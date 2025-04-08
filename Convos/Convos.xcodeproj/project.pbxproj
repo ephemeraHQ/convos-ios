@@ -26,6 +26,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		D83A7ABA2DA5C98400879441 /* Config */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Config;
+			sourceTree = "<group>";
+		};
 		D8A2B6932DA4BA4B00EF8577 /* Convos */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -52,6 +57,7 @@
 		D8A2B6882DA4BA4B00EF8577 = {
 			isa = PBXGroup;
 			children = (
+				D83A7ABA2DA5C98400879441 /* Config */,
 				D8A2B6932DA4BA4B00EF8577 /* Convos */,
 				D8A2B6922DA4BA4B00EF8577 /* Products */,
 			);
@@ -81,6 +87,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				D83A7ABA2DA5C98400879441 /* Config */,
 				D8A2B6932DA4BA4B00EF8577 /* Convos */,
 			);
 			name = Convos;
