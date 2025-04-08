@@ -35,8 +35,8 @@ import Foundation
 enum Secrets {
 EOF
 
-# Read each line from .env file
-while IFS='=' read -r key value; do
+# Read each line from .env file, handles missing newline at EOF
+while IFS='=' read -r key value || [[ -n "$key" ]]; do
     # Skip comments and empty lines
     [[ $key =~ ^#.*$ ]] && continue
     [[ -z $key ]] && continue
