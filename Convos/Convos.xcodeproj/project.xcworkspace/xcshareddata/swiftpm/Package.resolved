@@ -1,0 +1,24 @@
+{
+  "originHash" : "1f09a9f42ca08f4ff5b9246cd194a6ca48e83c855b55bb28ce0a6778b152c2d1",
+  "pins" : [
+    {
+      "identity" : "anchorkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Weebly/AnchorKit.git",
+      "state" : {
+        "revision" : "d8ac708856ee1975c705ebd44b0fa2b68e393e58",
+        "version" : "3.0.3"
+      }
+    },
+    {
+      "identity" : "privy-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/privy-io/privy-ios",
+      "state" : {
+        "revision" : "cfa9feade4040510fd9a02fe1160e96a0025e738",
+        "version" : "2.0.0-beta.3"
+      }
+    }
+  ],
+  "version" : 3
+}

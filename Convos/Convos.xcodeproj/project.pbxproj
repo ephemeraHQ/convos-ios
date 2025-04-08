@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */; };
+		D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6CA2DA4D5A500EF8577 /* Privy */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		D8A2B6912DA4BA4B00EF8577 /* Convos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Convos.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +41,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
+				D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +85,8 @@
 			);
 			name = Convos;
 			packageProductDependencies = (
+				D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */,
+				D8A2B6CA2DA4D5A500EF8577 /* Privy */,
 			);
 			productName = Convos;
 			productReference = D8A2B6912DA4BA4B00EF8577 /* Convos.app */;
@@ -107,6 +116,10 @@
 			);
 			mainGroup = D8A2B6882DA4BA4B00EF8577;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */,
+				D8A2B6C92DA4D5A500EF8577 /* XCRemoteSwiftPackageReference "privy-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
 			projectDirPath = "";
@@ -333,6 +346,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Weebly/AnchorKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.0.3;
+			};
+		};
+		D8A2B6C92DA4D5A500EF8577 /* XCRemoteSwiftPackageReference "privy-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/privy-io/privy-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = "2.0.0-beta.3";
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */;
+			productName = AnchorKit;
+		};
+		D8A2B6CA2DA4D5A500EF8577 /* Privy */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D8A2B6C92DA4D5A500EF8577 /* XCRemoteSwiftPackageReference "privy-ios" */;
+			productName = Privy;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = D8A2B6892DA4BA4B00EF8577 /* Project object */;
 }
