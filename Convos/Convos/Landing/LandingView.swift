@@ -7,6 +7,10 @@
 
 import SwiftUI
 
+#Preview {
+    LandingView()
+}
+
 struct LandingView: View {
     var body: some View {
         NavigationStack {
@@ -98,8 +102,4 @@ private struct LegalView: View {
             .multilineTextAlignment(.center)
 
     }
-}
-
-#Preview {
-    LandingView()
 }
