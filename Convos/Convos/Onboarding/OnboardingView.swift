@@ -1,5 +1,5 @@
 //
-//  LandingView.swift
+//  OnboardingView.swift
 //  Convos
 //
 //  Created by Joe on 4/9/25.
@@ -7,11 +7,15 @@
 
 import SwiftUI
 
-#Preview {
-    LandingView()
-}
-
-struct LandingView: View {
+struct OnboardingView: View {
+    @State var viewModel: OnboardingViewModel
+    @State var presentingCreateContactCard: Bool = false
+    @State var presentingImportContactCard: Bool = false
+    
+    init(authService: AuthServiceProtocol) {
+        _viewModel = State(initialValue: .init(authService: authService))
+    }
+    
     var body: some View {
         VStack(spacing: DesignConstants.Spacing.step4x) {
             
@@ -26,7 +30,7 @@ struct LandingView: View {
                 Spacer()
                 
                 Button("Sign in") {
-                    
+                    viewModel.signIn()
                 }
                 .convosButtonStyle(.text)
             }
@@ -51,7 +55,7 @@ struct LandingView: View {
             
             VStack(spacing: DesignConstants.Spacing.step4x) {
                 Button("Create your Contact Card") {
-                    
+                    presentingCreateContactCard = true
                 }
                 .convosButtonStyle(.rounded(fullWidth: true))
                 
@@ -62,6 +66,15 @@ struct LandingView: View {
             .padding(.bottom, DesignConstants.Spacing.step6x)
         }
         .padding(.horizontal, DesignConstants.Spacing.step3x)
+        .fullScreenCover(isPresented: $presentingCreateContactCard) {
+            ContactCardCreateView(name: $viewModel.name,
+                                  imageState: $viewModel.imageState,
+                                  nameIsValid: $viewModel.nameIsValid,
+                                  nameError: $viewModel.nameError,
+                                  importCardAction: {
+                presentingImportContactCard = true
+            }, submitAction: viewModel.createContactCard)
+        }
     }
 }
 
@@ -80,4 +93,8 @@ private struct LegalView: View {
         .tint(.secondary)
         .foregroundColor(.secondary)
     }
+}
+
+#Preview {
+    OnboardingView(authService: MockAuthService())
 }

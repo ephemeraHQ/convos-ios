@@ -10,8 +10,8 @@ import SwiftUI
 struct LabeledTextField: View {
     let label: String
     let prompt: String
+    let textFieldBorderColor: Color
     @Binding var text: String
-    @State private var borderColor: Color = .colorBorderSubtle
     @FocusState.Binding var isFocused: Bool
 
     var body: some View {
@@ -31,21 +31,13 @@ struct LabeledTextField: View {
         .background(
             RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.small)
                 .inset(by: 0.5)
-                .stroke(borderColor, lineWidth: 1.0)
+                .stroke(textFieldBorderColor, lineWidth: 1.0)
         )
-    }
-}
-
-extension LabeledTextField {
-    func textFieldBorder(_ color: Color) -> some View {
-        var copy = self
-        copy._borderColor = State(initialValue: color)
-        return copy
     }
 }
 
 #Preview {
     @Previewable @FocusState var isFocused: Bool
-    LabeledTextField(label: "Name", prompt: "Nice to meet you", text: .constant(""),
+    LabeledTextField(label: "Name", prompt: "Nice to meet you", textFieldBorderColor: .colorBorderSubtle, text: .constant(""),
                      isFocused: $isFocused)
 }

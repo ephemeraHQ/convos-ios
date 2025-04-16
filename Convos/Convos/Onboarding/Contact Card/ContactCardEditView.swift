@@ -179,7 +179,8 @@ struct ContactCardAvatarView: View {
 struct ContactCardEditView: View {
     @Binding var name: String
     @Binding var imageState: ContactCardImage.State
-    @Binding var isValidName: Bool
+    @Binding var nameIsValid: Bool
+    @Binding var nameError: String?
     @FocusState.Binding var isNameFocused: Bool
     let importAction: () -> Void
     
@@ -201,8 +202,11 @@ struct ContactCardEditView: View {
                 }
             }
             
-            LabeledTextField(label: "Name", prompt: "Nice to meet you", text: $name, isFocused: $isNameFocused)
-                .textFieldBorder(isValidName ? .colorBorderSubtle : .colorCaution)
+            LabeledTextField(label: "Name",
+                             prompt: "Nice to meet you",
+                             textFieldBorderColor: (nameError == nil ? .colorBorderSubtle : .colorCaution),
+                             text: $name,
+                             isFocused: $isNameFocused)
                 .submitLabel(.done)
                 .environment(\.colorScheme, .dark)
         }
@@ -216,8 +220,9 @@ struct ContactCardEditView: View {
 #Preview {
     @Previewable @State var imageState: ContactCardImage.State = .empty
     @Previewable @State var name: String = ""
-    @Previewable @State var isValidName: Bool = true
+    @Previewable @State var nameIsValid: Bool = true
+    @Previewable @State var nameError: String? = nil
     @Previewable @FocusState var isNameFocused: Bool
     
-    ContactCardEditView(name: $name, imageState: $imageState, isValidName: $isValidName, isNameFocused: $isNameFocused, importAction: { })
+    ContactCardEditView(name: $name, imageState: $imageState, nameIsValid: $nameIsValid, nameError: $nameError, isNameFocused: $isNameFocused, importAction: { })
 }

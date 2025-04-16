@@ -9,11 +9,13 @@ import AnchorKit
 import SwiftUI
 import UIKit
 
-final class LandingViewController: UIViewController {
+final class RootViewController: UIViewController {
+    let authService = AuthService()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        let landingView = LandingView()
-        let hostingController = UIHostingController(rootView: landingView)
+        let rootView = RootView(authService: authService)
+        let hostingController = UIHostingController(rootView: rootView)
         addChild(hostingController)
         view.addSubview(hostingController.view)
         hostingController.view.constrainEdges(to: view)

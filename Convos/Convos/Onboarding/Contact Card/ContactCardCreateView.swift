@@ -8,9 +8,12 @@
 import SwiftUI
 
 struct ContactCardCreateView: View {
-    @State var name: String = ""
-    @State var imageState: ContactCardImage.State = .empty
-    @State var isValidName: Bool = true
+    @Binding var name: String
+    @Binding var imageState: ContactCardImage.State
+    @Binding var nameIsValid: Bool
+    @Binding var nameError: String?
+    let importCardAction: () -> Void
+    let submitAction: () -> Void
     @FocusState var isNameFocused: Bool
     
     var body: some View {
@@ -31,24 +34,34 @@ struct ContactCardCreateView: View {
             .opacity(isNameFocused ? 0.0 : 1.0)
             .animation(.easeOut(duration: 0.2), value: isNameFocused)
             
-            ContactCardEditView(name: $name, imageState: $imageState, isValidName: $isValidName, isNameFocused: $isNameFocused, importAction: {
-                // import contact card
-            })
+                ContactCardEditView(name: $name, imageState: $imageState, nameIsValid: $nameIsValid, nameError: $nameError, isNameFocused: $isNameFocused, importAction: {
+                    importCardAction()
+                })
+                .overlay(alignment: .bottom) {
+                    if let nameError = nameError {
+                        Text(nameError)
+                            .font(.subheadline)
+                            .foregroundStyle(.colorCaution)
+                            .multilineTextAlignment(.center)
+                            .offset(y: DesignConstants.Spacing.step10x)
+                    }
+                }
             
             Text("You can update this anytime.")
                 .font(.subheadline)
                 .foregroundStyle(Color.colorTextSecondary)
+                .padding(.bottom, DesignConstants.Spacing.step6x)
                 .offset(y: isNameFocused ? 40 : 0)
                 .opacity(isNameFocused ? 0.0 : 1.0)
                 .animation(.easeOut(duration: 0.2), value: isNameFocused)
-                .padding(.bottom, DesignConstants.Spacing.step6x)
             
             Spacer()
             
             Button("That's me") {
-                
+                submitAction()
             }
             .convosButtonStyle(.outline(fullWidth: true))
+            .disabled(!nameIsValid)
             
         }
         .padding(.horizontal, 28.0)
@@ -57,5 +70,16 @@ struct ContactCardCreateView: View {
 }
 
 #Preview {
-    ContactCardCreateView()
+    @Previewable @State var name: String = ""
+    @Previewable @State var imageState: ContactCardImage.State = .empty
+    @Previewable @State var nameIsValid: Bool = false
+    @Previewable @State var nameError: String? = nil
+    ContactCardCreateView(name: $name,
+                          imageState: $imageState,
+                          nameIsValid: $nameIsValid,
+                          nameError: $nameError, importCardAction: {
+        // import
+    }) {
+        // submit
+    }
 }
