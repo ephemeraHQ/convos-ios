@@ -10,6 +10,10 @@ import SwiftUI
 
 enum DesignConstants {
     
+    enum ImageSizes {
+        static let smallAvatar: CGFloat = 24.0
+    }
+    
     enum Spacing {
         static let small: CGFloat = 16.0
         static let medium: CGFloat = 24.0

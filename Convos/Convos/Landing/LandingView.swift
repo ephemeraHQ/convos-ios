@@ -13,93 +13,71 @@ import SwiftUI
 
 struct LandingView: View {
     var body: some View {
-        NavigationStack {
-            VStack {
-                Spacer()
-                
-                VStack(alignment: .center, spacing: 8) {
-                    Text("Welcome to Convos")
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
-
-                    Text("Not another\nchat app")
-                        .font(.largeTitle.bold())
-                        .multilineTextAlignment(.center)
-
-                    Text("Super secure · Decentralized · Universal")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
+        VStack(spacing: DesignConstants.Spacing.step4x) {
+            
+            HStack(spacing: DesignConstants.Spacing.step2x) {
+                Circle()
+                    .foregroundStyle(.colorOrange)
+                    .frame(width: DesignConstants.ImageSizes.smallAvatar, height: DesignConstants.ImageSizes.smallAvatar)
+                Text("Convos")
+                    .font(.subheadline)
+                    .foregroundStyle(.colorTextPrimary)
                 
                 Spacer()
                 
-                VStack(spacing: 32) {
-                    VStack {
-                        Image(systemName: "person.text.rectangle")
-                            .resizable()
-                            .frame(width: 50, height: 40)
-                            .foregroundColor(.primary)
-                            .onTapGesture {
-                                print("tapped contact icon")
-                            }
-                        Text("Create a Contact Card")
-                            .font(.body)
-                            .foregroundColor(.primary)
-                            .onTapGesture {
-                                print("tapped create contact card text")
-                            }
-                    }
-
-                    LegalView()
-                        .padding(.horizontal, 40)
+                Button("Sign in") {
+                    
                 }
-                .padding(.bottom, 30)
+                .convosButtonStyle(.text)
             }
-            .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button {
-                        print("tapped top-right icon")
-                    } label: {
-                        Image(systemName: "person.badge.key")
-                            .font(.title2)
-                            .padding()
-                            .foregroundStyle(Color(.black))
-                    }
+            .padding(.leading, DesignConstants.Spacing.step3x)
+            .padding(.top, 10.0)
+            
+            Spacer()
+            
+            VStack(spacing: DesignConstants.Spacing.step4x) {
+                Text("Not another chat app")
+                    .font(.system(size: 56.0, weight: .bold))
+                    .multilineTextAlignment(.center)
+                
+                Text("Super secure · Decentralized · Universal")
+                    .font(.subheadline)
+                    .foregroundStyle(.colorTextSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, DesignConstants.Spacing.stepX)
+            
+            Spacer()
+            
+            VStack(spacing: DesignConstants.Spacing.step4x) {
+                Button("Create your Contact Card") {
+                    
                 }
+                .convosButtonStyle(.rounded(fullWidth: true))
+                
+                LegalView()
             }
+            .padding(.horizontal, DesignConstants.Spacing.step3x)
+            .padding(.top, DesignConstants.Spacing.step2x)
+            .padding(.bottom, DesignConstants.Spacing.step6x)
         }
+        .padding(.horizontal, DesignConstants.Spacing.step3x)
     }
 }
 
 private struct LegalView: View {
-    private let attributedText: AttributedString
-
-    init() {
-        var string = AttributedString("When you create a contact card, you agree to the Convos Terms of Service and Privacy Policy.")
-        
-        // find the range for "Terms of Service" and add the link and foreground color
-        if let termsRange = string.range(of: "Terms of Service") {
-            string[termsRange].link = URL(string: "https://www.google.com/search?q=terms")
-            string[termsRange].foregroundColor = .secondary
-            string[termsRange].underlineStyle = .single
-        }
-        
-        // find the range for "Privacy Policy" and add the link and foreground color
-        if let privacyRange = string.range(of: "Privacy Policy") {
-            string[privacyRange].link = URL(string: "https://www.google.com/search?q=privacy+policy")
-            string[privacyRange].foregroundColor = .secondary
-            string[privacyRange].underlineStyle = .single
-        }
-        
-        self.attributedText = string
-    }
-
     var body: some View {
-        Text(attributedText)
-            .font(.footnote)
-            .foregroundColor(.secondary)
-            .multilineTextAlignment(.center)
-
+        Group {
+            Text("When you create a contact card, you agree to the Convos ")
+            + Text("[Terms](https://xmtp.org/terms)")
+                .underline()
+            + Text(" and ")
+            + Text("[Privacy Policy](https://xmtp.org/privacy)")
+                .underline()
+        }
+        .font(.subheadline)
+        .multilineTextAlignment(.center)
+        .tint(.secondary)
+        .foregroundColor(.secondary)
     }
 }
