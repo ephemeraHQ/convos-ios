@@ -31,7 +31,7 @@ struct DraggableSpringyView<Content: View>: View {
     }
 
     var body: some View {
-        let dragGesture = DragGesture(minimumDistance: 0)
+        let dragGesture = DragGesture(minimumDistance: 20.0)
             .onChanged { _ in
                 if !isDragging {
                     isDragging = true

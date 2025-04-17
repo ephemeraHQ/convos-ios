@@ -19,6 +19,7 @@ struct ContactCardCreateView: View {
     @FocusState var isNameFocused: Bool
     @State private var isEditingContactCard: Bool = true
     @State private var hasAppeared: Bool = false
+    @State private var isVisible: Bool = true
     
     @Environment(\.dismiss) var dismiss
     
@@ -33,11 +34,12 @@ struct ContactCardCreateView: View {
                 Spacer()
             }
             .padding(.top, DesignConstants.Spacing.step3x)
+            .opacity(isEditingContactCard ? 1.0 : 0.0)
             
             Spacer(minLength: 0.0)
             
             VStack(spacing: DesignConstants.Spacing.medium) {
-                if !isNameFocused && hasAppeared {
+                if !isNameFocused && hasAppeared && isEditingContactCard {
                     VStack(spacing: DesignConstants.Spacing.small) {
                         Text("Complete your contact card")
                             .font(.largeTitle.bold())
@@ -53,8 +55,13 @@ struct ContactCardCreateView: View {
                 }
                 
                 DraggableSpringyView {
-                    ContactCardView(name: $name, imageState: $imageState, nameIsValid: $nameIsValid, nameError: $nameError,
-                                        isEditing: $isEditingContactCard, isNameFocused: $isNameFocused, importAction: {
+                    ContactCardView(name: $name,
+                                    imageState: $imageState,
+                                    nameIsValid: $nameIsValid,
+                                    nameError: $nameError,
+                                    isEditing: $isEditingContactCard,
+                                    isNameFocused: $isNameFocused,
+                                    importAction: {
                         importCardAction()
                     })
                 }
@@ -76,7 +83,7 @@ struct ContactCardCreateView: View {
                 .animation(.spring(duration: 0.6, bounce: 0.5).delay(0.1), value: hasAppeared)
                 
                 if !isNameFocused && hasAppeared && nameError == nil {
-                    Text("You can update this anytime.")
+                    Text(isEditingContactCard ? "You can update this anytime." : "Looks good!")
                         .font(.subheadline)
                         .foregroundStyle(Color.colorTextSecondary)
                         .padding(.bottom, DesignConstants.Spacing.step6x)
@@ -89,18 +96,34 @@ struct ContactCardCreateView: View {
             Spacer(minLength: 0.0)
             
             Button("That's me") {
-                submitAction()
+                // temporary animation
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isEditingContactCard = false
+                }
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isVisible = false
+                    }
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        submitAction()
+                    }
+                }
             }
             .convosButtonStyle(.outline(fullWidth: true))
+            .opacity(isEditingContactCard ? 1.0 : 0.0)
             .disabled(!nameIsValid)
             .padding(.horizontal, DesignConstants.Spacing.step3x)
             .padding(.bottom, DesignConstants.Spacing.step3x)
             .zIndex(0)
         }
+        .opacity(isVisible ? 1.0 : 0.0)
         .padding(.horizontal, DesignConstants.Spacing.step3x)
         .background(.colorBackgroundPrimary)
         .animation(.easeInOut(duration: 0.3), value: isNameFocused)
         .animation(.easeInOut(duration: 0.2), value: hasAppeared)
+        .animation(.easeInOut(duration: 0.2), value: isEditingContactCard)
         .onAppear {
             hasAppeared = true
         }
