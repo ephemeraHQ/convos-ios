@@ -1,5 +1,5 @@
 {
-  "originHash" : "1f09a9f42ca08f4ff5b9246cd194a6ca48e83c855b55bb28ce0a6778b152c2d1",
+  "originHash" : "3ed5230bdb79e4572e86346e046d7fa602ce3430957260d1987a1a14f3498fbd",
   "pins" : [
     {
       "identity" : "anchorkit",
@@ -11,12 +11,20 @@
       }
     },
     {
+      "identity" : "factory",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/hmlongco/Factory",
+      "state" : {
+        "revision" : "c8110886836ab4dd1136dbac0c04f0f36cd68540",
+        "version" : "2.4.5"
+      }
+    },
+    {
       "identity" : "privy-ios",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/privy-io/privy-ios",
       "state" : {
-        "revision" : "cfa9feade4040510fd9a02fe1160e96a0025e738",
-        "version" : "2.0.0-beta.3"
+        "revision" : "2623d1c97e8990d7164d7b858d0dbfd68876f4f4"
       }
     }
   ],
