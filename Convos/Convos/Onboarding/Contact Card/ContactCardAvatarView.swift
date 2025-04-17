@@ -1,8 +1,8 @@
 //
-//  ContactCardEditView.swift
+//  ContactCardAvatarView.swift
 //  Convos
 //
-//  Created by Jarod Luebbert on 4/15/25.
+//  Created by Jarod Luebbert on 4/17/25.
 //
 
 import SwiftUI
@@ -105,9 +105,9 @@ struct ContactCardCameraButton: View {
     }
 }
 
-struct ContactCardAvatarView: View {
+struct ContactCardAvatarView<Content: View>: View {
     
-    @State private var cameraButtonSize: ContactCardCameraButton.Size = .regular
+    @Binding var isEditing: Bool
     @Binding var imageState: ContactCardImage.State {
         didSet {
             withAnimation {
@@ -115,6 +115,10 @@ struct ContactCardAvatarView: View {
             }
         }
     }
+    
+    let emptyView: () -> Content
+    
+    @State private var cameraButtonSize: ContactCardCameraButton.Size = .regular
     @State private var imageSelection: PhotosPickerItem? = nil
     
     let defaultSize: CGFloat = 96.0
@@ -133,8 +137,12 @@ struct ContactCardAvatarView: View {
                     case .failure(let error):
                         Text("Error: \(error.localizedDescription)")
                     case .empty:
-                        EmptyView()
-                            .frame(width: size, height: size)
+                        emptyView()
+                            .overlay(
+                                Circle()
+                                    .inset(by: 0.5)
+                                    .stroke(.colorBorderSubtle, lineWidth: 1.0)
+                            )
                     case .success(let image):
                         image
                             .resizable()
@@ -143,20 +151,23 @@ struct ContactCardAvatarView: View {
                             .clipShape(Circle())
                     }
                     
-                    VStack(spacing: 0.0) {
-                        Spacer()
-                            .frame(height: cameraButtonSize.spacerOffset)
-                        
-                        HStack(spacing: 0.0) {
-                            ContactCardCameraButton(size: $cameraButtonSize)
-                            
+                    if isEditing {
+                        VStack(spacing: 0.0) {
                             Spacer()
-                                .frame(width: cameraButtonSize.spacerOffset)
+                                .frame(height: cameraButtonSize.spacerOffset)
+                            
+                            HStack(spacing: 0.0) {
+                                ContactCardCameraButton(size: $cameraButtonSize)
+                                
+                                Spacer()
+                                    .frame(width: cameraButtonSize.spacerOffset)
+                            }
                         }
+                        .frame(width: size, height: size)
                     }
-                    .frame(width: size, height: size)
                 }
             }
+                         .disabled(!isEditing)
                          .onChange(of: imageSelection) {
                              if let imageSelection {
                                  self.imageState = .loading
@@ -176,54 +187,19 @@ struct ContactCardAvatarView: View {
     
 }
 
-struct ContactCardEditView: View {
-    @Binding var name: String
-    @Binding var imageState: ContactCardImage.State
-    @Binding var nameIsValid: Bool
-    @Binding var nameError: String?
-    @FocusState.Binding var isNameFocused: Bool
-    let importAction: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 10.0) {
-            HStack(alignment: .top) {
-                ContactCardAvatarView(imageState: $imageState)
-                
-                Spacer()
-                
-                Button {
-                    importAction()
-                } label: {
-                    Text("Import")
-                        .font(DesignConstants.Fonts.buttonText)
-                        .foregroundStyle(Color.colorFillSecondary)
-                        .padding(.horizontal, DesignConstants.Spacing.step3x)
-                        .padding(.vertical, DesignConstants.Spacing.step2x)
-                }
-            }
-            
-            LabeledTextField(label: "Name",
-                             prompt: "Nice to meet you",
-                             textFieldBorderColor: (nameError == nil ? .colorBorderSubtle : .colorCaution),
-                             text: $name,
-                             isFocused: $isNameFocused)
-            .textInputAutocapitalization(.words)
-            .submitLabel(.done)
-            .environment(\.colorScheme, .dark)
-        }
-        .padding(DesignConstants.Spacing.medium)
-        .background(.backgroundSurface)
-        .clipShape(RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.regular))
-        .shadow(color: .colorDarkAlpha15, radius: 8, x: 0, y: 4)
-    }
-}
-
 #Preview {
     @Previewable @State var imageState: ContactCardImage.State = .empty
-    @Previewable @State var name: String = ""
-    @Previewable @State var nameIsValid: Bool = true
-    @Previewable @State var nameError: String? = nil
-    @Previewable @FocusState var isNameFocused: Bool
-    
-    ContactCardEditView(name: $name, imageState: $imageState, nameIsValid: $nameIsValid, nameError: $nameError, isNameFocused: $isNameFocused, importAction: { })
+    @Previewable @State var name: String = "Robert Adams"
+    @Previewable @State var isEditing: Bool = true
+
+    VStack {
+        ContactCardAvatarView(isEditing: $isEditing, imageState: $imageState) {
+            MonogramView(name: name)
+        }
+        
+        Button(isEditing ? "Done" : "Edit") {
+            isEditing.toggle()
+        }
+        .padding()
+    }
 }

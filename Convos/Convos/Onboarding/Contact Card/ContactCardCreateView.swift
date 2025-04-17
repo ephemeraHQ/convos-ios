@@ -17,6 +17,7 @@ struct ContactCardCreateView: View {
     let submitAction: () -> Void
     
     @FocusState var isNameFocused: Bool
+    @State private var isEditingContactCard: Bool = true
     @State private var hasAppeared: Bool = false
     
     @Environment(\.dismiss) var dismiss
@@ -52,7 +53,8 @@ struct ContactCardCreateView: View {
                 }
                 
                 DraggableSpringyView {
-                    ContactCardEditView(name: $name, imageState: $imageState, nameIsValid: $nameIsValid, nameError: $nameError, isNameFocused: $isNameFocused, importAction: {
+                    ContactCardView(name: $name, imageState: $imageState, nameIsValid: $nameIsValid, nameError: $nameError,
+                                        isEditing: $isEditingContactCard, isNameFocused: $isNameFocused, importAction: {
                         importCardAction()
                     })
                 }

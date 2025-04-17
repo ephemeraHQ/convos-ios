@@ -19,7 +19,7 @@ struct DraggableSpringyView<Content: View>: View {
     @State private var isDragging = false
 
     init(
-        maxDragDistance: CGFloat = 100.0,
+        maxDragDistance: CGFloat = 101.0,
         springStiffness: CGFloat = 200.0,
         springDamping: CGFloat = 20.0,
         @ViewBuilder content: @escaping () -> Content
