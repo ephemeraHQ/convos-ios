@@ -51,9 +51,12 @@ struct ContactCardCreateView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 
-                ContactCardEditView(name: $name, imageState: $imageState, nameIsValid: $nameIsValid, nameError: $nameError, isNameFocused: $isNameFocused, importAction: {
-                    importCardAction()
-                })
+                DraggableSpringyView {
+                    ContactCardEditView(name: $name, imageState: $imageState, nameIsValid: $nameIsValid, nameError: $nameError, isNameFocused: $isNameFocused, importAction: {
+                        importCardAction()
+                    })
+                }
+                .zIndex(1)
                 .overlay(alignment: .bottom) {
                     if let nameError = nameError {
                         Text(nameError)
@@ -70,12 +73,13 @@ struct ContactCardCreateView: View {
                 .offset(y: hasAppeared ? 0.0 : 40.0)
                 .animation(.spring(duration: 0.6, bounce: 0.5).delay(0.1), value: hasAppeared)
                 
-                if !isNameFocused && hasAppeared {
+                if !isNameFocused && hasAppeared && nameError == nil {
                     Text("You can update this anytime.")
                         .font(.subheadline)
                         .foregroundStyle(Color.colorTextSecondary)
                         .padding(.bottom, DesignConstants.Spacing.step6x)
                         .transition(.move(edge: .top).combined(with: .opacity))
+                        .zIndex(0)
                 }
             }
             .padding(.horizontal, DesignConstants.Spacing.step3x)
@@ -89,6 +93,7 @@ struct ContactCardCreateView: View {
             .disabled(!nameIsValid)
             .padding(.horizontal, DesignConstants.Spacing.step3x)
             .padding(.bottom, DesignConstants.Spacing.step3x)
+            .zIndex(0)
         }
         .padding(.horizontal, DesignConstants.Spacing.step3x)
         .background(.colorBackgroundPrimary)
