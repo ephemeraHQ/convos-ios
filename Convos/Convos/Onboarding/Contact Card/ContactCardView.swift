@@ -47,7 +47,6 @@ struct ContactCardView: View {
                                  isFocused: $isNameFocused)
                 .textInputAutocapitalization(.words)
                 .submitLabel(.done)
-                .environment(\.colorScheme, .dark)
                 .opacity(isEditing ? 1.0 : 0.0)
                 .transition(.scale)
                 
@@ -61,6 +60,7 @@ struct ContactCardView: View {
                     }
                 }
             }
+            .environment(\.colorScheme, .dark)
         }
         .padding(DesignConstants.Spacing.medium)
         .background(.backgroundSurface)
@@ -72,7 +72,7 @@ struct ContactCardView: View {
 
 #Preview {
     @Previewable @State var imageState: ContactCardImage.State = .empty
-    @Previewable @State var name: String = "Jarod"
+    @Previewable @State var name: String = "Robert Adams"
     @Previewable @State var nameIsValid: Bool = true
     @Previewable @State var nameError: String? = nil
     @Previewable @State var isEditing: Bool = false
@@ -80,12 +80,12 @@ struct ContactCardView: View {
     
     VStack {
         ContactCardView(name: $name,
-                            imageState: $imageState,
-                            nameIsValid: $nameIsValid,
-                            nameError: $nameError,
-                            isEditing: $isEditing,
-                            isNameFocused: $isNameFocused,
-                            importAction: { })
+                        imageState: $imageState,
+                        nameIsValid: $nameIsValid,
+                        nameError: $nameError,
+                        isEditing: $isEditing,
+                        isNameFocused: $isNameFocused,
+                        importAction: { })
         
         Button(isEditing ? "Done" : "Edit") {
             isEditing.toggle()
