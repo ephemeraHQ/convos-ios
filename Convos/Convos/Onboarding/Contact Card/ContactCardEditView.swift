@@ -207,8 +207,9 @@ struct ContactCardEditView: View {
                              textFieldBorderColor: (nameError == nil ? .colorBorderSubtle : .colorCaution),
                              text: $name,
                              isFocused: $isNameFocused)
-                .submitLabel(.done)
-                .environment(\.colorScheme, .dark)
+            .textInputAutocapitalization(.words)
+            .submitLabel(.done)
+            .environment(\.colorScheme, .dark)
         }
         .padding(DesignConstants.Spacing.medium)
         .background(.backgroundSurface)

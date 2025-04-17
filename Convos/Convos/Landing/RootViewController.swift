@@ -22,4 +22,3 @@ final class RootViewController: UIViewController {
         hostingController.didMove(toParent: self)
     }
 }
-

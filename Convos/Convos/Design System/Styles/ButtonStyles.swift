@@ -43,7 +43,6 @@ struct RoundedButtonStyle: ButtonStyle {
             .background(.colorFillPrimary)
             .clipShape(RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.medium))
             .foregroundColor(isEnabled ? .colorTextPrimaryInverted : .colorTextTertiary)
-
     }
 }
 
