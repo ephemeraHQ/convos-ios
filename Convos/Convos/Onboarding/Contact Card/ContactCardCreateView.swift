@@ -12,9 +12,13 @@ struct ContactCardCreateView: View {
     @Binding var imageState: ContactCardImage.State
     @Binding var nameIsValid: Bool
     @Binding var nameError: String?
+    
     let importCardAction: () -> Void
     let submitAction: () -> Void
+    
     @FocusState var isNameFocused: Bool
+    @State private var hasAppeared: Bool = false
+    
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
@@ -32,7 +36,7 @@ struct ContactCardCreateView: View {
             Spacer(minLength: 0.0)
             
             VStack(spacing: DesignConstants.Spacing.medium) {
-                if !isNameFocused {
+                if !isNameFocused && hasAppeared {
                     VStack(spacing: DesignConstants.Spacing.small) {
                         Text("Complete your contact card")
                             .font(.largeTitle.bold())
@@ -59,8 +63,14 @@ struct ContactCardCreateView: View {
                             .offset(y: DesignConstants.Spacing.step10x)
                     }
                 }
+                .rotation3DEffect(
+                    .degrees(hasAppeared ? 0.0 : 15.0),
+                    axis: (x: 1.0, y: 0.0, z: 0.0)
+                )
+                .offset(y: hasAppeared ? 0.0 : 40.0)
+                .animation(.spring(duration: 0.6, bounce: 0.5).delay(0.1), value: hasAppeared)
                 
-                if !isNameFocused {
+                if !isNameFocused && hasAppeared {
                     Text("You can update this anytime.")
                         .font(.subheadline)
                         .foregroundStyle(Color.colorTextSecondary)
@@ -83,6 +93,10 @@ struct ContactCardCreateView: View {
         .padding(.horizontal, DesignConstants.Spacing.step3x)
         .background(.colorBackgroundPrimary)
         .animation(.easeInOut(duration: 0.3), value: isNameFocused)
+        .animation(.easeInOut(duration: 0.2), value: hasAppeared)
+        .onAppear {
+            hasAppeared = true
+        }
     }
 }
 
