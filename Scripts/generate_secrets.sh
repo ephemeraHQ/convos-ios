@@ -14,15 +14,15 @@ echo "🔑 Generating $SECRETS_FILE"
 
 # Check if .env file exists
 if [ ! -f ".env" ]; then
-    echo "Error: .env file not found"
-    exit 1
+  echo "Error: .env file not found"
+  exit 1
 fi
 
 # Create the output directory if it doesn't exist
 mkdir -p "Convos/Config"
 
 # Read .env file and generate Secrets.swift
-cat > "$SECRETS_FILE" << 'EOF'
+cat >"$SECRETS_FILE" <<'EOF'
 import Foundation
 
 // WARNING:
@@ -37,18 +37,18 @@ EOF
 
 # Read each line from .env file, handles missing newline at EOF
 while IFS='=' read -r key value || [[ -n "$key" ]]; do
-    # Skip comments and empty lines
-    [[ $key =~ ^#.*$ ]] && continue
-    [[ -z $key ]] && continue
+  # Skip comments and empty lines
+  [[ $key =~ ^#.*$ ]] && continue
+  [[ -z $key ]] && continue
 
-    # Remove any quotes from the value
-    value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
+  # Remove any quotes from the value
+  value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
 
-    # Add the secret to the Swift file
-    echo "    static let $key = \"$value\"" >> "$SECRETS_FILE"
-done < .env
+  # Add the secret to the Swift file
+  echo "    static let $key = \"$value\"" >>"$SECRETS_FILE"
+done <.env
 
 # Close the enum
-echo "}" >> "$SECRETS_FILE"
+echo "}" >>"$SECRETS_FILE"
 
 echo "🏁 Generated $SECRETS_FILE"

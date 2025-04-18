@@ -9,10 +9,10 @@
 
 # check git status to ensure clean working tree
 # this ensures that the commit contains the version bump and nothing else.
-# if [ -n "$(git status --porcelain)" ]; then
-#   echo "❌ Git working tree is not clean. Please commit or stash your changes first."
-#   exit 1
-# fi
+if [ -n "$(git status --porcelain)" ]; then
+  echo "❌ Git working tree is not clean. Please commit or stash your changes first."
+  exit 1
+fi
 
 VERSION_INPUT="$1"
 
