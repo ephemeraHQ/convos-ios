@@ -42,7 +42,7 @@ do
 	else
 		echo "🔎 Linting before pushing"
 		git_root="$(git rev-parse --show-toplevel)"
-		swiftlint lint --path "$git_root" --strict
+		swiftlint lint --strict --config "$git_root/.swiftlint.yml" "$git_root"
 		lint_success=$?
 
 		echo ""
