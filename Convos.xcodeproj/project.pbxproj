@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1C3C742DB6F7AD00B723C0 /* PostHog */; };
-		7A5979A72DB2A6E2001EDC03 /* BuildFile in Frameworks */ = {isa = PBXBuildFile; };
 		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
 		D834386F2DB19D8C00A50F45 /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = D834386E2DB19D8C00A50F45 /* Factory */; };
 		D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */; };
@@ -17,6 +16,7 @@
 
 /* Begin PBXFileReference section */
 		7A1C3C512DB6F75000B723C0 /* Convos.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Convos.xcodeproj; sourceTree = "<group>"; };
+		7A7BB1322DB6FF8E009B8BBF /* Convos.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Convos.xcodeproj; sourceTree = "<group>"; };
 		D8A2B6912DA4BA4B00EF8577 /* Convos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Convos.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -33,8 +33,6 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D83A7ABA2DA5C98400879441 /* Config */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = Config;
 			sourceTree = "<group>";
 		};
@@ -57,7 +55,6 @@
 				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
 				D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */,
 				7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */,
-				7A5979A72DB2A6E2001EDC03 /* BuildFile in Frameworks */,
 				D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -69,6 +66,11 @@
 			isa = PBXGroup;
 			children = (
 			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		7A7BB1362DB6FF8E009B8BBF /* Products */ = {
+			isa = PBXGroup;
 			name = Products;
 			sourceTree = "<group>";
 		};
@@ -157,6 +159,10 @@
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
 			projectDirPath = "";
 			projectReferences = (
+				{
+					ProductGroup = 7A7BB1362DB6FF8E009B8BBF /* Products */;
+					ProjectRef = 7A7BB1322DB6FF8E009B8BBF /* Convos.xcodeproj */;
+				},
 				{
 					ProductGroup = 7A1C3C552DB6F75000B723C0 /* Products */;
 					ProjectRef = 7A1C3C512DB6F75000B723C0 /* Convos.xcodeproj */;
