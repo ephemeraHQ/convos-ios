@@ -20,12 +20,13 @@ if [[ "$SHOULD_COMMIT_BUILD_BUMP" != "y" && "$SHOULD_COMMIT_BUILD_BUMP" != "Y" ]
   exit 0
 fi
 
-# Get the current build number from the project
-CURRENT_BUILD=$(./Scripts/get-build.sh)
+# Get the current build numbers from the project
+echo "Current build numbers:"
+./Scripts/get-build.sh
 
 # commit the build number bump
 git add Convos/Convos.xcodeproj
-git commit -m "Bump build number to $CURRENT_BUILD"
+git commit -m "Bump build numbers"
 
 # ask dev if they want to push the commit
 read -p "Do you want to push the commit? (y/n): " SHOULD_PUSH_COMMIT
@@ -38,4 +39,4 @@ fi
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 git push -u origin "$current_branch"
 
-echo "🏁 Created commit for build number $CURRENT_BUILD" 
+echo "🏁 Created commit for build number bump" 
