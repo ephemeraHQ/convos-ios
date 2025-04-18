@@ -1,4 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# Exit on any error and ensure pipeline failures are caught
+set -e
+set -o pipefail
 
 # this script is used to increment the build number of the Xcode project
 # Note: you can skip this script and just update the build number manually in Xcode

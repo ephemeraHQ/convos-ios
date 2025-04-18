@@ -1,4 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# Exit on any error and ensure pipeline failures are caught
+set -e
+set -o pipefail
 
 # This script generates the Secrets.swift file from a .env file
 # Usage: ./generate_secrets.sh

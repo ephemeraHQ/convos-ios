@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # this script is used to bump the version of the Xcode project
 # Note: you can skip this script and just update the version manually in Xcode
