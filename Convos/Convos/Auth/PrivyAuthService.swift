@@ -51,9 +51,7 @@ class PrivyAuthService: AuthServiceProtocol {
             await privy.awaitReady()
 
             if case .authenticated(let privyUser) = privy.authState {
-//                authStateSubject.send(.authorized)
-            } else {
-//                authStateSubject.send(.unauthorized)
+                //
             }
         }
     }
@@ -65,17 +63,8 @@ class PrivyAuthService: AuthServiceProtocol {
     }
     
     func authStatePublisher() -> AnyPublisher<AuthServiceState, Never> {
-        return privy.authStatePublisher.map { state in
-            switch state {
-            case .authenticated:
-                return .authorized
-            case .unauthenticated:
-                return .unauthorized
-            case .notReady:
-                return .unknown
-            default:
-                return .unknown
-            }
-        }.eraseToAnyPublisher()
+        return privy.authStatePublisher
+            .map { $0.authServiceState }
+            .eraseToAnyPublisher()
     }
 }
