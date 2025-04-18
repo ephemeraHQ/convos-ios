@@ -10,7 +10,7 @@ import SwiftUI
 import UIKit
 
 final class RootViewController: UIViewController {
-    let authService = AuthService()
+    let authService = PrivyAuthService()
     
     override func viewDidLoad() {
         super.viewDidLoad()
