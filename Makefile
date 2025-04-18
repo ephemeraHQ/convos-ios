@@ -12,4 +12,12 @@ upload_symbols: ## Upload symbols to Sentry
 	# for local uploading, use like this: DSYM_DIR_PATH=/path/to/dSYM/dir make upload_symbols
 	./Scripts/upload_symbols.sh
 
-.PHONY: secrets
+.PHONY: bump-version
+bump-version: ## Bump version in package.json
+	./Scripts/bump-version.sh
+
+.PHONY: bump-build
+bump-build: ## Increment build number by 1 in Xcode project
+	./Scripts/bump-build.sh
+
+.PHONY: secrets upload_symbols bump-version bump-build
