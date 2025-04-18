@@ -7,4 +7,9 @@ help: ## Print help
 secrets: ## Generate Secrets.swift from .env
 	./Scripts/generate_secrets.sh
 
+.PHONY: upload_symbols
+upload_symbols: ## Upload symbols to Sentry
+	# for local uploading, use like this: DSYM_DIR_PATH=/path/to/dSYM/dir make upload_symbols
+	./Scripts/upload_symbols.sh
+
 .PHONY: secrets
