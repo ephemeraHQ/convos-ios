@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7A5979A72DB2A6E2001EDC03 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5979A62DB2A6E2001EDC03 /* PostHog */; };
 		D834386F2DB19D8C00A50F45 /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = D834386E2DB19D8C00A50F45 /* Factory */; };
 		D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */; };
 		D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6CA2DA4D5A500EF8577 /* Privy */; };
@@ -50,6 +51,7 @@
 				D834386F2DB19D8C00A50F45 /* Factory in Frameworks */,
 				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
 				D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */,
+				7A5979A72DB2A6E2001EDC03 /* PostHog in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -97,6 +99,7 @@
 				D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */,
 				D8A2B6CA2DA4D5A500EF8577 /* Privy */,
 				D834386E2DB19D8C00A50F45 /* Factory */,
+				7A5979A62DB2A6E2001EDC03 /* PostHog */,
 			);
 			productName = Convos;
 			productReference = D8A2B6912DA4BA4B00EF8577 /* Convos.app */;
@@ -130,6 +133,7 @@
 				D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */,
 				D8A2B6C92DA4D5A500EF8577 /* XCRemoteSwiftPackageReference "privy-ios" */,
 				D834386D2DB19D8C00A50F45 /* XCRemoteSwiftPackageReference "Factory" */,
+				7A5979A52DB2A6E2001EDC03 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
@@ -359,6 +363,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		7A5979A52DB2A6E2001EDC03 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.24.0;
+			};
+		};
 		D834386D2DB19D8C00A50F45 /* XCRemoteSwiftPackageReference "Factory" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/hmlongco/Factory";
@@ -386,6 +398,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		7A5979A62DB2A6E2001EDC03 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A5979A52DB2A6E2001EDC03 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
+		};
 		D834386E2DB19D8C00A50F45 /* Factory */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D834386D2DB19D8C00A50F45 /* XCRemoteSwiftPackageReference "Factory" */;
