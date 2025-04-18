@@ -89,6 +89,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				D80BAEE92DB2F26900C2FB42 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D83A7ABA2DA5C98400879441 /* Config */,
@@ -134,6 +135,7 @@
 				D8A2B6C92DA4D5A500EF8577 /* XCRemoteSwiftPackageReference "privy-ios" */,
 				D834386D2DB19D8C00A50F45 /* XCRemoteSwiftPackageReference "Factory" */,
 				D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
@@ -164,6 +166,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D80BAEE92DB2F26900C2FB42 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			productRef = D80BAEE82DB2F26900C2FB42 /* SwiftLintBuildToolPlugin */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		D8A2B6A52DA4BA4C00EF8577 /* Debug */ = {
@@ -371,6 +380,14 @@
 				minimumVersion = 8.49.0;
 			};
 		};
+		D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SimplyDanny/SwiftLintPlugins";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.59.1;
+			};
+		};
 		D834386D2DB19D8C00A50F45 /* XCRemoteSwiftPackageReference "Factory" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/hmlongco/Factory";
@@ -402,6 +419,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
+		};
+		D80BAEE82DB2F26900C2FB42 /* SwiftLintBuildToolPlugin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
+			productName = "plugin:SwiftLintBuildToolPlugin";
 		};
 		D834386E2DB19D8C00A50F45 /* Factory */ = {
 			isa = XCSwiftPackageProductDependency;
