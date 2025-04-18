@@ -1,5 +1,5 @@
 {
-  "originHash" : "80c851b3dd0965b843e571efbec11e5e7e69ddf2f17d11c539ac74e44d572217",
+  "originHash" : "adcad94264419c2259a521cb1be50e9e4117d5a2910bcb5082e5b12724bc55a6",
   "pins" : [
     {
       "identity" : "anchorkit",
@@ -25,6 +25,15 @@
       "location" : "https://github.com/privy-io/privy-ios",
       "state" : {
         "revision" : "2623d1c97e8990d7164d7b858d0dbfd68876f4f4"
+      }
+    },
+    {
+      "identity" : "sentry-cocoa",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/getsentry/sentry-cocoa",
+      "state" : {
+        "revision" : "2c6c1b81d9f6e6178064b4e9b457abe1c118bcda",
+        "version" : "8.49.0"
       }
     }
   ],
