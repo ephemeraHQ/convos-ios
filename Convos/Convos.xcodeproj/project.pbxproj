@@ -89,7 +89,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				D80BAEE92DB2F26900C2FB42 /* PBXTargetDependency */,
+				D82C77932DB2FEE3004EA1C7 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D83A7ABA2DA5C98400879441 /* Config */,
@@ -168,9 +168,9 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		D80BAEE92DB2F26900C2FB42 /* PBXTargetDependency */ = {
+		D82C77932DB2FEE3004EA1C7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = D80BAEE82DB2F26900C2FB42 /* SwiftLintBuildToolPlugin */;
+			productRef = D82C77922DB2FEE3004EA1C7 /* SwiftLintBuildToolPlugin */;
 		};
 /* End PBXTargetDependency section */
 
@@ -420,7 +420,7 @@
 			package = D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
 		};
-		D80BAEE82DB2F26900C2FB42 /* SwiftLintBuildToolPlugin */ = {
+		D82C77922DB2FEE3004EA1C7 /* SwiftLintBuildToolPlugin */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
 			productName = "plugin:SwiftLintBuildToolPlugin";

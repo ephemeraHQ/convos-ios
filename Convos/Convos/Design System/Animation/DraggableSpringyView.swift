@@ -1,10 +1,3 @@
-//
-//  DraggableSpringyView.swift
-//  Convos
-//
-//  Created by Jarod Luebbert on 4/17/25.
-//
-
 import SwiftUI
 import UIKit
 
@@ -16,7 +9,7 @@ struct DraggableSpringyView<Content: View>: View {
 
     @State private var dragOffset: CGSize = .zero
     @GestureState private var gestureOffset: CGSize = .zero
-    @State private var isDragging = false
+    @State private var isDragging: Bool = false
 
     init(
         maxDragDistance: CGFloat = 101.0,

@@ -1,12 +1,5 @@
-//
-//  ContactCardAvatarView.swift
-//  Convos
-//
-//  Created by Jarod Luebbert on 4/17/25.
-//
-
-import SwiftUI
 import PhotosUI
+import SwiftUI
 
 extension PhotosPickerItem {
     @MainActor
@@ -33,30 +26,30 @@ struct ContactCardImage: Transferable {
             return false
         }
     }
-    
+
     enum ContactCardImageError: Error {
         case importFailed
     }
-    
+
     let image: Image
-    
+
     static var transferRepresentation: some TransferRepresentation {
         DataRepresentation(importedContentType: .image) { data in
-#if canImport(AppKit)
-            guard let nsImage = NSImage(data: data) else {
+            #if canImport(AppKit)
+                guard let nsImage = NSImage(data: data) else {
+                    throw ContactCardImageError.importFailed
+                }
+                let image = Image(nsImage: nsImage)
+                return ContactCardImage(image: image)
+            #elseif canImport(UIKit)
+                guard let uiImage = UIImage(data: data) else {
+                    throw ContactCardImageError.importFailed
+                }
+                let image = Image(uiImage: uiImage)
+                return ContactCardImage(image: image)
+            #else
                 throw ContactCardImageError.importFailed
-            }
-            let image = Image(nsImage: nsImage)
-            return ContactCardImage(image: image)
-#elseif canImport(UIKit)
-            guard let uiImage = UIImage(data: data) else {
-                throw ContactCardImageError.importFailed
-            }
-            let image = Image(uiImage: uiImage)
-            return ContactCardImage(image: image)
-#else
-            throw ContactCardImageError.importFailed
-#endif
+            #endif
         }
     }
 }
@@ -64,7 +57,7 @@ struct ContactCardImage: Transferable {
 struct ContactCardCameraButton: View {
     enum Size {
         case compact, regular
-        
+
         var font: Font {
             switch self {
             case .regular:
@@ -73,7 +66,7 @@ struct ContactCardCameraButton: View {
                 return DesignConstants.Fonts.medium
             }
         }
-        
+
         var spacerOffset: CGFloat {
             switch self {
             case .regular:
@@ -83,9 +76,9 @@ struct ContactCardCameraButton: View {
             }
         }
     }
-    
+
     @Binding var size: Size
-    
+
     var body: some View {
         GeometryReader { reader in
             ZStack {
@@ -106,7 +99,6 @@ struct ContactCardCameraButton: View {
 }
 
 struct ContactCardAvatarView<Content: View>: View {
-    
     @Binding var isEditing: Bool
     @Binding var imageState: ContactCardImage.State {
         didSet {
@@ -115,26 +107,27 @@ struct ContactCardAvatarView<Content: View>: View {
             }
         }
     }
-    
+
     let emptyView: () -> Content
-    
+
     @State private var cameraButtonSize: ContactCardCameraButton.Size = .regular
-    @State private var imageSelection: PhotosPickerItem? = nil
-    
+    @State private var imageSelection: PhotosPickerItem?
+
     let defaultSize: CGFloat = 96.0
-    
+
     var body: some View {
         GeometryReader { reader in
             let size: CGFloat = min(reader.size.width, reader.size.height)
             PhotosPicker(selection: $imageSelection,
                          matching: .images,
-                         photoLibrary: .shared()) {
+                         photoLibrary: .shared())
+            {
                 ZStack {
                     switch self.imageState {
                     case .loading:
                         ProgressView()
                             .frame(width: size, height: size)
-                    case .failure(let error):
+                    case let .failure(error):
                         Text("Error: \(error.localizedDescription)")
                     case .empty:
                         emptyView()
@@ -143,22 +136,22 @@ struct ContactCardAvatarView<Content: View>: View {
                                     .inset(by: 0.5)
                                     .stroke(.colorBorderSubtle, lineWidth: 1.0)
                             )
-                    case .success(let image):
+                    case let .success(image):
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(width: size, height: size)
                             .clipShape(Circle())
                     }
-                    
+
                     if isEditing {
                         VStack(spacing: 0.0) {
                             Spacer()
                                 .frame(height: cameraButtonSize.spacerOffset)
-                            
+
                             HStack(spacing: 0.0) {
                                 ContactCardCameraButton(size: $cameraButtonSize)
-                                
+
                                 Spacer()
                                     .frame(width: cameraButtonSize.spacerOffset)
                             }
@@ -167,36 +160,34 @@ struct ContactCardAvatarView<Content: View>: View {
                     }
                 }
             }
-                         .disabled(!isEditing)
-                         .onChange(of: imageSelection) {
-                             if let imageSelection {
-                                 self.imageState = .loading
-                                 Task {
-                                     let imageState = await imageSelection.loadContactCardImage()
-                                     withAnimation {
-                                         self.imageState = imageState
-                                     }
-                                 }
-                             }
-                         }
-                         .buttonStyle(.borderless)
-            
+            .disabled(!isEditing)
+            .onChange(of: imageSelection) {
+                if let imageSelection {
+                    self.imageState = .loading
+                    Task {
+                        let imageState = await imageSelection.loadContactCardImage()
+                        withAnimation {
+                            self.imageState = imageState
+                        }
+                    }
+                }
+            }
+            .buttonStyle(.borderless)
         }
         .frame(width: defaultSize, height: defaultSize)
     }
-    
 }
 
 #Preview {
     @Previewable @State var imageState: ContactCardImage.State = .empty
-    @Previewable @State var name: String = "Robert Adams"
-    @Previewable @State var isEditing: Bool = true
+    @Previewable @State var name = "Robert Adams"
+    @Previewable @State var isEditing = true
 
     VStack {
         ContactCardAvatarView(isEditing: $isEditing, imageState: $imageState) {
             MonogramView(name: name)
         }
-        
+
         Button(isEditing ? "Done" : "Edit") {
             isEditing.toggle()
         }

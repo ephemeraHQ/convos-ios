@@ -85,9 +85,6 @@ explicit_type_interface:
   excluded:
     - local
 
-excluded: # paths to ignore during linting. Takes precedence over `included`.
-  - 
-
 swiftlint_version: 0.59.1
 
 implicit_return:

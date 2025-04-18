@@ -1,34 +1,27 @@
-//
-//  AppViewModel.swift
-//  Convos
-//
-//  Created by Jarod Luebbert on 4/16/25.
-//
-
-import SwiftUI
 import Combine
+import SwiftUI
 
 @Observable
 final class AppViewModel {
     enum AppState {
         case signedIn, signedOut, loading
     }
-    
+
     let authService: AuthServiceProtocol
-    private var cancellables = Set<AnyCancellable>()
-    
+    private var cancellables: Set<AnyCancellable> = .init()
+
     private(set) var appState: AppState = .loading
-    
+
     init(authService: AuthServiceProtocol = AuthService()) {
         self.authService = authService
         observeAuthState()
     }
-    
+
     private func observeAuthState() {
         authService.authStatePublisher()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] authState in
-                guard let self = self else { return }
+                guard let self else { return }
                 switch authState {
                 case .authorized:
                     self.appState = .signedIn
@@ -40,5 +33,4 @@ final class AppViewModel {
             }
             .store(in: &cancellables)
     }
-    
 }

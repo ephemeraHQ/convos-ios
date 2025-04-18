@@ -1,10 +1,3 @@
-//
-//  AppVersionView.swift
-//  Convos
-//
-//  Created by Jarod Luebbert on 4/16/25.
-//
-
 import SwiftUI
 
 enum AppVersionProvider {
@@ -21,7 +14,8 @@ enum AppIconProvider {
         guard let icons = bundle.object(forInfoDictionaryKey: "CFBundleIcons") as? [String: Any],
               let primaryIcon = icons["CFBundlePrimaryIcon"] as? [String: Any],
               let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String],
-              let iconFileName = iconFiles.last else {
+              let iconFileName = iconFiles.last
+        else {
             fatalError("Could not find icons in bundle")
         }
 
@@ -32,7 +26,7 @@ enum AppIconProvider {
 struct AppVersionView: View {
     let versionString: String
     let appIcon: String
-    
+
     init(versionString: String = AppVersionProvider.appVersion(), appIcon: String = AppIconProvider.appIcon()) {
         self.versionString = versionString
         self.appIcon = appIcon
@@ -50,7 +44,7 @@ struct AppVersionView: View {
             Group {
                 Text("Convos ")
                     .bold() +
-                Text("v\(versionString)")
+                    Text("v\(versionString)")
             }
             .multilineTextAlignment(.center)
             .font(.caption)

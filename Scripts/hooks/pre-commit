@@ -67,17 +67,7 @@ info "SwiftLint and SwiftFormat are installed"
 
 # Get list of staged Swift files
 info "Checking for staged Swift files..."
-set +e
-SWIFT_FILES=$(git diff --cached --name-only --diff-filter=ACMR 2>&1)
-GIT_STATUS=$?
-set -e
-
-if [ $GIT_STATUS -ne 0 ]; then
-    error "Failed to get staged files: $SWIFT_FILES"
-    exit 1
-fi
-
-SWIFT_FILES=$(echo "$SWIFT_FILES" | grep "\.swift$" || true)
+SWIFT_FILES=$(git diff --diff-filter=d --staged --name-only | grep -e '\(.*\).swift$' || true)
 
 if [ -z "$SWIFT_FILES" ]; then
     info "No Swift files staged for commit"
@@ -87,18 +77,17 @@ fi
 info "Found staged Swift files:"
 echo "$SWIFT_FILES"
 
+# Run SwiftFormat on staged files and add them back to git
+info "Running SwiftFormat..."
+echo "$SWIFT_FILES" | while read line; do
+    swiftformat "${line}"
+    git add "$line"
+done
+
 # Run SwiftLint on staged files
 info "Running SwiftLint..."
 if ! swiftlint lint --quiet $SWIFT_FILES; then
     error "SwiftLint found issues"
-    error "Please fix the issues before committing"
-    exit 1
-fi
-
-# Run SwiftFormat on staged files
-info "Running SwiftFormat..."
-if ! swiftformat --lint $SWIFT_FILES; then
-    error "SwiftFormat found issues"
     error "Please fix the issues before committing"
     exit 1
 fi

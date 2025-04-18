@@ -1,10 +1,3 @@
-//
-//  ViewExtensions.swift
-//  Convos
-//
-//  Created by Jarod Luebbert on 4/15/25.
-//
-
 import Foundation
 import SwiftUI
 
@@ -12,7 +5,7 @@ import SwiftUI
 
 extension View {
     @ViewBuilder
-    func applyIf<T: View>(_ condition: Bool, transform: (Self) -> T) -> some View {
+    func applyIf(_ condition: Bool, transform: (Self) -> some View) -> some View {
         if condition {
             transform(self)
         } else {

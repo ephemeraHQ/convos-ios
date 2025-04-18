@@ -1,17 +1,10 @@
-//
-//  LandingViewController.swift
-//  Convos
-//
-//  Created by Joe on 4/11/25.
-//
-
 import AnchorKit
 import SwiftUI
 import UIKit
 
 final class RootViewController: UIViewController {
-    let authService = AuthService()
-    
+    let authService: AuthService = .init()
+
     override func viewDidLoad() {
         super.viewDidLoad()
         let rootView = RootView(authService: authService)

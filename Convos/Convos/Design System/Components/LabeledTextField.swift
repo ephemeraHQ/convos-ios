@@ -1,10 +1,3 @@
-//
-//  LabeledTextField.swift
-//  Convos
-//
-//  Created by Jarod Luebbert on 4/15/25.
-//
-
 import SwiftUI
 
 struct LabeledTextField: View {
@@ -38,6 +31,9 @@ struct LabeledTextField: View {
 
 #Preview {
     @Previewable @FocusState var isFocused: Bool
-    LabeledTextField(label: "Name", prompt: "Nice to meet you", textFieldBorderColor: .colorBorderSubtle, text: .constant(""),
+    LabeledTextField(label: "Name",
+                     prompt: "Nice to meet you",
+                     textFieldBorderColor: .colorBorderSubtle,
+                     text: .constant(""),
                      isFocused: $isFocused)
 }

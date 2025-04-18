@@ -1,34 +1,27 @@
-//
-//  OnboardingView.swift
-//  Convos
-//
-//  Created by Joe on 4/9/25.
-//
-
 import SwiftUI
 
 struct OnboardingView: View {
     @State var viewModel: OnboardingViewModel
     @State var presentingCreateContactCard: Bool = false
     @State var presentingImportContactCard: Bool = false
-    
+
     init(authService: AuthServiceProtocol) {
         _viewModel = State(initialValue: .init(authService: authService))
     }
-    
+
     var body: some View {
         VStack(spacing: DesignConstants.Spacing.step4x) {
-            
             HStack(spacing: DesignConstants.Spacing.step2x) {
                 Circle()
                     .foregroundStyle(.colorOrange)
-                    .frame(width: DesignConstants.ImageSizes.smallAvatar, height: DesignConstants.ImageSizes.smallAvatar)
+                    .frame(width: DesignConstants.ImageSizes.smallAvatar,
+                           height: DesignConstants.ImageSizes.smallAvatar)
                 Text("Convos")
                     .font(.subheadline)
                     .foregroundStyle(.colorTextPrimary)
-                
+
                 Spacer()
-                
+
                 Button("Sign in") {
                     viewModel.signIn()
                 }
@@ -36,29 +29,29 @@ struct OnboardingView: View {
             }
             .padding(.leading, DesignConstants.Spacing.step3x)
             .padding(.top, 10.0)
-            
+
             Spacer()
-            
+
             VStack(spacing: DesignConstants.Spacing.step4x) {
                 Text("Not another chat app")
                     .font(.system(size: 56.0, weight: .bold))
                     .multilineTextAlignment(.center)
-                
+
                 Text("Super secure · Decentralized · Universal")
                     .font(.subheadline)
                     .foregroundStyle(.colorTextSecondary)
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, DesignConstants.Spacing.stepX)
-            
+
             Spacer()
-            
+
             VStack(spacing: DesignConstants.Spacing.step4x) {
                 Button("Create your Contact Card") {
                     presentingCreateContactCard = true
                 }
                 .convosButtonStyle(.rounded(fullWidth: true))
-                
+
                 LegalView()
             }
             .padding(.horizontal, DesignConstants.Spacing.step3x)
@@ -72,8 +65,8 @@ struct OnboardingView: View {
                                   nameIsValid: $viewModel.nameIsValid,
                                   nameError: $viewModel.nameError,
                                   importCardAction: {
-                presentingImportContactCard = true
-            }, submitAction: viewModel.createContactCard)
+                                      presentingImportContactCard = true
+                                  }, submitAction: viewModel.createContactCard)
         }
     }
 }
@@ -82,10 +75,10 @@ private struct LegalView: View {
     var body: some View {
         Group {
             Text("When you create a contact card, you agree to the Convos ")
-            + Text("[Terms](https://xmtp.org/terms)")
+                + Text("[Terms](https://xmtp.org/terms)")
                 .underline()
-            + Text(" and ")
-            + Text("[Privacy Policy](https://xmtp.org/privacy)")
+                + Text(" and ")
+                + Text("[Privacy Policy](https://xmtp.org/privacy)")
                 .underline()
         }
         .font(.subheadline)

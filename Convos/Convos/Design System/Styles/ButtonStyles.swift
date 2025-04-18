@@ -1,10 +1,3 @@
-//
-//  ButtonStyles.swift
-//  Convos
-//
-//  Created by Jarod Luebbert on 4/16/25.
-//
-
 import SwiftUI
 
 enum ConvosButtonStyleType {
@@ -14,19 +7,19 @@ enum ConvosButtonStyleType {
 extension Button {
     func convosButtonStyle(_ styleType: ConvosButtonStyleType) -> some View {
         switch styleType {
-        case .outline(let fullWidth):
+        case let .outline(fullWidth):
             return AnyView(self.buttonStyle(OutlineButtonStyle(fullWidth: fullWidth)))
         case .text:
             return AnyView(self.buttonStyle(TextButtonStyle()))
-        case .rounded(let fullWidth):
+        case let .rounded(fullWidth):
             return AnyView(self.buttonStyle(RoundedButtonStyle(fullWidth: fullWidth)))
         }
     }
 }
 
 struct RoundedButtonStyle: ButtonStyle {
-    @Environment(\.isEnabled) private var isEnabled
-    
+    @Environment(\.isEnabled) private var isEnabled: Bool
+
     let fullWidth: Bool
 
     func makeBody(configuration: Configuration) -> some View {
@@ -47,7 +40,7 @@ struct RoundedButtonStyle: ButtonStyle {
 }
 
 struct TextButtonStyle: ButtonStyle {
-    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.isEnabled) private var isEnabled: Bool
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -62,8 +55,8 @@ struct TextButtonStyle: ButtonStyle {
 }
 
 struct OutlineButtonStyle: ButtonStyle {
-    @Environment(\.isEnabled) private var isEnabled
-    
+    @Environment(\.isEnabled) private var isEnabled: Bool
+
     let fullWidth: Bool
 
     func makeBody(configuration: Configuration) -> some View {
@@ -91,20 +84,20 @@ struct OutlineButtonStyle: ButtonStyle {
         Button("Outline Button Style - Disabled") {}
             .convosButtonStyle(.outline(fullWidth: true))
             .disabled(true)
-        
+
         Button("Outline Button Style - Enabled") {}
             .convosButtonStyle(.outline(fullWidth: true))
-        
+
         Button("Text Button Style - Disabled") {}
             .convosButtonStyle(.text)
             .disabled(true)
-        
+
         Button("Text Button Style") {}
             .convosButtonStyle(.text)
-        
+
         Button("Rounded Button Style") {}
             .convosButtonStyle(.rounded(fullWidth: true))
-        
+
         Button("Rounded Button Style - Disabled") {}
             .convosButtonStyle(.rounded(fullWidth: true))
             .disabled(true)
