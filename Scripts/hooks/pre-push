@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+
+# Exit on any error and ensure pipeline failures are caught
+set -e
+set -o pipefail
+
+# A hook script to verify what is about to be pushed.  Called by "git push"
+# after it has checked the remote status, but before anything has been pushed.
+# If this script exits with a non-zero status nothing will be pushed.
+#
+# This hook is called with the following parameters:
+#
+# $1 -- Name of the remote to which the push is being done
+# $2 -- URL to which the push is being done
+#
+# If pushing without using a named remote those arguments will be equal.
+#
+# Information about the commits which are being pushed is supplied as lines to
+# the standard input in the form:
+#
+#   <local ref> <local sha1> <remote ref> <remote sha1>
+#
+
+# Check if SwiftLint is installed
+if ! command -v swiftlint &> /dev/null; then
+	echo "❌ SwiftLint is not installed"
+	echo "Please install SwiftLint using:"
+	echo "  brew install swiftlint"
+	exit 1
+fi
+
+# Do not push if SwiftLint warnings
+z40=0000000000000000000000000000000000000000
+
+IFS=' '
+while read -r _ local_sha _ _
+do
+	if [ "$local_sha" = $z40 ]
+	then
+		# Handle delete
+		exit 0
+	else
+		echo "🔎 Linting before pushing"
+		git_root="$(git rev-parse --show-toplevel)"
+		swiftlint lint --path "$git_root" --strict
+		lint_success=$?
+
+		echo ""
+		echo "Done linting"
+		if [ $lint_success -eq 0 ]
+		then
+			echo "✅ No SwiftLint violations on pre-push, pushing!"
+			echo ""
+		else
+			echo ""
+			echo "❌ Found SwiftLint violations, fix them before pushing."
+			exit 1
+		fi
+	fi
+done
+
+# Clean up any alpha/beta tags
+TAGS="$(git tag | grep 'b\|a' | xargs)"
+for tag in $TAGS; do
+	git tag -d "$tag"
+done
+
+exit 0

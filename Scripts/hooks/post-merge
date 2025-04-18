@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+# post-merge
+#
+# https://git-scm.com/docs/githooks#_post_merge
+
+git_root="$(git rev-parse --show-toplevel)"
+
+# Git
+cd "${git_root}" && git submodule update --init --recursive
+
+# Install gems via bundler
+bundle install
+
+# generate secrets from .env file to make life simpler for devs
+./Scripts/generate-secrets.sh

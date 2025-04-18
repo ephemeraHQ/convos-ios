@@ -1,0 +1,7 @@
+--exclude **Generated**,**Config**,**Scripts**
+
+--stripunusedargs closure-only
+--trimwhitespace always
+--xcodeindentation disabled
+--disable redundantSelf,spaceInsideComments,specifiers,redundantReturn,numberFormatting
+--commas always

@@ -1,0 +1,137 @@
+opt_in_rules:
+  - array_init
+  - closure_spacing
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - contains_over_first_not_nil
+  - contains_over_range_nil_comparison
+  - discouraged_object_literal
+  - empty_collection_literal
+  - empty_count
+  - empty_string
+  - explicit_init
+  - explicit_type_interface
+  - file_header
+  - first_where
+  - flatmap_over_map_reduce
+  - force_unwrapping
+  - identical_operands
+  - implicit_return
+  - implicitly_unwrapped_optional
+  - joined_default_parameter
+  - last_where
+  - legacy_multiple
+  - legacy_random
+  - line_length
+  - literal_expression_end_indentation
+  - lower_acl_than_parent
+  - modifier_order
+  - multiline_parameters
+  - nimble_operator
+  - nslocalizedstring_key
+  - operator_usage_whitespace
+  - optional_enum_case_matching
+  - orphaned_doc_comment
+  - overridden_super_call
+  - override_in_extension
+  - pattern_matching_keywords
+  - prefer_self_type_over_type_of_self
+  - private_action
+  - private_over_fileprivate
+  - prohibited_super_call
+  - quick_discouraged_call
+  - quick_discouraged_focused_test
+  - quick_discouraged_pending_test
+  - raw_value_for_camel_cased_codable_enum
+  - redundant_nil_coalescing
+  - single_test_class
+  - sorted_first_last
+  - sorted_imports
+  - toggle_bool
+  - trailing_closure
+  - unneeded_parentheses_in_closure_argument
+  - unowned_variable_capture
+  - untyped_error_in_catch
+  - vertical_parameter_alignment_on_call
+  - vertical_whitespace_opening_braces
+  - vertical_whitespace_closing_braces
+  - yoda_condition
+
+disabled_rules:
+  - trailing_comma
+  - identifier_name
+  - prohibited_interface_builder
+  - file_length
+  - no_space_in_method_call
+  - enum_case_associated_values_count
+  - type_name
+
+type_body_length: 625
+
+function_body_length: 125
+function_parameter_count: 6
+nesting:
+  type_level: 3
+
+cyclomatic_complexity:
+  ignores_case_statements: true
+  warning: 14
+  error: 15
+
+file_header:
+  forbidden_string: Created
+
+explicit_type_interface:
+  excluded:
+    - local
+
+excluded: # paths to ignore during linting. Takes precedence over `included`.
+  - 
+
+swiftlint_version: 0.59.1
+
+implicit_return:
+  included:
+    - closure
+
+trailing_closure:
+  only_single_muted_parameter: true
+
+modifier_order:
+  preferred_modifier_order:
+    - acl
+    - setterACL
+    - override
+    - dynamic
+    - mutators
+    - lazy
+    - final
+    - required
+    - convenience
+    - typeMethods
+    - owned
+
+custom_rules:
+  enum_constants:
+    regex: "enum Constants"
+    name: "Constants enum"
+    message: "Name your constants enum 'Constant'"
+    severity: warning
+
+  struct_constant:
+    regex: "struct Constant"
+    name: "Constants struct"
+    message: "Put your constants in an 'enum Constant'"
+    severity: warning
+
+  constant_enum_at_bottom:
+    regex: '\{\s+private enum Constant'
+    name: "Constants enum at the bottom of scope"
+    message: "Put your constants enum at the bottom of the scope"
+    severity: warning
+
+  no_assertions:
+    regex: '^\h*(assert|assertionFailure|preconditionFailure|precondition|dispatchPrecondition)\('
+    name: "Assertions In Non-Test Code"
+    message: "Log an error using Sentry or something else rather than using assertions in non-test code"
+    severity: warning

@@ -9,7 +9,7 @@ setup: ## Setup dependencies and developer environment
 
 .PHONY: secrets
 secrets: ## Generate Secrets.swift from .env
-	./Scripts/generate_secrets.sh
+	./Scripts/generate-secrets.sh
 
 .PHONY: upload_symbols
 upload_symbols: ## Upload symbols to Sentry

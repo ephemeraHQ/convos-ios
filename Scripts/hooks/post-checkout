@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+# post-checkout
+#
+# https://git-scm.com/docs/githooks#_post_checkout
+
+git_root="$(git rev-parse --show-toplevel)"
+
+# if this is a file checkout then do nothing
+if [ "${3}" == "0" ]; then exit; fi
+
+# if same commit before and after checkout then do nothing
+if [ "${1}" == "${2}" ]; then exit; fi
+
+# Git
+cd "${git_root}" && git submodule update --init --recursive
+
+# Install gems via bundler
+bundle install
+
+# generate secrets from .env file to make life simpler for devs
+./Scripts/generate-secrets.sh
