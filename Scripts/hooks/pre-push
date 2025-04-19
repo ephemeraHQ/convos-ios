@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-# Exit on any error and ensure pipeline failures are caught
-set -e
-set -o pipefail
-
 # A hook script to verify what is about to be pushed.  Called by "git push"
 # after it has checked the remote status, but before anything has been pushed.
 # If this script exits with a non-zero status nothing will be pushed.
@@ -42,7 +38,7 @@ do
 	else
 		echo "🔎 Linting before pushing"
 		git_root="$(git rev-parse --show-toplevel)"
-		swiftlint lint --strict --config "$git_root/Convos/.swiftlint.yml" "$git_root/Convos"
+		swiftlint lint --strict --config "$git_root/.swiftlint.yml" "$git_root"
 		lint_success=$?
 
 		echo ""
@@ -59,10 +55,7 @@ do
 	fi
 done
 
-# Clean up any alpha/beta tags
-TAGS="$(git tag | grep 'b\|a' | xargs)"
-for tag in $TAGS; do
-	git tag -d "$tag"
-done
+# Exit on any error and ensure pipeline failures are caught
+set -o errexit -o nounset
 
 exit 0

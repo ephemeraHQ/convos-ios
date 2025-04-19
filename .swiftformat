@@ -5,3 +5,5 @@
 --xcodeindentation disabled
 --disable redundantSelf,spaceInsideComments,specifiers,redundantReturn,numberFormatting
 --commas always
+--rules braces
+--allman false

@@ -4,7 +4,7 @@ require 'xcodeproj'
 
 # setup paths for the project
 repo_root = Dir.pwd
-project_path = File.expand_path('Convos/Convos.xcodeproj', repo_root)
+project_path = File.expand_path('Convos.xcodeproj', repo_root)
 
 # ensure project exists
 unless File.exist?(project_path)
