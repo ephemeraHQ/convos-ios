@@ -86,7 +86,7 @@ done
 
 # Run SwiftLint on staged files
 info "Running SwiftLint..."
-if ! swiftlint lint --quiet $SWIFT_FILES; then
+if ! swiftlint lint $SWIFT_FILES; then
     error "SwiftLint found issues"
     error "Please fix the issues before committing"
     exit 1

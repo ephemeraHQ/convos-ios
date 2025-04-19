@@ -44,7 +44,7 @@ fi
 echo "Current version: $VERSION"
 
 # check if release branch already exists
-if git show-ref --verify --quiet "refs/heads/release/$VERSION"; then
+if git show-ref --verify "refs/heads/release/$VERSION"; then
   echo "❌ Release branch 'release/$VERSION' already exists."
   exit 1
 fi
