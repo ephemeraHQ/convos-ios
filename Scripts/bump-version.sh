@@ -5,7 +5,7 @@
 
 # this script can be called from the command line with one argument
 # (argument is optional from terminal but is required and will be interactively prompted for if not provided):
-# 1. the version to bump to
+# 1. the version to bump to (format: Major.Minor.Patch)
 
 # check git status to ensure clean working tree
 # this ensures that the commit contains the version bump and nothing else.
@@ -41,12 +41,15 @@ fi
 
 # update Xcode project version
 if validate_version "$VERSION_INPUT"; then
+  # Append .1 as the build number
+  FULL_VERSION="${VERSION_INPUT}.1"
+  
   # Call sync-versions.sh with the new version
   ./Scripts/sync-versions.sh "$VERSION_INPUT"
 
   # check that tag for this version does not already exist
-  if git rev-parse "$VERSION_INPUT" >/dev/null 2>&1; then
-    echo "❌ Tag $VERSION_INPUT already exists. Please delete the tag and try again."
+  if git rev-parse "$FULL_VERSION" >/dev/null 2>&1; then
+    echo "❌ Tag $FULL_VERSION already exists. Please delete the tag and try again."
     exit 1
   fi
 
@@ -59,9 +62,9 @@ if validate_version "$VERSION_INPUT"; then
 
   # commit the version bump
   git add Convos.xcodeproj
-  git commit -m "Bump version to $VERSION_INPUT"
+  git commit -m "Bump version to $VERSION_INPUT Build 1"
   # annotate with a git tag for the version
-  git tag -a "$VERSION_INPUT" -m "(Automated) Bump version to $VERSION_INPUT"
+  git tag -a "$FULL_VERSION" -m "(Automated) Bump version to $VERSION_INPUT Build 1"
 
   # ask dev if they want to push the commit and tag
   read -p "Do you want to push the commit and tag? (y/n): " SHOULD_PUSH_COMMIT
@@ -73,7 +76,7 @@ if validate_version "$VERSION_INPUT"; then
   # push the commit and tag to the remote
   current_branch=$(git rev-parse --abbrev-ref HEAD)
   git push -u origin "$current_branch"
-  git push origin "$VERSION_INPUT"
+  git push origin "$FULL_VERSION"
 
-  echo "🏁 Created commit and tag for version $VERSION_INPUT"
+  echo "🏁 Created commit and tag for version $VERSION_INPUT Build 1"
 fi

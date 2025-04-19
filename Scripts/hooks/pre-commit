@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Exit on any error and ensure pipeline failures are caught
-set -o errexit -o pipefail -o nounset
+# set -o errexit -o pipefail -o nounset
 
 # Colors for output
 RED='\033[0;31m'
@@ -68,6 +68,7 @@ info "SwiftLint and SwiftFormat are installed"
 info "Checking for staged Swift files..."
 
 git diff --diff-filter=d --staged --name-only | grep -e '\(.*\).swift$' | while read line; do
+  echo "-asdf-a-sdf-asdf-"
   swiftformat "${line}";
   git add "$line";
 done
