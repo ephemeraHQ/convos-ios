@@ -37,7 +37,7 @@ echo "Current build numbers:"
 
 # commit the build number bump
 git add Convos.xcodeproj
-git commit -m "Bump build from $OLD_BUILD_NUMBER to $NEW_BUILD_NUMBER"
+git commit -m "bump build from $OLD_BUILD_NUMBER to $NEW_BUILD_NUMBER"
 
 # ask dev if they want to push the commit
 # - set it manually for now. we don't need to ask the dev.
@@ -52,6 +52,7 @@ CURRENT_VERSION=$(./Scripts/get-version.sh)
 
 # Create tag with full version (Major.Minor.Patch.Build)
 FULL_VERSION="${CURRENT_VERSION}.${NEW_BUILD_NUMBER}"
-git tag -a "$FULL_VERSION" -m "Build $NEW_BUILD_NUMBER"
+git tag -a "$FULL_VERSION" -m "(Automated) Bump build to $NEW_BUILD_NUMBER"
+git push origin "$FULL_VERSION"
 
 echo "🏁 Created commit and tag $FULL_VERSION for build number bump from $OLD_BUILD_NUMBER to $NEW_BUILD_NUMBER" 

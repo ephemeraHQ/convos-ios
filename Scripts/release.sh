@@ -65,6 +65,9 @@ git checkout -b "release/$VERSION"
 
 # push the release branch to origin
 echo "Pushing release branch to origin..."
-# git push -u origin "release/$VERSION"
+git push -u origin "release/$VERSION"
+
+# switch back to main branch
+git checkout main
 
 echo "🏁 Created and pushed release branch 'release/$VERSION'" 

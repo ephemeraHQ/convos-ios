@@ -67,11 +67,11 @@ if validate_version "$VERSION_INPUT"; then
   git tag -a "$FULL_VERSION" -m "(Automated) Bump version to $VERSION_INPUT Build 1"
 
   # ask dev if they want to push the commit and tag
-  read -p "Do you want to push the commit and tag? (y/n): " SHOULD_PUSH_COMMIT
-  if [[ "$SHOULD_PUSH_COMMIT" != "y" && "$SHOULD_PUSH_COMMIT" != "Y" ]]; then
-    echo "❗️ Skipping push of commit and tag."
-    exit 0
-  fi
+  # read -p "Do you want to push the commit and tag? (y/n): " SHOULD_PUSH_COMMIT
+  # if [[ "$SHOULD_PUSH_COMMIT" != "y" && "$SHOULD_PUSH_COMMIT" != "Y" ]]; then
+  #   echo "❗️ Skipping push of commit and tag."
+  #   exit 0
+  # fi
 
   # push the commit and tag to the remote
   current_branch=$(git rev-parse --abbrev-ref HEAD)
