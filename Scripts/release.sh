@@ -35,13 +35,17 @@ if [ $? -ne 0 ]; then
 fi
 
 # Get current version from Xcode project
-VERSION=$(./Scripts/get-version.sh)
-if [ -z "$VERSION" ]; then
+FULL_VERSION=$(./Scripts/get-version.sh)
+if [ -z "$FULL_VERSION" ]; then
   echo "❌ Could not determine current version from Xcode project"
   exit 1
 fi
 
-echo "Current version: $VERSION"
+# Extract major.minor version
+VERSION=$(echo "$FULL_VERSION" | cut -d. -f1,2)
+
+echo "Current version: $FULL_VERSION"
+echo "Release branch version: $VERSION"
 
 # check if release branch already exists
 if git show-ref --verify "refs/heads/release/$VERSION"; then
@@ -59,16 +63,8 @@ fi
 echo "Creating release branch 'release/$VERSION'..."
 git checkout -b "release/$VERSION"
 
-# update version and reset build number
-echo "Updating version to $VERSION and resetting build number..."
-./Scripts/sync-versions.sh "$VERSION"
-
-# commit the version update
-git add Convos.xcodeproj
-git commit -m "Release version $VERSION"
-
 # push the release branch to origin
 echo "Pushing release branch to origin..."
-git push -u origin "release/$VERSION"
+# git push -u origin "release/$VERSION"
 
 echo "🏁 Created and pushed release branch 'release/$VERSION'" 
