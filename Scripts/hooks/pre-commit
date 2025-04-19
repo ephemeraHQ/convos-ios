@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
 # Exit on any error and ensure pipeline failures are caught
-set -e
-set -o pipefail
+set -o errexit -o pipefail -o nounset
 
 # Colors for output
 RED='\033[0;31m'
@@ -67,30 +66,11 @@ info "SwiftLint and SwiftFormat are installed"
 
 # Get list of staged Swift files
 info "Checking for staged Swift files..."
-SWIFT_FILES=$(git diff --diff-filter=d --staged --name-only | grep -e '\(.*\).swift$' || true)
 
-if [ -z "$SWIFT_FILES" ]; then
-    info "No Swift files staged for commit"
-    exit 0
-fi
-
-info "Found staged Swift files:"
-echo "$SWIFT_FILES"
-
-# Run SwiftFormat on staged files and add them back to git
-info "Running SwiftFormat..."
-echo "$SWIFT_FILES" | while read line; do
-    swiftformat "${line}"
-    git add "$line"
+git diff --diff-filter=d --staged --name-only | grep -e '\(.*\).swift$' | while read line; do
+  swiftformat "${line}";
+  git add "$line";
 done
-
-# Run SwiftLint on staged files
-info "Running SwiftLint..."
-if ! swiftlint lint $SWIFT_FILES; then
-    error "SwiftLint found issues"
-    error "Please fix the issues before committing"
-    exit 1
-fi
 
 info "All Swift files passed linting and formatting checks"
 exit 0

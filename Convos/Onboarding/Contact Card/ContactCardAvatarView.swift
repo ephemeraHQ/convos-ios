@@ -120,8 +120,7 @@ struct ContactCardAvatarView<Content: View>: View {
             let size: CGFloat = min(reader.size.width, reader.size.height)
             PhotosPicker(selection: $imageSelection,
                          matching: .images,
-                         photoLibrary: .shared())
-            {
+                         photoLibrary: .shared()) {
                 ZStack {
                     switch self.imageState {
                     case .loading:
