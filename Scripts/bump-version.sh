@@ -58,7 +58,7 @@ if validate_version "$VERSION_INPUT"; then
   fi
 
   # commit the version bump
-  git add Convos/Convos.xcodeproj
+  git add Convos.xcodeproj
   git commit -m "Bump version to $VERSION_INPUT"
   # annotate with a git tag for the version
   git tag -a "$VERSION_INPUT" -m "(Automated) Bump version to $VERSION_INPUT"

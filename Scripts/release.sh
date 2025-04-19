@@ -64,7 +64,7 @@ echo "Updating version to $VERSION and resetting build number..."
 ./Scripts/sync-versions.sh "$VERSION"
 
 # commit the version update
-git add Convos/Convos.xcodeproj
+git add Convos.xcodeproj
 git commit -m "Release version $VERSION"
 
 # push the release branch to origin

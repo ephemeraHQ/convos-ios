@@ -29,7 +29,7 @@ echo "Current build numbers:"
 ./Scripts/get-build.sh
 
 # commit the build number bump
-git add Convos/Convos.xcodeproj
+git add Convos.xcodeproj
 git commit -m "Bump build numbers"
 
 # ask dev if they want to push the commit
