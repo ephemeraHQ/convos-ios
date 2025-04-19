@@ -47,12 +47,13 @@ git commit -m "bump build from $OLD_BUILD_NUMBER to $NEW_BUILD_NUMBER"
 #   exit 0
 # fi
 
-# Get the current version from the project
+# Get the current version from the project (format: Major.Minor.Patch.Build)
 CURRENT_VERSION=$(./Scripts/get-version.sh)
 
 # Create tag with full version (Major.Minor.Patch.Build)
-FULL_VERSION="${CURRENT_VERSION}.${NEW_BUILD_NUMBER}"
+FULL_VERSION="${CURRENT_VERSION}"
 git tag -a "$FULL_VERSION" -m "(Automated) Bump build to $NEW_BUILD_NUMBER"
 git push origin "$FULL_VERSION"
+git push origin main
 
 echo "🏁 Created commit and tag $FULL_VERSION for build number bump from $OLD_BUILD_NUMBER to $NEW_BUILD_NUMBER" 

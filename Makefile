@@ -25,7 +25,7 @@ bump-build: ## Increment build number by 1 in Xcode project
 	./Scripts/bump-build.sh
 
 .PHONY: release
-release: ## Create a release branch for a given version
-	./Scripts/release.sh
+release: ## Create a release branch for a given version. pass env=production, etc.
+	./Scripts/release.sh ENV=$(env)
 
 .PHONY: secrets upload_symbols bump-version bump-build release
