@@ -55,6 +55,10 @@ if [ ! "${CI}" = true ]; then
   defaults write com.apple.dt.Xcode DVTTextEditorTrimWhitespaceOnlyLines -bool true
   defaults write com.apple.dt.Xcode DVTTextPageGuideLocation -int 120
   defaults write com.apple.dt.Xcode ShowBuildOperationDuration -bool true
+
+  # Skip fingerprint validation for plugins and macros in Xcode (like SwiftLintBuildToolPlugin)
+  defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidatation -bool YES
+  defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES
 fi
 
 ################################################################################
