@@ -1,0 +1,79 @@
+---
+format_version: '23'
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+project_type: ios
+workflows:
+  release:
+    summary: Create an IPA file to install your app on a device or share it with your
+      team.
+    description: The workflow will first clone your Git repository, cache and install
+      your project's dependencies if any, export an IPA file from the project and
+      save it.
+    steps:
+    - activate-ssh-key@4: {}
+    - git-clone@8: {}
+    - file-downloader@1:
+        inputs:
+        - source: "$BITRISEIO_env_URL"
+        - file_permission: 600
+        - destination: "./.env"
+        title: "\U0001F510 Load .env file (SECRETS)"
+    - script@1:
+        title: "\U0001F510 Make Secrets"
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            # fail if any commands fails
+            set -e
+            # make pipelines' return status equal the last command to exit with a non-zero status, or zero if all commands exit successfully
+            set -o pipefail
+            # debug log
+            set -x
+
+            make secrets
+    - xcode-archive@5:
+        inputs:
+        - project_path: "$BITRISE_PROJECT_PATH"
+        - scheme: "$BITRISE_SCHEME"
+        - distribution_method: "$BITRISE_DISTRIBUTION_METHOD"
+        - automatic_code_signing: api-key
+        - cache_level: none
+        - verbose_log: 'yes'
+        - xcodebuild_options: "-skipPackagePluginValidation -skipMacroValidation"
+    - deploy-to-itunesconnect-application-loader@1: {}
+    - deploy-to-bitrise-io@2: {}
+    - brew-install@1:
+        inputs:
+        - packages: sentry-cli
+        - verbose_log: 'yes'
+        title: Install Sentry CLI
+    - script@1:
+        title: Upload Symbols to Sentry
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            # fail if any commands fails
+            set -e
+            # make pipelines' return status equal the last command to exit with a non-zero status, or zero if all commands exit successfully
+            set -o pipefail
+            # debug log
+            set -x
+
+            # run bash script (@joe: can also run ruby ./path-to/my-file.rb)
+            bash ./Scripts/upload_symbols.sh
+    triggers:
+      push:
+      - branch: release/*
+meta:
+  bitrise.io:
+    stack: osx-xcode-16.3.x
+    machine_type_id: g2-m1.4core
+app:
+  envs:
+  - BITRISE_PROJECT_PATH: Convos.xcodeproj
+    opts:
+      is_expand: false
+  - BITRISE_SCHEME: Convos
+    opts:
+      is_expand: false
+  - BITRISE_DISTRIBUTION_METHOD: app-store
