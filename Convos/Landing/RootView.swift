@@ -2,11 +2,13 @@ import SwiftUI
 
 struct RootView: View {
     private let authService: AuthServiceProtocol
-
+    private let analyticsService: AnalyticsServiceProtocol
+    
     @State var viewModel: AppViewModel
-
-    init(authService: AuthServiceProtocol) {
+    
+    init(authService: AuthServiceProtocol, analyticsService: AnalyticsServiceProtocol) {
         self.authService = authService
+        self.analyticsService = analyticsService
         _viewModel = .init(initialValue: .init(authService: authService))
     }
 
@@ -27,5 +29,6 @@ struct RootView: View {
 }
 
 #Preview {
-    RootView(authService: MockAuthService())
+    RootView(authService: MockAuthService(),
+             analyticsService: MockAnalyticsService())
 }
