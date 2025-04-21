@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 
 final class RootViewController: UIViewController {
-    let authService = PrivyAuthService()
+    let authService = MockAuthService()
     let analyticsService = PosthogAnalyticsService.shared
     
     override func viewDidLoad() {
