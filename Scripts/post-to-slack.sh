@@ -3,6 +3,9 @@
 # Exit on any error
 set -e
 
+# Load environment variables
+source ./Scripts/load-env.sh
+
 # Check if SLACK_URL_WITH_KEY is set
 if [ -z "$SLACK_URL_WITH_KEY" ]; then
     echo "❌ SLACK_URL_WITH_KEY environment variable is not set"

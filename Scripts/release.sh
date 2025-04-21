@@ -4,6 +4,9 @@
 set -e
 set -o pipefail
 
+# Load environment variables
+source ./Scripts/load-env.sh
+
 # this script creates a release branch for the current version
 # Usage: ./release.sh
 
