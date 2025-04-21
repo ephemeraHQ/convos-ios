@@ -1,25 +1,25 @@
 import Combine
 import Foundation
 
-enum AuthState {
+enum AuthServiceState {
     case unknown, authorized, unauthorized
 }
 
 protocol AuthServiceProtocol {
-    var state: AuthState { get }
+    var state: AuthServiceState { get }
 
     func signIn() async throws
     func signOut() async throws
 
-    func authStatePublisher() -> AnyPublisher<AuthState, Never>
+    func authStatePublisher() -> AnyPublisher<AuthServiceState, Never>
 }
 
 class AuthService: AuthServiceProtocol {
-    var state: AuthState {
+    var state: AuthServiceState {
         authStateSubject.value
     }
 
-    private var authStateSubject: CurrentValueSubject<AuthState, Never> = .init(.unknown)
+    private var authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
     init() {
         authStateSubject.send(.unauthorized)
@@ -33,18 +33,18 @@ class AuthService: AuthServiceProtocol {
         authStateSubject.send(.unauthorized)
     }
 
-    func authStatePublisher() -> AnyPublisher<AuthState, Never> {
+    func authStatePublisher() -> AnyPublisher<AuthServiceState, Never> {
         return authStateSubject.eraseToAnyPublisher()
     }
 }
 
 class MockAuthService: AuthServiceProtocol {
-    var state: AuthState {
+    var state: AuthServiceState {
         authStateSubject.value
     }
 
-    private var authStateSubject: CurrentValueSubject<AuthState, Never> = .init(.unknown)
-
+    private var authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
+    
     init() {
         authStateSubject.send(.unauthorized)
     }
@@ -56,8 +56,8 @@ class MockAuthService: AuthServiceProtocol {
     func signOut() async throws {
         authStateSubject.send(.unauthorized)
     }
-
-    func authStatePublisher() -> AnyPublisher<AuthState, Never> {
+    
+    func authStatePublisher() -> AnyPublisher<AuthServiceState, Never> {
         return authStateSubject.eraseToAnyPublisher()
     }
 }

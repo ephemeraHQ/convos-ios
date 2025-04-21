@@ -12,7 +12,7 @@ final class AppViewModel {
 
     private(set) var appState: AppState = .loading
 
-    init(authService: AuthServiceProtocol = AuthService()) {
+    init(authService: AuthServiceProtocol = PrivyAuthService()) {
         self.authService = authService
         observeAuthState()
     }
