@@ -17,11 +17,14 @@ fi
 echo "------Args: $@"
 echo "------ENV: $ENV"
 
-# Parse key=value argument
+# Parse key=value arguments
 for arg in "$@"; do
     case "$arg" in
         ENV=*)
             ENV="${arg#ENV=}"  # Override default if ENV is provided
+            ;;
+        post_slack=*)
+            POST_SLACK="${arg#post_slack=}"  # Set post_slack flag
             ;;
     esac
 done
@@ -90,4 +93,10 @@ git push -u origin "release/$VERSION/$ENV-$FULL_VERSION"
 # switch back to main branch
 git checkout main
 
-echo "🏁 Created and pushed release branch 'release/$VERSION/$ENV-$FULL_VERSION'" 
+echo "🏁 Created and pushed release branch 'release/$VERSION/$ENV-$FULL_VERSION'"
+
+# Post to Slack if requested
+if [ "$POST_SLACK" = "true" ]; then
+    echo "Posting release notification to Slack..."
+    ./Scripts/post-to-slack.sh
+fi 

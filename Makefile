@@ -26,6 +26,10 @@ bump-build: ## Increment build number by 1 in Xcode project
 
 .PHONY: release
 release: ## Create a release branch for a given version. pass env=production, etc.
-	./Scripts/release.sh ENV=$(env)
+	./Scripts/release.sh ENV=$(env) post_slack=true
 
-.PHONY: secrets upload_symbols bump-version bump-build release
+.PHONY: slack_changelog
+slack_changelog: ## Post a changelog to Slack. Usage: make slack_changelog old=<SHA> new=<SHA> chosen_env=<ENV>
+	./Scripts/post-to-slack.sh old=$(old) new=$(new) chosen_env=$(chosen_env)
+
+.PHONY: secrets upload_symbols bump-version bump-build release slack_changelog
