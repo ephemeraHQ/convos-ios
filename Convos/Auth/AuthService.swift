@@ -44,7 +44,7 @@ class MockAuthService: AuthServiceProtocol {
     }
 
     private var authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
-    
+
     init() {
         authStateSubject.send(.unauthorized)
     }
@@ -56,7 +56,7 @@ class MockAuthService: AuthServiceProtocol {
     func signOut() async throws {
         authStateSubject.send(.unauthorized)
     }
-    
+
     func authStatePublisher() -> AnyPublisher<AuthServiceState, Never> {
         return authStateSubject.eraseToAnyPublisher()
     }

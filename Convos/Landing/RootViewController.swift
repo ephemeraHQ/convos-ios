@@ -3,9 +3,9 @@ import SwiftUI
 import UIKit
 
 final class RootViewController: UIViewController {
-    let authService = MockAuthService()
-    let analyticsService = PosthogAnalyticsService.shared
-    
+    let authService: AuthServiceProtocol = MockAuthService()
+    let analyticsService: AnalyticsServiceProtocol = PosthogAnalyticsService.shared
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
