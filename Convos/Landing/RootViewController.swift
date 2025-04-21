@@ -3,12 +3,12 @@ import SwiftUI
 import UIKit
 
 final class RootViewController: UIViewController {
-    let authService = AuthService()
-    let analyticsService = PosthogAnalyticsService.shared
-    
+    let authService: AuthService = AuthService()
+    let analyticsService: AnalyticsServiceProtocol = PosthogAnalyticsService.shared
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+
         let rootView = RootView(authService: authService,
                                 analyticsService: analyticsService)
         let hostingController = UIHostingController(rootView: rootView)

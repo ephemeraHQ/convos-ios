@@ -3,9 +3,9 @@ import SwiftUI
 struct RootView: View {
     private let authService: AuthServiceProtocol
     private let analyticsService: AnalyticsServiceProtocol
-    
+
     @State var viewModel: AppViewModel
-    
+
     init(authService: AuthServiceProtocol, analyticsService: AnalyticsServiceProtocol) {
         self.authService = authService
         self.analyticsService = analyticsService
