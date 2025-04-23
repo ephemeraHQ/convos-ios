@@ -168,9 +168,9 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     func sendMessage(to address: String, content: String) async throws {
-        guard let client = xmtpClient else {
-            throw MessagingError.notInitialized
-        }
+//        guard let client = xmtpClient else {
+//            throw MessagingError.notInitialized
+//        }
         // Implement XMTP message sending
     }
 

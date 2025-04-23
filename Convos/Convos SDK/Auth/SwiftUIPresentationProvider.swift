@@ -1,11 +1,11 @@
-import UIKit
 import AuthenticationServices
 import PasskeyAuth
+import UIKit
 
 @objc
 final class PasskeyPresentationProvider: NSObject, PasskeyPresentationContextProvider {
     let presentationAnchor: ASPresentationAnchor
-    
+
     override init() {
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let window = windowScene.windows.first else {
@@ -14,8 +14,8 @@ final class PasskeyPresentationProvider: NSObject, PasskeyPresentationContextPro
         self.presentationAnchor = window
         super.init()
     }
-    
+
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         self.presentationAnchor
     }
-} 
+}

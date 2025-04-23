@@ -10,7 +10,7 @@ extension Data {
             hex = String(hex.dropFirst(2))
         }
 
-        guard hex.count % 2 == 0 else { return nil }
+        guard hex.count.isMultiple(of: 2) else { return nil }
 
         var newData = Data()
         var index = hex.startIndex
@@ -125,7 +125,6 @@ final class PrivyAuthService: ConvosSDK.AuthServiceProtocol {
         let jwtProvider = PrivyJWTProvider()
         self.jwtProvider = jwtProvider
         Logger.info("Initialized PrivyJWTProvider with token: \(jwtProvider.jwt ?? "nil")")
-        
         let authConfig = PrivyLoginWithCustomAuthConfig {
             Logger.info("Returning JWT for Privy authentication: \(jwtProvider.jwt ?? "nil")")
             return jwtProvider.jwt
