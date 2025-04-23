@@ -1,14 +1,14 @@
 import SwiftUI
 
 struct ConversationsView: View {
-    let authService: AuthServiceProtocol
+    let convos: ConvosSDK.Convos
     var body: some View {
         VStack {
             Spacer()
 
             Button("Sign out") {
                 Task {
-                    try? await authService.signOut()
+                    try? await convos.signOut()
                 }
             }
             .convosButtonStyle(.text)
@@ -19,5 +19,5 @@ struct ConversationsView: View {
 }
 
 #Preview {
-    ConversationsView(authService: MockAuthService())
+    ConversationsView(convos: .mock)
 }

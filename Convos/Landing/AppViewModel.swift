@@ -1,24 +1,35 @@
 import Combine
 import SwiftUI
 
+@MainActor
 @Observable
 final class AppViewModel {
     enum AppState {
         case signedIn, signedOut, loading
     }
 
-    let authService: AuthServiceProtocol
+    let convos: ConvosSDK.Convos
     private var cancellables: Set<AnyCancellable> = .init()
 
     private(set) var appState: AppState = .loading
 
-    init(authService: AuthServiceProtocol = PrivyAuthService()) {
-        self.authService = authService
-        observeAuthState()
+    init(convos: ConvosSDK.Convos) {
+        self.convos = convos
+
+        Task {
+            await convos.prepare()
+            observeAuthState()
+        }
     }
 
+//    func onAppear() {
+//        Task {
+//            await authService.setupPresentationContextProvider()
+//        }
+//    }
+
     private func observeAuthState() {
-        authService.authStatePublisher()
+        convos.authState
             .receive(on: DispatchQueue.main)
             .sink { [weak self] authState in
                 guard let self else { return }

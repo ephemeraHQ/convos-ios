@@ -118,6 +118,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				D834386F2DB19D8C00A50F45 /* Factory in Frameworks */,
+				7A7BB2282DB721D6009B8BBF /* PasskeyAuth in Frameworks */,
+				7A7BB22B2DB72230009B8BBF /* XMTPiOS in Frameworks */,
 				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
 				D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */,
 				D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */,
@@ -280,6 +282,18 @@
 			projectDirPath = "";
 			projectReferences = (
 				{
+					ProductGroup = 7A7BB2582DB722AF009B8BBF /* Products */;
+					ProjectRef = 7A7BB2542DB722AF009B8BBF /* Convos.xcodeproj */;
+				},
+				{
+					ProductGroup = 7A7BB20A2DB720B8009B8BBF /* Products */;
+					ProjectRef = 7A7BB2062DB720B8009B8BBF /* Convos.xcodeproj */;
+				},
+				{
+					ProductGroup = 7A7BB1C32DB70717009B8BBF /* Products */;
+					ProjectRef = 7A7BB1BF2DB70717009B8BBF /* Convos.xcodeproj */;
+				},
+				{
 					ProductGroup = 7A7BB1362DB6FF8E009B8BBF /* Products */;
 					ProjectRef = 7A7BB1322DB6FF8E009B8BBF /* Convos.xcodeproj */;
 				},
@@ -404,6 +418,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Convos/Convos.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
@@ -432,6 +447,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Convos/Convos.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;

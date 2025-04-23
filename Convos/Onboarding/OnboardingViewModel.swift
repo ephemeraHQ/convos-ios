@@ -2,7 +2,7 @@ import SwiftUI
 
 @Observable
 final class OnboardingViewModel {
-    let authService: AuthServiceProtocol
+    let convos: ConvosSDK.Convos
     var name: String = "" {
         didSet {
             validateName()
@@ -13,8 +13,8 @@ final class OnboardingViewModel {
     var nameIsValid: Bool = false
     var nameError: String?
 
-    init(authService: AuthServiceProtocol) {
-        self.authService = authService
+    init(convos: ConvosSDK.Convos) {
+        self.convos = convos
     }
 
     // MARK: - Public
@@ -22,15 +22,21 @@ final class OnboardingViewModel {
     func signIn() {
         Task {
             do {
-                try await authService.signIn()
+                try await convos.signIn()
             } catch {
-                print("Error signing in: \(error)")
+                Logger.error("Error signing in: \(error)")
             }
         }
     }
 
     func createContactCard() {
-        signIn()
+        Task {
+            do {
+                try await convos.register(displayName: name)
+            } catch {
+                Logger.error("Error registering display name: \(name) error: \(error)")
+            }
+        }
     }
 
     // MARK: - Private

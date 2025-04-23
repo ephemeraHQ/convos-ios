@@ -91,6 +91,7 @@ struct ContactCardCreateView: View {
             Button("That's me") {
                 // temporary animation
                 withAnimation(.easeInOut(duration: 0.3)) {
+                    isNameFocused = false
                     isEditingContactCard = false
                 }
 
