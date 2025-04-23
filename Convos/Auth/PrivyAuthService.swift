@@ -1,10 +1,3 @@
-//
-//  PrivyAuthService.swift
-//  Convos
-//
-//  Created by Jarod Luebbert on 4/17/25.
-//
-
 import Combine
 import Foundation
 import PrivySDK
@@ -45,7 +38,7 @@ class PrivyAuthService: AuthServiceProtocol {
     private func awaitPrivySDKReady() {
         Task {
             await privy.awaitReady()
-            if case .authenticated(let privyUser) = privy.authState {
+            if case .authenticated = privy.authState {
                 //
             }
         }
