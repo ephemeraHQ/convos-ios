@@ -61,7 +61,6 @@ private enum MessagingError: Error {
 
 final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private let authService: ConvosSDK.AuthServiceProtocol
-    private let messagesSubject: PassthroughSubject<[ConvosSDK.Message], Never> = .init()
     private var xmtpClient: XMTPiOS.Client?
     private let keychainService: KeychainService<ConvosKeychainItem> = .init()
     private var cancellables: Set<AnyCancellable> = []
@@ -84,10 +83,6 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     func start() async throws {
-        guard let _ = authService.currentUser else {
-            throw MessagingError.notAuthenticated
-        }
-        // Initialize XMTP client with user's address
     }
 
     func stop() async {
@@ -109,14 +104,14 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     func sendMessage(to address: String, content: String) async throws {
-//        guard let client = xmtpClient else {
-//            throw MessagingError.notInitialized
-//        }
+        guard xmtpClient != nil else {
+            throw MessagingError.notInitialized
+        }
         // Implement XMTP message sending
     }
 
     nonisolated func messages(for address: String) -> AnyPublisher<[ConvosSDK.Message], Never> {
-        messagesSubject.eraseToAnyPublisher()
+        Just([]).eraseToAnyPublisher()
     }
 
     // MARK: - Private
