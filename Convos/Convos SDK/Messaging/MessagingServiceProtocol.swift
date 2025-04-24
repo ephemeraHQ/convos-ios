@@ -15,6 +15,13 @@ public extension ConvosSDK {
         func sendMessage(to address: String, content: String) async throws
         func messages(for address: String) -> AnyPublisher<[Message], Never>
     }
+
+    enum MessagingServiceState {
+        case uninitialized
+        case initializing
+        case ready
+        case error(Error)
+    }
 }
 
 struct MockMessage: ConvosSDK.Message {
