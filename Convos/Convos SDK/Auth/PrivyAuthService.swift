@@ -135,9 +135,9 @@ final class PrivyAuthService: ConvosSDK.AuthServiceProtocol {
 
         let jwtProvider = PrivyJWTProvider()
         self.jwtProvider = jwtProvider
-        Logger.info("Initialized PrivyJWTProvider with token: \(jwtProvider.jwt ?? "nil")")
+        Logger.info("Initialized PrivyJWTProvider with token length: \(jwtProvider.jwt?.count ?? 0)")
         let authConfig = PrivyLoginWithCustomAuthConfig {
-            Logger.info("Returning JWT for Privy authentication: \(jwtProvider.jwt ?? "nil")")
+            Logger.info("Returning JWT for Privy authentication with length: \(jwtProvider.jwt?.count ?? 0)")
             return jwtProvider.jwt
         }
         let config = PrivyConfig(

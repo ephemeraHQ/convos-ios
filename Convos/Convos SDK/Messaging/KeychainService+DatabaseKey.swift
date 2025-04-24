@@ -29,7 +29,7 @@ extension KeychainService where T == DatabaseKey {
         return .init(account: account, value: value)
     }
 
-    func delete(for user: ConvosSDK.User) throws {
+    func deleteDatabaseKey(for user: ConvosSDK.User) throws {
         try delete(service: DatabaseKey.service, account: user.id)
     }
 }

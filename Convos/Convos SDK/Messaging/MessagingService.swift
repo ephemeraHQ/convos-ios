@@ -93,12 +93,14 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     func stop() async {
         if let user = authService.currentUser {
             do {
-                try keychainService.delete(for: user)
+                Logger.info("Deleting database key for user \(user.id)")
+                try keychainService.deleteDatabaseKey(for: user)
             } catch {
                 Logger.error("Failed deleting database key for user \(user.id): \(error.localizedDescription)")
             }
         }
         do {
+            Logger.info("Deleting local XMTP database")
             try xmtpClient?.deleteLocalDatabase()
         } catch {
             Logger.error("Failed deleting local XMTP database for user: \(error.localizedDescription)")
@@ -141,8 +143,9 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         }
         let options = ClientOptions(dbEncryptionKey: encryptionKey)
         let signingKey = try user.signingKey
-        Logger.info("Sending signing key to XMTP Client with chainId: \(String(describing: signingKey.chainId))")
+        Logger.info("Initializing XMTP client...")
         xmtpClient = try await Client.create(account: signingKey, options: options)
+        Logger.info("XMTP Client initialized, returning signing key.")
         return signingKey
     }
 
@@ -151,6 +154,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
               let xmtpId = xmtpClient?.inboxID else {
             throw InitializationError.xmtpClientMissingRequiredValuesForAuth
         }
+        Logger.info("Attempting to authenticate with Convos backend...")
         let result = try await apiClient.authenticate(xmtpInstallationId: installationId,
                                                       xmtpId: xmtpId,
                                                       xmtpSignature: signature)
@@ -158,6 +162,11 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     private func setXmtpClient(_ client: XMTPiOS.Client?) {
+        if client == nil {
+            Logger.info("Setting XMTP client to nil")
+        } else {
+            Logger.info("Setting XMTP client")
+        }
         xmtpClient = client
     }
 
@@ -177,13 +186,15 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                                 return
                             }
                             do {
-                                let result = try await self.authorizeConvosBackend(signature: signature)
+                                _ = try await self.authorizeConvosBackend(signature: signature)
                             } catch {
                                 Logger.error("Failed authorizing Convos backend.")
                             }
                         } catch {
                             Logger.error("Failed initializing XMTP Client: \(error.localizedDescription)")
                         }
+                    case .unauthorized:
+                        await self.stop()
                     default:
                         break
                     }
