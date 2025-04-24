@@ -63,7 +63,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private let authService: ConvosSDK.AuthServiceProtocol
     private let messagesSubject: PassthroughSubject<[ConvosSDK.Message], Never> = .init()
     private var xmtpClient: XMTPiOS.Client?
-    private let keychainService: KeychainService<DatabaseKey> = .init()
+    private let keychainService: KeychainService<ConvosKeychainItem> = .init()
     private var cancellables: Set<AnyCancellable> = []
     private let apiClient: ConvosAPIClient
 
@@ -94,7 +94,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         if let user = authService.currentUser {
             do {
                 Logger.info("Deleting database key for user \(user.id)")
-                try keychainService.deleteDatabaseKey(for: user)
+                try keychainService.delete(.xmtpDatabaseKey)
             } catch {
                 Logger.error("Failed deleting database key for user \(user.id): \(error.localizedDescription)")
             }
@@ -122,11 +122,11 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     // MARK: - Private
 
     private func fetchOrCreateDatabaseKey(for user: ConvosSDK.User) async throws -> DatabaseKey {
-        if let key = try self.keychainService.retrieveKey(for: user) {
-            return key
+        if let key = try self.keychainService.retrieve(.xmtpDatabaseKey) {
+            return .init(value: key)
         } else {
             let key = DatabaseKey.generate(for: user)
-            try await self.keychainService.save(DatabaseKey.generate(for: user))
+            try self.keychainService.save(key.value, for: .xmtpDatabaseKey)
             return key
         }
     }

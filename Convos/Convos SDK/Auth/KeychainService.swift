@@ -52,7 +52,7 @@ final class KeychainService<T: KeychainItemProtocol> {
         return try retrieve(service: T.service, account: item.account)
     }
 
-    func retrieve(service: String, account: String) throws -> String? {
+    private func retrieve(service: String, account: String) throws -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -78,7 +78,7 @@ final class KeychainService<T: KeychainItemProtocol> {
         return value
     }
 
-    func delete(service: String, account: String) throws {
+    private func delete(service: String, account: String) throws {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

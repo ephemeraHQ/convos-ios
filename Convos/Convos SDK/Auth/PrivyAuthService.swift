@@ -55,23 +55,8 @@ extension AuthState {
     }
 }
 
-extension KeychainItemProtocol {
-    static var service: String {
-        return "org.convos.ios"
-    }
-}
-
-enum AuthKeychainItem: String, KeychainItemProtocol {
-    case jwt // temporary backend
-    case convosJwt // convos backend
-
-    var account: String {
-        return rawValue
-    }
-}
-
 private class PrivyJWTProvider {
-    private let keychainService: KeychainService<AuthKeychainItem> = .init()
+    private let keychainService: KeychainService<ConvosKeychainItem> = .init()
 
     var jwt: String? {
         get {

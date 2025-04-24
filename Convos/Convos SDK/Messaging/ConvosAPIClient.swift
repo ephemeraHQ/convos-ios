@@ -56,7 +56,7 @@ struct ConversationMetadata: Codable {
 
 class ConvosAPIClient {
     private let baseURL: URL
-    private let keychainService: KeychainService<AuthKeychainItem> = .init()
+    private let keychainService: KeychainService<ConvosKeychainItem> = .init()
     private let session: URLSession
 
     init(baseURL: URL) {
