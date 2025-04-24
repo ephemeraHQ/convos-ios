@@ -30,8 +30,19 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private let keychainService: KeychainService<ConvosKeychainItem> = .init()
     private var cancellables: Set<AnyCancellable> = []
     private let apiClient: ConvosAPIClient
-    private var state: ConvosSDK.MessagingServiceState = .uninitialized
+    private var _state: ConvosSDK.MessagingServiceState = .uninitialized {
+        didSet {
+            stateSubject.send(_state)
+        }
+    }
     private var currentTask: Task<Void, Never>?
+
+    nonisolated
+    var state: ConvosSDK.MessagingServiceState {
+        stateSubject.value
+    }
+    nonisolated
+    private let stateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> = .init(.uninitialized)
 
     init(authService: ConvosSDK.AuthServiceProtocol) {
         self.authService = authService
@@ -52,13 +63,17 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         await processAction(.stop)
     }
 
+    nonisolated func messagingStatePublisher() -> AnyPublisher<ConvosSDK.MessagingServiceState, Never> {
+        stateSubject.eraseToAnyPublisher()
+    }
+
     // MARK: - State Machine
 
     private func processAction(_ action: MessagingServiceAction) async {
         currentTask?.cancel()
         currentTask = Task {
             do {
-                switch (state, action) {
+                switch (_state, action) {
                 case (.uninitialized, .start):
                     try await handleStart()
                 case (.initializing, .xmtpInitialized):
@@ -74,36 +89,36 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                 }
             } catch {
                 Logger.error("Failed processing action \(action): \(error.localizedDescription)")
-                state = .error(error)
+                _state = .error(error)
             }
         }
     }
 
     private func handleStart() async throws {
         guard let user = authService.currentUser else {
-            state = .error(MessagingServiceError.notAuthenticated)
+            _state = .error(MessagingServiceError.notAuthenticated)
             return
         }
 
-        state = .initializing
+        _state = .initializing
         try await initializeXmtpClient(for: user)
         await processAction(.xmtpInitialized)
     }
 
     private func handleXmtpInitialized() async throws {
-        state = .authorizing
+        _state = .authorizing
         _ = try await authorizeConvosBackend()
         await processAction(.backendAuthorized)
     }
 
     private func handleBackendAuthorized() async throws {
-        state = .ready
+        _state = .ready
     }
 
     private func handleStop() async throws {
-        state = .stopping
+        _state = .stopping
         try await cleanupResources()
-        state = .uninitialized
+        _state = .uninitialized
     }
 
     private func cleanupResources() async throws {

@@ -30,7 +30,7 @@ public enum ConvosSDK {
             try await authService.signIn()
         }
 
-        func register(displayName: String) async throws {
+        public func register(displayName: String) async throws {
             try await authService.register(displayName: displayName)
         }
 
