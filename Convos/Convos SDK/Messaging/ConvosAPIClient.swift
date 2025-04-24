@@ -74,8 +74,8 @@ class ConvosAPIClient {
         // Set required headers
         request.setValue(xmtpInstallationId, forHTTPHeaderField: "X-XMTP-InstallationId")
         request.setValue(xmtpId, forHTTPHeaderField: "X-XMTP-InboxId")
-        request.setValue(xmtpSignature, forHTTPHeaderField: "X-XMTP-Signature")
-        request.setValue("firebase-app-check", forHTTPHeaderField: "X-Firebase-AppCheck")
+        request.setValue("0x\(xmtpSignature)", forHTTPHeaderField: "X-XMTP-Signature")
+        request.setValue("123", forHTTPHeaderField: "X-Firebase-AppCheck")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let (data, response) = try await session.data(for: request)

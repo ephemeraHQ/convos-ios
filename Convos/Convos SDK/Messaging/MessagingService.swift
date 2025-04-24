@@ -2,58 +2,6 @@ import Combine
 import Foundation
 import XMTPiOS
 
-class ConvosSigningKey: SigningKey {
-    typealias Signer = (String) async throws -> XMTPiOS.SignedData
-
-    let publicIdentifier: String
-    let chainId: Int64?
-    let signer: Signer
-    private(set) var signature: String?
-
-    init(publicIdentifier: String, chainId: Int64?, signer: @escaping Signer) {
-        self.publicIdentifier = publicIdentifier
-        self.chainId = chainId
-        self.signer = signer
-    }
-
-    var identity: XMTPiOS.PublicIdentity {
-        .init(kind: .ethereum, identifier: publicIdentifier)
-    }
-
-    var type: SignerType {
-        .SCW
-    }
-
-    func sign(_ message: String) async throws -> XMTPiOS.SignedData {
-        let signatureData = try await signer(message)
-        signature = signatureData.rawData.hexEncodedString()
-        return signatureData
-    }
-}
-
-enum ConvosSigningKeyError: Error {
-    case missingPublicIdentifier, missingChainId, nilDataWhenSigningMessage
-}
-
-extension ConvosSDK.User {
-    var signingKey: ConvosSigningKey {
-        get throws {
-            guard let publicIdentifier = publicIdentifier else {
-                throw ConvosSigningKeyError.missingPublicIdentifier
-            }
-            guard let chainId = chainId else {
-                throw ConvosSigningKeyError.missingChainId
-            }
-            return ConvosSigningKey(publicIdentifier: publicIdentifier, chainId: chainId) { message in
-                guard let data = try await self.sign(message: message) else {
-                    throw ConvosSigningKeyError.nilDataWhenSigningMessage
-                }
-                return .init(rawData: data)
-            }
-        }
-    }
-}
-
 private enum MessagingError: Error {
     case notAuthenticated
     case notInitialized
@@ -126,11 +74,11 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         }
     }
 
-    private func initializeXmtpClient(for user: ConvosSDK.User) async throws -> ConvosSigningKey? {
+    private func initializeXmtpClient(for user: ConvosSDK.User) async throws {
         Logger.info("Initializing XMTP client...")
         guard xmtpClient == nil else {
             Logger.warning("Attempted to initialize XMTP when one exists, exiting...")
-            return nil
+            return
         }
         let key = try await fetchOrCreateDatabaseKey(for: user)
         guard let encryptionKey = key.valueData else {
@@ -141,14 +89,19 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         Logger.info("Initializing XMTP client...")
         xmtpClient = try await Client.create(account: signingKey, options: options)
         Logger.info("XMTP Client initialized, returning signing key.")
-        return signingKey
     }
 
-    private func authorizeConvosBackend(signature: String) async throws {
-        guard let installationId = xmtpClient?.installationID,
-              let xmtpId = xmtpClient?.inboxID else {
+    private func authorizeConvosBackend() async throws {
+        guard let client = xmtpClient else {
             throw InitializationError.xmtpClientMissingRequiredValuesForAuth
         }
+
+        let installationId = client.installationID
+        let xmtpId = client.inboxID
+        let firebaseAppCheckToken = Secrets.FIREBASE_APP_CHECK_TOKEN
+        let signatureData = try client.signWithInstallationKey(message: firebaseAppCheckToken)
+        let signature = signatureData.hexEncodedString()
+
         Logger.info("Attempting to authenticate with Convos backend...")
         let result = try await apiClient.authenticate(xmtpInstallationId: installationId,
                                                       xmtpId: xmtpId,
@@ -174,16 +127,17 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                     switch authState {
                     case .authorized(let user):
                         do {
-                            let result = try await self.initializeXmtpClient(for: user)
-                            guard let signingKey = result,
-                                let signature = signingKey.signature else {
-                                Logger.error("No signature found from XMTP Client, failed to auth with convos backend")
+                            try await self.initializeXmtpClient(for: user)
+                            
+                            guard let client = await self.xmtpClient else {
+                                Logger.info("XMTP client nil, skipping auth state change...")
                                 return
                             }
+
                             do {
-                                _ = try await self.authorizeConvosBackend(signature: signature)
+                                _ = try await self.authorizeConvosBackend()
                             } catch {
-                                Logger.error("Failed authorizing Convos backend.")
+                                Logger.error("Failed authorizing Convos backend: \(error.localizedDescription)")
                             }
                         } catch {
                             Logger.error("Failed initializing XMTP Client: \(error.localizedDescription)")
