@@ -1,8 +1,10 @@
+import Combine
 import SwiftUI
 
 @Observable
 final class OnboardingViewModel {
     let convos: ConvosSDK.Convos
+    private var cancellables: Set<AnyCancellable> = .init()
     var name: String = "" {
         didSet {
             validateName()
@@ -12,9 +14,12 @@ final class OnboardingViewModel {
     var imageState: ContactCardImage.State = .empty
     var nameIsValid: Bool = false
     var nameError: String?
+    var authenticationError: String?
+    var isAuthorized: Bool = false
 
     init(convos: ConvosSDK.Convos) {
         self.convos = convos
+        observeAuthState()
     }
 
     // MARK: - Public
@@ -25,6 +30,7 @@ final class OnboardingViewModel {
                 try await convos.signIn()
             } catch {
                 Logger.error("Error signing in: \(error)")
+                authenticationError = error.localizedDescription
             }
         }
     }
@@ -35,11 +41,29 @@ final class OnboardingViewModel {
                 try await convos.register(displayName: name)
             } catch {
                 Logger.error("Error registering display name: \(name) error: \(error)")
+                authenticationError = error.localizedDescription
             }
         }
     }
 
     // MARK: - Private
+
+    private func observeAuthState() {
+        convos.authState
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] authState in
+                guard let self else { return }
+                switch authState {
+                case .authorized:
+                    self.isAuthorized = true
+                case .unauthorized:
+                    self.isAuthorized = false
+                default:
+                    break
+                }
+            }
+            .store(in: &cancellables)
+    }
 
     func validateName() {
         let allowed = CharacterSet.alphanumerics.union(.whitespaces)

@@ -52,6 +52,8 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         await processAction(.stop)
     }
 
+    // MARK: - State Machine
+
     private func processAction(_ action: MessagingServiceAction) async {
         currentTask?.cancel()
         currentTask = Task {
@@ -115,6 +117,8 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         setXmtpClient(nil)
     }
 
+    // MARK: - Messaging
+
     func sendMessage(to address: String, content: String) async throws {
         guard xmtpClient != nil else {
             throw MessagingServiceError.notInitialized
@@ -127,7 +131,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         Just([]).eraseToAnyPublisher()
     }
 
-    // MARK: - Private
+    // MARK: - Helpers
 
     private func fetchOrCreateDatabaseKey(for user: ConvosSDK.User) async throws -> DatabaseKey {
         if let key = try self.keychainService.retrieve(.xmtpDatabaseKey) {
