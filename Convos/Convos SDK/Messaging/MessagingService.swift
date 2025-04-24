@@ -5,10 +5,23 @@ import XMTPiOS
 private enum MessagingServiceError: Error {
     case notAuthenticated
     case notInitialized
-    case initializationFailed(Error)
-    case invalidAddress
-    case networkError(Error)
-    case stoppingServiceFailed(Error)
+    case failedDecryptingDatabaseKey
+    case xmtpClientAlreadyInitialized
+    case xmtpClientMissingRequiredValuesForAuth
+}
+
+private enum MessagingServiceAction {
+    case start
+    case stop
+    case xmtpInitialized
+    case backendAuthorized
+}
+
+private enum MessagingServiceEffect {
+    case initializeXmtpClient(ConvosSDK.User)
+    case authorizeBackend
+    case cleanupResources
+    case none
 }
 
 final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
@@ -18,11 +31,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private var cancellables: Set<AnyCancellable> = []
     private let apiClient: ConvosAPIClient
     private var state: ConvosSDK.MessagingServiceState = .uninitialized
-
-    enum InitializationError: Error {
-        case failedDecryptingDatabaseKey
-        case xmtpClientMissingRequiredValuesForAuth
-    }
+    private var currentTask: Task<Void, Never>?
 
     init(authService: ConvosSDK.AuthServiceProtocol) {
         self.authService = authService
@@ -36,45 +45,74 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     func start() async throws {
-        guard case .uninitialized = state else {
-            Logger.warning("Attempted to start service in non-uninitialized state: \(state)")
+        await processAction(.start)
+    }
+
+    func stop() async {
+        await processAction(.stop)
+    }
+
+    private func processAction(_ action: MessagingServiceAction) async {
+        currentTask?.cancel()
+        currentTask = Task {
+            do {
+                switch (state, action) {
+                case (.uninitialized, .start):
+                    try await handleStart()
+                case (.initializing, .xmtpInitialized):
+                    try await handleXmtpInitialized()
+                case (.authorizing, .backendAuthorized):
+                    try await handleBackendAuthorized()
+                case (.ready, .stop):
+                    try await handleStop()
+                case (.error, .start):
+                    try await handleStart()
+                default:
+                    Logger.warning("Invalid MessagingService state transition: \(state) -> \(action)")
+                }
+            } catch {
+                Logger.error("Failed processing action \(action): \(error.localizedDescription)")
+                state = .error(error)
+            }
+        }
+    }
+
+    private func handleStart() async throws {
+        guard let user = authService.currentUser else {
+            state = .error(MessagingServiceError.notAuthenticated)
             return
         }
 
         state = .initializing
-        do {
-            if let user = authService.currentUser {
-                try await setupMessagingService(for: user)
-                state = .ready
-            } else {
-                state = .error(MessagingServiceError.notAuthenticated)
-            }
-        } catch {
-            state = .error(MessagingServiceError.initializationFailed(error))
-            throw error
-        }
+        try await initializeXmtpClient(for: user)
+        await processAction(.xmtpInitialized)
     }
 
-    func stop() async {
-        guard case .ready = state else {
-            Logger.warning("Attempted to stop service in un-ready state: \(state)")
-            return
-        }
+    private func handleXmtpInitialized() async throws {
+        state = .authorizing
+        _ = try await authorizeConvosBackend()
+        await processAction(.backendAuthorized)
+    }
 
-        do {
-            if let user = authService.currentUser {
-                Logger.info("Deleting database key for user \(user.id)")
-                try keychainService.delete(.xmtpDatabaseKey)
-            }
+    private func handleBackendAuthorized() async throws {
+        state = .ready
+    }
 
-            Logger.info("Deleting local XMTP database")
-            try xmtpClient?.deleteLocalDatabase()
-        } catch {
-            Logger.error("Failed deleting local XMTP database for user: \(error.localizedDescription)")
-            state = .error(MessagingServiceError.stoppingServiceFailed(error))
-        }
-        setXmtpClient(nil)
+    private func handleStop() async throws {
+        state = .stopping
+        try await cleanupResources()
         state = .uninitialized
+    }
+
+    private func cleanupResources() async throws {
+        if let user = authService.currentUser {
+            Logger.info("Deleting database key for user \(user.id)")
+            try keychainService.delete(.xmtpDatabaseKey)
+        }
+
+        Logger.info("Deleting local XMTP database")
+        try xmtpClient?.deleteLocalDatabase()
+        setXmtpClient(nil)
     }
 
     func sendMessage(to address: String, content: String) async throws {
@@ -104,12 +142,11 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private func initializeXmtpClient(for user: ConvosSDK.User) async throws {
         Logger.info("Initializing XMTP client...")
         guard xmtpClient == nil else {
-            Logger.warning("Attempted to initialize XMTP when one exists, exiting...")
-            return
+            throw MessagingServiceError.xmtpClientAlreadyInitialized
         }
         let key = try await fetchOrCreateDatabaseKey(for: user)
         guard let encryptionKey = key.valueData else {
-            throw InitializationError.failedDecryptingDatabaseKey
+            throw MessagingServiceError.failedDecryptingDatabaseKey
         }
         let options = ClientOptions(dbEncryptionKey: encryptionKey)
         let signingKey = try user.signingKey
@@ -120,7 +157,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
     private func authorizeConvosBackend() async throws {
         guard let client = xmtpClient else {
-            throw InitializationError.xmtpClientMissingRequiredValuesForAuth
+            throw MessagingServiceError.xmtpClientMissingRequiredValuesForAuth
         }
 
         let installationId = client.installationID
@@ -143,11 +180,6 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
             Logger.info("Setting XMTP client")
         }
         xmtpClient = client
-    }
-
-    private func setupMessagingService(for user: ConvosSDK.User) async throws {
-        try await initializeXmtpClient(for: user)
-        _ = try await authorizeConvosBackend()
     }
 
     private func observeAuthState() async {

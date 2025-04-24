@@ -19,7 +19,9 @@ public extension ConvosSDK {
     enum MessagingServiceState {
         case uninitialized
         case initializing
+        case authorizing
         case ready
+        case stopping
         case error(Error)
     }
 }
