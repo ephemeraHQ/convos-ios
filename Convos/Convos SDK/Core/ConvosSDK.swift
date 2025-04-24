@@ -35,7 +35,7 @@ public enum ConvosSDK {
         }
 
         public func signOut() async throws {
-            messagingService.stop()
+            await messagingService.stop()
             try await authService.signOut()
         }
 

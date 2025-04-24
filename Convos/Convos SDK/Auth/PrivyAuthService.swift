@@ -4,6 +4,16 @@ import PasskeyAuth
 import PrivySDK
 
 extension Data {
+    struct HexEncodingOptions: OptionSet {
+        let rawValue: Int
+        static let upperCase = HexEncodingOptions(rawValue: 1 << 0)
+    }
+
+    func hexEncodedString(options: HexEncodingOptions = []) -> String {
+        let format = options.contains(.upperCase) ? "%02hhX" : "%02hhx"
+        return self.map { String(format: format, $0) }.joined()
+    }
+
     init?(hexString: String) {
         var hex = hexString
         if hex.hasPrefix("0x") {
@@ -51,8 +61,9 @@ extension KeychainItemProtocol {
     }
 }
 
-private enum AuthKeychainItem: String, KeychainItemProtocol {
-    case jwt
+enum AuthKeychainItem: String, KeychainItemProtocol {
+    case jwt // temporary backend
+    case convosJwt // convos backend
 
     var account: String {
         return rawValue

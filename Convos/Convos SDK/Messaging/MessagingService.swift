@@ -2,62 +2,19 @@ import Combine
 import Foundation
 import XMTPiOS
 
-public extension ConvosSDK {
-    protocol Message {
-        var id: String { get }
-        var content: String { get }
-        var sender: User { get }
-        var timestamp: Date { get }
-    }
-
-    protocol MessagingServiceProtocol {
-        func start() async throws
-        func stop()
-        func sendMessage(to address: String, content: String) async throws
-        func messages(for address: String) -> AnyPublisher<[Message], Never>
-    }
-}
-
-struct MockMessage: ConvosSDK.Message {
-    var id: String
-    var content: String
-    var sender: any ConvosSDK.User
-    var timestamp: Date
-
-    static func message(_ content: String) -> MockMessage {
-        .init(
-            id: UUID().uuidString,
-            content: content,
-            sender: MockUser(),
-            timestamp: Date()
-        )
-    }
-}
-
-class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
-    private var messagesSubject: CurrentValueSubject<[ConvosSDK.Message], Never> = .init([])
-
-    func start() async throws {
-    }
-
-    func stop() {
-    }
-
-    func sendMessage(to address: String, content: String) async throws {
-        messagesSubject.send([MockMessage.message(content)])
-    }
-
-    func messages(for address: String) -> AnyPublisher<[any ConvosSDK.Message], Never> {
-        messagesSubject.eraseToAnyPublisher()
-    }
-}
-
-struct ConvosSigningKey: SigningKey {
+class ConvosSigningKey: SigningKey {
     typealias Signer = (String) async throws -> XMTPiOS.SignedData
 
     let publicIdentifier: String
     let chainId: Int64?
     let signer: Signer
+    private(set) var signature: String?
+
+    init(publicIdentifier: String, chainId: Int64?, signer: @escaping Signer) {
+        self.publicIdentifier = publicIdentifier
+        self.chainId = chainId
+        self.signer = signer
+    }
 
     var identity: XMTPiOS.PublicIdentity {
         .init(kind: .ethereum, identifier: publicIdentifier)
@@ -68,7 +25,9 @@ struct ConvosSigningKey: SigningKey {
     }
 
     func sign(_ message: String) async throws -> XMTPiOS.SignedData {
-        return try await signer(message)
+        let signatureData = try await signer(message)
+        signature = signatureData.rawData.hexEncodedString()
+        return signatureData
     }
 }
 
@@ -76,8 +35,8 @@ enum ConvosSigningKeyError: Error {
     case missingPublicIdentifier, missingChainId, nilDataWhenSigningMessage
 }
 
-public extension ConvosSDK.User {
-    var signingKey: SigningKey {
+extension ConvosSDK.User {
+    var signingKey: ConvosSigningKey {
         get throws {
             guard let publicIdentifier = publicIdentifier else {
                 throw ConvosSigningKeyError.missingPublicIdentifier
@@ -95,38 +54,9 @@ public extension ConvosSDK.User {
     }
 }
 
-private struct DatabaseKey: KeychainItemProtocol {
-    let account: String
-    let value: String
-
-    var valueData: Data? {
-        Data(base64Encoded: value)
-    }
-
-    static func generate(for user: ConvosSDK.User) -> DatabaseKey {
-        let databaseKey = Data((0 ..< 32)
-            .map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
-        let value = databaseKey.base64EncodedString()
-        return .init(account: user.id, value: value)
-    }
-}
-
-extension KeychainService where T == DatabaseKey {
-    func save(_ databaseKey: DatabaseKey) async throws {
-        try save(databaseKey.value, for: databaseKey)
-    }
-
-    func retrieveKey(for user: ConvosSDK.User) throws -> DatabaseKey? {
-        let account = user.id
-        guard let value = try retrieve(service: DatabaseKey.service, account: account) else {
-            return nil
-        }
-        return .init(account: account, value: value)
-    }
-
-    func delete(for user: ConvosSDK.User) throws {
-        try delete(service: DatabaseKey.service, account: user.id)
-    }
+private enum MessagingError: Error {
+    case notAuthenticated
+    case notInitialized
 }
 
 final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
@@ -135,13 +65,19 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private var xmtpClient: XMTPiOS.Client?
     private let keychainService: KeychainService<DatabaseKey> = .init()
     private var cancellables: Set<AnyCancellable> = []
+    private let apiClient: ConvosAPIClient
 
     enum InitializationError: Error {
         case failedDecryptingDatabaseKey
+        case xmtpClientMissingRequiredValuesForAuth
     }
 
     init(authService: ConvosSDK.AuthServiceProtocol) {
         self.authService = authService
+        guard let apiBaseURL = URL(string: Secrets.CONVOS_API_BASE_URL) else {
+            fatalError("Failed constructing API base URL")
+        }
+        self.apiClient = .init(baseURL: apiBaseURL)
         Task {
             await observeAuthState()
         }
@@ -154,17 +90,20 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         // Initialize XMTP client with user's address
     }
 
-    nonisolated func stop() {
-        Task {
-            if let user = await authService.currentUser {
-                do {
-                    try await keychainService.delete(for: user)
-                } catch {
-                    Logger.error("Failed deleting database key for user \(user.id): \(error.localizedDescription)")
-                }
+    func stop() async {
+        if let user = authService.currentUser {
+            do {
+                try keychainService.delete(for: user)
+            } catch {
+                Logger.error("Failed deleting database key for user \(user.id): \(error.localizedDescription)")
             }
-            await setXmtpClient(nil)
         }
+        do {
+            try xmtpClient?.deleteLocalDatabase()
+        } catch {
+            Logger.error("Failed deleting local XMTP database for user: \(error.localizedDescription)")
+        }
+        setXmtpClient(nil)
     }
 
     func sendMessage(to address: String, content: String) async throws {
@@ -190,11 +129,11 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         }
     }
 
-    private func initializeXmtpClient(for user: ConvosSDK.User) async throws {
+    private func initializeXmtpClient(for user: ConvosSDK.User) async throws -> ConvosSigningKey? {
         Logger.info("Initializing XMTP client...")
         guard xmtpClient == nil else {
             Logger.warning("Attempted to initialize XMTP when one exists, exiting...")
-            return
+            return nil
         }
         let key = try await fetchOrCreateDatabaseKey(for: user)
         guard let encryptionKey = key.valueData else {
@@ -204,6 +143,18 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         let signingKey = try user.signingKey
         Logger.info("Sending signing key to XMTP Client with chainId: \(String(describing: signingKey.chainId))")
         xmtpClient = try await Client.create(account: signingKey, options: options)
+        return signingKey
+    }
+
+    private func authorizeConvosBackend(signature: String) async throws {
+        guard let installationId = xmtpClient?.installationID,
+              let xmtpId = xmtpClient?.inboxID else {
+            throw InitializationError.xmtpClientMissingRequiredValuesForAuth
+        }
+        let result = try await apiClient.authenticate(xmtpInstallationId: installationId,
+                                                      xmtpId: xmtpId,
+                                                      xmtpSignature: signature)
+        Logger.info("Authenticated with Convos backend: \(result)")
     }
 
     private func setXmtpClient(_ client: XMTPiOS.Client?) {
@@ -219,7 +170,17 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                     switch authState {
                     case .authorized(let user):
                         do {
-                            try await self.initializeXmtpClient(for: user)
+                            let result = try await self.initializeXmtpClient(for: user)
+                            guard let signingKey = result,
+                                let signature = signingKey.signature else {
+                                Logger.error("No signature found from XMTP Client, failed to auth with convos backend")
+                                return
+                            }
+                            do {
+                                let result = try await self.authorizeConvosBackend(signature: signature)
+                            } catch {
+                                Logger.error("Failed authorizing Convos backend.")
+                            }
                         } catch {
                             Logger.error("Failed initializing XMTP Client: \(error.localizedDescription)")
                         }
@@ -232,13 +193,8 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 }
 
-private enum MessagingError: Error {
-    case notAuthenticated
-    case notInitialized
-}
-
 private struct ConvosMessage: ConvosSDK.Message {
-    let xmtpMessage: XMTPiOS.DecodedMessage
+    private let xmtpMessage: XMTPiOS.DecodedMessage
     let sender: ConvosSDK.User
 
     var id: String { xmtpMessage.id }
