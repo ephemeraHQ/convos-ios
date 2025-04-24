@@ -1,60 +1,6 @@
 import Foundation
 
-// MARK: - Models
-
-struct Device: Codable {
-    let id: String
-    let userId: String
-    let name: String?
-    let os: DeviceOS
-    let pushToken: String?
-    let expoToken: String?
-    let createdAt: Date
-    let updatedAt: Date
-}
-
-enum DeviceOS: String, Codable {
-    case ios
-    case android
-    case web
-    case macos
-}
-
-struct DeviceIdentity: Codable {
-    let id: String
-    let userId: String
-    let xmtpId: String?
-    let privyAddress: String
-    let createdAt: Date
-    let updatedAt: Date
-}
-
-struct Profile: Codable {
-    let id: String
-    let deviceIdentityId: String
-    let name: String
-    let username: String
-    let description: String?
-    let avatar: String?
-    let createdAt: Date
-    let updatedAt: Date
-}
-
-struct ConversationMetadata: Codable {
-    let id: String
-    let deviceIdentityId: String
-    let conversationId: String
-    let pinned: Bool
-    let unread: Bool
-    let deleted: Bool
-    let readUntil: Date?
-    let createdAt: Date
-    let updatedAt: Date
-}
-
-// MARK: - API Client
-
-class ConvosAPIClient {
+final class ConvosAPIClient {
     private let baseURL: URL
     private let keychainService: KeychainService<ConvosKeychainItem> = .init()
     private let session: URLSession
