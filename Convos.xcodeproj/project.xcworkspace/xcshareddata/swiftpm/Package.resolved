@@ -1,5 +1,5 @@
 {
-  "originHash" : "9353be867b2930bca22d652e1d28471c60aeb8586f4ea9fbf6341fad342047a6",
+  "originHash" : "071aae2a8458425fb85697fdb84c7865201c66ba0151c3a4ac1a4e13f7f110fe",
   "pins" : [
     {
       "identity" : "anchorkit",
@@ -78,7 +78,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/privy-io/privy-ios",
       "state" : {
-        "revision" : "55104d3ba101a74cba22d3251d1eb951924c630f"
+        "revision" : "8079e8d2c0011ba3f745f2c143d18e4a4713ca4d"
       }
     },
     {

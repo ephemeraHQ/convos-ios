@@ -124,6 +124,10 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         if let client = xmtpClient {
             Logger.info("Deleting local XMTP database")
             try client.deleteLocalDatabase()
+            let saltPath = client.dbPath + ".sqlcipher_salt"
+            if FileManager.default.fileExists(atPath: saltPath) {
+                try FileManager.default.removeItem(atPath: saltPath)
+            }
             Logger.info("Deleting XMTP database key")
             try keychainService.delete(.xmtpDatabaseKey)
             setXmtpClient(nil)
