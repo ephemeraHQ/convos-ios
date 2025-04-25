@@ -1,11 +1,6 @@
 import Foundation
 import Security
 
-enum DatabaseKeyError: Error {
-    case failedDecryptingDatabaseKey,
-         invalidDatabaseKeyLength
-}
-
 struct DatabaseKey {
     let rawData: Data
 

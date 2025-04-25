@@ -209,11 +209,13 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                     switch authState {
                     case .authorized:
                         do {
+                            Logger.info("MessagingService starting from auth state changing to authorized")
                             try await self.start()
                         } catch {
                             Logger.error("Auth state change failed to start messaging: \(error.localizedDescription)")
                         }
                     case .unauthorized:
+                        Logger.info("MessagingService stopping from auth state changing to unauthorized")
                         await self.stop()
                     default:
                         break
