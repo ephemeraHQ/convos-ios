@@ -36,14 +36,14 @@ final class ConvosAPIClient {
         }
 
         let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
-        try keychainService.save(authResponse.token, for: .convosJwt)
+        try keychainService.saveString(authResponse.token, for: .convosJwt)
         return authResponse.token
     }
 
     // MARK: - Private Helpers
 
     private func authenticatedRequest(for path: String, method: String = "GET") throws -> URLRequest {
-        guard let jwt = try keychainService.retrieve(.convosJwt) else {
+        guard let jwt = try keychainService.retrieveString(.convosJwt) else {
             throw APIError.notAuthenticated
         }
         let url = baseURL.appendingPathComponent(path)

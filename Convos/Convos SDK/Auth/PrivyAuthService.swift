@@ -25,7 +25,7 @@ private class PrivyJWTProvider {
     var jwt: String? {
         get {
             do {
-                return try keychainService.retrieve(.jwt)
+                return try keychainService.retrieveString(.jwt)
             } catch {
                 Logger.error("Error retrieving JWT token from keychain: \(error.localizedDescription)")
             }
@@ -35,7 +35,7 @@ private class PrivyJWTProvider {
         set {
             do {
                 if let newValue = newValue {
-                    try keychainService.save(newValue, for: .jwt)
+                    try keychainService.saveString(newValue, for: .jwt)
                 } else {
                     try keychainService.delete(.jwt)
                 }

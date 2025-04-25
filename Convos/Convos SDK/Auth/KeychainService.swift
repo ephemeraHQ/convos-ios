@@ -13,16 +13,19 @@ protocol KeychainItemProtocol {
 }
 
 final class KeychainService<T: KeychainItemProtocol> {
-    func save(_ value: String, for item: T) throws {
-        guard let valueString = value.data(using: .utf8) else {
+    func saveString(_ value: String, for item: T) throws {
+        guard let valueData = value.data(using: .utf8) else {
             throw KeychainError.unknown(errSecParam)
         }
+        try saveData(valueData, for: item)
+    }
 
+    func saveData(_ data: Data, for item: T) throws {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: T.service,
             kSecAttrAccount as String: item.account,
-            kSecValueData as String: valueString
+            kSecValueData as String: data
         ]
 
         let status = SecItemAdd(query as CFDictionary, nil)
@@ -36,7 +39,7 @@ final class KeychainService<T: KeychainItemProtocol> {
             ]
 
             let attributes: [String: Any] = [
-                kSecValueData as String: valueString
+                kSecValueData as String: data
             ]
 
             let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributes as CFDictionary)
@@ -48,11 +51,21 @@ final class KeychainService<T: KeychainItemProtocol> {
         }
     }
 
-    func retrieve(_ item: T) throws -> String? {
+    func retrieveString(_ item: T) throws -> String? {
+        let result = try retrieveData(item)
+        guard let data = result,
+              let value = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        return value
+    }
+
+    func retrieveData(_ item: T) throws -> Data? {
         return try retrieve(service: T.service, account: item.account)
     }
 
-    private func retrieve(service: String, account: String) throws -> String? {
+    private func retrieve(service: String, account: String) throws -> Data? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -70,12 +83,7 @@ final class KeychainService<T: KeychainItemProtocol> {
             throw KeychainError.unknown(status)
         }
 
-        guard let data = result as? Data,
-              let value = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-
-        return value
+        return result as? Data
     }
 
     private func delete(service: String, account: String) throws {

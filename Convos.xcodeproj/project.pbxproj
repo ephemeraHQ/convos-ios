@@ -117,6 +117,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7A9BDFE92DBBF97F00839156 /* Privy in Frameworks */,
 				D834386F2DB19D8C00A50F45 /* Factory in Frameworks */,
 				7A7BB2282DB721D6009B8BBF /* PasskeyAuth in Frameworks */,
 				7A7BB22B2DB72230009B8BBF /* XMTPiOS in Frameworks */,
@@ -225,7 +226,6 @@
 			name = Convos;
 			packageProductDependencies = (
 				D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */,
-				D8A2B6CA2DA4D5A500EF8577 /* Privy */,
 				D834386E2DB19D8C00A50F45 /* Factory */,
 				D80BAAC12DB2C36500C2FB42 /* Sentry */,
 				7A1C3C742DB6F7AD00B723C0 /* PostHog */,
@@ -267,7 +267,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */,
-				D8A2B6C92DA4D5A500EF8577 /* XCRemoteSwiftPackageReference "privy-ios" */,
 				D834386D2DB19D8C00A50F45 /* XCRemoteSwiftPackageReference "Factory" */,
 				D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
