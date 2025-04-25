@@ -22,12 +22,6 @@ final class AppViewModel {
         }
     }
 
-//    func onAppear() {
-//        Task {
-//            await authService.setupPresentationContextProvider()
-//        }
-//    }
-
     private func observeAuthState() {
         convos.authState
             .receive(on: DispatchQueue.main)
