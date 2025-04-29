@@ -117,9 +117,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7A9BDFE92DBBF97F00839156 /* Privy in Frameworks */,
 				D834386F2DB19D8C00A50F45 /* Factory in Frameworks */,
-				7A7BB2282DB721D6009B8BBF /* PasskeyAuth in Frameworks */,
 				7A7BB22B2DB72230009B8BBF /* XMTPiOS in Frameworks */,
 				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
 				D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */,
@@ -127,6 +125,7 @@
 				D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */,
 				D808502F2DC94EDF00E708B0 /* GRDB-dynamic in Frameworks */,
 				7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */,
+				7A6D4A7E2DBC0F6B003284DA /* TurnkeySDK in Frameworks */,
 				D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */,
 				D808504A2DC9534800E708B0 /* TurnkeySDK in Frameworks */,
 			);

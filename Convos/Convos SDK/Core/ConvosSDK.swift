@@ -6,7 +6,7 @@ public enum ConvosSDK {
         private let authService: AuthServiceProtocol
         private let messagingService: MessagingServiceProtocol
 
-        public static let shared: Convos = .init(authService: PrivyAuthService())
+        public static let shared: Convos = .init(authService: TurnkeyAuthService())
         public static let mock: Convos = .init(authService: MockAuthService())
 
         private init(authService: AuthServiceProtocol) {
@@ -22,8 +22,8 @@ public enum ConvosSDK {
             authService.authStatePublisher().eraseToAnyPublisher()
         }
 
-        public func prepare() async {
-            await authService.prepare()
+        public func prepare() async throws {
+            try await authService.prepare()
         }
 
         public func signIn() async throws {

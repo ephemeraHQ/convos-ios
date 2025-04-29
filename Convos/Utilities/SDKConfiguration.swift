@@ -1,5 +1,4 @@
 import Foundation
-import PrivySDK
 import Sentry
 
 enum SDKConfiguration {

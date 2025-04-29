@@ -12,7 +12,7 @@ public extension ConvosSDK {
 
         var messagingService: MessagingServiceProtocol { get }
 
-        func prepare() async
+        func prepare() async throws
 
         func signIn() async throws
         func register(displayName: String) async throws
@@ -52,7 +52,7 @@ class MockAuthService: ConvosSDK.AuthServiceProtocol {
         authStateSubject.send(.unauthorized)
     }
 
-    func prepare() async {
+    func prepare() async throws {
         authStateSubject.send(.unknown)
     }
 
