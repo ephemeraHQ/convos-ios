@@ -12,6 +12,7 @@
 		D834386F2DB19D8C00A50F45 /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = D834386E2DB19D8C00A50F45 /* Factory */; };
 		D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */; };
 		D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6CA2DA4D5A500EF8577 /* Privy */; };
+		D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = D8B5A9032DC272BD006003A4 /* XMTPiOS */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -54,6 +55,7 @@
 				D834386F2DB19D8C00A50F45 /* Factory in Frameworks */,
 				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
 				D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */,
+				D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */,
 				7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */,
 				D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */,
 			);
@@ -118,6 +120,7 @@
 				D834386E2DB19D8C00A50F45 /* Factory */,
 				D80BAAC12DB2C36500C2FB42 /* Sentry */,
 				7A1C3C742DB6F7AD00B723C0 /* PostHog */,
+				D8B5A9032DC272BD006003A4 /* XMTPiOS */,
 			);
 			productName = Convos;
 			productReference = D8A2B6912DA4BA4B00EF8577 /* Convos.app */;
@@ -154,6 +157,7 @@
 				D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
 				7A1C3C732DB6F7AD00B723C0 /* XCRemoteSwiftPackageReference "posthog-ios" */,
+				D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
@@ -198,7 +202,7 @@
 /* Begin PBXTargetDependency section */
 		D82C77932DB2FEE3004EA1C7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = D82C77922DB2FEE3004EA1C7 /* plugin:SwiftLintBuildToolPlugin */;
+			productRef = D82C77922DB2FEE3004EA1C7 /* SwiftLintBuildToolPlugin */;
 		};
 /* End PBXTargetDependency section */
 
@@ -450,6 +454,14 @@
 				revision = 2623d1c97e8990d7164d7b858d0dbfd68876f4f4;
 			};
 		};
+		D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/xmtp/xmtp-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.0.7;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -463,7 +475,7 @@
 			package = D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
 		};
-		D82C77922DB2FEE3004EA1C7 /* plugin:SwiftLintBuildToolPlugin */ = {
+		D82C77922DB2FEE3004EA1C7 /* SwiftLintBuildToolPlugin */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
 			productName = "plugin:SwiftLintBuildToolPlugin";
@@ -482,6 +494,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D8A2B6C92DA4D5A500EF8577 /* XCRemoteSwiftPackageReference "privy-ios" */;
 			productName = Privy;
+		};
+		D8B5A9032DC272BD006003A4 /* XMTPiOS */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */;
+			productName = XMTPiOS;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
