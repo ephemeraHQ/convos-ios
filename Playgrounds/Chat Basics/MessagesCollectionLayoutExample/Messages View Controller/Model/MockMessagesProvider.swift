@@ -167,17 +167,23 @@ final class MockMessagesProvider: MessagesProviderProtocol {
     private func createRandomMessage(date: Date = Date()) -> RawMessage {
         let sender = allUsers[Int.random(in: 0..<allUsers.count)]
         lastMessageIndex += 1
-        if lastMessageIndex == nextImageMessageIndex {
-            // Schedule next image message
-            nextImageMessageIndex = lastMessageIndex + Int.random(in: 3...8)
+        guard lastMessageIndex == nextImageMessageIndex else {
             return RawMessage(
                 id: UUID(),
-                date: date,
-                data: .image(.imageURL(imageUrls[Int.random(in: 0..<imageUrls.count)])),
-                userId: sender.id)
-        } else {
-            return RawMessage(id: UUID(), date: date, data: .text(TextGenerator.getString(of: Int.random(in: 1...20))), userId: sender.id)
+                              date: date,
+                              data: .text(TextGenerator.getString(of: Int.random(in: 1...20))),
+                              userId: sender.id
+            )
+
         }
+
+        // Schedule next image message
+        nextImageMessageIndex = lastMessageIndex + Int.random(in: 5...15)
+        return RawMessage(
+            id: UUID(),
+            date: date,
+            data: .image(.imageURL(imageUrls[Int.random(in: 0..<imageUrls.count)])),
+            userId: sender.id)
     }
 
     private func createBunchOfMessages(number: Int = 50) -> [RawMessage] {
