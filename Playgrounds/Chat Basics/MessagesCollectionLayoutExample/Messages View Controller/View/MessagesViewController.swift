@@ -216,7 +216,7 @@ final class MessagesViewController: UIViewController {
         Task {
             let sections = await messagingService.loadPreviousMessages()
             let animated = !isUserInitiatedScrolling
-            processUpdates(with: sections, animated: animated, requiresIsolatedProcess: false) {
+            processUpdates(with: sections, animated: animated, requiresIsolatedProcess: true) {
                 self.currentControllerActions.options.remove(.loadingPreviousMessages)
             }
         }
