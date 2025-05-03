@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import SwiftUI
 
-final class MockMessagesCollectionDataSource: NSObject {
+final class MessagesCollectionViewDataSource: NSObject {
     var sections: [Section] = [] {
         didSet {
             oldSections = oldValue
@@ -26,13 +26,13 @@ final class MockMessagesCollectionDataSource: NSObject {
     }
 }
 
-extension MockMessagesCollectionDataSource: MessagesCollectionDataSource {
+extension MessagesCollectionViewDataSource: MessagesCollectionDataSource {
     func prepare(with collectionView: UICollectionView) {
         registerCells(in: collectionView)
     }
 }
 
-extension MockMessagesCollectionDataSource: UICollectionViewDataSource {
+extension MessagesCollectionViewDataSource: UICollectionViewDataSource {
     func numberOfSections(in collectionView: UICollectionView) -> Int {
         sections.count
     }
@@ -57,7 +57,7 @@ extension MockMessagesCollectionDataSource: UICollectionViewDataSource {
     }
 }
 
-extension MockMessagesCollectionDataSource: MessagesLayoutDelegate {
+extension MessagesCollectionViewDataSource: MessagesLayoutDelegate {
     func shouldPresentHeader(_ messagesLayout: MessagesCollectionLayout, at sectionIndex: Int) -> Bool {
         layoutDelegate.shouldPresentHeader(messagesLayout, at: sectionIndex)
     }

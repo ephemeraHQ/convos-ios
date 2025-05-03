@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct MessagesView: UIViewControllerRepresentable {
+    let messagingService: MessagingServiceProtocol
 
     func makeUIViewController(context: Context) -> MessagesViewController {
-        return MessagesViewControllerBuilder.build()
+        let messageViewController = MessagesViewController(messagingService: messagingService)
+        return messageViewController
     }
 
     func updateUIViewController(_ uiViewController: MessagesViewController, context: Context) {
@@ -11,6 +13,6 @@ struct MessagesView: UIViewControllerRepresentable {
 }
 
 #Preview {
-    MessagesView()
+    MessagesView(messagingService: MockMessagingService())
         .ignoresSafeArea()
 }

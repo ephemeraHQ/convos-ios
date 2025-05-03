@@ -1,6 +1,7 @@
-import DifferenceKit
+import Combine
 import Foundation
 import UIKit
+import DifferenceKit
 
 final class MessagesViewController: UIViewController {
     // MARK: - Types
@@ -55,12 +56,13 @@ final class MessagesViewController: UIViewController {
         collectionView.isDragging || collectionView.isDecelerating
     }
 
+    private var cancellables = Set<AnyCancellable>()
+
     // MARK: - Initialization
 
-    init(messagingService: MessagingServiceProtocol,
-         dataSource: MessagesCollectionDataSource) {
+    init(messagingService: MessagingServiceProtocol) {
         self.messagingService = messagingService
-        self.dataSource = dataSource
+        self.dataSource = MessagesCollectionViewDataSource()
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -92,6 +94,17 @@ final class MessagesViewController: UIViewController {
         setupCollectionView()
         setupInputBar()
         loadInitialData()
+
+        messagingService.updates.receive(on: DispatchQueue.main)
+            .sink { [weak self] update in
+                guard let self else { return }
+                processUpdates(
+                    with: update.sections,
+                    animated: true,
+                    requiresIsolatedProcess: update.requiresIsolatedProcess
+                )
+            }
+            .store(in: &cancellables)
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -224,7 +237,7 @@ final class MessagesViewController: UIViewController {
 
     func scrollToBottom(completion: (() -> Void)? = nil) {
         let contentOffsetAtBottom = CGPoint(x: collectionView.contentOffset.x,
-                                          y: messagesLayout.collectionViewContentSize.height - collectionView.frame.height + collectionView.adjustedContentInset.bottom)
+                                            y: messagesLayout.collectionViewContentSize.height - collectionView.frame.height + collectionView.adjustedContentInset.bottom)
 
         guard contentOffsetAtBottom.y > collectionView.contentOffset.y else {
             completion?()
@@ -250,13 +263,13 @@ final class MessagesViewController: UIViewController {
             guard let self else { return }
 
             collectionView.contentOffset = CGPoint(x: collectionView.contentOffset.x,
-                                                 y: initialOffset + (delta * percentage))
+                                                   y: initialOffset + (delta * percentage))
 
             if percentage == 1.0 {
                 animator = nil
                 let positionSnapshot = MessagesLayoutPositionSnapshot(indexPath: IndexPath(item: 0, section: 0),
-                                                                    kind: .footer,
-                                                                    edge: .bottom)
+                                                                      kind: .footer,
+                                                                      edge: .bottom)
                 messagesLayout.restoreContentOffset(with: positionSnapshot)
                 currentInterfaceActions.options.remove(.scrollingToBottom)
                 completion?()
@@ -277,15 +290,11 @@ final class MessagesViewController: UIViewController {
 
 // MARK: - MessagesControllerDelegate
 
-extension MessagesViewController: MessagesControllerDelegate {
-    func update(with sections: [Section], requiresIsolatedProcess: Bool) {
-        processUpdates(with: sections, animated: true, requiresIsolatedProcess: false)
-    }
-
+extension MessagesViewController {
     private func processUpdates(with sections: [Section],
-                              animated: Bool = true,
-                              requiresIsolatedProcess: Bool,
-                              completion: (() -> Void)? = nil) {
+                                animated: Bool = true,
+                                requiresIsolatedProcess: Bool,
+                                completion: (() -> Void)? = nil) {
         guard isViewLoaded else {
             dataSource.sections = sections
             return
@@ -300,9 +309,9 @@ extension MessagesViewController: MessagesControllerDelegate {
     }
 
     private func scheduleDelayedUpdate(with sections: [Section],
-                                     animated: Bool,
-                                     requiresIsolatedProcess: Bool,
-                                     completion: (() -> Void)?) {
+                                       animated: Bool,
+                                       requiresIsolatedProcess: Bool,
+                                       completion: (() -> Void)?) {
         let reaction = SetActor<Set<InterfaceActions>, ReactionTypes>.Reaction(
             type: .delayedUpdate,
             action: .onEmpty,
@@ -310,17 +319,17 @@ extension MessagesViewController: MessagesControllerDelegate {
             actionBlock: { [weak self] in
                 guard let self else { return }
                 processUpdates(with: sections,
-                             animated: animated,
-                             requiresIsolatedProcess: requiresIsolatedProcess,
-                             completion: completion)
+                               animated: animated,
+                               requiresIsolatedProcess: requiresIsolatedProcess,
+                               completion: completion)
             })
         currentInterfaceActions.add(reaction: reaction)
     }
 
     private func performUpdate(with sections: [Section],
-                             animated: Bool,
-                             requiresIsolatedProcess: Bool,
-                             completion: (() -> Void)?) {
+                               animated: Bool,
+                               requiresIsolatedProcess: Bool,
+                               completion: (() -> Void)?) {
         let process = {
             let changeSet = StagedChangeset(source: self.dataSource.sections, target: sections).flattenIfPossible()
 

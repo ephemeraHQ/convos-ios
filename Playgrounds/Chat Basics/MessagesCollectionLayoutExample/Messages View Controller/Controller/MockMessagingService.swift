@@ -1,7 +1,13 @@
+import Combine
 import Foundation
 
 final class MockMessagingService: MessagingServiceProtocol {
-    weak var delegate: MessagesControllerDelegate?
+    var updates: AnyPublisher<MessagingServiceUpdate, Never> {
+        updatesPublisher
+            .compactMap { $0 }
+            .eraseToAnyPublisher()
+    }
+    private var updatesPublisher = CurrentValueSubject<MessagingServiceUpdate?, Never>(nil)
 
     private let dataProvider: MessagesProviderProtocol
     private var typingState: TypingState = .idle
@@ -20,9 +26,11 @@ final class MockMessagingService: MessagingServiceProtocol {
 
     var messages: [RawMessage] = []
 
-    init(dataProvider: MessagesProviderProtocol, userId: Int) {
-        self.dataProvider = dataProvider
-        self.userId = userId
+    init() {
+        let currentUser = User(id: 0, name: "You")
+        let provider = MockMessagesProvider(currentUser: currentUser)
+        self.dataProvider = provider
+        self.userId = currentUser.id
 
         // Get users from the provider if it's a MockMessagesProvider, otherwise use defaults
         if let mockProvider = dataProvider as? MockMessagesProvider {
@@ -33,6 +41,7 @@ final class MockMessagingService: MessagingServiceProtocol {
             self.currentUser = User(id: userId, name: "You")
             self.otherUsers = []
         }
+        provider.delegate = self
     }
 
     func loadInitialMessages() async -> [Section] {
@@ -197,7 +206,7 @@ extension MockMessagingService: MockMessagesProviderDelegate {
             await markAllMessagesAsReceived()
             await markAllMessagesAsRead()
             let sections = await propagateLatestMessages()
-            delegate?.update(with: sections, requiresIsolatedProcess: false)
+            updatesPublisher.send(.init(sections: sections, requiresIsolatedProcess: false))
         }
     }
 
@@ -205,7 +214,7 @@ extension MockMessagingService: MockMessagesProviderDelegate {
         typingState = state
         Task {
             let sections = await propagateLatestMessages()
-            delegate?.update(with: sections, requiresIsolatedProcess: false)
+            updatesPublisher.send(.init(sections: sections, requiresIsolatedProcess: false))
         }
     }
 
@@ -214,7 +223,7 @@ extension MockMessagingService: MockMessagesProviderDelegate {
         Task {
             await markAllMessagesAsRead()
             let sections = await propagateLatestMessages()
-            delegate?.update(with: sections, requiresIsolatedProcess: false)
+            updatesPublisher.send(.init(sections: sections, requiresIsolatedProcess: false))
         }
     }
 
@@ -223,7 +232,7 @@ extension MockMessagingService: MockMessagesProviderDelegate {
         Task {
             await markAllMessagesAsReceived()
             let sections = await propagateLatestMessages()
-            delegate?.update(with: sections, requiresIsolatedProcess: false)
+            updatesPublisher.send(.init(sections: sections, requiresIsolatedProcess: false))
         }
     }
 }
