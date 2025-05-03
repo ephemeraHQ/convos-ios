@@ -5,13 +5,13 @@ import SwiftUI
 final class MessagesCollectionViewDataSource: NSObject {
     var sections: [Section] = [] {
         didSet {
-            oldSections = oldValue
-            layoutDelegate = DefaultMessagesLayout(sections: sections, oldSections: oldSections)
+            layoutDelegate = DefaultMessagesLayoutDelegate(sections: sections,
+                                                           oldSections: layoutDelegate.sections)
         }
     }
 
-    private var oldSections: [Section] = []
-    private lazy var layoutDelegate = DefaultMessagesLayout(sections: sections, oldSections: oldSections)
+    private lazy var layoutDelegate = DefaultMessagesLayoutDelegate(sections: sections,
+                                                                    oldSections: [])
 
     private func registerCells(in collectionView: UICollectionView) {
         collectionView.register(TextMessageCollectionCell.self, forCellWithReuseIdentifier: TextMessageCollectionCell.reuseIdentifier)

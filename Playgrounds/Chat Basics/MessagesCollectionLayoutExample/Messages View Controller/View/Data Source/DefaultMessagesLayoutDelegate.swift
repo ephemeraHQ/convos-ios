@@ -1,10 +1,10 @@
 import UIKit
 
-final class DefaultMessagesLayout: MessagesLayoutDelegate {
-    private let sections: [Section]
+final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
+    let sections: [Section]
     private let oldSections: [Section]
 
-    init(sections: [Section], oldSections: [Section] = []) {
+    init(sections: [Section], oldSections: [Section]) {
         self.sections = sections
         self.oldSections = oldSections
     }
