@@ -1,5 +1,6 @@
 import DifferenceKit
 import Foundation
+import UIKit
 
 enum MessageType: Hashable {
     case incoming, outgoing
@@ -61,6 +62,17 @@ extension MessageGroup: Differentiable {
 
     func isContentEqual(to source: MessageGroup) -> Bool {
         self == source
+    }
+}
+
+enum ImageSource: Hashable {
+    case image(UIImage)
+    case imageURL(URL)
+    var isLocal: Bool {
+        switch self {
+            case .image: return true
+            case .imageURL: return false
+        }
     }
 }
 
