@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 protocol MessagingServiceProtocol {
     func loadInitialMessages() async -> [Section]
     func loadPreviousMessages() async -> [Section]

@@ -4,9 +4,9 @@ final class MockMessagingService: MessagingServiceProtocol {
     weak var delegate: MessagesControllerDelegate?
 
     private let dataProvider: MessagesProviderProtocol
-    @MainActor private var typingState: TypingState = .idle
-    @MainActor private var lastReadUUID: UUID?
-    @MainActor private var lastReceivedUUID: UUID?
+    private var typingState: TypingState = .idle
+    private var lastReadUUID: UUID?
+    private var lastReceivedUUID: UUID?
     private let userId: Int
 
     private let currentUser: User
@@ -18,7 +18,7 @@ final class MockMessagingService: MessagingServiceProtocol {
         return map
     }
 
-    @MainActor var messages: [RawMessage] = []
+    var messages: [RawMessage] = []
 
     init(dataProvider: MessagesProviderProtocol, userId: Int) {
         self.dataProvider = dataProvider
@@ -35,7 +35,6 @@ final class MockMessagingService: MessagingServiceProtocol {
         }
     }
 
-    @MainActor
     func loadInitialMessages() async -> [Section] {
         let messages = await dataProvider.loadInitialMessages()
         appendConvertingToMessages(messages)
@@ -44,7 +43,6 @@ final class MockMessagingService: MessagingServiceProtocol {
         return await propagateLatestMessages()
     }
 
-    @MainActor
     func loadPreviousMessages() async -> [Section] {
         let messages = await dataProvider.loadPreviousMessages()
         appendConvertingToMessages(messages)
@@ -53,20 +51,17 @@ final class MockMessagingService: MessagingServiceProtocol {
         return await propagateLatestMessages()
     }
 
-    @MainActor
     func sendMessage(_ data: Message.Data) async -> [Section] {
         messages.append(RawMessage(id: UUID(), date: Date(), data: convert(data), userId: userId))
         return await propagateLatestMessages()
     }
 
-    @MainActor
     private func appendConvertingToMessages(_ rawMessages: [RawMessage]) {
         var messages = messages
         messages.append(contentsOf: rawMessages)
         self.messages = messages.sorted(by: { $0.date.timeIntervalSince1970 < $1.date.timeIntervalSince1970 })
     }
 
-    @MainActor
     private func propagateLatestMessages() async -> [Section] {
         var lastMessageStorage: Message?
 
@@ -136,7 +131,6 @@ final class MockMessagingService: MessagingServiceProtocol {
         return [Section(id: 0, title: "", cells: Array(cells))]
     }
 
-    @MainActor
     private func markAllMessagesAsReceived() async {
         guard let lastReceivedUUID else { return }
 
@@ -157,7 +151,6 @@ final class MockMessagingService: MessagingServiceProtocol {
         }
     }
 
-    @MainActor
     private func markAllMessagesAsRead() async {
         guard let lastReadUUID else { return }
 
@@ -198,7 +191,6 @@ final class MockMessagingService: MessagingServiceProtocol {
 }
 
 extension MockMessagingService: MockMessagesProviderDelegate {
-    @MainActor
     func received(messages: [RawMessage]) {
         appendConvertingToMessages(messages)
         Task {
@@ -209,7 +201,6 @@ extension MockMessagingService: MockMessagesProviderDelegate {
         }
     }
 
-    @MainActor
     func typingStateChanged(to state: TypingState) {
         typingState = state
         Task {
@@ -218,7 +209,6 @@ extension MockMessagingService: MockMessagesProviderDelegate {
         }
     }
 
-    @MainActor
     func lastReadIdChanged(to id: UUID) {
         lastReadUUID = id
         Task {
@@ -228,7 +218,6 @@ extension MockMessagingService: MockMessagesProviderDelegate {
         }
     }
 
-    @MainActor
     func lastReceivedIdChanged(to id: UUID) {
         lastReceivedUUID = id
         Task {
