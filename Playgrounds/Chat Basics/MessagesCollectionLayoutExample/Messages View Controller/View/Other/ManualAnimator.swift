@@ -67,46 +67,30 @@ class ManualAnimator {
 }
 
 private extension CGFloat {
+    var clamped01: CGFloat {
+        Swift.min(Swift.max(self, 0.0), 1.0)
+    }
+
     var parametric: CGFloat {
-        guard self > 0.0 else {
-            return 0.0
-        }
-        guard self < 1.0 else {
-            return 1.0
-        }
-        return (self * self) / (2.0 * ((self * self) - self) + 1.0)
+        let t = clamped01
+        return (t * t) / (2.0 * ((t * t) - t) + 1.0)
     }
 
     var quadraticEaseInOut: CGFloat {
-        guard self > 0.0 else {
-            return 0.0
+        let t = clamped01
+        if t < 0.5 {
+            return 2 * t * t
         }
-        guard self < 1.0 else {
-            return 1.0
-        }
-        if self < 0.5 {
-            return 2 * self * self
-        }
-        return (-2 * self * self) + (4 * self) - 1
+        return (-2 * t * t) + (4 * t) - 1
     }
 
     var quadraticEaseOut: CGFloat {
-        guard self > 0.0 else {
-            return 0.0
-        }
-        guard self < 1.0 else {
-            return 1.0
-        }
-        return -self * (self - 2)
+        let t = clamped01
+        return -t * (t - 2)
     }
 
     var quadraticEaseIn: CGFloat {
-        guard self > 0.0 else {
-            return 0.0
-        }
-        guard self < 1.0 else {
-            return 1.0
-        }
-        return self * self
+        let t = clamped01
+        return t * t
     }
 }
