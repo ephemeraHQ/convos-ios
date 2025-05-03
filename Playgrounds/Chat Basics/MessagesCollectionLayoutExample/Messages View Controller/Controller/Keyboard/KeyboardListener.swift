@@ -28,6 +28,10 @@ final class KeyboardListener {
         delegates.add(delegate)
     }
 
+    func remove(delegate: KeyboardListenerDelegate) {
+        delegates.remove(delegate)
+    }
+
     private init() {
         subscribeToKeyboardNotifications()
     }

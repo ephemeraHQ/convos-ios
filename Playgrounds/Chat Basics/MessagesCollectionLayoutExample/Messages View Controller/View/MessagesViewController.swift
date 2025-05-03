@@ -64,6 +64,10 @@ final class MessagesViewController: UIViewController {
         super.init(nibName: nil, bundle: nil)
     }
 
+    deinit {
+        KeyboardListener.shared.remove(delegate: self)
+    }
+
     @available(*, unavailable, message: "Use init(messageController:) instead")
     override convenience init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
         fatalError()

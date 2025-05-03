@@ -137,6 +137,10 @@ final class MessagesInputView: UIView {
         KeyboardListener.shared.add(delegate: self)
     }
 
+    deinit {
+        KeyboardListener.shared.remove(delegate: self)
+    }
+
     // MARK: - Layout
 
     override func layoutSubviews() {
