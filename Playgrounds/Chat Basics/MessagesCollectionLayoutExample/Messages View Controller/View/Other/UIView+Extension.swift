@@ -14,9 +14,8 @@ extension UIView {
 
 extension UIViewController {
     func topMostViewController() -> UIViewController {
-        if presentedViewController == nil {
-            return self
-        }
+        guard let presentedViewController else { return self }
+
         if let navigationViewController = presentedViewController as? UINavigationController {
             if let visibleViewController = navigationViewController.visibleViewController {
                 return visibleViewController.topMostViewController()
@@ -24,13 +23,16 @@ extension UIViewController {
                 return navigationViewController
             }
         }
+
         if let tabBarViewController = presentedViewController as? UITabBarController {
             if let selectedViewController = tabBarViewController.selectedViewController {
                 return selectedViewController.topMostViewController()
             }
-            return tabBarViewController.topMostViewController()
+
+            return tabBarViewController
         }
-        return presentedViewController!.topMostViewController()
+
+        return presentedViewController.topMostViewController()
     }
 }
 

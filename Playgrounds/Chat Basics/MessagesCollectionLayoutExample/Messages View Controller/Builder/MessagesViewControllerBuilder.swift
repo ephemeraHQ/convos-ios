@@ -4,7 +4,7 @@ import UIKit
 struct MessagesViewControllerBuilder {
     static func build(enableImages: Bool = true) -> MessagesViewController {
         let currentUser = User(id: 0, name: "You")
-        let messagesProvider = MockMessagesProvider(currentUser: currentUser, enableImages: enableImages)
+        let messagesProvider = MockMessagesProvider(currentUser: currentUser)
         let messageController = MockMessagingService(dataProvider: messagesProvider, userId: currentUser.id)
         let dataSource = MockMessagesCollectionDataSource()
         messagesProvider.delegate = messageController

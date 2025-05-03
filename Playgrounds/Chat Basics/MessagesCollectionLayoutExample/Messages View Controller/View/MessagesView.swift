@@ -1,10 +1,9 @@
 import SwiftUI
 
 struct MessagesView: UIViewControllerRepresentable {
-    let imagesEnabled: Bool
 
     func makeUIViewController(context: Context) -> MessagesViewController {
-        return MessagesViewControllerBuilder.build(enableImages: imagesEnabled)
+        return MessagesViewControllerBuilder.build()
     }
 
     func updateUIViewController(_ uiViewController: MessagesViewController, context: Context) {
@@ -12,6 +11,6 @@ struct MessagesView: UIViewControllerRepresentable {
 }
 
 #Preview {
-    MessagesView(imagesEnabled: true)
+    MessagesView()
         .ignoresSafeArea()
 }

@@ -46,13 +46,12 @@ final class MockMessagesProvider: MessagesProviderProtocol {
     private var startingTimestamp = Date().timeIntervalSince1970
     private var typingState: TypingState = .idle
     private var lastMessageIndex: Int = 0
+    private var nextImageMessageIndex: Int = Int.random(in: 3...8)
     private var lastReadUUID: UUID?
     private var lastReceivedUUID: UUID?
     private let dispatchQueue = DispatchQueue.global(qos: .userInteractive)
     private let enableTyping = true
     private let enableNewMessages = true
-    private let enableImages: Bool
-    private let enableRichContent = true
 
     private let websiteUrls: [URL] = [
         URL(string: "https://ephemerahq.com")!,
@@ -68,9 +67,8 @@ final class MockMessagesProvider: MessagesProviderProtocol {
 
     // MARK: - Initialization
 
-    init(currentUser: User, enableImages: Bool = true) {
+    init(currentUser: User) {
         self.currentUser = currentUser
-        self.enableImages = enableImages
 
         messageTimer = Timer.scheduledTimer(timeInterval: TimeInterval(Int.random(in: 0...6)), target: self, selector: #selector(handleTimer), userInfo: nil, repeats: true)
         typingTimer = Timer.scheduledTimer(timeInterval: TimeInterval(Int.random(in: 0...6)), target: self, selector: #selector(handleTypingTimer), userInfo: nil, repeats: true)
@@ -169,10 +167,15 @@ final class MockMessagesProvider: MessagesProviderProtocol {
     private func createRandomMessage(date: Date = Date()) -> RawMessage {
         let sender = allUsers[Int.random(in: 0..<allUsers.count)]
         lastMessageIndex += 1
-        switch (Int.random(in: 0...8), enableRichContent) {
-        case (6, enableImages):
-            return RawMessage(id: UUID(), date: date, data: .image(.imageURL(imageUrls[Int.random(in: 0..<imageUrls.count)])), userId: sender.id)
-        default:
+        if lastMessageIndex == nextImageMessageIndex {
+            // Schedule next image message
+            nextImageMessageIndex = lastMessageIndex + Int.random(in: 3...8)
+            return RawMessage(
+                id: UUID(),
+                date: date,
+                data: .image(.imageURL(imageUrls[Int.random(in: 0..<imageUrls.count)])),
+                userId: sender.id)
+        } else {
             return RawMessage(id: UUID(), date: date, data: .text(TextGenerator.getString(of: Int.random(in: 1...20))), userId: sender.id)
         }
     }

@@ -4,7 +4,7 @@ import SwiftUI
 struct MessagesCollectionLayoutExample: App {
     var body: some Scene {
         WindowGroup {
-            MessagesView(imagesEnabled: false)
+            MessagesView()
                 .navigationBarHidden(true)
                 .ignoresSafeArea()
         }
