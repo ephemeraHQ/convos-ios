@@ -178,7 +178,7 @@ final class MockMessagesProvider: MessagesProviderProtocol {
         }
 
         // Schedule next image message
-//        nextImageMessageIndex = lastMessageIndex + Int.random(in: 5...15)
+        nextImageMessageIndex = lastMessageIndex + Int.random(in: 5...15)
         return RawMessage(
             id: UUID(),
             date: date,

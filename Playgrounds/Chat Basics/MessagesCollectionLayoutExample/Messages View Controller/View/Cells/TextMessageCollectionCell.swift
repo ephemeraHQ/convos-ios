@@ -17,9 +17,7 @@ class TextMessageCollectionCell: UICollectionViewCell {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-//        .margins(.top, messageType == .outgoing ? 8.0 : 0.0)
-        .margins(.top, 0.0)
-        .margins(.bottom, 0.0)
+        .margins(.vertical, 0.0)
     }
 
     override func preferredLayoutAttributesFitting(_ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {

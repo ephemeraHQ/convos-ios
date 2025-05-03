@@ -1,7 +1,9 @@
 import UIKit
 
 final class CellFactory {
-    static func createCell(in collectionView: UICollectionView, for indexPath: IndexPath, with item: Cell) -> UICollectionViewCell {
+    static func createCell(in collectionView: UICollectionView,
+                           for indexPath: IndexPath,
+                           with item: Cell) -> UICollectionViewCell {
         switch item {
         case let .message(message, bubbleType: bubbleType):
             return createMessageCell(in: collectionView, for: indexPath, message: message, bubbleType: bubbleType)
@@ -14,7 +16,10 @@ final class CellFactory {
         }
     }
 
-    private static func createMessageCell(in collectionView: UICollectionView, for indexPath: IndexPath, message: Message, bubbleType: Cell.BubbleType) -> UICollectionViewCell {
+    private static func createMessageCell(in collectionView: UICollectionView,
+                                          for indexPath: IndexPath,
+                                          message: Message,
+                                          bubbleType: Cell.BubbleType) -> UICollectionViewCell {
         switch message.data {
         case let .text(text):
             return createTextCell(
@@ -56,25 +61,43 @@ final class CellFactory {
         source: ImageSource,
         messageType: MessageType
     ) -> ImageCollectionCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ImageCollectionCell.reuseIdentifier, for: indexPath) as! ImageCollectionCell
-        cell.setup(with: source, messageId: messageId, isOutgoing: messageType == .outgoing)
+        let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: ImageCollectionCell.reuseIdentifier,
+            for: indexPath
+        ) as! ImageCollectionCell
+        cell.setup(with: source, messageType: messageType)
+        cell.layoutMargins = .init(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
         return cell
     }
 
-    private static func createTypingIndicatorCell(in collectionView: UICollectionView, for indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TypingIndicatorCollectionCell.reuseIdentifier, for: indexPath) as! TypingIndicatorCollectionCell
+    private static func createTypingIndicatorCell(in collectionView: UICollectionView,
+                                                  for indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: TypingIndicatorCollectionCell.reuseIdentifier,
+            for: indexPath
+        ) as! TypingIndicatorCollectionCell
         cell.prepare(with: .leading)
         return cell
     }
 
-    private static func createGroupTitle(in collectionView: UICollectionView, for indexPath: IndexPath, title: String) -> UserTitleCollectionCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: UserTitleCollectionCell.reuseIdentifier, for: indexPath) as! UserTitleCollectionCell
+    private static func createGroupTitle(in collectionView: UICollectionView,
+                                         for indexPath: IndexPath,
+                                         title: String) -> UserTitleCollectionCell {
+        let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: UserTitleCollectionCell.reuseIdentifier,
+            for: indexPath
+        ) as! UserTitleCollectionCell
         cell.setup(name: title)
         return cell
     }
 
-    private static func createDateTitle(in collectionView: UICollectionView, for indexPath: IndexPath, title: String) -> TextTitleCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TextTitleCell.reuseIdentifier, for: indexPath) as! TextTitleCell
+    private static func createDateTitle(in collectionView: UICollectionView,
+                                        for indexPath: IndexPath,
+                                        title: String) -> TextTitleCell {
+        let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: TextTitleCell.reuseIdentifier,
+            for: indexPath
+        ) as! TextTitleCell
         cell.setup(title: title)
         return cell
     }
