@@ -2,6 +2,7 @@ import DifferenceKit
 import Foundation
 import UIKit
 
+@MainActor
 extension UICollectionView {
     func reload<C>(
         using stagedChangeset: StagedChangeset<C>,

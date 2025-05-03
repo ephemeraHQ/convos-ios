@@ -26,6 +26,8 @@ struct ImageMessageView: View {
             switch source {
                 case .image(let uiImage):
                     Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
                 case .imageURL(let url):
                     AsyncImage(url: url) { phase in
                         switch phase {
@@ -42,8 +44,7 @@ struct ImageMessageView: View {
                                     .scaledToFit()
                             case .failure:
                                 Image(systemName: "photo")
-                                    .resizable()
-                                    .scaledToFit()
+                                    .frame(minHeight: minHeight)
                             @unknown default:
                                 EmptyView()
                                     .frame(minHeight: minHeight)

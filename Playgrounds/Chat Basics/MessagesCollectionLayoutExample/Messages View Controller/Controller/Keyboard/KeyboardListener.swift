@@ -21,7 +21,6 @@ extension KeyboardListenerDelegate {
 
 final class KeyboardListener {
     static let shared = KeyboardListener()
-    private(set) var isKeyboardVisible: Bool = false
     private(set) var keyboardRect: CGRect?
     private var delegates = NSHashTable<AnyObject>.weakObjects()
 
@@ -40,7 +39,6 @@ final class KeyboardListener {
         }
 
         keyboardRect = info.frameEnd
-        isKeyboardVisible = true
         delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
             $0.keyboardWillShow(info: info)
         }
@@ -96,7 +94,6 @@ final class KeyboardListener {
             return
         }
         keyboardRect = info.frameEnd
-        isKeyboardVisible = false
         delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
             $0.keyboardDidHide(info: info)
         }
