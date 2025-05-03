@@ -4,17 +4,22 @@ final class MessagesDateFormatter {
 
     static let shared = MessagesDateFormatter()
     private let formatter = DateFormatter()
+    private let queue = DispatchQueue(label: "com.app.MessagesDateFormatter")
 
     private init() {}
 
     func string(from date: Date) -> String {
-        configureDateFormatter(for: date)
-        return formatter.string(from: date)
+        return queue.sync {
+            configureDateFormatter(for: date)
+            return formatter.string(from: date)
+        }
     }
 
     func attributedString(from date: Date, with attributes: [NSAttributedString.Key: Any]) -> NSAttributedString {
-        let dateString = string(from: date)
-        return NSAttributedString(string: dateString, attributes: attributes)
+        return queue.sync {
+            let dateString = string(from: date)
+            return NSAttributedString(string: dateString, attributes: attributes)
+        }
     }
 
     func configureDateFormatter(for date: Date) {
