@@ -44,7 +44,10 @@ final class ConvosAPIClient {
 
     // MARK: - Authentication
 
-    func createSubOrganization(passkey: Passkey) async throws -> CreateSubOrganizationResponse {
+    func createSubOrganization(
+        ephemeralPublicKey: String,
+        passkey: Passkey
+    ) async throws -> CreateSubOrganizationResponse {
         let url = baseURL.appendingPathComponent("v1/wallets")
 
         var request = URLRequest(url: url)
@@ -53,6 +56,7 @@ final class ConvosAPIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let requestBody: [String: Any] = [
+            "ephemeralPublicKey": ephemeralPublicKey,
             "challenge": passkey.challenge,
             "attestation": [
                 "credentialId": passkey.attestation.credentialId,
@@ -68,12 +72,11 @@ final class ConvosAPIClient {
             let (data, response) = try await session.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
+                  httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
                 throw APIError.authenticationFailed
             }
 
             let result = try JSONDecoder().decode(CreateSubOrganizationResponse.self, from: data)
-            Logger.info("createSubOrganization response: \(response)")
             return result
         } catch {
             throw APIError.serverError(error)
@@ -129,16 +132,16 @@ final class ConvosAPIClient {
         }
 
         switch httpResponse.statusCode {
-        case 200...299:
-            return try JSONDecoder().decode(T.self, from: data)
-        case 401:
-            throw APIError.notAuthenticated
-        case 403:
-            throw APIError.forbidden
-        case 404:
-            throw APIError.notFound
-        default:
-            throw APIError.serverError(nil)
+            case 200...299:
+                return try JSONDecoder().decode(T.self, from: data)
+            case 401:
+                throw APIError.notAuthenticated
+            case 403:
+                throw APIError.forbidden
+            case 404:
+                throw APIError.notFound
+            default:
+                throw APIError.serverError(nil)
         }
     }
 }

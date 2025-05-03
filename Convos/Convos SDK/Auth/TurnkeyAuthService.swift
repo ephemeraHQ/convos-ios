@@ -5,20 +5,23 @@ import Shared
 import TurnkeySDK
 
 extension Notification.Name {
-    static let PasskeyManagerModalSheetCanceled = Notification.Name(
+    static let PasskeyManagerModalSheetCanceled: Notification.Name = Notification.Name(
         "PasskeyManagerModalSheetCanceledNotification")
-    static let PasskeyManagerError = Notification.Name("PasskeyManagerErrorNotification")
-    static let PasskeyRegistrationCompleted = Notification.Name(
+    static let PasskeyManagerError: Notification.Name = Notification.Name("PasskeyManagerErrorNotification")
+    static let PasskeyRegistrationCompleted: Notification.Name = Notification.Name(
         "PasskeyRegistrationCompletedNotification")
-    static let PasskeyRegistrationFailed = Notification.Name("PasskeyRegistrationFailedNotification")
-    static let PasskeyRegistrationCanceled = Notification.Name(
+    static let PasskeyRegistrationFailed: Notification.Name = Notification.Name("PasskeyRegistrationFailedNotification")
+    static let PasskeyRegistrationCanceled: Notification.Name = Notification.Name(
         "PasskeyRegistrationCanceledNotification")
-    static let PasskeyAssertionCompleted = Notification.Name(
+    static let PasskeyAssertionCompleted: Notification.Name = Notification.Name(
         "PasskeyAssertionCompletedNotification")
 }
 
 enum TurnkeyAuthServiceError: Error {
-    case failedFindingPasskeyPresentationAnchor, uninitializedTurnkeyClient
+    case failedFindingPasskeyPresentationAnchor,
+         uninitializedTurnkeyClient,
+         failedReturningCredential,
+         failedCreatingSubOrganization
 }
 
 final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
@@ -58,7 +61,8 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
     func prepare() async throws {
         Task { @MainActor in
             let presentationAnchor = try presentationAnchor()
-            client = TurnkeyClient(rpId: Secrets.API_RP_ID, presentationAnchor: presentationAnchor)
+            client = TurnkeyClient(rpId: Secrets.API_RP_ID,
+                                   presentationAnchor: presentationAnchor)
             //            setupPasskeyPresentationProvider()
             authState = .unauthorized
         }
@@ -74,6 +78,23 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
             throw TurnkeyAuthServiceError.uninitializedTurnkeyClient
         }
 
+        let keyPair = try KeyGenerator.generateP256KeyPair()
+        let publicKey = keyPair.publicKeyString
+        let sessionResponse = try await client.createReadWriteSession(
+            organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID,
+            targetPublicKey: publicKey,
+            userId: nil,
+            apiKeyName: nil,
+            expirationSeconds: "86400" // 24 hours
+        )
+        if case .ok(let session) = sessionResponse,
+           let credentialBundle = try session.body.json.activity.result.createReadWriteSessionResultV2?.credentialBundle {
+
+
+        } else {
+            throw TurnkeyAuthServiceError.failedFindingPasskeyPresentationAnchor
+        }
+
         do {
             // Get whoami to verify authentication
             let whoamiResponse = try await client.getWhoami(organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID)
@@ -81,6 +102,7 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
             Logger.info("Turnkey Whoami: \(whoamiResponse)")
             let whoami = try whoamiResponse.ok.body.json
             Logger.info("Turnkey whoami: \(whoami)")
+
             // Update auth state and current user
             //            authState = .authorized(ConvosUser(
             //                userId: whoami.userId,
@@ -163,12 +185,30 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
             return
         }
 
-        Task {
-            let result = try await sendCreateSubOrgRequest(
-                passkeyRegistrationResult: result,
-                displayName: displayName
-            )
-            Logger.info("Finished registering with Turnkey: \(result)")
+        do {
+            let keyPair = try KeyGenerator.generateP256KeyPair()
+
+            Task {
+                let result = try await sendCreateSubOrgRequest(
+                    ephemeralPublicKey: keyPair.publicKeyString,
+                    passkeyRegistrationResult: result,
+                    displayName: displayName
+                )
+
+                guard let client, let result else {
+                    throw TurnkeyAuthServiceError.failedCreatingSubOrganization
+                }
+
+                let session = try await client.createReadOnlySession(organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID)
+//                let whoamiResponse = try await client.getWhoami(organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID)
+
+//                Logger.info("Turnkey Whoami: \(whoamiResponse)")
+//                let whoami = try whoamiResponse.ok.body.json
+
+                Logger.info("Finished registering with Turnkey: \(result)")
+            }
+        } catch {
+
         }
     }
 
@@ -178,20 +218,17 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
         }
 
         // Handle passkey registration failure
-        // ...
-
-        //        isPerformingModalRequest = false
+        Logger.error("Error handling passkey registration: \(error)")
     }
 
     @objc private func handlePasskeyRegistrationCanceled(_ notification: Notification) {
         // Handle passkey registration cancellation
-        // ...
-
-        //        didCancelModalSheet()
+        Logger.info("Passkey Registration canceled")
     }
 
     // MARK: - TurnKey
     func sendCreateSubOrgRequest(
+        ephemeralPublicKey: String,
         passkeyRegistrationResult: PasskeyRegistrationResult,
         displayName: String
     ) async throws -> CreateSubOrganizationResponse? {
@@ -209,12 +246,15 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
             )
         )
 
+
         let response = try await apiClient.createSubOrganization(
+            ephemeralPublicKey: ephemeralPublicKey,
             passkey: .init(
                 challenge: passkey.challenge,
                 attestation: passkey.attestation
             )
         )
+
         return response
     }
 
