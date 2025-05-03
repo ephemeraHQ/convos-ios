@@ -1,0 +1,81 @@
+import UIKit
+
+final class CellFactory {
+    static func createCell(in collectionView: UICollectionView, for indexPath: IndexPath, with item: Cell) -> UICollectionViewCell {
+        switch item {
+        case let .message(message, bubbleType: bubbleType):
+            return createMessageCell(in: collectionView, for: indexPath, message: message, bubbleType: bubbleType)
+        case let .messageGroup(group):
+            return createGroupTitle(in: collectionView, for: indexPath, title: group.title)
+        case let .date(group):
+            return createDateTitle(in: collectionView, for: indexPath, title: group.value)
+        case .typingIndicator:
+            return createTypingIndicatorCell(in: collectionView, for: indexPath)
+        }
+    }
+
+    private static func createMessageCell(in collectionView: UICollectionView, for indexPath: IndexPath, message: Message, bubbleType: Cell.BubbleType) -> UICollectionViewCell {
+        switch message.data {
+        case let .text(text):
+            return createTextCell(
+                in: collectionView,
+                for: indexPath,
+                text: text,
+                bubbleType: bubbleType,
+                messageType: message.type
+            )
+        case let .image(source, _):
+            return createImageCell(
+                in: collectionView,
+                messageId: message.id,
+                for: indexPath,
+                user: message.owner,
+                source: source,
+                messageType: message.type
+            )
+        }
+    }
+
+    private static func createTextCell(
+        in collectionView: UICollectionView,
+        for indexPath: IndexPath,
+        text: String,
+        bubbleType: Cell.BubbleType,
+        messageType: MessageType
+    ) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TextMessageCollectionCell.reuseIdentifier, for: indexPath) as! TextMessageCollectionCell
+        cell.setup(message: text, messageType: messageType, style: bubbleType)
+        return cell
+    }
+
+    private static func createImageCell(
+        in collectionView: UICollectionView,
+        messageId: UUID,
+        for indexPath: IndexPath,
+        user: User,
+        source: ImageSource,
+        messageType: MessageType
+    ) -> ImageCollectionCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ImageCollectionCell.reuseIdentifier, for: indexPath) as! ImageCollectionCell
+        cell.setup(with: source, messageId: messageId, isOutgoing: messageType == .outgoing)
+        return cell
+    }
+
+    private static func createTypingIndicatorCell(in collectionView: UICollectionView, for indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TypingIndicatorCollectionCell.reuseIdentifier, for: indexPath) as! TypingIndicatorCollectionCell
+        cell.prepare(with: .leading)
+        return cell
+    }
+
+    private static func createGroupTitle(in collectionView: UICollectionView, for indexPath: IndexPath, title: String) -> UserTitleCollectionCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: UserTitleCollectionCell.reuseIdentifier, for: indexPath) as! UserTitleCollectionCell
+        cell.setup(name: title)
+        return cell
+    }
+
+    private static func createDateTitle(in collectionView: UICollectionView, for indexPath: IndexPath, title: String) -> TextTitleCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TextTitleCell.reuseIdentifier, for: indexPath) as! TextTitleCell
+        cell.setup(title: title)
+        return cell
+    }
+}
