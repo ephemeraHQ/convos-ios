@@ -360,10 +360,11 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
             return nil
         }
 
-        let kind = ItemKind(elementKind)
-        let attributes = controller.itemAttributes(for: indexPath.itemPath, kind: kind, at: state)
+        guard let kind = ItemKind(elementKind) else {
+            return nil
+        }
 
-        return attributes
+        return controller.itemAttributes(for: indexPath.itemPath, kind: kind, at: state)
     }
 
     // MARK: Coordinating Animated Changes
@@ -476,9 +477,13 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
         switch preferredMessageAttributes.kind {
             case .cell:
                 context.invalidateItems(at: [preferredMessageAttributes.indexPath])
-            case .footer,
-                    .header:
-                context.invalidateSupplementaryElements(ofKind: preferredMessageAttributes.kind.supplementaryElementStringType, at: [preferredMessageAttributes.indexPath])
+            case .footer, .header:
+                if let type = preferredMessageAttributes.kind.supplementaryElementStringType {
+                    context.invalidateSupplementaryElements(
+                        ofKind: type,
+                        at: [preferredMessageAttributes.indexPath]
+                    )
+                }
         }
 
         context.invalidateLayoutMetrics = false
@@ -726,7 +731,10 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
                                                                                at elementIndexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
         var attributes: MessagesLayoutAttributes?
 
-        let kind = ItemKind(elementKind)
+        guard let kind = ItemKind(elementKind) else {
+            return nil
+        }
+
         let elementPath = elementIndexPath.itemPath
         if state == .afterUpdate {
             if controller.insertedSectionsIndexes.contains(elementPath.section) {
@@ -758,7 +766,10 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
                                                                                 at elementIndexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
         var attributes: MessagesLayoutAttributes?
 
-        let kind = ItemKind(elementKind)
+        guard let kind = ItemKind(elementKind) else {
+            return nil
+        }
+        
         let elementPath = elementIndexPath.itemPath
         if state == .afterUpdate {
             if controller.deletedSectionsIndexes.contains(elementPath.section) {
