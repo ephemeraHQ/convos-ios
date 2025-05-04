@@ -62,6 +62,14 @@ class MessagesNavigationBar: UIView {
     private func setupUI() {
         backgroundColor = .white.withAlphaComponent(0.8)
 
+        blurView.layer.borderWidth = 0
+        blurView.layer.backgroundColor = UIColor.clear.cgColor
+        blurView.layer.masksToBounds = false
+        blurView.layer.shadowColor = UIColor.systemGray5.cgColor
+        blurView.layer.shadowOffset = CGSize(width: 0, height: 1)
+        blurView.layer.shadowOpacity = 1
+        blurView.layer.shadowRadius = 0
+
         leftButton.tintColor = .black
         rightButton.tintColor = .black
 
