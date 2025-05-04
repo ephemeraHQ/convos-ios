@@ -2,16 +2,42 @@ import UIKit
 
 class MessagesNavigationBar: UIView {
     enum Constants {
-        static let height: CGFloat = 44.0
-        static let horizontalPadding: CGFloat = 16.0
-        static let backButtonSize: CGFloat = 32.0
+        static let contentHeight: CGFloat = 40.0
+        static let height: CGFloat = 72.0
+        static let contentViewVerticalPadding: CGFloat = 16.0
+        static let avatarSize: CGFloat = 40.0
     }
 
     // MARK: - Properties
 
     private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
-    private let backButton = UIButton(type: .system)
-    private let titleLabel = UILabel()
+    private let barView = UIView()
+    private let contentView = UIView()
+    let leftButton = UIButton(type: .system)
+    let rightButton = UIButton(type: .system)
+    private let stackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.alignment = .center
+        stack.distribution = .fill
+        stack.spacing = 8.0
+        return stack
+    }()
+
+    private let avatarImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.backgroundColor = .systemGray5 // Default background color
+        return imageView
+    }()
+
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 16.0)
+        label.textColor = .label
+        return label
+    }()
 
     // MARK: - Initialization
 
@@ -26,55 +52,81 @@ class MessagesNavigationBar: UIView {
 
     // MARK: - Public Methods
 
-    func configure(title: String, backButtonIcon: UIImage? = UIImage(systemName: "chevron.left"), backButtonAction: @escaping () -> Void) {
+    func configure(title: String, avatar: UIImage? = nil) {
         titleLabel.text = title
-        backButton.setImage(backButtonIcon, for: .normal)
-        backButton.addAction(UIAction { _ in backButtonAction() }, for: .touchUpInside)
-    }
-
-    // MARK: - Layout
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-
-        backgroundColor = .clear
-
-        // Update blur view frame
-        blurView.frame = bounds
-
-        // Update back button frame
-        backButton.frame = CGRect(
-            x: Constants.horizontalPadding,
-            y: safeAreaInsets.top,
-            width: Constants.backButtonSize,
-            height: Constants.height
-        )
-
-        // Update title label frame
-        let titleLabelXPadding: CGFloat = Constants.backButtonSize + (Constants.horizontalPadding * 2)
-        titleLabel.frame = CGRect(
-            x: titleLabelXPadding,
-            y: safeAreaInsets.top,
-            width: bounds.width - (titleLabelXPadding * 2),
-            height: Constants.height
-        )
+        avatarImageView.image = avatar
     }
 
     // MARK: - Private Methods
-    
+
     private func setupUI() {
-        // Setup blur view
-        blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        backgroundColor = .white.withAlphaComponent(0.8)
+
+        leftButton.tintColor = .black
+        rightButton.tintColor = .black
+
         addSubview(blurView)
+        blurView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            blurView.topAnchor.constraint(equalTo: topAnchor),
+            blurView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            blurView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            blurView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
 
-        // Setup title label
-        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
-        titleLabel.textAlignment = .center
-        titleLabel.textColor = .label
-        addSubview(titleLabel)
+        addSubview(barView)
+        barView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            barView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            barView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            barView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            barView.heightAnchor.constraint(equalToConstant: Constants.height)
+        ])
 
-        // Setup back button
-        backButton.tintColor = .label
-        addSubview(backButton)
+        barView.addSubview(contentView)
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            contentView.leadingAnchor.constraint(equalTo: barView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: barView.trailingAnchor),
+            contentView.topAnchor.constraint(equalTo: barView.topAnchor, constant: Constants.contentViewVerticalPadding),
+            contentView.bottomAnchor.constraint(equalTo: barView.bottomAnchor, constant: -Constants.contentViewVerticalPadding)
+        ])
+
+        contentView.addSubview(leftButton)
+        leftButton.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            leftButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
+            leftButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            leftButton.heightAnchor.constraint(equalTo: contentView.heightAnchor),
+            leftButton.widthAnchor.constraint(equalTo: leftButton.heightAnchor)
+        ])
+
+        contentView.addSubview(rightButton)
+        rightButton.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            rightButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            rightButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            rightButton.heightAnchor.constraint(equalTo: contentView.heightAnchor),
+            rightButton.widthAnchor.constraint(equalTo: rightButton.heightAnchor)
+        ])
+
+        contentView.addSubview(stackView)
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            stackView.leadingAnchor.constraint(equalTo: leftButton.trailingAnchor, constant: 2),
+            stackView.trailingAnchor.constraint(equalTo: rightButton.leadingAnchor, constant: -2),
+            stackView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
+        ])
+
+        avatarImageView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.addArrangedSubview(avatarImageView)
+        NSLayoutConstraint.activate([
+            avatarImageView.widthAnchor.constraint(equalToConstant: Constants.avatarSize),
+            avatarImageView.heightAnchor.constraint(equalToConstant: Constants.avatarSize)
+        ])
+
+        avatarImageView.layer.cornerRadius = Constants.avatarSize / 2.0
+
+        stackView.addArrangedSubview(titleLabel)
     }
 }

@@ -140,9 +140,15 @@ final class MessagesViewController: UIViewController {
 
     private func setupUI() {
         view.backgroundColor = .systemBackground
-        navigationBar.configure(title: "Terry Gross") { [weak self] in
-            self?.navigationController?.popViewController(animated: true)
-        }
+        navigationBar.leftButton.setImage(
+            UIImage(systemName: "chevron.left",
+                    withConfiguration: UIImage.SymbolConfiguration(weight: .medium)),
+            for: .normal)
+        navigationBar.rightButton.setImage(
+            UIImage(systemName: "timer",
+                    withConfiguration: UIImage.SymbolConfiguration(weight: .medium)),
+            for: .normal)
+        navigationBar.configure(title: "Terry Gross", avatar: nil)
         view.addSubview(navigationBar)
     }
 
