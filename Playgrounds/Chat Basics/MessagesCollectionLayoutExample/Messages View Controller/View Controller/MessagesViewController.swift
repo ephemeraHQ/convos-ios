@@ -17,8 +17,6 @@ final class MessagesViewController: UIViewController {
         case sendingMessage
         case scrollingToTop
         case scrollingToBottom
-        case showingPreview
-        case showingAccessory
         case updatingCollectionInIsolation
     }
 
@@ -46,6 +44,7 @@ final class MessagesViewController: UIViewController {
     private var collectionView: UICollectionView!
     private var messagesLayout = MessagesCollectionLayout()
     private let inputBarView = MessagesInputView()
+    private let navigationBar = MessagesNavigationBar(frame: .zero)
 
     private let messagingService: MessagingServiceProtocol
     private let dataSource: MessagesCollectionDataSource
@@ -90,10 +89,13 @@ final class MessagesViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
+
+        navigationController?.setNavigationBarHidden(true, animated: false)
+
         setupCollectionView()
         setupInputBar()
         loadInitialData()
+        setupUI()
 
         messagingService.updates.receive(on: DispatchQueue.main)
             .sink { [weak self] update in
@@ -120,12 +122,28 @@ final class MessagesViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         ensureInputBarVisibility()
+
+        // Update navigation bar frame to include safe area
+        navigationBar.frame = CGRect(
+            x: view.bounds.origin.x,
+            y: view.bounds.origin.y,
+            width: view.bounds.width,
+            height: MessagesNavigationBar.Constants.height + view.safeAreaInsets.top
+        )
+
+        // Set content inset to just the base navigation bar height
+        collectionView.contentInset.top = MessagesNavigationBar.Constants.height
+        collectionView.verticalScrollIndicatorInsets.top = collectionView.contentInset.top
     }
 
     // MARK: - Private Setup Methods
 
     private func setupUI() {
         view.backgroundColor = .systemBackground
+        navigationBar.configure(title: "Terry Gross") { [weak self] in
+            self?.navigationController?.popViewController(animated: true)
+        }
+        view.addSubview(navigationBar)
     }
 
     private func setupCollectionView() {
@@ -389,8 +407,6 @@ extension MessagesViewController {
 extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate {
     func scrollViewShouldScrollToTop(_ scrollView: UIScrollView) -> Bool {
         guard scrollView.contentSize.height > 0,
-              !currentInterfaceActions.options.contains(.showingAccessory),
-              !currentInterfaceActions.options.contains(.showingPreview),
               !currentInterfaceActions.options.contains(.scrollingToTop),
               !currentInterfaceActions.options.contains(.scrollingToBottom) else {
             return false
