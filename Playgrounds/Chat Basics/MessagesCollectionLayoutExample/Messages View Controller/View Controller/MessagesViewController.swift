@@ -55,6 +55,8 @@ final class MessagesViewController: UIViewController {
         collectionView.isDragging || collectionView.isDecelerating
     }
 
+    private var navigationBarHeightConstraint: NSLayoutConstraint?
+
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initialization
@@ -123,16 +125,11 @@ final class MessagesViewController: UIViewController {
         super.viewDidLayoutSubviews()
         ensureInputBarVisibility()
 
-        // Update navigation bar frame to include safe area
-        navigationBar.frame = CGRect(
-            x: view.bounds.origin.x,
-            y: view.bounds.origin.y,
-            width: view.bounds.width,
-            height: MessagesNavigationBar.Constants.height + view.safeAreaInsets.top
-        )
-
-        // Set content inset to just the base navigation bar height
-        collectionView.contentInset.top = MessagesNavigationBar.Constants.height
+        // Set content inset to just the base navigation bar height plus safe area
+        let navHeight = (traitCollection.verticalSizeClass == .compact ?
+            MessagesNavigationBar.Constants.compactHeight :
+            MessagesNavigationBar.Constants.regularHeight) + view.safeAreaInsets.top
+        collectionView.contentInset.top = navHeight
         collectionView.verticalScrollIndicatorInsets.top = collectionView.contentInset.top
     }
 
@@ -150,6 +147,42 @@ final class MessagesViewController: UIViewController {
             for: .normal)
         navigationBar.configure(title: "Terry Gross", avatar: nil)
         view.addSubview(navigationBar)
+
+        // Setup Auto Layout for navigation bar
+        navigationBar.translatesAutoresizingMaskIntoConstraints = false
+
+        // Store height constraint for updates
+        let heightConstraint = navigationBar.heightAnchor.constraint(equalToConstant: 0)
+
+        NSLayoutConstraint.activate([
+            navigationBar.topAnchor.constraint(equalTo: view.topAnchor),
+            navigationBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            navigationBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            heightConstraint
+        ])
+
+        // Register for trait changes
+        registerForTraitChanges([UITraitVerticalSizeClass.self]) { (self: MessagesViewController, previousTraitCollection: UITraitCollection) in
+            self.updateNavigationBarHeight(heightConstraint)
+        }
+
+        // Set initial height
+        updateNavigationBarHeight(heightConstraint)
+        navigationBarHeightConstraint = heightConstraint
+    }
+
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        if let constraint = navigationBarHeightConstraint {
+            updateNavigationBarHeight(constraint)
+        }
+    }
+
+    private func updateNavigationBarHeight(_ constraint: NSLayoutConstraint) {
+        let baseHeight = traitCollection.verticalSizeClass == .compact ?
+            MessagesNavigationBar.Constants.compactHeight :
+            MessagesNavigationBar.Constants.regularHeight
+        constraint.constant = baseHeight + view.safeAreaInsets.top
     }
 
     private func setupCollectionView() {
