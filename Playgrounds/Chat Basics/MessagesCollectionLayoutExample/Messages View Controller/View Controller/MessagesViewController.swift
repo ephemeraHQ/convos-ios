@@ -501,7 +501,7 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
 extension MessagesViewController: MessagesInputViewDelegate {
     func messagesInputView(_ view: MessagesInputView, didChangeIntrinsicContentSize size: CGSize) {
         guard !currentInterfaceActions.options.contains(.sendingMessage) else { return }
-        scrollToBottom()
+//        scrollToBottom()
     }
 
     func messagesInputView(_ view: MessagesInputView, didTapSend text: String) {
