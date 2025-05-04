@@ -113,8 +113,8 @@ final class MessagesInputView: UIView {
 
             // Text View Constraints
             textView.topAnchor.constraint(equalTo: topAnchor, constant: Constants.margin),
-            textView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Constants.margin),
-            textView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Constants.margin),
+            textView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: Constants.margin),
+            textView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -Constants.margin),
 
             // Send Button Constraints
             sendButton.bottomAnchor.constraint(equalTo: textView.bottomAnchor),

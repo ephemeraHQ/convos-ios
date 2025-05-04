@@ -85,8 +85,8 @@ class MessagesNavigationBar: UIView {
         addSubview(barView)
         barView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            barView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            barView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            barView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor),
+            barView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor),
             barView.bottomAnchor.constraint(equalTo: bottomAnchor),
             barView.heightAnchor.constraint(equalToConstant: Constants.height)
         ])
