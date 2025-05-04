@@ -11,6 +11,13 @@ class TextMessageCollectionCell: UICollectionViewCell {
     private var longPressGestureRecognizer: UILongPressGestureRecognizer?
     private weak var reactionMenuController: MessageReactionMenuController?
 
+    // Preview state
+    private var cachedPreviewView: UIView?
+    private var gestureStartTime: Date?
+    private var activationTimer: Timer?
+    private let activationDuration: TimeInterval = 0.8
+    private var feedbackGenerator: UIImpactFeedbackGenerator?
+
     // MARK: - Initialization
 
     override init(frame: CGRect) {
@@ -36,6 +43,7 @@ class TextMessageCollectionCell: UICollectionViewCell {
         message = ""
         messageType = .incoming
         bubbleStyle = .normal
+        cleanupPreviewState()
     }
 
     func setup(message: String, messageType: MessageType, style: Cell.BubbleType) {
@@ -58,12 +66,81 @@ class TextMessageCollectionCell: UICollectionViewCell {
         layoutAttributesForHorizontalFittingRequired(layoutAttributes)
     }
 
+    // MARK: - Preview Handling
+
+    private func showInitialPreview() {
+        guard let window = window,
+              cachedPreviewView == nil else { return }
+
+
+        guard let previewView = previewView() else { return }
+        self.cachedPreviewView = previewView
+        window.addSubview(previewView)
+
+        // Prepare haptic feedback
+        feedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
+        feedbackGenerator?.prepare()
+
+        // Start tracking time
+        gestureStartTime = Date()
+
+        // Start timer for activation
+        activationTimer = Timer.scheduledTimer(withTimeInterval: activationDuration, repeats: false) { [weak self] _ in
+            self?.activateReactionMenu()
+        }
+
+        // Animate initial shadow
+        UIView.animate(withDuration: 0.3) {
+            previewView.transform = CGAffineTransform(scaleX: 1.05, y: 1.05)
+            previewView.layer.shadowColor = UIColor.black.cgColor
+            previewView.layer.shadowOffset = .zero
+            previewView.layer.shadowOpacity = 0.5
+            previewView.layer.shadowRadius = 10
+
+        }
+    }
+
+    private func activateReactionMenu() {
+        guard let window = window else { return }
+
+        // Trigger haptic feedback
+        feedbackGenerator?.impactOccurred()
+        feedbackGenerator = nil
+
+        let config = MessageReactionMenuController.Configuration(
+            sourceCell: self,
+            sourceRect: cachedPreviewView?.frame ?? convert(bounds, to: window),
+            containerView: window
+        )
+
+        let reactionMenu = MessageReactionMenuController(configuration: config)
+        window.rootViewController?.present(reactionMenu, animated: true)
+        self.reactionMenuController = reactionMenu
+
+        // Remove our preview since the menu controller will create its own
+        cleanupPreviewState()
+    }
+
+    private func cleanupPreviewState() {
+        activationTimer?.invalidate()
+        activationTimer = nil
+        gestureStartTime = nil
+        feedbackGenerator = nil
+
+        UIView.animate(withDuration: 0.2, animations: {
+            self.cachedPreviewView?.transform = .identity
+        }) { _ in
+            self.cachedPreviewView?.removeFromSuperview()
+            self.cachedPreviewView = nil
+        }
+    }
+
     // MARK: - Gesture Handling
 
     @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
         switch gesture.state {
         case .began:
-            showReactionMenu()
+            showInitialPreview()
 
         case .changed:
             if let reactionMenu = reactionMenuController {
@@ -76,6 +153,11 @@ class TextMessageCollectionCell: UICollectionViewCell {
                 panGesture.state = .changed
                 panGesture.setTranslation(translation, in: reactionMenu.view)
                 reactionMenu.handlePanGesture(panGesture)
+            } else if let preview = cachedPreviewView {
+                // Update preview position if menu hasn't shown yet
+//                let translation = gesture.translation(in: window)
+//                preview.transform = CGAffineTransform(translationX: translation.x, y: translation.y)
+//                    .scaledBy(x: 1.05, y: 1.05)
             }
 
         case .ended, .cancelled:
@@ -84,28 +166,13 @@ class TextMessageCollectionCell: UICollectionViewCell {
                     self?.reactionMenuController?.dismiss(animated: false)
                     self?.reactionMenuController = nil
                 }
+            } else {
+                cleanupPreviewState()
             }
 
         default:
             break
         }
-    }
-
-    private func showReactionMenu() {
-        guard let window else { return }
-
-        // Get the exact frame of the cell's content in window coordinates
-        let cellFrame = convert(contentView.frame, to: window)
-
-        let config = MessageReactionMenuController.Configuration(
-            sourceCell: self,
-            sourceRect: cellFrame,
-            containerView: window
-        )
-
-        let reactionMenu = MessageReactionMenuController(configuration: config)
-        window.rootViewController?.present(reactionMenu, animated: true)
-        self.reactionMenuController = reactionMenu
     }
 }
 
@@ -113,16 +180,27 @@ class TextMessageCollectionCell: UICollectionViewCell {
 
 extension TextMessageCollectionCell: PreviewableCell {
     func previewView() -> UIView? {
-        // Create an image view with a snapshot of our current content
-        let renderer = UIGraphicsImageRenderer(bounds: contentView.bounds)
+        guard let window else { return nil }
+
+        layoutIfNeeded()
+
+        let convertedFrame = convert(contentView.frame, to: window)
+
+        // Create the snapshot
+        let format = UIGraphicsImageRendererFormat()
+        format.opaque = false
+        format.scale = window.screen.scale
+        format.preferredRange = .extended
+
+        let renderer = UIGraphicsImageRenderer(bounds: contentView.bounds, format: format)
         let image = renderer.image { context in
             contentView.drawHierarchy(in: contentView.bounds, afterScreenUpdates: true)
         }
 
-        let imageView = UIImageView(image: image)
-        imageView.frame = contentView.frame
-        imageView.contentMode = .scaleToFill
-        return imageView
+        let preview = UIView(frame: convertedFrame)
+        preview.layer.contents = image.cgImage
+        preview.clipsToBounds = false
+        return preview
     }
 }
 
