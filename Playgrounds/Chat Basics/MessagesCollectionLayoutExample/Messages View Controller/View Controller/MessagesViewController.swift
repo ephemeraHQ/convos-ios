@@ -41,7 +41,7 @@ final class MessagesViewController: UIViewController {
     private var currentInterfaceActions: SetActor<Set<InterfaceActions>, ReactionTypes> = SetActor()
     private var currentControllerActions: SetActor<Set<ControllerActions>, ReactionTypes> = SetActor()
 
-    private var collectionView: UICollectionView!
+    internal let collectionView: UICollectionView
     private var messagesLayout = MessagesCollectionLayout()
     private let inputBarView = MessagesInputView()
     private let navigationBar = MessagesNavigationBar(frame: .zero)
@@ -59,11 +59,16 @@ final class MessagesViewController: UIViewController {
 
     private var cancellables = Set<AnyCancellable>()
 
+    // Add coordinator property
+    private var reactionMenuCoordinator: MessageReactionMenuCoordinator?
+
     // MARK: - Initialization
 
     init(messagingService: MessagingServiceProtocol) {
         self.messagingService = messagingService
         self.dataSource = MessagesCollectionViewDataSource()
+        self.collectionView = UICollectionView(frame: .zero,
+                                               collectionViewLayout: messagesLayout)
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -98,6 +103,8 @@ final class MessagesViewController: UIViewController {
         setupInputBar()
         loadInitialData()
         setupUI()
+
+        reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
 
         messagingService.updates.receive(on: DispatchQueue.main)
             .sink { [weak self] update in
@@ -186,6 +193,7 @@ final class MessagesViewController: UIViewController {
     }
 
     private func setupCollectionView() {
+        collectionView.frame = view.bounds
         configureMessagesLayout()
         setupCollectionViewInstance()
         configureCollectionViewConstraints()
@@ -201,7 +209,6 @@ final class MessagesViewController: UIViewController {
     }
 
     private func setupCollectionViewInstance() {
-        collectionView = UICollectionView(frame: view.frame, collectionViewLayout: messagesLayout)
         view.addSubview(collectionView)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .clear
@@ -584,5 +591,28 @@ extension MessagesViewController: KeyboardListenerDelegate {
         }, completion: { _ in
             self.currentInterfaceActions.options.remove(.changingContentInsets)
         })
+    }
+}
+
+// MARK: - MessageReactionMenuCoordinatorDelegate
+
+extension MessagesViewController: MessageReactionMenuCoordinatorDelegate {
+    func messageReactionMenuCoordinatorDidBeginTransition(_ coordinator: MessageReactionMenuCoordinator) {
+        collectionView.isScrollEnabled = false
+    }
+
+    func messageReactionMenuCoordinatorDidEndTransition(_ coordinator: MessageReactionMenuCoordinator) {
+        collectionView.isScrollEnabled = true
+    }
+
+    func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator, previewableCellAt indexPath: IndexPath) -> PreviewableCollectionViewCell? {
+        guard let cell = collectionView.cellForItem(at: indexPath) as? PreviewableCollectionViewCell else { return nil }
+        return cell
+    }
+
+    func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator,
+                                        shouldPresentMenuFor cell: PreviewableCollectionViewCell) -> Bool {
+        // Always allow for now
+        return true
     }
 }
