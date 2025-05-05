@@ -13,6 +13,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.window = .init(windowScene: windowScene)
         self.window?.rootViewController = ChatListView(conversationStore: conversationStore,
                                                        identityStore: identityStore).asViewController()
+        print("need to test")
         self.window?.makeKeyAndVisible()
     }
 
