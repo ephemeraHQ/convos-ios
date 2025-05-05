@@ -14,6 +14,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.window?.rootViewController = ChatListView(conversationStore: conversationStore,
                                                        identityStore: identityStore).asViewController()
         print("need to test")
+        let x = URL(string: "https://convos.dev")!
         self.window?.makeKeyAndVisible()
     }
 
