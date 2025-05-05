@@ -1,6 +1,8 @@
 import Foundation
 import SwiftUI
 
+let x: URL = URL(string: "this is a test")!
+
 // swiftlint:disable line_length force_unwrapping
 
 class CTConversationStore: ObservableObject {
