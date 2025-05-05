@@ -2,9 +2,9 @@ import SwiftUI
 import UIKit
 
 class ImageCollectionCell: UICollectionViewCell {
-    private let containerView = UIView()
-    private let imageView = UIImageView()
-    private let loadingIndicator = UIActivityIndicatorView(style: .medium)
+    private let containerView: UIView = UIView()
+    private let imageView: UIImageView = UIImageView()
+    private let loadingIndicator: UIActivityIndicatorView = UIActivityIndicatorView(style: .medium)
     private var imageAspectRatio: CGFloat = 1.0 // width / height
     private var currentImageURL: URL?
     private var imageLoadTask: Task<Void, Never>?
@@ -25,7 +25,7 @@ class ImageCollectionCell: UICollectionViewCell {
     private func setupViews() {
         // Setup container view
         containerView.backgroundColor = .systemGray5
-        containerView.layer.cornerRadius = Constants.bubbleCornerRadius
+        containerView.layer.cornerRadius = Constant.bubbleCornerRadius
         containerView.layer.masksToBounds = true
         containerView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(containerView)
@@ -42,14 +42,21 @@ class ImageCollectionCell: UICollectionViewCell {
         imageView.clipsToBounds = true
         containerView.addSubview(imageView)
 
-        leadingConstraint = containerView.leadingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.leadingAnchor)
-        trailingConstraint = containerView.trailingAnchor.constraint(equalTo: contentView.layoutMarginsGuide.trailingAnchor)
+        leadingConstraint = containerView.leadingAnchor.constraint(
+            equalTo: contentView.layoutMarginsGuide.leadingAnchor
+        )
+        trailingConstraint = containerView.trailingAnchor.constraint(
+            equalTo: contentView.layoutMarginsGuide.trailingAnchor
+        )
 
         NSLayoutConstraint.activate([
             // Container view constraints
             containerView.topAnchor.constraint(equalTo: contentView.topAnchor),
             containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            containerView.widthAnchor.constraint(equalTo: contentView.widthAnchor, multiplier: Constants.maxWidth),
+            containerView.widthAnchor.constraint(
+                equalTo: contentView.widthAnchor,
+                multiplier: Constant.maxWidth
+            ),
 
             // Image view constraints
             imageView.topAnchor.constraint(equalTo: containerView.topAnchor),
@@ -72,10 +79,14 @@ class ImageCollectionCell: UICollectionViewCell {
         switch messageType {
         case .incoming:
             leadingConstraint?.isActive = true
-            dynamicConstraint = containerView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.layoutMarginsGuide.trailingAnchor)
+            dynamicConstraint = containerView.trailingAnchor.constraint(
+                lessThanOrEqualTo: contentView.layoutMarginsGuide.trailingAnchor
+            )
         case .outgoing:
             trailingConstraint?.isActive = true
-            dynamicConstraint = containerView.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.layoutMarginsGuide.leadingAnchor)
+            dynamicConstraint = containerView.leadingAnchor.constraint(
+                greaterThanOrEqualTo: contentView.layoutMarginsGuide.leadingAnchor
+            )
         }
         dynamicConstraint?.isActive = true
     }
@@ -124,7 +135,6 @@ class ImageCollectionCell: UICollectionViewCell {
         }
     }
 
-    // TODO: Move into image fetcher/cache
     private func loadRemoteImage(from url: URL) async {
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
@@ -137,13 +147,18 @@ class ImageCollectionCell: UICollectionViewCell {
                 self.imageView.image = image
                 self.imageAspectRatio = image.size.width / image.size.height
                 invalidateIntrinsicContentSize()
-
                 // Animate the image fade-in
-                UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseOut) {
-                    self.imageView.alpha = 1
-                } completion: { _ in
-                    self.loadingIndicator.stopAnimating()
-                }
+                UIView.animate(
+                    withDuration: 0.2,
+                    delay: 0,
+                    options: .curveEaseOut,
+                    animations: {
+                        self.imageView.alpha = 1
+                    },
+                    completion: { _ in
+                        self.loadingIndicator.stopAnimating()
+                    }
+                )
             }
         } catch {
             await MainActor.run {
@@ -154,8 +169,10 @@ class ImageCollectionCell: UICollectionViewCell {
 
     // MARK: - Self Sizing
 
-    override func preferredLayoutAttributesFitting(_ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
-        let maxWidth = contentView.bounds.width * Constants.maxWidth
+    override func preferredLayoutAttributesFitting(
+        _ layoutAttributes: UICollectionViewLayoutAttributes
+    ) -> UICollectionViewLayoutAttributes {
+        let maxWidth = contentView.bounds.width * Constant.maxWidth
         var width = layoutAttributes.size.width
         width = min(width, maxWidth)
         let height = width / imageAspectRatio

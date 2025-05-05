@@ -1325,8 +1325,8 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
         guard sectionIndex < layout.sections.count,
               sectionIndex >= 0 else {
             assertionFailure(
-                // swiftlint:disable:next line_length
-                "Internal inconsistency. Section index \(sectionIndex) is invalid. Amount of sections is \(layout.sections.count)."
+                "Internal inconsistency. Section index \(sectionIndex) is invalid. Amount of sections is " +
+                "\(layout.sections.count)."
             )
             return nil
         }
@@ -1351,8 +1351,8 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
             guard itemIndex >= 0,
                   itemIndex < section.items.count else {
                 assertionFailure(
-                    // swiftlint:disable:next line_length
-                    "Internal inconsistency. Item index \(itemIndex) is invalid. Amount of items is \(section.items.count)."
+                    "Internal inconsistency. Item index \(itemIndex) is invalid. Amount of items is " +
+                    "\(section.items.count)."
                 )
                 return nil
             }

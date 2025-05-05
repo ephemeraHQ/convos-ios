@@ -46,8 +46,10 @@ struct MockMessage: ConvosSDK.Message {
 }
 
 class _MockMessagingService: ConvosSDK.MessagingServiceProtocol {
-    private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> = .init(.uninitialized)
-    private var messagesSubject: CurrentValueSubject<[ConvosSDK.Message], Never> = .init([])
+    private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
+    CurrentValueSubject<ConvosSDK.MessagingServiceState, Never>(.uninitialized)
+    private var messagesSubject: CurrentValueSubject<[ConvosSDK.Message], Never> =
+    CurrentValueSubject<[ConvosSDK.Message], Never>([])
 
     var state: ConvosSDK.MessagingServiceState {
         messagingStateSubject.value
@@ -66,7 +68,7 @@ class _MockMessagingService: ConvosSDK.MessagingServiceProtocol {
     func messages(for address: String) -> AnyPublisher<[any ConvosSDK.Message], Never> {
         messagesSubject.eraseToAnyPublisher()
     }
-    
+
     func messagingStatePublisher() -> AnyPublisher<ConvosSDK.MessagingServiceState, Never> {
         messagingStateSubject.eraseToAnyPublisher()
     }

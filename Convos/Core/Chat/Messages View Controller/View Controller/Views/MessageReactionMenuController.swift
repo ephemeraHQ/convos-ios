@@ -1,9 +1,6 @@
 import UIKit
 
 class MessageReactionMenuController: UIViewController {
-
-    // MARK: - Types
-
     struct Configuration {
         enum Edge {
             case leading, trailing
@@ -19,13 +16,14 @@ class MessageReactionMenuController: UIViewController {
     // MARK: - Positioning Constants
     private static let topInset: CGFloat = 116
     private static let betweenInset: CGFloat = 56
-    private static let spacing: CGFloat = 8.0 // You can adjust this if you want extra space between the betweenInset and the previewView
+    private static let spacing: CGFloat = 8.0 // You can adjust this if you want extra space
+    // between the betweenInset and the previewView
 
     // MARK: - Properties
 
     private let configuration: Configuration
-    let dimmingView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
-    private let previewContainerView = UIView()
+    let dimmingView: UIVisualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
+    private let previewContainerView: UIView = UIView()
     let previewView: UIView
     let previewSourceView: UIView
     let actualPreviewSourceSize: CGSize
@@ -90,9 +88,13 @@ class MessageReactionMenuController: UIViewController {
         let endWidth = view.bounds.width - leftMargin - rightMargin - horizontalInset
         let endHeight: CGFloat = 56.0
 
-        let xPosition: CGFloat = configuration.sourceCellEdge == .leading ?
-            horizontalInset / 2.0 :
-            view.bounds.width - endWidth - horizontalInset / 2.0
+        let xPosition: CGFloat
+        switch configuration.sourceCellEdge {
+        case .leading:
+            xPosition = view.bounds.minX + (horizontalInset / 2.0) + endHeight
+        case .trailing:
+            xPosition = view.bounds.minX + view.bounds.maxX - (endHeight * 2.0) - (horizontalInset / 2.0)
+        }
 
         let yPosition = endPosition.minY - Self.spacing - endHeight
 
@@ -139,10 +141,10 @@ class MessageReactionMenuController: UIViewController {
         // Decide which corner to use
         let xPosition: CGFloat
         switch configuration.sourceCellEdge {
-            case .leading:
-                xPosition = view.bounds.minX + (horizontalInset / 2.0) + endHeight
-            case .trailing:
-                xPosition = view.bounds.minX + view.bounds.maxX - (endHeight * 2.0) - (horizontalInset / 2.0)
+        case .leading:
+            xPosition = view.bounds.minX + (horizontalInset / 2.0) + endHeight
+        case .trailing:
+            xPosition = view.bounds.minX + view.bounds.maxX - (endHeight * 2.0) - (horizontalInset / 2.0)
         }
 
         let yPosition = previewFrame.minY - Self.spacing - endHeight
@@ -163,5 +165,4 @@ class MessageReactionMenuController: UIViewController {
         previewContainerView.backgroundColor = .clear
         view.addSubview(previewContainerView)
     }
-
 }

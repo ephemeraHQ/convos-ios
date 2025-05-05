@@ -3,8 +3,6 @@ import DifferenceKit
 import Foundation
 import UIKit
 
-// swiftlint:disable implicitly_unwrapped_optional
-
 final class MessagesViewController: UIViewController {
     private enum ReactionTypes {
         case delayedUpdate
@@ -57,7 +55,7 @@ final class MessagesViewController: UIViewController {
 
     private var navigationBarHeightConstraint: NSLayoutConstraint?
 
-    private var cancellables = Set<AnyCancellable>()
+    private var cancellables: Set<AnyCancellable> = Set<AnyCancellable>()
 
     // Add coordinator property
     private var reactionMenuCoordinator: MessageReactionMenuCoordinator?
@@ -134,8 +132,8 @@ final class MessagesViewController: UIViewController {
 
         // Set content inset to just the base navigation bar height plus safe area
         let navHeight = (traitCollection.verticalSizeClass == .compact ?
-            MessagesNavigationBar.Constants.compactHeight :
-            MessagesNavigationBar.Constants.regularHeight) + view.safeAreaInsets.top
+            MessagesNavigationBar.Constant.compactHeight :
+            MessagesNavigationBar.Constant.regularHeight) + view.safeAreaInsets.top
         collectionView.contentInset.top = navHeight
         collectionView.verticalScrollIndicatorInsets.top = collectionView.contentInset.top
     }
@@ -169,7 +167,9 @@ final class MessagesViewController: UIViewController {
         ])
 
         // Register for trait changes
-        registerForTraitChanges([UITraitVerticalSizeClass.self]) { (self: MessagesViewController, previousTraitCollection: UITraitCollection) in
+        registerForTraitChanges(
+            [UITraitVerticalSizeClass.self]
+        ) { (self: MessagesViewController, _: UITraitCollection) in
             self.updateNavigationBarHeight(heightConstraint)
         }
 
@@ -187,8 +187,8 @@ final class MessagesViewController: UIViewController {
 
     private func updateNavigationBarHeight(_ constraint: NSLayoutConstraint) {
         let baseHeight = traitCollection.verticalSizeClass == .compact ?
-            MessagesNavigationBar.Constants.compactHeight :
-            MessagesNavigationBar.Constants.regularHeight
+            MessagesNavigationBar.Constant.compactHeight :
+            MessagesNavigationBar.Constant.regularHeight
         constraint.constant = baseHeight + view.safeAreaInsets.top
     }
 
@@ -230,9 +230,6 @@ final class MessagesViewController: UIViewController {
         collectionView.delegate = self
         messagesLayout.delegate = dataSource
         collectionView.keyboardDismissMode = .interactive
-
-        // TODO: https://openradar.appspot.com/40926834
-        collectionView.isPrefetchingEnabled = false
 
         collectionView.contentInsetAdjustmentBehavior = .always
         collectionView.automaticallyAdjustsScrollIndicatorInsets = true
@@ -300,19 +297,27 @@ final class MessagesViewController: UIViewController {
     }
 
     func scrollToBottom(completion: (() -> Void)? = nil) {
-        let contentOffsetAtBottom = CGPoint(x: collectionView.contentOffset.x,
-                                            y: messagesLayout.collectionViewContentSize.height - collectionView.frame.height + collectionView.adjustedContentInset.bottom)
+        let contentOffsetAtBottom: CGPoint = CGPoint(
+            x: collectionView.contentOffset.x,
+            y: messagesLayout.collectionViewContentSize.height -
+            collectionView.frame.height +
+            collectionView.adjustedContentInset.bottom
+        )
 
         guard contentOffsetAtBottom.y > collectionView.contentOffset.y else {
             completion?()
             return
         }
 
-        performScrollToBottom(from: contentOffsetAtBottom, initialOffset: collectionView.contentOffset.y, completion: completion)
+        performScrollToBottom(from: contentOffsetAtBottom,
+                              initialOffset: collectionView.contentOffset.y,
+                              completion: completion)
     }
 
-    private func performScrollToBottom(from contentOffsetAtBottom: CGPoint, initialOffset: CGFloat, completion: (() -> Void)?) {
-        let delta = contentOffsetAtBottom.y - initialOffset
+    private func performScrollToBottom(from contentOffsetAtBottom: CGPoint,
+                                       initialOffset: CGFloat,
+                                       completion: (() -> Void)?) {
+        let delta: CGFloat = contentOffsetAtBottom.y - initialOffset
 
         if abs(delta) > messagesLayout.visibleBounds.height {
             performLongScrollToBottom(initialOffset: initialOffset, delta: delta, completion: completion)
@@ -365,11 +370,17 @@ extension MessagesViewController {
         }
 
         guard currentInterfaceActions.options.isEmpty else {
-            scheduleDelayedUpdate(with: sections, animated: animated, requiresIsolatedProcess: requiresIsolatedProcess, completion: completion)
+            scheduleDelayedUpdate(with: sections,
+                                  animated: animated,
+                                  requiresIsolatedProcess: requiresIsolatedProcess,
+                                  completion: completion)
             return
         }
 
-        performUpdate(with: sections, animated: animated, requiresIsolatedProcess: requiresIsolatedProcess, completion: completion)
+        performUpdate(with: sections,
+                      animated: animated,
+                      requiresIsolatedProcess: requiresIsolatedProcess,
+                      completion: completion)
     }
 
     private func scheduleDelayedUpdate(with sections: [Section],
@@ -566,7 +577,9 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
     private func calculateNewBottomInset(for info: KeyboardInfo) -> CGFloat {
         let keyboardFrame = collectionView.window?.convert(info.frameEnd, to: view)
-        return collectionView.frame.minY + collectionView.frame.size.height - (keyboardFrame?.minY ?? 0) - collectionView.safeAreaInsets.bottom
+        return (collectionView.frame.minY +
+                collectionView.frame.size.height - (keyboardFrame?.minY ?? 0) -
+                collectionView.safeAreaInsets.bottom)
     }
 
     private func updateCollectionViewInsets(to newBottomInset: CGFloat, with info: KeyboardInfo) {
@@ -574,7 +587,7 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
         if currentControllerActions.options.contains(.updatingCollection) {
             UIView.performWithoutAnimation {
-                self.collectionView.performBatchUpdates({})
+                self.collectionView.performBatchUpdates {}
             }
         }
 
@@ -605,7 +618,8 @@ extension MessagesViewController: MessageReactionMenuCoordinatorDelegate {
         collectionView.isScrollEnabled = true
     }
 
-    func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator, previewableCellAt indexPath: IndexPath) -> PreviewableCollectionViewCell? {
+    func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator,
+                                        previewableCellAt indexPath: IndexPath) -> PreviewableCollectionViewCell? {
         guard let cell = collectionView.cellForItem(at: indexPath) as? PreviewableCollectionViewCell else { return nil }
         return cell
     }

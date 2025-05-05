@@ -3,13 +3,6 @@ import UIKit
 // swiftlint:disable force_cast
 
 class ReactionMenuShapeView: UIView {
-
-    // MARK: - Constants
-
-    private struct Constants {
-        static let cornerRadius: CGFloat = 24.0
-    }
-
     // MARK: - Properties
 
     var fillColor: UIColor = .systemBackground {
@@ -36,7 +29,7 @@ class ReactionMenuShapeView: UIView {
             shapeLayer.path = UIBezierPath(roundedRect: bounds, cornerRadius: bounds.height / 2.0).cgPath
         } else {
             // Create rounded rectangle path
-            shapeLayer.path = UIBezierPath(roundedRect: bounds, cornerRadius: Constants.cornerRadius).cgPath
+            shapeLayer.path = UIBezierPath(roundedRect: bounds, cornerRadius: Constant.cornerRadius).cgPath
         }
     }
 
@@ -67,6 +60,9 @@ class ReactionMenuShapeView: UIView {
                 completion?()
             }
         )
+    }
+    private enum Constant {
+        static let cornerRadius: CGFloat = 24.0
     }
 }
 

@@ -51,7 +51,8 @@ public enum PasskeyError: LocalizedError {
         case .noData:
             return "No data was received from the server"
         case .invalidChallenge(let details):
-            return Self.includeDebugInfo ? "The challenge received from the server is invalid: \(details)" : "The challenge received from the server is invalid"
+            return (Self.includeDebugInfo ? "The challenge received from the server is invalid: \(details)"
+                    : "The challenge received from the server is invalid")
         case .authenticationFailed(let details):
             return Self.includeDebugInfo ? "The authentication failed: \(details)" : "The authentication failed"
         case .registrationFailed(let details):
@@ -66,7 +67,7 @@ public enum PasskeyError: LocalizedError {
             return "Too many requests. Please try again later"
         case .networkError(let error):
             return Self.includeDebugInfo ? "Network error: \(error.localizedDescription)" : "Network error occurred"
-        case .serverError(let statusCode, let message):
+        case let .serverError(statusCode, message):
             if Self.includeDebugInfo {
                 if let message = message {
                     return "Server error (\(statusCode)): \(message)"
@@ -75,7 +76,9 @@ public enum PasskeyError: LocalizedError {
             }
             return "Server error occurred"
         case .jsonParsingError(let error):
-            return Self.includeDebugInfo ? "Failed to parse server response: \(error.localizedDescription)" : "Failed to parse server response"
+            return (Self.includeDebugInfo ?
+                    "Failed to parse server response: \(error.localizedDescription)" :
+                        "Failed to parse server response")
         case .configurationError(let details):
             return Self.includeDebugInfo ? "Configuration error: \(details)" : "Configuration error occurred"
         }
@@ -120,4 +123,4 @@ public enum PasskeyError: LocalizedError {
             return false
         }
     }
-} 
+}

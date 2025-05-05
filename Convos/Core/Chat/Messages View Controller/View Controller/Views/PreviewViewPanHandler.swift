@@ -37,44 +37,44 @@ class PreviewViewPanHandler: NSObject {
         let location = gesture.location(in: containerView)
 
         switch gesture.state {
-            case .began:
-                initialTouchPoint = location
-                initialViewCenter = targetView.center
+        case .began:
+            initialTouchPoint = location
+            initialViewCenter = targetView.center
 
-            case .changed:
-                let translation = CGPoint(
-                    x: location.x - initialTouchPoint.x,
-                    y: location.y - initialTouchPoint.y
-                )
-                let elasticY = translation.y.rubberClamp(maxDragDistance: maxDragDistance)
-                targetView.center = CGPoint(
-                    x: initialViewCenter.x,
-                    y: initialViewCenter.y + elasticY
-                )
+        case .changed:
+            let translation = CGPoint(
+                x: location.x - initialTouchPoint.x,
+                y: location.y - initialTouchPoint.y
+            )
+            let elasticY = translation.y.rubberClamp(maxDragDistance: maxDragDistance)
+            targetView.center = CGPoint(
+                x: initialViewCenter.x,
+                y: initialViewCenter.y + elasticY
+            )
 
-            case .ended, .cancelled, .failed:
-                let translation = CGPoint(
-                    x: location.x - initialTouchPoint.x,
-                    y: location.y - initialTouchPoint.y
-                )
+        case .ended, .cancelled, .failed:
+            let translation = CGPoint(
+                x: location.x - initialTouchPoint.x,
+                y: location.y - initialTouchPoint.y
+            )
 
-                // If dragged far enough, trigger dismiss
-                if abs(translation.y) > maxDragDistance {
-                    onShouldDismiss?()
+            // If dragged far enough, trigger dismiss
+            if abs(translation.y) > maxDragDistance {
+                onShouldDismiss?()
+            }
+
+            UIView.animate(
+                withDuration: 0.5,
+                delay: 0,
+                usingSpringWithDamping: 0.7,
+                initialSpringVelocity: 0,
+                options: [.curveEaseOut, .allowUserInteraction],
+                animations: {
+                    targetView.center = self.initialViewCenter
                 }
-
-                UIView.animate(
-                    withDuration: 0.5,
-                    delay: 0,
-                    usingSpringWithDamping: 0.7,
-                    initialSpringVelocity: 0,
-                    options: [.curveEaseOut, .allowUserInteraction],
-                    animations: {
-                        targetView.center = self.initialViewCenter
-                    }
-                )
-            default:
-                break
+            )
+        default:
+            break
         }
     }
 
@@ -86,7 +86,8 @@ class PreviewViewPanHandler: NSObject {
 }
 
 extension PreviewViewPanHandler: UIGestureRecognizerDelegate {
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
     }
 }

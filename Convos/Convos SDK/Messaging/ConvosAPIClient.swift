@@ -132,21 +132,19 @@ final class ConvosAPIClient {
         }
 
         switch httpResponse.statusCode {
-            case 200...299:
-                return try JSONDecoder().decode(T.self, from: data)
-            case 401:
-                throw APIError.notAuthenticated
-            case 403:
-                throw APIError.forbidden
-            case 404:
-                throw APIError.notFound
-            default:
-                throw APIError.serverError(nil)
+        case 200...299:
+            return try JSONDecoder().decode(T.self, from: data)
+        case 401:
+            throw APIError.notAuthenticated
+        case 403:
+            throw APIError.forbidden
+        case 404:
+            throw APIError.notFound
+        default:
+            throw APIError.serverError(nil)
         }
     }
 }
-
-
 
 // MARK: - Error Handling
 

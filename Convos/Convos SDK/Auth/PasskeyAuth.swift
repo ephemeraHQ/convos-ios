@@ -134,7 +134,7 @@ public actor PasskeyAuth {
         do {
             let authResponse = try await asyncController.performRequests()
             switch authResponse {
-            case .assertion(let assertion):
+            case .assertion:
                 return .init(challenge: challengeData.base64EncodedString(),
                              attestation: .init(credentialId: "",
                                                 clientDataJson: "",

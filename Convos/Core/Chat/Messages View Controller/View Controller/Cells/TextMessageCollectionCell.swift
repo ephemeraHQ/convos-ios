@@ -1,10 +1,7 @@
-import UIKit
 import SwiftUI
+import UIKit
 
 class TextMessageCollectionCell: UICollectionViewCell, PreviewableCell {
-
-    // MARK: - Properties
-
     private var message: String = ""
     private var messageType: MessageType = .incoming
     private var bubbleStyle: Cell.BubbleType = .normal
@@ -35,19 +32,22 @@ class TextMessageCollectionCell: UICollectionViewCell, PreviewableCell {
         self.message = message
         self.messageType = messageType
         self.bubbleStyle = style
-
         contentConfiguration = UIHostingConfiguration {
             VStack(alignment: .leading) {
-                MessageBubble(style: style,
-                              message: message,
-                              isOutgoing: messageType == .outgoing)
+                MessageBubble(
+                    style: style,
+                    message: message,
+                    isOutgoing: messageType == .outgoing
+                )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .margins(.vertical, 0.0)
     }
 
-    override func preferredLayoutAttributesFitting(_ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
+    override func preferredLayoutAttributesFitting(
+        _ layoutAttributes: UICollectionViewLayoutAttributes
+    ) -> UICollectionViewLayoutAttributes {
         layoutAttributesForHorizontalFittingRequired(layoutAttributes)
     }
 
@@ -71,22 +71,17 @@ class TextMessageCollectionCell: UICollectionViewCell, PreviewableCell {
 
     func previewView() -> UIView {
         guard let window else { return UIView(frame: .zero) }
-
         layoutIfNeeded()
-
         let convertedFrame = convert(previewSourceView.frame, to: window)
-
         // Create the snapshot
         let format = UIGraphicsImageRendererFormat()
         format.opaque = false
         format.scale = window.screen.scale
         format.preferredRange = .extended
-
         let renderer = UIGraphicsImageRenderer(bounds: previewSourceView.bounds, format: format)
-        let image = renderer.image { context in
+        let image = renderer.image { _ in
             previewSourceView.drawHierarchy(in: contentView.bounds, afterScreenUpdates: true)
         }
-
         let preview = UIView(frame: convertedFrame)
         preview.layer.contents = image.cgImage
         preview.clipsToBounds = false
@@ -98,16 +93,13 @@ struct MessageBubble: View {
     let style: Cell.BubbleType
     let message: String
     let isOutgoing: Bool
-
     var body: some View {
         HStack {
-            MessageContainer(style: style,
-                             isOutgoing: isOutgoing) {
+            MessageContainer(style: style, isOutgoing: isOutgoing) {
                 Text(message)
                     .foregroundColor(isOutgoing ? .white : .primary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-
             }
         }
     }

@@ -11,24 +11,8 @@ protocol MessagesInputViewDelegate: AnyObject {
 // MARK: - MessagesInputView
 
 final class MessagesInputView: UIView {
-
-    // MARK: - Constants
-
-    private enum Constants {
-        static let bottomInset: CGFloat = 14.0
-        static let margin: CGFloat = 14.0
-        static let sendButtonSize: CGFloat = 36.0
-        static let baseHeight: CGFloat = 36.0
-        static let maxHeight: CGFloat = 150.0
-        static let textViewCornerRadius: CGFloat = 16.0
-        static let textViewFontSize: CGFloat = 16.0
-        static let textViewInset = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: sendButtonSize)
-    }
-
-    // MARK: - Properties
-
     weak var delegate: MessagesInputViewDelegate?
-    private var keyboardIsShowing = false
+    private var keyboardIsShowing: Bool = false
     private var textViewHeightConstraint: NSLayoutConstraint?
 
     // MARK: - UI Components
@@ -42,12 +26,12 @@ final class MessagesInputView: UIView {
 
     private(set) lazy var textView: UITextView = {
         let tv = UITextView()
-        tv.font = .systemFont(ofSize: Constants.textViewFontSize)
+        tv.font = .systemFont(ofSize: Constant.textViewFontSize)
         tv.backgroundColor = .white
         tv.layer.masksToBounds = true
         tv.layer.borderWidth = 1
         tv.layer.borderColor = UIColor.systemGray6.cgColor
-        tv.textContainerInset = Constants.textViewInset
+        tv.textContainerInset = Constant.textViewInset
         tv.translatesAutoresizingMaskIntoConstraints = false
         tv.isScrollEnabled = false
         tv.delegate = self
@@ -99,7 +83,7 @@ final class MessagesInputView: UIView {
     }
 
     private func setupTextViewHeightConstraint() {
-        textViewHeightConstraint = textView.heightAnchor.constraint(equalToConstant: Constants.baseHeight)
+        textViewHeightConstraint = textView.heightAnchor.constraint(equalToConstant: Constant.baseHeight)
         textViewHeightConstraint?.isActive = true
     }
 
@@ -112,15 +96,15 @@ final class MessagesInputView: UIView {
             blurView.bottomAnchor.constraint(equalTo: bottomAnchor),
 
             // Text View Constraints
-            textView.topAnchor.constraint(equalTo: topAnchor, constant: Constants.margin),
-            textView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: Constants.margin),
-            textView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -Constants.margin),
+            textView.topAnchor.constraint(equalTo: topAnchor, constant: Constant.margin),
+            textView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: Constant.margin),
+            textView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -Constant.margin),
 
             // Send Button Constraints
             sendButton.bottomAnchor.constraint(equalTo: textView.bottomAnchor),
             sendButton.trailingAnchor.constraint(equalTo: textView.trailingAnchor),
-            sendButton.widthAnchor.constraint(equalToConstant: Constants.sendButtonSize),
-            sendButton.heightAnchor.constraint(equalToConstant: Constants.sendButtonSize)
+            sendButton.widthAnchor.constraint(equalToConstant: Constant.sendButtonSize),
+            sendButton.heightAnchor.constraint(equalToConstant: Constant.sendButtonSize)
         ])
     }
 
@@ -149,12 +133,14 @@ final class MessagesInputView: UIView {
     }
 
     private func updateTextViewCornerRadius() {
-        let shouldUseRoundedCorners = textViewHeightConstraint?.constant == Constants.baseHeight || textView.text.isEmpty
-        textView.layer.cornerRadius = shouldUseRoundedCorners ? textView.frame.height / 2.0 : Constants.textViewCornerRadius
+        let shouldUseRoundedCorners = textViewHeightConstraint?.constant == Constant.baseHeight || textView.text.isEmpty
+        textView.layer.cornerRadius = shouldUseRoundedCorners
+            ? textView.frame.height / 2.0
+            : Constant.textViewCornerRadius
     }
 
     override var intrinsicContentSize: CGSize {
-        let textHeight = (textViewHeightConstraint?.constant ?? Constants.baseHeight) + (Constants.margin * 2.0)
+        let textHeight = (textViewHeightConstraint?.constant ?? Constant.baseHeight) + (Constant.margin * 2.0)
         return CGSize(width: UIView.noIntrinsicMetric, height: textHeight + safeAreaInsets.bottom)
     }
 
@@ -184,7 +170,7 @@ final class MessagesInputView: UIView {
     private func updateTextViewHeight() {
         let size = CGSize(width: textView.bounds.width, height: .infinity)
         let estimatedSize = textView.sizeThatFits(size)
-        let newHeight = min(max(estimatedSize.height, Constants.baseHeight), Constants.maxHeight)
+        let newHeight = min(max(estimatedSize.height, Constant.baseHeight), Constant.maxHeight)
         textViewHeightConstraint?.constant = newHeight
     }
 
@@ -202,6 +188,20 @@ final class MessagesInputView: UIView {
         textView.text = ""
         sendButton.alpha = 0.0
         handleTextChange()
+    }
+
+    private enum Constant {
+        static let bottomInset: CGFloat = 14.0
+        static let margin: CGFloat = 14.0
+        static let sendButtonSize: CGFloat = 36.0
+        static let baseHeight: CGFloat = 36.0
+        static let maxHeight: CGFloat = 150.0
+        static let textViewCornerRadius: CGFloat = 16.0
+        static let textViewFontSize: CGFloat = 16.0
+        static let textViewInset: UIEdgeInsets = UIEdgeInsets(top: 8,
+                                                              left: 12,
+                                                              bottom: 8,
+                                                              right: sendButtonSize)
     }
 }
 

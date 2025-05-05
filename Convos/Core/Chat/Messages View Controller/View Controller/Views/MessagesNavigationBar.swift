@@ -9,7 +9,7 @@ class CircularImageView: UIImageView {
 }
 
 class MessagesNavigationBar: UIView {
-    enum Constants {
+    enum Constant {
         static let contentHeight: CGFloat = 40.0
         static let regularHeight: CGFloat = 72.0
         static let compactHeight: CGFloat = 52.0
@@ -18,13 +18,13 @@ class MessagesNavigationBar: UIView {
 
     // MARK: - Properties
 
-    private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
-    private let barView = UIView()
-    private let contentView = UIView()
-    let leftButton = UIButton(type: .system)
-    let rightButton = UIButton(type: .system)
+    private let blurView: UIVisualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
+    private let barView: UIView = UIView()
+    private let contentView: UIView = UIView()
+    let leftButton: UIButton = UIButton(type: .system)
+    let rightButton: UIButton = UIButton(type: .system)
     private let stackView: UIStackView = {
-        let stack = UIStackView()
+        let stack: UIStackView = UIStackView()
         stack.axis = .horizontal
         stack.alignment = .center
         stack.distribution = .fill
@@ -33,14 +33,14 @@ class MessagesNavigationBar: UIView {
     }()
 
     private let avatarImageView: CircularImageView = {
-        let imageView = CircularImageView()
+        let imageView: CircularImageView = CircularImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.backgroundColor = .systemGray5
         return imageView
     }()
 
     private let titleLabel: UILabel = {
-        let label = UILabel()
+        let label: UILabel = UILabel()
         label.font = .systemFont(ofSize: 16.0)
         label.textColor = .label
         return label
@@ -105,8 +105,11 @@ class MessagesNavigationBar: UIView {
         NSLayoutConstraint.activate([
             contentView.leadingAnchor.constraint(equalTo: barView.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: barView.trailingAnchor),
-            contentView.topAnchor.constraint(equalTo: barView.topAnchor, constant: Constants.contentViewVerticalPadding),
-            contentView.bottomAnchor.constraint(equalTo: barView.bottomAnchor, constant: -Constants.contentViewVerticalPadding)
+            contentView.topAnchor.constraint(equalTo: barView.topAnchor, constant: Constant.contentViewVerticalPadding),
+            contentView.bottomAnchor.constraint(
+                equalTo: barView.bottomAnchor,
+                constant: -Constant.contentViewVerticalPadding
+            )
         ])
 
         contentView.addSubview(leftButton)
@@ -145,7 +148,9 @@ class MessagesNavigationBar: UIView {
 
         stackView.addArrangedSubview(titleLabel)
 
-        registerForTraitChanges([UITraitVerticalSizeClass.self]) { (self: MessagesNavigationBar, previousTraitCollection: UITraitCollection) in
+        registerForTraitChanges([
+            UITraitVerticalSizeClass.self
+        ]) { (self: MessagesNavigationBar, _: UITraitCollection) in
             self.updateNavigationBarHeight(barViewHeightConstraint)
         }
 
@@ -154,8 +159,8 @@ class MessagesNavigationBar: UIView {
 
     private func updateNavigationBarHeight(_ constraint: NSLayoutConstraint) {
         let baseHeight = traitCollection.verticalSizeClass == .compact ?
-            MessagesNavigationBar.Constants.compactHeight :
-            MessagesNavigationBar.Constants.regularHeight
+            MessagesNavigationBar.Constant.compactHeight :
+            MessagesNavigationBar.Constant.regularHeight
         constraint.constant = baseHeight
     }
 }

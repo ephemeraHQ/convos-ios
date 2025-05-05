@@ -1,8 +1,10 @@
 import UIKit
 
 protocol MessageReactionMenuCoordinatorDelegate: AnyObject {
-    func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator, previewableCellAt indexPath: IndexPath) -> PreviewableCollectionViewCell?
-    func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator, shouldPresentMenuFor cell: PreviewableCollectionViewCell) -> Bool
+    func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator,
+                                        previewableCellAt indexPath: IndexPath) -> PreviewableCollectionViewCell?
+    func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator,
+                                        shouldPresentMenuFor cell: PreviewableCollectionViewCell) -> Bool
     func messageReactionMenuCoordinatorDidBeginTransition(_ coordinator: MessageReactionMenuCoordinator)
     func messageReactionMenuCoordinatorDidEndTransition(_ coordinator: MessageReactionMenuCoordinator)
     var collectionView: UICollectionView { get }
@@ -12,8 +14,8 @@ class MessageReactionMenuCoordinator: UIPercentDrivenInteractiveTransition {
     weak var delegate: MessageReactionMenuCoordinatorDelegate?
 
     private var panHandler: PreviewViewPanHandler?
-    private var doubleTapRecognizer: UITapGestureRecognizer!
-    private var longPressRecognizer: UILongPressGestureRecognizer!
+    private var doubleTapRecognizer: UITapGestureRecognizer?
+    private var longPressRecognizer: UILongPressGestureRecognizer?
 
     // Store context for transition
     private var transitionSourceCell: PreviewableCollectionViewCell?
@@ -22,7 +24,7 @@ class MessageReactionMenuCoordinator: UIPercentDrivenInteractiveTransition {
     private weak var currentMenuController: MessageReactionMenuController?
 
     // Interactive transition state
-    private var isInteractive = false
+    private var isInteractive: Bool = false
     private var initialTouchPoint: CGPoint = .zero
     private var initialViewCenter: CGPoint = .zero
     private var interactivePreviewView: UIView?
@@ -43,55 +45,57 @@ class MessageReactionMenuCoordinator: UIPercentDrivenInteractiveTransition {
         guard let collectionView = delegate?.collectionView else { return }
 
         // Set up long press for interactive presentation
-        longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
         longPressRecognizer.delegate = self
         longPressRecognizer.minimumPressDuration = 0.2
         collectionView.addGestureRecognizer(longPressRecognizer)
+        self.longPressRecognizer = longPressRecognizer
 
         // Set up double tap
-        doubleTapRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
+        let doubleTapRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
         doubleTapRecognizer.numberOfTapsRequired = 2
         doubleTapRecognizer.delegate = self
         collectionView.addGestureRecognizer(doubleTapRecognizer)
+        self.doubleTapRecognizer = doubleTapRecognizer
     }
 
     @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
         guard let collectionView = delegate?.collectionView else { return }
         let location = gesture.location(in: collectionView)
         switch gesture.state {
-            case .began:
-                guard let indexPath = collectionView.indexPathForItem(at: location),
-                      let cell = delegate?.messageReactionMenuCoordinator(self, previewableCellAt: indexPath),
-                      delegate?.messageReactionMenuCoordinator(self, shouldPresentMenuFor: cell) ?? true else {
-                    return
-                }
+        case .began:
+            guard let indexPath = collectionView.indexPathForItem(at: location),
+                  let cell = delegate?.messageReactionMenuCoordinator(self, previewableCellAt: indexPath),
+                  delegate?.messageReactionMenuCoordinator(self, shouldPresentMenuFor: cell) ?? true else {
+                return
+            }
 
-                let cellRect = cell.convert(cell.bounds, to: collectionView.window)
+            let cellRect = cell.convert(cell.bounds, to: collectionView.window)
 
-                // Set up interactive state
-                isInteractive = true
-                initialTouchPoint = location
-                interactiveDirection = .presentation
+            // Set up interactive state
+            isInteractive = true
+            initialTouchPoint = location
+            interactiveDirection = .presentation
 
-                presentMenu(for: cell, at: cellRect, edge: cell.sourceCellEdge, interactive: true)
-                initialViewCenter = interactivePreviewView?.center ?? cell.center
+            presentMenu(for: cell, at: cellRect, edge: cell.sourceCellEdge, interactive: true)
+            initialViewCenter = interactivePreviewView?.center ?? cell.center
 
-                delegate?.messageReactionMenuCoordinatorDidBeginTransition(self)
+            delegate?.messageReactionMenuCoordinatorDidBeginTransition(self)
 
-                gestureStartTime = CACurrentMediaTime()
-                displayLink = CADisplayLink(target: self, selector: #selector(handleDisplayLinkTick))
-                displayLink?.add(to: .main, forMode: .common)
+            gestureStartTime = CACurrentMediaTime()
+            displayLink = CADisplayLink(target: self, selector: #selector(handleDisplayLinkTick))
+            displayLink?.add(to: .main, forMode: .common)
 
-            case .ended, .cancelled, .failed:
-                if displayLink != nil {
-                    finish()
-                } else {
-                    cancel()
-                }
-                
-                delegate?.messageReactionMenuCoordinatorDidEndTransition(self)
-            default:
-                break
+        case .ended, .cancelled, .failed:
+            if displayLink != nil {
+                finish()
+            } else {
+                cancel()
+            }
+
+            delegate?.messageReactionMenuCoordinatorDidEndTransition(self)
+        default:
+            break
         }
     }
 
@@ -168,11 +172,15 @@ class MessageReactionMenuCoordinator: UIPercentDrivenInteractiveTransition {
         interactiveMenuController = nil
     }
 
-    func interactionControllerForPresentation(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+    func interactionControllerForPresentation(
+        using animator: UIViewControllerAnimatedTransitioning
+    ) -> UIViewControllerInteractiveTransitioning? {
         return isInteractive ? self : nil
     }
 
-    func interactionControllerForDismissal(using animator: UIViewControllerAnimatedTransitioning) -> UIViewControllerInteractiveTransitioning? {
+    func interactionControllerForDismissal(
+        using animator: UIViewControllerAnimatedTransitioning
+    ) -> UIViewControllerInteractiveTransitioning? {
         return isInteractive ? self : nil
     }
 }
@@ -182,21 +190,17 @@ extension MessageReactionMenuCoordinator: UIGestureRecognizerDelegate {
         return true
     }
 
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-//        // Allow pan and long press to work together
-//        if (gestureRecognizer is UILongPressGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer) ||
-//            (gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UILongPressGestureRecognizer) {
-//            return true
-//        }
-//
-//        if gestureRecognizer is UIPanGestureRecognizer {
-//            return true
-//        }
-
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
         return true
     }
 
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
         if gestureRecognizer is UILongPressGestureRecognizer,
            otherGestureRecognizer is UITapGestureRecognizer {
             return true
@@ -207,7 +211,9 @@ extension MessageReactionMenuCoordinator: UIGestureRecognizerDelegate {
 }
 
 extension MessageReactionMenuCoordinator: UIViewControllerTransitioningDelegate {
-    func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+    func animationController(forPresented presented: UIViewController,
+                             presenting: UIViewController,
+                             source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         guard let cell = transitionSourceCell, let rect = transitionSourceRect else { return nil }
         return MessageReactionPresentationAnimator(sourceCell: cell, sourceRect: rect)
     }
@@ -280,9 +286,7 @@ final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnima
                 toVC.dimmingView.alpha = 1.0
                 toVC.view.alpha = 1.0
             }
-
-        }, completion: { finished in
-
+        }, completion: { _ in
             UIView.animate(withDuration: 0.5,
                            delay: 0.0,
                            usingSpringWithDamping: 0.8,
@@ -290,7 +294,7 @@ final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnima
                            options: .beginFromCurrentState) {
                 previewView.transform = .identity
                 previewView.frame = toVC.endPosition
-            } completion: { finished in
+            } completion: { _ in
                 previewView.removeFromSuperview()
                 toVC.view.addSubview(previewView)
             }

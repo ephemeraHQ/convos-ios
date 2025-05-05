@@ -24,7 +24,6 @@ private enum MessagingServiceEffect {
 }
 
 final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
-
     private let authService: ConvosSDK.AuthServiceProtocol
     private var xmtpClient: XMTPiOS.Client?
     private let keychainService: KeychainService<ConvosKeychainItem> = .init()
@@ -88,7 +87,9 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                     Logger.warning("Invalid MessagingService state transition: \(_state) -> \(action)")
                 }
             } catch {
-                Logger.error("MessagingService failed state transition \(_state) -> \(action): \(error.localizedDescription)")
+                Logger.error(
+                    "MessagingService failed state transition \(_state) -> \(action): \(error.localizedDescription)"
+                )
                 _state = .error(error)
             }
         }
@@ -147,7 +148,6 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     nonisolated func messages(for address: String) -> AnyPublisher<[ConvosSDK.Message], Never> {
-        // TODO: Implement proper message streaming from XMTP client
         Just([]).eraseToAnyPublisher()
     }
 
