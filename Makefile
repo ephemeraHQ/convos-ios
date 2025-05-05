@@ -11,6 +11,10 @@ setup: ## Setup dependencies and developer environment
 secrets: ## Generate Secrets.swift from .env
 	./Scripts/generate-secrets.sh
 
+.PHONY: entitlements
+entitlements: ## Generate entitlements file from .env
+	./Scripts/generate_entitlements.sh	
+
 .PHONY: upload_symbols
 upload_symbols: ## Upload symbols to Sentry
 	# for local uploading, use like this: DSYM_DIR_PATH=/path/to/dSYM/dir make upload_symbols
@@ -32,4 +36,4 @@ release: ## Create a release branch for a given version. pass env=production, et
 slack_changelog: ## Post a changelog to Slack. Usage: make slack_changelog old=<SHA> new=<SHA> chosen_env=<ENV>
 	./Scripts/post-to-slack.sh old=$(old) new=$(new) chosen_env=$(chosen_env)
 
-.PHONY: secrets upload_symbols bump-version bump-build release slack_changelog
+.PHONY: secrets entitlements upload_symbols bump-version bump-build release slack_changelog

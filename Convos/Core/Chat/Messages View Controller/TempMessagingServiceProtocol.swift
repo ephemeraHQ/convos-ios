@@ -7,7 +7,7 @@ struct MessagingServiceUpdate {
 }
 
 @MainActor
-protocol MessagingServiceProtocol {
+protocol TempMessagingServiceProtocol {
     var updates: AnyPublisher<MessagingServiceUpdate, Never> { get }
     func loadInitialMessages() async -> [Section]
     func loadPreviousMessages() async -> [Section]

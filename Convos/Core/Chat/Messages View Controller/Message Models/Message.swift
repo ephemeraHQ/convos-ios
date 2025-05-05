@@ -71,7 +71,7 @@ enum ImageSource: Hashable {
 }
 
 struct Message: Hashable {
-    enum Data: Hashable {
+    public enum Data: Hashable {
         case text(String)
         case image(ImageSource, isLocallyStored: Bool)
     }
@@ -79,7 +79,7 @@ struct Message: Hashable {
     var id: UUID
     var date: Date
     var data: Data
-    var owner: User
+    var owner: ConvosUser
     var type: MessageType
     var status: MessageStatus = .sent
 }

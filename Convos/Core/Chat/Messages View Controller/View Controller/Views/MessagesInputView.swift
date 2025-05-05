@@ -11,8 +11,6 @@ protocol MessagesInputViewDelegate: AnyObject {
 // MARK: - MessagesInputView
 
 final class MessagesInputView: UIView {
-    // MARK: - Properties
-
     weak var delegate: MessagesInputViewDelegate?
     private var keyboardIsShowing: Bool = false
     private var textViewHeightConstraint: NSLayoutConstraint?
@@ -99,8 +97,8 @@ final class MessagesInputView: UIView {
 
             // Text View Constraints
             textView.topAnchor.constraint(equalTo: topAnchor, constant: Constant.margin),
-            textView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Constant.margin),
-            textView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Constant.margin),
+            textView.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: Constant.margin),
+            textView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -Constant.margin),
 
             // Send Button Constraints
             sendButton.bottomAnchor.constraint(equalTo: textView.bottomAnchor),
@@ -135,11 +133,10 @@ final class MessagesInputView: UIView {
     }
 
     private func updateTextViewCornerRadius() {
-        let shouldUseRoundedCorners = textViewHeightConstraint?.constant == Constant.baseHeight
-        || textView.text.isEmpty
+        let shouldUseRoundedCorners = textViewHeightConstraint?.constant == Constant.baseHeight || textView.text.isEmpty
         textView.layer.cornerRadius = shouldUseRoundedCorners
-        ? textView.frame.height / 2.0
-        : Constant.textViewCornerRadius
+            ? textView.frame.height / 2.0
+            : Constant.textViewCornerRadius
     }
 
     override var intrinsicContentSize: CGSize {
@@ -201,7 +198,10 @@ final class MessagesInputView: UIView {
         static let maxHeight: CGFloat = 150.0
         static let textViewCornerRadius: CGFloat = 16.0
         static let textViewFontSize: CGFloat = 16.0
-        static let textViewInset: UIEdgeInsets = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: sendButtonSize)
+        static let textViewInset: UIEdgeInsets = UIEdgeInsets(top: 8,
+                                                              left: 12,
+                                                              bottom: 8,
+                                                              right: sendButtonSize)
     }
 }
 

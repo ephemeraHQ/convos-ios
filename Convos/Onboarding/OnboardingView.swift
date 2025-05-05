@@ -5,8 +5,8 @@ struct OnboardingView: View {
     @State var presentingCreateContactCard: Bool = false
     @State var presentingImportContactCard: Bool = false
 
-    init(authService: AuthServiceProtocol) {
-        _viewModel = State(initialValue: .init(authService: authService))
+    init(convos: ConvosSDK.Convos) {
+        _viewModel = State(initialValue: .init(convos: convos))
     }
 
     var body: some View {
@@ -89,5 +89,5 @@ private struct LegalView: View {
 }
 
 #Preview {
-    OnboardingView(authService: MockAuthService())
+    OnboardingView(convos: .mock)
 }

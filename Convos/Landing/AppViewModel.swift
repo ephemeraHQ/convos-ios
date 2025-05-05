@@ -1,24 +1,33 @@
 import Combine
 import SwiftUI
 
+@MainActor
 @Observable
 final class AppViewModel {
     enum AppState {
         case signedIn, signedOut, loading
     }
 
-    let authService: AuthServiceProtocol
+    let convos: ConvosSDK.Convos
     private var cancellables: Set<AnyCancellable> = .init()
 
     private(set) var appState: AppState = .loading
 
-    init(authService: AuthServiceProtocol = PrivyAuthService()) {
-        self.authService = authService
-        observeAuthState()
+    init(convos: ConvosSDK.Convos) {
+        self.convos = convos
+
+        Task {
+            do {
+                try await convos.prepare()
+            } catch {
+                Logger.error("Convos SDK failed preparing: \(error.localizedDescription)")
+            }
+            observeAuthState()
+        }
     }
 
     private func observeAuthState() {
-        authService.authStatePublisher()
+        convos.authState
             .receive(on: DispatchQueue.main)
             .sink { [weak self] authState in
                 guard let self else { return }

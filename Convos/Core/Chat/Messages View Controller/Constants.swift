@@ -1,9 +1,8 @@
 import Foundation
 import UIKit
 
-struct GlobalConstant {
+enum Constant {
     static let maxWidth: CGFloat = 0.75
     static let bubbleCornerRadius: CGFloat = 16.0
-
-    private init() {}
+    static let minimumPressDurationForReactions: CGFloat = 0.15
 }

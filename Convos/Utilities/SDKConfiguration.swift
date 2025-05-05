@@ -1,5 +1,4 @@
 import Foundation
-import PrivySDK
 import Sentry
 
 enum SDKConfiguration {
@@ -11,6 +10,7 @@ enum SDKConfiguration {
         SentrySDK.start { options in
             options.dsn = Secrets.SENTRY_DSN
             options.debug = true // Enabling debug when first installing is always helpful
+            options.diagnosticLevel = .warning
             options.attachScreenshot = true
             options.enableSigtermReporting = true
             options.attachStacktrace = true
@@ -20,9 +20,5 @@ enum SDKConfiguration {
             // For more information, visit: https://docs.sentry.io/platforms/apple/data-management/data-collected/
             options.sendDefaultPii = true
         }
-    }
-
-    private static func configurePrivy() {
-        // Add Privy SDK configuration here
     }
 }

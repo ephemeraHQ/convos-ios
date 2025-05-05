@@ -17,7 +17,6 @@
 		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
 		D834386F2DB19D8C00A50F45 /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = D834386E2DB19D8C00A50F45 /* Factory */; };
 		D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */; };
-		D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6CA2DA4D5A500EF8577 /* Privy */; };
 		D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = D8B5A9032DC272BD006003A4 /* XMTPiOS */; };
 /* End PBXBuildFile section */
 
@@ -119,7 +118,6 @@
 			files = (
 				D834386F2DB19D8C00A50F45 /* Factory in Frameworks */,
 				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
-				D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */,
 				D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */,
 				D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */,
 				D808502F2DC94EDF00E708B0 /* GRDB-dynamic in Frameworks */,
@@ -223,7 +221,6 @@
 			name = Convos;
 			packageProductDependencies = (
 				D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */,
-				D8A2B6CA2DA4D5A500EF8577 /* Privy */,
 				D834386E2DB19D8C00A50F45 /* Factory */,
 				D80BAAC12DB2C36500C2FB42 /* Sentry */,
 				7A1C3C742DB6F7AD00B723C0 /* PostHog */,
@@ -265,7 +262,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */,
-				D8A2B6C92DA4D5A500EF8577 /* XCRemoteSwiftPackageReference "privy-ios" */,
 				D834386D2DB19D8C00A50F45 /* XCRemoteSwiftPackageReference "Factory" */,
 				D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
@@ -404,6 +400,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Convos/Convos.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
@@ -432,6 +429,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Convos/Convos.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
@@ -671,14 +669,6 @@
 				minimumVersion = 3.0.3;
 			};
 		};
-		D8A2B6C92DA4D5A500EF8577 /* XCRemoteSwiftPackageReference "privy-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/privy-io/privy-ios";
-			requirement = {
-				kind = revision;
-				revision = 2623d1c97e8990d7164d7b858d0dbfd68876f4f4;
-			};
-		};
 		D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/xmtp/xmtp-ios.git";
@@ -739,11 +729,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */;
 			productName = AnchorKit;
-		};
-		D8A2B6CA2DA4D5A500EF8577 /* Privy */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D8A2B6C92DA4D5A500EF8577 /* XCRemoteSwiftPackageReference "privy-ios" */;
-			productName = Privy;
 		};
 		D8B5A9032DC272BD006003A4 /* XMTPiOS */ = {
 			isa = XCSwiftPackageProductDependency;

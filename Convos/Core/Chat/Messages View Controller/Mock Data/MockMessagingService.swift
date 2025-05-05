@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-final class MockMessagingService: MessagingServiceProtocol {
+final class MockMessagingService: TempMessagingServiceProtocol {
     var updates: AnyPublisher<MessagingServiceUpdate, Never> {
         updatesPublisher
             .compactMap { $0 }
@@ -13,13 +13,13 @@ final class MockMessagingService: MessagingServiceProtocol {
     private var typingState: TypingState = .idle
     private var lastReadUUID: UUID?
     private var lastReceivedUUID: UUID?
-    private let userId: Int
+    private let userId: String
 
-    private let currentUser: User
-    private let otherUsers: [User]
+    private let currentUser: ConvosUser
+    private let otherUsers: [ConvosUser]
 
-    private var userMap: [Int: User] {
-        var map: [Int: User] = [currentUser.id: currentUser]
+    private var userMap: [String: ConvosUser] {
+        var map: [String: ConvosUser] = [currentUser.id: currentUser]
         otherUsers.forEach { map[$0.id] = $0 }
         return map
     }
@@ -27,10 +27,10 @@ final class MockMessagingService: MessagingServiceProtocol {
     var messages: [RawMessage] = []
 
     init() {
-        let currentUser = User(id: 0, name: "You")
-        let provider = MockMessagesProvider(currentUser: currentUser)
+        let convosUser = ConvosUser(id: "0", name: "You")
+        let provider = MockMessagesProvider(currentUser: convosUser)
         self.dataProvider = provider
-        self.userId = currentUser.id
+        self.userId = convosUser.id
 
         // Get users from the provider if it's a MockMessagesProvider, otherwise use defaults
         if let mockProvider = dataProvider as? MockMessagesProvider {
@@ -38,7 +38,7 @@ final class MockMessagingService: MessagingServiceProtocol {
             self.currentUser = users.current
             self.otherUsers = users.others
         } else {
-            self.currentUser = User(id: userId, name: "You")
+            self.currentUser = ConvosUser(id: userId, name: "You")
             self.otherUsers = []
         }
         provider.delegate = self
@@ -79,7 +79,7 @@ final class MockMessagingService: MessagingServiceProtocol {
                 Message(id: rawMessage.id,
                         date: rawMessage.date,
                         data: self.convert(rawMessage.data),
-                        owner: userMap[rawMessage.userId] ?? User(id: rawMessage.userId, name: "Unknown User"),
+                        owner: userMap[rawMessage.userId] ?? ConvosUser(id: rawMessage.userId, name: "Unknown User"),
                         type: rawMessage.userId == self.userId ? .outgoing : .incoming,
                         status: rawMessage.status)
             }

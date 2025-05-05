@@ -91,18 +91,11 @@ struct ContactCardCreateView: View {
             Button("That's me") {
                 // temporary animation
                 withAnimation(.easeInOut(duration: 0.3)) {
+                    isNameFocused = false
                     isEditingContactCard = false
                 }
 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isVisible = false
-                    }
-
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        submitAction()
-                    }
-                }
+                submitAction()
             }
             .convosButtonStyle(.outline(fullWidth: true))
             .opacity(isEditingContactCard ? 1.0 : 0.0)

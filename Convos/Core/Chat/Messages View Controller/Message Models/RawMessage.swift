@@ -10,6 +10,6 @@ struct RawMessage: Hashable {
     var id: UUID
     var date: Date
     var data: Data
-    var userId: Int
+    var userId: String
     var status: MessageStatus = .sent
 }

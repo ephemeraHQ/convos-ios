@@ -84,8 +84,6 @@ extension UICollectionView {
 
                         reconfigureItems(at: indexPaths)
                         (collectionViewLayout as? MessagesCollectionLayout)?.reconfigureItems(at: indexPaths)
-                    // todo: maybe replace with reload if reconfigure mis-behaves
-//                        reloadItems(at: indexPaths)
                 }
 
                 for (source, target) in changeset.elementMoved {

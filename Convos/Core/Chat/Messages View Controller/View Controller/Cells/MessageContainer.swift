@@ -3,10 +3,9 @@ import SwiftUI
 struct MessageContainer<Content: View>: View {
     let style: Cell.BubbleType
     let isOutgoing: Bool
-    let cornerRadius: CGFloat = GlobalConstant.bubbleCornerRadius
+    let cornerRadius: CGFloat = Constant.bubbleCornerRadius
     let content: () -> Content
 
-    // todo: do this proportionally, not a fixed size
     var spacer: some View {
         Group {
             Spacer()
@@ -50,7 +49,7 @@ struct MessageContainer<Content: View>: View {
             }
 
             content()
-                .background(isOutgoing ? Color.black : Color.gray.opacity(0.2))
+                .background(isOutgoing ? Color.black : Color(hue: 0.0, saturation: 0.0, brightness: 0.96))
                 .foregroundColor(isOutgoing ? .white : .primary)
                 .mask(mask)
 

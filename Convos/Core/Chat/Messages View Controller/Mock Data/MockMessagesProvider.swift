@@ -22,22 +22,22 @@ final class MockMessagesProvider: MessagesProviderProtocol {
 
     // MARK: - Mock Users
 
-    private let currentUser: User
-    private let otherUsers: [User] = [
-        User(id: 1, name: "Emily Dickinson"),
-        User(id: 2, name: "William Shakespeare"),
-        User(id: 3, name: "Virginia Woolf"),
-        User(id: 4, name: "James Joyce"),
-        User(id: 5, name: "Oscar Wilde")
+    private let currentUser: ConvosUser
+    private let otherUsers: [ConvosUser] = [
+        ConvosUser(id: "1", name: "Emily Dickinson"),
+        ConvosUser(id: "2", name: "William Shakespeare"),
+        ConvosUser(id: "3", name: "Virginia Woolf"),
+        ConvosUser(id: "4", name: "James Joyce"),
+        ConvosUser(id: "5", name: "Oscar Wilde")
     ]
 
-    private var allUsers: [User] {
+    private var allUsers: [ConvosUser] {
         [currentUser] + otherUsers
     }
 
     // MARK: - User Access
 
-    var users: (current: User, others: [User]) {
+    var users: (current: ConvosUser, others: [ConvosUser]) {
         (currentUser, otherUsers)
     }
 
@@ -63,15 +63,19 @@ final class MockMessagesProvider: MessagesProviderProtocol {
     // swiftlint:disable line_length
     private let imageUrls: [URL] = [
         URL(string: "https://upload.wikimedia.org/wikipedia/commons/5/56/Black-white_photograph_of_Emily_Dickinson2.png")!,
-        URL(string: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/William_Shakespeare_by_John_Taylor%2C_edited.jpg/1920px-William_Shakespeare_by_John_Taylor%2C_edited.jpg")!,
-        URL(string: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/George_Charles_Beresford_-_Virginia_Woolf_in_1902_-_Restoration.jpg/1200px-George_Charles_Beresford_-_Virginia_Woolf_in_1902_-_Restoration.jpg")!,
-        URL(string: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Portrait_of_James_Joyce_P529.jpg/1920px-Portrait_of_James_Joyce_P529.jpg")!
+        URL(string: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/William_Shakespeare_by_John_Taylor%2C_edited.jpg/1920px-"
+            + "William_Shakespeare_by_John_Taylor%2C_edited.jpg")!,
+        URL(string: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/George_Charles_Beresford-"
+            + "_Virginia_Woolf_in_1902_-_Restoration.jpg/1200px-George_Charles_Beresford-"
+            + "_Virginia_Woolf_in_1902_-_Restoration.jpg")!,
+        URL(string: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Portrait_of_James_Joyce_P529.jpg/1920px-"
+            + "Portrait_of_James_Joyce_P529.jpg")!
     ]
     // swiftlint:enable line_length
 
     // MARK: - Initialization
 
-    init(currentUser: User) {
+    init(currentUser: ConvosUser) {
         self.currentUser = currentUser
 
         messageTimer = Timer.scheduledTimer(

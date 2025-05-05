@@ -19,17 +19,17 @@ struct ContactCardView: View {
 
                 Spacer()
 
-                if isEditing {
-                    Button {
-                        importAction()
-                    } label: {
-                        Text("Import")
-                            .font(DesignConstants.Fonts.buttonText)
-                            .foregroundStyle(Color.colorFillSecondary)
-                            .padding(.horizontal, DesignConstants.Spacing.step3x)
-                            .padding(.vertical, DesignConstants.Spacing.step2x)
-                    }
-                }
+//                if isEditing {
+//                    Button {
+//                        importAction()
+//                    } label: {
+//                        Text("Import")
+//                            .font(DesignConstants.Fonts.buttonText)
+//                            .foregroundStyle(Color.colorFillSecondary)
+//                            .padding(.horizontal, DesignConstants.Spacing.step3x)
+//                            .padding(.vertical, DesignConstants.Spacing.step2x)
+//                    }
+//                }
             }
 
             ZStack {

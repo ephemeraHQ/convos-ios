@@ -1,15 +1,16 @@
 import SwiftUI
 
 struct RootView: View {
-    private let authService: AuthServiceProtocol
+    private let convos: ConvosSDK.Convos
     private let analyticsService: AnalyticsServiceProtocol
 
     @State var viewModel: AppViewModel
 
-    init(authService: AuthServiceProtocol, analyticsService: AnalyticsServiceProtocol) {
-        self.authService = authService
+    init(convos: ConvosSDK.Convos,
+         analyticsService: AnalyticsServiceProtocol) {
+        self.convos = convos
         self.analyticsService = analyticsService
-        _viewModel = .init(initialValue: .init(authService: authService))
+        _viewModel = .init(initialValue: .init(convos: convos))
     }
 
     var body: some View {
@@ -21,14 +22,13 @@ struct RootView: View {
                 Spacer()
             }
         case .signedIn:
-            ConversationsView(authService: authService)
+            EmptyView()
         case .signedOut:
-            OnboardingView(authService: authService)
+            OnboardingView(convos: convos)
         }
     }
 }
 
 #Preview {
-    RootView(authService: MockAuthService(),
-             analyticsService: MockAnalyticsService())
+    RootView(convos: .mock, analyticsService: MockAnalyticsService())
 }

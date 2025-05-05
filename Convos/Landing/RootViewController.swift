@@ -3,13 +3,13 @@ import SwiftUI
 import UIKit
 
 final class RootViewController: UIViewController {
-    let authService: AuthServiceProtocol = MockAuthService()
+    let convos: ConvosSDK.Convos = .shared
     let analyticsService: AnalyticsServiceProtocol = PosthogAnalyticsService.shared
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        let rootView = RootView(authService: authService,
+        let rootView = RootView(convos: convos,
                                 analyticsService: analyticsService)
         let hostingController = UIHostingController(rootView: rootView)
         addChild(hostingController)
