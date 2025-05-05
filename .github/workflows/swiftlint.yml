@@ -2,9 +2,9 @@ name: SwiftLint
 
 on:
   pull_request:
-    branches:
-      - main
-      - joe/main
+    branches: ['main', 'joe/main']
+  push:
+    branches: ['main', 'joe/main']
 
 jobs:
   lint:
