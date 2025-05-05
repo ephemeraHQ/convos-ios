@@ -1,11 +1,11 @@
 import Combine
-import DifferenceKit
 import Foundation
 import UIKit
-
-// swiftlint:disable implicitly_unwrapped_optional
+import DifferenceKit
 
 final class MessagesViewController: UIViewController {
+    // MARK: - Types
+
     private enum ReactionTypes {
         case delayedUpdate
     }
@@ -42,9 +42,9 @@ final class MessagesViewController: UIViewController {
     private var currentControllerActions: SetActor<Set<ControllerActions>, ReactionTypes> = SetActor()
 
     internal let collectionView: UICollectionView
-    private var messagesLayout: MessagesCollectionLayout = MessagesCollectionLayout()
-    private let inputBarView: MessagesInputView = MessagesInputView()
-    private let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
+    private var messagesLayout = MessagesCollectionLayout()
+    private let inputBarView = MessagesInputView()
+    private let navigationBar = MessagesNavigationBar(frame: .zero)
 
     private let messagingService: MessagingServiceProtocol
     private let dataSource: MessagesCollectionDataSource
