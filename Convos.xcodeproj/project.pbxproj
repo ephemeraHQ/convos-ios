@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1C3C742DB6F7AD00B723C0 /* PostHog */; };
+		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
 		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
 		D834386F2DB19D8C00A50F45 /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = D834386E2DB19D8C00A50F45 /* Factory */; };
 		D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */; };
@@ -55,6 +56,7 @@
 				D834386F2DB19D8C00A50F45 /* Factory in Frameworks */,
 				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
 				D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */,
+				D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */,
 				D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */,
 				7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */,
 				D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */,
@@ -107,7 +109,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				D82C77932DB2FEE3004EA1C7 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D83A7ABA2DA5C98400879441 /* Config */,
@@ -121,6 +122,7 @@
 				D80BAAC12DB2C36500C2FB42 /* Sentry */,
 				7A1C3C742DB6F7AD00B723C0 /* PostHog */,
 				D8B5A9032DC272BD006003A4 /* XMTPiOS */,
+				D8084BA82DC9193A00E708B0 /* DifferenceKit */,
 			);
 			productName = Convos;
 			productReference = D8A2B6912DA4BA4B00EF8577 /* Convos.app */;
@@ -158,6 +160,7 @@
 				D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
 				7A1C3C732DB6F7AD00B723C0 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */,
+				D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
@@ -198,13 +201,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		D82C77932DB2FEE3004EA1C7 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			productRef = D82C77922DB2FEE3004EA1C7 /* SwiftLintBuildToolPlugin */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		D8A2B6A52DA4BA4C00EF8577 /* Debug */ = {
@@ -414,6 +410,14 @@
 				minimumVersion = 3.24.0;
 			};
 		};
+		D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ra1028/DifferenceKit.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.3.0;
+			};
+		};
 		D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
@@ -470,15 +474,15 @@
 			package = 7A1C3C732DB6F7AD00B723C0 /* XCRemoteSwiftPackageReference "posthog-ios" */;
 			productName = PostHog;
 		};
+		D8084BA82DC9193A00E708B0 /* DifferenceKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */;
+			productName = DifferenceKit;
+		};
 		D80BAAC12DB2C36500C2FB42 /* Sentry */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
-		};
-		D82C77922DB2FEE3004EA1C7 /* SwiftLintBuildToolPlugin */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
-			productName = "plugin:SwiftLintBuildToolPlugin";
 		};
 		D834386E2DB19D8C00A50F45 /* Factory */ = {
 			isa = XCSwiftPackageProductDependency;

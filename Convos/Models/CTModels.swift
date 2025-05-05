@@ -21,7 +21,7 @@ struct CTMessage: Identifiable, Equatable {
     }
 }
 
-struct CTConversation: Identifiable, Equatable {
+struct CTConversation: Identifiable, Equatable, Hashable {
     let id: String
     let participants: [CTUser]
     var lastMessage: CTMessage?
@@ -47,6 +47,10 @@ struct CTConversation: Identifiable, Equatable {
         lhs.isMuted == rhs.isMuted &&
         lhs.amount == rhs.amount &&
         lhs.timestamp == rhs.timestamp
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }
 
