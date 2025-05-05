@@ -12,6 +12,7 @@ public extension ConvosSDK {
     protocol MessagingServiceProtocol {
         func start() async throws
         func stop() async
+
         func sendMessage(to address: String, content: String) async throws
         func messages(for address: String) -> AnyPublisher<[Message], Never>
         func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never>
@@ -44,7 +45,7 @@ struct MockMessage: ConvosSDK.Message {
     }
 }
 
-class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
+class _MockMessagingService: ConvosSDK.MessagingServiceProtocol {
     private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> = .init(.uninitialized)
     private var messagesSubject: CurrentValueSubject<[ConvosSDK.Message], Never> = .init([])
 

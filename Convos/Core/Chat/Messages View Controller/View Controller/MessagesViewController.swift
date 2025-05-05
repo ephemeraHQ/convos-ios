@@ -46,7 +46,7 @@ final class MessagesViewController: UIViewController {
     private let inputBarView: MessagesInputView = MessagesInputView()
     private let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
 
-    private let messagingService: MessagingServiceProtocol
+    private let messagingService: TempMessagingServiceProtocol
     private let dataSource: MessagesCollectionDataSource
 
     private var animator: ManualAnimator?
@@ -64,7 +64,7 @@ final class MessagesViewController: UIViewController {
 
     // MARK: - Initialization
 
-    init(messagingService: MessagingServiceProtocol) {
+    init(messagingService: TempMessagingServiceProtocol) {
         self.messagingService = messagingService
         self.dataSource = MessagesCollectionViewDataSource()
         self.collectionView = UICollectionView(frame: .zero,

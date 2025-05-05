@@ -24,6 +24,7 @@ private enum MessagingServiceEffect {
 }
 
 final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
+
     private let authService: ConvosSDK.AuthServiceProtocol
     private var xmtpClient: XMTPiOS.Client?
     private let keychainService: KeychainService<ConvosKeychainItem> = .init()

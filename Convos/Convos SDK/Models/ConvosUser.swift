@@ -1,9 +1,8 @@
 import Foundation
 
 struct ConvosUser: ConvosSDK.User {
-    var id: String {
-        "1"
-    }
+    let id: String
+    let name: String
 
     var chainId: Int64? {
         0
@@ -13,6 +12,8 @@ struct ConvosUser: ConvosSDK.User {
         ""
     }
 }
+
+extension ConvosUser: Hashable {}
 
 extension ConvosUser {
     func sign(message: String) async throws -> Data? {

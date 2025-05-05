@@ -22,22 +22,22 @@ final class MockMessagesProvider: MessagesProviderProtocol {
 
     // MARK: - Mock Users
 
-    private let currentUser: User
-    private let otherUsers: [User] = [
-        User(id: 1, name: "Emily Dickinson"),
-        User(id: 2, name: "William Shakespeare"),
-        User(id: 3, name: "Virginia Woolf"),
-        User(id: 4, name: "James Joyce"),
-        User(id: 5, name: "Oscar Wilde")
+    private let currentUser: ConvosUser
+    private let otherUsers: [ConvosUser] = [
+        ConvosUser(id: "1", name: "Emily Dickinson"),
+        ConvosUser(id: "2", name: "William Shakespeare"),
+        ConvosUser(id: "3", name: "Virginia Woolf"),
+        ConvosUser(id: "4", name: "James Joyce"),
+        ConvosUser(id: "5", name: "Oscar Wilde")
     ]
 
-    private var allUsers: [User] {
+    private var allUsers: [ConvosUser] {
         [currentUser] + otherUsers
     }
 
     // MARK: - User Access
 
-    var users: (current: User, others: [User]) {
+    var users: (current: ConvosUser, others: [ConvosUser]) {
         (currentUser, otherUsers)
     }
 
@@ -71,7 +71,7 @@ final class MockMessagesProvider: MessagesProviderProtocol {
 
     // MARK: - Initialization
 
-    init(currentUser: User) {
+    init(currentUser: ConvosUser) {
         self.currentUser = currentUser
 
         messageTimer = Timer.scheduledTimer(

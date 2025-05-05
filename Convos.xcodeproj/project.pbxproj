@@ -17,7 +17,6 @@
 		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
 		D834386F2DB19D8C00A50F45 /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = D834386E2DB19D8C00A50F45 /* Factory */; };
 		D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */; };
-		D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6CA2DA4D5A500EF8577 /* Privy */; };
 		D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = D8B5A9032DC272BD006003A4 /* XMTPiOS */; };
 /* End PBXBuildFile section */
 
@@ -118,14 +117,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				D834386F2DB19D8C00A50F45 /* Factory in Frameworks */,
-				7A7BB22B2DB72230009B8BBF /* XMTPiOS in Frameworks */,
 				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
-				D8A2B6CB2DA4D5A500EF8577 /* Privy in Frameworks */,
 				D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */,
 				D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */,
 				D808502F2DC94EDF00E708B0 /* GRDB-dynamic in Frameworks */,
 				7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */,
-				7A6D4A7E2DBC0F6B003284DA /* TurnkeySDK in Frameworks */,
 				D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */,
 				D808504A2DC9534800E708B0 /* TurnkeySDK in Frameworks */,
 			);
@@ -279,18 +275,6 @@
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
 			projectDirPath = "";
 			projectReferences = (
-				{
-					ProductGroup = 7A7BB2582DB722AF009B8BBF /* Products */;
-					ProjectRef = 7A7BB2542DB722AF009B8BBF /* Convos.xcodeproj */;
-				},
-				{
-					ProductGroup = 7A7BB20A2DB720B8009B8BBF /* Products */;
-					ProjectRef = 7A7BB2062DB720B8009B8BBF /* Convos.xcodeproj */;
-				},
-				{
-					ProductGroup = 7A7BB1C32DB70717009B8BBF /* Products */;
-					ProjectRef = 7A7BB1BF2DB70717009B8BBF /* Convos.xcodeproj */;
-				},
 				{
 					ProductGroup = 7A7BB1362DB6FF8E009B8BBF /* Products */;
 					ProjectRef = 7A7BB1322DB6FF8E009B8BBF /* Convos.xcodeproj */;
@@ -685,14 +669,6 @@
 				minimumVersion = 3.0.3;
 			};
 		};
-		D8A2B6C92DA4D5A500EF8577 /* XCRemoteSwiftPackageReference "privy-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/privy-io/privy-ios";
-			requirement = {
-				kind = revision;
-				revision = 2623d1c97e8990d7164d7b858d0dbfd68876f4f4;
-			};
-		};
 		D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/xmtp/xmtp-ios.git";
@@ -753,11 +729,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */;
 			productName = AnchorKit;
-		};
-		D8A2B6CA2DA4D5A500EF8577 /* Privy */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D8A2B6C92DA4D5A500EF8577 /* XCRemoteSwiftPackageReference "privy-ios" */;
-			productName = Privy;
 		};
 		D8B5A9032DC272BD006003A4 /* XMTPiOS */ = {
 			isa = XCSwiftPackageProductDependency;

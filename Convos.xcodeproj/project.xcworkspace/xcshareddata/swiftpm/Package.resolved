@@ -1,5 +1,5 @@
 {
-  "originHash" : "6850c0d7acdf229d1699dce3419e570430365e26c6945a8da22892c686b53b2b",
+  "originHash" : "67f8dd576a7a0e74b88f6b976063a1fee48cf63442ce57fa675423fe8d3ca4d2",
   "pins" : [
     {
       "identity" : "anchorkit",
@@ -65,6 +65,15 @@
       }
     },
     {
+      "identity" : "differencekit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ra1028/DifferenceKit.git",
+      "state" : {
+        "revision" : "073b9671ce2b9b5b96398611427a1f929927e428",
+        "version" : "1.3.0"
+      }
+    },
+    {
       "identity" : "factory",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/hmlongco/Factory",
@@ -74,12 +83,21 @@
       }
     },
     {
+      "identity" : "grdb.swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/groue/GRDB.swift",
+      "state" : {
+        "revision" : "04e73c26c4ce8218ab85aaf791942bb0b204f330",
+        "version" : "7.4.1"
+      }
+    },
+    {
       "identity" : "libxmtp-swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/xmtp/libxmtp-swift.git",
       "state" : {
-        "revision" : "3e98b685e8f24dedddb9f041f4a092b003b17b79",
-        "version" : "4.0.4"
+        "revision" : "f40dd2de8edd8feb7bdd65df445a167e1b6ca8e9",
+        "version" : "4.0.5"
       }
     },
     {
@@ -148,7 +166,7 @@
     {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections.git",
+      "location" : "https://github.com/apple/swift-collections",
       "state" : {
         "revision" : "671108c96644956dddcd89dd59c203dcdb36cec7",
         "version" : "1.1.4"
@@ -276,8 +294,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/xmtp/xmtp-ios.git",
       "state" : {
-        "revision" : "490b82efe2c34c29a2ba6a83ecf907e42ca86456",
-        "version" : "4.0.6"
+        "revision" : "f94209ae27d872ba250bc80ecd4c4b8343ccd3db",
+        "version" : "4.0.7"
       }
     },
     {

@@ -23,6 +23,7 @@ public extension ConvosSDK {
 }
 
 struct MockUser: ConvosSDK.User {
+    var name: String = "Mock User"
     var id: String = "mock-id"
     var chainId: Int64? = 1
     var publicIdentifier: String? = "mock-public-id"
@@ -43,7 +44,7 @@ class MockAuthService: ConvosSDK.AuthServiceProtocol {
     }
 
     var messagingService: any ConvosSDK.MessagingServiceProtocol {
-        MockMessagingService()
+        _MockMessagingService()
     }
 
     private var authStateSubject: CurrentValueSubject<ConvosSDK.AuthServiceState, Never> = .init(.unknown)

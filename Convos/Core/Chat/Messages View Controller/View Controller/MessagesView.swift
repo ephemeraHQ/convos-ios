@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MessagesView: UIViewControllerRepresentable {
-    let messagingService: MessagingServiceProtocol
+    let messagingService: TempMessagingServiceProtocol
 
     func makeUIViewController(context: Context) -> MessagesViewController {
         let messageViewController = MessagesViewController(messagingService: messagingService)
