@@ -3,7 +3,7 @@ import Foundation
 struct CTUser: Identifiable, Equatable {
     let id: String
     let username: String
-    let avatarURL: URL
+    let avatarURL: URL?
 
     static func == (lhs: CTUser, rhs: CTUser) -> Bool {
         lhs.id == rhs.id

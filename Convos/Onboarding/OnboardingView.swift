@@ -1,3 +1,4 @@
+import GRDB
 import SwiftUI
 
 struct OnboardingView: View {

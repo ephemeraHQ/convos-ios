@@ -1,3 +1,5 @@
+import Foundation
+import GRDB
 import SwiftUI
 
 struct RootView: View {
@@ -9,7 +11,7 @@ struct RootView: View {
     init(authService: AuthServiceProtocol, analyticsService: AnalyticsServiceProtocol) {
         self.authService = authService
         self.analyticsService = analyticsService
-        _viewModel = .init(initialValue: .init(authService: authService))
+        _viewModel = State(initialValue: AppViewModel(authService: authService))
     }
 
     var body: some View {
@@ -21,7 +23,15 @@ struct RootView: View {
                 Spacer()
             }
         case .signedIn:
-            ConversationsView(authService: authService)
+            Group {
+                // swiftlint:disable:next force_try
+                let identityStore = try! CTIdentityStore()
+                let conversationStore = CTConversationStore()
+                ChatListView(
+                    conversationStore: conversationStore,
+                    identityStore: identityStore
+                )
+            }
         case .signedOut:
             OnboardingView(authService: authService)
         }

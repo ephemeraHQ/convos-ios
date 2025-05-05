@@ -8,11 +8,21 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                willConnectTo session: UISceneSession,
                options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
-        let identityStore = CTIdentityStore()
-        let conversationStore = CTConversationStore()
         self.window = .init(windowScene: windowScene)
-        self.window?.rootViewController = ChatListView(conversationStore: conversationStore,
-                                                       identityStore: identityStore).asViewController()
+
+        do {
+            let identityStore = try CTIdentityStore()
+            let authService = AuthService(identityStore: identityStore)
+            let analyticsService = PosthogAnalyticsService.shared
+
+            self.window?.rootViewController = RootView(
+                authService: authService,
+                analyticsService: analyticsService
+            ).asViewController()
+        } catch {
+            assertionFailure(error.localizedDescription) // swiftlint:disable:this no_assertions
+        }
+
         self.window?.makeKeyAndVisible()
     }
 

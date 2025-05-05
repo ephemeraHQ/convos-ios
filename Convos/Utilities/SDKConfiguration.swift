@@ -1,5 +1,4 @@
 import Foundation
-import PrivySDK
 import Sentry
 
 enum SDKConfiguration {
@@ -20,9 +19,5 @@ enum SDKConfiguration {
             // For more information, visit: https://docs.sentry.io/platforms/apple/data-management/data-collected/
             options.sendDefaultPii = true
         }
-    }
-
-    private static func configurePrivy() {
-        // Add Privy SDK configuration here
     }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 @Observable
 final class OnboardingViewModel {
     let authService: AuthServiceProtocol
+
     var name: String = "" {
         didSet {
             validateName()
@@ -22,7 +23,13 @@ final class OnboardingViewModel {
     func signIn() {
         Task {
             do {
-                try await authService.signIn()
+                try await authService.signIn(
+                    with: .init(
+                        id: UUID().uuidString,
+                        username: "Some Tester",
+                        avatarURL: .defaultOpenAPIServerURL
+                    )
+                )
             } catch {
                 print("Error signing in: \(error)")
             }

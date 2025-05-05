@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import GRDB
 
 // swiftlint:disable line_length force_unwrapping
 
@@ -13,32 +14,33 @@ class CTConversationStore: ObservableObject {
     private let maxPinnedConversations: Int = 9
 
     init() {
-        // Initialize current user
+        // Initialize with empty state
         self.currentUser = CTUser(
-            id: "current-user",
-            username: "andrew",
-            avatarURL: URL(string: "https://fastly.picsum.photos/id/204/200/200.jpg?hmac=gppQCOIV43fSCLsdUCoPQxrc16lrOEvVu2u5nH-I4Zo")!
+            id: "",
+            username: "",
+            avatarURL: nil
         )
-
-        // Load mock data
-        self.conversations = Self.generateMockConversations(for: self.currentUser)
+        self.conversations = []
     }
 
     func switchIdentity(to identity: CTUser) {
         currentUser = identity
-        conversations = Self.generateMockConversations(for: identity)
+        // TODO: Load real conversations for the identity
+        conversations = []
     }
 
-    private static func generateMockConversations(for identity: CTUser) -> [CTConversation] {
-        switch identity.username {
+    // MARK: - Mock Data (for testing only)
+
+    func loadMockData() {
+        switch currentUser.username {
         case "Convos":
-            return generateConvosMockData()
+            conversations = Self.generateConvosMockData()
         case "Andrew":
-            return generateAndrewMockData()
+            conversations = Self.generateAndrewMockData()
         case "Incognito":
-            return generateIncognitoMockData()
+            conversations = Self.generateIncognitoMockData()
         default:
-            return generateConvosMockData()
+            conversations = []
         }
     }
 
