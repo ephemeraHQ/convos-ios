@@ -35,6 +35,8 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		D83A7ABA2DA5C98400879441 /* Config */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = Config;
 			sourceTree = "<group>";
 		};
@@ -75,6 +77,8 @@
 		};
 		7A7BB1362DB6FF8E009B8BBF /* Products */ = {
 			isa = PBXGroup;
+			children = (
+			);
 			name = Products;
 			sourceTree = "<group>";
 		};
@@ -206,7 +210,7 @@
 /* Begin PBXTargetDependency section */
 		D8084C1C2DC91F1300E708B0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = D8084C1B2DC91F1300E708B0 /* SwiftLintBuildToolPlugin */;
+			productRef = D8084C1B2DC91F1300E708B0 /* plugin:SwiftLintBuildToolPlugin */;
 		};
 /* End PBXTargetDependency section */
 
@@ -217,7 +221,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Convos/Info.plist;
@@ -245,7 +249,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Convos/Info.plist;
@@ -487,7 +491,7 @@
 			package = D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */;
 			productName = DifferenceKit;
 		};
-		D8084C1B2DC91F1300E708B0 /* SwiftLintBuildToolPlugin */ = {
+		D8084C1B2DC91F1300E708B0 /* plugin:SwiftLintBuildToolPlugin */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
 			productName = "plugin:SwiftLintBuildToolPlugin";
