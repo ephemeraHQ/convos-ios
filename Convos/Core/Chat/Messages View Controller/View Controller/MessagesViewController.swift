@@ -41,7 +41,7 @@ final class MessagesViewController: UIViewController {
     private var currentInterfaceActions: SetActor<Set<InterfaceActions>, ReactionTypes> = SetActor()
     private var currentControllerActions: SetActor<Set<ControllerActions>, ReactionTypes> = SetActor()
 
-    private var collectionView: UICollectionView!
+    internal let collectionView: UICollectionView
     private var messagesLayout: MessagesCollectionLayout = MessagesCollectionLayout()
     private let inputBarView: MessagesInputView = MessagesInputView()
     private let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
@@ -55,13 +55,20 @@ final class MessagesViewController: UIViewController {
         collectionView.isDragging || collectionView.isDecelerating
     }
 
-    private var cancellables: Set<AnyCancellable> = Set<AnyCancellable>()
+    private var navigationBarHeightConstraint: NSLayoutConstraint?
+
+    private var cancellables = Set<AnyCancellable>()
+
+    // Add coordinator property
+    private var reactionMenuCoordinator: MessageReactionMenuCoordinator?
 
     // MARK: - Initialization
 
     init(messagingService: MessagingServiceProtocol) {
         self.messagingService = messagingService
         self.dataSource = MessagesCollectionViewDataSource()
+        self.collectionView = UICollectionView(frame: .zero,
+                                               collectionViewLayout: messagesLayout)
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -97,6 +104,8 @@ final class MessagesViewController: UIViewController {
         loadInitialData()
         setupUI()
 
+        reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
+
         messagingService.updates.receive(on: DispatchQueue.main)
             .sink { [weak self] update in
                 guard let self else { return }
@@ -123,16 +132,11 @@ final class MessagesViewController: UIViewController {
         super.viewDidLayoutSubviews()
         ensureInputBarVisibility()
 
-        // Update navigation bar frame to include safe area
-        navigationBar.frame = CGRect(
-            x: view.bounds.origin.x,
-            y: view.bounds.origin.y,
-            width: view.bounds.width,
-            height: MessagesNavigationBar.Constant.height + view.safeAreaInsets.top
-        )
-
-        // Set content inset to just the base navigation bar height
-        collectionView.contentInset.top = MessagesNavigationBar.Constant.height
+        // Set content inset to just the base navigation bar height plus safe area
+        let navHeight = (traitCollection.verticalSizeClass == .compact ?
+            MessagesNavigationBar.Constants.compactHeight :
+            MessagesNavigationBar.Constants.regularHeight) + view.safeAreaInsets.top
+        collectionView.contentInset.top = navHeight
         collectionView.verticalScrollIndicatorInsets.top = collectionView.contentInset.top
     }
 
@@ -150,9 +154,46 @@ final class MessagesViewController: UIViewController {
             for: .normal)
         navigationBar.configure(title: "Terry Gross", avatar: nil)
         view.addSubview(navigationBar)
+
+        // Setup Auto Layout for navigation bar
+        navigationBar.translatesAutoresizingMaskIntoConstraints = false
+
+        // Store height constraint for updates
+        let heightConstraint = navigationBar.heightAnchor.constraint(equalToConstant: 0)
+
+        NSLayoutConstraint.activate([
+            navigationBar.topAnchor.constraint(equalTo: view.topAnchor),
+            navigationBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            navigationBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            heightConstraint
+        ])
+
+        // Register for trait changes
+        registerForTraitChanges([UITraitVerticalSizeClass.self]) { (self: MessagesViewController, previousTraitCollection: UITraitCollection) in
+            self.updateNavigationBarHeight(heightConstraint)
+        }
+
+        // Set initial height
+        updateNavigationBarHeight(heightConstraint)
+        navigationBarHeightConstraint = heightConstraint
+    }
+
+    override func viewSafeAreaInsetsDidChange() {
+        super.viewSafeAreaInsetsDidChange()
+        if let constraint = navigationBarHeightConstraint {
+            updateNavigationBarHeight(constraint)
+        }
+    }
+
+    private func updateNavigationBarHeight(_ constraint: NSLayoutConstraint) {
+        let baseHeight = traitCollection.verticalSizeClass == .compact ?
+            MessagesNavigationBar.Constants.compactHeight :
+            MessagesNavigationBar.Constants.regularHeight
+        constraint.constant = baseHeight + view.safeAreaInsets.top
     }
 
     private func setupCollectionView() {
+        collectionView.frame = view.bounds
         configureMessagesLayout()
         setupCollectionViewInstance()
         configureCollectionViewConstraints()
@@ -168,7 +209,6 @@ final class MessagesViewController: UIViewController {
     }
 
     private func setupCollectionViewInstance() {
-        collectionView = UICollectionView(frame: view.frame, collectionViewLayout: messagesLayout)
         view.addSubview(collectionView)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .clear
@@ -191,7 +231,7 @@ final class MessagesViewController: UIViewController {
         messagesLayout.delegate = dataSource
         collectionView.keyboardDismissMode = .interactive
 
-        // todo: https://openradar.appspot.com/40926834
+        // TODO: https://openradar.appspot.com/40926834
         collectionView.isPrefetchingEnabled = false
 
         collectionView.contentInsetAdjustmentBehavior = .always
@@ -260,25 +300,18 @@ final class MessagesViewController: UIViewController {
     }
 
     func scrollToBottom(completion: (() -> Void)? = nil) {
-        let contentOffsetAtBottom = CGPoint(
-            x: collectionView.contentOffset.x,
-            y: messagesLayout.collectionViewContentSize.height
-            - collectionView.frame.height + collectionView.adjustedContentInset.bottom
-        )
+        let contentOffsetAtBottom = CGPoint(x: collectionView.contentOffset.x,
+                                            y: messagesLayout.collectionViewContentSize.height - collectionView.frame.height + collectionView.adjustedContentInset.bottom)
 
         guard contentOffsetAtBottom.y > collectionView.contentOffset.y else {
             completion?()
             return
         }
 
-        performScrollToBottom(from: contentOffsetAtBottom,
-                              initialOffset: collectionView.contentOffset.y,
-                              completion: completion)
+        performScrollToBottom(from: contentOffsetAtBottom, initialOffset: collectionView.contentOffset.y, completion: completion)
     }
 
-    private func performScrollToBottom(from contentOffsetAtBottom: CGPoint,
-                                       initialOffset: CGFloat,
-                                       completion: (() -> Void)?) {
+    private func performScrollToBottom(from contentOffsetAtBottom: CGPoint, initialOffset: CGFloat, completion: (() -> Void)?) {
         let delta = contentOffsetAtBottom.y - initialOffset
 
         if abs(delta) > messagesLayout.visibleBounds.height {
@@ -332,17 +365,11 @@ extension MessagesViewController {
         }
 
         guard currentInterfaceActions.options.isEmpty else {
-            scheduleDelayedUpdate(with: sections,
-                                  animated: animated,
-                                  requiresIsolatedProcess: requiresIsolatedProcess,
-                                  completion: completion)
+            scheduleDelayedUpdate(with: sections, animated: animated, requiresIsolatedProcess: requiresIsolatedProcess, completion: completion)
             return
         }
 
-        performUpdate(with: sections,
-                      animated: animated,
-                      requiresIsolatedProcess: requiresIsolatedProcess,
-                      completion: completion)
+        performUpdate(with: sections, animated: animated, requiresIsolatedProcess: requiresIsolatedProcess, completion: completion)
     }
 
     private func scheduleDelayedUpdate(with sections: [Section],
@@ -481,7 +508,7 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
 extension MessagesViewController: MessagesInputViewDelegate {
     func messagesInputView(_ view: MessagesInputView, didChangeIntrinsicContentSize size: CGSize) {
         guard !currentInterfaceActions.options.contains(.sendingMessage) else { return }
-        scrollToBottom()
+//        scrollToBottom()
     }
 
     func messagesInputView(_ view: MessagesInputView, didTapSend text: String) {
@@ -539,10 +566,7 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
     private func calculateNewBottomInset(for info: KeyboardInfo) -> CGFloat {
         let keyboardFrame = collectionView.window?.convert(info.frameEnd, to: view)
-        return collectionView.frame.minY
-        + collectionView.frame.size.height
-        - (keyboardFrame?.minY ?? 0)
-        - collectionView.safeAreaInsets.bottom
+        return collectionView.frame.minY + collectionView.frame.size.height - (keyboardFrame?.minY ?? 0) - collectionView.safeAreaInsets.bottom
     }
 
     private func updateCollectionViewInsets(to newBottomInset: CGFloat, with info: KeyboardInfo) {
@@ -550,7 +574,7 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
         if currentControllerActions.options.contains(.updatingCollection) {
             UIView.performWithoutAnimation {
-                self.collectionView.performBatchUpdates {}
+                self.collectionView.performBatchUpdates({})
             }
         }
 
@@ -570,4 +594,25 @@ extension MessagesViewController: KeyboardListenerDelegate {
     }
 }
 
-// swiftlint:enable implicitly_unwrapped_optional
+// MARK: - MessageReactionMenuCoordinatorDelegate
+
+extension MessagesViewController: MessageReactionMenuCoordinatorDelegate {
+    func messageReactionMenuCoordinatorDidBeginTransition(_ coordinator: MessageReactionMenuCoordinator) {
+        collectionView.isScrollEnabled = false
+    }
+
+    func messageReactionMenuCoordinatorDidEndTransition(_ coordinator: MessageReactionMenuCoordinator) {
+        collectionView.isScrollEnabled = true
+    }
+
+    func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator, previewableCellAt indexPath: IndexPath) -> PreviewableCollectionViewCell? {
+        guard let cell = collectionView.cellForItem(at: indexPath) as? PreviewableCollectionViewCell else { return nil }
+        return cell
+    }
+
+    func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator,
+                                        shouldPresentMenuFor cell: PreviewableCollectionViewCell) -> Bool {
+        // Always allow for now
+        return true
+    }
+}

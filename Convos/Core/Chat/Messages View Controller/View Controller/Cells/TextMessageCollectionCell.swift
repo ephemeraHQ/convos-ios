@@ -1,13 +1,41 @@
-import SwiftUI
 import UIKit
+import SwiftUI
 
-class TextMessageCollectionCell: UICollectionViewCell {
+class TextMessageCollectionCell: UICollectionViewCell, PreviewableCell {
+
+    // MARK: - Properties
+
+    private var message: String = ""
+    private var messageType: MessageType = .incoming
+    private var bubbleStyle: Cell.BubbleType = .normal
+    private var longPressGestureRecognizer: UILongPressGestureRecognizer?
+    private var panGestureRecognizer: UIPanGestureRecognizer?
+    private var doubleTapGestureRecognizer: UITapGestureRecognizer?
+    private weak var reactionMenuController: MessageReactionMenuController?
+
+    // MARK: - Initialization
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+
     override func prepareForReuse() {
         super.prepareForReuse()
         self.contentConfiguration = nil
+        message = ""
+        messageType = .incoming
+        bubbleStyle = .normal
     }
 
     func setup(message: String, messageType: MessageType, style: Cell.BubbleType) {
+        self.message = message
+        self.messageType = messageType
+        self.bubbleStyle = style
+
         contentConfiguration = UIHostingConfiguration {
             VStack(alignment: .leading) {
                 MessageBubble(style: style,
@@ -19,10 +47,50 @@ class TextMessageCollectionCell: UICollectionViewCell {
         .margins(.vertical, 0.0)
     }
 
-    override func preferredLayoutAttributesFitting(
-        _ layoutAttributes: UICollectionViewLayoutAttributes
-    ) -> UICollectionViewLayoutAttributes {
+    override func preferredLayoutAttributesFitting(_ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
         layoutAttributesForHorizontalFittingRequired(layoutAttributes)
+    }
+
+    // MARK: - PreviewableCell
+
+    var previewSourceView: UIView {
+        contentView
+    }
+
+    var actualPreviewSourceSize: CGSize {
+        intrinsicContentSize
+    }
+
+    var horizontalInset: CGFloat {
+        (layoutMargins.left + layoutMargins.right) + 10.0
+    }
+
+    var sourceCellEdge: MessageReactionMenuController.Configuration.Edge {
+        messageType == .incoming ? .leading : .trailing
+    }
+
+    func previewView() -> UIView {
+        guard let window else { return UIView(frame: .zero) }
+
+        layoutIfNeeded()
+
+        let convertedFrame = convert(previewSourceView.frame, to: window)
+
+        // Create the snapshot
+        let format = UIGraphicsImageRendererFormat()
+        format.opaque = false
+        format.scale = window.screen.scale
+        format.preferredRange = .extended
+
+        let renderer = UIGraphicsImageRenderer(bounds: previewSourceView.bounds, format: format)
+        let image = renderer.image { context in
+            previewSourceView.drawHierarchy(in: contentView.bounds, afterScreenUpdates: true)
+        }
+
+        let preview = UIView(frame: convertedFrame)
+        preview.layer.contents = image.cgImage
+        preview.clipsToBounds = false
+        return preview
     }
 }
 
@@ -39,6 +107,7 @@ struct MessageBubble: View {
                     .foregroundColor(isOutgoing ? .white : .primary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
+
             }
         }
     }
@@ -47,10 +116,8 @@ struct MessageBubble: View {
 #Preview {
     VStack {
         ForEach([MessageType.outgoing, MessageType.incoming], id: \.self) { type in
-            MessageBubble(
-                style: .normal,
-                message: "Hello world!",
-                isOutgoing: type == .outgoing)
+            MessageBubble(style: .normal,
+                          message: "Hello world!", isOutgoing: type == .outgoing)
         }
     }
 }

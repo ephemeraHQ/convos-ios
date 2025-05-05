@@ -3,10 +3,10 @@ import SwiftUI
 struct MessageContainer<Content: View>: View {
     let style: Cell.BubbleType
     let isOutgoing: Bool
-    let cornerRadius: CGFloat = GlobalConstant.bubbleCornerRadius
+    let cornerRadius: CGFloat = Constants.bubbleCornerRadius
     let content: () -> Content
 
-    // todo: do this proportionally, not a fixed size
+    // TODO: do this proportionally, not a fixed size
     var spacer: some View {
         Group {
             Spacer()
@@ -17,29 +17,29 @@ struct MessageContainer<Content: View>: View {
 
     var mask: UnevenRoundedRectangle {
         switch style {
-        case .normal:
-            return .rect(
-                topLeadingRadius: cornerRadius,
-                bottomLeadingRadius: cornerRadius,
-                bottomTrailingRadius: cornerRadius,
-                topTrailingRadius: cornerRadius
-            )
-        case .tailed:
-            if isOutgoing {
+            case .normal:
                 return .rect(
                     topLeadingRadius: cornerRadius,
                     bottomLeadingRadius: cornerRadius,
-                    bottomTrailingRadius: 0.0,
-                    topTrailingRadius: cornerRadius
-                )
-            } else {
-                return .rect(
-                    topLeadingRadius: cornerRadius,
-                    bottomLeadingRadius: 0,
                     bottomTrailingRadius: cornerRadius,
                     topTrailingRadius: cornerRadius
                 )
-            }
+            case .tailed:
+                if isOutgoing {
+                    return .rect(
+                        topLeadingRadius: cornerRadius,
+                        bottomLeadingRadius: cornerRadius,
+                        bottomTrailingRadius: 0.0,
+                        topTrailingRadius: cornerRadius
+                    )
+                } else {
+                    return .rect(
+                        topLeadingRadius: cornerRadius,
+                        bottomLeadingRadius: 0,
+                        bottomTrailingRadius: cornerRadius,
+                        topTrailingRadius: cornerRadius
+                    )
+                }
         }
     }
 
@@ -50,7 +50,7 @@ struct MessageContainer<Content: View>: View {
             }
 
             content()
-                .background(isOutgoing ? Color.black : Color.gray.opacity(0.2))
+                .background(isOutgoing ? Color.black : Color(hue: 0.0, saturation: 0.0, brightness: 0.96))
                 .foregroundColor(isOutgoing ? .white : .primary)
                 .mask(mask)
 
