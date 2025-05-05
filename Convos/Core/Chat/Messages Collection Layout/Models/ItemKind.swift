@@ -6,32 +6,32 @@ enum ItemKind: CaseIterable, Hashable {
 
     init?(_ elementKind: String) {
         switch elementKind {
-            case UICollectionView.elementKindSectionHeader:
-                self = .header
-            case UICollectionView.elementKindSectionFooter:
-                self = .footer
-            default:
-                return nil
+        case UICollectionView.elementKindSectionHeader:
+            self = .header
+        case UICollectionView.elementKindSectionFooter:
+            self = .footer
+        default:
+            return nil
         }
     }
 
     var isSupplementaryItem: Bool {
         switch self {
-            case .cell:
-                false
-            case .footer, .header:
-                true
+        case .cell:
+            false
+        case .footer, .header:
+            true
         }
     }
 
     var supplementaryElementStringType: String? {
         switch self {
-            case .cell:
-                nil
-            case .header:
-                UICollectionView.elementKindSectionHeader
-            case .footer:
-                UICollectionView.elementKindSectionFooter
+        case .cell:
+            nil
+        case .header:
+            UICollectionView.elementKindSectionHeader
+        case .footer:
+            UICollectionView.elementKindSectionFooter
         }
     }
 }

@@ -109,6 +109,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				D8084C1C2DC91F1300E708B0 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D83A7ABA2DA5C98400879441 /* Config */,
@@ -201,6 +202,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D8084C1C2DC91F1300E708B0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			productRef = D8084C1B2DC91F1300E708B0 /* SwiftLintBuildToolPlugin */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		D8A2B6A52DA4BA4C00EF8577 /* Debug */ = {
@@ -478,6 +486,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */;
 			productName = DifferenceKit;
+		};
+		D8084C1B2DC91F1300E708B0 /* SwiftLintBuildToolPlugin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
+			productName = "plugin:SwiftLintBuildToolPlugin";
 		};
 		D80BAAC12DB2C36500C2FB42 /* Sentry */ = {
 			isa = XCSwiftPackageProductDependency;

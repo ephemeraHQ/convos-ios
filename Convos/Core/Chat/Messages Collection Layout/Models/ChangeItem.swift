@@ -1,6 +1,8 @@
 import Foundation
 import UIKit
 
+// swiftlint:disable no_assertions
+
 enum ChangeItem: Equatable {
     case sectionDelete(sectionIndex: Int)
     case itemDelete(itemIndexPath: IndexPath)
@@ -22,7 +24,9 @@ enum ChangeItem: Equatable {
         case .move:
             guard let indexPathBeforeUpdate,
                   let indexPathAfterUpdate else {
-                assertionFailure("`indexPathBeforeUpdate` and `indexPathAfterUpdate` cannot be `nil` for a `.move` update action.")
+                assertionFailure(
+                    "`indexPathBeforeUpdate` and `indexPathAfterUpdate` cannot be `nil` for a `.move` update action."
+                )
                 return nil
             }
             if indexPathBeforeUpdate.item == NSNotFound, indexPathAfterUpdate.item == NSNotFound {
@@ -68,3 +72,5 @@ enum ChangeItem: Equatable {
         }
     }
 }
+
+// swiftlint:enable no_assertions

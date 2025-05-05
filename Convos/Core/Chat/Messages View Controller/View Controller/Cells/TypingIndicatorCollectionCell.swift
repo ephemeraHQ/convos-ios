@@ -6,7 +6,6 @@ class TypingIndicatorCollectionCell: UICollectionViewCell {
         contentConfiguration = UIHostingConfiguration {
             HStack {
                 TypingIndicatorView(alignment: alignment)
-                
                 Spacer()
             }
         }
@@ -27,15 +26,14 @@ struct TypingIndicatorView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 4)
-
         }
     }
 }
 
 struct TypingIndicatorDots: View {
-    @State private var animate = false
+    @State private var animate: Bool = false
 
-    let dotCount = 3
+    let dotCount: Int = 3
     let dotSize: CGFloat = 10
     let dotSpacing: CGFloat = 6
     let animationDuration: Double = 0.6
@@ -62,7 +60,6 @@ struct TypingIndicatorDots: View {
         }
     }
 }
-
 
 #Preview {
     TypingIndicatorView(alignment: .leading)

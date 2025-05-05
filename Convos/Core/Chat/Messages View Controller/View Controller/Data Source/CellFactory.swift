@@ -1,5 +1,7 @@
 import UIKit
 
+// swiftlint:disable force_cast
+
 final class CellFactory {
     static func createCell(in collectionView: UICollectionView,
                            for indexPath: IndexPath,
@@ -48,7 +50,8 @@ final class CellFactory {
         bubbleType: Cell.BubbleType,
         messageType: MessageType
     ) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TextMessageCollectionCell.reuseIdentifier, for: indexPath) as! TextMessageCollectionCell
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TextMessageCollectionCell.reuseIdentifier,
+                                                      for: indexPath) as! TextMessageCollectionCell
         cell.setup(message: text, messageType: messageType, style: bubbleType)
         return cell
     }
@@ -102,3 +105,5 @@ final class CellFactory {
         return cell
     }
 }
+
+// swiftlint:enable force_cast

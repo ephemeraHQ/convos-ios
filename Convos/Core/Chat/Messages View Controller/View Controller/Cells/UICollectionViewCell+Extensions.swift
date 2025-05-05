@@ -1,7 +1,9 @@
 import UIKit
 
 extension UICollectionViewCell {
-    func layoutAttributesForHorizontalFittingRequired(_ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
+    func layoutAttributesForHorizontalFittingRequired(
+        _ layoutAttributes: UICollectionViewLayoutAttributes
+    ) -> UICollectionViewLayoutAttributes {
         let targetSize = CGSize(width: layoutAttributes.size.width,
                                 height: UIView.layoutFittingCompressedSize.height)
 

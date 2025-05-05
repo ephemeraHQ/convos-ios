@@ -1,10 +1,12 @@
 import Foundation
 import UIKit
 
+// swiftlint:disable force_cast force_unwrapping type_body_length no_assertions
+
 open class MessagesCollectionLayout: UICollectionViewLayout {
     weak var delegate: MessagesLayoutDelegate?
 
-    var settings = MessagesLayoutSettings() {
+    var settings: MessagesLayoutSettings = MessagesLayoutSettings() {
         didSet {
             guard collectionView != nil,
                   settings != oldValue else {
@@ -41,10 +43,14 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
             return .zero
         }
         let additionalInsets = settings.additionalInsets
-        return CGRect(x: adjustedContentInset.left + additionalInsets.left,
-                      y: adjustedContentInset.top + additionalInsets.top,
-                      width: collectionView.bounds.width - additionalInsets.left - additionalInsets.right - adjustedContentInset.left - adjustedContentInset.right,
-                      height: controller.contentHeight(at: state) - additionalInsets.top - additionalInsets.bottom - adjustedContentInset.top - adjustedContentInset.bottom)
+        return CGRect(
+            x: adjustedContentInset.left + additionalInsets.left,
+            y: adjustedContentInset.top + additionalInsets.top,
+            width: collectionView.bounds.width - additionalInsets.left
+            - additionalInsets.right - adjustedContentInset.left - adjustedContentInset.right,
+            height: controller.contentHeight(at: state) - additionalInsets.top - additionalInsets.bottom
+            - adjustedContentInset.top - adjustedContentInset.bottom
+        )
     }
 
     open override var developmentLayoutDirection: UIUserInterfaceLayoutDirection {
@@ -94,20 +100,20 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
     private struct PrepareActions: OptionSet {
         let rawValue: UInt
 
-        static let recreateSectionModels = PrepareActions(rawValue: 1 << 0)
-        static let updateLayoutMetrics = PrepareActions(rawValue: 1 << 1)
-        static let cachePreviousWidth = PrepareActions(rawValue: 1 << 2)
-        static let cachePreviousContentInsets = PrepareActions(rawValue: 1 << 3)
-        static let switchStates = PrepareActions(rawValue: 1 << 4)
+        static let recreateSectionModels: PrepareActions = PrepareActions(rawValue: 1 << 0)
+        static let updateLayoutMetrics: PrepareActions = PrepareActions(rawValue: 1 << 1)
+        static let cachePreviousWidth: PrepareActions = PrepareActions(rawValue: 1 << 2)
+        static let cachePreviousContentInsets: PrepareActions = PrepareActions(rawValue: 1 << 3)
+        static let switchStates: PrepareActions = PrepareActions(rawValue: 1 << 4)
     }
 
     private struct InvalidationActions: OptionSet {
         let rawValue: UInt
 
-        static let shouldInvalidateOnBoundsChange = InvalidationActions(rawValue: 1 << 0)
+        static let shouldInvalidateOnBoundsChange: InvalidationActions = InvalidationActions(rawValue: 1 << 0)
     }
 
-    private lazy var controller = MessagesLayoutStateController(layoutRepresentation: self)
+    private lazy var controller: MessagesLayoutStateController = .init(layoutRepresentation: self)
     private var state: MessagesCollectionLayoutModelState = .beforeUpdate
     private var prepareActions: PrepareActions = []
     private var invalidationActions: InvalidationActions = []
@@ -118,9 +124,9 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
     // These properties are used to keep the layout attributes copies used for insert/delete
     // animations up-to-date as items are self-sized. If we don't keep these copies up-to-date, then
     // animations will start from the estimated height.
-    private var attributesForPendingAnimations = [ItemKind: [ItemPath: MessagesLayoutAttributes]]()
+    private var attributesForPendingAnimations: [ItemKind: [ItemPath: MessagesLayoutAttributes]] = [:]
 
-    private var invalidatedAttributes = [ItemKind: Set<ItemPath>]()
+    private var invalidatedAttributes: [ItemKind: Set<ItemPath>] = [:]
     private var dontReturnAttributes: Bool = true
     private var currentPositionSnapshot: MessagesLayoutPositionSnapshot?
     private let _flipsHorizontallyInOppositeLayoutDirection: Bool
@@ -138,7 +144,7 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
         resetInvalidatedAttributes()
     }
 
-    required public init?(coder aDecoder: NSCoder) {
+    public required init?(coder aDecoder: NSCoder) {
         _flipsHorizontallyInOppositeLayoutDirection = true
         super.init(coder: aDecoder)
         resetAttributesForPendingAnimations()
@@ -161,23 +167,27 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
 
         switch edge {
         case .top:
-            guard let firstVisibleItemAttributes = layoutAttributes.first(where: { $0.frame.minY >= visibleBounds.higherPoint.y }) else {
-                return nil
-            }
-            let visibleBoundsTopOffset = firstVisibleItemAttributes.frame.minY - visibleBounds.higherPoint.y - settings.additionalInsets.top
+            let firstVisibleItemAttributes = layoutAttributes
+                .first(where: { $0.frame.minY >= visibleBounds.higherPoint.y })
+            guard let firstVisibleItemAttributes = firstVisibleItemAttributes else { return nil }
+            let visibleBoundsTopOffset = firstVisibleItemAttributes.frame.minY
+            - visibleBounds.higherPoint.y - settings.additionalInsets.top
             return MessagesLayoutPositionSnapshot(indexPath: firstVisibleItemAttributes.indexPath,
-                                              kind: firstVisibleItemAttributes.kind,
-                                              edge: .top,
-                                              offset: visibleBoundsTopOffset)
+                                                  kind: firstVisibleItemAttributes.kind,
+                                                  edge: .top,
+                                                  offset: visibleBoundsTopOffset)
         case .bottom:
-            guard let lastVisibleItemAttributes = layoutAttributes.last(where: { $0.frame.minY <= visibleBounds.lowerPoint.y }) else {
+            let lastVisibleItemAttributes = layoutAttributes
+                .last(where: { $0.frame.minY <= visibleBounds.lowerPoint.y })
+            guard let lastVisibleItemAttributes = lastVisibleItemAttributes else {
                 return nil
             }
-            let visibleBoundsBottomOffset = visibleBounds.lowerPoint.y - lastVisibleItemAttributes.frame.maxY - settings.additionalInsets.bottom
+            let visibleBoundsBottomOffset = visibleBounds.lowerPoint.y - lastVisibleItemAttributes.frame.maxY
+            - settings.additionalInsets.bottom
             return MessagesLayoutPositionSnapshot(indexPath: lastVisibleItemAttributes.indexPath,
-                                              kind: lastVisibleItemAttributes.kind,
-                                              edge: .bottom,
-                                              offset: visibleBoundsBottomOffset)
+                                                  kind: lastVisibleItemAttributes.kind,
+                                                  edge: .bottom,
+                                                  offset: visibleBoundsBottomOffset)
         }
     }
 
@@ -354,8 +364,10 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
     }
 
     /// Retrieves the layout attributes for the specified supplementary view.
-    open override func layoutAttributesForSupplementaryView(ofKind elementKind: String,
-                                                            at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
+    open override func layoutAttributesForSupplementaryView(
+        ofKind elementKind: String,
+        at indexPath: IndexPath
+    ) -> UICollectionViewLayoutAttributes? {
         guard !dontReturnAttributes else {
             return nil
         }
@@ -399,28 +411,38 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
 
     // MARK: Context Invalidation
 
-    open override func shouldInvalidateLayout(forPreferredLayoutAttributes preferredAttributes: UICollectionViewLayoutAttributes,
-                                              withOriginalAttributes originalAttributes: UICollectionViewLayoutAttributes) -> Bool {
+    open override func shouldInvalidateLayout(
+        forPreferredLayoutAttributes preferredAttributes: UICollectionViewLayoutAttributes,
+        withOriginalAttributes originalAttributes: UICollectionViewLayoutAttributes
+    ) -> Bool {
         let preferredAttributesItemPath = preferredAttributes.indexPath.itemPath
-        guard let preferredMessageAttributes = preferredAttributes as? MessagesLayoutAttributes,
-              let item = controller.item(for: preferredAttributesItemPath, kind: preferredMessageAttributes.kind, at: state) else {
+        guard
+            let preferredMessageAttributes = preferredAttributes as? MessagesLayoutAttributes,
+            let item = controller.item(for: preferredAttributesItemPath,
+                                       kind: preferredMessageAttributes.kind,
+                                       at: state)
+        else {
             return true
         }
 
         let shouldInvalidateLayout = item.calculatedSize == nil
-            || (_supportSelfSizingInvalidation ? (item.size.height - preferredMessageAttributes.size.height).rounded() != 0 : false)
-            || item.alignment != preferredMessageAttributes.alignment
-            || item.interItemSpacing != preferredMessageAttributes.interItemSpacing
+        || (_supportSelfSizingInvalidation
+            ? (item.size.height - preferredMessageAttributes.size.height).rounded() != 0 : false)
+        || item.alignment != preferredMessageAttributes.alignment
+        || item.interItemSpacing != preferredMessageAttributes.interItemSpacing
 
         return shouldInvalidateLayout
     }
 
-    open override func invalidationContext(forPreferredLayoutAttributes preferredAttributes: UICollectionViewLayoutAttributes,
-                                           withOriginalAttributes originalAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutInvalidationContext {
+    open override func invalidationContext(
+        forPreferredLayoutAttributes preferredAttributes: UICollectionViewLayoutAttributes,
+        withOriginalAttributes originalAttributes: UICollectionViewLayoutAttributes
+    ) -> UICollectionViewLayoutInvalidationContext {
         guard let preferredMessageAttributes = preferredAttributes as? MessagesLayoutAttributes,
               // Can be called after the model update in iOS <16. Checking if model for this index path exists.
               controller.item(for: preferredMessageAttributes.indexPath.itemPath, kind: .cell, at: state) != nil else {
-            return super.invalidationContext(forPreferredLayoutAttributes: preferredAttributes, withOriginalAttributes: originalAttributes)
+            return super.invalidationContext(forPreferredLayoutAttributes: preferredAttributes,
+                                             withOriginalAttributes: originalAttributes)
         }
 
         let preferredAttributesItemPath = preferredMessageAttributes.indexPath.itemPath
@@ -429,11 +451,14 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
             invalidatedAttributes[preferredMessageAttributes.kind]?.insert(preferredAttributesItemPath)
         }
 
-        let layoutAttributesForPendingAnimation = attributesForPendingAnimations[preferredMessageAttributes.kind]?[preferredAttributesItemPath]
+        let layoutAttributesForPendingAnimation =
+        attributesForPendingAnimations[preferredMessageAttributes.kind]?[preferredAttributesItemPath]
 
         let newItemSize = itemSize(with: preferredMessageAttributes)
-        let newItemAlignment = alignment(for: preferredMessageAttributes.kind, at: preferredMessageAttributes.indexPath)
-        let newInterItemSpacing = interItemSpacing(for: preferredMessageAttributes.kind, at: preferredMessageAttributes.indexPath)
+        let newItemAlignment = alignment(for: preferredMessageAttributes.kind,
+                                         at: preferredMessageAttributes.indexPath)
+        let newInterItemSpacing = interItemSpacing(for: preferredMessageAttributes.kind,
+                                                   at: preferredMessageAttributes.indexPath)
         controller.update(preferredSize: newItemSize,
                           alignment: newItemAlignment,
                           interItemSpacing: newInterItemSpacing,
@@ -441,24 +466,35 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
                           kind: preferredMessageAttributes.kind,
                           at: state)
 
-        let context = super.invalidationContext(forPreferredLayoutAttributes: preferredMessageAttributes, withOriginalAttributes: originalAttributes) as! MessagesLayoutInvalidationContext
+        let context = super.invalidationContext(
+            forPreferredLayoutAttributes: preferredMessageAttributes,
+            withOriginalAttributes: originalAttributes
+        ) as! MessagesLayoutInvalidationContext
 
         let heightDifference = newItemSize.height - originalAttributes.size.height
         let isAboveBottomEdge = originalAttributes.frame.minY.rounded() <= visibleBounds.maxY.rounded()
 
         if heightDifference != 0,
-           (keepContentOffsetAtBottomOnBatchUpdates && controller.contentHeight(at: state).rounded() + heightDifference > visibleBounds.height.rounded()) || isUserInitiatedScrolling,
+           (keepContentOffsetAtBottomOnBatchUpdates
+            && controller.contentHeight(at: state).rounded() + heightDifference > visibleBounds.height.rounded())
+            || isUserInitiatedScrolling,
            isAboveBottomEdge {
-            let offsetCompensation: CGFloat = min(controller.contentHeight(at: state) - collectionView!.frame.height + adjustedContentInset.bottom + adjustedContentInset.top, heightDifference)
+            let offsetCompensation: CGFloat = min(
+                controller.contentHeight(at: state) - collectionView!.frame.height
+                + adjustedContentInset.bottom + adjustedContentInset.top,
+                heightDifference
+            )
             context.contentOffsetAdjustment.y += offsetCompensation
             invalidationActions.formUnion([.shouldInvalidateOnBoundsChange])
         }
 
-        if let attributes = controller.itemAttributes(for: preferredAttributesItemPath, kind: preferredMessageAttributes.kind, at: state)?.typedCopy() {
+        if let attributes = controller.itemAttributes(for: preferredAttributesItemPath,
+                                                      kind: preferredMessageAttributes.kind, at: state)?.typedCopy() {
             layoutAttributesForPendingAnimation?.frame = attributes.frame
             if state == .afterUpdate {
                 controller.totalProposedCompensatingOffset += heightDifference
-                controller.offsetByTotalCompensation(attributes: layoutAttributesForPendingAnimation, for: state, backward: true)
+                controller.offsetByTotalCompensation(attributes: layoutAttributesForPendingAnimation,
+                                                     for: state, backward: true)
                 if controller.insertedIndexes.contains(preferredMessageAttributes.indexPath) ||
                     controller.insertedSectionsIndexes.contains(preferredMessageAttributes.indexPath.section) {
                     layoutAttributesForPendingAnimation.map { attributes in
@@ -466,7 +502,8 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
                             attributes.alpha = 0
                             return
                         }
-                        delegate.initialLayoutAttributesForInsertedItem(self, of: .cell, at: attributes.indexPath, modifying: attributes, on: .invalidation)
+                        delegate.initialLayoutAttributesForInsertedItem(self, of: .cell, at: attributes.indexPath,
+                                                                        modifying: attributes, on: .invalidation)
                     }
                 }
             }
@@ -475,15 +512,15 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
         }
 
         switch preferredMessageAttributes.kind {
-            case .cell:
-                context.invalidateItems(at: [preferredMessageAttributes.indexPath])
-            case .footer, .header:
-                if let type = preferredMessageAttributes.kind.supplementaryElementStringType {
-                    context.invalidateSupplementaryElements(
-                        ofKind: type,
-                        at: [preferredMessageAttributes.indexPath]
-                    )
-                }
+        case .cell:
+            context.invalidateItems(at: [preferredMessageAttributes.indexPath])
+        case .footer, .header:
+            if let type = preferredMessageAttributes.kind.supplementaryElementStringType {
+                context.invalidateSupplementaryElements(
+                    ofKind: type,
+                    at: [preferredMessageAttributes.indexPath]
+                )
+            }
         }
 
         context.invalidateLayoutMetrics = false
@@ -494,21 +531,25 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
     /// Asks the layout object if the new bounds require a layout update.
     open override func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool {
         let shouldInvalidateLayout = cachedCollectionViewSize != .some(newBounds.size) ||
-            cachedCollectionViewInset != .some(adjustedContentInset) ||
-            invalidationActions.contains(.shouldInvalidateOnBoundsChange)
-            || (isUserInitiatedScrolling && state == .beforeUpdate)
+        cachedCollectionViewInset != .some(adjustedContentInset) ||
+        invalidationActions.contains(.shouldInvalidateOnBoundsChange)
+        || (isUserInitiatedScrolling && state == .beforeUpdate)
 
         invalidationActions.remove(.shouldInvalidateOnBoundsChange)
         return shouldInvalidateLayout || hasPinnedHeaderOrFooter
     }
 
-    open override func invalidationContext(forBoundsChange newBounds: CGRect) -> UICollectionViewLayoutInvalidationContext {
-        let invalidationContext = super.invalidationContext(forBoundsChange: newBounds) as! MessagesLayoutInvalidationContext
+    open override
+    func invalidationContext(forBoundsChange newBounds: CGRect) -> UICollectionViewLayoutInvalidationContext {
+        let invalidationContext = super
+            .invalidationContext(forBoundsChange: newBounds) as! MessagesLayoutInvalidationContext
         invalidationContext.invalidateLayoutMetrics = false
         return invalidationContext
     }
 
-    open override func invalidateLayout(with context: UICollectionViewLayoutInvalidationContext) {
+    open override
+    // swiftlint:disable:next overridden_super_call
+    func invalidateLayout(with context: UICollectionViewLayoutInvalidationContext) {
         guard let collectionView else {
             super.invalidateLayout(with: context)
             return
@@ -543,16 +584,38 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
 
         if let currentPositionSnapshot {
             let contentHeight = controller.contentHeight(at: state)
-            if let frame = controller.itemFrame(for: currentPositionSnapshot.indexPath.itemPath, kind: currentPositionSnapshot.kind, at: state, isFinal: true),
+            if let frame = controller.itemFrame(for: currentPositionSnapshot.indexPath.itemPath,
+                                                kind: currentPositionSnapshot.kind,
+                                                at: state,
+                                                isFinal: true),
                contentHeight != 0 {
                 let adjustedContentInset: UIEdgeInsets = collectionView.adjustedContentInset
-                let maxAllowed = max(-adjustedContentInset.top, contentHeight - collectionView.frame.height + adjustedContentInset.bottom)
+                let maxAllowed = max(
+                    -adjustedContentInset.top,
+                    contentHeight - collectionView.frame.height + adjustedContentInset.bottom
+                )
                 switch currentPositionSnapshot.edge {
                 case .top:
-                    let desiredOffset = max(min(maxAllowed, frame.minY - currentPositionSnapshot.offset - adjustedContentInset.top - settings.additionalInsets.top), -adjustedContentInset.top)
+                    let desiredOffset = max(
+                        min(
+                            maxAllowed,
+                            frame.minY
+                            - currentPositionSnapshot.offset
+                            - adjustedContentInset.top
+                            - settings.additionalInsets.top
+                        ),
+                        -adjustedContentInset.top
+                    )
                     context.contentOffsetAdjustment.y = desiredOffset - collectionView.contentOffset.y
                 case .bottom:
-                    let desiredOffset = max(min(maxAllowed, frame.maxY + currentPositionSnapshot.offset - collectionView.bounds.height + adjustedContentInset.bottom + settings.additionalInsets.bottom), -adjustedContentInset.top)
+                    let desiredOffset = max(
+                        min(
+                            maxAllowed,
+                            frame.maxY + currentPositionSnapshot.offset - collectionView.bounds.height
+                            + adjustedContentInset.bottom + settings.additionalInsets.bottom
+                        ),
+                        -adjustedContentInset.top
+                    )
                     context.contentOffsetAdjustment.y = desiredOffset - collectionView.contentOffset.y
                 }
             }
@@ -560,17 +623,21 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
         super.invalidateLayout(with: context)
     }
 
-    /// Invalidates the current layout and triggers a layout update.
-    open override func invalidateLayout() {
-        super.invalidateLayout()
-    }
-
     /// Retrieves the content offset to use after an animated layout update or change.
     open override func targetContentOffset(forProposedContentOffset proposedContentOffset: CGPoint) -> CGPoint {
         if controller.proposedCompensatingOffset != 0,
            let collectionView {
             let minPossibleContentOffset = -collectionView.adjustedContentInset.top
-            let newProposedContentOffset = CGPoint(x: proposedContentOffset.x, y: max(minPossibleContentOffset, min(collectionView.contentOffset.y + controller.proposedCompensatingOffset, maxPossibleContentOffset.y)))
+            let newProposedContentOffset =
+            CGPoint(
+                x: proposedContentOffset.x,
+                y: max(
+                    minPossibleContentOffset, min(
+                        collectionView.contentOffset.y + controller.proposedCompensatingOffset,
+                        maxPossibleContentOffset.y
+                    )
+                )
+            )
             invalidationActions.formUnion([.shouldInvalidateOnBoundsChange])
             controller.proposedCompensatingOffset = 0
             return newProposedContentOffset
@@ -591,19 +658,29 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
         if !reconfigureItemsIndexPaths.isEmpty,
            let collectionView {
             reconfigureItemsIndexPaths
-                .filter { collectionView.indexPathsForVisibleItems.contains($0) && !controller.reloadedIndexes.contains($0) }
+                .filter {
+                    collectionView.indexPathsForVisibleItems.contains($0) && !controller.reloadedIndexes.contains($0)
+                }
                 .forEach { indexPath in
                     let cell = collectionView.cellForItem(at: indexPath)
 
-                    if let originalAttributes = controller.itemAttributes(for: indexPath.itemPath, kind: .cell, at: .beforeUpdate),
-                       let preferredAttributes = cell?.preferredLayoutAttributesFitting(originalAttributes.typedCopy()) as? MessagesLayoutAttributes,
-                       let itemIdentifierBeforeUpdate = controller.itemIdentifier(for: indexPath.itemPath, kind: .cell, at: .beforeUpdate),
-                       let indexPathAfterUpdate = controller.itemPath(by: itemIdentifierBeforeUpdate, kind: .cell, at: .afterUpdate)?.indexPath,
-                       let itemAfterUpdate = controller.item(for: indexPathAfterUpdate.itemPath, kind: .cell, at: .afterUpdate),
+                    if let originalAttributes = controller.itemAttributes(for: indexPath.itemPath,
+                                                                          kind: .cell, at: .beforeUpdate),
+                       let preferredAttributes =
+                        cell?.preferredLayoutAttributesFitting(
+                            originalAttributes.typedCopy()
+                        ) as? MessagesLayoutAttributes,
+                       let itemIdentifierBeforeUpdate = controller.itemIdentifier(for: indexPath.itemPath,
+                                                                                  kind: .cell, at: .beforeUpdate),
+                       let indexPathAfterUpdate = controller.itemPath(by: itemIdentifierBeforeUpdate,
+                                                                      kind: .cell, at: .afterUpdate)?.indexPath,
+                       let itemAfterUpdate = controller.item(for: indexPathAfterUpdate.itemPath,
+                                                             kind: .cell, at: .afterUpdate),
                        (itemAfterUpdate.size.height - preferredAttributes.size.height).rounded() != 0 {
                         originalAttributes.indexPath = indexPathAfterUpdate
                         preferredAttributes.indexPath = indexPathAfterUpdate
-                        _ = invalidationContext(forPreferredLayoutAttributes: preferredAttributes, withOriginalAttributes: originalAttributes)
+                        _ = invalidationContext(forPreferredLayoutAttributes: preferredAttributes,
+                                                withOriginalAttributes: originalAttributes)
                     }
                 }
             reconfigureItemsIndexPaths = []
@@ -621,7 +698,10 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
            let collectionView {
             let compensatingOffset: CGFloat
             if controller.contentSize(for: .beforeUpdate).height > visibleBounds.size.height {
-                compensatingOffset = controller.batchUpdateCompensatingOffset - min(0, maxPossibleContentOffset.y - (contentOffsetBeforeUpdate?.y ?? 0))
+                compensatingOffset =
+                controller.batchUpdateCompensatingOffset - min(
+                    0, maxPossibleContentOffset.y - (contentOffsetBeforeUpdate?.y ?? 0)
+                )
             } else {
                 compensatingOffset = maxPossibleContentOffset.y - collectionView.contentOffset.y
             }
@@ -641,12 +721,15 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
 
     // MARK: - Cell Appearance Animation
 
-    open override func initialLayoutAttributesForAppearingItem(at itemIndexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
+    open override
+    func initialLayoutAttributesForAppearingItem(at itemIndexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
         var attributes: MessagesLayoutAttributes?
 
         let itemPath = itemIndexPath.itemPath
         if state == .afterUpdate {
-            if controller.insertedIndexes.contains(itemIndexPath) || controller.insertedSectionsIndexes.contains(itemPath.section) {
+            if
+                controller.insertedIndexes.contains(itemIndexPath)
+                    || controller.insertedSectionsIndexes.contains(itemPath.section) {
                 attributes = controller.itemAttributes(for: itemPath, kind: .cell, at: .afterUpdate)?.typedCopy()
                 controller.offsetByTotalCompensation(attributes: attributes, for: state, backward: true)
                 attributes.map { attributes in
@@ -654,15 +737,25 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
                         attributes.alpha = 0
                         return
                     }
-                    delegate.initialLayoutAttributesForInsertedItem(self, of: .cell, at: itemIndexPath, modifying: attributes, on: .initial)
+                    delegate.initialLayoutAttributesForInsertedItem(self,
+                                                                    of: .cell,
+                                                                    at: itemIndexPath,
+                                                                    modifying: attributes,
+                                                                    on: .initial)
                 }
                 attributesForPendingAnimations[.cell]?[itemPath] = attributes
             } else if let itemIdentifier = controller.itemIdentifier(for: itemPath, kind: .cell, at: .afterUpdate),
                       let initialIndexPath = controller.itemPath(by: itemIdentifier, kind: .cell, at: .beforeUpdate) {
-                attributes = controller.itemAttributes(for: initialIndexPath, kind: .cell, at: .beforeUpdate)?.typedCopy() ?? MessagesLayoutAttributes(forCellWith: itemIndexPath)
+                attributes = controller.itemAttributes(
+                    for: initialIndexPath,
+                    kind: .cell,
+                    at: .beforeUpdate
+                )?.typedCopy() ?? MessagesLayoutAttributes(forCellWith: itemIndexPath)
                 attributes?.indexPath = itemIndexPath
                 if #unavailable(iOS 13.0) {
-                    if controller.reloadedIndexes.contains(itemIndexPath) || controller.reconfiguredIndexes.contains(itemIndexPath) || controller.reloadedSectionsIndexes.contains(itemPath.section) {
+                    if controller.reloadedIndexes.contains(itemIndexPath)
+                        || controller.reconfiguredIndexes.contains(itemIndexPath)
+                        || controller.reloadedSectionsIndexes.contains(itemPath.section) {
                         // It is needed to position the new cell in the middle of the old cell on ios 12
                         attributesForPendingAnimations[.cell]?[itemPath] = attributes
                     }
@@ -677,13 +770,18 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
         return attributes
     }
 
-    open override func finalLayoutAttributesForDisappearingItem(at itemIndexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
+    open override
+    func finalLayoutAttributesForDisappearingItem(at itemIndexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
         var attributes: MessagesLayoutAttributes?
 
         let itemPath = itemIndexPath.itemPath
         if state == .afterUpdate {
-            if controller.deletedIndexes.contains(itemIndexPath) || controller.deletedSectionsIndexes.contains(itemPath.section) {
-                attributes = controller.itemAttributes(for: itemPath, kind: .cell, at: .beforeUpdate)?.typedCopy() ?? MessagesLayoutAttributes(forCellWith: itemIndexPath)
+            if controller.deletedIndexes.contains(itemIndexPath)
+                || controller.deletedSectionsIndexes.contains(itemPath.section) {
+                attributes = controller.itemAttributes(
+                    for: itemPath,
+                    kind: .cell,
+                    at: .beforeUpdate)?.typedCopy() ?? MessagesLayoutAttributes(forCellWith: itemIndexPath)
                 controller.offsetByTotalCompensation(attributes: attributes, for: state, backward: false)
                 if keepContentOffsetAtBottomOnBatchUpdates,
                    controller.isLayoutBiggerThanVisibleBounds(at: state),
@@ -695,13 +793,20 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
                         attributes.alpha = 0
                         return
                     }
-                    delegate.finalLayoutAttributesForDeletedItem(self, of: .cell, at: itemIndexPath, modifying: attributes)
+                    delegate.finalLayoutAttributesForDeletedItem(self,
+                                                                 of: .cell,
+                                                                 at: itemIndexPath,
+                                                                 modifying: attributes)
                 }
             } else if let itemIdentifier = controller.itemIdentifier(for: itemPath, kind: .cell, at: .beforeUpdate),
                       let finalIndexPath = controller.itemPath(by: itemIdentifier, kind: .cell, at: .afterUpdate) {
-                if controller.movedIndexes.contains(itemIndexPath) || controller.movedSectionsIndexes.contains(itemPath.section) ||
-                    controller.reloadedIndexes.contains(itemIndexPath) || controller.reconfiguredIndexes.contains(itemIndexPath) || controller.reloadedSectionsIndexes.contains(itemPath.section) {
-                    attributes = controller.itemAttributes(for: finalIndexPath, kind: .cell, at: .afterUpdate)?.typedCopy()
+                if controller.movedIndexes.contains(itemIndexPath)
+                    || controller.movedSectionsIndexes.contains(itemPath.section)
+                    || controller.reloadedIndexes.contains(itemIndexPath)
+                    || controller.reconfiguredIndexes.contains(itemIndexPath)
+                    || controller.reloadedSectionsIndexes.contains(itemPath.section) {
+                    attributes = controller.itemAttributes(for: finalIndexPath, kind: .cell, at: .afterUpdate)?
+                        .typedCopy()
                 } else {
                     attributes = controller.itemAttributes(for: itemPath, kind: .cell, at: .beforeUpdate)?.typedCopy()
                 }
@@ -711,7 +816,9 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
 
                 attributes?.indexPath = itemIndexPath
                 attributesForPendingAnimations[.cell]?[itemPath] = attributes
-                if controller.reloadedIndexes.contains(itemIndexPath) || controller.reloadedSectionsIndexes.contains(itemPath.section) {
+                if
+                    controller.reloadedIndexes.contains(itemIndexPath)
+                        || controller.reloadedSectionsIndexes.contains(itemPath.section) {
                     attributes?.alpha = 0
                     attributes?.transform = CGAffineTransform(scaleX: 0, y: 0)
                 }
@@ -727,8 +834,10 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
 
     // MARK: - Supplementary View Appearance Animation
 
-    open override func initialLayoutAttributesForAppearingSupplementaryElement(ofKind elementKind: String,
-                                                                               at elementIndexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
+    open override func initialLayoutAttributesForAppearingSupplementaryElement(
+        ofKind elementKind: String,
+        at elementIndexPath: IndexPath
+    ) -> UICollectionViewLayoutAttributes? {
         var attributes: MessagesLayoutAttributes?
 
         guard let kind = ItemKind(elementKind) else {
@@ -745,12 +854,19 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
                         attributes.alpha = 0
                         return
                     }
-                    delegate.initialLayoutAttributesForInsertedItem(self, of: kind, at: elementIndexPath, modifying: attributes, on: .initial)
+                    delegate.initialLayoutAttributesForInsertedItem(self,
+                                                                    of: kind,
+                                                                    at: elementIndexPath,
+                                                                    modifying: attributes,
+                                                                    on: .initial)
                 }
                 attributesForPendingAnimations[kind]?[elementPath] = attributes
             } else if let itemIdentifier = controller.itemIdentifier(for: elementPath, kind: kind, at: .afterUpdate),
                       let initialIndexPath = controller.itemPath(by: itemIdentifier, kind: kind, at: .beforeUpdate) {
-                attributes = controller.itemAttributes(for: initialIndexPath, kind: kind, at: .beforeUpdate)?.typedCopy() ?? MessagesLayoutAttributes(forSupplementaryViewOfKind: elementKind, with: elementIndexPath)
+                attributes = controller.itemAttributes(
+                    for: initialIndexPath, kind: kind, at: .beforeUpdate)?
+                    .typedCopy() ?? MessagesLayoutAttributes(forSupplementaryViewOfKind: elementKind,
+                                                             with: elementIndexPath)
                 attributes?.indexPath = elementIndexPath
             } else {
                 attributes = controller.itemAttributes(for: elementPath, kind: kind, at: .beforeUpdate)
@@ -762,18 +878,24 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
         return attributes
     }
 
-    open override func finalLayoutAttributesForDisappearingSupplementaryElement(ofKind elementKind: String,
-                                                                                at elementIndexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
+    open override func finalLayoutAttributesForDisappearingSupplementaryElement(
+        ofKind elementKind: String,
+        at elementIndexPath: IndexPath
+    ) -> UICollectionViewLayoutAttributes? {
         var attributes: MessagesLayoutAttributes?
 
         guard let kind = ItemKind(elementKind) else {
             return nil
         }
-        
+
         let elementPath = elementIndexPath.itemPath
         if state == .afterUpdate {
             if controller.deletedSectionsIndexes.contains(elementPath.section) {
-                attributes = controller.itemAttributes(for: elementPath, kind: kind, at: .beforeUpdate)?.typedCopy() ?? MessagesLayoutAttributes(forSupplementaryViewOfKind: elementKind, with: elementIndexPath)
+                attributes = controller.itemAttributes(for: elementPath,
+                                                       kind: kind,
+                                                       at: .beforeUpdate)?
+                    .typedCopy() ?? MessagesLayoutAttributes(forSupplementaryViewOfKind: elementKind,
+                                                             with: elementIndexPath)
                 controller.offsetByTotalCompensation(attributes: attributes, for: state, backward: false)
                 if keepContentOffsetAtBottomOnBatchUpdates,
                    controller.isLayoutBiggerThanVisibleBounds(at: state),
@@ -785,12 +907,18 @@ open class MessagesCollectionLayout: UICollectionViewLayout {
                         attributes.alpha = 0
                         return
                     }
-                    delegate.finalLayoutAttributesForDeletedItem(self, of: .cell, at: elementIndexPath, modifying: attributes)
+                    delegate.finalLayoutAttributesForDeletedItem(self,
+                                                                 of: .cell,
+                                                                 at: elementIndexPath,
+                                                                 modifying: attributes)
                 }
             } else if let itemIdentifier = controller.itemIdentifier(for: elementPath, kind: kind, at: .beforeUpdate),
                       let finalIndexPath = controller.itemPath(by: itemIdentifier, kind: kind, at: .afterUpdate) {
-                if controller.movedSectionsIndexes.contains(elementPath.section) || controller.reloadedSectionsIndexes.contains(elementPath.section) {
-                    attributes = controller.itemAttributes(for: finalIndexPath, kind: kind, at: .afterUpdate)?.typedCopy()
+                if controller.movedSectionsIndexes.contains(elementPath.section)
+                    || controller.reloadedSectionsIndexes.contains(elementPath.section) {
+                    attributes = controller.itemAttributes(
+                        for: finalIndexPath, kind: kind, at: .afterUpdate
+                    )?.typedCopy()
                 } else {
                     attributes = controller.itemAttributes(for: elementPath, kind: kind, at: .beforeUpdate)?.typedCopy()
                 }
@@ -823,7 +951,10 @@ extension MessagesCollectionLayout {
         } else {
             interItemSpacing = 0
         }
-        return ItemModel.Configuration(alignment: alignment(for: element, at: indexPath), preferredSize: itemSize.estimated, calculatedSize: itemSize.exact, interItemSpacing: interItemSpacing)
+        return ItemModel.Configuration(alignment: alignment(for: element, at: indexPath),
+                                       preferredSize: itemSize.estimated,
+                                       calculatedSize: itemSize.exact,
+                                       interItemSpacing: interItemSpacing)
     }
 
     private func estimatedSize(for element: ItemKind, at indexPath: IndexPath) -> (estimated: CGSize, exact: CGSize?) {
@@ -846,7 +977,9 @@ extension MessagesCollectionLayout {
     private func itemSize(with preferredAttributes: MessagesLayoutAttributes) -> CGSize {
         let itemSize: CGSize
         if let delegate,
-           case let .exact(size) = delegate.sizeForItem(self, of: preferredAttributes.kind, at: preferredAttributes.indexPath) {
+           case let .exact(size) = delegate.sizeForItem(self,
+                                                        of: preferredAttributes.kind,
+                                                        at: preferredAttributes.indexPath) {
             itemSize = size
         } else {
             itemSize = preferredAttributes.size
@@ -929,7 +1062,11 @@ extension MessagesCollectionLayout {
         guard let collectionView else {
             return .zero
         }
-        let maxContentOffset = max(0 - collectionView.adjustedContentInset.top, controller.contentHeight(at: state) - collectionView.frame.height + collectionView.adjustedContentInset.bottom)
+        let maxContentOffset = max(
+            0 - collectionView.adjustedContentInset.top,
+            controller.contentHeight(at: state) - collectionView.frame.height
+            + collectionView.adjustedContentInset.bottom
+        )
         return CGPoint(x: 0, y: maxContentOffset)
     }
 
@@ -940,3 +1077,5 @@ extension MessagesCollectionLayout {
         return collectionView.isDragging || collectionView.isDecelerating
     }
 }
+
+// swiftlint:enable force_cast force_unwrapping type_body_length no_assertions

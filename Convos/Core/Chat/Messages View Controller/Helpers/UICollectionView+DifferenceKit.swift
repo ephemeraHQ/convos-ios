@@ -2,6 +2,8 @@ import DifferenceKit
 import Foundation
 import UIKit
 
+// swiftlint:disable force_unwrapping
+
 @MainActor
 extension UICollectionView {
     func reload<C>(
@@ -82,12 +84,15 @@ extension UICollectionView {
 
                         reconfigureItems(at: indexPaths)
                         (collectionViewLayout as? MessagesCollectionLayout)?.reconfigureItems(at: indexPaths)
-                    // TODO: maybe replace with reload if reconfigure mis-behaves
+                    // todo: maybe replace with reload if reconfigure mis-behaves
 //                        reloadItems(at: indexPaths)
                 }
 
                 for (source, target) in changeset.elementMoved {
-                    moveItem(at: IndexPath(item: source.element, section: source.section), to: IndexPath(item: target.element, section: target.section))
+                    moveItem(
+                        at: IndexPath(item: source.element, section: source.section),
+                        to: IndexPath(item: target.element, section: target.section)
+                    )
                 }
             }, completion: completionHandler)
         }
@@ -98,9 +103,12 @@ extension UICollectionView {
 }
 
 extension StagedChangeset {
-    // DifferenceKit splits different type of actions into the different change sets to avoid the limitations of UICollectionView
-    // But it may lead to the situations that `UICollectionViewLayout` doesnt know what change will happen next within the single portion
-    // of changes. As we know that at least insertions and deletions can be processed together, we fix that in the StagedChangeset we got from
+    // DifferenceKit splits different type of actions into the different change sets to avoid
+    // the limitations of UICollectionView
+    // But it may lead to the situations that `UICollectionViewLayout` doesnt know what change
+    // will happen next within the single portion
+    // of changes. As we know that at least insertions and deletions can be processed together,
+    // we fix that in the StagedChangeset we got from
     // DifferenceKit.
     func flattenIfPossible() -> StagedChangeset {
         if count == 2,
@@ -108,8 +116,12 @@ extension StagedChangeset {
            self[1].sectionChangeCount == 0,
            self[0].elementDeleted.count == self[0].elementChangeCount,
            self[1].elementInserted.count == self[1].elementChangeCount {
-            return StagedChangeset(arrayLiteral: Changeset(data: self[1].data, elementDeleted: self[0].elementDeleted, elementInserted: self[1].elementInserted))
+            return StagedChangeset(arrayLiteral: Changeset(data: self[1].data,
+                                                           elementDeleted: self[0].elementDeleted,
+                                                           elementInserted: self[1].elementInserted))
         }
         return self
     }
 }
+
+// swiftlint:enable force_unwrapping

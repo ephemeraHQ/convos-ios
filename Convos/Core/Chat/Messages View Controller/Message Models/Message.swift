@@ -47,12 +47,6 @@ struct MessageGroup: Hashable {
     var id: UUID
     var title: String
     var type: MessageType
-
-    init(id: UUID, title: String, type: MessageType) {
-        self.id = id
-        self.title = title
-        self.type = type
-    }
 }
 
 extension MessageGroup: Differentiable {
@@ -70,8 +64,8 @@ enum ImageSource: Hashable {
     case imageURL(URL)
     var isLocal: Bool {
         switch self {
-            case .image: return true
-            case .imageURL: return false
+        case .image: return true
+        case .imageURL: return false
         }
     }
 }

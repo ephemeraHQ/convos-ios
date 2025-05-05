@@ -1,6 +1,8 @@
 import Foundation
 import UIKit
 
+// swiftlint:disable force_unwrapping
+
 @MainActor
 protocol MockMessagesProviderDelegate: AnyObject {
     func received(messages: [RawMessage])
@@ -43,35 +45,49 @@ final class MockMessagesProvider: MessagesProviderProtocol {
 
     private var messageTimer: Timer?
     private var typingTimer: Timer?
-    private var startingTimestamp = Date().timeIntervalSince1970
+    private var startingTimestamp: Double = Date().timeIntervalSince1970
     private var typingState: TypingState = .idle
     private var lastMessageIndex: Int = 0
     private var nextImageMessageIndex: Int = Int.random(in: 3...8)
     private var lastReadUUID: UUID?
     private var lastReceivedUUID: UUID?
-    private let dispatchQueue = DispatchQueue.global(qos: .userInteractive)
-    private let enableTyping = true
-    private let enableNewMessages = true
+    private let dispatchQueue: DispatchQueue = DispatchQueue.global(qos: .userInteractive)
+    private let enableTyping: Bool = true
+    private let enableNewMessages: Bool = true
 
     private let websiteUrls: [URL] = [
         URL(string: "https://ephemerahq.com")!,
         URL(string: "https://xmtp.org"),
     ].compactMap { $0 }
 
+    // swiftlint:disable line_length
     private let imageUrls: [URL] = [
         URL(string: "https://upload.wikimedia.org/wikipedia/commons/5/56/Black-white_photograph_of_Emily_Dickinson2.png")!,
         URL(string: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/William_Shakespeare_by_John_Taylor%2C_edited.jpg/1920px-William_Shakespeare_by_John_Taylor%2C_edited.jpg")!,
         URL(string: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/George_Charles_Beresford_-_Virginia_Woolf_in_1902_-_Restoration.jpg/1200px-George_Charles_Beresford_-_Virginia_Woolf_in_1902_-_Restoration.jpg")!,
         URL(string: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Portrait_of_James_Joyce_P529.jpg/1920px-Portrait_of_James_Joyce_P529.jpg")!
     ]
+    // swiftlint:enable line_length
 
     // MARK: - Initialization
 
     init(currentUser: User) {
         self.currentUser = currentUser
 
-        messageTimer = Timer.scheduledTimer(timeInterval: TimeInterval(Int.random(in: 0...6)), target: self, selector: #selector(handleTimer), userInfo: nil, repeats: true)
-        typingTimer = Timer.scheduledTimer(timeInterval: TimeInterval(Int.random(in: 0...6)), target: self, selector: #selector(handleTypingTimer), userInfo: nil, repeats: true)
+        messageTimer = Timer.scheduledTimer(
+            timeInterval: TimeInterval(Int.random(in: 0...6)),
+            target: self,
+            selector: #selector(handleTimer),
+            userInfo: nil,
+            repeats: true
+        )
+        typingTimer = Timer.scheduledTimer(
+            timeInterval: TimeInterval(Int.random(in: 0...6)),
+            target: self,
+            selector: #selector(handleTypingTimer),
+            userInfo: nil,
+            repeats: true
+        )
     }
 
     func loadInitialMessages() async -> [RawMessage] {
@@ -155,13 +171,27 @@ final class MockMessagesProvider: MessagesProviderProtocol {
     private func restartMessageTimer() {
         messageTimer?.invalidate()
         messageTimer = nil
-        messageTimer = Timer.scheduledTimer(timeInterval: TimeInterval(Int.random(in: 0...6)), target: self, selector: #selector(handleTimer), userInfo: nil, repeats: true)
+        messageTimer = Timer
+            .scheduledTimer(
+                timeInterval: TimeInterval(Int.random(in: 0...6)),
+                target: self,
+                selector: #selector(handleTimer),
+                userInfo: nil,
+                repeats: true
+            )
     }
 
     private func restartTypingTimer() {
         typingTimer?.invalidate()
         typingTimer = nil
-        typingTimer = Timer.scheduledTimer(timeInterval: TimeInterval(Int.random(in: 1...3)), target: self, selector: #selector(handleTypingTimer), userInfo: nil, repeats: true)
+        typingTimer = Timer
+            .scheduledTimer(
+                timeInterval: TimeInterval(Int.random(in: 1...3)),
+                target: self,
+                selector: #selector(handleTypingTimer),
+                userInfo: nil,
+                repeats: true
+            )
     }
 
     private func createRandomMessage(date: Date = Date()) -> RawMessage {
@@ -170,11 +200,10 @@ final class MockMessagesProvider: MessagesProviderProtocol {
         guard lastMessageIndex == nextImageMessageIndex else {
             return RawMessage(
                 id: UUID(),
-                              date: date,
-                              data: .text(TextGenerator.getString(of: Int.random(in: 1...20))),
-                              userId: sender.id
+                date: date,
+                data: .text(TextGenerator.getString(of: Int.random(in: 1...20))),
+                userId: sender.id
             )
-
         }
 
         // Schedule next image message
@@ -194,3 +223,5 @@ final class MockMessagesProvider: MessagesProviderProtocol {
         return messages
     }
 }
+
+// swiftlint:enable force_unwrapping

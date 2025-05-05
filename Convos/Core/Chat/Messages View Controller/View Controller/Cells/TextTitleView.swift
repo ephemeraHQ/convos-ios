@@ -1,5 +1,5 @@
-import UIKit
 import SwiftUI
+import UIKit
 
 class TextTitleView: UICollectionReusableView {
     private let titleLabel: UILabel = {
@@ -38,8 +38,11 @@ class TextTitleView: UICollectionReusableView {
         titleLabel.text = title
     }
 
-    override func preferredLayoutAttributesFitting(_ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
-        let labelSize = titleLabel.sizeThatFits(CGSize(width: layoutAttributes.frame.width, height: .greatestFiniteMagnitude))
+    override func preferredLayoutAttributesFitting(
+        _ layoutAttributes: UICollectionViewLayoutAttributes
+    ) -> UICollectionViewLayoutAttributes {
+        let labelSize = titleLabel.sizeThatFits(CGSize(width: layoutAttributes.frame.width,
+                                                       height: .greatestFiniteMagnitude))
 
         let totalHeight = labelSize.height + topPadding
 

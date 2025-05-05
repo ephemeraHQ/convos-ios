@@ -1,8 +1,7 @@
-import UIKit
 import SwiftUI
+import UIKit
 
 class TextMessageCollectionCell: UICollectionViewCell {
-
     override func prepareForReuse() {
         super.prepareForReuse()
         self.contentConfiguration = nil
@@ -20,7 +19,9 @@ class TextMessageCollectionCell: UICollectionViewCell {
         .margins(.vertical, 0.0)
     }
 
-    override func preferredLayoutAttributesFitting(_ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
+    override func preferredLayoutAttributesFitting(
+        _ layoutAttributes: UICollectionViewLayoutAttributes
+    ) -> UICollectionViewLayoutAttributes {
         layoutAttributesForHorizontalFittingRequired(layoutAttributes)
     }
 }
@@ -38,7 +39,6 @@ struct MessageBubble: View {
                     .foregroundColor(isOutgoing ? .white : .primary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-
             }
         }
     }
@@ -47,8 +47,10 @@ struct MessageBubble: View {
 #Preview {
     VStack {
         ForEach([MessageType.outgoing, MessageType.incoming], id: \.self) { type in
-            MessageBubble(style: .normal,
-                message: "Hello world!", isOutgoing: type == .outgoing)
+            MessageBubble(
+                style: .normal,
+                message: "Hello world!",
+                isOutgoing: type == .outgoing)
         }
     }
 }

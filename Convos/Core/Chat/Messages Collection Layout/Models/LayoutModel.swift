@@ -1,8 +1,9 @@
 import Foundation
 import UIKit
 
+// swiftlint:disable no_assertions
+
 final class LayoutModel<Layout: MessagesLayoutProtocol> {
-    
     private struct ItemUUIDKey: Hashable {
         let kind: ItemKind
         let id: UUID
@@ -29,7 +30,12 @@ final class LayoutModel<Layout: MessagesLayoutProtocol> {
             for sectionIndex in 0..<directlyMutableSections.count {
                 sectionIndexByIdentifierCache[directlyMutableSections[sectionIndex].id] = sectionIndex
                 directlyMutableSections[sectionIndex].offsetY = offsetY
-                offsetY += directlyMutableSections[sectionIndex].height + (sectionIndex < directlyMutableSections.count - 1 ? directlyMutableSections[sectionIndex].interSectionSpacing : 0)
+                offsetY += directlyMutableSections[sectionIndex].height
+                + (
+                    sectionIndex < directlyMutableSections.count - 1
+                    ? directlyMutableSections[sectionIndex].interSectionSpacing
+                    : 0
+                )
                 if let header = directlyMutableSections[sectionIndex].header {
                     let key = ItemUUIDKey(kind: .header, id: header.id)
                     itemPathByIdentifierCache[key] = ItemPath(item: 0, section: sectionIndex)
@@ -124,9 +130,10 @@ final class LayoutModel<Layout: MessagesLayoutProtocol> {
             let nextIndex = index &+ 1
             sections.withUnsafeMutableBufferPointer { directlyMutableSections in
                 nonisolated(unsafe) let directlyMutableSections = directlyMutableSections
-                DispatchQueue.concurrentPerform(iterations: directlyMutableSections.count &- nextIndex) { internalIndex in
-                    directlyMutableSections[internalIndex &+ nextIndex].offsetY += heightDiff
-                }
+                DispatchQueue
+                    .concurrentPerform(iterations: directlyMutableSections.count &- nextIndex) { internalIndex in
+                        directlyMutableSections[internalIndex &+ nextIndex].offsetY += heightDiff
+                    }
             }
         }
     }
@@ -190,3 +197,5 @@ final class LayoutModel<Layout: MessagesLayoutProtocol> {
         sectionIndexByIdentifierCache = nil
     }
 }
+
+// swiftlint:enable no_assertions

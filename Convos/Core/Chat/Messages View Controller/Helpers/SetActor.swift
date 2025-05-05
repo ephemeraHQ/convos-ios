@@ -16,7 +16,10 @@ final class SetActor<Option: SetAlgebra, ReactionType> {
         let executionType: ExecutionType
         let actionBlock: () -> Void
 
-        init(type: ReactionType, action: Action, executionType: ExecutionType = .once, actionBlock: @escaping () -> Void) {
+        init(type: ReactionType,
+             action: Action,
+             executionType: ExecutionType = .once,
+             actionBlock: @escaping () -> Void) {
             self.type = type
             self.action = action
             self.executionType = executionType

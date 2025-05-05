@@ -1,20 +1,12 @@
 import UIKit
 
 class MessagesNavigationBar: UIView {
-    enum Constants {
-        static let contentHeight: CGFloat = 40.0
-        static let height: CGFloat = 72.0
-        static let contentViewVerticalPadding: CGFloat = 16.0
-        static let avatarSize: CGFloat = 40.0
-    }
+    private let blurView: UIVisualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
+    private let barView: UIView = UIView()
+    private let contentView: UIView = UIView()
+    let leftButton: UIButton = UIButton(type: .system)
+    let rightButton: UIButton = UIButton(type: .system)
 
-    // MARK: - Properties
-
-    private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
-    private let barView = UIView()
-    private let contentView = UIView()
-    let leftButton = UIButton(type: .system)
-    let rightButton = UIButton(type: .system)
     private let stackView: UIStackView = {
         let stack = UIStackView()
         stack.axis = .horizontal
@@ -88,7 +80,7 @@ class MessagesNavigationBar: UIView {
             barView.leadingAnchor.constraint(equalTo: leadingAnchor),
             barView.trailingAnchor.constraint(equalTo: trailingAnchor),
             barView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            barView.heightAnchor.constraint(equalToConstant: Constants.height)
+            barView.heightAnchor.constraint(equalToConstant: Constant.height)
         ])
 
         barView.addSubview(contentView)
@@ -96,8 +88,10 @@ class MessagesNavigationBar: UIView {
         NSLayoutConstraint.activate([
             contentView.leadingAnchor.constraint(equalTo: barView.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: barView.trailingAnchor),
-            contentView.topAnchor.constraint(equalTo: barView.topAnchor, constant: Constants.contentViewVerticalPadding),
-            contentView.bottomAnchor.constraint(equalTo: barView.bottomAnchor, constant: -Constants.contentViewVerticalPadding)
+            contentView.topAnchor.constraint(equalTo: barView.topAnchor, constant: Constant.contentViewVerticalPadding),
+            contentView
+                .bottomAnchor
+                .constraint(equalTo: barView.bottomAnchor, constant: -Constant.contentViewVerticalPadding)
         ])
 
         contentView.addSubview(leftButton)
@@ -129,12 +123,19 @@ class MessagesNavigationBar: UIView {
         avatarImageView.translatesAutoresizingMaskIntoConstraints = false
         stackView.addArrangedSubview(avatarImageView)
         NSLayoutConstraint.activate([
-            avatarImageView.widthAnchor.constraint(equalToConstant: Constants.avatarSize),
-            avatarImageView.heightAnchor.constraint(equalToConstant: Constants.avatarSize)
+            avatarImageView.widthAnchor.constraint(equalToConstant: Constant.avatarSize),
+            avatarImageView.heightAnchor.constraint(equalToConstant: Constant.avatarSize)
         ])
 
-        avatarImageView.layer.cornerRadius = Constants.avatarSize / 2.0
+        avatarImageView.layer.cornerRadius = Constant.avatarSize / 2.0
 
         stackView.addArrangedSubview(titleLabel)
+    }
+
+    enum Constant {
+        static let contentHeight: CGFloat = 40.0
+        static let height: CGFloat = 72.0
+        static let contentViewVerticalPadding: CGFloat = 16.0
+        static let avatarSize: CGFloat = 40.0
     }
 }

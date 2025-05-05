@@ -7,7 +7,7 @@ final class MockMessagingService: MessagingServiceProtocol {
             .compactMap { $0 }
             .eraseToAnyPublisher()
     }
-    private var updatesPublisher = CurrentValueSubject<MessagingServiceUpdate?, Never>(nil)
+    private var updatesPublisher: CurrentValueSubject<MessagingServiceUpdate?, Never> = .init(nil)
 
     private let dataProvider: MessagesProviderProtocol
     private var typingState: TypingState = .idle
@@ -77,11 +77,11 @@ final class MockMessagingService: MessagingServiceProtocol {
         let messages = self.messages
             .map { rawMessage in
                 Message(id: rawMessage.id,
-                       date: rawMessage.date,
-                       data: self.convert(rawMessage.data),
-                       owner: userMap[rawMessage.userId] ?? User(id: rawMessage.userId, name: "Unknown User"),
-                       type: rawMessage.userId == self.userId ? .outgoing : .incoming,
-                       status: rawMessage.status)
+                        date: rawMessage.date,
+                        data: self.convert(rawMessage.data),
+                        owner: userMap[rawMessage.userId] ?? User(id: rawMessage.userId, name: "Unknown User"),
+                        type: rawMessage.userId == self.userId ? .outgoing : .incoming,
+                        status: rawMessage.status)
             }
 
         let messagesSplitByDay = messages
@@ -132,8 +132,7 @@ final class MockMessagingService: MessagingServiceProtocol {
             cells.insert(dateCell, at: 0)
         }
 
-        if typingState == .typing,
-           messagesSplitByDay.count > 0 {
+        if typingState == .typing, !messagesSplitByDay.isEmpty {
             cells.append(.typingIndicator)
         }
 

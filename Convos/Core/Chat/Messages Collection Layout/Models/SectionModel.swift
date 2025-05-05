@@ -1,6 +1,8 @@
 import Foundation
 import UIKit
 
+// swiftlint:disable no_assertions
+
 enum MessagesCollectionLayoutModelState: Hashable, CaseIterable {
     case beforeUpdate, afterUpdate
 }
@@ -62,7 +64,9 @@ struct SectionModel<Layout: MessagesLayoutProtocol> {
         items.withUnsafeMutableBufferPointer { directlyMutableItems in
             for rowIndex in 0..<directlyMutableItems.count {
                 directlyMutableItems[rowIndex].offsetY = offsetY
-                let offset: CGFloat = rowIndex < directlyMutableItems.count - 1 ? directlyMutableItems[rowIndex].interItemSpacing : 0
+                let offset: CGFloat = rowIndex < directlyMutableItems.count - 1
+                ? directlyMutableItems[rowIndex].interItemSpacing
+                : 0
                 offsetY += directlyMutableItems[rowIndex].size.height + offset
             }
         }
@@ -167,3 +171,5 @@ struct SectionModel<Layout: MessagesLayoutProtocol> {
         items.remove(at: index)
     }
 }
+
+// swiftlint:enable no_assertions

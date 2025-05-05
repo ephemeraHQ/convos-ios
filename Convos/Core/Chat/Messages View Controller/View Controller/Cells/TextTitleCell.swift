@@ -1,5 +1,5 @@
-import UIKit
 import SwiftUI
+import UIKit
 
 class TextTitleCell: UICollectionViewCell {
     private let titleLabel: UILabel = {
@@ -40,7 +40,9 @@ class TextTitleCell: UICollectionViewCell {
         invalidateIntrinsicContentSize()
     }
 
-    override func preferredLayoutAttributesFitting(_ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
+    override func preferredLayoutAttributesFitting(
+        _ layoutAttributes: UICollectionViewLayoutAttributes
+    ) -> UICollectionViewLayoutAttributes {
         let width = layoutAttributes.frame.width - (2 * horizontalPadding)
         let labelSize = titleLabel.sizeThatFits(
             CGSize(width: width, height: .greatestFiniteMagnitude)

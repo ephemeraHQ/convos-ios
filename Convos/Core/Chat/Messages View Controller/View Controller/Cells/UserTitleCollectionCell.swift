@@ -1,8 +1,7 @@
-import UIKit
 import SwiftUI
+import UIKit
 
 class UserTitleCollectionCell: UICollectionViewCell {
-
     override func prepareForReuse() {
         super.prepareForReuse()
         self.contentConfiguration = nil

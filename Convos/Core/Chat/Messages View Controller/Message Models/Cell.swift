@@ -3,11 +3,10 @@ import Foundation
 import UIKit
 
 enum Cell: Hashable {
-
     enum Alignment {
         case leading, center, trailing, fullWidth
     }
-    
+
     enum BubbleType {
         case normal, tailed
     }

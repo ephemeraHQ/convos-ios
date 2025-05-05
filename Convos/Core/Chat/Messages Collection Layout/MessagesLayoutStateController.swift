@@ -1,6 +1,8 @@
 import Foundation
 import UIKit
 
+// swiftlint:disable cyclomatic_complexity function_body_length type_body_length no_assertions large_tuple
+
 protocol MessagesLayoutProtocol: AnyObject {
     var settings: MessagesLayoutSettings { get }
     var viewSize: CGSize { get }
@@ -64,12 +66,14 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
         case done
     }
 
-    // This thing exists here as `UICollectionView` calls `targetContentOffset(forProposedContentOffset proposedContentOffset: CGPoint)`
-    // only once at the beginning of the animated updates. But we must compensate the other changes that happened during the update.
+    // This thing exists here as `UICollectionView` calls
+    // `targetContentOffset(forProposedContentOffset proposedContentOffset: CGPoint)`
+    // only once at the beginning of the animated updates. But we must compensate the
+    // other changes that happened during the update.
     var batchUpdateCompensatingOffset: CGFloat = 0
     var proposedCompensatingOffset: CGFloat = 0
     var totalProposedCompensatingOffset: CGFloat = 0
-    var isAnimatedBoundsChange = false
+    var isAnimatedBoundsChange: Bool = false
 
     private(set) var reloadedIndexes: Set<IndexPath> = []
     private(set) var reconfiguredIndexes: Set<IndexPath> = []
@@ -82,7 +86,9 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
     private(set) var movedSectionsIndexes: Set<Int> = []
 
     private var cachedAttributesState: (rect: CGRect, attributes: [MessagesLayoutAttributes])?
-    private var cachedAttributeObjects = [MessagesCollectionLayoutModelState: [ItemKind: [ItemPath: MessagesLayoutAttributes]]]()
+    private var cachedAttributeObjects: [
+        MessagesCollectionLayoutModelState: [ItemKind: [ItemPath: MessagesLayoutAttributes]]
+    ] = [:]
 
     private var layoutBeforeUpdate: LayoutModel<Layout>
     private var layoutAfterUpdate: LayoutModel<Layout>?
@@ -139,12 +145,21 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
         if !ignoreCache,
            let cachedAttributesState,
            cachedAttributesState.rect.contains(rect) {
-            return cachedAttributesState.attributes.withUnsafeBufferPointer { $0.binarySearchRange(predicate: predicate) }
+            return cachedAttributesState
+                .attributes
+                .withUnsafeBufferPointer { $0.binarySearchRange(predicate: predicate) }
         } else {
             let totalRect: CGRect
             switch state {
             case .beforeUpdate:
-                totalRect = rect.inset(by: UIEdgeInsets(top: -rect.height / 2, left: -rect.width / 2, bottom: -rect.height / 2, right: -rect.width / 2))
+                totalRect = rect.inset(
+                    by: UIEdgeInsets(
+                        top: -rect.height / 2,
+                        left: -rect.width / 2,
+                        bottom: -rect.height / 2,
+                        right: -rect.width / 2
+                    )
+                )
             case .afterUpdate:
                 totalRect = rect
             }
@@ -209,8 +224,10 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
             if let cachedAttributes = cachedAttributeObjects[state]?[.header]?[itemPath] {
                 attributes = cachedAttributes
             } else {
-                attributes = MessagesLayoutAttributes(forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
-                                                  with: itemIndexPath)
+                attributes = MessagesLayoutAttributes(
+                    forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
+                    with: itemIndexPath
+                )
                 cachedAttributeObjects[state]?[.header]?[itemPath] = attributes
             }
             #if DEBUG
@@ -238,7 +255,10 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
             if let cachedAttributes = cachedAttributeObjects[state]?[.footer]?[itemPath] {
                 attributes = cachedAttributes
             } else {
-                attributes = MessagesLayoutAttributes(forSupplementaryViewOfKind: UICollectionView.elementKindSectionFooter, with: itemIndexPath)
+                attributes = MessagesLayoutAttributes(
+                    forSupplementaryViewOfKind: UICollectionView.elementKindSectionFooter,
+                    with: itemIndexPath
+                )
                 cachedAttributeObjects[state]?[.footer]?[itemPath] = attributes
             }
             #if DEBUG
@@ -353,7 +373,9 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
     func section(at index: Int, at state: MessagesCollectionLayoutModelState) -> SectionModel<Layout> {
         #if DEBUG
         guard index < layout(at: state).sections.count else {
-            preconditionFailure("Section index \(index) is bigger than the amount of sections \(layout(at: state).sections.count).")
+            preconditionFailure(
+                "Section index \(index) is bigger than the amount of sections \(layout(at: state).sections.count)."
+            )
         }
         #endif
         return layout(at: state).sections[index]
@@ -468,10 +490,12 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
         }
 
         let isLastItemInSection = isLastItemInSection(itemPath, at: state)
-        let frameUpdateAction = CompensatingAction.frameUpdate(previousFrame: previousFrame,
-                                                               newFrame: item.frame,
-                                                               previousSpacing: isLastItemInSection ? 0 : previousInterItemSpacing,
-                                                               newSpacing: isLastItemInSection ? 0 : interItemSpacing)
+        let frameUpdateAction = CompensatingAction.frameUpdate(
+            previousFrame: previousFrame,
+            newFrame: item.frame,
+            previousSpacing: isLastItemInSection ? 0 : previousInterItemSpacing,
+            newSpacing: isLastItemInSection ? 0 : interItemSpacing
+        )
         compensateOffsetIfNeeded(for: itemPath, kind: kind, action: frameUpdateAction)
     }
 
@@ -488,11 +512,18 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
         }
         var itemToRestore: ItemToRestore?
         if layoutRepresentation.keepContentOffsetAtBottomOnBatchUpdates,
-           let lastVisibleAttribute = allAttributes(at: .beforeUpdate, visibleRect: layoutRepresentation.visibleBounds).last,
-           let itemFrame = itemFrame(for: lastVisibleAttribute.indexPath.itemPath, kind: lastVisibleAttribute.kind, at: .beforeUpdate) {
-            itemToRestore = ItemToRestore(globalIndex: globalIndexFor(lastVisibleAttribute.indexPath.itemPath, kind: lastVisibleAttribute.kind, state: .beforeUpdate),
-                                          kind: lastVisibleAttribute.kind,
-                                          offset: (itemFrame.maxY - layoutRepresentation.visibleBounds.maxY).rounded())
+           let lastVisibleAttribute = allAttributes(at: .beforeUpdate,
+                                                    visibleRect: layoutRepresentation.visibleBounds).last,
+           let itemFrame = itemFrame(for: lastVisibleAttribute.indexPath.itemPath,
+                                     kind: lastVisibleAttribute.kind,
+                                     at: .beforeUpdate) {
+            itemToRestore = ItemToRestore(
+                globalIndex: globalIndexFor(lastVisibleAttribute.indexPath.itemPath,
+                                            kind: lastVisibleAttribute.kind,
+                                            state: .beforeUpdate),
+                kind: lastVisibleAttribute.kind,
+                offset: (itemFrame.maxY - layoutRepresentation.visibleBounds.maxY).rounded()
+            )
         }
         batchUpdateCompensatingOffset = 0
         proposedCompensatingOffset = 0
@@ -547,7 +578,9 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
             case let .itemMove(initialItemIndexPath, finalItemIndexPath):
                 movedIndexes.insert(initialItemIndexPath)
 
-                let original = layoutBeforeUpdate.sections[initialItemIndexPath.section].items[initialItemIndexPath.item]
+                let original = layoutBeforeUpdate
+                    .sections[initialItemIndexPath.section]
+                    .items[initialItemIndexPath.item]
                 deletedItemsIndexesArray.append(initialItemIndexPath)
                 insertedItemsIndexesArray.append((finalItemIndexPath, original))
             }
@@ -565,8 +598,12 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
             var header: ItemModel?
             if layoutRepresentation.shouldPresentHeader(at: sectionIndex) == true {
                 let headerIndexPath = IndexPath(item: 0, section: sectionIndex)
-                var newHeader = section.header ?? ItemModel(with: layoutRepresentation.configuration(for: .header,
-                                                                                                     at: headerIndexPath))
+                var newHeader = section.header ?? ItemModel(
+                    with: layoutRepresentation.configuration(
+                        for: .header,
+                        at: headerIndexPath
+                    )
+                )
                 let configuration = layoutRepresentation.configuration(for: .header, at: headerIndexPath)
                 applyConfiguration(configuration, to: &newHeader)
                 header = newHeader
@@ -578,8 +615,12 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
             var footer: ItemModel?
             if layoutRepresentation.shouldPresentFooter(at: sectionIndex) == true {
                 let footerIndexPath = IndexPath(item: 0, section: sectionIndex)
-                var newFooter = section.footer ?? ItemModel(with: layoutRepresentation.configuration(for: .footer,
-                                                                                                     at: footerIndexPath))
+                var newFooter = section.footer ?? ItemModel(
+                    with: layoutRepresentation.configuration(
+                        for: .footer,
+                        at: footerIndexPath
+                    )
+                )
                 let configuration = layoutRepresentation.configuration(for: .footer, at: footerIndexPath)
                 applyConfiguration(configuration, to: &newFooter)
                 footer = newFooter
@@ -610,7 +651,10 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
             afterUpdateModel.removeSection(for: sectionIndex)
             if layoutRepresentation.keepContentOffsetAtBottomOnBatchUpdates {
                 if let localItemToRestore = itemToRestore {
-                    guard let originalIndexPath = itemPathFor(localItemToRestore.globalIndex, kind: localItemToRestore.kind, state: .beforeUpdate) else {
+                    let originalIndexPath = itemPathFor(localItemToRestore.globalIndex,
+                                                        kind: localItemToRestore.kind,
+                                                        state: .beforeUpdate)
+                    guard let originalIndexPath = originalIndexPath else {
                         continue
                     }
                     if originalIndexPath.section >= sectionIndex {
@@ -620,13 +664,25 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
                                 let previousSection = section(at: previousSectionIndex, at: .beforeUpdate)
                                 if previousSection.footer != nil {
                                     itemToRestore?.kind = .footer
-                                    itemToRestore?.globalIndex = globalIndexFor(ItemPath(item: 0, section: previousSectionIndex), kind: .footer, state: .model(afterUpdateModel))
+                                    itemToRestore?.globalIndex = globalIndexFor(
+                                        ItemPath(item: 0, section: previousSectionIndex),
+                                        kind: .footer,
+                                        state: .model(afterUpdateModel)
+                                    )
                                 } else if !previousSection.items.isEmpty {
                                     itemToRestore?.kind = .cell
-                                    itemToRestore?.globalIndex = globalIndexFor(ItemPath(item: previousSection.items.count - 1, section: previousSectionIndex), kind: .cell, state: .model(afterUpdateModel))
+                                    itemToRestore?.globalIndex = globalIndexFor(
+                                        ItemPath(item: previousSection.items.count - 1, section: previousSectionIndex),
+                                        kind: .cell,
+                                        state: .model(afterUpdateModel)
+                                    )
                                 } else if previousSection.header != nil {
                                     itemToRestore?.kind = .header
-                                    itemToRestore?.globalIndex = globalIndexFor(ItemPath(item: 0, section: previousSectionIndex), kind: .header, state: .model(afterUpdateModel))
+                                    itemToRestore?.globalIndex = globalIndexFor(
+                                        ItemPath(item: 0, section: previousSectionIndex),
+                                        kind: .header,
+                                        state: .model(afterUpdateModel)
+                                    )
                                 } else {
                                     itemToRestore = nil
                                 }
@@ -666,17 +722,24 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
                 } else {
                     footer = nil
                 }
-                let section = SectionModel(interSectionSpacing: layoutRepresentation.interSectionSpacing(at: sectionIndex),
-                                           header: header,
-                                           footer: footer,
-                                           items: ContiguousArray(items),
-                                           collectionLayout: layoutRepresentation)
+                let section = SectionModel(
+                    interSectionSpacing: layoutRepresentation.interSectionSpacing(at: sectionIndex),
+                    header: header,
+                    footer: footer,
+                    items: ContiguousArray(items),
+                    collectionLayout: layoutRepresentation
+                )
                 insertedSection = section
                 afterUpdateModel.insertSection(section, at: sectionIndex)
             }
             if layoutRepresentation.keepContentOffsetAtBottomOnBatchUpdates {
                 if let localItemToRestore = itemToRestore {
-                    guard let originalIndexPath = itemPathFor(localItemToRestore.globalIndex, kind: localItemToRestore.kind, state: .model(afterUpdateModel)) else {
+                    let originalIndexPath = itemPathFor(
+                        localItemToRestore.globalIndex,
+                        kind: localItemToRestore.kind,
+                        state: .model(afterUpdateModel)
+                    )
+                    guard let originalIndexPath = originalIndexPath else {
                         continue
                     }
                     if localItemToRestore.globalIndex >= originalIndexPath.section {
@@ -685,13 +748,21 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
                 } else {
                     if insertedSection.footer != nil {
                         itemToRestore?.kind = .footer
-                        itemToRestore?.globalIndex = globalIndexFor(ItemPath(item: 0, section: sectionIndex), kind: .footer, state: .model(afterUpdateModel))
+                        itemToRestore?.globalIndex = globalIndexFor(ItemPath(item: 0, section: sectionIndex),
+                                                                    kind: .footer,
+                                                                    state: .model(afterUpdateModel))
                     } else if !insertedSection.items.isEmpty {
                         itemToRestore?.kind = .cell
-                        itemToRestore?.globalIndex = globalIndexFor(ItemPath(item: insertedSection.items.count - 1, section: sectionIndex), kind: .cell, state: .model(afterUpdateModel))
+                        itemToRestore?.globalIndex = globalIndexFor(
+                            ItemPath(item: insertedSection.items.count - 1, section: sectionIndex),
+                            kind: .cell,
+                            state: .model(afterUpdateModel)
+                        )
                     } else if insertedSection.header != nil {
                         itemToRestore?.kind = .header
-                        itemToRestore?.globalIndex = globalIndexFor(ItemPath(item: 0, section: sectionIndex), kind: .header, state: .model(afterUpdateModel))
+                        itemToRestore?.globalIndex = globalIndexFor(
+                            ItemPath(item: 0, section: sectionIndex), kind: .header, state: .model(afterUpdateModel)
+                        )
                     } else {
                         itemToRestore = nil
                     }
@@ -784,10 +855,16 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
         // Calculating potential content offset changes after the updates
         if layoutRepresentation.keepContentOffsetAtBottomOnBatchUpdates,
            let itemToRestore,
-           let itemPath = itemPathFor(itemToRestore.globalIndex, kind: itemToRestore.kind, state: .model(afterUpdateModel)),
-           let itemFrame = itemFrame(for: itemPath, kind: itemToRestore.kind, at: .afterUpdate),
-           isLayoutBiggerThanVisibleBounds(at: .afterUpdate, visibleBounds: layoutRepresentation.visibleBounds) {
-            let newProposedCompensationOffset = (itemFrame.maxY - itemToRestore.offset) - layoutRepresentation.visibleBounds.maxY
+           let itemPath = itemPathFor(itemToRestore.globalIndex,
+                                      kind: itemToRestore.kind,
+                                      state: .model(afterUpdateModel)),
+           let itemFrame = itemFrame(for: itemPath,
+                                     kind: itemToRestore.kind,
+                                     at: .afterUpdate),
+           isLayoutBiggerThanVisibleBounds(at: .afterUpdate,
+                                           visibleBounds: layoutRepresentation.visibleBounds) {
+            let newProposedCompensationOffset =
+            (itemFrame.maxY - itemToRestore.offset) - layoutRepresentation.visibleBounds.maxY
             proposedCompensatingOffset = newProposedCompensationOffset
         }
         totalProposedCompensatingOffset = proposedCompensatingOffset
@@ -833,7 +910,11 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
         return contentSize
     }
 
-    func offsetByTotalCompensation(attributes: UICollectionViewLayoutAttributes?, for state: MessagesCollectionLayoutModelState, backward: Bool = false) {
+    func offsetByTotalCompensation(
+        attributes: UICollectionViewLayoutAttributes?,
+        for state: MessagesCollectionLayoutModelState,
+        backward: Bool = false
+    ) {
         guard layoutRepresentation.keepContentOffsetAtBottomOnBatchUpdates,
               state == .afterUpdate,
               let attributes else {
@@ -863,11 +944,15 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
                                          withFullCompensation: Bool = false,
                                          visibleBounds: CGRect? = nil) -> Bool {
         let visibleBounds = visibleBounds ?? layoutRepresentation.visibleBounds
-        let visibleBoundsHeight = visibleBounds.height + (withFullCompensation ? batchUpdateCompensatingOffset + proposedCompensatingOffset : 0)
+        let visibleBoundsHeight = visibleBounds.height
+        + (withFullCompensation ? batchUpdateCompensatingOffset + proposedCompensatingOffset : 0)
         return contentHeight(at: state).rounded() > visibleBoundsHeight.rounded()
     }
 
-    private func allAttributes(at state: MessagesCollectionLayoutModelState, visibleRect: CGRect? = nil) -> [MessagesLayoutAttributes] {
+    private func allAttributes(
+        at state: MessagesCollectionLayoutModelState,
+        visibleRect: CGRect? = nil
+    ) -> [MessagesLayoutAttributes] {
         let layout = layout(at: state)
         let additionalAttributes = AdditionalLayoutAttributes(layoutRepresentation)
 
@@ -942,7 +1027,8 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
 
                     // Find if any of the items of the section is visible
                     if comparisonResults.contains(predicate(itemIndex: section.items.count - 1)),
-                       let firstMatchingIndex = ContiguousArray(0...section.items.count - 1).withUnsafeBufferPointer({ $0.binarySearch(predicate: predicate) }) {
+                       let firstMatchingIndex = ContiguousArray(0...section.items.count - 1)
+                        .withUnsafeBufferPointer({ $0.binarySearch(predicate: predicate) }) {
                         // Find first item that is visible
                         startingIndex = firstMatchingIndex
                         for itemIndex in (0..<firstMatchingIndex).reversed() {
@@ -967,32 +1053,68 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
                         let itemPath = ItemPath(item: itemIndex, section: sectionIndex)
                         if let itemFrame = itemFrame(for: itemPath, kind: .cell, at: state, isFinal: true,
                                                      additionalAttributes: additionalAttributes),
-                            check(rect: itemFrame) {
-                            if state == .beforeUpdate || isAnimatedBoundsChange || !layoutRepresentation.processOnlyVisibleItemsOnAnimatedBatchUpdates {
+                           check(rect: itemFrame) {
+                            if state == .beforeUpdate
+                                || isAnimatedBoundsChange
+                                || !layoutRepresentation.processOnlyVisibleItemsOnAnimatedBatchUpdates {
                                 allRects.append((frame: itemFrame, indexPath: itemPath, kind: .cell))
                             } else {
                                 var itemWasVisibleBefore: Bool {
-                                    guard let itemIdentifier = itemIdentifier(for: itemPath, kind: .cell, at: .afterUpdate),
-                                          let initialIndexPath = self.itemPath(by: itemIdentifier, kind: .cell, at: .beforeUpdate),
+                                    guard let itemIdentifier = itemIdentifier(for: itemPath,
+                                                                              kind: .cell, at: .afterUpdate),
+                                          let initialIndexPath = self.itemPath(by: itemIdentifier,
+                                                                               kind: .cell, at: .beforeUpdate),
                                           let item = item(for: initialIndexPath, kind: .cell, at: .beforeUpdate),
                                           item.calculatedOnce == true,
-                                          let itemFrame = self.itemFrame(for: initialIndexPath, kind: .cell, at: .beforeUpdate, isFinal: false, additionalAttributes: additionalAttributes),
-                                          itemFrame.intersects(additionalAttributes.visibleBounds.offsetBy(dx: 0, dy: -totalProposedCompensatingOffset)) else {
+                                          let itemFrame = self.itemFrame(
+                                            for: initialIndexPath,
+                                            kind: .cell,
+                                            at: .beforeUpdate,
+                                            isFinal: false,
+                                            additionalAttributes: additionalAttributes
+                                          ),
+                                          itemFrame
+                                        .intersects(
+                                            additionalAttributes
+                                                .visibleBounds
+                                                .offsetBy(dx: 0, dy: -totalProposedCompensatingOffset)
+                                        ) else {
                                         return false
                                     }
                                     return true
                                 }
                                 var itemWillBeVisible: Bool {
-                                    let offsetVisibleBounds = additionalAttributes.visibleBounds.offsetBy(dx: 0, dy: proposedCompensatingOffset + batchUpdateCompensatingOffset)
+                                    let offsetVisibleBounds =
+                                    additionalAttributes
+                                        .visibleBounds
+                                        .offsetBy(dx: 0,
+                                                  dy: proposedCompensatingOffset + batchUpdateCompensatingOffset)
                                     if insertedIndexes.contains(itemPath.indexPath),
-                                       let itemFrame = self.itemFrame(for: itemPath, kind: .cell, at: state, isFinal: true, additionalAttributes: additionalAttributes),
+                                       let itemFrame = self
+                                        .itemFrame(for: itemPath,
+                                                   kind: .cell,
+                                                   at: state,
+                                                   isFinal: true,
+                                                   additionalAttributes: additionalAttributes),
                                        itemFrame.intersects(offsetVisibleBounds) {
                                         return true
                                     }
-                                    if let itemIdentifier = itemIdentifier(for: itemPath, kind: .cell, at: .afterUpdate),
-                                       let initialIndexPath = self.itemPath(by: itemIdentifier, kind: .cell, at: .beforeUpdate)?.indexPath,
-                                       movedIndexes.contains(initialIndexPath) || reloadedIndexes.contains(initialIndexPath),
-                                       let itemFrame = self.itemFrame(for: itemPath, kind: .cell, at: state, isFinal: true, additionalAttributes: additionalAttributes),
+                                    if let itemIdentifier = itemIdentifier(for: itemPath,
+                                                                           kind: .cell,
+                                                                           at: .afterUpdate),
+                                       let initialIndexPath = self.itemPath(by: itemIdentifier,
+                                                                            kind: .cell,
+                                                                            at: .beforeUpdate)?.indexPath,
+                                       movedIndexes.contains(
+                                        initialIndexPath) || reloadedIndexes.contains(initialIndexPath
+                                        ),
+                                       let itemFrame = self.itemFrame(
+                                        for: itemPath,
+                                        kind: .cell,
+                                        at: state,
+                                        isFinal: true,
+                                        additionalAttributes: additionalAttributes
+                                       ),
                                        itemFrame.intersects(offsetVisibleBounds) {
                                         return true
                                     }
@@ -1009,14 +1131,16 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
                     }
                 }
 
-                if let footerFrame = itemFrame(for: sectionPath, kind: .footer, at: state, isFinal: true, additionalAttributes: additionalAttributes),
+                if let footerFrame = itemFrame(for: sectionPath, kind: .footer,
+                                               at: state, isFinal: true, additionalAttributes: additionalAttributes),
                    check(rect: footerFrame) {
                     allRects.append((frame: footerFrame, indexPath: sectionPath, kind: .footer))
                 }
             }
 
             return allRects.compactMap { frame, path, kind -> MessagesLayoutAttributes? in
-                itemAttributes(for: path, kind: kind, predefinedFrame: frame, at: state, additionalAttributes: additionalAttributes)
+                itemAttributes(for: path, kind: kind, predefinedFrame: frame,
+                               at: state, additionalAttributes: additionalAttributes)
             }
         } else {
             // Debug purposes only.
@@ -1024,15 +1148,24 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
             attributes.reserveCapacity(layout.sections.reduce(into: 0) { $0 += $1.items.count })
             for (sectionIndex, section) in layout.sections.enumerated() {
                 let sectionPath = ItemPath(item: 0, section: sectionIndex)
-                if let headerAttributes = itemAttributes(for: sectionPath, kind: .header, at: state, additionalAttributes: additionalAttributes) {
+                if let headerAttributes = itemAttributes(for: sectionPath,
+                                                         kind: .header,
+                                                         at: state,
+                                                         additionalAttributes: additionalAttributes) {
                     attributes.append(headerAttributes)
                 }
-                if let footerAttributes = itemAttributes(for: sectionPath, kind: .footer, at: state, additionalAttributes: additionalAttributes) {
+                if let footerAttributes = itemAttributes(for: sectionPath,
+                                                         kind: .footer,
+                                                         at: state,
+                                                         additionalAttributes: additionalAttributes) {
                     attributes.append(footerAttributes)
                 }
                 for itemIndex in 0..<section.items.count {
                     let itemPath = ItemPath(item: itemIndex, section: sectionIndex)
-                    if let itemAttributes = itemAttributes(for: itemPath, kind: .cell, at: state, additionalAttributes: additionalAttributes) {
+                    if let itemAttributes = itemAttributes(for: itemPath,
+                                                           kind: .cell,
+                                                           at: state,
+                                                           additionalAttributes: additionalAttributes) {
                         attributes.append(itemAttributes)
                     }
                 }
@@ -1063,14 +1196,18 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
                 proposedCompensatingOffset += itemFrame.height + interItemSpacing
             }
         case let .frameUpdate(previousFrame, newFrame, oldInterItemSpacing, newInterItemSpacing):
-            guard isLayoutBiggerThanVisibleBounds(at: .afterUpdate, withFullCompensation: true, visibleBounds: visibleBounds) else {
+            guard isLayoutBiggerThanVisibleBounds(at: .afterUpdate,
+                                                  withFullCompensation: true,
+                                                  visibleBounds: visibleBounds) else {
                 return
             }
             if newFrame.minY.rounded() <= minY {
-                batchUpdateCompensatingOffset += newFrame.height - previousFrame.height + newInterItemSpacing - oldInterItemSpacing
+                batchUpdateCompensatingOffset += newFrame.height - previousFrame.height
+                + newInterItemSpacing - oldInterItemSpacing
             }
         case let .delete(interItemSpacing):
-            guard isLayoutBiggerThanVisibleBounds(at: .beforeUpdate, visibleBounds: visibleBounds),
+            guard isLayoutBiggerThanVisibleBounds(at: .beforeUpdate,
+                                                  visibleBounds: visibleBounds),
                   let deletedFrame = itemFrame(for: itemPath, kind: kind, at: .beforeUpdate) else {
                 return
             }
@@ -1116,11 +1253,14 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
             }
         case let .frameUpdate(previousFrame, newFrame, oldInterSectionSpacing, newInterSectionSpacing):
             guard sectionIndex < layout(at: .afterUpdate).sections.count,
-                  isLayoutBiggerThanVisibleBounds(at: .afterUpdate, withFullCompensation: true, visibleBounds: visibleBounds) else {
+                  isLayoutBiggerThanVisibleBounds(at: .afterUpdate,
+                                                  withFullCompensation: true,
+                                                  visibleBounds: visibleBounds) else {
                 return
             }
             if newFrame.minY.rounded() <= minY {
-                batchUpdateCompensatingOffset += newFrame.height - previousFrame.height + newInterSectionSpacing - oldInterSectionSpacing
+                batchUpdateCompensatingOffset += newFrame.height - previousFrame.height
+                + newInterSectionSpacing - oldInterSectionSpacing
             }
         case let .delete(interSectionSpacing):
             guard isLayoutBiggerThanVisibleBounds(at: .afterUpdate, visibleBounds: visibleBounds),
@@ -1184,7 +1324,10 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
         }
         guard sectionIndex < layout.sections.count,
               sectionIndex >= 0 else {
-            assertionFailure("Internal inconsistency. Section index \(sectionIndex) is invalid. Amount of sections is \(layout.sections.count).")
+            assertionFailure(
+                // swiftlint:disable:next line_length
+                "Internal inconsistency. Section index \(sectionIndex) is invalid. Amount of sections is \(layout.sections.count)."
+            )
             return nil
         }
         switch kind {
@@ -1207,10 +1350,15 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
             let section = layout.sections[sectionIndex]
             guard itemIndex >= 0,
                   itemIndex < section.items.count else {
-                assertionFailure("Internal inconsistency. Item index \(itemIndex) is invalid. Amount of items is \(section.items.count).")
+                assertionFailure(
+                    // swiftlint:disable:next line_length
+                    "Internal inconsistency. Item index \(itemIndex) is invalid. Amount of items is \(section.items.count)."
+                )
                 return nil
             }
             return ItemPath(item: itemIndex, section: sectionIndex)
         }
     }
 }
+
+// swiftlint:enable cyclomatic_complexity function_body_length type_body_length no_assertions large_tuple

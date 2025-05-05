@@ -20,9 +20,9 @@ extension KeyboardListenerDelegate {
 }
 
 final class KeyboardListener {
-    static let shared = KeyboardListener()
+    static let shared: KeyboardListener = KeyboardListener()
     private(set) var keyboardRect: CGRect?
-    private var delegates = NSHashTable<AnyObject>.weakObjects()
+    private var delegates: NSHashTable<AnyObject> = NSHashTable<AnyObject>.weakObjects()
 
     func add(delegate: KeyboardListenerDelegate) {
         delegates.add(delegate)

@@ -17,7 +17,9 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         true
     }
 
-    func sizeForItem(_ messagesLayout: MessagesCollectionLayout, of kind: ItemKind, at indexPath: IndexPath) -> ItemSize {
+    func sizeForItem(_ messagesLayout: MessagesCollectionLayout,
+                     of kind: ItemKind,
+                     at indexPath: IndexPath) -> ItemSize {
         switch kind {
         case .cell:
             let item = sections[indexPath.section].cells[indexPath.item]
@@ -41,7 +43,9 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         }
     }
 
-    func alignmentForItem(_ messagesLayout: MessagesCollectionLayout, of kind: ItemKind, at indexPath: IndexPath) -> Cell.Alignment {
+    func alignmentForItem(_ messagesLayout: MessagesCollectionLayout,
+                          of kind: ItemKind,
+                          at indexPath: IndexPath) -> Cell.Alignment {
         switch kind {
         case .header:
             return .center
@@ -60,7 +64,11 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         }
     }
 
-    func initialLayoutAttributesForInsertedItem(_ messagesLayout: MessagesCollectionLayout, of kind: ItemKind, at indexPath: IndexPath, modifying originalAttributes: MessagesLayoutAttributes, on state: InitialAttributesRequestType) {
+    func initialLayoutAttributesForInsertedItem(_ messagesLayout: MessagesCollectionLayout,
+                                                of kind: ItemKind,
+                                                at indexPath: IndexPath,
+                                                modifying originalAttributes: MessagesLayoutAttributes,
+                                                on state: InitialAttributesRequestType) {
         originalAttributes.alpha = 0
         guard state == .invalidation,
               kind == .cell else {
@@ -79,7 +87,10 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         }
     }
 
-    func finalLayoutAttributesForDeletedItem(_ messagesLayout: MessagesCollectionLayout, of kind: ItemKind, at indexPath: IndexPath, modifying originalAttributes: MessagesLayoutAttributes) {
+    func finalLayoutAttributesForDeletedItem(_ messagesLayout: MessagesCollectionLayout,
+                                             of kind: ItemKind,
+                                             at indexPath: IndexPath,
+                                             modifying originalAttributes: MessagesLayoutAttributes) {
         originalAttributes.alpha = 0
         guard kind == .cell else {
             return
@@ -97,7 +108,9 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         }
     }
 
-    func interItemSpacing(_ messagesLayout: MessagesCollectionLayout, of kind: ItemKind, after indexPath: IndexPath) -> CGFloat? {
+    func interItemSpacing(_ messagesLayout: MessagesCollectionLayout,
+                          of kind: ItemKind,
+                          after indexPath: IndexPath) -> CGFloat? {
         let item = sections[indexPath.section].cells[indexPath.item]
         switch item {
         case .messageGroup:
@@ -119,7 +132,11 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
 
     private func applyMessageAnimation(for message: Message, to attributes: MessagesLayoutAttributes) {
         attributes.transform = .init(scaleX: 0.9, y: 0.9)
-        attributes.transform = attributes.transform.concatenating(.init(rotationAngle: message.type == .incoming ? -0.05 : 0.05))
+        attributes.transform = attributes
+            .transform
+            .concatenating(
+                .init(rotationAngle: message.type == .incoming ? -0.05 : 0.05)
+            )
         attributes.center.x += (message.type == .incoming ? -20 : 20)
         attributes.center.y += 40
     }

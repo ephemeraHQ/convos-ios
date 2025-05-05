@@ -28,8 +28,8 @@ class ManualAnimator {
     }
 
     private var displayLink: CADisplayLink?
-    private var start = Date()
-    private var total = TimeInterval(0)
+    private var start: Date = Date()
+    private var total: TimeInterval = TimeInterval(0)
     private var closure: ((CGFloat) -> Void)?
     private var animationCurve: AnimationCurve = .linear
 

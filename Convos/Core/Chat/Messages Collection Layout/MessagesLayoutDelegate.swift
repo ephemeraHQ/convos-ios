@@ -8,11 +8,24 @@ enum InitialAttributesRequestType: Hashable {
 protocol MessagesLayoutDelegate: AnyObject {
     func shouldPresentHeader(_ messagesLayout: MessagesCollectionLayout, at sectionIndex: Int) -> Bool
     func shouldPresentFooter(_ messagesLayout: MessagesCollectionLayout, at sectionIndex: Int) -> Bool
-    func sizeForItem(_ messagesLayout: MessagesCollectionLayout, of kind: ItemKind, at indexPath: IndexPath) -> ItemSize
-    func alignmentForItem(_ messagesLayout: MessagesCollectionLayout, of kind: ItemKind, at indexPath: IndexPath) -> Cell.Alignment
-    func initialLayoutAttributesForInsertedItem(_ messagesLayout: MessagesCollectionLayout, of kind: ItemKind, at indexPath: IndexPath, modifying originalAttributes: MessagesLayoutAttributes, on state: InitialAttributesRequestType)
-    func finalLayoutAttributesForDeletedItem(_ messagesLayout: MessagesCollectionLayout, of kind: ItemKind, at indexPath: IndexPath, modifying originalAttributes: MessagesLayoutAttributes)
-    func interItemSpacing(_ messagesLayout: MessagesCollectionLayout, of kind: ItemKind, after indexPath: IndexPath) -> CGFloat?
+    func sizeForItem(_ messagesLayout: MessagesCollectionLayout,
+                     of kind: ItemKind,
+                     at indexPath: IndexPath) -> ItemSize
+    func alignmentForItem(_ messagesLayout: MessagesCollectionLayout,
+                          of kind: ItemKind,
+                          at indexPath: IndexPath) -> Cell.Alignment
+    func initialLayoutAttributesForInsertedItem(_ messagesLayout: MessagesCollectionLayout,
+                                                of kind: ItemKind,
+                                                at indexPath: IndexPath,
+                                                modifying originalAttributes: MessagesLayoutAttributes,
+                                                on state: InitialAttributesRequestType)
+    func finalLayoutAttributesForDeletedItem(_ messagesLayout: MessagesCollectionLayout,
+                                             of kind: ItemKind,
+                                             at indexPath: IndexPath,
+                                             modifying originalAttributes: MessagesLayoutAttributes)
+    func interItemSpacing(_ messagesLayout: MessagesCollectionLayout,
+                          of kind: ItemKind,
+                          after indexPath: IndexPath) -> CGFloat?
     func interSectionSpacing(_ messagesLayout: MessagesCollectionLayout, after sectionIndex: Int) -> CGFloat?
 }
 

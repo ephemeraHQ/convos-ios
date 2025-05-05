@@ -1,13 +1,12 @@
 import SwiftUI
 
 struct MessageContainer<Content: View>: View {
-
     let style: Cell.BubbleType
     let isOutgoing: Bool
-    let cornerRadius: CGFloat = Constants.bubbleCornerRadius
+    let cornerRadius: CGFloat = GlobalConstant.bubbleCornerRadius
     let content: () -> Content
 
-    // TODO: do this proportionally, not a fixed size
+    // todo: do this proportionally, not a fixed size
     var spacer: some View {
         Group {
             Spacer()
@@ -18,29 +17,29 @@ struct MessageContainer<Content: View>: View {
 
     var mask: UnevenRoundedRectangle {
         switch style {
-            case .normal:
+        case .normal:
+            return .rect(
+                topLeadingRadius: cornerRadius,
+                bottomLeadingRadius: cornerRadius,
+                bottomTrailingRadius: cornerRadius,
+                topTrailingRadius: cornerRadius
+            )
+        case .tailed:
+            if isOutgoing {
                 return .rect(
                     topLeadingRadius: cornerRadius,
                     bottomLeadingRadius: cornerRadius,
+                    bottomTrailingRadius: 0.0,
+                    topTrailingRadius: cornerRadius
+                )
+            } else {
+                return .rect(
+                    topLeadingRadius: cornerRadius,
+                    bottomLeadingRadius: 0,
                     bottomTrailingRadius: cornerRadius,
                     topTrailingRadius: cornerRadius
                 )
-            case .tailed:
-                if isOutgoing {
-                    return .rect(
-                        topLeadingRadius: cornerRadius,
-                        bottomLeadingRadius: cornerRadius,
-                        bottomTrailingRadius: 0.0,
-                        topTrailingRadius: cornerRadius
-                    )
-                } else {
-                    return .rect(
-                        topLeadingRadius: cornerRadius,
-                        bottomLeadingRadius: 0,
-                        bottomTrailingRadius: cornerRadius,
-                        topTrailingRadius: cornerRadius
-                    )
-                }
+            }
         }
     }
 

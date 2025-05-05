@@ -1,8 +1,9 @@
 import Foundation
 import UIKit
 
-final class MessagesLayoutAttributes: UICollectionViewLayoutAttributes {
+// swiftlint:disable force_cast no_assertions
 
+final class MessagesLayoutAttributes: UICollectionViewLayoutAttributes {
     var alignment: Cell.Alignment = .fullWidth
     var interItemSpacing: CGFloat = 0
     var additionalInsets: UIEdgeInsets = .zero
@@ -67,3 +68,5 @@ final class MessagesLayoutAttributes: UICollectionViewLayoutAttributes {
         return typedCopy
     }
 }
+
+// swiftlint:enable force_cast no_assertions

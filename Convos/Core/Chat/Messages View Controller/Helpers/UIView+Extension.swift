@@ -9,7 +9,6 @@ extension UIView {
     func subview<T>(of type: T.Type) -> T? {
         subviews.compactMap { $0 as? T ?? $0.subview(of: type) }.first
     }
-
 }
 
 extension UIViewController {

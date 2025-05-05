@@ -6,12 +6,12 @@ struct MessagesLayoutPositionSnapshot: Hashable {
     enum Edge: Hashable {
         case top, bottom
     }
-    
+
     var indexPath: IndexPath
     var kind: ItemKind
     var edge: Edge
     var offset: CGFloat
-    
+
     init(indexPath: IndexPath,
          kind: ItemKind,
          edge: Edge,

@@ -1,10 +1,9 @@
 import Foundation
 
 final class MessagesDateFormatter {
-
-    static let shared = MessagesDateFormatter()
-    private let formatter = DateFormatter()
-    private let queue = DispatchQueue(label: "com.app.MessagesDateFormatter")
+    static let shared: MessagesDateFormatter = MessagesDateFormatter()
+    private let formatter: DateFormatter = DateFormatter()
+    private let queue: DispatchQueue = DispatchQueue(label: "com.app.MessagesDateFormatter")
 
     private init() {}
 

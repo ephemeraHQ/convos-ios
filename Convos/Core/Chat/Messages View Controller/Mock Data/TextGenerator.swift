@@ -1,7 +1,7 @@
 import Foundation
 
 class TextGenerator {
-    private static let words = [
+    private static let words: [String] = [
         "alias", "consequatur", "aut", "perferendis", "sit", "voluptatem",
         "accusantium", "doloremque", "aperiam", "eaque", "ipsa", "quae", "ab",
         "illo", "inventore", "veritatis", "et", "quasi", "architecto",
@@ -47,7 +47,9 @@ class TextGenerator {
         }
 
         var result = words.shuffled().prefix(wordsCount).joined(separator: " ")
-        result.replaceSubrange(result.startIndex...result.startIndex, with: String(result[result.startIndex]).capitalized)
+        result.replaceSubrange(
+            result.startIndex...result.startIndex, with: String(result[result.startIndex]).capitalized
+        )
         return result + "."
     }
 }
