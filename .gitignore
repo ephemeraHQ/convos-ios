@@ -9,6 +9,7 @@
 ### Secrets ###
 Config/Secrets.swift
 .env
+.env.local
 
 ## User settings
 xcuserdata/

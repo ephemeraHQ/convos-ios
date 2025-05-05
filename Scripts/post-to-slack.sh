@@ -87,9 +87,12 @@ CHANGELOG=$(git log --pretty="• %s" "$OLD_SHA".."$NEW_SHA")
 # Construct Slack message
 MESSAGE="🤖 <!channel> New TestFlight :rocket: :airplane_departure: $VERSION_DISPLAY.\n\nBuilt against: $ENV_DISPLAY. \n\nContains:\n\n$CHANGELOG"
 
-# Post to Slack
-curl -X POST -H 'Content-type: application/json' \
-    --data "{\"channel\":\"#build\",\"text\":\"$MESSAGE\"}" \
-    "$SLACK_URL_WITH_KEY"
+# Escape the message for JSON
+ESCAPED_MESSAGE=$(printf '%s' "$MESSAGE" | sed 's/"/\\"/g')
 
+curl -X POST $SLACK_URL_WITHOUT_KEY \
+  -H "Authorization: Bearer $SLACK_OAUTH_KEY" \
+  -H 'Content-type: application/json' \
+  --data "{\"channel\":\"$SLACK_CHANNEL_ID\",\"text\":\"$ESCAPED_MESSAGE\"}"
+  
 echo "✅ Posted release notification to Slack" 
