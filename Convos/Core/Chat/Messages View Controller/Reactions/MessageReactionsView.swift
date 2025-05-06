@@ -25,6 +25,8 @@ struct MessageReactionsView: View {
                                     Text(reaction.emoji)
                                         .font(.system(size: 24.0))
                                         .padding(padding)
+                                        .blur(radius: isCollapsed ? 10.0 : emojiAppeared.indices.contains(index) &&
+                                              emojiAppeared[index] ? 0.0 : 10.0)
                                         .scaleEffect(
                                             isCollapsed ? 0.0 : (emojiAppeared.indices.contains(index) &&
                                                                  emojiAppeared[index] ? 1.0 : 0.0)
@@ -85,19 +87,26 @@ struct MessageReactionsView: View {
                                 .frame(width: contentHeight)
                         }
                     )
+
                     HStack(spacing: padding) {
                         Spacer()
-                        if isCollapsed {
-                            Image(systemName: "face.smiling")
-                                .font(.system(size: 24.0))
-                                .padding(padding)
-                                .tint(.black)
-                                .opacity(isCollapsed ? 0.2 : 0.0)
-                                .scaleEffect(
-                                    isCollapsed ? 1.0 : 0.0
+
+                        Image(systemName: "face.smiling")
+                            .font(.system(size: 28.0))
+                            .padding(padding)
+                            .tint(.black)
+                            .opacity(isCollapsed ? 0.2 : 0.0)
+                            .blur(radius: isCollapsed ? 0.0 : 10.0)
+                            .rotationEffect(
+                                .degrees(
+                                    isCollapsed ? 0.0 : -30.0
                                 )
-                                .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isCollapsed)
-                        }
+                            )
+                            .scaleEffect(
+                                isCollapsed ? 1.0 : 0.0
+                            )
+                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isCollapsed)
+
                         Button {
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                                 isCollapsed.toggle()
