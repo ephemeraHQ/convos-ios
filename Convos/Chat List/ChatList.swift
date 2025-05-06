@@ -106,7 +106,7 @@ struct ChatListView: View {
                     }
                 }
                 .navigationBarHidden(true)
-                .navigationDestination(item: $selectedConversation) { conversation in
+                .navigationDestination(item: $selectedConversation) { _ in
                     MessagesView(messagingService: MockMessagingService())
                         .ignoresSafeArea()
                         .toolbarVisibility(.hidden, for: .navigationBar)
