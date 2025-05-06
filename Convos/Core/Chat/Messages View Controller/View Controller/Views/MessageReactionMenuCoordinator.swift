@@ -5,8 +5,8 @@ protocol MessageReactionMenuCoordinatorDelegate: AnyObject {
                                         previewableCellAt indexPath: IndexPath) -> PreviewableCollectionViewCell?
     func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator,
                                         shouldPresentMenuFor cell: PreviewableCollectionViewCell) -> Bool
-    func messageReactionMenuCoordinatorDidBeginTransition(_ coordinator: MessageReactionMenuCoordinator)
-    func messageReactionMenuCoordinatorDidEndTransition(_ coordinator: MessageReactionMenuCoordinator)
+    func messageReactionMenuCoordinatorWasPresented(_ coordinator: MessageReactionMenuCoordinator)
+    func messageReactionMenuCoordinatorWasDismissed(_ coordinator: MessageReactionMenuCoordinator)
     var collectionView: UICollectionView { get }
 }
 
@@ -80,8 +80,6 @@ class MessageReactionMenuCoordinator: UIPercentDrivenInteractiveTransition {
             presentMenu(for: cell, at: cellRect, edge: cell.sourceCellEdge, interactive: true)
             initialViewCenter = interactivePreviewView?.center ?? cell.center
 
-            delegate?.messageReactionMenuCoordinatorDidBeginTransition(self)
-
             gestureStartTime = CACurrentMediaTime()
             displayLink = CADisplayLink(target: self, selector: #selector(handleDisplayLinkTick))
             displayLink?.add(to: .main, forMode: .common)
@@ -92,8 +90,6 @@ class MessageReactionMenuCoordinator: UIPercentDrivenInteractiveTransition {
             } else {
                 cancel()
             }
-
-            delegate?.messageReactionMenuCoordinatorDidEndTransition(self)
         default:
             break
         }
@@ -215,24 +211,43 @@ extension MessageReactionMenuCoordinator: UIViewControllerTransitioningDelegate 
                              presenting: UIViewController,
                              source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         guard let cell = transitionSourceCell, let rect = transitionSourceRect else { return nil }
-        return MessageReactionPresentationAnimator(sourceCell: cell, sourceRect: rect)
+        return MessageReactionPresentationAnimator(
+            sourceCell: cell,
+            sourceRect: rect) { [weak self] in
+                guard let self else { return }
+                delegate?.messageReactionMenuCoordinatorWasPresented(self)
+            } transitionEnded: {
+            }
     }
 
     func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         guard let cell = transitionSourceCell, let rect = transitionSourceRect else { return nil }
-        return MessageReactionDismissalAnimator(sourceCell: cell, sourceRect: rect)
+        return MessageReactionDismissalAnimator(
+            sourceCell: cell,
+            sourceRect: rect) {
+            } transitionEnded: { [weak self] in
+                guard let self else { return }
+                delegate?.messageReactionMenuCoordinatorWasDismissed(self)
+            }
     }
 }
 
 final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnimatedTransitioning, CAAnimationDelegate {
     private let sourceCell: PreviewableCollectionViewCell
     private let sourceRect: CGRect
+    private let transitionBegan: () -> Void
+    private let transitionEnded: () -> Void
 
     static var activationDuration: CGFloat = 0.25
 
-    init(sourceCell: PreviewableCollectionViewCell, sourceRect: CGRect) {
+    init(sourceCell: PreviewableCollectionViewCell,
+         sourceRect: CGRect,
+         transitionBegan: @escaping () -> Void,
+         transitionEnded: @escaping () -> Void) {
         self.sourceCell = sourceCell
         self.sourceRect = sourceRect
+        self.transitionBegan = transitionBegan
+        self.transitionEnded = transitionEnded
         super.init()
     }
 
@@ -259,6 +274,8 @@ final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnima
 
         let duration = transitionDuration(using: transitionContext)
         let overshootScale: CGFloat = 1.02
+
+        transitionBegan()
 
         UIView.animateKeyframes(withDuration: duration,
                                 delay: 0,
@@ -287,7 +304,8 @@ final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnima
                 toVC.dimmingView.alpha = 1.0
                 toVC.view.alpha = 1.0
             }
-        }, completion: { _ in
+        }, completion: { [weak self] _ in
+            guard let self else { return }
             UIView.animate(withDuration: 0.5,
                            delay: 0.0,
                            usingSpringWithDamping: 0.8,
@@ -299,6 +317,7 @@ final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnima
                 previewView.removeFromSuperview()
                 toVC.view.addSubview(previewView)
             }
+            transitionEnded()
             transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
         })
     }
@@ -307,10 +326,18 @@ final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnima
 final class MessageReactionDismissalAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     private let sourceCell: PreviewableCollectionViewCell
     private let sourceRect: CGRect
+    private let transitionBegan: () -> Void
+    private let transitionEnded: () -> Void
 
-    init(sourceCell: PreviewableCollectionViewCell, sourceRect: CGRect) {
+    init(sourceCell: PreviewableCollectionViewCell,
+         sourceRect: CGRect,
+         transitionBegan: @escaping () -> Void,
+         transitionEnded: @escaping () -> Void) {
         self.sourceCell = sourceCell
         self.sourceRect = sourceRect
+        self.transitionBegan = transitionBegan
+        self.transitionEnded = transitionEnded
+
         super.init()
     }
 
@@ -323,6 +350,8 @@ final class MessageReactionDismissalAnimator: NSObject, UIViewControllerAnimated
             transitionContext.completeTransition(false)
             return
         }
+
+        transitionBegan()
 
         let containerView = transitionContext.containerView
 
@@ -359,10 +388,12 @@ final class MessageReactionDismissalAnimator: NSObject, UIViewControllerAnimated
 
                 fromVC.dimmingView.alpha = 0.0
             }
-        }, completion: { _ in
+        }, completion: { [weak self] _ in
+            guard let self else { return }
             previewView.removeFromSuperview()
             fromVC.previewSourceView.alpha = 1.0
             transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
+            transitionEnded()
         })
     }
 }

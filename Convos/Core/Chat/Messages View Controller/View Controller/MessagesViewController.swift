@@ -618,12 +618,14 @@ extension MessagesViewController: KeyboardListenerDelegate {
 // MARK: - MessageReactionMenuCoordinatorDelegate
 
 extension MessagesViewController: MessageReactionMenuCoordinatorDelegate {
-    func messageReactionMenuCoordinatorDidBeginTransition(_ coordinator: MessageReactionMenuCoordinator) {
+    func messageReactionMenuCoordinatorWasPresented(_ coordinator: MessageReactionMenuCoordinator) {
         collectionView.isScrollEnabled = false
+        currentInterfaceActions.options.insert(.showingReactionsMenu)
     }
 
-    func messageReactionMenuCoordinatorDidEndTransition(_ coordinator: MessageReactionMenuCoordinator) {
+    func messageReactionMenuCoordinatorWasDismissed(_ coordinator: MessageReactionMenuCoordinator) {
         collectionView.isScrollEnabled = true
+        currentInterfaceActions.options.remove(.showingReactionsMenu)
     }
 
     func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator,
@@ -634,7 +636,6 @@ extension MessagesViewController: MessageReactionMenuCoordinatorDelegate {
 
     func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator,
                                         shouldPresentMenuFor cell: PreviewableCollectionViewCell) -> Bool {
-        currentInterfaceActions.options.insert(.showingReactionsMenu)
         return true
     }
 }
