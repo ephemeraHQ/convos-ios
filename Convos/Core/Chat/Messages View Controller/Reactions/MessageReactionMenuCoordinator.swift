@@ -8,7 +8,7 @@ protocol MessageReactionMenuCoordinatorDelegate: AnyObject {
     func messageReactionMenuCoordinatorWasPresented(_ coordinator: MessageReactionMenuCoordinator)
     func messageReactionMenuCoordinatorWasDismissed(_ coordinator: MessageReactionMenuCoordinator)
     func messageReactionMenuViewModel(_ coordinator: MessageReactionMenuCoordinator,
-                                      for indexPath: IndexPath) -> MessageReactionMenuViewModelType
+                                      for indexPath: IndexPath) -> MessageReactionMenuViewModel
     var collectionView: UICollectionView { get }
 }
 
@@ -123,7 +123,7 @@ class MessageReactionMenuCoordinator: UIPercentDrivenInteractiveTransition {
     private func presentMenu(for cell: PreviewableCollectionViewCell,
                              at rect: CGRect,
                              edge: MessageReactionMenuController.Configuration.Edge,
-                             viewModel: MessageReactionMenuViewModelType,
+                             viewModel: MessageReactionMenuViewModel,
                              interactive: Bool = false) {
         guard let window = delegate?.collectionView.window else { return }
         let config = MessageReactionMenuController.Configuration(

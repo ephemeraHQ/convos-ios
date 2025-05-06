@@ -52,7 +52,7 @@ class ReactionMenuShapeView: UIView {
             delay: 0,
             usingSpringWithDamping: 0.8,
             initialSpringVelocity: 0.0,
-            options: [.curveEaseInOut, .layoutSubviews],
+            options: [.curveEaseInOut, .layoutSubviews, .beginFromCurrentState],
             animations: {
                 self.frame = targetFrame
                 self.alpha = alpha

@@ -619,7 +619,7 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
 extension MessagesViewController: MessageReactionMenuCoordinatorDelegate {
     func messageReactionMenuViewModel(_ coordinator: MessageReactionMenuCoordinator,
-                                      for indexPath: IndexPath) -> any MessageReactionMenuViewModelType {
+                                      for indexPath: IndexPath) -> MessageReactionMenuViewModel {
         MessageReactionMenuViewModel()
     }
 

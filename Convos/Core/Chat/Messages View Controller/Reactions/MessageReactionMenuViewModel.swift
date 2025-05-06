@@ -1,6 +1,20 @@
+import Combine
 import Foundation
+import SwiftUI
 
-class MessageReactionMenuViewModel: MessageReactionMenuViewModelType {
+@Observable
+class MessageReactionMenuViewModel {
+    private(set) var isCollapsed: Bool = false {
+        didSet {
+            _isCollapsedPublisher.send(isCollapsed)
+        }
+    }
+
+    private let _isCollapsedPublisher: PassthroughSubject<Bool, Never> = .init()
+    var isCollapsedPublisher: AnyPublisher<Bool, Never> {
+        _isCollapsedPublisher.eraseToAnyPublisher()
+    }
+
     var reactions: [MessageReaction] = [
         .init(id: "1", emoji: "❤️", isSelected: false),
         .init(id: "2", emoji: "👍", isSelected: false),
@@ -14,5 +28,9 @@ class MessageReactionMenuViewModel: MessageReactionMenuViewModelType {
     }
 
     func showMoreReactions() {
+    }
+
+    func toggleCollapsed() {
+        isCollapsed.toggle()
     }
 }

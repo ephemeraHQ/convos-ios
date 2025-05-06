@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import UIKit
 
@@ -7,21 +8,14 @@ struct MessageReaction: Identifiable {
     let isSelected: Bool
 }
 
-protocol MessageReactionMenuViewModelType {
-    var reactions: [MessageReaction] { get }
-
-    func add(reaction: MessageReaction)
-    func showMoreReactions()
-}
-
 private class ReactionsViewController: UIViewController {
     let hostingVC: UIHostingController<MessageReactionsView>
 
-    var viewModel: MessageReactionMenuViewModelType {
+    var viewModel: MessageReactionMenuViewModel {
         didSet { update() }
     }
 
-    init(viewModel: MessageReactionMenuViewModelType) {
+    init(viewModel: MessageReactionMenuViewModel) {
         self.viewModel = viewModel
         let reactionsView = MessageReactionsView(viewModel: viewModel)
         self.hostingVC = UIHostingController(rootView: reactionsView)
@@ -74,17 +68,19 @@ class MessageReactionMenuController: UIViewController {
     let previewSourceView: UIView
     let actualPreviewSourceSize: CGSize
     let shapeViewStartingRect: CGRect
+    private var shapeViewEndingRect: CGRect?
     let endPosition: CGRect
     fileprivate let reactionsVC: ReactionsViewController
     private var animator: UIViewPropertyAnimator?
     private var panGestureRecognizer: UIPanGestureRecognizer?
     let shapeView: ReactionMenuShapeView
     private var previewPanHandler: PreviewViewPanHandler?
+    private var cancellables: Set<AnyCancellable> = []
 
     // MARK: - Initialization
 
     init(configuration: Configuration,
-         viewModel: MessageReactionMenuViewModelType) {
+         viewModel: MessageReactionMenuViewModel) {
         self.configuration = configuration
         self.previewView = configuration.sourceCell.previewView()
         self.previewSourceView = configuration.sourceCell.previewSourceView
@@ -106,6 +102,14 @@ class MessageReactionMenuController: UIViewController {
         self.reactionsVC = ReactionsViewController(viewModel: viewModel)
 
         super.init(nibName: nil, bundle: nil)
+
+        viewModel.isCollapsedPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isCollapsed in
+                guard let self else { return }
+                animateShapeView(collapsed: isCollapsed)
+            }
+            .store(in: &cancellables)
 
         modalPresentationStyle = .custom
     }
@@ -145,6 +149,7 @@ class MessageReactionMenuController: UIViewController {
         if configuration.sourceCellEdge == .trailing {
             targetFrame.origin.x -= (endWidth - shapeViewStartingRect.width)
         }
+        shapeViewEndingRect = targetFrame
         shapeView.animateToShape(frame: targetFrame,
                                  alpha: 1.0,
                                  color: .systemBackground)
@@ -164,6 +169,15 @@ class MessageReactionMenuController: UIViewController {
 
         shapeView.animateToShape(frame: shapeViewStartingRect,
                                  alpha: 0.0,
+                                 color: .systemBackground)
+    }
+
+    private func animateShapeView(collapsed: Bool) {
+        guard let shapeViewEndingRect else { return }
+        var shapeRect = shapeView.frame
+        shapeRect.size.width = collapsed ? (shapeViewStartingRect.width * 2.0) : shapeViewEndingRect.width
+        shapeView.animateToShape(frame: shapeRect,
+                                 alpha: 1.0,
                                  color: .systemBackground)
     }
 

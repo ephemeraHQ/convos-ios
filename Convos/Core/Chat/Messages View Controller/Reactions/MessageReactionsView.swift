@@ -1,20 +1,23 @@
 import SwiftUI
 
 struct MessageReactionsView: View {
-    let viewModel: MessageReactionMenuViewModelType
+    @State var viewModel: MessageReactionMenuViewModel
     let padding: CGFloat = 8.0
     let emojiAppearanceDelay: TimeInterval = 0.3
+
+    init(viewModel: MessageReactionMenuViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
 
     @State private var emojiAppeared: [Bool] = []
     @State private var showMoreAppeared: Bool = false
     @State private var didAppear: Bool = false
-    @State private var isCollapsed: Bool = false
 
     var body: some View {
-        HStack {
+        Group {
             GeometryReader { reader in
                 let contentHeight = reader.size.height - (padding * 2.0)
-                ZStack {
+                ZStack(alignment: .leading) {
                     ScrollView(.horizontal,
                                showsIndicators: false) {
                         HStack(spacing: 0.0) {
@@ -25,10 +28,13 @@ struct MessageReactionsView: View {
                                     Text(reaction.emoji)
                                         .font(.system(size: 24.0))
                                         .padding(padding)
-                                        .blur(radius: isCollapsed ? 10.0 : emojiAppeared.indices.contains(index) &&
-                                              emojiAppeared[index] ? 0.0 : 10.0)
+                                        .blur(
+                                            radius: (viewModel.isCollapsed ? 10.0 :
+                                                        emojiAppeared.indices.contains(index)
+                                                     && emojiAppeared[index] ? 0.0 : 10.0)
+                                        )
                                         .scaleEffect(
-                                            isCollapsed ? 0.0 : (emojiAppeared.indices.contains(index) &&
+                                            viewModel.isCollapsed ? 0.0 : (emojiAppeared.indices.contains(index) &&
                                                                  emojiAppeared[index] ? 1.0 : 0.0)
                                         )
                                         .rotationEffect(
@@ -36,10 +42,10 @@ struct MessageReactionsView: View {
                                                 emojiAppeared.indices.contains(index) && emojiAppeared[index] ? 0 : -15
                                             )
                                         )
-                                        .opacity(isCollapsed ? 0 : 1)
+                                        .opacity(viewModel.isCollapsed ? 0 : 1)
                                         .animation(
                                             .spring(response: 0.4, dampingFraction: 0.6),
-                                            value: isCollapsed
+                                            value: viewModel.isCollapsed
                                         )
                                         .animation(
                                             .spring(response: 0.4, dampingFraction: 0.6),
@@ -88,28 +94,31 @@ struct MessageReactionsView: View {
                         }
                     )
 
-                    HStack(spacing: padding) {
-                        Spacer()
+                    HStack(spacing: 0.0) {
+                        if !viewModel.isCollapsed {
+                            Spacer()
+                        }
 
                         Image(systemName: "face.smiling")
                             .font(.system(size: 28.0))
                             .padding(padding)
                             .tint(.black)
-                            .opacity(isCollapsed ? 0.2 : 0.0)
-                            .blur(radius: isCollapsed ? 0.0 : 10.0)
+                            .opacity(viewModel.isCollapsed ? 0.2 : 0.0)
+                            .blur(radius: viewModel.isCollapsed ? 0.0 : 10.0)
                             .rotationEffect(
                                 .degrees(
-                                    isCollapsed ? 0.0 : -30.0
+                                    viewModel.isCollapsed ? 0.0 : -30.0
                                 )
                             )
                             .scaleEffect(
-                                isCollapsed ? 1.0 : 0.0
+                                viewModel.isCollapsed ? 1.0 : 0.0
                             )
-                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isCollapsed)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.isCollapsed)
+                            .padding(.horizontal, padding)
 
                         Button {
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                                isCollapsed.toggle()
+                                viewModel.toggleCollapsed()
                             }
                             viewModel.showMoreReactions()
                         } label: {
@@ -122,19 +131,17 @@ struct MessageReactionsView: View {
                                 .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showMoreAppeared)
                                 .rotationEffect(
                                     .degrees(
-                                        isCollapsed ? -45.0 : 0.0
+                                        viewModel.isCollapsed ? -45.0 : 0.0
                                     )
                                 )
                         }
                         .frame(minWidth: contentHeight)
-                        .padding(.trailing, padding)
+                        .padding(.trailing, 8.0)
                     }
-                    .background(.clear)
                 }
             }
             .padding(0.0)
-            .frame(width: isCollapsed ? 56.0 + padding * 2.0 : nil, alignment: .leading) // 56 is the button height
-            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isCollapsed)
+            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: viewModel.isCollapsed)
             .onAppear {
                 guard !didAppear else { return }
                 didAppear = true
