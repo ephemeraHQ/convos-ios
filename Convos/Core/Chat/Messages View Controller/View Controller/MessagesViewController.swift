@@ -618,6 +618,11 @@ extension MessagesViewController: KeyboardListenerDelegate {
 // MARK: - MessageReactionMenuCoordinatorDelegate
 
 extension MessagesViewController: MessageReactionMenuCoordinatorDelegate {
+    func messageReactionMenuViewModel(_ coordinator: MessageReactionMenuCoordinator,
+                                      for indexPath: IndexPath) -> any MessageReactionMenuViewModelType {
+        MessageReactionMenuViewModel()
+    }
+
     func messageReactionMenuCoordinatorWasPresented(_ coordinator: MessageReactionMenuCoordinator) {
         collectionView.isScrollEnabled = false
         currentInterfaceActions.options.insert(.showingReactionsMenu)

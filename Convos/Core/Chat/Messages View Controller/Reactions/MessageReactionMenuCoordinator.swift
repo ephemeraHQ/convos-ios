@@ -7,6 +7,8 @@ protocol MessageReactionMenuCoordinatorDelegate: AnyObject {
                                         shouldPresentMenuFor cell: PreviewableCollectionViewCell) -> Bool
     func messageReactionMenuCoordinatorWasPresented(_ coordinator: MessageReactionMenuCoordinator)
     func messageReactionMenuCoordinatorWasDismissed(_ coordinator: MessageReactionMenuCoordinator)
+    func messageReactionMenuViewModel(_ coordinator: MessageReactionMenuCoordinator,
+                                      for indexPath: IndexPath) -> MessageReactionMenuViewModelType
     var collectionView: UICollectionView { get }
 }
 
@@ -77,7 +79,14 @@ class MessageReactionMenuCoordinator: UIPercentDrivenInteractiveTransition {
             initialTouchPoint = location
             interactiveDirection = .presentation
 
-            presentMenu(for: cell, at: cellRect, edge: cell.sourceCellEdge, interactive: true)
+            guard let viewModel = delegate?.messageReactionMenuViewModel(self, for: indexPath) else {
+                return
+            }
+            presentMenu(for: cell,
+                        at: cellRect,
+                        edge: cell.sourceCellEdge,
+                        viewModel: viewModel,
+                        interactive: true)
             initialViewCenter = interactivePreviewView?.center ?? cell.center
 
             gestureStartTime = CACurrentMediaTime()
@@ -103,12 +112,18 @@ class MessageReactionMenuCoordinator: UIPercentDrivenInteractiveTransition {
               let cell = delegate?.messageReactionMenuCoordinator(self, previewableCellAt: indexPath) else { return }
         let cellRect = cell.convert(cell.bounds, to: collectionView.window)
         guard delegate?.messageReactionMenuCoordinator(self, shouldPresentMenuFor: cell) ?? true else { return }
-        presentMenu(for: cell, at: cellRect, edge: cell.sourceCellEdge, interactive: false)
+        guard let viewModel = delegate?.messageReactionMenuViewModel(self, for: indexPath) else { return }
+        presentMenu(for: cell,
+                    at: cellRect,
+                    edge: cell.sourceCellEdge,
+                    viewModel: viewModel,
+                    interactive: false)
     }
 
     private func presentMenu(for cell: PreviewableCollectionViewCell,
                              at rect: CGRect,
                              edge: MessageReactionMenuController.Configuration.Edge,
+                             viewModel: MessageReactionMenuViewModelType,
                              interactive: Bool = false) {
         guard let window = delegate?.collectionView.window else { return }
         let config = MessageReactionMenuController.Configuration(
@@ -118,7 +133,8 @@ class MessageReactionMenuCoordinator: UIPercentDrivenInteractiveTransition {
             sourceCellEdge: edge,
             startColor: UIColor(hue: 0.0, saturation: 0.0, brightness: 0.96, alpha: 1.0)
         )
-        let menuController = MessageReactionMenuController(configuration: config)
+        let menuController = MessageReactionMenuController(configuration: config,
+                                                           viewModel: viewModel)
         menuController.modalPresentationStyle = .custom
         menuController.transitioningDelegate = self
 

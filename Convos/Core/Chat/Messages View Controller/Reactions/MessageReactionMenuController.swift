@@ -1,4 +1,51 @@
+import SwiftUI
 import UIKit
+
+struct MessageReaction: Identifiable {
+    let id: String
+    let emoji: String
+    let isSelected: Bool
+}
+
+protocol MessageReactionMenuViewModelType {
+    var reactions: [MessageReaction] { get }
+
+    func add(reaction: MessageReaction)
+    func showMoreReactions()
+}
+
+private class ReactionsViewController: UIViewController {
+    let hostingVC: UIHostingController<MessageReactionsView>
+
+    var viewModel: MessageReactionMenuViewModelType {
+        didSet { update() }
+    }
+
+    init(viewModel: MessageReactionMenuViewModelType) {
+        self.viewModel = viewModel
+        let reactionsView = MessageReactionsView(viewModel: viewModel)
+        self.hostingVC = UIHostingController(rootView: reactionsView)
+        self.hostingVC.sizingOptions = .intrinsicContentSize
+        super.init(nibName: nil, bundle: nil)
+        self.addChild(hostingVC)
+        self.view.addSubview(hostingVC.view)
+        hostingVC.didMove(toParent: self)
+        self.view.layer.masksToBounds = true
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        hostingVC.view.frame = view.bounds
+    }
+
+    func update() {
+        hostingVC.rootView = MessageReactionsView(viewModel: viewModel)
+    }
+}
 
 class MessageReactionMenuController: UIViewController {
     struct Configuration {
@@ -23,12 +70,12 @@ class MessageReactionMenuController: UIViewController {
 
     let configuration: Configuration
     let dimmingView: UIVisualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
-    private let previewContainerView: UIView = UIView()
     let previewView: UIView
     let previewSourceView: UIView
     let actualPreviewSourceSize: CGSize
     let shapeViewStartingRect: CGRect
     let endPosition: CGRect
+    fileprivate let reactionsVC: ReactionsViewController
     private var animator: UIViewPropertyAnimator?
     private var panGestureRecognizer: UIPanGestureRecognizer?
     let shapeView: ReactionMenuShapeView
@@ -36,7 +83,8 @@ class MessageReactionMenuController: UIViewController {
 
     // MARK: - Initialization
 
-    init(configuration: Configuration) {
+    init(configuration: Configuration,
+         viewModel: MessageReactionMenuViewModelType) {
         self.configuration = configuration
         self.previewView = configuration.sourceCell.previewView()
         self.previewSourceView = configuration.sourceCell.previewSourceView
@@ -54,6 +102,8 @@ class MessageReactionMenuController: UIViewController {
         let startFrame = CGRect(origin: .zero, size: startSize)
         self.shapeView = ReactionMenuShapeView(frame: startFrame)
         self.shapeView.fillColor = configuration.startColor
+
+        self.reactionsVC = ReactionsViewController(viewModel: viewModel)
 
         super.init(nibName: nil, bundle: nil)
 
@@ -129,6 +179,13 @@ class MessageReactionMenuController: UIViewController {
         setupViews()
     }
 
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+
+        reactionsVC.view.frame = shapeView.bounds
+        reactionsVC.view.layer.cornerRadius = shapeView.bounds.height / 2.0
+    }
+
     // MARK: - Setup
 
     private static func shapeViewStartRect(for configuration: Configuration) -> CGRect {
@@ -168,10 +225,8 @@ class MessageReactionMenuController: UIViewController {
         shapeView.configureShadow()
         view.addSubview(shapeView)
 
-        // Setup preview container
-        previewContainerView.frame = view.bounds
-        previewContainerView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        previewContainerView.backgroundColor = .clear
-        view.addSubview(previewContainerView)
+        addChild(reactionsVC)
+        shapeView.addSubview(reactionsVC.view)
+        reactionsVC.didMove(toParent: self)
     }
 }
