@@ -21,12 +21,13 @@ class MessageReactionMenuController: UIViewController {
 
     // MARK: - Properties
 
-    private let configuration: Configuration
+    let configuration: Configuration
     let dimmingView: UIVisualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
     private let previewContainerView: UIView = UIView()
     let previewView: UIView
     let previewSourceView: UIView
     let actualPreviewSourceSize: CGSize
+    let shapeViewStartingRect: CGRect
     let endPosition: CGRect
     private var animator: UIViewPropertyAnimator?
     private var panGestureRecognizer: UIPanGestureRecognizer?
@@ -41,6 +42,7 @@ class MessageReactionMenuController: UIViewController {
         self.previewSourceView = configuration.sourceCell.previewSourceView
         self.actualPreviewSourceSize = configuration.sourceCell.actualPreviewSourceSize
         self.previewView.frame = configuration.sourceRect
+        self.shapeViewStartingRect = Self.shapeViewStartRect(for: configuration)
         self.endPosition = MessageReactionMenuController.calculateEndPosition(
             for: self.previewView,
             in: configuration.containerView,
@@ -82,24 +84,20 @@ class MessageReactionMenuController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
+        let yPosition = endPosition.minY - Self.spacing - shapeViewStartingRect.height
+        var targetFrame = shapeViewStartingRect
         let horizontalInset = configuration.sourceCell.horizontalInset
         let leftMargin: CGFloat = 24.0
         let rightMargin: CGFloat = 56.0
         let endWidth = view.bounds.width - leftMargin - rightMargin - horizontalInset
-        let endHeight: CGFloat = 56.0
-
-        let xPosition: CGFloat
-        switch configuration.sourceCellEdge {
-        case .leading:
-            xPosition = view.bounds.minX + (horizontalInset / 2.0) + endHeight
-        case .trailing:
-            xPosition = view.bounds.minX + view.bounds.maxX - (endHeight * 2.0) - (horizontalInset / 2.0)
+        targetFrame.size.width = endWidth
+        targetFrame.origin.y = yPosition
+        if configuration.sourceCellEdge == .trailing {
+            targetFrame.origin.x -= (endWidth - shapeViewStartingRect.width)
         }
-
-        let yPosition = endPosition.minY - Self.spacing - endHeight
-
-        let targetFrame = CGRect(x: xPosition, y: yPosition, width: endWidth, height: endHeight)
-        shapeView.animateToShape(frame: targetFrame, color: .systemBackground)
+        shapeView.animateToShape(frame: targetFrame,
+                                 alpha: 1.0,
+                                 color: .systemBackground)
 
         // Attach pan handler to previewView
         previewPanHandler = PreviewViewPanHandler(containerView: view) { [weak self] in
@@ -111,8 +109,15 @@ class MessageReactionMenuController: UIViewController {
         }
     }
 
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+
+        shapeView.animateToShape(frame: shapeViewStartingRect,
+                                 alpha: 0.0,
+                                 color: .systemBackground)
+    }
+
     private func startInteractiveDismiss() {
-        // Start your interactive dismiss transition here
         dismiss(animated: true, completion: nil)
     }
 
@@ -126,6 +131,32 @@ class MessageReactionMenuController: UIViewController {
 
     // MARK: - Setup
 
+    private static func shapeViewStartRect(for configuration: Configuration) -> CGRect {
+        let horizontalInset = configuration.sourceCell.horizontalInset
+        let previewFrame = configuration.sourceRect
+        let endSize = 56.0
+
+        let view = configuration.containerView
+
+        // Decide which edge to use
+        let xPosition: CGFloat
+        switch configuration.sourceCellEdge {
+        case .leading:
+            xPosition = view.bounds.minX + (horizontalInset / 2.0)
+        case .trailing:
+            xPosition = view.bounds.minX + view.bounds.maxX - endSize - (horizontalInset / 2.0)
+        }
+
+        let yPosition = previewFrame.minY - Self.spacing - endSize
+        let startRect = CGRect(
+            x: xPosition,
+            y: yPosition + endSize + Self.spacing,
+            width: endSize,
+            height: endSize
+        )
+        return startRect
+    }
+
     private func setupViews() {
         view.backgroundColor = .clear
 
@@ -133,29 +164,7 @@ class MessageReactionMenuController: UIViewController {
         dimmingView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(dimmingView)
 
-        // Position shape view
-        let horizontalInset = configuration.sourceCell.horizontalInset
-        let previewFrame = configuration.sourceRect
-        let endHeight = 56.0
-
-        // Decide which corner to use
-        let xPosition: CGFloat
-        switch configuration.sourceCellEdge {
-        case .leading:
-            xPosition = view.bounds.minX + (horizontalInset / 2.0) + endHeight
-        case .trailing:
-            xPosition = view.bounds.minX + view.bounds.maxX - (endHeight * 2.0) - (horizontalInset / 2.0)
-        }
-
-        let yPosition = previewFrame.minY - Self.spacing - endHeight
-        let startRect = CGRect(
-            x: xPosition,
-            y: yPosition + endHeight + Self.spacing,
-            width: endHeight,
-            height: endHeight
-        )
-
-        shapeView.frame = startRect
+        shapeView.frame = shapeViewStartingRect
         shapeView.configureShadow()
         view.addSubview(shapeView)
 

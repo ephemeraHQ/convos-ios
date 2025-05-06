@@ -331,21 +331,47 @@ final class MessageReactionDismissalAnimator: NSObject, UIViewControllerAnimated
 
         let duration = transitionDuration(using: transitionContext)
 
-        UIView.animate(withDuration: duration,
-                       delay: 0,
-                       options: [.curveEaseInOut, .beginFromCurrentState]) {
-            fromVC.view.alpha = 0.0
-            fromVC.dimmingView.alpha = 0.0
-            previewView.alpha = 0.0
-            previewView.transform = .identity
-            previewView.layer.shadowColor = UIColor.clear.cgColor
-            previewView.layer.shadowOffset = .zero
-            previewView.layer.shadowOpacity = 0.0
-            previewView.layer.shadowRadius = 0
-        } completion: { _ in
-            fromVC.previewSourceView.alpha = 1.0
-            previewView.removeFromSuperview()
+        UIView.animateKeyframes(withDuration: duration,
+                                delay: 0,
+                                options: [.calculationModeCubic, .beginFromCurrentState], animations: {
+            UIView.addKeyframe(withRelativeStartTime: 0.0, relativeDuration: 0.9) {
+                guard !transitionContext.transitionWasCancelled else {
+                    transitionContext.completeTransition(false)
+                    return
+                }
+
+//                previewView.transform = CGAffineTransform(scaleX: overshootScale, y: overshootScale)
+                previewView.layer.shadowOpacity = 0.0
+                previewView.layer.shadowRadius = 0.0
+                previewView.layer.shadowOffset = .zero
+                previewView.transform = .identity
+                previewView.frame = fromVC.configuration.sourceRect
+            }
+            UIView.addKeyframe(withRelativeStartTime: 0.2, relativeDuration: 0.5) {
+                fromVC.shapeView.transform = CGAffineTransform(scaleX: 0.0, y: 0.0)
+                fromVC.shapeView.alpha = 0.0
+            }
+            UIView.addKeyframe(withRelativeStartTime: 0.0, relativeDuration: 0.3) {
+                guard !transitionContext.transitionWasCancelled else {
+                    transitionContext.completeTransition(false)
+                    return
+                }
+
+                fromVC.dimmingView.alpha = 0.0
+            }
+        }, completion: { _ in
+//            UIView.animate(withDuration: 0.5,
+//                           delay: 0.0,
+//                           usingSpringWithDamping: 0.8,
+//                           initialSpringVelocity: 0.2,
+//                           options: .beginFromCurrentState) {
+//            } completion: { _ in
+                previewView.removeFromSuperview()
+//                toVC.view.addSubview(previewView)
+                fromVC.previewSourceView.alpha = 1.0
+//                fromVC.configuration.sourceCell.isHidden = false
+//            }
             transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
-        }
+        })
     }
 }
