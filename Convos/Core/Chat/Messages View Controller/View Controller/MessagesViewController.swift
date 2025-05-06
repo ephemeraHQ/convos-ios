@@ -16,6 +16,7 @@ final class MessagesViewController: UIViewController {
         case scrollingToTop
         case scrollingToBottom
         case updatingCollectionInIsolation
+        case showingReactionsMenu
     }
 
     private enum ControllerActions {
@@ -633,7 +634,7 @@ extension MessagesViewController: MessageReactionMenuCoordinatorDelegate {
 
     func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator,
                                         shouldPresentMenuFor cell: PreviewableCollectionViewCell) -> Bool {
-        // Always allow for now
+        currentInterfaceActions.options.insert(.showingReactionsMenu)
         return true
     }
 }

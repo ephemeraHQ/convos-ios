@@ -252,8 +252,6 @@ final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnima
 
         let previewView = toVC.previewView
         previewView.layer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-
-        toVC.previewSourceView.alpha = 0.0
         containerView.addSubview(toVC.view)
         containerView.addSubview(previewView)
 
@@ -265,6 +263,9 @@ final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnima
         UIView.animateKeyframes(withDuration: duration,
                                 delay: 0,
                                 options: [.calculationModeCubic, .beginFromCurrentState], animations: {
+            UIView.addKeyframe(withRelativeStartTime: 0.0, relativeDuration: 0.0) {
+                toVC.previewSourceView.alpha = 0.0
+            }
             UIView.addKeyframe(withRelativeStartTime: 0.0, relativeDuration: 0.9) {
                 guard !transitionContext.transitionWasCancelled else {
                     transitionContext.completeTransition(false)
@@ -277,7 +278,7 @@ final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnima
                 previewView.layer.shadowOffset = .zero
             }
 
-            UIView.addKeyframe(withRelativeStartTime: 1.0, relativeDuration: 0.4) {
+            UIView.addKeyframe(withRelativeStartTime: 0.9, relativeDuration: 0.4) {
                 guard !transitionContext.transitionWasCancelled else {
                     transitionContext.completeTransition(false)
                     return
@@ -340,7 +341,6 @@ final class MessageReactionDismissalAnimator: NSObject, UIViewControllerAnimated
                     return
                 }
 
-//                previewView.transform = CGAffineTransform(scaleX: overshootScale, y: overshootScale)
                 previewView.layer.shadowOpacity = 0.0
                 previewView.layer.shadowRadius = 0.0
                 previewView.layer.shadowOffset = .zero
@@ -360,17 +360,8 @@ final class MessageReactionDismissalAnimator: NSObject, UIViewControllerAnimated
                 fromVC.dimmingView.alpha = 0.0
             }
         }, completion: { _ in
-//            UIView.animate(withDuration: 0.5,
-//                           delay: 0.0,
-//                           usingSpringWithDamping: 0.8,
-//                           initialSpringVelocity: 0.2,
-//                           options: .beginFromCurrentState) {
-//            } completion: { _ in
-                previewView.removeFromSuperview()
-//                toVC.view.addSubview(previewView)
-                fromVC.previewSourceView.alpha = 1.0
-//                fromVC.configuration.sourceCell.isHidden = false
-//            }
+            previewView.removeFromSuperview()
+            fromVC.previewSourceView.alpha = 1.0
             transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
         })
     }

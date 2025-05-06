@@ -8,7 +8,6 @@ class TextMessageCollectionCell: UICollectionViewCell, PreviewableCell {
     private var longPressGestureRecognizer: UILongPressGestureRecognizer?
     private var panGestureRecognizer: UIPanGestureRecognizer?
     private var doubleTapGestureRecognizer: UITapGestureRecognizer?
-    private weak var reactionMenuController: MessageReactionMenuController?
 
     // MARK: - Initialization
 
