@@ -5,11 +5,9 @@ struct MessageReactionsView: View {
     let padding: CGFloat = 8.0
     let emojiAppearanceDelay: TimeInterval = 0.3
 
-    // Animation states
     @State private var emojiAppeared: [Bool] = []
     @State private var showMoreAppeared: Bool = false
     @State private var didAppear: Bool = false
-    // Collapse state
     @State private var isCollapsed: Bool = false
 
     var body: some View {
@@ -28,7 +26,8 @@ struct MessageReactionsView: View {
                                         .font(.system(size: 24.0))
                                         .padding(padding)
                                         .scaleEffect(
-                                            isCollapsed ? 0.0 : (emojiAppeared.indices.contains(index) && emojiAppeared[index] ? 1.0 : 0.0)
+                                            isCollapsed ? 0.0 : (emojiAppeared.indices.contains(index) &&
+                                                                 emojiAppeared[index] ? 1.0 : 0.0)
                                         )
                                         .rotationEffect(
                                             .degrees(
@@ -48,7 +47,9 @@ struct MessageReactionsView: View {
                                 .onAppear {
                                     // Staggered animation
                                     if emojiAppeared.indices.contains(index) && !emojiAppeared[index] {
-                                        DispatchQueue.main.asyncAfter(deadline: .now() + emojiAppearanceDelay + 0.08 * Double(index)) {
+                                        DispatchQueue.main.asyncAfter(
+                                            deadline: .now() + emojiAppearanceDelay + 0.08 * Double(index)
+                                        ) {
                                             withAnimation {
                                                 emojiAppeared[index] = true
                                             }
