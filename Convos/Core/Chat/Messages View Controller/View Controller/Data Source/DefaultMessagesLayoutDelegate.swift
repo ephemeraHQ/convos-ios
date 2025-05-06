@@ -1,10 +1,10 @@
 import UIKit
 
 final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
-    let sections: [Section]
-    private let oldSections: [Section]
+    let sections: [MessagesCollectionSection]
+    private let oldSections: [MessagesCollectionSection]
 
-    init(sections: [Section], oldSections: [Section]) {
+    init(sections: [MessagesCollectionSection], oldSections: [MessagesCollectionSection]) {
         self.sections = sections
         self.oldSections = oldSections
     }
@@ -25,7 +25,7 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
             let item = sections[indexPath.section].cells[indexPath.item]
             switch item {
             case let .message(message, bubbleType: _):
-                switch message.data {
+                switch message.kind {
                 case .text:
                     return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 36))
                 case let .image(_, isLocallyStored: isDownloaded):
@@ -45,7 +45,7 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
 
     func alignmentForItem(_ messagesLayout: MessagesCollectionLayout,
                           of kind: ItemKind,
-                          at indexPath: IndexPath) -> Cell.Alignment {
+                          at indexPath: IndexPath) -> MessagesCollectionCell.Alignment {
         switch kind {
         case .header:
             return .center

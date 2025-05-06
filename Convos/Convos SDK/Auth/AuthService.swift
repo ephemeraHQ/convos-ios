@@ -10,7 +10,7 @@ public extension ConvosSDK {
         var state: AuthServiceState { get }
         var currentUser: User? { get }
 
-        var messagingService: MessagingServiceProtocol { get }
+        var messagingService: any MessagingServiceProtocol { get }
 
         func prepare() async throws
 
@@ -44,7 +44,7 @@ class MockAuthService: ConvosSDK.AuthServiceProtocol {
     }
 
     var messagingService: any ConvosSDK.MessagingServiceProtocol {
-        _MockMessagingService()
+        MockMessagingService()
     }
 
     private var authStateSubject: CurrentValueSubject<ConvosSDK.AuthServiceState, Never> = .init(.unknown)

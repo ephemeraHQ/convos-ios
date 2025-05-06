@@ -2,7 +2,7 @@ import DifferenceKit
 import Foundation
 import UIKit
 
-enum Cell: Hashable {
+enum MessagesCollectionCell: Hashable {
     enum Alignment {
         case leading, center, trailing, fullWidth
     }
@@ -16,7 +16,7 @@ enum Cell: Hashable {
     case messageGroup(MessageGroup)
     case date(DateGroup)
 
-    var alignment: Cell.Alignment {
+    var alignment: MessagesCollectionCell.Alignment {
         switch self {
         case let .message(message, _):
             message.type == .incoming ? .leading : .trailing
@@ -30,7 +30,7 @@ enum Cell: Hashable {
     }
 }
 
-extension Cell: Differentiable {
+extension MessagesCollectionCell: Differentiable {
     var differenceIdentifier: Int {
         switch self {
         case let .message(message, _):
@@ -44,7 +44,7 @@ extension Cell: Differentiable {
         }
     }
 
-    func isContentEqual(to source: Cell) -> Bool {
+    func isContentEqual(to source: MessagesCollectionCell) -> Bool {
         self == source
     }
 }

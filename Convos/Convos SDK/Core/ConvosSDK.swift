@@ -4,7 +4,7 @@ import Foundation
 public enum ConvosSDK {
     public final class Convos {
         private let authService: AuthServiceProtocol
-        private let messagingService: MessagingServiceProtocol
+        private let messagingService: any MessagingServiceProtocol
 
         public static let shared: Convos = .init(authService: TurnkeyAuthService())
         public static let mock: Convos = .init(authService: MockAuthService())
@@ -38,7 +38,7 @@ public enum ConvosSDK {
             try await authService.signOut()
         }
 
-        public var messaging: MessagingServiceProtocol {
+        public var messaging: any MessagingServiceProtocol {
             messagingService
         }
     }

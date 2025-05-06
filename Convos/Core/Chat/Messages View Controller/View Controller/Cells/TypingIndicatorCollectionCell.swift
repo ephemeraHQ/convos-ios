@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 class TypingIndicatorCollectionCell: UICollectionViewCell {
-    func prepare(with alignment: Cell.Alignment) {
+    func prepare(with alignment: MessagesCollectionCell.Alignment) {
         contentConfiguration = UIHostingConfiguration {
             HStack {
                 TypingIndicatorView(alignment: alignment)
@@ -13,7 +13,7 @@ class TypingIndicatorCollectionCell: UICollectionViewCell {
 }
 
 struct TypingIndicatorView: View {
-    let alignment: Cell.Alignment
+    let alignment: MessagesCollectionCell.Alignment
     var body: some View {
         MessageContainer(style: .tailed,
                          isOutgoing: false) {

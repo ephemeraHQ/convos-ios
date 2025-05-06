@@ -106,11 +106,10 @@ struct ChatListView: View {
                     }
                 }
                 .navigationBarHidden(true)
-                .navigationDestination(item: $selectedConversation) { conversation in
-                    MessagesView(messagingService: MockMessagingService())
+                .navigationDestination(item: $selectedConversation) { _ in
+                    MessagesView(messagesStore: MockMessagesStore())
                         .ignoresSafeArea()
-                        .navigationTitle(conversation.otherParticipant?.username ?? "Chat")
-                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbarVisibility(.hidden, for: .navigationBar)
                 }
 
                 // Dropdown menu overlay
