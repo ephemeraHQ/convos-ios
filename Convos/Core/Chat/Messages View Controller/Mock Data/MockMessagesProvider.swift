@@ -1,29 +1,65 @@
+import Combine
 import Foundation
 import UIKit
 
 // swiftlint:disable force_unwrapping
 
-@MainActor
-protocol MockMessagesProviderDelegate: AnyObject {
-    func received(messages: [RawMessage])
-    func typingStateChanged(to state: TypingState)
-    func lastReadIdChanged(to id: UUID)
-    func lastReceivedIdChanged(to id: UUID)
-}
+final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
+    typealias RawMessage = MockMessage
 
-protocol MessagesProviderProtocol {
-    func loadInitialMessages() async -> [RawMessage]
-    func loadPreviousMessages() async -> [RawMessage]
-    func stop()
-}
+    private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
+    CurrentValueSubject<ConvosSDK.MessagingServiceState, Never>(.uninitialized)
+    private var messagesSubject: CurrentValueSubject<[RawMessage], Never> =
+    CurrentValueSubject<[RawMessage], Never>([])
 
-final class MockMessagesProvider: MessagesProviderProtocol {
-    weak var delegate: MockMessagesProviderDelegate?
+    var state: ConvosSDK.MessagingServiceState {
+        messagingStateSubject.value
+    }
 
-    // MARK: - Mock Users
+    func start() async throws {
+        await MainActor.run {
+            self.messageTimer = Timer.scheduledTimer(
+                timeInterval: TimeInterval(Int.random(in: 0...6)),
+                target: self,
+                selector: #selector(self.handleTimer),
+                userInfo: nil,
+                repeats: true
+            )
+        }
+    }
+
+    func stop() {
+        messageTimer?.invalidate()
+        messageTimer = nil
+    }
+
+    func loadInitialMessages() async -> [RawMessage] {
+        let messages = createBunchOfMessages(number: 20)
+        messagesSubject.value.append(contentsOf: messages)
+        return messagesSubject.value
+    }
+
+    func loadPreviousMessages() async -> [RawMessage] {
+        let messages = createBunchOfMessages(number: 20)
+        messagesSubject.value.append(contentsOf: messages)
+        return messagesSubject.value
+    }
+
+    func sendMessage(to address: String, content: String) async throws -> [RawMessage] {
+        messagesSubject.value.append(MockMessage.message(content, sender: currentUser))
+        return messagesSubject.value
+    }
+
+    func messages(for address: String) -> AnyPublisher<[RawMessage], Never> {
+        messagesSubject.eraseToAnyPublisher()
+    }
+
+    func messagingStatePublisher() -> AnyPublisher<ConvosSDK.MessagingServiceState, Never> {
+        messagingStateSubject.eraseToAnyPublisher()
+    }
 
     private let currentUser: ConvosUser
-    private let otherUsers: [ConvosUser] = [
+    let otherUsers: [ConvosUser] = [
         ConvosUser(id: "1", name: "Emily Dickinson"),
         ConvosUser(id: "2", name: "William Shakespeare"),
         ConvosUser(id: "3", name: "Virginia Woolf"),
@@ -44,15 +80,7 @@ final class MockMessagesProvider: MessagesProviderProtocol {
     // MARK: - Private Properties
 
     private var messageTimer: Timer?
-    private var typingTimer: Timer?
     private var startingTimestamp: Double = Date().timeIntervalSince1970
-    private var typingState: TypingState = .idle
-    private var lastMessageIndex: Int = 0
-    private var nextImageMessageIndex: Int = Int.random(in: 3...8)
-    private var lastReadUUID: UUID?
-    private var lastReceivedUUID: UUID?
-    private let dispatchQueue: DispatchQueue = DispatchQueue.global(qos: .userInteractive)
-    private let enableTyping: Bool = true
     private let enableNewMessages: Bool = true
 
     private let websiteUrls: [URL] = [
@@ -77,62 +105,7 @@ final class MockMessagesProvider: MessagesProviderProtocol {
 
     init(currentUser: ConvosUser) {
         self.currentUser = currentUser
-
-        messageTimer = Timer.scheduledTimer(
-            timeInterval: TimeInterval(Int.random(in: 0...6)),
-            target: self,
-            selector: #selector(handleTimer),
-            userInfo: nil,
-            repeats: true
-        )
-        typingTimer = Timer.scheduledTimer(
-            timeInterval: TimeInterval(Int.random(in: 0...6)),
-            target: self,
-            selector: #selector(handleTypingTimer),
-            userInfo: nil,
-            repeats: true
-        )
-    }
-
-    func loadInitialMessages() async -> [RawMessage] {
-        await withCheckedContinuation { continuation in
-            dispatchQueue.async { [weak self] in
-                guard let self else {
-                    continuation.resume(returning: [])
-                    return
-                }
-                let messages = createBunchOfMessages(number: 50)
-                if messages.count > 10 {
-                    lastReceivedUUID = messages[messages.count - 10].id
-                }
-                if messages.count > 3 {
-                    lastReadUUID = messages[messages.count - 3].id
-                }
-                DispatchQueue.main.async {
-                    continuation.resume(returning: messages)
-                }
-            }
-        }
-    }
-
-    func loadPreviousMessages() async -> [RawMessage] {
-        await withCheckedContinuation { continuation in
-            dispatchQueue.async { [weak self] in
-                guard let self else {
-                    continuation.resume(returning: [])
-                    return
-                }
-                let messages = createBunchOfMessages(number: 50)
-                continuation.resume(returning: messages)
-            }
-        }
-    }
-
-    func stop() {
-        messageTimer?.invalidate()
-        messageTimer = nil
-        typingTimer?.invalidate()
-        typingTimer = nil
+        restartMessageTimer()
     }
 
     @objc
@@ -141,35 +114,8 @@ final class MockMessagesProvider: MessagesProviderProtocol {
             return
         }
         let message = createRandomMessage()
-        Task { @MainActor in
-            delegate?.received(messages: [message])
-
-            if message.userId != currentUser.id {
-                if Int.random(in: 0...1) == 0 {
-                    lastReceivedUUID = message.id
-                    delegate?.lastReceivedIdChanged(to: message.id)
-                }
-                if Int.random(in: 0...3) == 0 {
-                    lastReadUUID = lastReceivedUUID
-                    lastReceivedUUID = message.id
-                    delegate?.lastReadIdChanged(to: message.id)
-                }
-            }
-        }
-
+        messagesSubject.value.append(message)
         restartMessageTimer()
-        restartTypingTimer()
-    }
-
-    @objc
-    private func handleTypingTimer() {
-        guard enableTyping else {
-            return
-        }
-        typingState = typingState == .idle ? TypingState.typing : .idle
-        Task { @MainActor in
-            delegate?.typingStateChanged(to: typingState)
-        }
     }
 
     private func restartMessageTimer() {
@@ -185,38 +131,13 @@ final class MockMessagesProvider: MessagesProviderProtocol {
             )
     }
 
-    private func restartTypingTimer() {
-        typingTimer?.invalidate()
-        typingTimer = nil
-        typingTimer = Timer
-            .scheduledTimer(
-                timeInterval: TimeInterval(Int.random(in: 1...3)),
-                target: self,
-                selector: #selector(handleTypingTimer),
-                userInfo: nil,
-                repeats: true
-            )
-    }
-
-    private func createRandomMessage(date: Date = Date()) -> RawMessage {
+    private func createRandomMessage(date: Date = Date()) -> MockMessage {
         let sender = allUsers[Int.random(in: 0..<allUsers.count)]
-        lastMessageIndex += 1
-        guard lastMessageIndex == nextImageMessageIndex else {
-            return RawMessage(
-                id: UUID(),
-                date: date,
-                data: .text(TextGenerator.getString(of: Int.random(in: 1...20))),
-                userId: sender.id
-            )
-        }
-
-        // Schedule next image message
-        nextImageMessageIndex = lastMessageIndex + Int.random(in: 5...15)
-        return RawMessage(
-            id: UUID(),
-            date: date,
-            data: .image(.imageURL(imageUrls[Int.random(in: 0..<imageUrls.count)])),
-            userId: sender.id)
+        return MockMessage(id: UUID().uuidString,
+                           content: TextGenerator.getString(of: Int.random(in: 1...20)),
+                           sender: sender,
+                           timestamp: date,
+                           replies: [])
     }
 
     private func createBunchOfMessages(number: Int = 50) -> [RawMessage] {
@@ -225,6 +146,16 @@ final class MockMessagesProvider: MessagesProviderProtocol {
             return self.createRandomMessage(date: Date(timeIntervalSince1970: startingTimestamp))
         }
         return messages
+    }
+
+    private func randomDate(before endDate: Date) -> Date {
+        let earliestTimeInterval: TimeInterval = 0.0
+        let latestTimeInterval = endDate.timeIntervalSince1970
+
+        // Generate a random time interval between 0 and endDate.timeIntervalSince1970
+        let randomTimeInterval = TimeInterval.random(in: earliestTimeInterval..<latestTimeInterval)
+
+        return Date(timeIntervalSince1970: randomTimeInterval)
     }
 }
 

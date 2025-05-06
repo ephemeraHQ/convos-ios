@@ -44,7 +44,7 @@ final class MessagesViewController: UIViewController {
     private let inputBarView: MessagesInputView = MessagesInputView()
     private let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
 
-    private let messagingService: TempMessagingServiceProtocol
+    private let messagesStore: MessagesStoreProtocol
     private let dataSource: MessagesCollectionDataSource
 
     private var animator: ManualAnimator?
@@ -62,8 +62,8 @@ final class MessagesViewController: UIViewController {
 
     // MARK: - Initialization
 
-    init(messagingService: TempMessagingServiceProtocol) {
-        self.messagingService = messagingService
+    init(messagesStore: MessagesStoreProtocol) {
+        self.messagesStore = messagesStore
         self.dataSource = MessagesCollectionViewDataSource()
         self.collectionView = UICollectionView(frame: .zero,
                                                collectionViewLayout: messagesLayout)
@@ -104,7 +104,7 @@ final class MessagesViewController: UIViewController {
 
         reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
 
-        messagingService.updates.receive(on: DispatchQueue.main)
+        messagesStore.updates.receive(on: DispatchQueue.main)
             .sink { [weak self] update in
                 guard let self else { return }
                 processUpdates(
@@ -133,9 +133,15 @@ final class MessagesViewController: UIViewController {
         // Set content inset to just the base navigation bar height plus safe area
         let navHeight = (traitCollection.verticalSizeClass == .compact ?
             MessagesNavigationBar.Constant.compactHeight :
-            MessagesNavigationBar.Constant.regularHeight) + view.safeAreaInsets.top
+            MessagesNavigationBar.Constant.regularHeight)
         collectionView.contentInset.top = navHeight
         collectionView.verticalScrollIndicatorInsets.top = collectionView.contentInset.top
+    }
+
+    // MARK: - Actions
+
+    @objc private func onBack() {
+        navigationController?.popViewController(animated: true)
     }
 
     // MARK: - Private Setup Methods
@@ -146,6 +152,7 @@ final class MessagesViewController: UIViewController {
             UIImage(systemName: "chevron.left",
                     withConfiguration: UIImage.SymbolConfiguration(weight: .medium)),
             for: .normal)
+        navigationBar.leftButton.addTarget(self, action: #selector(onBack), for: .touchUpInside)
         navigationBar.rightButton.setImage(
             UIImage(systemName: "timer",
                     withConfiguration: UIImage.SymbolConfiguration(weight: .medium)),
@@ -248,7 +255,7 @@ final class MessagesViewController: UIViewController {
     private func loadInitialData() {
         currentControllerActions.options.insert(.loadingInitialMessages)
         Task {
-            let sections = await messagingService.loadInitialMessages()
+            let sections = await messagesStore.loadInitialMessages()
             currentControllerActions.options.remove(.loadingInitialMessages)
             processUpdates(with: sections, animated: true, requiresIsolatedProcess: false)
         }
@@ -288,7 +295,7 @@ final class MessagesViewController: UIViewController {
     private func loadPreviousMessages() {
         currentControllerActions.options.insert(.loadingPreviousMessages)
         Task {
-            let sections = await messagingService.loadPreviousMessages()
+            let sections = await messagesStore.loadPreviousMessages()
             let animated = !isUserInitiatedScrolling
             processUpdates(with: sections, animated: animated, requiresIsolatedProcess: true) {
                 self.currentControllerActions.options.remove(.loadingPreviousMessages)
@@ -360,7 +367,7 @@ final class MessagesViewController: UIViewController {
 // MARK: - MessagesControllerDelegate
 
 extension MessagesViewController {
-    private func processUpdates(with sections: [Section],
+    private func processUpdates(with sections: [MessagesCollectionSection],
                                 animated: Bool = true,
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
@@ -383,7 +390,7 @@ extension MessagesViewController {
                       completion: completion)
     }
 
-    private func scheduleDelayedUpdate(with sections: [Section],
+    private func scheduleDelayedUpdate(with sections: [MessagesCollectionSection],
                                        animated: Bool,
                                        requiresIsolatedProcess: Bool,
                                        completion: (() -> Void)?) {
@@ -401,7 +408,7 @@ extension MessagesViewController {
         currentInterfaceActions.add(reaction: reaction)
     }
 
-    private func performUpdate(with sections: [Section],
+    private func performUpdate(with sections: [MessagesCollectionSection],
                                animated: Bool,
                                requiresIsolatedProcess: Bool,
                                completion: (() -> Void)?) {
@@ -498,7 +505,7 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
             return
         }
 
-        if scrollView.contentOffset.y <= -scrollView.adjustedContentInset.top + scrollView.bounds.height {
+        if scrollView.contentOffset.y <= -scrollView.adjustedContentInset.top {
             loadPreviousMessages()
         }
     }
@@ -526,7 +533,7 @@ extension MessagesViewController: MessagesInputViewDelegate {
         currentInterfaceActions.options.insert(.sendingMessage)
         scrollToBottom()
         Task {
-            let sections = await messagingService.sendMessage(.text(text))
+            let sections = await messagesStore.sendMessage(.text(text))
             currentInterfaceActions.options.remove(.sendingMessage)
             processUpdates(with: sections, animated: true, requiresIsolatedProcess: false)
         }

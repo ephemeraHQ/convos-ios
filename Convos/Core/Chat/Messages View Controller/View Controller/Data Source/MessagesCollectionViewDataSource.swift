@@ -5,7 +5,7 @@ import UIKit
 // swiftlint:disable force_cast
 
 final class MessagesCollectionViewDataSource: NSObject {
-    var sections: [Section] = [] {
+    var sections: [MessagesCollectionSection] = [] {
         didSet {
             layoutDelegate = DefaultMessagesLayoutDelegate(sections: sections,
                                                            oldSections: layoutDelegate.sections)
@@ -88,7 +88,7 @@ extension MessagesCollectionViewDataSource: MessagesLayoutDelegate {
 
     func alignmentForItem(_ messagesLayout: MessagesCollectionLayout,
                           of kind: ItemKind,
-                          at indexPath: IndexPath) -> Cell.Alignment {
+                          at indexPath: IndexPath) -> MessagesCollectionCell.Alignment {
         layoutDelegate.alignmentForItem(messagesLayout, of: kind, at: indexPath)
     }
 

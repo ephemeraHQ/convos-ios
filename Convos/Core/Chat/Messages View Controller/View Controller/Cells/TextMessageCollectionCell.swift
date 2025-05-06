@@ -4,7 +4,7 @@ import UIKit
 class TextMessageCollectionCell: UICollectionViewCell, PreviewableCell {
     private var message: String = ""
     private var messageType: MessageType = .incoming
-    private var bubbleStyle: Cell.BubbleType = .normal
+    private var bubbleStyle: MessagesCollectionCell.BubbleType = .normal
     private var longPressGestureRecognizer: UILongPressGestureRecognizer?
     private var panGestureRecognizer: UIPanGestureRecognizer?
     private var doubleTapGestureRecognizer: UITapGestureRecognizer?
@@ -28,7 +28,7 @@ class TextMessageCollectionCell: UICollectionViewCell, PreviewableCell {
         bubbleStyle = .normal
     }
 
-    func setup(message: String, messageType: MessageType, style: Cell.BubbleType) {
+    func setup(message: String, messageType: MessageType, style: MessagesCollectionCell.BubbleType) {
         self.message = message
         self.messageType = messageType
         self.bubbleStyle = style
@@ -90,7 +90,7 @@ class TextMessageCollectionCell: UICollectionViewCell, PreviewableCell {
 }
 
 struct MessageBubble: View {
-    let style: Cell.BubbleType
+    let style: MessagesCollectionCell.BubbleType
     let message: String
     let isOutgoing: Bool
     var body: some View {
