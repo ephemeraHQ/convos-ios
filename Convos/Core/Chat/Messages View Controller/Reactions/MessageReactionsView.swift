@@ -3,6 +3,12 @@ import SwiftUI
 struct MessageReactionsView: View {
     let viewModel: MessageReactionMenuViewModelType
     let padding: CGFloat = 8.0
+    let emojiAppearanceDelay: TimeInterval = 0.3
+
+    // Animation states
+    @State private var emojiAppeared: [Bool] = []
+    @State private var showMoreAppeared: Bool = false
+    @State private var didAppear: Bool = false
 
     var body: some View {
         HStack {
@@ -12,13 +18,38 @@ struct MessageReactionsView: View {
                     ScrollView(.horizontal,
                                showsIndicators: false) {
                         HStack(spacing: 0.0) {
-                            ForEach(viewModel.reactions) { reaction in
+                            ForEach(Array(viewModel.reactions.enumerated()), id: \ .element.id) { index, reaction in
                                 Button {
                                     viewModel.add(reaction: reaction)
                                 } label: {
                                     Text(reaction.emoji)
                                         .font(.system(size: 24.0))
                                         .padding(padding)
+                                        .scaleEffect(
+                                            emojiAppeared.indices.contains(index) &&
+                                            emojiAppeared[index] ? 1.0 : 0.0
+                                        )
+                                        .rotationEffect(
+                                            .degrees(
+                                                emojiAppeared.indices.contains(index) &&
+                                                emojiAppeared[index] ? 0 : -15
+                                            )
+                                        )
+                                        .animation(
+                                            .spring(response: 0.4,
+                                                    dampingFraction: 0.6),
+                                            value: emojiAppeared.indices.contains(index) ? emojiAppeared[index] : false
+                                        )
+                                }
+                                .onAppear {
+                                    // Staggered animation
+                                    if emojiAppeared.indices.contains(index) && !emojiAppeared[index] {
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + emojiAppearanceDelay + 0.08 * Double(index)) {
+                                            withAnimation {
+                                                emojiAppeared[index] = true
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -50,7 +81,6 @@ struct MessageReactionsView: View {
                         )
                     HStack(spacing: padding) {
                         Spacer()
-
                         Button {
                             viewModel.showMoreReactions()
                         } label: {
@@ -58,6 +88,9 @@ struct MessageReactionsView: View {
                                 .font(.system(size: 24.0))
                                 .padding(padding)
                                 .tint(.colorTextSecondary)
+                                .offset(x: showMoreAppeared ? 0 : 40)
+                                .opacity(showMoreAppeared ? 1 : 0)
+                                .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showMoreAppeared)
                         }
                         .frame(minWidth: contentHeight)
                         .padding(.trailing, padding)
@@ -66,6 +99,22 @@ struct MessageReactionsView: View {
                 }
             }
             .padding(0.0)
+            .onAppear {
+                guard !didAppear else { return }
+
+                didAppear = true
+
+                if emojiAppeared.count != viewModel.reactions.count {
+                    emojiAppeared = Array(repeating: false, count: viewModel.reactions.count)
+                }
+
+                let totalDelay = emojiAppearanceDelay + 0.08 * Double(viewModel.reactions.count)
+                DispatchQueue.main.asyncAfter(deadline: .now() + totalDelay) {
+                    withAnimation {
+                        showMoreAppeared = true
+                    }
+                }
+            }
         }
     }
 }
