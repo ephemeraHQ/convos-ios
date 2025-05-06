@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct MessagesView: UIViewControllerRepresentable {
-    let messagingService: TempMessagingServiceProtocol
+    let messagesStore: MessagesStoreProtocol
 
     func makeUIViewController(context: Context) -> MessagesViewController {
-        let messageViewController = MessagesViewController(messagingService: messagingService)
+        let messageViewController = MessagesViewController(messagesStore: messagesStore)
         return messageViewController
     }
 
@@ -13,6 +13,6 @@ struct MessagesView: UIViewControllerRepresentable {
 }
 
 #Preview {
-    MessagesView(messagingService: MockMessagingService())
+    MessagesView(messagesStore: MockMessagesStore())
         .ignoresSafeArea()
 }

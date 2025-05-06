@@ -23,7 +23,74 @@ private enum MessagingServiceEffect {
     case none
 }
 
+extension XMTPiOS.Member: ConvosSDK.User {
+    public var id: String {
+        ""
+    }
+
+    public var name: String {
+        ""
+    }
+
+    public var publicIdentifier: String? {
+        nil
+    }
+
+    public var chainId: Int64? {
+        0
+    }
+
+    public func sign(message: String) async throws -> Data? {
+        nil
+    }
+}
+
+// TODO: Temporary to get around not initializing XMTPiOS.Member
+struct XMTPiOSMember: ConvosSDK.User {
+    var id: String
+    var name: String
+    var publicIdentifier: String?
+    var chainId: Int64?
+
+    func sign(message: String) async throws -> Data? {
+        nil
+    }
+}
+
+extension XMTPiOS.DecodedMessage: ConvosSDK.RawMessageType {
+    public var content: String {
+        ""
+    }
+
+    public var sender: any ConvosSDK.User {
+        XMTPiOSMember(id: "", name: "")
+    }
+
+    public var timestamp: Date {
+        Date()
+    }
+
+    public var replies: [any ConvosSDK.RawMessageType] {
+        []
+    }
+}
+
 final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
+    nonisolated
+    func messages(for address: String) -> AnyPublisher<[XMTPiOS.DecodedMessage], Never> {
+        Just([]).eraseToAnyPublisher()
+    }
+
+    func loadInitialMessages() async -> [XMTPiOS.DecodedMessage] {
+        []
+    }
+
+    func loadPreviousMessages() async -> [XMTPiOS.DecodedMessage] {
+        []
+    }
+
+    typealias RawMessage = XMTPiOS.DecodedMessage
+
     private let authService: ConvosSDK.AuthServiceProtocol
     private var xmtpClient: XMTPiOS.Client?
     private let keychainService: KeychainService<ConvosKeychainItem> = .init()
@@ -140,14 +207,15 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
     // MARK: - Messaging
 
-    func sendMessage(to address: String, content: String) async throws {
+    func sendMessage(to address: String, content: String) async throws -> [XMTPiOS.DecodedMessage] {
         guard xmtpClient != nil else {
             throw MessagingServiceError.notInitialized
         }
         // Implement XMTP message sending
+        return []
     }
 
-    nonisolated func messages(for address: String) -> AnyPublisher<[ConvosSDK.Message], Never> {
+    nonisolated func messages(for address: String) -> AnyPublisher<[ConvosSDK.RawMessageType], Never> {
         Just([]).eraseToAnyPublisher()
     }
 
@@ -229,13 +297,4 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
             })
             .store(in: &cancellables)
     }
-}
-
-private struct ConvosMessage: ConvosSDK.Message {
-    private let xmtpMessage: XMTPiOS.DecodedMessage
-    let sender: ConvosSDK.User
-
-    var id: String { xmtpMessage.id }
-    var content: String { (try? xmtpMessage.body) ?? "" }
-    var timestamp: Date { xmtpMessage.sentAt }
 }

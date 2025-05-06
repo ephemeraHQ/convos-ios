@@ -14,12 +14,6 @@ enum MessageStatus: Hashable {
     case sent, delivered, read
 }
 
-extension Cell.Alignment {
-    var isIncoming: Bool {
-        self == .leading
-    }
-}
-
 struct DateGroup: Hashable {
     var id: UUID
     var date: Date
@@ -71,14 +65,14 @@ enum ImageSource: Hashable {
 }
 
 struct Message: Hashable {
-    public enum Data: Hashable {
+    public enum Kind: Hashable {
         case text(String)
         case image(ImageSource, isLocallyStored: Bool)
     }
 
-    var id: UUID
+    var id: String
     var date: Date
-    var data: Data
+    var kind: Kind
     var owner: ConvosUser
     var type: MessageType
     var status: MessageStatus = .sent

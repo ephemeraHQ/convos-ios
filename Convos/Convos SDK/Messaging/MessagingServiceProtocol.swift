@@ -2,20 +2,25 @@ import Combine
 import Foundation
 
 public extension ConvosSDK {
-    protocol Message {
+    protocol RawMessageType {
         var id: String { get }
         var content: String { get }
         var sender: User { get }
         var timestamp: Date { get }
+        var replies: [RawMessageType] { get }
     }
 
     protocol MessagingServiceProtocol {
+        associatedtype RawMessage: RawMessageType
+
         func start() async throws
         func stop() async
 
-        func sendMessage(to address: String, content: String) async throws
-        func messages(for address: String) -> AnyPublisher<[Message], Never>
+        func sendMessage(to address: String, content: String) async throws -> [RawMessage]
+        func messages(for address: String) -> AnyPublisher<[RawMessage], Never>
         func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never>
+        func loadInitialMessages() async -> [RawMessage]
+        func loadPreviousMessages() async -> [RawMessage]
         var state: MessagingServiceState { get }
     }
 
@@ -29,27 +34,31 @@ public extension ConvosSDK {
     }
 }
 
-struct MockMessage: ConvosSDK.Message {
+struct MockMessage: ConvosSDK.RawMessageType {
     var id: String
     var content: String
     var sender: any ConvosSDK.User
     var timestamp: Date
+    var replies: [any ConvosSDK.RawMessageType]
 
-    static func message(_ content: String) -> MockMessage {
+    static func message(_ content: String, sender: any ConvosSDK.User) -> MockMessage {
         .init(
             id: UUID().uuidString,
             content: content,
-            sender: MockUser(),
-            timestamp: Date()
+            sender: sender,
+            timestamp: Date(),
+            replies: []
         )
     }
 }
 
-class _MockMessagingService: ConvosSDK.MessagingServiceProtocol {
+class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
+    typealias RawMessage = MockMessage
+
     private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
     CurrentValueSubject<ConvosSDK.MessagingServiceState, Never>(.uninitialized)
-    private var messagesSubject: CurrentValueSubject<[ConvosSDK.Message], Never> =
-    CurrentValueSubject<[ConvosSDK.Message], Never>([])
+    private var messagesSubject: CurrentValueSubject<[RawMessage], Never> =
+    CurrentValueSubject<[RawMessage], Never>([])
 
     var state: ConvosSDK.MessagingServiceState {
         messagingStateSubject.value
@@ -61,11 +70,20 @@ class _MockMessagingService: ConvosSDK.MessagingServiceProtocol {
     func stop() {
     }
 
-    func sendMessage(to address: String, content: String) async throws {
-        messagesSubject.send([MockMessage.message(content)])
+    func loadInitialMessages() async -> [RawMessage] {
+        return []
     }
 
-    func messages(for address: String) -> AnyPublisher<[any ConvosSDK.Message], Never> {
+    func loadPreviousMessages() async -> [RawMessage] {
+        return []
+    }
+
+    func sendMessage(to address: String, content: String) async throws -> [RawMessage] {
+        messagesSubject.send([MockMessage.message(content, sender: MockUser())])
+        return messagesSubject.value
+    }
+
+    func messages(for address: String) -> AnyPublisher<[RawMessage], Never> {
         messagesSubject.eraseToAnyPublisher()
     }
 
