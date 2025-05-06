@@ -133,9 +133,15 @@ final class MessagesViewController: UIViewController {
         // Set content inset to just the base navigation bar height plus safe area
         let navHeight = (traitCollection.verticalSizeClass == .compact ?
             MessagesNavigationBar.Constant.compactHeight :
-            MessagesNavigationBar.Constant.regularHeight) + view.safeAreaInsets.top
+            MessagesNavigationBar.Constant.regularHeight)
         collectionView.contentInset.top = navHeight
         collectionView.verticalScrollIndicatorInsets.top = collectionView.contentInset.top
+    }
+
+    // MARK: - Actions
+
+    @objc func onBack() {
+        navigationController?.popViewController(animated: true)
     }
 
     // MARK: - Private Setup Methods
@@ -146,6 +152,7 @@ final class MessagesViewController: UIViewController {
             UIImage(systemName: "chevron.left",
                     withConfiguration: UIImage.SymbolConfiguration(weight: .medium)),
             for: .normal)
+        navigationBar.leftButton.addTarget(self, action: #selector(onBack), for: .touchUpInside)
         navigationBar.rightButton.setImage(
             UIImage(systemName: "timer",
                     withConfiguration: UIImage.SymbolConfiguration(weight: .medium)),
@@ -498,7 +505,7 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
             return
         }
 
-        if scrollView.contentOffset.y <= -scrollView.adjustedContentInset.top + scrollView.bounds.height {
+        if scrollView.contentOffset.y <= -scrollView.adjustedContentInset.top {
             loadPreviousMessages()
         }
     }
