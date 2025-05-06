@@ -9,6 +9,8 @@ struct MessageReactionsView: View {
     @State private var emojiAppeared: [Bool] = []
     @State private var showMoreAppeared: Bool = false
     @State private var didAppear: Bool = false
+    // Collapse state
+    @State private var isCollapsed: Bool = false
 
     var body: some View {
         HStack {
@@ -26,18 +28,20 @@ struct MessageReactionsView: View {
                                         .font(.system(size: 24.0))
                                         .padding(padding)
                                         .scaleEffect(
-                                            emojiAppeared.indices.contains(index) &&
-                                            emojiAppeared[index] ? 1.0 : 0.0
+                                            isCollapsed ? 0.0 : (emojiAppeared.indices.contains(index) && emojiAppeared[index] ? 1.0 : 0.0)
                                         )
                                         .rotationEffect(
                                             .degrees(
-                                                emojiAppeared.indices.contains(index) &&
-                                                emojiAppeared[index] ? 0 : -15
+                                                emojiAppeared.indices.contains(index) && emojiAppeared[index] ? 0 : -15
                                             )
                                         )
+                                        .opacity(isCollapsed ? 0 : 1)
                                         .animation(
-                                            .spring(response: 0.4,
-                                                    dampingFraction: 0.6),
+                                            .spring(response: 0.4, dampingFraction: 0.6),
+                                            value: isCollapsed
+                                        )
+                                        .animation(
+                                            .spring(response: 0.4, dampingFraction: 0.6),
                                             value: emojiAppeared.indices.contains(index) ? emojiAppeared[index] : false
                                         )
                                 }
@@ -54,34 +58,49 @@ struct MessageReactionsView: View {
                             }
                         }
                         .padding(.horizontal, padding)
-                    }.frame(height: reader.size.height)
-                        .contentMargins(.trailing, contentHeight, for: .scrollContent)
-                        .mask(
-                            HStack(spacing: 0) {
-                                // Left gradient
-                                LinearGradient(gradient:
-                                                Gradient(
-                                                    colors: [Color.black.opacity(0), Color.black]),
-                                               startPoint: .leading, endPoint: .trailing
-                                )
-                                .frame(width: padding)
-                                // Middle
-                                Rectangle().fill(Color.black)
-                                // Right gradient
-                                LinearGradient(gradient:
-                                                Gradient(
-                                                    colors: [Color.black, Color.black.opacity(0)]),
-                                               startPoint: .leading, endPoint: .trailing
-                                )
-                                .frame(width: (contentHeight * 0.3))
-                                // Right button area
-                                Rectangle().fill(Color.clear)
-                                    .frame(width: contentHeight)
-                            }
-                        )
+                    }
+                    .frame(height: reader.size.height)
+                    .contentMargins(.trailing, contentHeight, for: .scrollContent)
+                    .mask(
+                        HStack(spacing: 0) {
+                            // Left gradient
+                            LinearGradient(gradient:
+                                            Gradient(
+                                                colors: [Color.black.opacity(0), Color.black]),
+                                           startPoint: .leading, endPoint: .trailing
+                            )
+                            .frame(width: padding)
+                            // Middle
+                            Rectangle().fill(Color.black)
+                            // Right gradient
+                            LinearGradient(gradient:
+                                            Gradient(
+                                                colors: [Color.black, Color.black.opacity(0)]),
+                                           startPoint: .leading, endPoint: .trailing
+                            )
+                            .frame(width: (contentHeight * 0.3))
+                            // Right button area
+                            Rectangle().fill(Color.clear)
+                                .frame(width: contentHeight)
+                        }
+                    )
                     HStack(spacing: padding) {
                         Spacer()
+                        if isCollapsed {
+                            Image(systemName: "face.smiling")
+                                .font(.system(size: 24.0))
+                                .padding(padding)
+                                .tint(.black)
+                                .opacity(isCollapsed ? 0.2 : 0.0)
+                                .scaleEffect(
+                                    isCollapsed ? 1.0 : 0.0
+                                )
+                                .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isCollapsed)
+                        }
                         Button {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                isCollapsed.toggle()
+                            }
                             viewModel.showMoreReactions()
                         } label: {
                             Image(systemName: "plus")
@@ -91,6 +110,11 @@ struct MessageReactionsView: View {
                                 .offset(x: showMoreAppeared ? 0 : 40)
                                 .opacity(showMoreAppeared ? 1 : 0)
                                 .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showMoreAppeared)
+                                .rotationEffect(
+                                    .degrees(
+                                        isCollapsed ? -45.0 : 0.0
+                                    )
+                                )
                         }
                         .frame(minWidth: contentHeight)
                         .padding(.trailing, padding)
@@ -99,15 +123,14 @@ struct MessageReactionsView: View {
                 }
             }
             .padding(0.0)
+            .frame(width: isCollapsed ? 56.0 + padding * 2.0 : nil, alignment: .leading) // 56 is the button height
+            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isCollapsed)
             .onAppear {
                 guard !didAppear else { return }
-
                 didAppear = true
-
                 if emojiAppeared.count != viewModel.reactions.count {
                     emojiAppeared = Array(repeating: false, count: viewModel.reactions.count)
                 }
-
                 let totalDelay = emojiAppearanceDelay + 0.08 * Double(viewModel.reactions.count)
                 DispatchQueue.main.asyncAfter(deadline: .now() + totalDelay) {
                     withAnimation {
