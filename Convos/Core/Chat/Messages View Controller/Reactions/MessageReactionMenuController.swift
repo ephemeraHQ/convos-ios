@@ -2,14 +2,6 @@ import Combine
 import SwiftUI
 import UIKit
 
-struct MessageReaction: Identifiable {
-    var id: String {
-        emoji
-    }
-    let emoji: String
-    let isSelected: Bool
-}
-
 private class ReactionsViewController: UIViewController {
     let hostingVC: UIHostingController<MessageReactionsView>
 
