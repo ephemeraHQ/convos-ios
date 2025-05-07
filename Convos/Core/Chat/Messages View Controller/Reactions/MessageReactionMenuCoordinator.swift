@@ -372,7 +372,6 @@ final class MessageReactionDismissalAnimator: NSObject, UIViewControllerAnimated
         let containerView = transitionContext.containerView
 
         let previewView = fromVC.previewView
-        previewView.frame = sourceRect
         containerView.addSubview(previewView)
 
         let duration = transitionDuration(using: transitionContext)

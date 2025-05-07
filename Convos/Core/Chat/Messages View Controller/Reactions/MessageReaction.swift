@@ -7,4 +7,3 @@ struct MessageReaction: Identifiable {
     let emoji: String
     let isSelected: Bool
 }
-

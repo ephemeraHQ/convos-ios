@@ -1,44 +1,6 @@
 import SwiftUI
 
 struct MessageReactionsView: View {
-    private enum Constant {
-        static let padding: CGFloat = 8.0
-        static let emojiAppearanceDelay: TimeInterval = 0.4
-        static let emojiAppearanceDelayStep: TimeInterval = 0.05
-        static let emojiFontSize: CGFloat = 24.0
-        static let selectedEmojiFontSize: CGFloat = 28.0
-        static let selectedEmojiFrame: CGFloat = 32.0
-        static let blurRadius: CGFloat = 10.0
-        static let emojiRotationCollapsed: Double = -15
-        static let faceSmilingRotationCollapsed: Double = -30.0
-        static let plusRotationCollapsed: Double = -45.0
-        static let plusOffset: CGFloat = 40
-        static let plusTrailingPadding: CGFloat = 8.0
-        static let faceSmilingOpacity: Double = 0.2
-        static let faceSmilingOpacityHidden: Double = 0.0
-        static let visibleOpacity: Double = 1.0
-        static let hiddenOpacity: Double = 0.0
-        static let popScaleDelay: TimeInterval = 0.15
-        static let popScaleLarge: CGFloat = 1.2
-        static let popScaleNormal: CGFloat = 1.0
-        static let collapsedScale: CGFloat = 0.0
-        static let springResponse: Double = 0.4
-        static let springDampingFraction: Double = 0.8
-        static let springDampingFractionCollapsed: Double = 0.6
-        static let springDampingFractionPlus: Double = 0.7
-        static let springResponsePop: Double = 0.2
-        static let springDampingFractionPop: Double = 0.5
-        static let maskRightGradientMultiplier: CGFloat = 0.3
-        static let backgroundColor: Color = Color.gray.opacity(0.1)
-        static let maskGradientColor: Color = Color.black
-        static let maskGradientTransparent: Color = Color.black.opacity(0)
-        static let plusIconFontSize: CGFloat = 24.0
-        static let faceSmilingFontSize: CGFloat = 28.0
-        static let plusIconColor: Color = .colorTextSecondary
-        static let faceSmilingColor: Color = .black
-        static let maskClear: Color = .clear
-    }
-
     @State var viewModel: MessageReactionMenuViewModel
     @State private var emojiAppeared: [Bool] = []
     @State private var showMoreAppeared: Bool = false
@@ -49,7 +11,7 @@ struct MessageReactionsView: View {
     init(viewModel: MessageReactionMenuViewModel) {
         _viewModel = State(initialValue: viewModel)
     }
-    
+
     var body: some View {
         Group {
             GeometryReader { reader in
@@ -279,6 +241,44 @@ struct MessageReactionsView: View {
             .spring(response: Constant.springResponse, dampingFraction: Constant.springDampingFraction),
             value: viewModel.isCollapsed
         )
+    }
+
+    private enum Constant {
+        static let padding: CGFloat = 8.0
+        static let emojiAppearanceDelay: TimeInterval = 0.4
+        static let emojiAppearanceDelayStep: TimeInterval = 0.05
+        static let emojiFontSize: CGFloat = 24.0
+        static let selectedEmojiFontSize: CGFloat = 28.0
+        static let selectedEmojiFrame: CGFloat = 32.0
+        static let blurRadius: CGFloat = 10.0
+        static let emojiRotationCollapsed: Double = -15
+        static let faceSmilingRotationCollapsed: Double = -30.0
+        static let plusRotationCollapsed: Double = -45.0
+        static let plusOffset: CGFloat = 40
+        static let plusTrailingPadding: CGFloat = 8.0
+        static let faceSmilingOpacity: Double = 0.2
+        static let faceSmilingOpacityHidden: Double = 0.0
+        static let visibleOpacity: Double = 1.0
+        static let hiddenOpacity: Double = 0.0
+        static let popScaleDelay: TimeInterval = 0.15
+        static let popScaleLarge: CGFloat = 1.2
+        static let popScaleNormal: CGFloat = 1.0
+        static let collapsedScale: CGFloat = 0.0
+        static let springResponse: Double = 0.4
+        static let springDampingFraction: Double = 0.8
+        static let springDampingFractionCollapsed: Double = 0.6
+        static let springDampingFractionPlus: Double = 0.7
+        static let springResponsePop: Double = 0.2
+        static let springDampingFractionPop: Double = 0.5
+        static let maskRightGradientMultiplier: CGFloat = 0.3
+        static let backgroundColor: Color = Color.gray.opacity(0.1)
+        static let maskGradientColor: Color = Color.black
+        static let maskGradientTransparent: Color = Color.black.opacity(0)
+        static let plusIconFontSize: CGFloat = 24.0
+        static let faceSmilingFontSize: CGFloat = 28.0
+        static let plusIconColor: Color = .colorTextSecondary
+        static let faceSmilingColor: Color = .black
+        static let maskClear: Color = .clear
     }
 }
 
