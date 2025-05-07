@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-class TextMessageCollectionCell: UICollectionViewCell, PreviewableCell {
+class TextMessageCollectionCell: UICollectionViewCell {
     private var message: String = ""
     private var messageType: MessageType = .incoming
     private var bubbleStyle: Cell.BubbleType = .normal
@@ -49,42 +49,11 @@ class TextMessageCollectionCell: UICollectionViewCell, PreviewableCell {
     ) -> UICollectionViewLayoutAttributes {
         layoutAttributesForHorizontalFittingRequired(layoutAttributes)
     }
+}
 
-    // MARK: - PreviewableCell
-
-    var previewSourceView: UIView {
-        contentView
-    }
-
-    var actualPreviewSourceSize: CGSize {
-        intrinsicContentSize
-    }
-
-    var horizontalInset: CGFloat {
-        (layoutMargins.left + layoutMargins.right) + 10.0
-    }
-
+extension TextMessageCollectionCell: PreviewableCell {
     var sourceCellEdge: MessageReactionMenuController.Configuration.Edge {
         messageType == .incoming ? .leading : .trailing
-    }
-
-    func previewView() -> UIView {
-        guard let window else { return UIView(frame: .zero) }
-        layoutIfNeeded()
-        let convertedFrame = convert(previewSourceView.frame, to: window)
-        // Create the snapshot
-        let format = UIGraphicsImageRendererFormat()
-        format.opaque = false
-        format.scale = window.screen.scale
-        format.preferredRange = .extended
-        let renderer = UIGraphicsImageRenderer(bounds: previewSourceView.bounds, format: format)
-        let image = renderer.image { _ in
-            previewSourceView.drawHierarchy(in: contentView.bounds, afterScreenUpdates: true)
-        }
-        let preview = UIView(frame: convertedFrame)
-        preview.layer.contents = image.cgImage
-        preview.clipsToBounds = false
-        return preview
     }
 }
 
