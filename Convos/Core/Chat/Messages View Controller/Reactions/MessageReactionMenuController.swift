@@ -124,9 +124,9 @@ class MessageReactionMenuController: UIViewController {
                 if selectedEmoji != nil {
                     animateShapeView(to: .compact)
 
-//                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-//                        self.dismiss(animated: true)
-//                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        self.dismiss(animated: true)
+                    }
                 }
             }
             .store(in: &cancellables)

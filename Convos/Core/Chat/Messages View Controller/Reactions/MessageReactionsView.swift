@@ -55,8 +55,7 @@ struct MessageReactionsView: View {
                                         )
                                 }
                                 .scaleEffect(
-                                    (viewModel.selectedEmoji == nil ? 1.0 :
-                                        viewModel.selectedEmoji == reaction.emoji ? 1.0 : 0.0)
+                                    (viewModel.selectedEmoji == nil ? 1.0 : 0.0)
                                 )
                                 .onAppear {
                                     // Staggered animation
