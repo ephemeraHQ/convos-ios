@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct MessageReactionsView: View {
-    @State var viewModel: MessageReactionMenuViewModel
     private enum Constant {
         static let padding: CGFloat = 8.0
         static let emojiAppearanceDelay: TimeInterval = 0.4
@@ -40,211 +39,36 @@ struct MessageReactionsView: View {
         static let maskClear: Color = .clear
     }
 
-    init(viewModel: MessageReactionMenuViewModel) {
-        _viewModel = State(initialValue: viewModel)
-    }
-
+    @State var viewModel: MessageReactionMenuViewModel
     @State private var emojiAppeared: [Bool] = []
     @State private var showMoreAppeared: Bool = false
     @State private var didAppear: Bool = false
     @State private var customEmoji: String?
     @State private var popScale: CGFloat = 1.0
 
+    init(viewModel: MessageReactionMenuViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
+    
     var body: some View {
         Group {
             GeometryReader { reader in
                 let contentHeight = max(reader.size.height - (Constant.padding * 2.0), 0.0)
                 ZStack(alignment: .leading) {
-                    ScrollView(.horizontal,
-                               showsIndicators: false) {
-                        HStack(spacing: 0.0) {
-                            ForEach(Array(viewModel.reactions.enumerated()),
-                                    id: \ .element.id) { index, reaction in
-                                Button {
-                                    viewModel.add(reaction: reaction)
-                                } label: {
-                                    Text(reaction.emoji)
-                                        .font(.system(size: Constant.emojiFontSize))
-                                        .padding(Constant.padding)
-                                        .blur(
-                                            radius: (viewModel.isCollapsed ? Constant.blurRadius :
-                                                        emojiAppeared.indices.contains(index)
-                                                     && emojiAppeared[index] ? 0.0 : Constant.blurRadius)
-                                        )
-                                        .scaleEffect(
-                                            viewModel.isCollapsed ? Constant.collapsedScale :
-                                                (emojiAppeared.indices.contains(index) &&
-                                                 emojiAppeared[index] ? Constant.popScaleNormal :
-                                                    Constant.collapsedScale)
-                                        )
-                                        .rotationEffect(
-                                            .degrees(
-                                                emojiAppeared.indices.contains(index) && emojiAppeared[index] ? 0 :
-                                                    Constant.emojiRotationCollapsed
-                                            )
-                                        )
-                                        .opacity(viewModel.isCollapsed ? Constant.hiddenOpacity :
-                                                    Constant.visibleOpacity)
-                                        .animation(
-                                            .spring(response: Constant.springResponse,
-                                                    dampingFraction: Constant.springDampingFractionCollapsed),
-                                            value: viewModel.isCollapsed
-                                        )
-                                        .animation(
-                                            .spring(response: Constant.springResponse,
-                                                    dampingFraction: Constant.springDampingFractionCollapsed),
-                                            value: emojiAppeared.indices.contains(index) ? emojiAppeared[index] : false
-                                        )
-                                }
-                                .scaleEffect(
-                                    (viewModel.selectedEmoji == nil ? Constant.popScaleNormal : Constant.collapsedScale)
-                                )
-                                .onAppear {
-                                    // Staggered animation
-                                    if emojiAppeared.indices.contains(index) && !emojiAppeared[index] {
-                                        DispatchQueue.main.asyncAfter(
-                                            deadline: (.now() + Constant.emojiAppearanceDelay +
-                                                       (Constant.emojiAppearanceDelayStep * Double(index)))
-                                        ) {
-                                            withAnimation {
-                                                emojiAppeared[index] = true
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.horizontal, Constant.padding)
-                    }
-                               .frame(height: reader.size.height)
-                               .contentMargins(.trailing, contentHeight, for: .scrollContent)
-                               .mask(
-                                HStack(spacing: 0) {
-                                    // Left gradient
-                                    LinearGradient(gradient:
-                                                    Gradient(
-                                                        colors: [Constant.maskGradientTransparent,
-                                                                 Constant.maskGradientColor]),
-                                                   startPoint: .leading, endPoint: .trailing
-                                    )
-                                    .frame(width: Constant.padding)
-                                    // Middle
-                                    Rectangle().fill(Constant.maskGradientColor)
-                                    // Right gradient
-                                    LinearGradient(gradient:
-                                                    Gradient(
-                                                        colors: [Constant.maskGradientColor,
-                                                                 Constant.maskGradientTransparent]),
-                                                   startPoint: .leading, endPoint: .trailing
-                                    )
-                                    .frame(width: (contentHeight * Constant.maskRightGradientMultiplier))
-                                    // Right button area
-                                    Rectangle().fill(Constant.maskClear)
-                                        .frame(width: contentHeight)
-                                }
-                               )
-                               .animation(
-                                .spring(response: Constant.springResponse,
-                                        dampingFraction: Constant.springDampingFraction),
-                                value: viewModel.isCollapsed
-                               )
-
+                    reactionsScrollView(reader: reader, contentHeight: contentHeight)
                     HStack(spacing: 0.0) {
                         Spacer()
-
-                        ZStack {
-                            Text(viewModel.selectedEmoji ?? customEmoji ?? "")
-                                .multilineTextAlignment(.center)
-                                .font(.system(size: Constant.selectedEmojiFontSize))
-                                .frame(width: Constant.selectedEmojiFrame, height: Constant.selectedEmojiFrame)
-                                .scaleEffect(
-                                    popScale *
-                                    (
-                                        (viewModel.isCollapsed && customEmoji != nil) ||
-                                        viewModel.selectedEmoji != nil ? Constant.popScaleNormal :
-                                            Constant.collapsedScale
-                                    )
-                                )
-                                .animation(.spring(response: Constant.springResponse,
-                                                   dampingFraction: Constant.springDampingFraction),
-                                           value: customEmoji)
-                                .animation(.spring(response: Constant.springResponse,
-                                                   dampingFraction: Constant.springDampingFraction),
-                                           value: viewModel.selectedEmoji)
-                                .onChange(of: viewModel.selectedEmoji ?? customEmoji ?? "") {
-                                    withAnimation(.spring(response: Constant.springResponsePop,
-                                                          dampingFraction: Constant.springDampingFractionPop)) {
-                                        popScale = Constant.popScaleLarge
-                                    }
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + Constant.popScaleDelay) {
-                                        withAnimation(.spring(response: Constant.springResponse,
-                                                              dampingFraction: Constant.springDampingFraction)) {
-                                            popScale = Constant.popScaleNormal
-                                        }
-                                    }
-                                }
-
-                            Image(systemName: "face.smiling")
-                                .font(.system(size: Constant.faceSmilingFontSize))
-                                .tint(Constant.faceSmilingColor)
-                                .opacity(viewModel.isCollapsed ? Constant.faceSmilingOpacity :
-                                            Constant.faceSmilingOpacityHidden)
-                                .blur(radius: viewModel.isCollapsed ? Constant.faceSmilingOpacityHidden :
-                                        Constant.blurRadius)
-                                .rotationEffect(
-                                    .degrees(
-                                        viewModel.isCollapsed ? 0.0 : Constant.faceSmilingRotationCollapsed
-                                    )
-                                )
-                                .scaleEffect(
-                                    viewModel.isCollapsed &&
-                                    customEmoji == nil &&
-                                    viewModel.selectedEmoji == nil ? Constant.popScaleNormal : Constant.collapsedScale
-                                )
-                                .animation(
-                                    .spring(response: Constant.springResponse,
-                                            dampingFraction: Constant.springDampingFraction),
-                                    value: viewModel.isCollapsed
-                                )
-                        }
-                        .frame(width: reader.size.height, height: reader.size.height)
-
-                        Button {
-                            withAnimation(.spring(response: Constant.springResponse,
-                                                  dampingFraction: Constant.springDampingFractionPlus)) {
-                                viewModel.toggleCollapsed()
-                            }
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: Constant.plusIconFontSize))
-                                .padding(Constant.padding)
-                                .tint(Constant.plusIconColor)
-                                .offset(x: showMoreAppeared ? 0 : Constant.plusOffset)
-                                .opacity(showMoreAppeared ? Constant.visibleOpacity : Constant.hiddenOpacity)
-                                .animation(.spring(response: Constant.springResponse,
-                                                   dampingFraction: Constant.springDampingFractionPlus),
-                                           value: showMoreAppeared)
-                                .rotationEffect(
-                                    .degrees(
-                                        viewModel.isCollapsed ? Constant.plusRotationCollapsed : 0.0
-                                    )
-                                )
-                        }
-                        .frame(minWidth: contentHeight)
-                        .padding(.trailing, Constant.plusTrailingPadding)
-                        .scaleEffect(
-                            viewModel.selectedEmoji == nil ? Constant.popScaleNormal : Constant.collapsedScale
-                        )
-                        .animation(.spring(response: Constant.springResponse,
-                                           dampingFraction: Constant.springDampingFraction),
-                                   value: viewModel.isCollapsed)
+                        selectedEmojiView(reader: reader)
+                        expandCollapseButton(contentHeight: contentHeight)
                     }
                 }
             }
             .padding(0.0)
-            .animation(.spring(response: Constant.springResponse,
-                               dampingFraction: Constant.springDampingFractionPlus),
-                       value: viewModel.isCollapsed)
+            .animation(
+                .spring(response: Constant.springResponse,
+                        dampingFraction: Constant.springDampingFractionPlus),
+                value: viewModel.isCollapsed
+            )
             .onAppear {
                 guard !didAppear else { return }
                 didAppear = true
@@ -260,13 +84,201 @@ struct MessageReactionsView: View {
                 }
             }
         }
-        .emojiPicker(isPresented: $viewModel.showingEmojiPicker,
-                     onPick: { emoji in
-            customEmoji = emoji
-            viewModel.add(reaction: .init(emoji: emoji, isSelected: true))
-        }, onDelete: {
-            customEmoji = nil
-        })
+        .emojiPicker(
+            isPresented: $viewModel.showingEmojiPicker,
+            onPick: { emoji in
+                customEmoji = emoji
+                viewModel.add(reaction: .init(emoji: emoji, isSelected: true))
+            },
+            onDelete: {
+                customEmoji = nil
+            }
+        )
+    }
+
+    // MARK: - Subviews
+
+    private func reactionsScrollView(reader: GeometryProxy, contentHeight: CGFloat) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 0.0) {
+                ForEach(Array(viewModel.reactions.enumerated()), id: \ .element.id) { index, reaction in
+                    Button {
+                        viewModel.add(reaction: reaction)
+                    } label: {
+                        Text(reaction.emoji)
+                            .font(.system(size: Constant.emojiFontSize))
+                            .padding(Constant.padding)
+                            .blur(
+                                radius: (viewModel.isCollapsed ? Constant.blurRadius :
+                                            emojiAppeared.indices.contains(index)
+                                         && emojiAppeared[index] ? 0.0 : Constant.blurRadius)
+                            )
+                            .scaleEffect(
+                                viewModel.isCollapsed ? Constant.collapsedScale :
+                                    (emojiAppeared.indices.contains(index) &&
+                                     emojiAppeared[index] ? Constant.popScaleNormal : Constant.collapsedScale)
+                            )
+                            .rotationEffect(
+                                .degrees(
+                                    emojiAppeared.indices.contains(index) && emojiAppeared[index] ? 0 :
+                                        Constant.emojiRotationCollapsed
+                                )
+                            )
+                            .opacity(viewModel.isCollapsed ? Constant.hiddenOpacity : Constant.visibleOpacity)
+                            .animation(
+                                .spring(response: Constant.springResponse,
+                                        dampingFraction: Constant.springDampingFractionCollapsed),
+                                value: viewModel.isCollapsed
+                            )
+                            .animation(
+                                .spring(response: Constant.springResponse,
+                                        dampingFraction: Constant.springDampingFractionCollapsed),
+                                value: emojiAppeared.indices.contains(index) ? emojiAppeared[index] : false
+                            )
+                    }
+                    .scaleEffect(
+                        (viewModel.selectedEmoji == nil ? Constant.popScaleNormal : Constant.collapsedScale)
+                    )
+                    .onAppear {
+                        // Staggered animation
+                        if emojiAppeared.indices.contains(index) && !emojiAppeared[index] {
+                            DispatchQueue.main.asyncAfter(
+                                deadline: (.now() + Constant.emojiAppearanceDelay +
+                                           (Constant.emojiAppearanceDelayStep * Double(index)))
+                            ) {
+                                withAnimation {
+                                    emojiAppeared[index] = true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, Constant.padding)
+        }
+        .frame(height: reader.size.height)
+        .contentMargins(.trailing, contentHeight, for: .scrollContent)
+        .mask(
+            HStack(spacing: 0) {
+                // Left gradient
+                LinearGradient(
+                    gradient: Gradient(colors: [Constant.maskGradientTransparent, Constant.maskGradientColor]),
+                    startPoint: .leading, endPoint: .trailing
+                )
+                .frame(width: Constant.padding)
+                // Middle
+                Rectangle().fill(Constant.maskGradientColor)
+                // Right gradient
+                LinearGradient(
+                    gradient: Gradient(colors: [Constant.maskGradientColor, Constant.maskGradientTransparent]),
+                    startPoint: .leading, endPoint: .trailing
+                )
+                .frame(width: (contentHeight * Constant.maskRightGradientMultiplier))
+                // Right button area
+                Rectangle().fill(Constant.maskClear)
+                    .frame(width: contentHeight)
+            }
+        )
+        .animation(
+            .spring(response: Constant.springResponse, dampingFraction: Constant.springDampingFraction),
+            value: viewModel.isCollapsed
+        )
+    }
+
+    private func selectedEmojiView(reader: GeometryProxy) -> some View {
+        ZStack {
+            Text(viewModel.selectedEmoji ?? customEmoji ?? "")
+                .multilineTextAlignment(.center)
+                .font(.system(size: Constant.selectedEmojiFontSize))
+                .frame(width: Constant.selectedEmojiFrame, height: Constant.selectedEmojiFrame)
+                .scaleEffect(
+                    popScale * (
+                        (viewModel.isCollapsed && customEmoji != nil) ||
+                        viewModel.selectedEmoji != nil ? Constant.popScaleNormal : Constant.collapsedScale
+                    )
+                )
+                .animation(
+                    .spring(response: Constant.springResponse, dampingFraction: Constant.springDampingFraction),
+                    value: customEmoji
+                )
+                .animation(
+                    .spring(response: Constant.springResponse, dampingFraction: Constant.springDampingFraction),
+                    value: viewModel.selectedEmoji
+                )
+                .onChange(of: viewModel.selectedEmoji ?? customEmoji ?? "") {
+                    withAnimation(
+                        .spring(response: Constant.springResponsePop,
+                                dampingFraction: Constant.springDampingFractionPop)
+                    ) {
+                        popScale = Constant.popScaleLarge
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Constant.popScaleDelay) {
+                        withAnimation(
+                            .spring(response: Constant.springResponse,
+                                    dampingFraction: Constant.springDampingFraction)
+                        ) {
+                            popScale = Constant.popScaleNormal
+                        }
+                    }
+                }
+
+            Image(systemName: "face.smiling")
+                .font(.system(size: Constant.faceSmilingFontSize))
+                .tint(Constant.faceSmilingColor)
+                .opacity(
+                    viewModel.isCollapsed ? Constant.faceSmilingOpacity : Constant.faceSmilingOpacityHidden
+                )
+                .blur(
+                    radius: viewModel.isCollapsed ? Constant.faceSmilingOpacityHidden : Constant.blurRadius
+                )
+                .rotationEffect(
+                    .degrees(viewModel.isCollapsed ? 0.0 : Constant.faceSmilingRotationCollapsed)
+                )
+                .scaleEffect(
+                    viewModel.isCollapsed && customEmoji == nil && viewModel.selectedEmoji == nil ?
+                        Constant.popScaleNormal : Constant.collapsedScale
+                )
+                .animation(
+                    .spring(response: Constant.springResponse, dampingFraction: Constant.springDampingFraction),
+                    value: viewModel.isCollapsed
+                )
+        }
+        .frame(width: reader.size.height, height: reader.size.height)
+    }
+
+    private func expandCollapseButton(contentHeight: CGFloat) -> some View {
+        Button {
+            withAnimation(
+                .spring(response: Constant.springResponse,
+                        dampingFraction: Constant.springDampingFractionPlus)
+            ) {
+                viewModel.toggleCollapsed()
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: Constant.plusIconFontSize))
+                .padding(Constant.padding)
+                .tint(Constant.plusIconColor)
+                .offset(x: showMoreAppeared ? 0 : Constant.plusOffset)
+                .opacity(showMoreAppeared ? Constant.visibleOpacity : Constant.hiddenOpacity)
+                .animation(
+                    .spring(response: Constant.springResponse,
+                            dampingFraction: Constant.springDampingFractionPlus),
+                    value: showMoreAppeared
+                )
+                .rotationEffect(
+                    .degrees(viewModel.isCollapsed ? Constant.plusRotationCollapsed : 0.0)
+                )
+        }
+        .frame(minWidth: contentHeight)
+        .padding(.trailing, Constant.plusTrailingPadding)
+        .scaleEffect(
+            viewModel.selectedEmoji == nil ? Constant.popScaleNormal : Constant.collapsedScale
+        )
+        .animation(
+            .spring(response: Constant.springResponse, dampingFraction: Constant.springDampingFraction),
+            value: viewModel.isCollapsed
+        )
     }
 }
 
