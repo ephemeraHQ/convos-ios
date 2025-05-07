@@ -81,7 +81,7 @@ class MessageReactionMenuController: UIViewController {
     let previewSourceView: UIView
 
     fileprivate let reactionsVC: ReactionsViewController
-    private var animator: UIViewPropertyAnimator?
+    private var tapGestureRecognizer: UITapGestureRecognizer?
     private var panGestureRecognizer: UIPanGestureRecognizer?
     private var previewPanHandler: PreviewViewPanHandler?
     private var cancellables: Set<AnyCancellable> = []
@@ -134,6 +134,8 @@ class MessageReactionMenuController: UIViewController {
             }
             .store(in: &cancellables)
 
+        self.tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+
         modalPresentationStyle = .custom
     }
 
@@ -167,7 +169,7 @@ class MessageReactionMenuController: UIViewController {
         case .collapsed:
             shapeRect.size.width = shapeViewStartingRect.width * 2.0
         case .compact:
-            shapeRect.size.width = shapeViewStartingRect.width + 16.0
+            shapeRect.size.width = shapeViewStartingRect.width + (Self.spacing * 2.0)
         }
         shapeView.animateToShape(frame: shapeRect,
                                  alpha: 1.0,
@@ -264,6 +266,10 @@ class MessageReactionMenuController: UIViewController {
         dimmingView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(dimmingView)
 
+        if let tapGestureRecognizer {
+            dimmingView.addGestureRecognizer(tapGestureRecognizer)
+        }
+
         shapeView.frame = shapeViewStartingRect
         shapeView.configureShadow()
         view.addSubview(shapeView)
@@ -271,5 +277,11 @@ class MessageReactionMenuController: UIViewController {
         addChild(reactionsVC)
         shapeView.addSubview(reactionsVC.view)
         reactionsVC.didMove(toParent: self)
+    }
+
+    // MARK: - Gestures
+
+    @objc private func handleTap() {
+        dismiss(animated: true)
     }
 }
