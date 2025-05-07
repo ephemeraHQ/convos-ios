@@ -574,6 +574,7 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
     private func shouldHandleKeyboardFrameChange(info: KeyboardInfo) -> Bool {
         guard !currentInterfaceActions.options.contains(.changingFrameSize),
+              !currentInterfaceActions.options.contains(.showingReactionsMenu),
               collectionView.contentInsetAdjustmentBehavior != .never,
               let keyboardFrame = collectionView.window?.convert(info.frameEnd, to: view),
               keyboardFrame.minY > 0,
