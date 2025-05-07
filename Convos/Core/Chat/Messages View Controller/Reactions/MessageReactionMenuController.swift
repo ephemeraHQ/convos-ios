@@ -53,6 +53,9 @@ class MessageReactionMenuController: UIViewController {
         let sourceCellEdge: Edge
         let startColor: UIColor
 
+        // Animation timing
+        static let dismissDelay: TimeInterval = 0.5
+
         // Positioning Constants
         static let topInset: CGFloat = 116.0
         static let betweenInset: CGFloat = 56.0
@@ -173,7 +176,7 @@ class MessageReactionMenuController: UIViewController {
                 if selectedEmoji != nil {
                     animateShapeView(to: .compact)
 
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Configuration.dismissDelay) {
                         self.dismiss(animated: true)
                     }
                 }
