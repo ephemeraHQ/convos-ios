@@ -37,7 +37,7 @@ struct MessageReactionsView: View {
                                         )
                                         .scaleEffect(
                                             viewModel.isCollapsed ? 0.0 : (emojiAppeared.indices.contains(index) &&
-                                                                 emojiAppeared[index] ? 1.0 : 0.0)
+                                                                           emojiAppeared[index] ? 1.0 : 0.0)
                                         )
                                         .rotationEffect(
                                             .degrees(
@@ -74,45 +74,52 @@ struct MessageReactionsView: View {
                         }
                         .padding(.horizontal, padding)
                     }
-                    .frame(height: reader.size.height)
-                    .contentMargins(.trailing, contentHeight, for: .scrollContent)
-                    .mask(
-                        HStack(spacing: 0) {
-                            // Left gradient
-                            LinearGradient(gradient:
-                                            Gradient(
-                                                colors: [Color.black.opacity(0), Color.black]),
-                                           startPoint: .leading, endPoint: .trailing
-                            )
-                            .frame(width: padding)
-                            // Middle
-                            Rectangle().fill(Color.black)
-                            // Right gradient
-                            LinearGradient(gradient:
-                                            Gradient(
-                                                colors: [Color.black, Color.black.opacity(0)]),
-                                           startPoint: .leading, endPoint: .trailing
-                            )
-                            .frame(width: (contentHeight * 0.3))
-                            // Right button area
-                            Rectangle().fill(Color.clear)
-                                .frame(width: contentHeight)
-                        }
-                    )
-                    .animation(
-                        .spring(response: 0.4, dampingFraction: 0.8),
-                        value: viewModel.isCollapsed
-                    )
+                               .frame(height: reader.size.height)
+                               .contentMargins(.trailing, contentHeight, for: .scrollContent)
+                               .mask(
+                                HStack(spacing: 0) {
+                                    // Left gradient
+                                    LinearGradient(gradient:
+                                                    Gradient(
+                                                        colors: [Color.black.opacity(0), Color.black]),
+                                                   startPoint: .leading, endPoint: .trailing
+                                    )
+                                    .frame(width: padding)
+                                    // Middle
+                                    Rectangle().fill(Color.black)
+                                    // Right gradient
+                                    LinearGradient(gradient:
+                                                    Gradient(
+                                                        colors: [Color.black, Color.black.opacity(0)]),
+                                                   startPoint: .leading, endPoint: .trailing
+                                    )
+                                    .frame(width: (contentHeight * 0.3))
+                                    // Right button area
+                                    Rectangle().fill(Color.clear)
+                                        .frame(width: contentHeight)
+                                }
+                               )
+                               .animation(
+                                .spring(response: 0.4, dampingFraction: 0.8),
+                                value: viewModel.isCollapsed
+                               )
 
                     HStack(spacing: 0.0) {
-                        if !viewModel.isCollapsed {
-                            Spacer()
-                        }
+                        Spacer()
 
-                        ZStack(alignment: .center) {
-                            Rectangle().fill(Color.clear)
-                                .frame(width: reader.size.height,
-                                       height: reader.size.height)
+                        ZStack {
+                            Text(viewModel.selectedEmoji ?? customEmoji ?? "")
+                                .multilineTextAlignment(.center)
+                                .font(.system(size: 28.0))
+                                .scaleEffect(
+                                    (viewModel.isCollapsed &&
+                                     customEmoji != nil) ||
+                                    viewModel.selectedEmoji != nil ? 1.0 : 0.0
+                                )
+                                .animation(.spring(response: 0.4, dampingFraction: 0.8),
+                                           value: customEmoji)
+                                .animation(.spring(response: 0.4, dampingFraction: 0.8),
+                                           value: viewModel.selectedEmoji)
 
                             Image(systemName: "face.smiling")
                                 .font(.system(size: 28.0))
@@ -129,23 +136,12 @@ struct MessageReactionsView: View {
                                     customEmoji == nil &&
                                     viewModel.selectedEmoji == nil ? 1.0 : 0.0
                                 )
-                                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.isCollapsed)
-                                .padding(0.0)
-
-                            Text(viewModel.selectedEmoji ?? customEmoji ?? "")
-                                .multilineTextAlignment(.center)
-                                .font(.system(size: 28.0))
-                                .scaleEffect(
-                                    (viewModel.isCollapsed &&
-                                    customEmoji != nil) ||
-                                     viewModel.selectedEmoji != nil ? 1.0 : 0.0
+                                .animation(
+                                    .spring(response: 0.4, dampingFraction: 0.8),
+                                    value: viewModel.isCollapsed
                                 )
-                                .animation(.spring(response: 0.4, dampingFraction: 0.8),
-                                           value: customEmoji)
-                                .animation(.spring(response: 0.4, dampingFraction: 0.8),
-                                           value: viewModel.selectedEmoji)
-                                .padding(0.0)
                         }
+                        .frame(width: reader.size.height, height: reader.size.height)
 
                         Button {
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {

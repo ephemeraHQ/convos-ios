@@ -124,9 +124,9 @@ class MessageReactionMenuController: UIViewController {
                 if selectedEmoji != nil {
                     animateShapeView(to: .compact)
 
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                        self.dismiss(animated: true)
-                    }
+//                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+//                        self.dismiss(animated: true)
+//                    }
                 }
             }
             .store(in: &cancellables)
@@ -201,7 +201,7 @@ class MessageReactionMenuController: UIViewController {
         case .collapsed:
             shapeRect.size.width = shapeViewStartingRect.width * 2.0
         case .compact:
-            shapeRect.size.width = shapeViewStartingRect.width + 4.0
+            shapeRect.size.width = shapeViewStartingRect.width + 16.0
         }
         shapeView.animateToShape(frame: shapeRect,
                                  alpha: 1.0,
