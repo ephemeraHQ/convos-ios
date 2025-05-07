@@ -120,7 +120,6 @@ class MessageReactionMenuController: UIViewController {
     let actualPreviewSourceSize: CGSize
     let shapeViewStartingRect: CGRect
     let endPosition: CGRect
-    private var shapeViewEndingRect: CGRect?
 
     let dimmingView: UIVisualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
     let previewView: UIView
@@ -189,15 +188,14 @@ class MessageReactionMenuController: UIViewController {
     // MARK: - End Position Helper
 
     private func animateShapeView(to size: ReactionsViewSize) {
-        guard let shapeViewEndingRect else { return }
         var shapeRect = shapeView.frame
         switch size {
         case .expanded:
-            shapeRect.size.width = shapeViewEndingRect.width
+            shapeRect.size.width = configuration.shapeViewEndingRect.width
         case .collapsed:
-            shapeRect.size.width = shapeViewStartingRect.width * 2.0
+            shapeRect.size.width = configuration.shapeViewStartingRect.width * 2.0
         case .compact:
-            shapeRect.size.width = shapeViewStartingRect.width + (Configuration.spacing * 2.0)
+            shapeRect.size.width = configuration.shapeViewStartingRect.width + (Configuration.spacing * 2.0)
         }
         shapeView.animateToShape(frame: shapeRect,
                                  alpha: 1.0,
@@ -230,7 +228,6 @@ class MessageReactionMenuController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
-        shapeViewEndingRect = configuration.shapeViewEndingRect
         shapeView.animateToShape(frame: configuration.shapeViewEndingRect,
                                  alpha: 1.0,
                                  color: .systemBackground)

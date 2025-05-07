@@ -63,7 +63,7 @@ struct MessageReactionsView: View {
     private func reactionsScrollView(reader: GeometryProxy, contentHeight: CGFloat) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 0.0) {
-                ForEach(Array(viewModel.reactions.enumerated()), id: \ .element.id) { index, reaction in
+                ForEach(Array(viewModel.reactions.enumerated()), id: \.element.id) { index, reaction in
                     Button {
                         viewModel.add(reaction: reaction)
                     } label: {
