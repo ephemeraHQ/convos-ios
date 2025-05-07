@@ -54,6 +54,12 @@ class MessageReactionMenuController: UIViewController {
         let startColor: UIColor
     }
 
+    enum ReactionsViewSize {
+        case expanded,
+             collapsed,
+             compact
+    }
+
     // MARK: - Positioning Constants
     private static let topInset: CGFloat = 116
     private static let betweenInset: CGFloat = 56
@@ -107,7 +113,21 @@ class MessageReactionMenuController: UIViewController {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isCollapsed in
                 guard let self else { return }
-                animateShapeView(collapsed: isCollapsed)
+                animateShapeView(to: isCollapsed ? .collapsed : .expanded)
+            }
+            .store(in: &cancellables)
+
+        viewModel.selectedEmojiPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] selectedEmoji in
+                guard let self else { return }
+                if selectedEmoji != nil {
+                    animateShapeView(to: .compact)
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        self.dismiss(animated: true)
+                    }
+                }
             }
             .store(in: &cancellables)
 
@@ -172,10 +192,17 @@ class MessageReactionMenuController: UIViewController {
                                  color: .systemBackground)
     }
 
-    private func animateShapeView(collapsed: Bool) {
+    private func animateShapeView(to size: ReactionsViewSize) {
         guard let shapeViewEndingRect else { return }
         var shapeRect = shapeView.frame
-        shapeRect.size.width = collapsed ? (shapeViewStartingRect.width * 2.0) : shapeViewEndingRect.width
+        switch size {
+        case .expanded:
+            shapeRect.size.width = shapeViewEndingRect.width
+        case .collapsed:
+            shapeRect.size.width = shapeViewStartingRect.width * 2.0
+        case .compact:
+            shapeRect.size.width = shapeViewStartingRect.width + 4.0
+        }
         shapeView.animateToShape(frame: shapeRect,
                                  alpha: 1.0,
                                  color: .systemBackground)

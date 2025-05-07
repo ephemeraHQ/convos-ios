@@ -3,7 +3,7 @@ import SwiftUI
 struct MessageReactionsView: View {
     @State var viewModel: MessageReactionMenuViewModel
     let padding: CGFloat = 8.0
-    let emojiAppearanceDelay: TimeInterval = 0.3
+    let emojiAppearanceDelay: TimeInterval = 0.15
 
     init(viewModel: MessageReactionMenuViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -12,6 +12,7 @@ struct MessageReactionsView: View {
     @State private var emojiAppeared: [Bool] = []
     @State private var showMoreAppeared: Bool = false
     @State private var didAppear: Bool = false
+    @State private var customEmoji: String?
 
     var body: some View {
         Group {
@@ -21,7 +22,8 @@ struct MessageReactionsView: View {
                     ScrollView(.horizontal,
                                showsIndicators: false) {
                         HStack(spacing: 0.0) {
-                            ForEach(Array(viewModel.reactions.enumerated()), id: \ .element.id) { index, reaction in
+                            ForEach(Array(viewModel.reactions.enumerated()),
+                                    id: \ .element.id) { index, reaction in
                                 Button {
                                     viewModel.add(reaction: reaction)
                                 } label: {
@@ -52,6 +54,10 @@ struct MessageReactionsView: View {
                                             value: emojiAppeared.indices.contains(index) ? emojiAppeared[index] : false
                                         )
                                 }
+                                .scaleEffect(
+                                    (viewModel.selectedEmoji == nil ? 1.0 :
+                                        viewModel.selectedEmoji == reaction.emoji ? 1.0 : 0.0)
+                                )
                                 .onAppear {
                                     // Staggered animation
                                     if emojiAppeared.indices.contains(index) && !emojiAppeared[index] {
@@ -93,34 +99,58 @@ struct MessageReactionsView: View {
                                 .frame(width: contentHeight)
                         }
                     )
+                    .animation(
+                        .spring(response: 0.4, dampingFraction: 0.8),
+                        value: viewModel.isCollapsed
+                    )
 
                     HStack(spacing: 0.0) {
                         if !viewModel.isCollapsed {
                             Spacer()
                         }
 
-                        Image(systemName: "face.smiling")
-                            .font(.system(size: 28.0))
-                            .padding(padding)
-                            .tint(.black)
-                            .opacity(viewModel.isCollapsed ? 0.2 : 0.0)
-                            .blur(radius: viewModel.isCollapsed ? 0.0 : 10.0)
-                            .rotationEffect(
-                                .degrees(
-                                    viewModel.isCollapsed ? 0.0 : -30.0
+                        ZStack(alignment: .center) {
+                            Rectangle().fill(Color.clear)
+                                .frame(width: reader.size.height,
+                                       height: reader.size.height)
+
+                            Image(systemName: "face.smiling")
+                                .font(.system(size: 28.0))
+                                .tint(.black)
+                                .opacity(viewModel.isCollapsed ? 0.2 : 0.0)
+                                .blur(radius: viewModel.isCollapsed ? 0.0 : 10.0)
+                                .rotationEffect(
+                                    .degrees(
+                                        viewModel.isCollapsed ? 0.0 : -30.0
+                                    )
                                 )
-                            )
-                            .scaleEffect(
-                                viewModel.isCollapsed ? 1.0 : 0.0
-                            )
-                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.isCollapsed)
-                            .padding(.horizontal, padding)
+                                .scaleEffect(
+                                    viewModel.isCollapsed &&
+                                    customEmoji == nil &&
+                                    viewModel.selectedEmoji == nil ? 1.0 : 0.0
+                                )
+                                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.isCollapsed)
+                                .padding(0.0)
+
+                            Text(viewModel.selectedEmoji ?? customEmoji ?? "")
+                                .multilineTextAlignment(.center)
+                                .font(.system(size: 28.0))
+                                .scaleEffect(
+                                    (viewModel.isCollapsed &&
+                                    customEmoji != nil) ||
+                                     viewModel.selectedEmoji != nil ? 1.0 : 0.0
+                                )
+                                .animation(.spring(response: 0.4, dampingFraction: 0.8),
+                                           value: customEmoji)
+                                .animation(.spring(response: 0.4, dampingFraction: 0.8),
+                                           value: viewModel.selectedEmoji)
+                                .padding(0.0)
+                        }
 
                         Button {
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                                 viewModel.toggleCollapsed()
                             }
-                            viewModel.showMoreReactions()
                         } label: {
                             Image(systemName: "plus")
                                 .font(.system(size: 24.0))
@@ -137,6 +167,10 @@ struct MessageReactionsView: View {
                         }
                         .frame(minWidth: contentHeight)
                         .padding(.trailing, 8.0)
+                        .scaleEffect(
+                            viewModel.selectedEmoji == nil ? 1.0 : 0.0
+                        )
+                        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.isCollapsed)
                     }
                 }
             }
@@ -156,6 +190,13 @@ struct MessageReactionsView: View {
                 }
             }
         }
+        .emojiPicker(isPresented: $viewModel.showingEmojiPicker,
+                     onPick: { emoji in
+            customEmoji = emoji
+            viewModel.add(reaction: .init(id: "7", emoji: emoji, isSelected: true))
+        }, onDelete: {
+            customEmoji = nil
+        })
     }
 }
 
