@@ -202,7 +202,7 @@ struct MessageReactionsView: View {
         .emojiPicker(isPresented: $viewModel.showingEmojiPicker,
                      onPick: { emoji in
             customEmoji = emoji
-            viewModel.add(reaction: .init(id: "7", emoji: emoji, isSelected: true))
+            viewModel.add(reaction: .init(emoji: emoji, isSelected: true))
         }, onDelete: {
             customEmoji = nil
         })

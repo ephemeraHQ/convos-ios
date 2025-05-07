@@ -3,7 +3,9 @@ import SwiftUI
 import UIKit
 
 struct MessageReaction: Identifiable {
-    let id: String
+    var id: String {
+        emoji
+    }
     let emoji: String
     let isSelected: Bool
 }
