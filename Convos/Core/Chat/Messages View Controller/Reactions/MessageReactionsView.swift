@@ -2,9 +2,43 @@ import SwiftUI
 
 struct MessageReactionsView: View {
     @State var viewModel: MessageReactionMenuViewModel
-    let padding: CGFloat = 8.0
-    let emojiAppearanceDelay: TimeInterval = 0.4
-    let emojiAppearanceDelayStep: TimeInterval = 0.05
+    private enum Constant {
+        static let padding: CGFloat = 8.0
+        static let emojiAppearanceDelay: TimeInterval = 0.4
+        static let emojiAppearanceDelayStep: TimeInterval = 0.05
+        static let emojiFontSize: CGFloat = 24.0
+        static let selectedEmojiFontSize: CGFloat = 28.0
+        static let selectedEmojiFrame: CGFloat = 32.0
+        static let blurRadius: CGFloat = 10.0
+        static let emojiRotationCollapsed: Double = -15
+        static let faceSmilingRotationCollapsed: Double = -30.0
+        static let plusRotationCollapsed: Double = -45.0
+        static let plusOffset: CGFloat = 40
+        static let plusTrailingPadding: CGFloat = 8.0
+        static let faceSmilingOpacity: Double = 0.2
+        static let faceSmilingOpacityHidden: Double = 0.0
+        static let visibleOpacity: Double = 1.0
+        static let hiddenOpacity: Double = 0.0
+        static let popScaleDelay: TimeInterval = 0.15
+        static let popScaleLarge: CGFloat = 1.2
+        static let popScaleNormal: CGFloat = 1.0
+        static let collapsedScale: CGFloat = 0.0
+        static let springResponse: Double = 0.4
+        static let springDampingFraction: Double = 0.8
+        static let springDampingFractionCollapsed: Double = 0.6
+        static let springDampingFractionPlus: Double = 0.7
+        static let springResponsePop: Double = 0.2
+        static let springDampingFractionPop: Double = 0.5
+        static let maskRightGradientMultiplier: CGFloat = 0.3
+        static let backgroundColor: Color = Color.gray.opacity(0.1)
+        static let maskGradientColor: Color = Color.black
+        static let maskGradientTransparent: Color = Color.black.opacity(0)
+        static let plusIconFontSize: CGFloat = 24.0
+        static let faceSmilingFontSize: CGFloat = 28.0
+        static let plusIconColor: Color = .colorTextSecondary
+        static let faceSmilingColor: Color = .black
+        static let maskClear: Color = .clear
+    }
 
     init(viewModel: MessageReactionMenuViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -19,7 +53,7 @@ struct MessageReactionsView: View {
     var body: some View {
         Group {
             GeometryReader { reader in
-                let contentHeight = max(reader.size.height - (padding * 2.0), 0.0)
+                let contentHeight = max(reader.size.height - (Constant.padding * 2.0), 0.0)
                 ZStack(alignment: .leading) {
                     ScrollView(.horizontal,
                                showsIndicators: false) {
@@ -30,41 +64,47 @@ struct MessageReactionsView: View {
                                     viewModel.add(reaction: reaction)
                                 } label: {
                                     Text(reaction.emoji)
-                                        .font(.system(size: 24.0))
-                                        .padding(padding)
+                                        .font(.system(size: Constant.emojiFontSize))
+                                        .padding(Constant.padding)
                                         .blur(
-                                            radius: (viewModel.isCollapsed ? 10.0 :
+                                            radius: (viewModel.isCollapsed ? Constant.blurRadius :
                                                         emojiAppeared.indices.contains(index)
-                                                     && emojiAppeared[index] ? 0.0 : 10.0)
+                                                     && emojiAppeared[index] ? 0.0 : Constant.blurRadius)
                                         )
                                         .scaleEffect(
-                                            viewModel.isCollapsed ? 0.0 : (emojiAppeared.indices.contains(index) &&
-                                                                           emojiAppeared[index] ? 1.0 : 0.0)
+                                            viewModel.isCollapsed ? Constant.collapsedScale :
+                                                (emojiAppeared.indices.contains(index) &&
+                                                 emojiAppeared[index] ? Constant.popScaleNormal :
+                                                    Constant.collapsedScale)
                                         )
                                         .rotationEffect(
                                             .degrees(
-                                                emojiAppeared.indices.contains(index) && emojiAppeared[index] ? 0 : -15
+                                                emojiAppeared.indices.contains(index) && emojiAppeared[index] ? 0 :
+                                                    Constant.emojiRotationCollapsed
                                             )
                                         )
-                                        .opacity(viewModel.isCollapsed ? 0 : 1)
+                                        .opacity(viewModel.isCollapsed ? Constant.hiddenOpacity :
+                                                    Constant.visibleOpacity)
                                         .animation(
-                                            .spring(response: 0.4, dampingFraction: 0.6),
+                                            .spring(response: Constant.springResponse,
+                                                    dampingFraction: Constant.springDampingFractionCollapsed),
                                             value: viewModel.isCollapsed
                                         )
                                         .animation(
-                                            .spring(response: 0.4, dampingFraction: 0.6),
+                                            .spring(response: Constant.springResponse,
+                                                    dampingFraction: Constant.springDampingFractionCollapsed),
                                             value: emojiAppeared.indices.contains(index) ? emojiAppeared[index] : false
                                         )
                                 }
                                 .scaleEffect(
-                                    (viewModel.selectedEmoji == nil ? 1.0 : 0.0)
+                                    (viewModel.selectedEmoji == nil ? Constant.popScaleNormal : Constant.collapsedScale)
                                 )
                                 .onAppear {
                                     // Staggered animation
                                     if emojiAppeared.indices.contains(index) && !emojiAppeared[index] {
                                         DispatchQueue.main.asyncAfter(
-                                            deadline: (.now() + emojiAppearanceDelay +
-                                                       (emojiAppearanceDelayStep * Double(index)))
+                                            deadline: (.now() + Constant.emojiAppearanceDelay +
+                                                       (Constant.emojiAppearanceDelayStep * Double(index)))
                                         ) {
                                             withAnimation {
                                                 emojiAppeared[index] = true
@@ -74,7 +114,7 @@ struct MessageReactionsView: View {
                                 }
                             }
                         }
-                        .padding(.horizontal, padding)
+                        .padding(.horizontal, Constant.padding)
                     }
                                .frame(height: reader.size.height)
                                .contentMargins(.trailing, contentHeight, for: .scrollContent)
@@ -83,26 +123,29 @@ struct MessageReactionsView: View {
                                     // Left gradient
                                     LinearGradient(gradient:
                                                     Gradient(
-                                                        colors: [Color.black.opacity(0), Color.black]),
+                                                        colors: [Constant.maskGradientTransparent,
+                                                                 Constant.maskGradientColor]),
                                                    startPoint: .leading, endPoint: .trailing
                                     )
-                                    .frame(width: padding)
+                                    .frame(width: Constant.padding)
                                     // Middle
-                                    Rectangle().fill(Color.black)
+                                    Rectangle().fill(Constant.maskGradientColor)
                                     // Right gradient
                                     LinearGradient(gradient:
                                                     Gradient(
-                                                        colors: [Color.black, Color.black.opacity(0)]),
+                                                        colors: [Constant.maskGradientColor,
+                                                                 Constant.maskGradientTransparent]),
                                                    startPoint: .leading, endPoint: .trailing
                                     )
-                                    .frame(width: (contentHeight * 0.3))
+                                    .frame(width: (contentHeight * Constant.maskRightGradientMultiplier))
                                     // Right button area
-                                    Rectangle().fill(Color.clear)
+                                    Rectangle().fill(Constant.maskClear)
                                         .frame(width: contentHeight)
                                 }
                                )
                                .animation(
-                                .spring(response: 0.4, dampingFraction: 0.8),
+                                .spring(response: Constant.springResponse,
+                                        dampingFraction: Constant.springDampingFraction),
                                 value: viewModel.isCollapsed
                                )
 
@@ -112,86 +155,104 @@ struct MessageReactionsView: View {
                         ZStack {
                             Text(viewModel.selectedEmoji ?? customEmoji ?? "")
                                 .multilineTextAlignment(.center)
-                                .font(.system(size: 28.0))
-                                .frame(width: 32.0, height: 32.0)
+                                .font(.system(size: Constant.selectedEmojiFontSize))
+                                .frame(width: Constant.selectedEmojiFrame, height: Constant.selectedEmojiFrame)
                                 .scaleEffect(
                                     popScale *
                                     (
                                         (viewModel.isCollapsed && customEmoji != nil) ||
-                                        viewModel.selectedEmoji != nil ? 1.0 : 0.0
+                                        viewModel.selectedEmoji != nil ? Constant.popScaleNormal :
+                                            Constant.collapsedScale
                                     )
                                 )
-                                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: customEmoji)
-                                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.selectedEmoji)
+                                .animation(.spring(response: Constant.springResponse,
+                                                   dampingFraction: Constant.springDampingFraction),
+                                           value: customEmoji)
+                                .animation(.spring(response: Constant.springResponse,
+                                                   dampingFraction: Constant.springDampingFraction),
+                                           value: viewModel.selectedEmoji)
                                 .onChange(of: viewModel.selectedEmoji ?? customEmoji ?? "") {
-                                    withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
-                                        popScale = 1.2
+                                    withAnimation(.spring(response: Constant.springResponsePop,
+                                                          dampingFraction: Constant.springDampingFractionPop)) {
+                                        popScale = Constant.popScaleLarge
                                     }
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                            popScale = 1.0
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + Constant.popScaleDelay) {
+                                        withAnimation(.spring(response: Constant.springResponse,
+                                                              dampingFraction: Constant.springDampingFraction)) {
+                                            popScale = Constant.popScaleNormal
                                         }
                                     }
                                 }
 
                             Image(systemName: "face.smiling")
-                                .font(.system(size: 28.0))
-                                .tint(.black)
-                                .opacity(viewModel.isCollapsed ? 0.2 : 0.0)
-                                .blur(radius: viewModel.isCollapsed ? 0.0 : 10.0)
+                                .font(.system(size: Constant.faceSmilingFontSize))
+                                .tint(Constant.faceSmilingColor)
+                                .opacity(viewModel.isCollapsed ? Constant.faceSmilingOpacity :
+                                            Constant.faceSmilingOpacityHidden)
+                                .blur(radius: viewModel.isCollapsed ? Constant.faceSmilingOpacityHidden :
+                                        Constant.blurRadius)
                                 .rotationEffect(
                                     .degrees(
-                                        viewModel.isCollapsed ? 0.0 : -30.0
+                                        viewModel.isCollapsed ? 0.0 : Constant.faceSmilingRotationCollapsed
                                     )
                                 )
                                 .scaleEffect(
                                     viewModel.isCollapsed &&
                                     customEmoji == nil &&
-                                    viewModel.selectedEmoji == nil ? 1.0 : 0.0
+                                    viewModel.selectedEmoji == nil ? Constant.popScaleNormal : Constant.collapsedScale
                                 )
                                 .animation(
-                                    .spring(response: 0.4, dampingFraction: 0.8),
+                                    .spring(response: Constant.springResponse,
+                                            dampingFraction: Constant.springDampingFraction),
                                     value: viewModel.isCollapsed
                                 )
                         }
                         .frame(width: reader.size.height, height: reader.size.height)
 
                         Button {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                            withAnimation(.spring(response: Constant.springResponse,
+                                                  dampingFraction: Constant.springDampingFractionPlus)) {
                                 viewModel.toggleCollapsed()
                             }
                         } label: {
                             Image(systemName: "plus")
-                                .font(.system(size: 24.0))
-                                .padding(padding)
-                                .tint(.colorTextSecondary)
-                                .offset(x: showMoreAppeared ? 0 : 40)
-                                .opacity(showMoreAppeared ? 1 : 0)
-                                .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showMoreAppeared)
+                                .font(.system(size: Constant.plusIconFontSize))
+                                .padding(Constant.padding)
+                                .tint(Constant.plusIconColor)
+                                .offset(x: showMoreAppeared ? 0 : Constant.plusOffset)
+                                .opacity(showMoreAppeared ? Constant.visibleOpacity : Constant.hiddenOpacity)
+                                .animation(.spring(response: Constant.springResponse,
+                                                   dampingFraction: Constant.springDampingFractionPlus),
+                                           value: showMoreAppeared)
                                 .rotationEffect(
                                     .degrees(
-                                        viewModel.isCollapsed ? -45.0 : 0.0
+                                        viewModel.isCollapsed ? Constant.plusRotationCollapsed : 0.0
                                     )
                                 )
                         }
                         .frame(minWidth: contentHeight)
-                        .padding(.trailing, 8.0)
+                        .padding(.trailing, Constant.plusTrailingPadding)
                         .scaleEffect(
-                            viewModel.selectedEmoji == nil ? 1.0 : 0.0
+                            viewModel.selectedEmoji == nil ? Constant.popScaleNormal : Constant.collapsedScale
                         )
-                        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.isCollapsed)
+                        .animation(.spring(response: Constant.springResponse,
+                                           dampingFraction: Constant.springDampingFraction),
+                                   value: viewModel.isCollapsed)
                     }
                 }
             }
             .padding(0.0)
-            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: viewModel.isCollapsed)
+            .animation(.spring(response: Constant.springResponse,
+                               dampingFraction: Constant.springDampingFractionPlus),
+                       value: viewModel.isCollapsed)
             .onAppear {
                 guard !didAppear else { return }
                 didAppear = true
                 if emojiAppeared.count != viewModel.reactions.count {
                     emojiAppeared = Array(repeating: false, count: viewModel.reactions.count)
                 }
-                let totalDelay = emojiAppearanceDelay + (emojiAppearanceDelayStep * Double(viewModel.reactions.count))
+                let totalDelay = (Constant.emojiAppearanceDelay +
+                                  (Constant.emojiAppearanceDelayStep * Double(viewModel.reactions.count)))
                 DispatchQueue.main.asyncAfter(deadline: .now() + totalDelay) {
                     withAnimation {
                         showMoreAppeared = true
