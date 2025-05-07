@@ -3,7 +3,8 @@ import SwiftUI
 struct MessageReactionsView: View {
     @State var viewModel: MessageReactionMenuViewModel
     let padding: CGFloat = 8.0
-    let emojiAppearanceDelay: TimeInterval = 0.15
+    let emojiAppearanceDelay: TimeInterval = 0.4
+    let emojiAppearanceDelayStep: TimeInterval = 0.05
 
     init(viewModel: MessageReactionMenuViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -17,7 +18,7 @@ struct MessageReactionsView: View {
     var body: some View {
         Group {
             GeometryReader { reader in
-                let contentHeight = reader.size.height - (padding * 2.0)
+                let contentHeight = max(reader.size.height - (padding * 2.0), 0.0)
                 ZStack(alignment: .leading) {
                     ScrollView(.horizontal,
                                showsIndicators: false) {
@@ -61,7 +62,8 @@ struct MessageReactionsView: View {
                                     // Staggered animation
                                     if emojiAppeared.indices.contains(index) && !emojiAppeared[index] {
                                         DispatchQueue.main.asyncAfter(
-                                            deadline: .now() + emojiAppearanceDelay + 0.08 * Double(index)
+                                            deadline: (.now() + emojiAppearanceDelay +
+                                                       (emojiAppearanceDelayStep * Double(index)))
                                         ) {
                                             withAnimation {
                                                 emojiAppeared[index] = true
@@ -177,7 +179,7 @@ struct MessageReactionsView: View {
                 if emojiAppeared.count != viewModel.reactions.count {
                     emojiAppeared = Array(repeating: false, count: viewModel.reactions.count)
                 }
-                let totalDelay = emojiAppearanceDelay + 0.08 * Double(viewModel.reactions.count)
+                let totalDelay = emojiAppearanceDelay + (emojiAppearanceDelayStep * Double(viewModel.reactions.count))
                 DispatchQueue.main.asyncAfter(deadline: .now() + totalDelay) {
                     withAnimation {
                         showMoreAppeared = true

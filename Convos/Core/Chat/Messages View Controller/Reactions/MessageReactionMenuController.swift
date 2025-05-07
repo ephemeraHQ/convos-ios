@@ -61,25 +61,28 @@ class MessageReactionMenuController: UIViewController {
     }
 
     // MARK: - Positioning Constants
-    private static let topInset: CGFloat = 116
-    private static let betweenInset: CGFloat = 56
+    private static let topInset: CGFloat = 116.0
+    private static let betweenInset: CGFloat = 56.0
+    private static let maxPreviewHeight: CGFloat = 75.0 // max height of the message preview to show
     private static let spacing: CGFloat = 8.0 // You can adjust this if you want extra space
     // between the betweenInset and the previewView
 
     // MARK: - Properties
 
     let configuration: Configuration
-    let dimmingView: UIVisualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
-    let previewView: UIView
-    let previewSourceView: UIView
     let actualPreviewSourceSize: CGSize
     let shapeViewStartingRect: CGRect
-    private var shapeViewEndingRect: CGRect?
     let endPosition: CGRect
+    private var shapeViewEndingRect: CGRect?
+
+    let dimmingView: UIVisualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
+    let previewView: UIView
+    let shapeView: ReactionMenuShapeView
+    let previewSourceView: UIView
+
     fileprivate let reactionsVC: ReactionsViewController
     private var animator: UIViewPropertyAnimator?
     private var panGestureRecognizer: UIPanGestureRecognizer?
-    let shapeView: ReactionMenuShapeView
     private var previewPanHandler: PreviewViewPanHandler?
     private var cancellables: Set<AnyCancellable> = []
 
@@ -149,50 +152,13 @@ class MessageReactionMenuController: UIViewController {
         let betweenInset = Self.betweenInset
         let spacing = Self.spacing
         let minY = topInset + betweenInset + spacing
-        let maxY = containerView.bounds.height - previewView.bounds.height - containerView.safeAreaInsets.bottom
-        let desiredY = min(max(sourceRect.origin.y, minY), maxY)
+        let maxY = containerView.bounds.midY - min(maxPreviewHeight, previewView.frame.height)
+        let desiredY = min(max(sourceRect.origin.y, minY), maxY < 0.0 ? minY : maxY)
         let finalX = (containerView.bounds.width - previewView.bounds.width) / 2
         return CGRect(x: finalX, y: desiredY, width: previewView.bounds.width, height: previewView.bounds.height)
     }
 
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-
-        let yPosition = endPosition.minY - Self.spacing - shapeViewStartingRect.height
-        var targetFrame = shapeViewStartingRect
-        let horizontalInset = configuration.sourceCell.horizontalInset
-        let leftMargin: CGFloat = 24.0
-        let rightMargin: CGFloat = 56.0
-        let endWidth = view.bounds.width - leftMargin - rightMargin - horizontalInset
-        targetFrame.size.width = endWidth
-        targetFrame.origin.y = yPosition
-        if configuration.sourceCellEdge == .trailing {
-            targetFrame.origin.x -= (endWidth - shapeViewStartingRect.width)
-        }
-        shapeViewEndingRect = targetFrame
-        shapeView.animateToShape(frame: targetFrame,
-                                 alpha: 1.0,
-                                 color: .systemBackground)
-
-        // Attach pan handler to previewView
-        previewPanHandler = PreviewViewPanHandler(containerView: view) { [weak self] in
-            guard let self else { return nil }
-            return previewView
-        }
-        previewPanHandler?.onShouldDismiss = { [weak self] in
-            self?.startInteractiveDismiss()
-        }
-    }
-
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-
-        shapeView.animateToShape(frame: shapeViewStartingRect,
-                                 alpha: 0.0,
-                                 color: .systemBackground)
-    }
-
-    private func animateShapeView(to size: ReactionsViewSize) {
+   private func animateShapeView(to size: ReactionsViewSize) {
         guard let shapeViewEndingRect else { return }
         var shapeRect = shapeView.frame
         switch size {
@@ -208,8 +174,31 @@ class MessageReactionMenuController: UIViewController {
                                  color: .systemBackground)
     }
 
-    private func startInteractiveDismiss() {
-        dismiss(animated: true, completion: nil)
+    private static func shapeViewStartRect(for configuration: Configuration) -> CGRect {
+        let horizontalInset = configuration.sourceCell.horizontalInset
+        let previewFrame = configuration.sourceRect
+        let endSize = 56.0
+        let startSize = min(endSize, previewFrame.height)
+
+        let view = configuration.containerView
+
+        // Decide which edge to use
+        let xPosition: CGFloat
+        switch configuration.sourceCellEdge {
+        case .leading:
+            xPosition = view.bounds.minX + (horizontalInset / 2.0)
+        case .trailing:
+            xPosition = view.bounds.minX + view.bounds.maxX - startSize - (horizontalInset / 2.0)
+        }
+
+        let yPosition = previewFrame.minY
+        let startRect = CGRect(
+            x: xPosition,
+            y: yPosition,
+            width: endSize,
+            height: startSize
+        )
+        return startRect
     }
 
     // MARK: - Lifecycle
@@ -227,33 +216,46 @@ class MessageReactionMenuController: UIViewController {
         reactionsVC.view.layer.cornerRadius = shapeView.bounds.height / 2.0
     }
 
-    // MARK: - Setup
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
 
-    private static func shapeViewStartRect(for configuration: Configuration) -> CGRect {
-        let horizontalInset = configuration.sourceCell.horizontalInset
-        let previewFrame = configuration.sourceRect
-        let endSize = 56.0
-
-        let view = configuration.containerView
-
-        // Decide which edge to use
-        let xPosition: CGFloat
-        switch configuration.sourceCellEdge {
-        case .leading:
-            xPosition = view.bounds.minX + (horizontalInset / 2.0)
-        case .trailing:
-            xPosition = view.bounds.minX + view.bounds.maxX - endSize - (horizontalInset / 2.0)
-        }
-
-        let yPosition = previewFrame.minY - Self.spacing - endSize
-        let startRect = CGRect(
-            x: xPosition,
-            y: yPosition + endSize + Self.spacing,
-            width: endSize,
-            height: endSize
-        )
-        return startRect
+        shapeView.animateToShape(frame: shapeViewStartingRect,
+                                 alpha: 0.0,
+                                 color: .systemBackground)
     }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        let yPosition = endPosition.minY - Self.spacing - shapeViewStartingRect.height
+        var targetFrame = shapeViewStartingRect
+        let horizontalInset = configuration.sourceCell.horizontalInset
+        let leftMargin: CGFloat = 24.0
+        let rightMargin: CGFloat = 56.0
+        let endWidth = view.bounds.width - leftMargin - rightMargin - horizontalInset
+        let endHeight: CGFloat = 56.0
+        targetFrame.size.width = endWidth
+        targetFrame.origin.y = yPosition - (endHeight - shapeViewStartingRect.height)
+        targetFrame.size.height = endHeight
+        if configuration.sourceCellEdge == .trailing {
+            targetFrame.origin.x -= (endWidth - shapeViewStartingRect.width)
+        }
+        shapeViewEndingRect = targetFrame
+        shapeView.animateToShape(frame: targetFrame,
+                                 alpha: 1.0,
+                                 color: .systemBackground)
+
+        // Attach pan handler to previewView
+        previewPanHandler = PreviewViewPanHandler(containerView: view) { [weak self] in
+            guard let self else { return nil }
+            return previewView
+        }
+        previewPanHandler?.onShouldDismiss = { [weak self] in
+            self?.dismiss(animated: true)
+        }
+    }
+
+    // MARK: - Setup
 
     private func setupViews() {
         view.backgroundColor = .clear
