@@ -52,6 +52,45 @@ class MessageReactionMenuController: UIViewController {
         let containerView: UIView
         let sourceCellEdge: Edge
         let startColor: UIColor
+
+        // Positioning Constants
+        static let topInset: CGFloat = 116.0
+        static let betweenInset: CGFloat = 56.0
+        static let maxPreviewHeight: CGFloat = 75.0
+        static let spacing: CGFloat = 8.0
+
+        var shapeViewStartingRect: CGRect {
+            let horizontalInset = sourceCell.horizontalInset
+            let previewFrame = sourceRect
+            let endSize = 56.0
+            let startSize = min(endSize, previewFrame.height)
+            let view = containerView
+            let xPosition: CGFloat
+            switch sourceCellEdge {
+            case .leading:
+                xPosition = view.bounds.minX + (horizontalInset / 2.0)
+            case .trailing:
+                xPosition = view.bounds.minX + view.bounds.maxX - startSize - (horizontalInset / 2.0)
+            }
+            let yPosition = previewFrame.minY
+            return CGRect(
+                x: xPosition,
+                y: yPosition,
+                width: endSize,
+                height: startSize
+            )
+        }
+
+        var endPosition: CGRect {
+            let topInset = Self.topInset + containerView.safeAreaInsets.top
+            let betweenInset = Self.betweenInset
+            let spacing = Self.spacing
+            let minY = topInset + betweenInset + spacing
+            let maxY = containerView.bounds.midY - min(Self.maxPreviewHeight, sourceRect.height)
+            let desiredY = min(max(sourceRect.origin.y, minY), maxY < 0.0 ? minY : maxY)
+            let finalX = (containerView.bounds.width - sourceRect.width) / 2
+            return CGRect(x: finalX, y: desiredY, width: sourceRect.width, height: sourceRect.height)
+        }
     }
 
     enum ReactionsViewSize {
@@ -59,13 +98,6 @@ class MessageReactionMenuController: UIViewController {
              collapsed,
              compact
     }
-
-    // MARK: - Positioning Constants
-    private static let topInset: CGFloat = 116.0
-    private static let betweenInset: CGFloat = 56.0
-    private static let maxPreviewHeight: CGFloat = 75.0 // max height of the message preview to show
-    private static let spacing: CGFloat = 8.0 // You can adjust this if you want extra space
-    // between the betweenInset and the previewView
 
     // MARK: - Properties
 
@@ -95,12 +127,8 @@ class MessageReactionMenuController: UIViewController {
         self.previewSourceView = configuration.sourceCell.previewSourceView
         self.actualPreviewSourceSize = configuration.sourceCell.actualPreviewSourceSize
         self.previewView.frame = configuration.sourceRect
-        self.shapeViewStartingRect = Self.shapeViewStartRect(for: configuration)
-        self.endPosition = MessageReactionMenuController.calculateEndPosition(
-            for: self.previewView,
-            in: configuration.containerView,
-            sourceRect: configuration.sourceRect
-        )
+        self.shapeViewStartingRect = configuration.shapeViewStartingRect
+        self.endPosition = configuration.endPosition
 
         // Create initial shape view
         let startSize = CGSize(width: 56, height: 56)
@@ -145,22 +173,7 @@ class MessageReactionMenuController: UIViewController {
 
     // MARK: - End Position Helper
 
-    private static func calculateEndPosition(
-        for previewView: UIView,
-        in containerView: UIView,
-        sourceRect: CGRect
-    ) -> CGRect {
-        let topInset = Self.topInset + containerView.safeAreaInsets.top
-        let betweenInset = Self.betweenInset
-        let spacing = Self.spacing
-        let minY = topInset + betweenInset + spacing
-        let maxY = containerView.bounds.midY - min(maxPreviewHeight, previewView.frame.height)
-        let desiredY = min(max(sourceRect.origin.y, minY), maxY < 0.0 ? minY : maxY)
-        let finalX = (containerView.bounds.width - previewView.bounds.width) / 2
-        return CGRect(x: finalX, y: desiredY, width: previewView.bounds.width, height: previewView.bounds.height)
-    }
-
-   private func animateShapeView(to size: ReactionsViewSize) {
+    private func animateShapeView(to size: ReactionsViewSize) {
         guard let shapeViewEndingRect else { return }
         var shapeRect = shapeView.frame
         switch size {
@@ -169,38 +182,11 @@ class MessageReactionMenuController: UIViewController {
         case .collapsed:
             shapeRect.size.width = shapeViewStartingRect.width * 2.0
         case .compact:
-            shapeRect.size.width = shapeViewStartingRect.width + (Self.spacing * 2.0)
+            shapeRect.size.width = shapeViewStartingRect.width + (Configuration.spacing * 2.0)
         }
         shapeView.animateToShape(frame: shapeRect,
                                  alpha: 1.0,
                                  color: .systemBackground)
-    }
-
-    private static func shapeViewStartRect(for configuration: Configuration) -> CGRect {
-        let horizontalInset = configuration.sourceCell.horizontalInset
-        let previewFrame = configuration.sourceRect
-        let endSize = 56.0
-        let startSize = min(endSize, previewFrame.height)
-
-        let view = configuration.containerView
-
-        // Decide which edge to use
-        let xPosition: CGFloat
-        switch configuration.sourceCellEdge {
-        case .leading:
-            xPosition = view.bounds.minX + (horizontalInset / 2.0)
-        case .trailing:
-            xPosition = view.bounds.minX + view.bounds.maxX - startSize - (horizontalInset / 2.0)
-        }
-
-        let yPosition = previewFrame.minY
-        let startRect = CGRect(
-            x: xPosition,
-            y: yPosition,
-            width: endSize,
-            height: startSize
-        )
-        return startRect
     }
 
     // MARK: - Lifecycle
@@ -229,7 +215,7 @@ class MessageReactionMenuController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
-        let yPosition = endPosition.minY - Self.spacing - shapeViewStartingRect.height
+        let yPosition = endPosition.minY - Configuration.spacing - shapeViewStartingRect.height
         var targetFrame = shapeViewStartingRect
         let horizontalInset = configuration.sourceCell.horizontalInset
         let leftMargin: CGFloat = 24.0
