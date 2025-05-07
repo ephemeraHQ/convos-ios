@@ -14,6 +14,7 @@ struct MessageReactionsView: View {
     @State private var showMoreAppeared: Bool = false
     @State private var didAppear: Bool = false
     @State private var customEmoji: String?
+    @State private var popScale: CGFloat = 1.0
 
     var body: some View {
         Group {
@@ -113,14 +114,24 @@ struct MessageReactionsView: View {
                                 .multilineTextAlignment(.center)
                                 .font(.system(size: 28.0))
                                 .scaleEffect(
-                                    (viewModel.isCollapsed &&
-                                     customEmoji != nil) ||
-                                    viewModel.selectedEmoji != nil ? 1.0 : 0.0
+                                    popScale *
+                                    (
+                                        (viewModel.isCollapsed && customEmoji != nil) ||
+                                        viewModel.selectedEmoji != nil ? 1.0 : 0.0
+                                    )
                                 )
-                                .animation(.spring(response: 0.4, dampingFraction: 0.8),
-                                           value: customEmoji)
-                                .animation(.spring(response: 0.4, dampingFraction: 0.8),
-                                           value: viewModel.selectedEmoji)
+                                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: customEmoji)
+                                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.selectedEmoji)
+                                .onChange(of: viewModel.selectedEmoji ?? customEmoji ?? "") {
+                                    withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
+                                        popScale = 1.2
+                                    }
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                            popScale = 1.0
+                                        }
+                                    }
+                                }
 
                             Image(systemName: "face.smiling")
                                 .font(.system(size: 28.0))
