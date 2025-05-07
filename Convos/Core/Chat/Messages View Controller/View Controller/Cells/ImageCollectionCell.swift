@@ -8,6 +8,7 @@ class ImageCollectionCell: UICollectionViewCell {
     private var imageAspectRatio: CGFloat = 1.0 // width / height
     private var currentImageURL: URL?
     private var imageLoadTask: Task<Void, Never>?
+    private var messageType: MessageType?
     private var leadingConstraint: NSLayoutConstraint?
     private var trailingConstraint: NSLayoutConstraint?
     private var dynamicConstraint: NSLayoutConstraint?
@@ -99,6 +100,7 @@ class ImageCollectionCell: UICollectionViewCell {
         imageView.alpha = 0
         imageView.image = nil
         imageAspectRatio = 1.0
+        messageType = nil
         currentImageURL = nil
         imageLoadTask?.cancel()
         imageLoadTask = nil
@@ -108,6 +110,7 @@ class ImageCollectionCell: UICollectionViewCell {
     // MARK: - Public Setup
 
     func setup(with source: ImageSource, messageType: MessageType) {
+        self.messageType = messageType
         updateAlignment(for: messageType)
 
         switch source {
@@ -178,5 +181,11 @@ class ImageCollectionCell: UICollectionViewCell {
         let height = width / imageAspectRatio
         layoutAttributes.size = CGSize(width: width, height: height)
         return layoutAttributes
+    }
+}
+
+extension ImageCollectionCell: PreviewableCell {
+    var sourceCellEdge: MessageReactionMenuController.Configuration.Edge {
+        messageType == .incoming ? .leading : .trailing
     }
 }

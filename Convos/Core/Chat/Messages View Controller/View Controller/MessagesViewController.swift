@@ -16,6 +16,7 @@ final class MessagesViewController: UIViewController {
         case scrollingToTop
         case scrollingToBottom
         case updatingCollectionInIsolation
+        case showingReactionsMenu
     }
 
     private enum ControllerActions {
@@ -573,6 +574,7 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
     private func shouldHandleKeyboardFrameChange(info: KeyboardInfo) -> Bool {
         guard !currentInterfaceActions.options.contains(.changingFrameSize),
+              !currentInterfaceActions.options.contains(.showingReactionsMenu),
               collectionView.contentInsetAdjustmentBehavior != .never,
               let keyboardFrame = collectionView.window?.convert(info.frameEnd, to: view),
               keyboardFrame.minY > 0,
@@ -617,12 +619,19 @@ extension MessagesViewController: KeyboardListenerDelegate {
 // MARK: - MessageReactionMenuCoordinatorDelegate
 
 extension MessagesViewController: MessageReactionMenuCoordinatorDelegate {
-    func messageReactionMenuCoordinatorDidBeginTransition(_ coordinator: MessageReactionMenuCoordinator) {
-        collectionView.isScrollEnabled = false
+    func messageReactionMenuViewModel(_ coordinator: MessageReactionMenuCoordinator,
+                                      for indexPath: IndexPath) -> MessageReactionMenuViewModel {
+        MessageReactionMenuViewModel()
     }
 
-    func messageReactionMenuCoordinatorDidEndTransition(_ coordinator: MessageReactionMenuCoordinator) {
+    func messageReactionMenuCoordinatorWasPresented(_ coordinator: MessageReactionMenuCoordinator) {
+        collectionView.isScrollEnabled = false
+        currentInterfaceActions.options.insert(.showingReactionsMenu)
+    }
+
+    func messageReactionMenuCoordinatorWasDismissed(_ coordinator: MessageReactionMenuCoordinator) {
         collectionView.isScrollEnabled = true
+        currentInterfaceActions.options.remove(.showingReactionsMenu)
     }
 
     func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator,
@@ -633,7 +642,6 @@ extension MessagesViewController: MessageReactionMenuCoordinatorDelegate {
 
     func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator,
                                         shouldPresentMenuFor cell: PreviewableCollectionViewCell) -> Bool {
-        // Always allow for now
         return true
     }
 }
