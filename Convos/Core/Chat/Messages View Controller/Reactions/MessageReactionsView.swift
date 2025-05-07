@@ -113,6 +113,7 @@ struct MessageReactionsView: View {
                             Text(viewModel.selectedEmoji ?? customEmoji ?? "")
                                 .multilineTextAlignment(.center)
                                 .font(.system(size: 28.0))
+                                .frame(width: 32.0, height: 32.0)
                                 .scaleEffect(
                                     popScale *
                                     (
