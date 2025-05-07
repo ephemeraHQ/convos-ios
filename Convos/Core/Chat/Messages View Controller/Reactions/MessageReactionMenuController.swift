@@ -58,11 +58,14 @@ class MessageReactionMenuController: UIViewController {
         static let betweenInset: CGFloat = 56.0
         static let maxPreviewHeight: CGFloat = 75.0
         static let spacing: CGFloat = 8.0
+        static let shapeViewHeight: CGFloat = 56.0
+        static let leftMargin: CGFloat = 24.0
+        static let rightMargin: CGFloat = shapeViewHeight
 
         var shapeViewStartingRect: CGRect {
             let horizontalInset = sourceCell.horizontalInset
             let previewFrame = sourceRect
-            let endSize = 56.0
+            let endSize = Self.shapeViewHeight
             let startSize = min(endSize, previewFrame.height)
             let view = containerView
             let xPosition: CGFloat
@@ -90,6 +93,21 @@ class MessageReactionMenuController: UIViewController {
             let desiredY = min(max(sourceRect.origin.y, minY), maxY < 0.0 ? minY : maxY)
             let finalX = (containerView.bounds.width - sourceRect.width) / 2
             return CGRect(x: finalX, y: desiredY, width: sourceRect.width, height: sourceRect.height)
+        }
+
+        var shapeViewEndingRect: CGRect {
+            let yPosition = endPosition.minY - Self.spacing - shapeViewStartingRect.height
+            var targetFrame = shapeViewStartingRect
+            let horizontalInset = sourceCell.horizontalInset
+            let endWidth = containerView.bounds.width - Self.leftMargin - Self.rightMargin - horizontalInset
+            let endHeight = Self.shapeViewHeight
+            targetFrame.size.width = endWidth
+            targetFrame.origin.y = yPosition - (endHeight - shapeViewStartingRect.height)
+            targetFrame.size.height = endHeight
+            if sourceCellEdge == .trailing {
+                targetFrame.origin.x -= (endWidth - shapeViewStartingRect.width)
+            }
+            return targetFrame
         }
     }
 
@@ -131,7 +149,7 @@ class MessageReactionMenuController: UIViewController {
         self.endPosition = configuration.endPosition
 
         // Create initial shape view
-        let startSize = CGSize(width: 56, height: 56)
+        let startSize = CGSize(width: Configuration.shapeViewHeight, height: Configuration.shapeViewHeight)
         let startFrame = CGRect(origin: .zero, size: startSize)
         self.shapeView = ReactionMenuShapeView(frame: startFrame)
         self.shapeView.fillColor = configuration.startColor
@@ -215,21 +233,8 @@ class MessageReactionMenuController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
-        let yPosition = endPosition.minY - Configuration.spacing - shapeViewStartingRect.height
-        var targetFrame = shapeViewStartingRect
-        let horizontalInset = configuration.sourceCell.horizontalInset
-        let leftMargin: CGFloat = 24.0
-        let rightMargin: CGFloat = 56.0
-        let endWidth = view.bounds.width - leftMargin - rightMargin - horizontalInset
-        let endHeight: CGFloat = 56.0
-        targetFrame.size.width = endWidth
-        targetFrame.origin.y = yPosition - (endHeight - shapeViewStartingRect.height)
-        targetFrame.size.height = endHeight
-        if configuration.sourceCellEdge == .trailing {
-            targetFrame.origin.x -= (endWidth - shapeViewStartingRect.width)
-        }
-        shapeViewEndingRect = targetFrame
-        shapeView.animateToShape(frame: targetFrame,
+        shapeViewEndingRect = configuration.shapeViewEndingRect
+        shapeView.animateToShape(frame: configuration.shapeViewEndingRect,
                                  alpha: 1.0,
                                  color: .systemBackground)
 
