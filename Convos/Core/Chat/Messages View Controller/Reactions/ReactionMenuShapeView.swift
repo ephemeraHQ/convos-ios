@@ -43,15 +43,19 @@ class ReactionMenuShapeView: UIView {
 
     // MARK: - Animation
 
-    func animateToShape(frame targetFrame: CGRect, color: UIColor? = nil, completion: (() -> Void)? = nil) {
+    func animateToShape(frame targetFrame: CGRect,
+                        alpha: CGFloat,
+                        color: UIColor? = nil,
+                        completion: (() -> Void)? = nil) {
         UIView.animate(
             withDuration: 0.5,
             delay: 0,
             usingSpringWithDamping: 0.8,
             initialSpringVelocity: 0.0,
-            options: [.curveEaseInOut, .layoutSubviews],
+            options: [.curveEaseInOut, .layoutSubviews, .beginFromCurrentState],
             animations: {
                 self.frame = targetFrame
+                self.alpha = alpha
                 if let color = color {
                     self.fillColor = color
                 }
