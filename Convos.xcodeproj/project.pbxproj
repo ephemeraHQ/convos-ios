@@ -8,12 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1C3C742DB6F7AD00B723C0 /* PostHog */; };
+		7A3483CC2DD2A544003DB67E /* TurnkeySDK in Frameworks */ = {isa = PBXBuildFile; productRef = 7A3483CB2DD2A544003DB67E /* TurnkeySDK */; };
 		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
 		D808502F2DC94EDF00E708B0 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = D808502E2DC94EDF00E708B0 /* GRDB-dynamic */; };
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D80850452DC94FF300E708B0 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = D80850442DC94FF300E708B0 /* GRDB-dynamic */; };
 		D80850462DC94FF300E708B0 /* GRDB-dynamic in Embed Frameworks */ = {isa = PBXBuildFile; productRef = D80850442DC94FF300E708B0 /* GRDB-dynamic */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		D808504A2DC9534800E708B0 /* TurnkeySDK in Frameworks */ = {isa = PBXBuildFile; productRef = D80850492DC9534800E708B0 /* TurnkeySDK */; };
 		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
 		D834386F2DB19D8C00A50F45 /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = D834386E2DB19D8C00A50F45 /* Factory */; };
 		D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */; };
@@ -125,8 +125,8 @@
 				D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */,
 				D808502F2DC94EDF00E708B0 /* GRDB-dynamic in Frameworks */,
 				7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */,
+				7A3483CC2DD2A544003DB67E /* TurnkeySDK in Frameworks */,
 				D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */,
-				D808504A2DC9534800E708B0 /* TurnkeySDK in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -233,7 +233,7 @@
 				D8B5A9032DC272BD006003A4 /* XMTPiOS */,
 				D8084BA82DC9193A00E708B0 /* DifferenceKit */,
 				D808502E2DC94EDF00E708B0 /* GRDB-dynamic */,
-				D80850492DC9534800E708B0 /* TurnkeySDK */,
+				7A3483CB2DD2A544003DB67E /* TurnkeySDK */,
 			);
 			productName = Convos;
 			productReference = D8A2B6912DA4BA4B00EF8577 /* Convos.app */;
@@ -275,7 +275,7 @@
 				D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */,
 				D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */,
 				D808502D2DC94EDF00E708B0 /* XCRemoteSwiftPackageReference "GRDB" */,
-				D80850482DC9534800E708B0 /* XCRemoteSwiftPackageReference "swift-sdk" */,
+				7A3483CA2DD2A544003DB67E /* XCRemoteSwiftPackageReference "swift-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
@@ -619,6 +619,14 @@
 				minimumVersion = 3.24.0;
 			};
 		};
+		7A3483CA2DD2A544003DB67E /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tkhq/swift-sdk.git";
+			requirement = {
+				branch = taylor/sessions;
+				kind = branch;
+			};
+		};
 		D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ra1028/DifferenceKit.git";
@@ -633,14 +641,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 7.4.1;
-			};
-		};
-		D80850482DC9534800E708B0 /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/tkhq/swift-sdk.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.1;
 			};
 		};
 		D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
@@ -691,6 +691,11 @@
 			package = 7A1C3C732DB6F7AD00B723C0 /* XCRemoteSwiftPackageReference "posthog-ios" */;
 			productName = PostHog;
 		};
+		7A3483CB2DD2A544003DB67E /* TurnkeySDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A3483CA2DD2A544003DB67E /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = TurnkeySDK;
+		};
 		D8084BA82DC9193A00E708B0 /* DifferenceKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */;
@@ -715,11 +720,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D808502D2DC94EDF00E708B0 /* XCRemoteSwiftPackageReference "GRDB" */;
 			productName = "GRDB-dynamic";
-		};
-		D80850492DC9534800E708B0 /* TurnkeySDK */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D80850482DC9534800E708B0 /* XCRemoteSwiftPackageReference "swift-sdk" */;
-			productName = TurnkeySDK;
 		};
 		D80BAAC12DB2C36500C2FB42 /* Sentry */ = {
 			isa = XCSwiftPackageProductDependency;

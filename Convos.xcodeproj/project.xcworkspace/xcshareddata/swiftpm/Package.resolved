@@ -1,5 +1,5 @@
 {
-  "originHash" : "67f8dd576a7a0e74b88f6b976063a1fee48cf63442ce57fa675423fe8d3ca4d2",
+  "originHash" : "cf6aa6b693095c70462b54e008597d122f78bd3c7a563cb6df22702b351301e2",
   "pins" : [
     {
       "identity" : "anchorkit",
@@ -258,8 +258,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/tkhq/swift-sdk.git",
       "state" : {
-        "revision" : "35a3f203d406eaaf64cc647f4c001deddb69c365",
-        "version" : "1.2.1"
+        "branch" : "taylor/sessions",
+        "revision" : "056ecad37099431b76ced1df70c34ef77413a180"
       }
     },
     {

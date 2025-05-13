@@ -63,26 +63,29 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
             let presentationAnchor = try presentationAnchor()
             client = TurnkeyClient(rpId: Secrets.API_RP_ID,
                                    presentationAnchor: presentationAnchor)
-            //            setupPasskeyPresentationProvider()
             authState = .unauthorized
         }
     }
 
-    //    func setupPasskeyPresentationProvider() async {
-    //        let presentationProvider = await PasskeyPresentationProvider()
-    //        await passkeyAuth.setPresentationContextProvider(presentationProvider)
-    //    }
-
     func signIn() async throws {
-//        guard let client = client else {
-//            throw TurnkeyAuthServiceError.uninitializedTurnkeyClient
-//        }
+        guard let client = client else {
+            throw TurnkeyAuthServiceError.uninitializedTurnkeyClient
+        }
+        
+        let session = SessionManager.shared
 
-//        let keyPair = try KeyGenerator.generateP256KeyPair()
-//        let publicKey = keyPair.publicKeyString
+        do {
+            let loggedInClient = try await client.login(organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID)
+            print("Logged in as: \(loggedInClient)")
+        } catch {
+            Logger.error("Error signing in with Turnkey: \(error)")
+        }
+        //        let manager = SecureEnclaveKeyManager()
+//        let tag = try manager.createKeypair()
+//        let publicKey = try manager.publicKey(tag: tag)
 //        let sessionResponse = try await client.createReadWriteSession(
 //            organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID,
-//            targetPublicKey: publicKey,
+//            targetPublicKey: publicKey.base64EncodedString(),
 //            userId: nil,
 //            apiKeyName: nil,
 //            expirationSeconds: "86400" // 24 hours
@@ -181,40 +184,49 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
     }
 
     @objc private func handlePasskeyRegistrationCompleted(_ notification: Notification) {
-//        guard let result = notification.userInfo?["result"] as? PasskeyRegistrationResult else {
-//            return
-//        }
-//
-//        guard let displayName = displayName else {
-//            return
-//        }
-//
-//        do {
-//            let keyPair = try KeyGenerator.generateP256KeyPair()
-//
-//            Task {
-//                let result = try await sendCreateSubOrgRequest(
-//                    ephemeralPublicKey: keyPair.publicKeyString,
-//                    passkeyRegistrationResult: result,
-//                    displayName: displayName
-//                )
-//
-//                guard let client, let result else {
-//                    throw TurnkeyAuthServiceError.failedCreatingSubOrganization
-//                }
-//
-////                let session = try await client.createReadOnlySession(
-////                organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID)
-////                let whoamiResponse = try await client.getWhoami(
-////                organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID)
-//
-////                Logger.info("Turnkey Whoami: \(whoamiResponse)")
-////                let whoami = try whoamiResponse.ok.body.json
-//
-//                Logger.info("Finished registering with Turnkey: \(result)")
-//            }
-//        } catch {
-//        }
+        guard let result = notification.userInfo?["result"] as? PasskeyRegistrationResult else {
+            return
+        }
+
+        guard let displayName = displayName else {
+            return
+        }
+
+        do {
+            let manager = SecureEnclaveKeyManager()
+            let tag = try manager.createKeypair()
+            let publicKey = try manager.publicKey(tag: tag)
+
+            Task {
+                let result = try await sendCreateSubOrgRequest(
+                    ephemeralPublicKey: publicKey.base64EncodedString(),
+                    passkeyRegistrationResult: result,
+                    displayName: displayName
+                )
+
+                guard let client, let result else {
+                    throw TurnkeyAuthServiceError.failedCreatingSubOrganization
+                }
+
+                let sessionResponse = try await client.createReadWriteSession(
+                    organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID,
+                    targetPublicKey: publicKey.base64EncodedString(),
+                    userId: nil,
+                    apiKeyName: nil,
+                    expirationSeconds: "86400" // 24 hours
+                )
+
+                let whoamiResponse = try await client.getWhoami(
+                    organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID)
+
+                Logger.info("Turnkey Whoami: \(whoamiResponse)")
+                let whoami = try whoamiResponse.ok.body.json
+
+                Logger.info("Finished registering with Turnkey: \(result)")
+            }
+        } catch {
+            Logger.error("Error registering with Turnkey: \(error)")
+        }
     }
 
     @objc private func handlePasskeyRegistrationFailed(_ notification: Notification) {
@@ -237,29 +249,28 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
         passkeyRegistrationResult: PasskeyRegistrationResult,
         displayName: String
     ) async throws -> CreateSubOrganizationResponse? {
-        return nil
-//        guard let client = client else {
-//            throw TurnkeyAuthServiceError.uninitializedTurnkeyClient
-//        }
-//
-//        let passkey = Passkey(
-//            challenge: passkeyRegistrationResult.challenge,
-//            attestation: PasskeyAttestation(
-//                credentialId: passkeyRegistrationResult.attestation.credentialId,
-//                clientDataJson: passkeyRegistrationResult.attestation.clientDataJson,
-//                attestationObject: passkeyRegistrationResult.attestation.attestationObject,
-//                transports: [.transportInternal]
-//            )
-//        )
-//
-//        let response = try await apiClient.createSubOrganization(
-//            ephemeralPublicKey: ephemeralPublicKey,
-//            passkey: .init(
-//                challenge: passkey.challenge,
-//                attestation: passkey.attestation
-//            )
-//        )
-//
-//        return response
+        guard let client = client else {
+            throw TurnkeyAuthServiceError.uninitializedTurnkeyClient
+        }
+
+        let passkey = Passkey(
+            challenge: passkeyRegistrationResult.challenge,
+            attestation: PasskeyAttestation(
+                credentialId: passkeyRegistrationResult.attestation.credentialId,
+                clientDataJson: passkeyRegistrationResult.attestation.clientDataJson,
+                attestationObject: passkeyRegistrationResult.attestation.attestationObject,
+                transports: [.transportInternal]
+            )
+        )
+
+        let response = try await apiClient.createSubOrganization(
+            ephemeralPublicKey: ephemeralPublicKey,
+            passkey: .init(
+                challenge: passkey.challenge,
+                attestation: passkey.attestation
+            )
+        )
+
+        return response
     }
 }
