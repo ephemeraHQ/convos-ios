@@ -32,7 +32,7 @@ extension XMTPiOS.Member: ConvosSDK.User {
         ""
     }
 
-    public var publicIdentifier: String? {
+    public var walletAddress: String? {
         nil
     }
 
@@ -49,7 +49,7 @@ extension XMTPiOS.Member: ConvosSDK.User {
 struct XMTPiOSMember: ConvosSDK.User {
     var id: String
     var name: String
-    var publicIdentifier: String?
+    var walletAddress: String?
     var chainId: Int64?
 
     func sign(message: String) async throws -> Data? {

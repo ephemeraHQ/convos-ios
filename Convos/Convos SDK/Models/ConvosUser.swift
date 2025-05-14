@@ -8,7 +8,7 @@ struct ConvosUser: ConvosSDK.User {
         0
     }
 
-    var publicIdentifier: String? {
+    var walletAddress: String? {
         ""
     }
 }

@@ -53,7 +53,13 @@ struct MockMessage: ConvosSDK.RawMessageType {
 }
 
 class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
+    enum MockMessagingServiceError: Error {
+        case unauthorized
+    }
+
     typealias RawMessage = MockMessage
+
+    private let currentUser: MockUser? = nil
 
     private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
     CurrentValueSubject<ConvosSDK.MessagingServiceState, Never>(.uninitialized)
@@ -79,7 +85,10 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     func sendMessage(to address: String, content: String) async throws -> [RawMessage] {
-        messagesSubject.send([MockMessage.message(content, sender: MockUser())])
+        guard let currentUser else {
+            throw MockMessagingServiceError.unauthorized
+        }
+        messagesSubject.send([MockMessage.message(content, sender: currentUser)])
         return messagesSubject.value
     }
 

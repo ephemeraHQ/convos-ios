@@ -37,10 +37,6 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
         return nil
     }
 
-    var messagingService: any ConvosSDK.MessagingServiceProtocol {
-        MessagingService(authService: self)
-    }
-
     private var passkeyRegistration: PasskeyManager?
     private var displayName: String?
 

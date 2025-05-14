@@ -10,6 +10,10 @@ extension Data {
         let format = options.contains(.upperCase) ? "%02hhX" : "%02hhx"
         return self.map { String(format: format, $0) }.joined()
     }
+    
+    var toHex: String {
+        return reduce("") { $0 + String(format: "%02x", $1) }
+    }
 
     init?(hexString: String) {
         var hex = hexString

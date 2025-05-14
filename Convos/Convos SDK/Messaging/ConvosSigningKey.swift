@@ -13,7 +13,7 @@ struct ConvosSigningKey: SigningKey {
     }
 
     var type: SignerType {
-        .SCW
+        .EOA
     }
 
     func sign(_ message: String) async throws -> XMTPiOS.SignedData {

@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 
 final class RootViewController: UIViewController {
-    let convos: ConvosSDK.Convos = .shared
+    let convos: ConvosSDK.Convos = .mock
     let analyticsService: AnalyticsServiceProtocol = PosthogAnalyticsService.shared
 
     override func viewDidLoad() {
