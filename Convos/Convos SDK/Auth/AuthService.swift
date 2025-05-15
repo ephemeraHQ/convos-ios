@@ -36,7 +36,10 @@ extension PrivateKey {
 struct MockUser: ConvosSDK.User, Codable {
     var id: String
     var name: String
+    var username: String?
+    var displayName: String?
     let privateKey: PrivateKey
+    var avatarURL: URL?
 
     var chainId: Int64? {
         nil

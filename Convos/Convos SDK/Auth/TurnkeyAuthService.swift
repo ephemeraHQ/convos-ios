@@ -1,5 +1,6 @@
 import AuthenticationServices
 import Combine
+import CryptoKit
 import Foundation
 import Shared
 import TurnkeySDK
@@ -56,6 +57,7 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
 
     func prepare() async throws {
         Task { @MainActor in
+            try? SessionManager.shared.deleteSession()
             let presentationAnchor = try presentationAnchor()
             client = TurnkeyClient(rpId: Secrets.API_RP_ID,
                                    presentationAnchor: presentationAnchor)
@@ -67,8 +69,6 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
         guard let client = client else {
             throw TurnkeyAuthServiceError.uninitializedTurnkeyClient
         }
-        
-        let session = SessionManager.shared
 
         do {
             let loggedInClient = try await client.login(organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID)
@@ -77,44 +77,44 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
             Logger.error("Error signing in with Turnkey: \(error)")
         }
         //        let manager = SecureEnclaveKeyManager()
-//        let tag = try manager.createKeypair()
-//        let publicKey = try manager.publicKey(tag: tag)
-//        let sessionResponse = try await client.createReadWriteSession(
-//            organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID,
-//            targetPublicKey: publicKey.base64EncodedString(),
-//            userId: nil,
-//            apiKeyName: nil,
-//            expirationSeconds: "86400" // 24 hours
-//        )
+        //        let tag = try manager.createKeypair()
+        //        let publicKey = try manager.publicKey(tag: tag)
+        //        let sessionResponse = try await client.createReadWriteSession(
+        //            organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID,
+        //            targetPublicKey: publicKey.base64EncodedString(),
+        //            userId: nil,
+        //            apiKeyName: nil,
+        //            expirationSeconds: "86400" // 24 hours
+        //        )
 
-//        if case .ok(let session) = sessionResponse,
-//           let credentialBundle = try session.body.json.activity.
-//        result.createReadWriteSessionResultV2?.credentialBundle {
-//
-//
-//        } else {
-//            throw TurnkeyAuthServiceError.failedFindingPasskeyPresentationAnchor
-//        }
+        //        if case .ok(let session) = sessionResponse,
+        //           let credentialBundle = try session.body.json.activity.
+        //        result.createReadWriteSessionResultV2?.credentialBundle {
+        //
+        //
+        //        } else {
+        //            throw TurnkeyAuthServiceError.failedFindingPasskeyPresentationAnchor
+        //        }
 
-//        do {
-//            // Get whoami to verify authentication
-//            let whoamiResponse = try await client.getWhoami(organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID)
-//
-//            Logger.info("Turnkey Whoami: \(whoamiResponse)")
-//            let whoami = try whoamiResponse.ok.body.json
-//            Logger.info("Turnkey whoami: \(whoami)")
-//
-//            // Update auth state and current user
-//            //            authState = .authorized(ConvosUser(
-//            //                userId: whoami.userId,
-//            //                username: whoami.username,
-//            //                organizationId: whoami.organizationId,
-//            //                organizationName: whoami.organizationName
-//            //            ))
-//        } catch {
-//            Logger.error("Error signing in with Turnkey: \(error)")
-//            throw error
-//        }
+        //        do {
+        //            // Get whoami to verify authentication
+        //            let whoamiResponse = try await client.getWhoami(organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID)
+        //
+        //            Logger.info("Turnkey Whoami: \(whoamiResponse)")
+        //            let whoami = try whoamiResponse.ok.body.json
+        //            Logger.info("Turnkey whoami: \(whoami)")
+        //
+        //            // Update auth state and current user
+        //            //            authState = .authorized(ConvosUser(
+        //            //                userId: whoami.userId,
+        //            //                username: whoami.username,
+        //            //                organizationId: whoami.organizationId,
+        //            //                organizationName: whoami.organizationName
+        //            //            ))
+        //        } catch {
+        //            Logger.error("Error signing in with Turnkey: \(error)")
+        //            throw error
+        //        }
     }
 
     func register(displayName: String) async throws {
@@ -179,6 +179,8 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
         NotificationCenter.default.removeObserver(self, name: .PasskeyRegistrationCanceled, object: nil)
     }
 
+    private var passkeyRegistrationTask: Task<Void, Never>?
+    private var authClient: TurnkeyClient!
     @objc private func handlePasskeyRegistrationCompleted(_ notification: Notification) {
         guard let result = notification.userInfo?["result"] as? PasskeyRegistrationResult else {
             return
@@ -188,40 +190,126 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
             return
         }
 
-        do {
-            let manager = SecureEnclaveKeyManager()
-            let tag = try manager.createKeypair()
-            let publicKey = try manager.publicKey(tag: tag)
+        let ephemeralPrivateKey = P256.KeyAgreement.PrivateKey()
+        let publicKey = ephemeralPrivateKey.publicKey
 
-            Task {
+        guard let apiPublicKey = try? publicKey.toString(
+            representation: PublicKeyRepresentation.x963),
+              let apiPublicKeyCompressed = try? publicKey.toString(
+                representation: PublicKeyRepresentation.compressed
+              ),
+        let apiPrivateKey = try? ephemeralPrivateKey.toString(
+            representation: PrivateKeyRepresentation.raw) else {
+            Logger.error("Missing api keys")
+            return
+        }
+
+        let authClient = TurnkeyClient(
+            apiPrivateKey: apiPrivateKey,
+            apiPublicKey: apiPublicKeyCompressed
+        )
+        self.authClient = authClient
+
+        passkeyRegistrationTask = Task {
+            do {
+                let expirationSeconds: Int = 3600
                 let result = try await sendCreateSubOrgRequest(
-                    ephemeralPublicKey: publicKey.base64EncodedString(),
+                    ephemeralPublicKey: apiPublicKeyCompressed,
                     passkeyRegistrationResult: result,
                     displayName: displayName
                 )
 
-                guard let client, let result else {
+                Logger.info("Private key: \(apiPrivateKey) Public key: \(apiPublicKey)")
+
+                guard let result else {
                     throw TurnkeyAuthServiceError.failedCreatingSubOrganization
                 }
 
-                let sessionResponse = try await client.createReadWriteSession(
-                    organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID,
-                    targetPublicKey: publicKey.base64EncodedString(),
+//                if let whoami = try? await authClient.getWhoami(
+//                    organizationId: result.subOrgId) {
+//                    Logger.info("Whoami result: \(whoami)")
+//                    switch whoami {
+//                    case .undocumented(statusCode: let status, let payload):
+//                        if let body = payload.body {
+//                            // Convert the HTTPBody to a string
+//                            let bodyString = try await String(collecting: body, upTo: .max)
+//                            print("Whoami bodyString: \(bodyString)")
+//                            //                        XCTFail("Undocumented response body: \(bodyString)")
+//                        }
+//                        print("Status code: \(status) payload: \(payload)")
+//                    default:
+//                        break
+//                    }
+//                }
+
+                Logger.info("Create sub organization result from Convos backend: \(result)")
+
+                let sessionResponse = try await self.authClient.createReadWriteSession(
+                    organizationId: result.subOrgId,
+                    targetPublicKey: apiPublicKey,
                     userId: nil,
-                    apiKeyName: nil,
-                    expirationSeconds: "86400" // 24 hours
+                    apiKeyName: "session-key",
+                    expirationSeconds: String(expirationSeconds)
                 )
 
-                let whoamiResponse = try await client.getWhoami(
-                    organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID)
+                switch sessionResponse {
+                case .undocumented(statusCode: let status, let payload):
+                    if let body = payload.body {
+                        // Convert the HTTPBody to a string
+                        let bodyString = try await String(collecting: body, upTo: .max)
+                        print("bodyString: \(bodyString)")
+                        //                        XCTFail("Undocumented response body: \(bodyString)")
+                    }
+                    print("status: \(status) payload: \(payload)")
+                case .ok(let output):
+                    print("output: \(output)")
+                }
+                Logger.info("Session response: \(sessionResponse)")
 
-                Logger.info("Turnkey Whoami: \(whoamiResponse)")
-                let whoami = try whoamiResponse.ok.body.json
+                let responseBody = try sessionResponse.ok.body.json
+                guard let result = responseBody.activity.result.createReadWriteSessionResultV2 else {
+                    throw NSError(
+                        domain: "TurnkeyClient",
+                        code: 1,
+                        userInfo: [NSLocalizedDescriptionKey: "Missing createReadWriteSessionResultV2"]
+                    )
+                }
+                let organizationId = result.organizationId
+                let userId = result.userId
 
-                Logger.info("Finished registering with Turnkey: \(result)")
+                guard let finalClient = try await TurnkeySessionManager.shared.saveSession(
+                    userId: userId,
+                    organizationId: organizationId,
+                    encryptedBundle: result.credentialBundle,
+                    ephemeralPrivateKey: ephemeralPrivateKey
+                ) else {
+                    Logger.error("Failed saving session")
+                    return
+                }
+
+                if let whoamiResponse = try? await finalClient.getWhoami(
+                    organizationId: organizationId) {
+                    Logger.info("Whoami result: \(whoamiResponse)")
+                    switch whoamiResponse {
+                    case .undocumented(statusCode: let status, let payload):
+                        if let body = payload.body {
+                            // Convert the HTTPBody to a string
+                            let bodyString = try await String(collecting: body, upTo: .max)
+                            print("Whoami bodyString: \(bodyString)")
+                            //                        XCTFail("Undocumented response body: \(bodyString)")
+                        }
+                        print("Status code: \(status) payload: \(payload)")
+                    case .ok(let output):
+                        print("output from whoami: \(output)")
+                    default:
+                        break
+                    }
+                    
+                    Logger.info("Finished registering with Turnkey: \(whoamiResponse)")
+                }
+            } catch {
+                Logger.error("Error registering with Turnkey: \(error)")
             }
-        } catch {
-            Logger.error("Error registering with Turnkey: \(error)")
         }
     }
 

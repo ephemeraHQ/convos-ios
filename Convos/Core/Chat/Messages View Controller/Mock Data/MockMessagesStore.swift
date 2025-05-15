@@ -13,12 +13,12 @@ final class MockMessagesStore: MessagesStoreProtocol {
             .eraseToAnyPublisher()
     }
 
-    private let currentUser: ConvosUser
+    private let currentUser: User
 
     let messagingService: MockMessagesService
 
     init() {
-        self.currentUser = ConvosUser(id: "0", name: "You")
+        self.currentUser = User(id: "0", name: "You")
         self.messagingService = MockMessagesService(currentUser: currentUser)
     }
 
@@ -44,14 +44,14 @@ final class MockMessagesStore: MessagesStoreProtocol {
         return []
     }
 
-    func mapMessagesToSections(messages: [MockMessagesService.RawMessage]) -> [MessagesCollectionSection] {
+    func mapMessagesToSections(messages: [any ConvosSDK.RawMessageType]) -> [MessagesCollectionSection] {
         let cells: [MessagesCollectionCell] = messages
             .sorted(by: { lhs, rhs in
                 lhs.timestamp < rhs.timestamp
             })
             .map { rawMessage in
-                let owner: ConvosUser = ConvosUser(id: rawMessage.sender.id,
-                                                   name: rawMessage.sender.name)
+                let owner: User = User(id: rawMessage.sender.id,
+                                       name: rawMessage.sender.name)
                 let message = Message(id: rawMessage.id,
                                       date: rawMessage.timestamp,
                                       kind: .text(rawMessage.content),

@@ -24,12 +24,24 @@ private enum MessagingServiceEffect {
 }
 
 extension XMTPiOS.Member: ConvosSDK.User {
+    public var avatarURL: URL? {
+        nil
+    }
+
     public var id: String {
         ""
     }
 
     public var name: String {
         ""
+    }
+
+    public var username: String? {
+        nil
+    }
+
+    public var displayName: String? {
+        nil
     }
 
     public var walletAddress: String? {
@@ -49,8 +61,11 @@ extension XMTPiOS.Member: ConvosSDK.User {
 struct XMTPiOSMember: ConvosSDK.User {
     var id: String
     var name: String
+    var username: String?
+    var displayName: String?
     var walletAddress: String?
     var chainId: Int64?
+    var avatarURL: URL?
 
     func sign(message: String) async throws -> Data? {
         nil
@@ -75,22 +90,46 @@ extension XMTPiOS.DecodedMessage: ConvosSDK.RawMessageType {
     }
 }
 
+extension XMTPiOS.Conversation: ConvosSDK.ConversationType {
+    public var lastMessage: (any ConvosSDK.RawMessageType)? {
+        get async throws {
+            try await lastMessage()
+        }
+    }
+
+    public var otherParticipant: (any ConvosSDK.User)? {
+        get async throws {
+            try await members().first
+        }
+    }
+
+
+    public var isPinned: Bool {
+        false
+    }
+
+    public var isUnread: Bool {
+        false
+    }
+
+    public var isRequest: Bool {
+        false
+    }
+
+    public var isMuted: Bool {
+        false
+    }
+
+    public var timestamp: Date {
+        createdAt
+    }
+
+    public var amount: Double? {
+        nil
+    }
+}
+
 final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
-    nonisolated
-    func messages(for address: String) -> AnyPublisher<[XMTPiOS.DecodedMessage], Never> {
-        Just([]).eraseToAnyPublisher()
-    }
-
-    func loadInitialMessages() async -> [XMTPiOS.DecodedMessage] {
-        []
-    }
-
-    func loadPreviousMessages() async -> [XMTPiOS.DecodedMessage] {
-        []
-    }
-
-    typealias RawMessage = XMTPiOS.DecodedMessage
-
     private let authService: ConvosSDK.AuthServiceProtocol
     private var xmtpClient: XMTPiOS.Client?
     private let keychainService: KeychainService<ConvosKeychainItem> = .init()
@@ -128,6 +167,49 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     func stop() async {
         await processAction(.stop)
     }
+
+    // MARK: - Conversations
+
+    func conversations() async throws -> [ConvosSDK.ConversationType] {
+        guard let xmtpClient else { return [] }
+        return try await xmtpClient.conversations.list()
+    }
+
+    func conversationsStream() async -> AsyncThrowingStream<any ConvosSDK.ConversationType, any Error> {
+        guard let xmtpClient else { return .init {
+            nil
+        } }
+        let baseStream = await xmtpClient.conversations.stream()
+        return AsyncThrowingStream { continuation in
+            Task {
+                do {
+                    for try await conversation in baseStream {
+                        continuation.yield(conversation as any ConvosSDK.ConversationType)
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+        }
+    }
+
+    // MARK: - Messages
+
+    nonisolated
+    func messages(for address: String) -> AnyPublisher<[ConvosSDK.RawMessageType], Never> {
+        Just([]).eraseToAnyPublisher()
+    }
+
+    func loadInitialMessages() async -> [ConvosSDK.RawMessageType] {
+        []
+    }
+
+    func loadPreviousMessages() async -> [ConvosSDK.RawMessageType] {
+        []
+    }
+
+    // MARK: -
 
     nonisolated func messagingStatePublisher() -> AnyPublisher<ConvosSDK.MessagingServiceState, Never> {
         stateSubject.eraseToAnyPublisher()
@@ -207,16 +289,12 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
     // MARK: - Messaging
 
-    func sendMessage(to address: String, content: String) async throws -> [XMTPiOS.DecodedMessage] {
+    func sendMessage(to address: String, content: String) async throws -> [any ConvosSDK.RawMessageType] {
         guard xmtpClient != nil else {
             throw MessagingServiceError.notInitialized
         }
         // Implement XMTP message sending
         return []
-    }
-
-    nonisolated func messages(for address: String) -> AnyPublisher<[ConvosSDK.RawMessageType], Never> {
-        Just([]).eraseToAnyPublisher()
     }
 
     // MARK: - Helpers

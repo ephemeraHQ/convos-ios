@@ -2,10 +2,16 @@ import Foundation
 import SwiftUI
 
 struct ChatListView: View {
-    @ObservedObject var conversationStore: CTConversationStore
+    @State var conversationsStore: ConversationsStore
+    @State private var selectedConversation: ConversationItem?
+
     @ObservedObject var identityStore: CTIdentityStore
     @State private var showDropdownMenu: Bool = false
-    @State private var selectedConversation: CTConversation?
+
+    init(messagingService: any ConvosSDK.MessagingServiceProtocol) {
+        _conversationsStore = State(wrappedValue: ConversationsStore(messagingService: messagingService))
+        _identityStore = ObservedObject(initialValue: CTIdentityStore())
+    }
 
     var body: some View {
         NavigationStack {
@@ -30,74 +36,74 @@ struct ChatListView: View {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             // Pinned chats grid
-                            if !conversationStore.pinnedConversations.isEmpty {
-                                PinnedChatsGrid(
-                                    conversations: conversationStore.pinnedConversations,
-                                    onTapChat: { conversation in
-                                        print("tapping on pinned chat")
-                                        selectedConversation = conversation
-                                    },
-                                    onUnpin: { conversation in
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                            conversationStore.togglePin(for: conversation)
-                                        }
-                                    },
-                                    onToggleRead: { conversation in
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                            conversationStore.toggleRead(for: conversation)
-                                        }
-                                    },
-                                    onToggleMute: { conversation in
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                            conversationStore.toggleMute(for: conversation)
-                                        }
-                                    },
-                                    onDelete: { conversation in
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                            conversationStore.deleteConversation(id: conversation.id)
-                                        }
-                                    }
-                                )
-                                .background(Color(.systemBackground))
-                            }
-
-                            // Requests section
-                            if !conversationStore.requests.isEmpty {
-                                RequestsHeader(
-                                    requestCount: conversationStore.requests.count,
-                                    amount: conversationStore.requests.first?.amount,
-                                    onTap: {
-                                        print("Navigate to requests list")
-                                    }
-                                )
-                            }
+//                            if !conversationStore.pinnedConversations.isEmpty {
+//                                PinnedChatsGrid(
+//                                    conversations: conversationStore.pinnedConversations,
+//                                    onTapChat: { conversation in
+//                                        print("tapping on pinned chat")
+//                                        selectedConversation = conversation
+//                                    },
+//                                    onUnpin: { conversation in
+//                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+//                                            conversationStore.togglePin(for: conversation)
+//                                        }
+//                                    },
+//                                    onToggleRead: { conversation in
+//                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+//                                            conversationStore.toggleRead(for: conversation)
+//                                        }
+//                                    },
+//                                    onToggleMute: { conversation in
+//                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+//                                            conversationStore.toggleMute(for: conversation)
+//                                        }
+//                                    },
+//                                    onDelete: { conversation in
+//                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+//                                            conversationStore.deleteConversation(id: conversation.id)
+//                                        }
+//                                    }
+//                                )
+//                                .background(Color(.systemBackground))
+//                            }
+//
+//                            // Requests section
+//                            if !conversationStore.requests.isEmpty {
+//                                RequestsHeader(
+//                                    requestCount: conversationStore.requests.count,
+//                                    amount: conversationStore.requests.first?.amount,
+//                                    onTap: {
+//                                        print("Navigate to requests list")
+//                                    }
+//                                )
+//                            }
 
                             // Regular chats
-                            ForEach(conversationStore.unpinnedConversations) { conversation in
+                            ForEach(conversationsStore.unpinnedConversations) { conversation in
                                 ChatListItem(
-                                    conversation: conversation,
+                                    conversationItem: conversation,
                                     onTap: {
                                         print("tapping on regular chat")
                                         selectedConversation = conversation
                                     },
                                     onPin: {
                                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                            conversationStore.togglePin(for: conversation)
+//                                            conversationsStore.togglePin(for: conversation)
                                         }
                                     },
                                     onToggleRead: {
                                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                            conversationStore.toggleRead(for: conversation)
+//                                            conversationStore.toggleRead(for: conversation)
                                         }
                                     },
                                     onToggleMute: {
                                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                            conversationStore.toggleMute(for: conversation)
+//                                            conversationStore.toggleMute(for: conversation)
                                         }
                                     },
                                     onDelete: {
                                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                            conversationStore.deleteConversation(id: conversation.id)
+//                                            conversationStore.deleteConversation(id: conversation.id)
                                         }
                                     }
                                 )
@@ -122,11 +128,11 @@ struct ChatListView: View {
                     .zIndex(10)
                 }
             }
-            .alert("Pinned Conversations", isPresented: $conversationStore.showPinLimitAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("You can pin up to 9 conversations. To pin this conversation, unpin another one first.")
-            }
+//            .alert("Pinned Conversations", isPresented: $conversationStore.showPinLimitAlert) {
+//                Button("OK", role: .cancel) {}
+//            } message: {
+//                Text("You can pin up to 9 conversations. To pin this conversation, unpin another one first.")
+//            }
             .sheet(isPresented: $identityStore.isIdentityPickerPresented) {
                 NavigationView {
                     List(identityStore.availableIdentities) { identity in
@@ -185,7 +191,7 @@ struct ChatListView: View {
                     isIdentity: true,
                     action: {
                         identityStore.switchIdentity(to: identity)
-                        conversationStore.switchIdentity(to: identity)
+//                        conversationsStore.switchIdentity(to: identity)
                         showDropdownMenu = false
                     }
                 )
@@ -221,5 +227,5 @@ struct ChatListView: View {
 }
 
 #Preview {
-    ChatListView(conversationStore: CTConversationStore(), identityStore: CTIdentityStore())
+//    ChatListView(conversationStore: CTConversationStore(), identityStore: CTIdentityStore())
 }

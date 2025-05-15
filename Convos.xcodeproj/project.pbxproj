@@ -10,10 +10,7 @@
 		7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1C3C742DB6F7AD00B723C0 /* PostHog */; };
 		7A3483CC2DD2A544003DB67E /* TurnkeySDK in Frameworks */ = {isa = PBXBuildFile; productRef = 7A3483CB2DD2A544003DB67E /* TurnkeySDK */; };
 		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
-		D808502F2DC94EDF00E708B0 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = D808502E2DC94EDF00E708B0 /* GRDB-dynamic */; };
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		D80850452DC94FF300E708B0 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = D80850442DC94FF300E708B0 /* GRDB-dynamic */; };
-		D80850462DC94FF300E708B0 /* GRDB-dynamic in Embed Frameworks */ = {isa = PBXBuildFile; productRef = D80850442DC94FF300E708B0 /* GRDB-dynamic */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
 		D834386F2DB19D8C00A50F45 /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = D834386E2DB19D8C00A50F45 /* Factory */; };
 		D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */; };
@@ -48,7 +45,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				D80850462DC94FF300E708B0 /* GRDB-dynamic in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -111,7 +107,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D80850452DC94FF300E708B0 /* GRDB-dynamic in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -123,7 +118,6 @@
 				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
 				D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */,
 				D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */,
-				D808502F2DC94EDF00E708B0 /* GRDB-dynamic in Frameworks */,
 				7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */,
 				7A3483CC2DD2A544003DB67E /* TurnkeySDK in Frameworks */,
 				D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */,
@@ -199,7 +193,6 @@
 			);
 			name = NotificationService;
 			packageProductDependencies = (
-				D80850442DC94FF300E708B0 /* GRDB-dynamic */,
 			);
 			productName = NotificationService;
 			productReference = D80850342DC94F4C00E708B0 /* NotificationService.appex */;
@@ -232,7 +225,6 @@
 				7A1C3C742DB6F7AD00B723C0 /* PostHog */,
 				D8B5A9032DC272BD006003A4 /* XMTPiOS */,
 				D8084BA82DC9193A00E708B0 /* DifferenceKit */,
-				D808502E2DC94EDF00E708B0 /* GRDB-dynamic */,
 				7A3483CB2DD2A544003DB67E /* TurnkeySDK */,
 			);
 			productName = Convos;
@@ -274,7 +266,6 @@
 				7A1C3C732DB6F7AD00B723C0 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */,
 				D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */,
-				D808502D2DC94EDF00E708B0 /* XCRemoteSwiftPackageReference "GRDB" */,
 				7A3483CA2DD2A544003DB67E /* XCRemoteSwiftPackageReference "swift-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -635,14 +626,6 @@
 				minimumVersion = 1.3.0;
 			};
 		};
-		D808502D2DC94EDF00E708B0 /* XCRemoteSwiftPackageReference "GRDB" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/groue/GRDB.swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 7.4.1;
-			};
-		};
 		D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
@@ -706,20 +689,10 @@
 			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
 			productName = "plugin:SwiftLintBuildToolPlugin";
 		};
-		D808502E2DC94EDF00E708B0 /* GRDB-dynamic */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D808502D2DC94EDF00E708B0 /* XCRemoteSwiftPackageReference "GRDB" */;
-			productName = "GRDB-dynamic";
-		};
 		D80850412DC94FA000E708B0 /* SwiftLintBuildToolPlugin */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
 			productName = "plugin:SwiftLintBuildToolPlugin";
-		};
-		D80850442DC94FF300E708B0 /* GRDB-dynamic */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D808502D2DC94EDF00E708B0 /* XCRemoteSwiftPackageReference "GRDB" */;
-			productName = "GRDB-dynamic";
 		};
 		D80BAAC12DB2C36500C2FB42 /* Sentry */ = {
 			isa = XCSwiftPackageProductDependency;

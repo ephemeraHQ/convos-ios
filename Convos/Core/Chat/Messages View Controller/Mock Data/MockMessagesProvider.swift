@@ -5,12 +5,10 @@ import UIKit
 // swiftlint:disable force_unwrapping
 
 final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
-    typealias RawMessage = MockMessage
-
     private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
     CurrentValueSubject<ConvosSDK.MessagingServiceState, Never>(.uninitialized)
-    private var messagesSubject: CurrentValueSubject<[RawMessage], Never> =
-    CurrentValueSubject<[RawMessage], Never>([])
+    private var messagesSubject: CurrentValueSubject<[any ConvosSDK.RawMessageType], Never> =
+    CurrentValueSubject<[any ConvosSDK.RawMessageType], Never>([])
 
     var state: ConvosSDK.MessagingServiceState {
         messagingStateSubject.value
@@ -33,24 +31,34 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
         messageTimer = nil
     }
 
-    func loadInitialMessages() async -> [RawMessage] {
+    func conversations() async throws -> [any ConvosSDK.ConversationType] {
+        return []
+    }
+
+    func conversationsStream() async -> AsyncThrowingStream<any ConvosSDK.ConversationType, any Error> {
+        return .init {
+            nil
+        }
+    }
+
+    func loadInitialMessages() async -> [any ConvosSDK.RawMessageType] {
         let messages = createBunchOfMessages(number: 20)
         messagesSubject.value.append(contentsOf: messages)
         return messagesSubject.value
     }
 
-    func loadPreviousMessages() async -> [RawMessage] {
+    func loadPreviousMessages() async -> [any ConvosSDK.RawMessageType] {
         let messages = createBunchOfMessages(number: 20)
         messagesSubject.value.append(contentsOf: messages)
         return messagesSubject.value
     }
 
-    func sendMessage(to address: String, content: String) async throws -> [RawMessage] {
+    func sendMessage(to address: String, content: String) async throws -> [any ConvosSDK.RawMessageType] {
         messagesSubject.value.append(MockMessage.message(content, sender: currentUser))
         return messagesSubject.value
     }
 
-    func messages(for address: String) -> AnyPublisher<[RawMessage], Never> {
+    func messages(for address: String) -> AnyPublisher<[any ConvosSDK.RawMessageType], Never> {
         messagesSubject.eraseToAnyPublisher()
     }
 
@@ -58,22 +66,22 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
         messagingStateSubject.eraseToAnyPublisher()
     }
 
-    private let currentUser: ConvosUser
-    let otherUsers: [ConvosUser] = [
-        ConvosUser(id: "1", name: "Emily Dickinson"),
-        ConvosUser(id: "2", name: "William Shakespeare"),
-        ConvosUser(id: "3", name: "Virginia Woolf"),
-        ConvosUser(id: "4", name: "James Joyce"),
-        ConvosUser(id: "5", name: "Oscar Wilde")
+    private let currentUser: User
+    let otherUsers: [User] = [
+        User(id: "1", name: "Emily Dickinson"),
+        User(id: "2", name: "William Shakespeare"),
+        User(id: "3", name: "Virginia Woolf"),
+        User(id: "4", name: "James Joyce"),
+        User(id: "5", name: "Oscar Wilde")
     ]
 
-    private var allUsers: [ConvosUser] {
+    private var allUsers: [User] {
         [currentUser] + otherUsers
     }
 
     // MARK: - User Access
 
-    var users: (current: ConvosUser, others: [ConvosUser]) {
+    var users: (current: User, others: [User]) {
         (currentUser, otherUsers)
     }
 
@@ -103,7 +111,7 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
 
     // MARK: - Initialization
 
-    init(currentUser: ConvosUser) {
+    init(currentUser: User) {
         self.currentUser = currentUser
         restartMessageTimer()
     }
@@ -140,8 +148,8 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
                            replies: [])
     }
 
-    private func createBunchOfMessages(number: Int = 50) -> [RawMessage] {
-        let messages = (0..<number).map { _ -> RawMessage in
+    private func createBunchOfMessages(number: Int = 50) -> [any ConvosSDK.RawMessageType] {
+        let messages = (0..<number).map { _ -> any ConvosSDK.RawMessageType in
             startingTimestamp -= TimeInterval(Int.random(in: 100...1000))
             return self.createRandomMessage(date: Date(timeIntervalSince1970: startingTimestamp))
         }

@@ -60,7 +60,7 @@ final class CellFactory {
         in collectionView: UICollectionView,
         messageId: String,
         for indexPath: IndexPath,
-        user: ConvosUser,
+        user: User,
         source: ImageSource,
         messageType: MessageType
     ) -> ImageCollectionCell {

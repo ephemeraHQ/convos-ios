@@ -2,25 +2,50 @@ import Combine
 import Foundation
 
 public extension ConvosSDK {
+    protocol User {
+        var id: String { get }
+        var name: String { get }
+        var username: String? { get }
+        var displayName: String? { get }
+        var walletAddress: String? { get }
+        var chainId: Int64? { get }
+        var avatarURL: URL? { get }
+        func sign(message: String) async throws -> Data?
+    }
+
     protocol RawMessageType {
         var id: String { get }
         var content: String { get }
-        var sender: User { get }
+        var sender: any User { get }
         var timestamp: Date { get }
-        var replies: [RawMessageType] { get }
+        var replies: [any RawMessageType] { get }
+    }
+
+    protocol ConversationType {
+        var id: String { get }
+//        var participants: [CTUser] { get }
+        var otherParticipant: (any User)? { get async throws }
+        var lastMessage: (any RawMessageType)? { get async throws }
+        var isPinned: Bool { get }
+        var isUnread: Bool { get }
+        var isRequest: Bool { get }
+        var isMuted: Bool { get }
+        var timestamp: Date { get }
+        var amount: Double? { get }
     }
 
     protocol MessagingServiceProtocol {
-        associatedtype RawMessage: RawMessageType
-
         func start() async throws
         func stop() async
 
-        func sendMessage(to address: String, content: String) async throws -> [RawMessage]
-        func messages(for address: String) -> AnyPublisher<[RawMessage], Never>
+        func conversations() async throws -> [ConversationType]
+        func conversationsStream() async -> AsyncThrowingStream<any ConversationType, any Error>
+
+        func sendMessage(to address: String, content: String) async throws -> [any RawMessageType]
+        func messages(for address: String) -> AnyPublisher<[any RawMessageType], Never>
         func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never>
-        func loadInitialMessages() async -> [RawMessage]
-        func loadPreviousMessages() async -> [RawMessage]
+        func loadInitialMessages() async -> [any RawMessageType]
+        func loadPreviousMessages() async -> [any RawMessageType]
         var state: MessagingServiceState { get }
     }
 
@@ -52,19 +77,33 @@ struct MockMessage: ConvosSDK.RawMessageType {
     }
 }
 
+struct MockConversation: ConvosSDK.ConversationType {
+    var id: String
+    var lastMessage: (any ConvosSDK.RawMessageType)? {
+        get async throws {
+            nil
+        }
+    }
+    var otherParticipant: (any ConvosSDK.User)?
+    var isPinned: Bool
+    var isUnread: Bool
+    var isRequest: Bool
+    var isMuted: Bool
+    var timestamp: Date
+    var amount: Double?
+}
+
 class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
     enum MockMessagingServiceError: Error {
         case unauthorized
     }
 
-    typealias RawMessage = MockMessage
-
     private let currentUser: MockUser? = nil
 
     private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
     CurrentValueSubject<ConvosSDK.MessagingServiceState, Never>(.uninitialized)
-    private var messagesSubject: CurrentValueSubject<[RawMessage], Never> =
-    CurrentValueSubject<[RawMessage], Never>([])
+    private var messagesSubject: CurrentValueSubject<[any ConvosSDK.RawMessageType], Never> =
+    CurrentValueSubject<[any ConvosSDK.RawMessageType], Never>([])
 
     var state: ConvosSDK.MessagingServiceState {
         messagingStateSubject.value
@@ -76,15 +115,25 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
     func stop() {
     }
 
-    func loadInitialMessages() async -> [RawMessage] {
+    func conversations() async throws -> [any ConvosSDK.ConversationType] {
         return []
     }
 
-    func loadPreviousMessages() async -> [RawMessage] {
+    func conversationsStream() async -> AsyncThrowingStream<any ConvosSDK.ConversationType, any Error> {
+        return .init {
+            nil
+        }
+    }
+
+    func loadInitialMessages() async -> [any ConvosSDK.RawMessageType] {
         return []
     }
 
-    func sendMessage(to address: String, content: String) async throws -> [RawMessage] {
+    func loadPreviousMessages() async -> [any ConvosSDK.RawMessageType] {
+        return []
+    }
+
+    func sendMessage(to address: String, content: String) async throws -> [any ConvosSDK.RawMessageType] {
         guard let currentUser else {
             throw MockMessagingServiceError.unauthorized
         }
@@ -92,7 +141,7 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
         return messagesSubject.value
     }
 
-    func messages(for address: String) -> AnyPublisher<[RawMessage], Never> {
+    func messages(for address: String) -> AnyPublisher<[any ConvosSDK.RawMessageType], Never> {
         messagesSubject.eraseToAnyPublisher()
     }
 
