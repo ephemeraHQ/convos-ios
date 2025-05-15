@@ -7,15 +7,11 @@ public enum ConvosSDK {
         private let messagingService: any MessagingServiceProtocol
 
         public static let shared: Convos = .init(authService: TurnkeyAuthService())
-        public static let mock: Convos = .init(authService: MockAuthService())
+        public static let mock: Convos = .init(authService: PasskeyAuthService())
 
         private init(authService: AuthServiceProtocol) {
             self.authService = authService
             self.messagingService = MessagingService(authService: authService)
-        }
-
-        public var currentUser: User? {
-            authService.currentUser
         }
 
         public var authState: AnyPublisher<AuthServiceState, Never> {

@@ -3,13 +3,28 @@ import Foundation
 import XMTPiOS
 
 public extension ConvosSDK {
+    protocol AuthorizedResultType {
+        var privateKeyData: Data { get throws }
+    }
+
+//    struct AnyAuthorizedResult: AuthorizedResultType {
+//        private let _privateKeyData: () throws -> Data
+//
+//        public init<T: AuthorizedResultType>(_ base: T) {
+//            self._privateKeyData = { try base.privateKeyData }
+//        }
+//
+//        public var privateKeyData: Data {
+//            get throws { try _privateKeyData() }
+//        }
+//    }
+
     enum AuthServiceState {
-        case unknown, notReady, authorized(ConvosSDK.User), unauthorized
+        case unknown, notReady, authorized(AuthorizedResultType), unauthorized
     }
 
     protocol AuthServiceProtocol {
         var state: AuthServiceState { get }
-        var currentUser: User? { get }
 
         func prepare() async throws
 
@@ -33,13 +48,19 @@ extension PrivateKey {
     }
 }
 
-struct MockUser: ConvosSDK.User, Codable {
+struct MockUser: ConvosSDK.User, ConvosSDK.AuthorizedResultType, Codable {
     var id: String
     var name: String
     var username: String?
     var displayName: String?
     let privateKey: PrivateKey
     var avatarURL: URL?
+
+    var privateKeyData: Data {
+        get throws {
+            try privateKey.serializedData()
+        }
+    }
 
     var chainId: Int64? {
         nil

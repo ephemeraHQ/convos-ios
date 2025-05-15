@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1C3C742DB6F7AD00B723C0 /* PostHog */; };
 		7A3483CC2DD2A544003DB67E /* TurnkeySDK in Frameworks */ = {isa = PBXBuildFile; productRef = 7A3483CB2DD2A544003DB67E /* TurnkeySDK */; };
+		7A3498FF2DD67C2900E526A3 /* PasskeyAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7A3498FE2DD67C2900E526A3 /* PasskeyAuth */; };
 		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
@@ -119,6 +120,7 @@
 				D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */,
 				D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */,
 				7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */,
+				7A3498FF2DD67C2900E526A3 /* PasskeyAuth in Frameworks */,
 				7A3483CC2DD2A544003DB67E /* TurnkeySDK in Frameworks */,
 				D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */,
 			);
@@ -226,6 +228,7 @@
 				D8B5A9032DC272BD006003A4 /* XMTPiOS */,
 				D8084BA82DC9193A00E708B0 /* DifferenceKit */,
 				7A3483CB2DD2A544003DB67E /* TurnkeySDK */,
+				7A3498FE2DD67C2900E526A3 /* PasskeyAuth */,
 			);
 			productName = Convos;
 			productReference = D8A2B6912DA4BA4B00EF8577 /* Convos.app */;
@@ -267,6 +270,7 @@
 				D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */,
 				D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */,
 				7A3483CA2DD2A544003DB67E /* XCRemoteSwiftPackageReference "swift-sdk" */,
+				7A3498FD2DD67C2900E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
@@ -618,6 +622,14 @@
 				kind = branch;
 			};
 		};
+		7A3498FD2DD67C2900E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ephemeraHQ/PasskeyAuth.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 		D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ra1028/DifferenceKit.git";
@@ -678,6 +690,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7A3483CA2DD2A544003DB67E /* XCRemoteSwiftPackageReference "swift-sdk" */;
 			productName = TurnkeySDK;
+		};
+		7A3498FE2DD67C2900E526A3 /* PasskeyAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A3498FD2DD67C2900E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */;
+			productName = PasskeyAuth;
 		};
 		D8084BA82DC9193A00E708B0 /* DifferenceKit */ = {
 			isa = XCSwiftPackageProductDependency;

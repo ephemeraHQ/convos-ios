@@ -17,7 +17,7 @@ private enum MessagingServiceAction {
 }
 
 private enum MessagingServiceEffect {
-    case initializeXmtpClient(ConvosSDK.User)
+    case initializeXmtpClient(ConvosSDK.AuthorizedResultType)
     case authorizeBackend
     case cleanupResources
     case none
@@ -245,13 +245,15 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     private func handleStart() async throws {
-        guard let user = authService.currentUser else {
+        guard case .authorized(let result) = authService.state else {
             _state = .error(MessagingServiceError.notAuthenticated)
             return
         }
 
         _state = .initializing
-        try await initializeXmtpClient(for: user)
+        let privateKey = try PrivateKey(result.privateKeyData)
+        try await initializeXmtpClient(with: result.privateKeyData,
+                                       signingKey: privateKey)
         await processAction(.xmtpInitialized)
     }
 
@@ -311,14 +313,13 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         }
     }
 
-    private func initializeXmtpClient(for user: ConvosSDK.User) async throws {
+    private func initializeXmtpClient(with databaseKey: Data,
+                                      signingKey: SigningKey) async throws {
         Logger.info("Initializing XMTP client...")
         guard xmtpClient == nil else {
             throw MessagingServiceError.xmtpClientAlreadyInitialized
         }
-        let key = try fetchOrCreateDatabaseKey()
-        let options = ClientOptions(dbEncryptionKey: key.rawData)
-        let signingKey = try user.signingKey
+        let options = ClientOptions(dbEncryptionKey: databaseKey)
         Logger.info("Initializing XMTP client...")
         xmtpClient = try await Client.create(account: signingKey, options: options)
         Logger.info("XMTP Client initialized, returning signing key.")
