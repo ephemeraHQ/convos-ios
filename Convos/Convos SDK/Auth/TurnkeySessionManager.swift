@@ -126,7 +126,7 @@ extension TurnkeySessionManager {
         if status == errSecItemNotFound {
             // If item not found, add new item
             var newItem = query
-            newItem.merge(attributes) { (_, new) in new }
+            newItem.merge(attributes) { _, new in new }
             let addStatus = SecItemAdd(newItem as CFDictionary, nil)
             if addStatus != errSecSuccess {
                 throw NSError(domain: "SessionManager", code: Int(addStatus), userInfo: nil)
@@ -159,7 +159,6 @@ extension TurnkeySessionManager {
             return nil
         }
     }
-
 }
 
 extension TurnkeySessionManager {
@@ -169,7 +168,7 @@ extension TurnkeySessionManager {
             throw TurnkeySessionManagerError.keyGenerationFailed(
                 NSError(domain: "TagEncoding", code: -1))
         }
-        
+
         let attributes: [String: Any] = [
             kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
             kSecAttrKeySizeInBits as String: 256,
@@ -179,14 +178,14 @@ extension TurnkeySessionManager {
                 kSecAttrApplicationTag as String: tagData,
             ],
         ]
-        
+
         var error: Unmanaged<CFError>?
         guard SecKeyCreateRandomKey(attributes as CFDictionary, &error) != nil else {
             throw TurnkeySessionManagerError.keyGenerationFailed(error!.takeRetainedValue() as Error)
         }
         return tag
     }
-    
+
     /// Retrieves the public key (ANSI X9.63 representation) for a stored key.
     private func publicPrivateKeyPair(for tag: String) throws -> (Data, Data) {
         guard let tagData = tag.data(using: .utf8) else {

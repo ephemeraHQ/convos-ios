@@ -29,6 +29,7 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
     private var client: TurnkeyClient?
     private var authState: ConvosSDK.AuthServiceState = .notReady
     private let apiClient: ConvosAPIClient
+    private var passkeyRegistrationTask: Task<Void, Never>?
 
     var state: ConvosSDK.AuthServiceState {
         return authState
@@ -57,7 +58,6 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
 
     func prepare() async throws {
         Task { @MainActor in
-            try? SessionManager.shared.deleteSession()
             let presentationAnchor = try presentationAnchor()
             client = TurnkeyClient(rpId: Secrets.API_RP_ID,
                                    presentationAnchor: presentationAnchor)
@@ -76,45 +76,6 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
         } catch {
             Logger.error("Error signing in with Turnkey: \(error)")
         }
-        //        let manager = SecureEnclaveKeyManager()
-        //        let tag = try manager.createKeypair()
-        //        let publicKey = try manager.publicKey(tag: tag)
-        //        let sessionResponse = try await client.createReadWriteSession(
-        //            organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID,
-        //            targetPublicKey: publicKey.base64EncodedString(),
-        //            userId: nil,
-        //            apiKeyName: nil,
-        //            expirationSeconds: "86400" // 24 hours
-        //        )
-
-        //        if case .ok(let session) = sessionResponse,
-        //           let credentialBundle = try session.body.json.activity.
-        //        result.createReadWriteSessionResultV2?.credentialBundle {
-        //
-        //
-        //        } else {
-        //            throw TurnkeyAuthServiceError.failedFindingPasskeyPresentationAnchor
-        //        }
-
-        //        do {
-        //            // Get whoami to verify authentication
-        //            let whoamiResponse = try await client.getWhoami(organizationId: Secrets.TURNKEY_PUBLIC_ORGANIZATION_ID)
-        //
-        //            Logger.info("Turnkey Whoami: \(whoamiResponse)")
-        //            let whoami = try whoamiResponse.ok.body.json
-        //            Logger.info("Turnkey whoami: \(whoami)")
-        //
-        //            // Update auth state and current user
-        //            //            authState = .authorized(ConvosUser(
-        //            //                userId: whoami.userId,
-        //            //                username: whoami.username,
-        //            //                organizationId: whoami.organizationId,
-        //            //                organizationName: whoami.organizationName
-        //            //            ))
-        //        } catch {
-        //            Logger.error("Error signing in with Turnkey: \(error)")
-        //            throw error
-        //        }
     }
 
     func register(displayName: String) async throws {
@@ -179,8 +140,6 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
         NotificationCenter.default.removeObserver(self, name: .PasskeyRegistrationCanceled, object: nil)
     }
 
-    private var passkeyRegistrationTask: Task<Void, Never>?
-    private var authClient: TurnkeyClient!
     @objc private func handlePasskeyRegistrationCompleted(_ notification: Notification) {
         guard let result = notification.userInfo?["result"] as? PasskeyRegistrationResult else {
             return
@@ -208,7 +167,6 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
             apiPrivateKey: apiPrivateKey,
             apiPublicKey: apiPublicKeyCompressed
         )
-        self.authClient = authClient
 
         passkeyRegistrationTask = Task {
             do {
@@ -225,26 +183,9 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
                     throw TurnkeyAuthServiceError.failedCreatingSubOrganization
                 }
 
-//                if let whoami = try? await authClient.getWhoami(
-//                    organizationId: result.subOrgId) {
-//                    Logger.info("Whoami result: \(whoami)")
-//                    switch whoami {
-//                    case .undocumented(statusCode: let status, let payload):
-//                        if let body = payload.body {
-//                            // Convert the HTTPBody to a string
-//                            let bodyString = try await String(collecting: body, upTo: .max)
-//                            print("Whoami bodyString: \(bodyString)")
-//                            //                        XCTFail("Undocumented response body: \(bodyString)")
-//                        }
-//                        print("Status code: \(status) payload: \(payload)")
-//                    default:
-//                        break
-//                    }
-//                }
-
                 Logger.info("Create sub organization result from Convos backend: \(result)")
 
-                let sessionResponse = try await self.authClient.createReadWriteSession(
+                let sessionResponse = try await authClient.createReadWriteSession(
                     organizationId: result.subOrgId,
                     targetPublicKey: apiPublicKey,
                     userId: nil,
@@ -253,12 +194,11 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
                 )
 
                 switch sessionResponse {
-                case .undocumented(statusCode: let status, let payload):
+                case let .undocumented(status, payload):
                     if let body = payload.body {
                         // Convert the HTTPBody to a string
                         let bodyString = try await String(collecting: body, upTo: .max)
                         print("bodyString: \(bodyString)")
-                        //                        XCTFail("Undocumented response body: \(bodyString)")
                     }
                     print("status: \(status) payload: \(payload)")
                 case .ok(let output):
@@ -287,24 +227,7 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
                     return
                 }
 
-                if let whoamiResponse = try? await finalClient.getWhoami(
-                    organizationId: organizationId) {
-                    Logger.info("Whoami result: \(whoamiResponse)")
-                    switch whoamiResponse {
-                    case .undocumented(statusCode: let status, let payload):
-                        if let body = payload.body {
-                            // Convert the HTTPBody to a string
-                            let bodyString = try await String(collecting: body, upTo: .max)
-                            print("Whoami bodyString: \(bodyString)")
-                            //                        XCTFail("Undocumented response body: \(bodyString)")
-                        }
-                        print("Status code: \(status) payload: \(payload)")
-                    case .ok(let output):
-                        print("output from whoami: \(output)")
-                    }
-
-                    Logger.info("Finished registering with Turnkey: \(whoamiResponse)")
-                }
+                Logger.info("Finished registering with Turnkey")
             } catch {
                 Logger.error("Error registering with Turnkey: \(error)")
             }
@@ -325,16 +248,13 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
         Logger.info("Passkey Registration canceled")
     }
 
-    // MARK: - TurnKey
+    // MARK: - Convos Backend
+
     func sendCreateSubOrgRequest(
         ephemeralPublicKey: String,
         passkeyRegistrationResult: PasskeyRegistrationResult,
         displayName: String
     ) async throws -> CreateSubOrganizationResponse? {
-        guard let client = client else {
-            throw TurnkeyAuthServiceError.uninitializedTurnkeyClient
-        }
-
         let passkey = Passkey(
             challenge: passkeyRegistrationResult.challenge,
             attestation: PasskeyAttestation(
