@@ -169,24 +169,24 @@ extension TurnkeySessionManager {
             throw TurnkeySessionManagerError.keyGenerationFailed(
                 NSError(domain: "TagEncoding", code: -1))
         }
-
+        
         let attributes: [String: Any] = [
             kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
             kSecAttrKeySizeInBits as String: 256,
-//            kSecAttrTokenID as String: kSecAttrTokenIDSecureEnclave, // TODO: we need to retrieve the private key
+            //            kSecAttrTokenID as String: kSecAttrTokenIDSecureEnclave, // TODO: we need to retrieve the private key
             kSecPrivateKeyAttrs as String: [
                 kSecAttrIsPermanent as String: true,
                 kSecAttrApplicationTag as String: tagData,
             ],
         ]
-
+        
         var error: Unmanaged<CFError>?
         guard SecKeyCreateRandomKey(attributes as CFDictionary, &error) != nil else {
             throw TurnkeySessionManagerError.keyGenerationFailed(error!.takeRetainedValue() as Error)
         }
         return tag
     }
-
+    
     /// Retrieves the public key (ANSI X9.63 representation) for a stored key.
     private func publicPrivateKeyPair(for tag: String) throws -> (Data, Data) {
         guard let tagData = tag.data(using: .utf8) else {
@@ -216,54 +216,6 @@ extension TurnkeySessionManager {
             throw TurnkeySessionManagerError.externalRepresentationFailed
         }
         return (ext, privateKey)
-    }
-
-    /// Signs arbitrary data with the Secure-Enclave private key identified by `tag`.
-    private func sign(tag: String, data: Data) throws -> Data {
-        // Convert tag to Data
-        guard let tagData = tag.data(using: .utf8) else {
-            throw TurnkeySessionManagerError.keyGenerationFailed(
-                NSError(domain: "InvalidTag", code: -1))
-        }
-
-        // Query the keychain for the private key with the given tag
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: tagData,
-            kSecReturnRef as String: true,
-        ]
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status == errSecSuccess, let item = item else {
-            throw TurnkeySessionManagerError.keyNotFound
-        }
-
-        // Force-cast to SecKey since kSecReturnRef always returns a SecKey
-        let privateKey: SecKey = item as! SecKey
-
-        // Determine the appropriate algorithm based on key type
-        let attributes = SecKeyCopyAttributes(privateKey) as? [String: Any]
-        let keyType = attributes?[kSecAttrKeyType as String] as? String
-        let algorithm: SecKeyAlgorithm
-        if keyType == (kSecAttrKeyTypeRSA as String) {
-            algorithm = .rsaSignatureMessagePKCS1v15SHA256
-        } else {
-            algorithm = .ecdsaSignatureMessageX962SHA256
-        }
-
-        // Check if the algorithm is supported
-        guard SecKeyIsAlgorithmSupported(privateKey, .sign, algorithm) else {
-            throw TurnkeySessionManagerError.signingNotSupported
-        }
-
-        // Create signature
-        var error: Unmanaged<CFError>?
-        guard let signature = SecKeyCreateSignature(
-            privateKey, algorithm, data as CFData, &error
-        ) as Data? else {
-            throw error!.takeRetainedValue() as Error
-        }
-        return signature
     }
 }
 

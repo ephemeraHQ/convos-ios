@@ -301,10 +301,8 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
                         print("Status code: \(status) payload: \(payload)")
                     case .ok(let output):
                         print("output from whoami: \(output)")
-                    default:
-                        break
                     }
-                    
+
                     Logger.info("Finished registering with Turnkey: \(whoamiResponse)")
                 }
             } catch {
