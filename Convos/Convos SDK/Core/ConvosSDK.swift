@@ -8,18 +8,17 @@ public enum ConvosSDK {
         private let messagingService: any MessagingServiceProtocol
 
         public var databaseWriter: any DatabaseWriter {
-            DatabaseManager.shared.dbPool as (any DatabaseWriter)
+            DatabaseManager.shared.dbWriter
         }
 
         public var databaseReader: any DatabaseReader {
-            DatabaseManager.shared.dbPool as (any DatabaseReader)
+            DatabaseManager.shared.dbReader
         }
 
         static func sdk(authService: AuthServiceProtocol) -> Convos {
-            let databaseWriter = DatabaseManager.shared.dbPool
-            let userWriter = DBUserWriter(databaseWriter: databaseWriter)
+            let databaseWriter = DatabaseManager.shared.dbWriter
             let messagingService = MessagingService(authService: authService,
-                                                    userWriter: userWriter)
+                                                    databaseWriter: databaseWriter)
             return .init(authService: authService,
                          messagingService: messagingService)
         }

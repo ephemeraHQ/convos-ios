@@ -25,12 +25,7 @@ public extension ConvosSDK {
         var id: String { get }
         var otherParticipant: (any User)? { get async throws }
         var lastMessage: (any RawMessageType)? { get async throws }
-        var isPinned: Bool { get }
-        var isUnread: Bool { get }
-        var isRequest: Bool { get }
-        var isMuted: Bool { get }
         var timestamp: Date { get }
-        var amount: Double? { get }
     }
 
     protocol MessagingServiceProtocol {

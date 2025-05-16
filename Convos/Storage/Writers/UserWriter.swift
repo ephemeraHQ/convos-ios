@@ -1,12 +1,12 @@
 import Foundation
 import GRDB
 
-protocol UserWriter {
+protocol UserWriterProtocol {
     func storeUser(_ user: ConvosAPIClient.UserResponse) async throws
     func storeUser(_ user: ConvosAPIClient.CreatedUserResponse) async throws
 }
 
-class DBUserWriter: UserWriter {
+class UserWriter: UserWriterProtocol {
     private let databaseWriter: any DatabaseWriter
 
     init(databaseWriter: any DatabaseWriter) {

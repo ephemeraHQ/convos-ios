@@ -3,7 +3,7 @@ import UIKit
 
 class TextMessageCollectionCell: UICollectionViewCell {
     private var message: String = ""
-    private var messageType: MessageType = .incoming
+    private var messageType: Message.Source = .incoming
     private var bubbleStyle: MessagesCollectionCell.BubbleType = .normal
     private var longPressGestureRecognizer: UILongPressGestureRecognizer?
     private var panGestureRecognizer: UIPanGestureRecognizer?
@@ -27,7 +27,7 @@ class TextMessageCollectionCell: UICollectionViewCell {
         bubbleStyle = .normal
     }
 
-    func setup(message: String, messageType: MessageType, style: MessagesCollectionCell.BubbleType) {
+    func setup(message: String, messageType: Message.Source, style: MessagesCollectionCell.BubbleType) {
         self.message = message
         self.messageType = messageType
         self.bubbleStyle = style
@@ -75,7 +75,7 @@ struct MessageBubble: View {
 
 #Preview {
     VStack {
-        ForEach([MessageType.outgoing, MessageType.incoming], id: \.self) { type in
+        ForEach([Message.Source.outgoing, Message.Source.incoming], id: \.self) { type in
             MessageBubble(style: .normal,
                           message: "Hello world!", isOutgoing: type == .outgoing)
         }

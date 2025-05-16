@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ChatListItem: View {
-    let conversationItem: ConversationItem
+    let conversationItem: Conversation
     let onTap: () -> Void
     let onPin: () -> Void
     let onToggleRead: () -> Void
@@ -32,7 +32,7 @@ struct ChatListItem: View {
                 VStack(alignment: .leading, spacing: 4) {
                     // Username
                     Text(otherParticipant?.profile.username ?? "Unknown")
-                        .font(.system(size: 17, weight: conversationItem.conversation.isUnread ? .semibold : .regular))
+                        .font(.system(size: 17, weight: conversationItem.isUnread ? .semibold : .regular))
                         .foregroundColor(.primary)
 
                     // Message preview with timestamp
@@ -44,7 +44,7 @@ struct ChatListItem: View {
                                 Text(message.content)
                             }
                             .font(.system(size: 15))
-                            .foregroundColor(conversationItem.conversation.isUnread ? .primary : .secondary)
+                            .foregroundColor(conversationItem.isUnread ? .primary : .secondary)
                             .lineLimit(1)
                         }
 
@@ -52,13 +52,13 @@ struct ChatListItem: View {
 
                         // Status indicators
                         HStack(spacing: 4) {
-                            if conversationItem.conversation.isMuted {
+                            if conversationItem.isMuted {
                                 Image(systemName: "bell.slash.fill")
                                     .font(.system(size: 13))
                                     .foregroundColor(.secondary)
                             }
 
-                            if conversationItem.conversation.isUnread {
+                            if conversationItem.isUnread {
                                 Circle()
                                     .fill(Color.black)
                                     .frame(width: 12, height: 12)
@@ -78,7 +78,7 @@ struct ChatListItem: View {
         .opacity(isPinning ? 0.8 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPinning)
         .contextMenu {
-            if conversationItem.conversation.isPinned {
+            if conversationItem.isPinned {
                 Button("Unpin") {
                     withAnimation {
                         isPinning = true
@@ -104,11 +104,11 @@ struct ChatListItem: View {
                 }
             }
 
-            Button(conversationItem.conversation.isUnread ? "Mark as Read" : "Mark as Unread") {
+            Button(conversationItem.isUnread ? "Mark as Read" : "Mark as Unread") {
                 onToggleRead()
             }
 
-            Button(conversationItem.conversation.isMuted ? "Unmute" : "Mute") {
+            Button(conversationItem.isMuted ? "Unmute" : "Mute") {
                 onToggleMute()
             }
 

@@ -16,43 +16,34 @@ final class UserRepository: UserRepositoryProtocol {
 
     func getCurrentUser() async throws -> User? {
         try await dbReader.read { db in
-            guard let session = try Session.fetchOne(db) else { return nil }
-
-            // Fetch base user row (has id)
-            guard let dbUser = try DBUser.fetchOne(db, key: session.currentUserId) else { return nil }
-
-            // Fetch profile and identities
-            guard let profile = try Profile
-                .filter(Column("userId") == dbUser.id)
-                .fetchOne(db) else { return nil }
-
-            let identities = try Identity
-                .filter(Column("userId") == dbUser.id)
-                .fetchAll(db)
-
-            // Compose and return
-            return User(id: dbUser.id, identities: identities, profile: profile)
+            try db.composeCurrentUser()
         }
     }
 
     func userPublisher() -> AnyPublisher<User?, Never> {
         ValueObservation
             .tracking { db in
-                guard let session = try Session.fetchOne(db) else { return nil }
-
-                guard let dbUser = try DBUser.fetchOne(db, key: session.currentUserId) else { return nil }
-                guard let profile = try Profile
-                    .filter(Column("userId") == dbUser.id)
-                    .fetchOne(db) else { return nil }
-
-                let identities = try Identity
-                    .filter(Column("userId") == dbUser.id)
-                    .fetchAll(db)
-
-                return User(id: dbUser.id, identities: identities, profile: profile)
+                try db.composeCurrentUser()
             }
             .publisher(in: dbReader)
             .replaceError(with: nil)
             .eraseToAnyPublisher()
+    }
+}
+
+fileprivate extension Database {
+    func composeCurrentUser() throws -> User? {
+        guard let session = try Session.fetchOne(self) else { return nil }
+
+        guard let dbUser = try DBUser.fetchOne(self, key: session.currentUserId) else { return nil }
+        guard let profile = try Profile
+            .filter(Column("userId") == dbUser.id)
+            .fetchOne(self) else { return nil }
+
+        let identities = try Identity
+            .filter(Column("userId") == dbUser.id)
+            .fetchAll(self)
+
+        return User(id: dbUser.id, identities: identities, profile: profile)
     }
 }

@@ -50,25 +50,21 @@ final class MockMessagesStore: MessagesStoreProtocol {
                 lhs.timestamp < rhs.timestamp
             })
             .map { rawMessage in
-                let owner: MockUser = MockUser(name: rawMessage.sender.profile.name)
                 let message = Message(
                     id: rawMessage.id,
+                    userId: rawMessage.sender.id,
+                    userProfile: .init(
+                        id: UUID().uuidString,
+                        userId: rawMessage.sender.id,
+                        name: rawMessage.sender.profile.name,
+                        username: rawMessage.sender.profile.username,
+                        avatar: rawMessage.sender.profile.avatarURL?.absoluteString
+                    ),
                     date: rawMessage.timestamp,
                     kind: .text(rawMessage.content),
-                    owner: User(
-                        id: rawMessage.sender.id,
-                        identities: [],
-                        profile: .init(
-                            id: "",
-                            userId: rawMessage.sender.id,
-                            name: rawMessage.sender.profile.name,
-                            username: rawMessage.sender.profile.username,
-                            avatar: nil
-                        )
-                    ),
-                                      type: owner.id == self.currentUser.id ? .outgoing : .incoming,
-                                      status: .delivered
-)
+                    source: rawMessage.sender.id == self.currentUser.id ? .outgoing : .incoming,
+                    status: .published
+                )
                 return MessagesCollectionCell.message(message, bubbleType: .normal)
             }
         let sections = [MessagesCollectionSection(id: 0, title: "", cells: cells)]

@@ -6,6 +6,14 @@ final class DatabaseManager {
 
     let dbPool: DatabasePool
 
+    var dbWriter: DatabaseWriter {
+        dbPool as DatabaseWriter
+    }
+
+    var dbReader: DatabaseReader {
+        dbPool as DatabaseReader
+    }
+
     private init() {
         do {
             dbPool = try DatabaseManager.makeDatabasePool()

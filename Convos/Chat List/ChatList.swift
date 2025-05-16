@@ -3,15 +3,20 @@ import SwiftUI
 
 struct ChatListView: View {
     @State var userState: UserState
-    @State var conversationsStore: ConversationsStore
-    @State private var selectedConversation: ConversationItem?
+    @State var conversationsState: ConversationsState
+    @State private var selectedConversation: Conversation?
 
     @State private var showDropdownMenu: Bool = false
 
     init(messagingService: any ConvosSDK.MessagingServiceProtocol,
-         userRepository: any UserRepositoryProtocol) {
+         userRepository: any UserRepositoryProtocol,
+         conversationsRepository: any ConversationsRepositoryProtocol) {
         _userState = State(wrappedValue: .init(userRepository: userRepository))
-        _conversationsStore = State(wrappedValue: ConversationsStore(messagingService: messagingService))
+        _conversationsState = State(
+            wrappedValue: ConversationsState(
+                conversationsRepository: conversationsRepository
+            )
+        )
     }
 
     var body: some View {
@@ -37,7 +42,7 @@ struct ChatListView: View {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             // Regular chats
-                            ForEach(conversationsStore.unpinnedConversations) { conversation in
+                            ForEach(conversationsState.unpinnedConversations) { conversation in
                                 ChatListItem(
                                     conversationItem: conversation,
                                     onTap: {
