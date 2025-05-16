@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ChatListNavigationBar: View {
-    let currentIdentity: CTUser
+    @State var userState: UserState
     let onIdentityTap: () -> Void
     let onQRTap: () -> Void
     let onWalletTap: () -> Void
@@ -14,7 +14,7 @@ struct ChatListNavigationBar: View {
                 onIdentityTap()
             } label: {
                 HStack(spacing: 8) {
-                    AsyncImage(url: currentIdentity.avatarURL) { image in
+                    AsyncImage(url: userState.currentUser?.profile.avatarURL) { image in
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
@@ -24,7 +24,7 @@ struct ChatListNavigationBar: View {
                     .frame(width: 32, height: 32)
                     .clipShape(Circle())
 
-                    Text(currentIdentity.username)
+                    Text(userState.currentUser?.profile.name ?? "")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.primary)
 
@@ -70,17 +70,17 @@ struct ChatListNavigationBar: View {
 }
 
 // swiftlint:disable force_unwrapping
-#Preview {
-    ChatListNavigationBar(
-        currentIdentity: CTUser(
-            id: "preview",
-            username: "preview.eth",
-            avatarURL: URL(string: "https://picsum.photos/200")!
-        ),
-        onIdentityTap: {},
-        onQRTap: {},
-        onWalletTap: {},
-        onComposeTap: {}
-    )
-}
+//#Preview {
+//    ChatListNavigationBar(
+//        currentIdentity: CTUser(
+//            id: "preview",
+//            username: "preview.eth",
+//            avatarURL: URL(string: "https://picsum.photos/200")!
+//        ),
+//        onIdentityTap: {},
+//        onQRTap: {},
+//        onWalletTap: {},
+//        onComposeTap: {}
+//    )
+//}
 // swiftlint:enable force_unwrapping

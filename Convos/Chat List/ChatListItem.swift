@@ -18,7 +18,7 @@ struct ChatListItem: View {
         } label: {
             HStack(spacing: 12) {
                 // Avatar
-                AsyncImage(url: otherParticipant?.avatarURL) { image in
+                AsyncImage(url: otherParticipant?.profile.avatarURL) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -31,7 +31,7 @@ struct ChatListItem: View {
                 // Chat info
                 VStack(alignment: .leading, spacing: 4) {
                     // Username
-                    Text(otherParticipant?.username ?? otherParticipant?.walletAddress ?? "Unknown")
+                    Text(otherParticipant?.profile.username ?? "Unknown")
                         .font(.system(size: 17, weight: conversationItem.conversation.isUnread ? .semibold : .regular))
                         .foregroundColor(.primary)
 

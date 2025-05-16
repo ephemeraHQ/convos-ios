@@ -64,22 +64,6 @@ enum ImageSource: Hashable {
     }
 }
 
-struct User: Hashable {
-    let id: String
-    let name: String
-    let username: String? = nil
-    let displayName: String? = nil
-    let walletAddress: String? = nil
-    let chainId: Int64? = nil
-    let avatarURL: URL? = nil
-}
-
-extension User: ConvosSDK.User {
-    func sign(message: String) async throws -> Data? {
-        nil
-    }
-}
-
 struct Message: Hashable {
     public enum Kind: Hashable {
         case text(String)

@@ -2,15 +2,16 @@ import Foundation
 import SwiftUI
 
 struct ChatListView: View {
+    @State var userState: UserState
     @State var conversationsStore: ConversationsStore
     @State private var selectedConversation: ConversationItem?
 
-    @ObservedObject var identityStore: CTIdentityStore
     @State private var showDropdownMenu: Bool = false
 
-    init(messagingService: any ConvosSDK.MessagingServiceProtocol) {
+    init(messagingService: any ConvosSDK.MessagingServiceProtocol,
+         userRepository: any UserRepositoryProtocol) {
+        _userState = State(wrappedValue: .init(userRepository: userRepository))
         _conversationsStore = State(wrappedValue: ConversationsStore(messagingService: messagingService))
-        _identityStore = ObservedObject(initialValue: CTIdentityStore())
     }
 
     var body: some View {
@@ -18,7 +19,7 @@ struct ChatListView: View {
             ZStack {
                 VStack(spacing: 0) {
                     ChatListNavigationBar(
-                        currentIdentity: identityStore.currentIdentity,
+                        userState: userState,
                         onIdentityTap: {
                             showDropdownMenu = true
                         },
@@ -85,87 +86,12 @@ struct ChatListView: View {
                     .zIndex(10)
                 }
             }
-//            .alert("Pinned Conversations", isPresented: $conversationStore.showPinLimitAlert) {
-//                Button("OK", role: .cancel) {}
-//            } message: {
-//                Text("You can pin up to 9 conversations. To pin this conversation, unpin another one first.")
-//            }
-            .sheet(isPresented: $identityStore.isIdentityPickerPresented) {
-                NavigationView {
-                    List(identityStore.availableIdentities) { identity in
-                        Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                identityStore.switchIdentity(to: identity)
-                            }
-                        } label: {
-                            HStack {
-                                AsyncImage(url: identity.avatarURL) { image in
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                } placeholder: {
-                                    Color(.systemGray5)
-                                }
-                                .frame(width: 40, height: 40)
-                                .clipShape(Circle())
-
-                                Text(identity.username)
-                                    .font(.system(size: 17))
-                                    .foregroundColor(.primary)
-
-                                Spacer()
-
-                                if identity.id == identityStore.currentIdentity.id {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(.blue)
-                                }
-                            }
-                        }
-                    }
-                    .navigationTitle("Switch Identity")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button("Done") {
-                                identityStore.isIdentityPickerPresented = false
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 
     // Build the dropdown menu data
     private var dropdownMenuSections: [DropdownMenuSection] {
         [
-            DropdownMenuSection(items: identityStore.availableIdentities.map { identity in
-                DropdownMenuItem(
-                    title: identity.username,
-                    subtitle: identity.username == "Convos" ? "All chats" : nil,
-                    icon: nil,
-                    isSelected: identity.id == identityStore.currentIdentity.id,
-                    isIdentity: true,
-                    action: {
-                        identityStore.switchIdentity(to: identity)
-//                        conversationsStore.switchIdentity(to: identity)
-                        showDropdownMenu = false
-                    }
-                )
-            }),
-            DropdownMenuSection(items: [
-                DropdownMenuItem(
-                    title: "New Contact Card",
-                    subtitle: nil,
-                    icon: Image("contactCard"),
-                    isSelected: false,
-                    isIdentity: false,
-                    action: {
-                        print("New Contact Card tapped")
-                        showDropdownMenu = false
-                    }
-                )
-            ]),
             DropdownMenuSection(items: [
                 DropdownMenuItem(
                     title: "App Settings",

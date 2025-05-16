@@ -8,9 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1C3C742DB6F7AD00B723C0 /* PostHog */; };
-		7A3483CC2DD2A544003DB67E /* TurnkeySDK in Frameworks */ = {isa = PBXBuildFile; productRef = 7A3483CB2DD2A544003DB67E /* TurnkeySDK */; };
 		7A3498FF2DD67C2900E526A3 /* PasskeyAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7A3498FE2DD67C2900E526A3 /* PasskeyAuth */; };
 		7A349B6E2DD6FF5400E526A3 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */; };
+		7A349CA62DD7017B00E526A3 /* GRDB-dynamic in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
@@ -59,6 +59,7 @@
 			dstSubfolderSpec = 10;
 			files = (
 				D85B9B9F2DD26BC400831D58 /* (null) in Embed Frameworks */,
+				7A349CA62DD7017B00E526A3 /* GRDB-dynamic in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -86,6 +87,10 @@
 		D8A2B6A32DA4BA4C00EF8577 /* Exceptions for "Convos" folder in "Convos" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Convos SDK/Auth/Turnkey/ConvosAPIClient+Turnkey.swift",
+				"Convos SDK/Auth/Turnkey/TurnkeyAuthService.swift",
+				"Convos SDK/Auth/Turnkey/TurnkeyOutput+Errors.swift",
+				"Convos SDK/Auth/Turnkey/TurnkeySessionManager.swift",
 				Info.plist,
 			);
 			target = D8A2B6902DA4BA4B00EF8577 /* Convos */;
@@ -135,7 +140,6 @@
 				7A349B6E2DD6FF5400E526A3 /* GRDB-dynamic in Frameworks */,
 				7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */,
 				7A3498FF2DD67C2900E526A3 /* PasskeyAuth in Frameworks */,
-				7A3483CC2DD2A544003DB67E /* TurnkeySDK in Frameworks */,
 				D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -242,7 +246,6 @@
 				7A1C3C742DB6F7AD00B723C0 /* PostHog */,
 				D8B5A9032DC272BD006003A4 /* XMTPiOS */,
 				D8084BA82DC9193A00E708B0 /* DifferenceKit */,
-				7A3483CB2DD2A544003DB67E /* TurnkeySDK */,
 				7A3498FE2DD67C2900E526A3 /* PasskeyAuth */,
 				7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */,
 			);
@@ -285,7 +288,6 @@
 				7A1C3C732DB6F7AD00B723C0 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */,
 				D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */,
-				7A3483CA2DD2A544003DB67E /* XCRemoteSwiftPackageReference "swift-sdk" */,
 				7A3498FD2DD67C2900E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */,
 				7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 			);
@@ -631,14 +633,6 @@
 				minimumVersion = 3.24.0;
 			};
 		};
-		7A3483CA2DD2A544003DB67E /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/tkhq/swift-sdk.git";
-			requirement = {
-				branch = taylor/sessions;
-				kind = branch;
-			};
-		};
 		7A3498FD2DD67C2900E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ephemeraHQ/PasskeyAuth.git";
@@ -710,11 +704,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7A1C3C732DB6F7AD00B723C0 /* XCRemoteSwiftPackageReference "posthog-ios" */;
 			productName = PostHog;
-		};
-		7A3483CB2DD2A544003DB67E /* TurnkeySDK */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7A3483CA2DD2A544003DB67E /* XCRemoteSwiftPackageReference "swift-sdk" */;
-			productName = TurnkeySDK;
 		};
 		7A3498FE2DD67C2900E526A3 /* PasskeyAuth */ = {
 			isa = XCSwiftPackageProductDependency;

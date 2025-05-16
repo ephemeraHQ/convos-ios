@@ -25,82 +25,16 @@ private enum MessagingServiceAction {
     case backendAuthorized
 }
 
-extension XMTPiOS.Member: ConvosSDK.User {
-    public var avatarURL: URL? {
-        nil
-    }
-
-    public var id: String {
-        ""
-    }
-
-    public var name: String {
-        ""
-    }
-
-    public var username: String? {
-        nil
-    }
-
-    public var displayName: String? {
-        nil
-    }
-
-    public var walletAddress: String? {
-        nil
-    }
-
-    public var chainId: Int64? {
-        0
-    }
-
-    public func sign(message: String) async throws -> Data? {
-        nil
-    }
-}
-
-struct XMTPiOSMember: ConvosSDK.User {
-    var id: String
-    var name: String
-    var username: String?
-    var displayName: String?
-    var walletAddress: String?
-    var chainId: Int64?
-    var avatarURL: URL?
-
-    func sign(message: String) async throws -> Data? {
-        nil
-    }
-}
-
-extension XMTPiOS.DecodedMessage: ConvosSDK.RawMessageType {
-    public var content: String {
-        ""
-    }
-
-    public var sender: any ConvosSDK.User {
-        XMTPiOSMember(id: "", name: "")
-    }
-
-    public var timestamp: Date {
-        Date()
-    }
-
-    public var replies: [any ConvosSDK.RawMessageType] {
-        []
-    }
-}
-
 extension XMTPiOS.Conversation: ConvosSDK.ConversationType {
     public var lastMessage: (any ConvosSDK.RawMessageType)? {
         get async throws {
-            try await lastMessage()
+            nil
         }
     }
 
     public var otherParticipant: (any ConvosSDK.User)? {
         get async throws {
-            try await members().first
+            nil
         }
     }
 
@@ -131,6 +65,7 @@ extension XMTPiOS.Conversation: ConvosSDK.ConversationType {
 
 final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private let authService: ConvosSDK.AuthServiceProtocol
+    private let userWriter: UserWriter
     private var xmtpClient: XMTPiOS.Client?
     private var cancellables: Set<AnyCancellable> = []
     private let apiClient: ConvosAPIClient
@@ -148,8 +83,10 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     nonisolated
     private let stateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> = .init(.uninitialized)
 
-    init(authService: ConvosSDK.AuthServiceProtocol) {
+    init(authService: ConvosSDK.AuthServiceProtocol,
+         userWriter: UserWriter) {
         self.authService = authService
+        self.userWriter = userWriter
         guard let apiBaseURL = URL(string: Secrets.CONVOS_API_BASE_URL) else {
             fatalError("Failed constructing API base URL")
         }
@@ -285,7 +222,8 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
     // MARK: - User Creation
 
-    private func createUser(from result: ConvosSDK.RegisteredResultType, privateKey: PrivateKey) async throws {
+    private func createUser(from result: ConvosSDK.RegisteredResultType,
+                            privateKey: PrivateKey) async throws -> ConvosAPIClient.CreatedUserResponse {
         let userId = UUID().uuidString
         let username = try await generateUsername(from: result.displayName)
         let xmtpId = xmtpClient?.inboxID
@@ -301,8 +239,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                            description: nil,
                            avatar: nil)
         )
-        let createdUser = try await apiClient.createUser(requestBody)
-        Logger.info("Created user: \(createdUser)")
+        return try await apiClient.createUser(requestBody)
     }
 
     private func generateUsername(from displayName: String, maxRetries: Int = 5) async throws -> String {
@@ -381,11 +318,13 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                                              xmtpSignature: signature)
         if let registeredResult = result as? ConvosSDK.RegisteredResultType {
             Logger.info("Creating user from registeredResult: \(registeredResult)")
-            try await createUser(from: registeredResult,
-                                 privateKey: privateKey)
+            let user = try await createUser(from: registeredResult,
+                                            privateKey: privateKey)
+            try await userWriter.storeUser(user)
         } else {
             let user = try await apiClient.getUser()
             Logger.info("Authenticated with Convos backend: \(result) user: \(user)")
+            try await userWriter.storeUser(user)
         }
         await processAction(.backendAuthorized)
     }

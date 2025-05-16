@@ -13,12 +13,12 @@ final class MockMessagesStore: MessagesStoreProtocol {
             .eraseToAnyPublisher()
     }
 
-    private let currentUser: User
+    private let currentUser: MockUser
 
     let messagingService: MockMessagesService
 
     init() {
-        self.currentUser = User(id: "0", name: "You")
+        self.currentUser = MockUser(name: "You")
         self.messagingService = MockMessagesService(currentUser: currentUser)
     }
 
@@ -50,14 +50,25 @@ final class MockMessagesStore: MessagesStoreProtocol {
                 lhs.timestamp < rhs.timestamp
             })
             .map { rawMessage in
-                let owner: User = User(id: rawMessage.sender.id,
-                                       name: rawMessage.sender.name)
-                let message = Message(id: rawMessage.id,
-                                      date: rawMessage.timestamp,
-                                      kind: .text(rawMessage.content),
-                                      owner: owner,
+                let owner: MockUser = MockUser(name: rawMessage.sender.profile.name)
+                let message = Message(
+                    id: rawMessage.id,
+                    date: rawMessage.timestamp,
+                    kind: .text(rawMessage.content),
+                    owner: User(
+                        id: rawMessage.sender.id,
+                        identities: [],
+                        profile: .init(
+                            id: "",
+                            userId: rawMessage.sender.id,
+                            name: rawMessage.sender.profile.name,
+                            username: rawMessage.sender.profile.username,
+                            avatar: nil
+                        )
+                    ),
                                       type: owner.id == self.currentUser.id ? .outgoing : .incoming,
-                                      status: .delivered)
+                                      status: .delivered
+)
                 return MessagesCollectionCell.message(message, bubbleType: .normal)
             }
         let sections = [MessagesCollectionSection(id: 0, title: "", cells: cells)]

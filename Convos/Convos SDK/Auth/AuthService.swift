@@ -63,13 +63,16 @@ extension PrivateKey {
     }
 }
 
+struct MockProfile: ConvosSDK.Profile {
+    let name: String
+    let username: String
+    let avatarURL: URL? = nil
+}
+
 struct MockUser: ConvosSDK.User, ConvosSDK.AuthorizedResultType, Codable {
+    var profile: any ConvosSDK.Profile
     var id: String
-    var name: String
-    var username: String?
-    var displayName: String?
-    let privateKey: PrivateKey
-    var avatarURL: URL?
+    let privateKey: PrivateKey!
 
     var privateKeyData: Data {
         get throws {
@@ -89,16 +92,17 @@ struct MockUser: ConvosSDK.User, ConvosSDK.AuthorizedResultType, Codable {
         case id, name, privateKeyData
     }
 
-    init(name: String) throws {
+    init(name: String) {
         self.id = UUID().uuidString
-        self.name = name
-        self.privateKey = try PrivateKey.generate()
+        self.profile = MockProfile(name: name, username: "")
+        self.privateKey = try? PrivateKey.generate()
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(String.self, forKey: .id)
-        self.name = try container.decode(String.self, forKey: .name)
+        let name = try container.decode(String.self, forKey: .name)
+        self.profile = MockProfile(name: name, username: "")
         let privateKeyData = try container.decode(Data.self, forKey: .privateKeyData)
         self.privateKey = try PrivateKey(privateKeyData)
     }
@@ -106,7 +110,7 @@ struct MockUser: ConvosSDK.User, ConvosSDK.AuthorizedResultType, Codable {
     func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
-        try container.encode(name, forKey: .name)
+        try container.encode(profile.name, forKey: .name)
         try container.encode(privateKey.secp256K1.bytes, forKey: .privateKeyData)
     }
 

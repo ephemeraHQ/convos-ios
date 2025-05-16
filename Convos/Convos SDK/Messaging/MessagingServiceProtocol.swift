@@ -4,13 +4,13 @@ import Foundation
 public extension ConvosSDK {
     protocol User {
         var id: String { get }
+        var profile: ConvosSDK.Profile { get }
+    }
+
+    protocol Profile {
         var name: String { get }
-        var username: String? { get }
-        var displayName: String? { get }
-        var walletAddress: String? { get }
-        var chainId: Int64? { get }
+        var username: String { get }
         var avatarURL: URL? { get }
-        func sign(message: String) async throws -> Data?
     }
 
     protocol RawMessageType {
