@@ -14,6 +14,7 @@ final class OnboardingViewModel {
     var imageState: ContactCardImage.State = .empty
     var nameIsValid: Bool = false
     var nameError: String?
+    var isEditingContactCard: Bool = true
     var authenticationError: String?
     var isAuthorized: Bool = false
 
@@ -36,12 +37,14 @@ final class OnboardingViewModel {
     }
 
     func createContactCard() {
+        isEditingContactCard = false
         Task {
             do {
                 try await convos.register(displayName: name)
             } catch {
                 Logger.error("Error registering display name: \(name) error: \(error)")
                 authenticationError = error.localizedDescription
+                isEditingContactCard = true
             }
         }
     }
@@ -54,7 +57,7 @@ final class OnboardingViewModel {
             .sink { [weak self] authState in
                 guard let self else { return }
                 switch authState {
-                case .authorized:
+                case .authorized, .registered:
                     self.isAuthorized = true
                 case .unauthorized:
                     self.isAuthorized = false

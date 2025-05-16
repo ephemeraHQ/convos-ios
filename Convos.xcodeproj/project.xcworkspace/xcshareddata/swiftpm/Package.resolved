@@ -1,5 +1,5 @@
 {
-  "originHash" : "16e31ffc37cf2f45e5a4a46a766f911e3545b58ac2c2a71d04b374f039b52c6a",
+  "originHash" : "fa9f74ee41d62abb7ea7d5df2fbc92249b15700024263584ed7af46d725a0d7c",
   "pins" : [
     {
       "identity" : "anchorkit",
@@ -106,7 +106,7 @@
       "location" : "https://github.com/ephemeraHQ/PasskeyAuth.git",
       "state" : {
         "branch" : "main",
-        "revision" : "b4f8c4697466b9cec063872709471241e9ee789a"
+        "revision" : "83b095bf90f715c5eede8e6e0839c6a9894252be"
       }
     },
     {

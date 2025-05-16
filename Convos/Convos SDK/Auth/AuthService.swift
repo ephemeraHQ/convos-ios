@@ -3,24 +3,39 @@ import Foundation
 import XMTPiOS
 
 public extension ConvosSDK {
+    protocol RegisteredResultType: AuthorizedResultType {
+        var displayName: String { get }
+    }
+
     protocol AuthorizedResultType {
         var privateKeyData: Data { get throws }
     }
 
-//    struct AnyAuthorizedResult: AuthorizedResultType {
-//        private let _privateKeyData: () throws -> Data
-//
-//        public init<T: AuthorizedResultType>(_ base: T) {
-//            self._privateKeyData = { try base.privateKeyData }
-//        }
-//
-//        public var privateKeyData: Data {
-//            get throws { try _privateKeyData() }
-//        }
-//    }
-
     enum AuthServiceState {
-        case unknown, notReady, authorized(AuthorizedResultType), unauthorized
+        case unknown,
+             notReady,
+             registered(RegisteredResultType),
+             authorized(AuthorizedResultType),
+             unauthorized
+
+        var isAuthenticated: Bool {
+            switch self {
+            case .authorized(_), .registered(_):
+                return true
+            default: return false
+            }
+        }
+
+        var authorizedResult: AuthorizedResultType? {
+            switch self {
+            case .authorized(let result):
+                return result
+            case .registered(let result):
+                return result
+            default:
+                return nil
+            }
+        }
     }
 
     protocol AuthServiceProtocol {

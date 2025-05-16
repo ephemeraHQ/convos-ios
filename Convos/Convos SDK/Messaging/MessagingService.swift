@@ -9,18 +9,20 @@ private enum MessagingServiceError: Error {
     case xmtpClientMissingRequiredValuesForAuth
 }
 
+private enum MessagingServiceState {
+    case uninitialized
+    case initializing
+    case authorizing
+    case ready
+    case stopping
+    case error(Error)
+}
+
 private enum MessagingServiceAction {
     case start
     case stop
-    case xmtpInitialized
+    case xmtpInitialized(ConvosSDK.AuthorizedResultType, PrivateKey)
     case backendAuthorized
-}
-
-private enum MessagingServiceEffect {
-    case initializeXmtpClient(ConvosSDK.AuthorizedResultType)
-    case authorizeBackend
-    case cleanupResources
-    case none
 }
 
 extension XMTPiOS.Member: ConvosSDK.User {
@@ -102,7 +104,6 @@ extension XMTPiOS.Conversation: ConvosSDK.ConversationType {
             try await members().first
         }
     }
-
 
     public var isPinned: Bool {
         false
@@ -224,14 +225,17 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                 switch (_state, action) {
                 case (.uninitialized, .start):
                     try await handleStart()
-                case (.initializing, .xmtpInitialized):
-                    try await handleXmtpInitialized()
+                case (.initializing, let .xmtpInitialized(result, privateKey)):
+                    try await authorizeConvosBackend(from: result,
+                                                     privateKey: privateKey)
                 case (.authorizing, .backendAuthorized):
                     try handleBackendAuthorized()
                 case (.ready, .stop), (.error, .stop):
                     try handleStop()
                 case (.error, .start):
                     try await handleStart()
+                case (.uninitialized, .stop):
+                    break
                 default:
                     Logger.warning("Invalid MessagingService state transition: \(_state) -> \(action)")
                 }
@@ -245,22 +249,16 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     private func handleStart() async throws {
-        guard case .authorized(let result) = authService.state else {
+        guard let authorizedResult = authService.state.authorizedResult else {
             _state = .error(MessagingServiceError.notAuthenticated)
             return
         }
 
         _state = .initializing
-        let privateKey = try PrivateKey(result.privateKeyData)
-        try await initializeXmtpClient(with: result.privateKeyData,
+        let privateKey = try PrivateKey(authorizedResult.privateKeyData)
+        try await initializeXmtpClient(with: authorizedResult.privateKeyData,
                                        signingKey: privateKey)
-        await processAction(.xmtpInitialized)
-    }
-
-    private func handleXmtpInitialized() async throws {
-        _state = .authorizing
-        _ = try await authorizeConvosBackend()
-        await processAction(.backendAuthorized)
+        await processAction(.xmtpInitialized(authorizedResult, privateKey))
     }
 
     private func handleBackendAuthorized() throws {
@@ -287,6 +285,61 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         } else {
             Logger.warning("XMTP Client not initialized, skipping database deletion")
         }
+    }
+
+    // MARK: - User Creation
+
+    private func createUser(from result: ConvosSDK.RegisteredResultType, privateKey: PrivateKey) async throws {
+        let userId = UUID().uuidString
+        let username = try await generateUsername(from: result.displayName)
+        let xmtpId = xmtpClient?.inboxID
+        let xmtpInstallationId = xmtpClient?.installationID
+        let requestBody: ConvosAPIClient.CreateUserRequest = .init(
+            turnkeyUserId: userId,
+            device: .current(),
+            identity: .init(turnkeyAddress: privateKey.walletAddress,
+                            xmtpId: xmtpId,
+                            xmtpInstallationId: xmtpInstallationId),
+            profile: .init(name: result.displayName,
+                           username: username,
+                           description: nil,
+                           avatar: nil)
+        )
+        let createdUser = try await apiClient.createUser(requestBody)
+        Logger.info("Created user: \(createdUser)")
+    }
+
+    private func generateUsername(from displayName: String, maxRetries: Int = 5) async throws -> String {
+        let base = displayName
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .joined()
+
+        let baseUsername = base.isEmpty ? "convos_user" : base
+
+        for i in 0...maxRetries {
+            let candidate: String
+            if i == 0 {
+                candidate = baseUsername
+            } else {
+                let numDigits = Int(pow(2.0, Double(i - 1)))
+                let min = Int(pow(10.0, Double(numDigits - 1)))
+                let max = Int(pow(10.0, Double(numDigits))) - 1
+                let randomNumber = Int.random(in: min...max)
+                candidate = "\(baseUsername)\(randomNumber)"
+            }
+            do {
+                let check = try await apiClient.checkUsername(candidate)
+                if !check.taken {
+                    return candidate
+                }
+            } catch {
+                Logger.warning("Username check failed for \(candidate): \(error)")
+            }
+        }
+
+        let random = UUID().uuidString.prefix(10).lowercased()
+        return "\(baseUsername)\(random)"
     }
 
     // MARK: - Messaging
@@ -325,11 +378,13 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         Logger.info("XMTP Client initialized, returning signing key.")
     }
 
-    private func authorizeConvosBackend() async throws {
+    private func authorizeConvosBackend(from result: ConvosSDK.AuthorizedResultType,
+                                        privateKey: PrivateKey) async throws {
         guard let client = xmtpClient else {
             throw MessagingServiceError.xmtpClientMissingRequiredValuesForAuth
         }
 
+        _state = .authorizing
         let installationId = client.installationID
         let xmtpId = client.inboxID
         let firebaseAppCheckToken = Secrets.FIREBASE_APP_CHECK_TOKEN
@@ -337,10 +392,18 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         let signature = signatureData.hexEncodedString()
 
         Logger.info("Attempting to authenticate with Convos backend...")
-        let result = try await apiClient.authenticate(xmtpInstallationId: installationId,
-                                                      xmtpId: xmtpId,
-                                                      xmtpSignature: signature)
-        Logger.info("Authenticated with Convos backend: \(result)")
+        let authResult = try await apiClient.authenticate(xmtpInstallationId: installationId,
+                                                          xmtpId: xmtpId,
+                                                          xmtpSignature: signature)
+        if let registeredResult = result as? ConvosSDK.RegisteredResultType {
+            Logger.info("Creating user from registeredResult: \(registeredResult)")
+            try await createUser(from: registeredResult,
+                                 privateKey: privateKey)
+        } else {
+            let user = try await apiClient.getUser()
+            Logger.info("Authenticated with Convos backend: \(result) user: \(user)")
+        }
+        await processAction(.backendAuthorized)
     }
 
     private func setXmtpClient(_ client: XMTPiOS.Client?) {
@@ -359,7 +422,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                 Task {
                     guard let self = self else { return }
                     switch authState {
-                    case .authorized:
+                    case .authorized, .registered:
                         do {
                             Logger.info("MessagingService starting from auth state changing to authorized")
                             try await self.start()

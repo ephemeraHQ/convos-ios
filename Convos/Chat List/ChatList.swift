@@ -35,48 +35,6 @@ struct ChatListView: View {
 
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            // Pinned chats grid
-//                            if !conversationStore.pinnedConversations.isEmpty {
-//                                PinnedChatsGrid(
-//                                    conversations: conversationStore.pinnedConversations,
-//                                    onTapChat: { conversation in
-//                                        print("tapping on pinned chat")
-//                                        selectedConversation = conversation
-//                                    },
-//                                    onUnpin: { conversation in
-//                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-//                                            conversationStore.togglePin(for: conversation)
-//                                        }
-//                                    },
-//                                    onToggleRead: { conversation in
-//                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-//                                            conversationStore.toggleRead(for: conversation)
-//                                        }
-//                                    },
-//                                    onToggleMute: { conversation in
-//                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-//                                            conversationStore.toggleMute(for: conversation)
-//                                        }
-//                                    },
-//                                    onDelete: { conversation in
-//                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-//                                            conversationStore.deleteConversation(id: conversation.id)
-//                                        }
-//                                    }
-//                                )
-//                                .background(Color(.systemBackground))
-//                            }
-//
-//                            // Requests section
-//                            if !conversationStore.requests.isEmpty {
-//                                RequestsHeader(
-//                                    requestCount: conversationStore.requests.count,
-//                                    amount: conversationStore.requests.first?.amount,
-//                                    onTap: {
-//                                        print("Navigate to requests list")
-//                                    }
-//                                )
-//                            }
 
                             // Regular chats
                             ForEach(conversationsStore.unpinnedConversations) { conversation in
