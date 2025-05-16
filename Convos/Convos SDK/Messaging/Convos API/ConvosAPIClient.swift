@@ -74,13 +74,13 @@ final class ConvosAPIClient {
 
     // MARK: - v1/users
 
-    func getUser() async throws -> User {
+    func getUser() async throws -> UserResponse {
         let request = try authenticatedRequest(for: "v1/users/me")
-        let user: User = try await performRequest(request)
+        let user: UserResponse = try await performRequest(request)
         return user
     }
 
-    func createUser(_ requestBody: CreateUserRequest) async throws -> CreatedUser {
+    func createUser(_ requestBody: CreateUserRequest) async throws -> CreatedUserResponse {
         var request = try authenticatedRequest(for: "v1/users")
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -90,9 +90,9 @@ final class ConvosAPIClient {
         return try await performRequest(request)
     }
 
-    func checkUsername(_ username: String) async throws -> UsernameCheck {
+    func checkUsername(_ username: String) async throws -> UsernameCheckResponse {
         let request = try authenticatedRequest(for: "v1/profiles/check/\(username)")
-        let result: UsernameCheck = try await performRequest(request)
+        let result: UsernameCheckResponse = try await performRequest(request)
         return result
     }
 

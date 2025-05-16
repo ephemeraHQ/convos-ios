@@ -132,7 +132,6 @@ extension XMTPiOS.Conversation: ConvosSDK.ConversationType {
 final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private let authService: ConvosSDK.AuthServiceProtocol
     private var xmtpClient: XMTPiOS.Client?
-    private let keychainService: KeychainService<ConvosKeychainItem> = .init()
     private var cancellables: Set<AnyCancellable> = []
     private let apiClient: ConvosAPIClient
     private var _state: ConvosSDK.MessagingServiceState = .uninitialized {
@@ -278,8 +277,6 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
             if FileManager.default.fileExists(atPath: saltPath) {
                 try FileManager.default.removeItem(atPath: saltPath)
             }
-            Logger.info("Deleting XMTP database key")
-            try keychainService.delete(.xmtpDatabaseKey)
             setXmtpClient(nil)
         } else {
             Logger.warning("XMTP Client not initialized, skipping database deletion")
@@ -352,18 +349,6 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     // MARK: - Helpers
-
-    private func fetchOrCreateDatabaseKey() throws -> DatabaseKey {
-        if let key = try self.keychainService.retrieveData(.xmtpDatabaseKey) {
-            Logger.info("Found existing XMTP database key: \(key.base64EncodedString())")
-            return .init(rawData: key)
-        } else {
-            let key = try DatabaseKey.generate()
-            Logger.info("Generating new XMTP database key: \(key.rawData.base64EncodedString())")
-            try self.keychainService.saveData(key.rawData, for: .xmtpDatabaseKey)
-            return key
-        }
-    }
 
     private func initializeXmtpClient(with databaseKey: Data,
                                       signingKey: SigningKey) async throws {

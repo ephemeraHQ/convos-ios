@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 
 extension ConvosAPIClient {
-    struct User: Decodable {
+    struct UserResponse: Decodable {
         let id: String
         let identities: [Identity]
         struct Identity: Decodable {
@@ -34,7 +34,7 @@ extension ConvosAPIClient {
         }
     }
 
-    struct CreatedUser: Decodable {
+    struct CreatedUserResponse: Decodable {
         let id: String
         let turnkeyUserId: String
         let device: Device
@@ -59,7 +59,7 @@ extension ConvosAPIClient {
         }
     }
 
-    struct UsernameCheck: Decodable {
+    struct UsernameCheckResponse: Decodable {
         let taken: Bool
     }
 }
