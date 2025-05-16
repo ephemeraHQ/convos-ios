@@ -39,15 +39,15 @@ struct ChatListNavigationBar: View {
 
             // Action buttons
             HStack(spacing: 20) {
-                Button(action: onQRTap) {
-                    Image(systemName: "qrcode")
-                        .font(.system(size: 20))
-                }
-
-                Button(action: onWalletTap) {
-                    Image(systemName: "creditcard")
-                        .font(.system(size: 20))
-                }
+//                Button(action: onQRTap) {
+//                    Image(systemName: "qrcode")
+//                        .font(.system(size: 20))
+//                }
+//
+//                Button(action: onWalletTap) {
+//                    Image(systemName: "creditcard")
+//                        .font(.system(size: 20))
+//                }
 
                 Button(action: onComposeTap) {
                     Image(systemName: "square.and.pencil")

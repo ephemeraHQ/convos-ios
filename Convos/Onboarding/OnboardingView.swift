@@ -64,6 +64,7 @@ struct OnboardingView: View {
                                   imageState: $viewModel.imageState,
                                   nameIsValid: $viewModel.nameIsValid,
                                   nameError: $viewModel.nameError,
+                                  isEditing: $viewModel.isEditingContactCard,
                                   importCardAction: {
                                       presentingImportContactCard = true
                                   }, submitAction: viewModel.createContactCard)

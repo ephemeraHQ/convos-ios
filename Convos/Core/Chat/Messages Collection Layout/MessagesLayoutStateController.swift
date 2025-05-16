@@ -447,7 +447,7 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
     }
 
     func update(preferredSize: CGSize,
-                alignment: Cell.Alignment,
+                alignment: MessagesCollectionCell.Alignment,
                 interItemSpacing: CGFloat,
                 for itemPath: ItemPath,
                 kind: ItemKind,

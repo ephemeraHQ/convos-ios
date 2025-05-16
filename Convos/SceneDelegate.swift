@@ -8,11 +8,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                willConnectTo session: UISceneSession,
                options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
-        let identityStore = CTIdentityStore()
-        let conversationStore = CTConversationStore()
         self.window = .init(windowScene: windowScene)
-        self.window?.rootViewController = ChatListView(conversationStore: conversationStore,
-                                                       identityStore: identityStore).asViewController()
+        self.window?.rootViewController = RootViewController()
         self.window?.makeKeyAndVisible()
     }
 

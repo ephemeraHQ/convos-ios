@@ -14,12 +14,6 @@ enum MessageStatus: Hashable {
     case sent, delivered, read
 }
 
-extension Cell.Alignment {
-    var isIncoming: Bool {
-        self == .leading
-    }
-}
-
 struct DateGroup: Hashable {
     var id: UUID
     var date: Date
@@ -70,16 +64,32 @@ enum ImageSource: Hashable {
     }
 }
 
+struct User: Hashable {
+    let id: String
+    let name: String
+    let username: String? = nil
+    let displayName: String? = nil
+    let walletAddress: String? = nil
+    let chainId: Int64? = nil
+    let avatarURL: URL? = nil
+}
+
+extension User: ConvosSDK.User {
+    func sign(message: String) async throws -> Data? {
+        nil
+    }
+}
+
 struct Message: Hashable {
-    public enum Data: Hashable {
+    public enum Kind: Hashable {
         case text(String)
         case image(ImageSource, isLocallyStored: Bool)
     }
 
-    var id: UUID
+    var id: String
     var date: Date
-    var data: Data
-    var owner: ConvosUser
+    var kind: Kind
+    var owner: User
     var type: MessageType
     var status: MessageStatus = .sent
 }

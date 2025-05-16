@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     private let convos: ConvosSDK.Convos
     private let analyticsService: AnalyticsServiceProtocol
+    private let identityStore: CTIdentityStore = CTIdentityStore()
 
     @State var viewModel: AppViewModel
 
@@ -22,7 +23,7 @@ struct RootView: View {
                 Spacer()
             }
         case .signedIn:
-            EmptyView()
+            ChatListView(messagingService: convos.messaging)
         case .signedOut:
             OnboardingView(convos: convos)
         }

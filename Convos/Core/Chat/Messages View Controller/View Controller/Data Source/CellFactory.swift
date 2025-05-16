@@ -5,7 +5,7 @@ import UIKit
 final class CellFactory {
     static func createCell(in collectionView: UICollectionView,
                            for indexPath: IndexPath,
-                           with item: Cell) -> UICollectionViewCell {
+                           with item: MessagesCollectionCell) -> UICollectionViewCell {
         switch item {
         case let .message(message, bubbleType: bubbleType):
             return createMessageCell(in: collectionView, for: indexPath, message: message, bubbleType: bubbleType)
@@ -21,8 +21,8 @@ final class CellFactory {
     private static func createMessageCell(in collectionView: UICollectionView,
                                           for indexPath: IndexPath,
                                           message: Message,
-                                          bubbleType: Cell.BubbleType) -> UICollectionViewCell {
-        switch message.data {
+                                          bubbleType: MessagesCollectionCell.BubbleType) -> UICollectionViewCell {
+        switch message.kind {
         case let .text(text):
             return createTextCell(
                 in: collectionView,
@@ -47,7 +47,7 @@ final class CellFactory {
         in collectionView: UICollectionView,
         for indexPath: IndexPath,
         text: String,
-        bubbleType: Cell.BubbleType,
+        bubbleType: MessagesCollectionCell.BubbleType,
         messageType: MessageType
     ) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TextMessageCollectionCell.reuseIdentifier,
@@ -58,9 +58,9 @@ final class CellFactory {
 
     private static func createImageCell(
         in collectionView: UICollectionView,
-        messageId: UUID,
+        messageId: String,
         for indexPath: IndexPath,
-        user: ConvosUser,
+        user: User,
         source: ImageSource,
         messageType: MessageType
     ) -> ImageCollectionCell {

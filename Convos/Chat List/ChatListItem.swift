@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ChatListItem: View {
-    let conversation: CTConversation
+    let conversationItem: ConversationItem
     let onTap: () -> Void
     let onPin: () -> Void
     let onToggleRead: () -> Void
@@ -9,6 +9,8 @@ struct ChatListItem: View {
     let onDelete: () -> Void
 
     @State private var isPinning: Bool = false
+    @State private var otherParticipant: ConvosSDK.User?
+    @State private var lastMessage: ConvosSDK.RawMessageType?
 
     var body: some View {
         Button {
@@ -16,7 +18,7 @@ struct ChatListItem: View {
         } label: {
             HStack(spacing: 12) {
                 // Avatar
-                AsyncImage(url: conversation.otherParticipant?.avatarURL) { image in
+                AsyncImage(url: otherParticipant?.avatarURL) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -29,20 +31,20 @@ struct ChatListItem: View {
                 // Chat info
                 VStack(alignment: .leading, spacing: 4) {
                     // Username
-                    Text(conversation.otherParticipant?.username ?? "Unknown")
-                        .font(.system(size: 17, weight: conversation.isUnread ? .semibold : .regular))
+                    Text(otherParticipant?.username ?? otherParticipant?.walletAddress ?? "Unknown")
+                        .font(.system(size: 17, weight: conversationItem.conversation.isUnread ? .semibold : .regular))
                         .foregroundColor(.primary)
 
                     // Message preview with timestamp
                     HStack {
-                        if let message = conversation.lastMessage {
+                        if let message = lastMessage {
                             HStack(spacing: 4) {
                                 Text(message.timestamp.relativeShort()).textCase(.lowercase)
                                 Text("•")
                                 Text(message.content)
                             }
                             .font(.system(size: 15))
-                            .foregroundColor(conversation.isUnread ? .primary : .secondary)
+                            .foregroundColor(conversationItem.conversation.isUnread ? .primary : .secondary)
                             .lineLimit(1)
                         }
 
@@ -50,13 +52,13 @@ struct ChatListItem: View {
 
                         // Status indicators
                         HStack(spacing: 4) {
-                            if conversation.isMuted {
+                            if conversationItem.conversation.isMuted {
                                 Image(systemName: "bell.slash.fill")
                                     .font(.system(size: 13))
                                     .foregroundColor(.secondary)
                             }
 
-                            if conversation.isUnread {
+                            if conversationItem.conversation.isUnread {
                                 Circle()
                                     .fill(Color.black)
                                     .frame(width: 12, height: 12)
@@ -76,7 +78,7 @@ struct ChatListItem: View {
         .opacity(isPinning ? 0.8 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPinning)
         .contextMenu {
-            if conversation.isPinned {
+            if conversationItem.conversation.isPinned {
                 Button("Unpin") {
                     withAnimation {
                         isPinning = true
@@ -102,11 +104,11 @@ struct ChatListItem: View {
                 }
             }
 
-            Button(conversation.isUnread ? "Mark as Read" : "Mark as Unread") {
+            Button(conversationItem.conversation.isUnread ? "Mark as Read" : "Mark as Unread") {
                 onToggleRead()
             }
 
-            Button(conversation.isMuted ? "Unmute" : "Mute") {
+            Button(conversationItem.conversation.isMuted ? "Unmute" : "Mute") {
                 onToggleMute()
             }
 
@@ -128,75 +130,3 @@ struct ChatListItemButtonStyle: ButtonStyle {
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
-
-// swiftlint:disable force_unwrapping
-#Preview {
-    VStack(spacing: 0) {
-        ChatListItem(
-            conversation: CTConversation(
-                id: "1",
-                participants: [
-                    CTUser(
-                        id: "user1",
-                        username: "test.eth",
-                        avatarURL: URL(string: "https://picsum.photos/200")!
-                    )
-                ],
-                lastMessage: CTMessage(
-                    id: "msg1",
-                    content: "Hey, do you have time to listen to me whine?",
-                    sender: CTUser(
-                        id: "user1",
-                        username: "test.eth",
-                        avatarURL: URL(string: "https://picsum.photos/200")!
-                    ),
-                    timestamp: Date()
-                ),
-                isPinned: false,
-                isUnread: true,
-                isRequest: false,
-                isMuted: true,
-                timestamp: Date()
-            ),
-            onTap: {},
-            onPin: {},
-            onToggleRead: {},
-            onToggleMute: {},
-            onDelete: {}
-        )
-
-        ChatListItem(
-            conversation: CTConversation(
-                id: "2",
-                participants: [
-                    CTUser(
-                        id: "user2",
-                        username: "crypto.lens",
-                        avatarURL: URL(string: "https://picsum.photos/200")!
-                    )
-                ],
-                lastMessage: CTMessage(
-                    id: "msg2",
-                    content: "All I see is changes",
-                    sender: CTUser(
-                        id: "user2",
-                        username: "crypto.lens",
-                        avatarURL: URL(string: "https://picsum.photos/200")!
-                    ),
-                    timestamp: Date().addingTimeInterval(-86400) // Yesterday
-                ),
-                isPinned: true,
-                isUnread: false,
-                isRequest: false,
-                isMuted: false,
-                timestamp: Date().addingTimeInterval(-86400)
-            ),
-            onTap: {},
-            onPin: {},
-            onToggleRead: {},
-            onToggleMute: {},
-            onDelete: {}
-        )
-    }
-}
-// swiftlint:enable force_unwrapping

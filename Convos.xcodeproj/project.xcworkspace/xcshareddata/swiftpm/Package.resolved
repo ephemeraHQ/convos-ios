@@ -1,5 +1,5 @@
 {
-  "originHash" : "67f8dd576a7a0e74b88f6b976063a1fee48cf63442ce57fa675423fe8d3ca4d2",
+  "originHash" : "fa9f74ee41d62abb7ea7d5df2fbc92249b15700024263584ed7af46d725a0d7c",
   "pins" : [
     {
       "identity" : "anchorkit",
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/hmlongco/Factory",
       "state" : {
-        "revision" : "f1e35a1672fcb71a40ef6b7aaf1ea38a458c4485",
-        "version" : "2.4.12"
+        "revision" : "22157b88670bbeac591895c0fc8b8f7f340cf757",
+        "version" : "2.5.0"
       }
     },
     {
@@ -110,12 +110,21 @@
       }
     },
     {
+      "identity" : "passkeyauth",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ephemeraHQ/PasskeyAuth.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "83b095bf90f715c5eede8e6e0839c6a9894252be"
+      }
+    },
+    {
       "identity" : "posthog-ios",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/PostHog/posthog-ios.git",
       "state" : {
-        "revision" : "d640df892fcb3bbeadf02b9ec28eeb682df53d24",
-        "version" : "3.25.0"
+        "revision" : "479ce5ba9ce899dfe969dea7c88cd110adb800e7",
+        "version" : "3.25.1"
       }
     },
     {
@@ -123,8 +132,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/getsentry/sentry-cocoa",
       "state" : {
-        "revision" : "6c81e671154e63464dd6749b7ba3279dd390a146",
-        "version" : "8.50.1"
+        "revision" : "d87b07a27cd9a082d367261d7199a96a54e59f1d",
+        "version" : "8.50.2"
       }
     },
     {
@@ -258,8 +267,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/tkhq/swift-sdk.git",
       "state" : {
-        "revision" : "35a3f203d406eaaf64cc647f4c001deddb69c365",
-        "version" : "1.2.1"
+        "branch" : "taylor/sessions",
+        "revision" : "badaed4044b7bb394e6d30d9a4f130f58ee2359f"
       }
     },
     {
@@ -303,8 +312,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/jpsim/Yams",
       "state" : {
-        "revision" : "b4b8042411dc7bbb696300a34a4bf3ba1b7ad19b",
-        "version" : "5.3.1"
+        "revision" : "3d6871d5b4a5cd519adf233fbb576e0a2af71c17",
+        "version" : "5.4.0"
       }
     }
   ],

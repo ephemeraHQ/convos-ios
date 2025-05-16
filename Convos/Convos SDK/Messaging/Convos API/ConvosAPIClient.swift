@@ -33,9 +33,9 @@ struct Passkey: Codable {
 }
 
 final class ConvosAPIClient {
-    private let baseURL: URL
+    internal let baseURL: URL
     private let keychainService: KeychainService<ConvosKeychainItem> = .init()
-    private let session: URLSession
+    internal let session: URLSession
 
     init(baseURL: URL) {
         self.baseURL = baseURL
@@ -43,45 +43,6 @@ final class ConvosAPIClient {
     }
 
     // MARK: - Authentication
-
-    func createSubOrganization(
-        ephemeralPublicKey: String,
-        passkey: Passkey
-    ) async throws -> CreateSubOrganizationResponse {
-        let url = baseURL.appendingPathComponent("v1/wallets")
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue(Secrets.FIREBASE_APP_CHECK_TOKEN, forHTTPHeaderField: "X-Firebase-AppCheck")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let requestBody: [String: Any] = [
-            "ephemeralPublicKey": ephemeralPublicKey,
-            "challenge": passkey.challenge,
-            "attestation": [
-                "credentialId": passkey.attestation.credentialId,
-                "clientDataJson": passkey.attestation.clientDataJson,
-                "attestationObject": passkey.attestation.attestationObject,
-                "transports": passkey.attestation.transports.map { $0.rawValue }
-            ]
-        ]
-
-        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
-
-        do {
-            let (data, response) = try await session.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
-                throw APIError.authenticationFailed
-            }
-
-            let result = try JSONDecoder().decode(CreateSubOrganizationResponse.self, from: data)
-            return result
-        } catch {
-            throw APIError.serverError(error)
-        }
-    }
 
     func authenticate(xmtpInstallationId: String, xmtpId: String, xmtpSignature: String) async throws -> String {
         let url = baseURL.appendingPathComponent("v1/authenticate")
@@ -111,6 +72,30 @@ final class ConvosAPIClient {
         return authResponse.token
     }
 
+    // MARK: - v1/users
+
+    func getUser() async throws -> User {
+        let request = try authenticatedRequest(for: "v1/users/me")
+        let user: User = try await performRequest(request)
+        return user
+    }
+
+    func createUser(_ requestBody: CreateUserRequest) async throws -> CreatedUser {
+        var request = try authenticatedRequest(for: "v1/users")
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        Logger.info("Sending create user request with body: \(requestBody)")
+        request.httpBody = try JSONEncoder().encode(requestBody)
+        Logger.info("Creating user with json body: \(request.httpBody?.prettyPrintedJSONString ?? "")")
+        return try await performRequest(request)
+    }
+
+    func checkUsername(_ username: String) async throws -> UsernameCheck {
+        let request = try authenticatedRequest(for: "v1/profiles/check/\(username)")
+        let result: UsernameCheck = try await performRequest(request)
+        return result
+    }
+
     // MARK: - Private Helpers
 
     private func authenticatedRequest(for path: String, method: String = "GET") throws -> URLRequest {
@@ -126,6 +111,8 @@ final class ConvosAPIClient {
 
     private func performRequest<T: Decodable>(_ request: URLRequest) async throws -> T {
         let (data, response) = try await session.data(for: request)
+
+        Logger.info("Received response: \(data.prettyPrintedJSONString ?? "nil data")")
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse

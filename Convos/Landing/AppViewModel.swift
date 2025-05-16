@@ -32,7 +32,7 @@ final class AppViewModel {
             .sink { [weak self] authState in
                 guard let self else { return }
                 switch authState {
-                case .authorized:
+                case .authorized, .registered:
                     self.appState = .signedIn
                 case .unauthorized:
                     self.appState = .signedOut
