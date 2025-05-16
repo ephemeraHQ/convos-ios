@@ -3,7 +3,6 @@ import SwiftUI
 struct RootView: View {
     private let convos: ConvosSDK.Convos
     private let analyticsService: AnalyticsServiceProtocol
-    private let identityStore: CTIdentityStore = CTIdentityStore()
     private let userRepository: UserRepositoryProtocol
 
     @State var viewModel: AppViewModel

@@ -19,7 +19,7 @@ struct ChatListNavigationBar: View {
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                     } placeholder: {
-                        Color(.systemGray5)
+                        MonogramView(name: userState.currentUser?.profile.name ?? "")
                     }
                     .frame(width: 32, height: 32)
                     .clipShape(Circle())
