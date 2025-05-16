@@ -14,6 +14,7 @@
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
 		D834386F2DB19D8C00A50F45 /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = D834386E2DB19D8C00A50F45 /* Factory */; };
+		D85B9B9F2DD26BC400831D58 /* GRDB-dynamic in Embed Frameworks */ = {isa = PBXBuildFile; productRef = D808502E2DC94EDF00E708B0 /* GRDB-dynamic */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */; };
 		D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = D8B5A9032DC272BD006003A4 /* XMTPiOS */; };
 /* End PBXBuildFile section */
@@ -46,6 +47,17 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D85B9BA02DD26BC400831D58 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				D85B9B9F2DD26BC400831D58 /* GRDB-dynamic in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -208,6 +220,7 @@
 				D8A2B68E2DA4BA4B00EF8577 /* Frameworks */,
 				D8A2B68F2DA4BA4B00EF8577 /* Resources */,
 				D808503B2DC94F4C00E708B0 /* Embed Foundation Extensions */,
+				D85B9BA02DD26BC400831D58 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
