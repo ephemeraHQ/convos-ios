@@ -392,9 +392,9 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         let signature = signatureData.hexEncodedString()
 
         Logger.info("Attempting to authenticate with Convos backend...")
-        let authResult = try await apiClient.authenticate(xmtpInstallationId: installationId,
-                                                          xmtpId: xmtpId,
-                                                          xmtpSignature: signature)
+        _ = try await apiClient.authenticate(xmtpInstallationId: installationId,
+                                             xmtpId: xmtpId,
+                                             xmtpSignature: signature)
         if let registeredResult = result as? ConvosSDK.RegisteredResultType {
             Logger.info("Creating user from registeredResult: \(registeredResult)")
             try await createUser(from: registeredResult,
