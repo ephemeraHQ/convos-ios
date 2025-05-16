@@ -20,7 +20,7 @@ public extension ConvosSDK {
 
         var isAuthenticated: Bool {
             switch self {
-            case .authorized(_), .registered(_):
+            case .authorized, .registered:
                 return true
             default: return false
             }

@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
-import TurnkeySDK
 import Shared
+import TurnkeySDK
 
 // swiftlint:disable force_cast force_unwrapping
 
@@ -16,7 +16,7 @@ class TurnkeySessionManager {
     }
 
     static var shared: TurnkeySessionManager = TurnkeySessionManager()
-    private let sessionKey = "com.convos.ios.session"
+    private let sessionKey: String = "com.convos.ios.session"
 
     private init() {}
 
@@ -43,8 +43,6 @@ class TurnkeySessionManager {
             encryptedBundle: encryptedBundle,
             ephemeralPrivateKey: ephemeralPrivateKey
         )
-        let tempApiPublicKey = try decryptedPublicKey.toString(
-            representation: PublicKeyRepresentation.x963)
         let tempApiPublicKeyCompressed = try decryptedPublicKey.toString(
             representation: PublicKeyRepresentation
                 .compressed)
@@ -73,7 +71,7 @@ class TurnkeySessionManager {
             )
         ]
 
-        let apiKeyCreationResponse = try await tempClient.createApiKeys(
+        _ = try await tempClient.createApiKeys(
             organizationId: organizationId,
             apiKeys: apiKeyParams,
             userId: userId
@@ -172,7 +170,6 @@ extension TurnkeySessionManager {
         let attributes: [String: Any] = [
             kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
             kSecAttrKeySizeInBits as String: 256,
-            //            kSecAttrTokenID as String: kSecAttrTokenIDSecureEnclave, // TODO: we need to retrieve the private key
             kSecPrivateKeyAttrs as String: [
                 kSecAttrIsPermanent as String: true,
                 kSecAttrApplicationTag as String: tagData,
@@ -208,7 +205,7 @@ extension TurnkeySessionManager {
         var error: Unmanaged<CFError>?
         guard let pubKey = SecKeyCopyPublicKey(privKey),
               let privateKey = SecKeyCopyExternalRepresentation(privKey, &error) as Data? else {
-            Logger.error("Error extracting public/private key: \(error)")
+            Logger.error("Error extracting public/private key")
             throw TurnkeySessionManagerError.publicKeyExtractionFailed
         }
         guard let ext = SecKeyCopyExternalRepresentation(pubKey, &error) as Data? else {

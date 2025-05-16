@@ -59,7 +59,6 @@ extension XMTPiOS.Member: ConvosSDK.User {
     }
 }
 
-// TODO: Temporary to get around not initializing XMTPiOS.Member
 struct XMTPiOSMember: ConvosSDK.User {
     var id: String
     var name: String

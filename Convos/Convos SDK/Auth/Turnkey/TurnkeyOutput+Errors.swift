@@ -17,7 +17,7 @@ extension Operations.GetWhoami.Output {
                     NSError(
                         domain: "TurnkeyClientErrorDomain",
                         code: statusCode,
-                        userInfo: [NSLocalizedDescriptionKey : payloadString]
+                        userInfo: [NSLocalizedDescriptionKey: payloadString]
                     )
                 )
             case .ok(let okResponse):
@@ -43,7 +43,7 @@ extension Operations.CreateReadWriteSession.Output {
                     NSError(
                         domain: "TurnkeyClientErrorDomain",
                         code: statusCode,
-                        userInfo: [NSLocalizedDescriptionKey : payloadString]
+                        userInfo: [NSLocalizedDescriptionKey: payloadString]
                     )
                 )
             case .ok(let okResponse):

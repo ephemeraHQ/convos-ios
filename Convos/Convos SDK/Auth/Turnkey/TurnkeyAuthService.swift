@@ -217,12 +217,12 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
                 let organizationId = result.organizationId
                 let userId = result.userId
 
-                guard let finalClient = try await TurnkeySessionManager.shared.saveSession(
+                guard try await TurnkeySessionManager.shared.saveSession(
                     userId: userId,
                     organizationId: organizationId,
                     encryptedBundle: result.credentialBundle,
                     ephemeralPrivateKey: ephemeralPrivateKey
-                ) else {
+                ) != nil else {
                     Logger.error("Failed saving session")
                     return
                 }

@@ -35,7 +35,6 @@ struct ChatListView: View {
 
                     ScrollView {
                         LazyVStack(spacing: 0) {
-
                             // Regular chats
                             ForEach(conversationsStore.unpinnedConversations) { conversation in
                                 ChatListItem(
