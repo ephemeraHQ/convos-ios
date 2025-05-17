@@ -26,7 +26,7 @@ struct RootView: View {
                 Spacer()
             }
         case .signedIn:
-            ChatListView(messagingService: convos.messaging,
+            ChatListView(convos: convos,
                          userRepository: userRepository,
                          conversationsRepository: conversationsRepository)
         case .signedOut:

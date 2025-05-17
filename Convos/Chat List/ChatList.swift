@@ -2,12 +2,14 @@ import Foundation
 import SwiftUI
 
 struct ChatListView: View {
+    let convos: ConvosSDK.Convos
     @State var userState: UserState
     @State var conversationsState: ConversationsState
 
-    init(messagingService: any ConvosSDK.MessagingServiceProtocol,
+    init(convos: ConvosSDK.Convos,
          userRepository: any UserRepositoryProtocol,
          conversationsRepository: any ConversationsRepositoryProtocol) {
+        self.convos = convos
         _userState = State(wrappedValue: .init(userRepository: userRepository))
         _conversationsState = State(
             wrappedValue: ConversationsState(
@@ -20,7 +22,11 @@ struct ChatListView: View {
         NavigationStack {
             ZStack {
                 VStack(spacing: 0) {
-                    ChatListNavigationBar(userState: userState)
+                    ChatListNavigationBar(userState: userState, signOut: {
+                        Task {
+                            try await convos.signOut()
+                        }
+                    })
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(conversationsState.unpinnedConversations) { conversation in

@@ -3,11 +3,16 @@ import SwiftUI
 struct ChatListNavigationBar: View {
     @State var userState: UserState
 
+    let signOut: () -> Void
+
     var body: some View {
         HStack(spacing: 16) {
-            // Identity selector button
-            Button {
-//                onIdentityTap()
+            Menu {
+                Button(role: .destructive) {
+                    signOut()
+                } label: {
+                    Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
+                }
             } label: {
                 HStack(spacing: 8) {
                     AsyncImage(url: userState.currentUser?.profile.avatarURL) { image in
@@ -29,21 +34,20 @@ struct ChatListNavigationBar: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .buttonStyle(PlainButtonStyle())
 
             Spacer()
 
             // Action buttons
             HStack(spacing: 20) {
-//                Button(action: onQRTap) {
-//                    Image(systemName: "qrcode")
-//                        .font(.system(size: 20))
-//                }
-//
-//                Button(action: onWalletTap) {
-//                    Image(systemName: "creditcard")
-//                        .font(.system(size: 20))
-//                }
+                //                Button(action: onQRTap) {
+                //                    Image(systemName: "qrcode")
+                //                        .font(.system(size: 20))
+                //                }
+                //
+                //                Button(action: onWalletTap) {
+                //                    Image(systemName: "creditcard")
+                //                        .font(.system(size: 20))
+                //                }
 
                 Button {
                     // composer
