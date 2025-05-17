@@ -3,7 +3,7 @@ import GRDB
 import XMTPiOS
 
 protocol MessageWriterProtocol {
-    func store(message: XMTPiOS.DecodedMessage) async throws
+    func store(message: XMTPiOS.DecodedMessage, in conversation: XMTPiOS.Conversation?) async throws
 }
 
 class MessageWriter: MessageWriterProtocol {
@@ -13,14 +13,13 @@ class MessageWriter: MessageWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    func store(message: DecodedMessage) async throws {
+    func store(message: DecodedMessage, in conversation: XMTPiOS.Conversation?) async throws {
         let conversationId = message.conversationId
         let dbLastMessage = try message.dbRepresentation(
             conversationId: conversationId,
             sender: .empty
         )
         try await databaseWriter.write { db in
-            // TODO: the message save will fail if the conversation doesn't exist
             if var conversation = try DBConversation
                 .filter(Column("id") == conversationId)
                 .fetchOne(db) {
