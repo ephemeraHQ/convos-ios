@@ -82,7 +82,7 @@ fileprivate extension Database {
                 isPinned: localState.isPinned,
                 isUnread: localState.isUnread,
                 isMuted: localState.isMuted,
-                lastMessage: "Last message",
+                lastMessage: dbConv.lastMessage,
                 imageURL: imageURL
             )
         }

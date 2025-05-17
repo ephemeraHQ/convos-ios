@@ -16,6 +16,7 @@ final class ConversationsState {
     private var cancellables: Set<AnyCancellable> = .init()
 
     init(conversationsRepository: ConversationsRepositoryProtocol) {
+        print("initializing conversations state")
         self.conversationsRepository = conversationsRepository
         do {
             self.conversations = try conversationsRepository.fetchAll()

@@ -5,6 +5,11 @@ enum ConversationKind: Hashable, Codable {
     case group, dm
 }
 
+struct MessagePreview: Codable, Equatable, Hashable {
+    let text: String
+    let createdAt: Date
+}
+
 struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
     static var databaseTableName: String = "conversation"
     enum Consent: Hashable, Codable {
@@ -20,6 +25,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     let creatorId: String
     let memberIds: [String]
     let imageURLString: String?
+    var lastMessage: MessagePreview?
 }
 
 struct Conversation: Codable, Hashable, Identifiable {
@@ -32,7 +38,7 @@ struct Conversation: Codable, Hashable, Identifiable {
     let isPinned: Bool
     let isUnread: Bool
     let isMuted: Bool
-    let lastMessage: String?
+    let lastMessage: MessagePreview?
     let imageURL: URL?
 
     var otherMember: Profile? {

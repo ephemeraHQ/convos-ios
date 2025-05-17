@@ -45,10 +45,9 @@ struct ChatListItem: View {
                     HStack {
                         if let message = conversation.lastMessage {
                             HStack(spacing: 4) {
-                                Text(message)
-//                                Text(message.timestamp.relativeShort()).textCase(.lowercase)
-//                                Text("•")
-//                                Text(message.content)
+                                Text(message.createdAt.relativeShort()).textCase(.lowercase)
+                                Text("•")
+                                Text(message.text)
                             }
                             .font(.system(size: 15))
                             .foregroundColor(conversation.isUnread ? .primary : .secondary)

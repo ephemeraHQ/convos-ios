@@ -26,6 +26,16 @@ class ConversationWriter: ConversationWriterProtocol {
             kind = .group
             imageURLString = try? group.imageUrl()
         }
+
+        let lastMessage = try await conversation.lastMessage()
+        let dbLastMessage: MessagePreview?
+        if let lastMessage {
+            let text = try? lastMessage.body
+            dbLastMessage = .init(text: text ?? "",
+                                  createdAt: lastMessage.sentAt)
+        } else {
+            dbLastMessage = nil
+        }
         let dbConversation = DBConversation(
             id: conversation.id,
             isCreator: try await conversation.isCreator(),
@@ -35,7 +45,8 @@ class ConversationWriter: ConversationWriterProtocol {
             topic: conversation.topic,
             creatorId: try await conversation.creatorInboxId,
             memberIds: dbMembers.map { $0.id },
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            lastMessage: dbLastMessage
         )
 
         let isCurrentUser = conversation.client.inboxID == dbConversation.creatorId
@@ -47,8 +58,6 @@ class ConversationWriter: ConversationWriterProtocol {
             isCurrentUser: isCurrentUser
         )
 
-        let lastMessage = try await conversation.lastMessage()
-
         try await databaseWriter.write { db in
             try creatorProfile.save(db)
 
@@ -58,7 +67,7 @@ class ConversationWriter: ConversationWriterProtocol {
                     sender: .empty
                 )
                 if let dbLastMessage = dbLastMessage as? any PersistableRecord {
-                    try dbLastMessage.save(db)
+//                    try dbLastMessage.save(db)
                 } else {
                     Logger.error("Error saving last message, could not cast to PersistableRecord")
                 }
@@ -82,121 +91,6 @@ extension Attachment {
         let fileURL = tempDir.appendingPathComponent(fileName)
         try data.write(to: fileURL)
         return fileURL
-    }
-}
-
-fileprivate extension XMTPiOS.DecodedMessage {
-    enum DecodedMessageDBRepresentationError: Error {
-        case mismatchedContentType, unsupportedContentType
-    }
-
-    func dbRepresentation(conversationId: String,
-                          sender: Profile) throws -> any MessageType {
-        let senderId = senderInboxId
-        let source: MessageSource = sender.isCurrentUser ? .outgoing : .incoming
-        let status: MessageStatus = deliveryStatus.status
-
-        let content = try content() as Any
-        let encodedContentType = try encodedContent.type
-        switch encodedContentType {
-        case ContentTypeText:
-            guard let contentString = content as? String else {
-                throw DecodedMessageDBRepresentationError.mismatchedContentType
-            }
-            let kind: MessageKind = .text(contentString)
-            return Message(id: id,
-                           conversationId: conversationId,
-                           sender: sender,
-                           date: sentAt,
-                           kind: kind,
-                           source: source,
-                           status: status)
-        case ContentTypeReply:
-            guard let contentReply = content as? Reply else {
-                throw DecodedMessageDBRepresentationError.mismatchedContentType
-            }
-            let sourceMessageId = contentReply.reference
-            let kind: MessageKind
-            switch contentReply.contentType {
-            case ContentTypeText:
-                guard let contentString = contentReply.content as? String else {
-                    throw DecodedMessageDBRepresentationError.mismatchedContentType
-                }
-                kind = .text(contentString)
-            case ContentTypeRemoteAttachment:
-                guard let remoteAttachment = content as? RemoteAttachment else {
-                    throw DecodedMessageDBRepresentationError.mismatchedContentType
-//                      let encodedContent: EncodedContent = try? await remoteAttachment.content(),
-//                      let attachment: Attachment = try? encodedContent.decoded(),
-//                      let localURL = try? attachment.saveToTmpFile() else {
-                }
-                kind = .attachment(URL(string: "http://google.com")!)
-            default:
-                Logger.error("Unhandled contentType \(contentReply.contentType)")
-                kind = .text("")
-            }
-            return MessageReply(id: id,
-                                conversationId: conversationId,
-                                sender: sender,
-                                date: sentAt,
-                                kind: kind,
-                                source: source,
-                                status: status,
-                                sourceMessageId: sourceMessageId)
-        case ContentTypeReaction, ContentTypeReactionV2:
-            guard let reaction = content as? Reaction else {
-                throw DecodedMessageDBRepresentationError.mismatchedContentType
-            }
-            return MessageReaction(id: id,
-                                   conversationId: conversationId,
-                                   sender: sender,
-                                   date: sentAt,
-                                   source: source,
-                                   status: status,
-                                   sourceMessageId: reaction.reference,
-                                   emoji: reaction.emoji)
-        case ContentTypeRemoteAttachment:
-            guard let remoteAttachment = content as? RemoteAttachment else {
-                throw DecodedMessageDBRepresentationError.mismatchedContentType
-            }
-            return Message(id: id,
-                           conversationId: conversationId,
-                           sender: sender,
-                           date: sentAt,
-                           kind: .attachment(URL(string: "http://google.com")!),
-                           source: source,
-                           status: status)
-        case ContentTypeAttachment:
-            throw DecodedMessageDBRepresentationError.unsupportedContentType
-        default:
-            throw DecodedMessageDBRepresentationError.unsupportedContentType
-        }
-    }
-}
-
-fileprivate extension XMTPiOS.Reaction {
-    var emoji: String {
-        switch schema {
-        case .unicode:
-            if let scalarValue = UInt32(content.replacingOccurrences(of: "U+", with: ""), radix: 16),
-               let scalar = UnicodeScalar(scalarValue) {
-                return String(scalar)
-            }
-        default:
-            break
-        }
-        return content
-    }
-}
-
-fileprivate extension XMTPiOS.MessageDeliveryStatus {
-    var status: MessageStatus {
-        switch self {
-        case .failed: return .failed
-        case .unpublished: return .unpublished
-        case .published: return .published
-        case .all: return .unknown
-        }
     }
 }
 

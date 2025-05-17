@@ -62,7 +62,7 @@ final class DatabaseManager {
                     .notNull()
                     .unique()
                     .references("user", onDelete: .cascade)
-                    .primaryKey() // userId
+                    .primaryKey()
                 t.column("name", .text).notNull()
                 t.column("username", .text).notNull()
                 t.column("avatar", .text)
@@ -79,15 +79,15 @@ final class DatabaseManager {
             try db.create(table: "conversation") { t in
                 t.column("id", .text).primaryKey()
                 t.column("isCreator", .boolean).notNull().defaults(to: false)
-                t.column("kind", .text).notNull() // store as JSON string
-                t.column("consent", .text).notNull() // store enum as string
+                t.column("kind", .text).notNull()
+                t.column("consent", .text).notNull()
                 t.column("createdAt", .datetime).notNull()
                 t.column("topic", .text).notNull()
                 t.column("creatorId", .text).notNull()
                     .references("memberProfile", onDelete: .cascade)
-                t.column("memberIds", .text).notNull() // store as JSON string
-                t.column("lastMessage", .text)
+                t.column("memberIds", .text).notNull()
                 t.column("imageURLString", .text)
+                t.column("lastMessage", .text)
             }
 
             try db.create(table: "member") { t in
@@ -95,8 +95,8 @@ final class DatabaseManager {
                 t.column("conversationId", .text)
                     .references("conversation", onDelete: .none)
                     .notNull()
-                t.column("role", .text).notNull() // store enum as string
-                t.column("consent", .text).notNull() // store enum as string
+                t.column("role", .text).notNull()
+                t.column("consent", .text).notNull()
                 t.primaryKey(["inboxId", "conversationId"])
             }
 
@@ -111,25 +111,27 @@ final class DatabaseManager {
 
             try db.create(table: "message") { t in
                 t.column("id", .text).primaryKey()
-                t.column("conversationId", .text).notNull()
+                t.column("conversationId", .text)
+                    .notNull()
                     .references("conversation", onDelete: .cascade)
-                t.column("sender", .text).notNull() // store Profile as JSON string
+                t.column("sender", .text).notNull()
                 t.column("date", .datetime).notNull()
-                t.column("kind", .text).notNull() // store as JSON string
-                t.column("source", .text).notNull() // store enum as string
-                t.column("status", .text).notNull() // store enum as string
-                t.column("sourceMessageId", .text) // nullable, for future extensibility
+                t.column("kind", .text).notNull()
+                t.column("source", .text).notNull()
+                t.column("status", .text).notNull()
+                t.column("sourceMessageId", .text)
             }
 
             try db.create(table: "messageReply") { t in
                 t.column("id", .text).primaryKey()
-                t.column("conversationId", .text).notNull()
+                t.column("conversationId", .text)
+                    .notNull()
                     .references("conversation", onDelete: .cascade)
-                t.column("sender", .text).notNull() // store Profile as JSON string
+                t.column("sender", .text).notNull()
                 t.column("date", .datetime).notNull()
-                t.column("kind", .text).notNull() // store as JSON string
-                t.column("source", .text).notNull() // store enum as string
-                t.column("status", .text).notNull() // store enum as string
+                t.column("kind", .text).notNull()
+                t.column("source", .text).notNull()
+                t.column("status", .text).notNull()
                 t.column("sourceMessageId", .text).notNull().references("message", column: "id", onDelete: .cascade)
             }
 
@@ -138,17 +140,18 @@ final class DatabaseManager {
                 t.column("conversationId", .text)
                     .notNull()
                     .references("conversation", onDelete: .cascade)
-                t.column("sender", .text).notNull() // store Profile as JSON string
+                t.column("sender", .text).notNull()
                 t.column("date", .datetime).notNull()
-                t.column("source", .text).notNull() // store enum as string
-                t.column("status", .text).notNull() // store enum as string
+                t.column("source", .text).notNull()
+                t.column("status", .text).notNull()
                 t.column("sourceMessageId", .text).notNull()
                     .references("message", column: "id", onDelete: .cascade)
             }
 
             try db.create(table: "session") { t in
                 t.column("id", .integer).primaryKey()
-                t.column("currentUserId", .text).notNull()
+                t.column("currentUserId", .text)
+                    .notNull()
                     .references("user", onDelete: .cascade)
             }
         }

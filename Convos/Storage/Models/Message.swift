@@ -80,5 +80,4 @@ struct MessageReaction: MessageType, FetchableRecord, PersistableRecord {
     var preview: String {
         return emoji
     }
-
 }
