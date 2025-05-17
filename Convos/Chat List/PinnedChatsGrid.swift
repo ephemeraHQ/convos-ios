@@ -1,12 +1,13 @@
 import SwiftUI
 
 struct PinnedChatsGrid: View {
-    let conversations: [CTConversation]
-    let onTapChat: (CTConversation) -> Void
-    let onUnpin: (CTConversation) -> Void
-    let onToggleRead: (CTConversation) -> Void
-    let onToggleMute: (CTConversation) -> Void
-    let onDelete: (CTConversation) -> Void
+    let conversations: [Conversation]
+    
+    let onTapChat: (Conversation) -> Void
+    let onUnpin: (Conversation) -> Void
+    let onToggleRead: (Conversation) -> Void
+    let onToggleMute: (Conversation) -> Void
+    let onDelete: (Conversation) -> Void
 
     private let columns: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 24), count: 3)
 
@@ -17,7 +18,7 @@ struct PinnedChatsGrid: View {
                     onTapChat(conversation)
                 } label: {
                     VStack(spacing: 8) {
-                        AsyncImage(url: conversation.otherParticipant?.avatarURL) { image in
+                        AsyncImage(url: conversation.otherMember?.avatarURL) { image in
                             image
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
@@ -41,7 +42,7 @@ struct PinnedChatsGrid: View {
                             ) : AnyView(EmptyView())
                         )
 
-                        if let username = conversation.otherParticipant?.username {
+                        if let username = conversation.otherMember?.username {
                             Text(username)
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(.primary)
@@ -107,26 +108,9 @@ struct PinnedChatButtonStyle: ButtonStyle {
     }
 }
 
-// swiftlint:disable force_unwrapping
 #Preview {
     PinnedChatsGrid(
         conversations: [
-            CTConversation(
-                id: "1",
-                participants: [
-                    CTUser(
-                        id: "user1",
-                        username: "test.eth",
-                        avatarURL: URL(string: "https://picsum.photos/200")!
-                    )
-                ],
-                lastMessage: nil,
-                isPinned: true,
-                isUnread: true,
-                isRequest: false,
-                isMuted: false,
-                timestamp: Date()
-            )
         ],
         onTapChat: { _ in },
         onUnpin: { _ in },
@@ -136,4 +120,3 @@ struct PinnedChatButtonStyle: ButtonStyle {
     )
     .background(Color(.systemBackground))
 }
-// swiftlint:enable force_unwrapping

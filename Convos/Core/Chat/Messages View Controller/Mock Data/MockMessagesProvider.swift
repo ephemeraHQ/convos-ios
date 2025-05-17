@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import UIKit
 
-// swiftlint:disable force_unwrapping
+// swiftlint:disable force_unwrapping force_try
 
 final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
     private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
@@ -66,22 +66,22 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
         messagingStateSubject.eraseToAnyPublisher()
     }
 
-    private let currentUser: User
-    let otherUsers: [User] = [
-        User(id: "1", name: "Emily Dickinson"),
-        User(id: "2", name: "William Shakespeare"),
-        User(id: "3", name: "Virginia Woolf"),
-        User(id: "4", name: "James Joyce"),
-        User(id: "5", name: "Oscar Wilde")
+    private let currentUser: MockUser
+    let otherUsers: [MockUser] = [
+        MockUser(name: "Emily Dickinson"),
+        MockUser(name: "William Shakespeare"),
+        MockUser(name: "Virginia Woolf"),
+        MockUser(name: "James Joyce"),
+        MockUser(name: "Oscar Wilde")
     ]
 
-    private var allUsers: [User] {
+    private var allUsers: [MockUser] {
         [currentUser] + otherUsers
     }
 
     // MARK: - User Access
 
-    var users: (current: User, others: [User]) {
+    var users: (current: MockUser, others: [MockUser]) {
         (currentUser, otherUsers)
     }
 
@@ -111,7 +111,7 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
 
     // MARK: - Initialization
 
-    init(currentUser: User) {
+    init(currentUser: MockUser) {
         self.currentUser = currentUser
         restartMessageTimer()
     }
@@ -167,4 +167,4 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
     }
 }
 
-// swiftlint:enable force_unwrapping
+// swiftlint:enable force_unwrapping force_try

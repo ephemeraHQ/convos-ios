@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import GRDB
 import XMTPiOS
 
 private enum MessagingServiceError: Error {
@@ -21,118 +22,16 @@ private enum MessagingServiceState {
 private enum MessagingServiceAction {
     case start
     case stop
-    case xmtpInitialized(ConvosSDK.AuthorizedResultType, PrivateKey)
+    case xmtpInitialized(Client, ConvosSDK.AuthorizedResultType, PrivateKey)
     case backendAuthorized
-}
-
-extension XMTPiOS.Member: ConvosSDK.User {
-    public var avatarURL: URL? {
-        nil
-    }
-
-    public var id: String {
-        ""
-    }
-
-    public var name: String {
-        ""
-    }
-
-    public var username: String? {
-        nil
-    }
-
-    public var displayName: String? {
-        nil
-    }
-
-    public var walletAddress: String? {
-        nil
-    }
-
-    public var chainId: Int64? {
-        0
-    }
-
-    public func sign(message: String) async throws -> Data? {
-        nil
-    }
-}
-
-struct XMTPiOSMember: ConvosSDK.User {
-    var id: String
-    var name: String
-    var username: String?
-    var displayName: String?
-    var walletAddress: String?
-    var chainId: Int64?
-    var avatarURL: URL?
-
-    func sign(message: String) async throws -> Data? {
-        nil
-    }
-}
-
-extension XMTPiOS.DecodedMessage: ConvosSDK.RawMessageType {
-    public var content: String {
-        ""
-    }
-
-    public var sender: any ConvosSDK.User {
-        XMTPiOSMember(id: "", name: "")
-    }
-
-    public var timestamp: Date {
-        Date()
-    }
-
-    public var replies: [any ConvosSDK.RawMessageType] {
-        []
-    }
-}
-
-extension XMTPiOS.Conversation: ConvosSDK.ConversationType {
-    public var lastMessage: (any ConvosSDK.RawMessageType)? {
-        get async throws {
-            try await lastMessage()
-        }
-    }
-
-    public var otherParticipant: (any ConvosSDK.User)? {
-        get async throws {
-            try await members().first
-        }
-    }
-
-    public var isPinned: Bool {
-        false
-    }
-
-    public var isUnread: Bool {
-        false
-    }
-
-    public var isRequest: Bool {
-        false
-    }
-
-    public var isMuted: Bool {
-        false
-    }
-
-    public var timestamp: Date {
-        createdAt
-    }
-
-    public var amount: Double? {
-        nil
-    }
 }
 
 final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private let authService: ConvosSDK.AuthServiceProtocol
+    private let userWriter: UserWriter
+    private let syncingManager: SyncingManagerProtocol
+
     private var xmtpClient: XMTPiOS.Client?
-    private let keychainService: KeychainService<ConvosKeychainItem> = .init()
     private var cancellables: Set<AnyCancellable> = []
     private let apiClient: ConvosAPIClient
     private var _state: ConvosSDK.MessagingServiceState = .uninitialized {
@@ -149,12 +48,16 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     nonisolated
     private let stateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> = .init(.uninitialized)
 
-    init(authService: ConvosSDK.AuthServiceProtocol) {
+    init(authService: ConvosSDK.AuthServiceProtocol,
+         databaseWriter: any DatabaseWriter) {
         self.authService = authService
+        self.userWriter = UserWriter(databaseWriter: databaseWriter)
         guard let apiBaseURL = URL(string: Secrets.CONVOS_API_BASE_URL) else {
             fatalError("Failed constructing API base URL")
         }
         self.apiClient = .init(baseURL: apiBaseURL)
+        self.syncingManager = SyncingManager(databaseWriter: databaseWriter,
+                                             apiClient: apiClient)
         Task {
             await observeAuthState()
         }
@@ -166,32 +69,6 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
     func stop() async {
         await processAction(.stop)
-    }
-
-    // MARK: - Conversations
-
-    func conversations() async throws -> [ConvosSDK.ConversationType] {
-        guard let xmtpClient else { return [] }
-        return try await xmtpClient.conversations.list()
-    }
-
-    func conversationsStream() async -> AsyncThrowingStream<any ConvosSDK.ConversationType, any Error> {
-        guard let xmtpClient else { return .init {
-            nil
-        } }
-        let baseStream = await xmtpClient.conversations.stream()
-        return AsyncThrowingStream { continuation in
-            Task {
-                do {
-                    for try await conversation in baseStream {
-                        continuation.yield(conversation as any ConvosSDK.ConversationType)
-                    }
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
-            }
-        }
     }
 
     // MARK: - Messages
@@ -224,8 +101,10 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                 switch (_state, action) {
                 case (.uninitialized, .start):
                     try await handleStart()
-                case (.initializing, let .xmtpInitialized(result, privateKey)):
-                    try await authorizeConvosBackend(from: result,
+                case (.initializing, let .xmtpInitialized(client, result, privateKey)):
+                    syncingManager.start(with: client)
+                    try await authorizeConvosBackend(client: client,
+                                                     authResult: result,
                                                      privateKey: privateKey)
                 case (.authorizing, .backendAuthorized):
                     try handleBackendAuthorized()
@@ -255,9 +134,9 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
         _state = .initializing
         let privateKey = try PrivateKey(authorizedResult.privateKeyData)
-        try await initializeXmtpClient(with: authorizedResult.privateKeyData,
-                                       signingKey: privateKey)
-        await processAction(.xmtpInitialized(authorizedResult, privateKey))
+        let client = try await initializeXmtpClient(with: authorizedResult.privateKeyData,
+                                                    signingKey: privateKey)
+        await processAction(.xmtpInitialized(client, authorizedResult, privateKey))
     }
 
     private func handleBackendAuthorized() throws {
@@ -278,8 +157,6 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
             if FileManager.default.fileExists(atPath: saltPath) {
                 try FileManager.default.removeItem(atPath: saltPath)
             }
-            Logger.info("Deleting XMTP database key")
-            try keychainService.delete(.xmtpDatabaseKey)
             setXmtpClient(nil)
         } else {
             Logger.warning("XMTP Client not initialized, skipping database deletion")
@@ -288,7 +165,8 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
     // MARK: - User Creation
 
-    private func createUser(from result: ConvosSDK.RegisteredResultType, privateKey: PrivateKey) async throws {
+    private func createUser(from result: ConvosSDK.RegisteredResultType,
+                            privateKey: PrivateKey) async throws -> ConvosAPIClient.CreatedUserResponse {
         let userId = UUID().uuidString
         let username = try await generateUsername(from: result.displayName)
         let xmtpId = xmtpClient?.inboxID
@@ -304,8 +182,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                            description: nil,
                            avatar: nil)
         )
-        let createdUser = try await apiClient.createUser(requestBody)
-        Logger.info("Created user: \(createdUser)")
+        return try await apiClient.createUser(requestBody)
     }
 
     private func generateUsername(from displayName: String, maxRetries: Int = 5) async throws -> String {
@@ -353,36 +230,23 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
     // MARK: - Helpers
 
-    private func fetchOrCreateDatabaseKey() throws -> DatabaseKey {
-        if let key = try self.keychainService.retrieveData(.xmtpDatabaseKey) {
-            Logger.info("Found existing XMTP database key: \(key.base64EncodedString())")
-            return .init(rawData: key)
-        } else {
-            let key = try DatabaseKey.generate()
-            Logger.info("Generating new XMTP database key: \(key.rawData.base64EncodedString())")
-            try self.keychainService.saveData(key.rawData, for: .xmtpDatabaseKey)
-            return key
-        }
-    }
-
     private func initializeXmtpClient(with databaseKey: Data,
-                                      signingKey: SigningKey) async throws {
+                                      signingKey: SigningKey) async throws -> Client {
         Logger.info("Initializing XMTP client...")
         guard xmtpClient == nil else {
             throw MessagingServiceError.xmtpClientAlreadyInitialized
         }
         let options = ClientOptions(dbEncryptionKey: databaseKey)
         Logger.info("Initializing XMTP client...")
-        xmtpClient = try await Client.create(account: signingKey, options: options)
+        let client = try await Client.create(account: signingKey, options: options)
+        xmtpClient = client
         Logger.info("XMTP Client initialized, returning signing key.")
+        return client
     }
 
-    private func authorizeConvosBackend(from result: ConvosSDK.AuthorizedResultType,
+    private func authorizeConvosBackend(client: Client,
+                                        authResult: ConvosSDK.AuthorizedResultType,
                                         privateKey: PrivateKey) async throws {
-        guard let client = xmtpClient else {
-            throw MessagingServiceError.xmtpClientMissingRequiredValuesForAuth
-        }
-
         _state = .authorizing
         let installationId = client.installationID
         let xmtpId = client.inboxID
@@ -394,13 +258,15 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         _ = try await apiClient.authenticate(xmtpInstallationId: installationId,
                                              xmtpId: xmtpId,
                                              xmtpSignature: signature)
-        if let registeredResult = result as? ConvosSDK.RegisteredResultType {
+        if let registeredResult = authResult as? ConvosSDK.RegisteredResultType {
             Logger.info("Creating user from registeredResult: \(registeredResult)")
-            try await createUser(from: registeredResult,
-                                 privateKey: privateKey)
+            let user = try await createUser(from: registeredResult,
+                                            privateKey: privateKey)
+            try await userWriter.storeUser(user)
         } else {
-            let user = try await apiClient.getUser()
-            Logger.info("Authenticated with Convos backend: \(result) user: \(user)")
+            async let user = try apiClient.getUser()
+            async let profile = try apiClient.getProfile(inboxId: client.inboxID)
+            try await userWriter.storeUser(await user, profile: await profile)
         }
         await processAction(.backendAuthorized)
     }

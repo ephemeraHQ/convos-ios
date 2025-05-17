@@ -1,17 +1,32 @@
 import Combine
 import Foundation
+import GRDB
 
 public enum ConvosSDK {
     public final class Convos {
         private let authService: AuthServiceProtocol
         private let messagingService: any MessagingServiceProtocol
 
-        public static let shared: Convos = .init(authService: TurnkeyAuthService())
-        public static let mock: Convos = .init(authService: PasskeyAuthService())
+        public var databaseWriter: any DatabaseWriter {
+            DatabaseManager.shared.dbWriter
+        }
 
-        private init(authService: AuthServiceProtocol) {
+        public var databaseReader: any DatabaseReader {
+            DatabaseManager.shared.dbReader
+        }
+
+        static func sdk(authService: AuthServiceProtocol) -> Convos {
+            let databaseWriter = DatabaseManager.shared.dbWriter
+            let messagingService = MessagingService(authService: authService,
+                                                    databaseWriter: databaseWriter)
+            return .init(authService: authService,
+                         messagingService: messagingService)
+        }
+
+        private init(authService: AuthServiceProtocol,
+                     messagingService: MessagingServiceProtocol) {
             self.authService = authService
-            self.messagingService = MessagingService(authService: authService)
+            self.messagingService = messagingService
         }
 
         public var authState: AnyPublisher<AuthServiceState, Never> {

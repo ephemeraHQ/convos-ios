@@ -28,8 +28,8 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
                 switch message.kind {
                 case .text:
                     return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 36))
-                case let .image(_, isLocallyStored: isDownloaded):
-                    return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: isDownloaded ? 120 : 80))
+                case .attachment:
+                    return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 120.0))
                 }
             case .date:
                 return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 18))
@@ -135,9 +135,9 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         attributes.transform = attributes
             .transform
             .concatenating(
-                .init(rotationAngle: message.type == .incoming ? -0.05 : 0.05)
+                .init(rotationAngle: message.source == .incoming ? -0.05 : 0.05)
             )
-        attributes.center.x += (message.type == .incoming ? -20 : 20)
+        attributes.center.x += (message.source == .incoming ? -20 : 20)
         attributes.center.y += 40
     }
 

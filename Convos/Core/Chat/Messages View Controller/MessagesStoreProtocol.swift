@@ -11,5 +11,5 @@ protocol MessagesStoreProtocol {
     var updates: AnyPublisher<MessagingServiceUpdate, Never> { get }
     func loadInitialMessages() async -> [MessagesCollectionSection]
     func loadPreviousMessages() async -> [MessagesCollectionSection]
-    func sendMessage(_ data: Message.Kind) async -> [MessagesCollectionSection]
+    func sendMessage(_ data: MessageKind) async -> [MessagesCollectionSection]
 }

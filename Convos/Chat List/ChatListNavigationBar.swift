@@ -1,30 +1,31 @@
 import SwiftUI
 
 struct ChatListNavigationBar: View {
-    let currentIdentity: CTUser
-    let onIdentityTap: () -> Void
-    let onQRTap: () -> Void
-    let onWalletTap: () -> Void
-    let onComposeTap: () -> Void
+    @State var userState: UserState
+
+    let signOut: () -> Void
 
     var body: some View {
         HStack(spacing: 16) {
-            // Identity selector button
-            Button {
-                onIdentityTap()
+            Menu {
+                Button(role: .destructive) {
+                    signOut()
+                } label: {
+                    Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
+                }
             } label: {
                 HStack(spacing: 8) {
-                    AsyncImage(url: currentIdentity.avatarURL) { image in
+                    AsyncImage(url: userState.currentUser?.profile.avatarURL) { image in
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                     } placeholder: {
-                        Color(.systemGray5)
+                        MonogramView(name: userState.currentUser?.profile.name ?? "")
                     }
                     .frame(width: 32, height: 32)
                     .clipShape(Circle())
 
-                    Text(currentIdentity.username)
+                    Text(userState.currentUser?.profile.name ?? "")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.primary)
 
@@ -33,23 +34,24 @@ struct ChatListNavigationBar: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .buttonStyle(PlainButtonStyle())
 
             Spacer()
 
             // Action buttons
             HStack(spacing: 20) {
-//                Button(action: onQRTap) {
-//                    Image(systemName: "qrcode")
-//                        .font(.system(size: 20))
-//                }
-//
-//                Button(action: onWalletTap) {
-//                    Image(systemName: "creditcard")
-//                        .font(.system(size: 20))
-//                }
+                //                Button(action: onQRTap) {
+                //                    Image(systemName: "qrcode")
+                //                        .font(.system(size: 20))
+                //                }
+                //
+                //                Button(action: onWalletTap) {
+                //                    Image(systemName: "creditcard")
+                //                        .font(.system(size: 20))
+                //                }
 
-                Button(action: onComposeTap) {
+                Button {
+                    // composer
+                } label: {
                     Image(systemName: "square.and.pencil")
                         .font(.system(size: 20))
                 }
@@ -70,17 +72,17 @@ struct ChatListNavigationBar: View {
 }
 
 // swiftlint:disable force_unwrapping
-#Preview {
-    ChatListNavigationBar(
-        currentIdentity: CTUser(
-            id: "preview",
-            username: "preview.eth",
-            avatarURL: URL(string: "https://picsum.photos/200")!
-        ),
-        onIdentityTap: {},
-        onQRTap: {},
-        onWalletTap: {},
-        onComposeTap: {}
-    )
-}
+//#Preview {
+//    ChatListNavigationBar(
+//        currentIdentity: CTUser(
+//            id: "preview",
+//            username: "preview.eth",
+//            avatarURL: URL(string: "https://picsum.photos/200")!
+//        ),
+//        onIdentityTap: {},
+//        onQRTap: {},
+//        onWalletTap: {},
+//        onComposeTap: {}
+//    )
+//}
 // swiftlint:enable force_unwrapping

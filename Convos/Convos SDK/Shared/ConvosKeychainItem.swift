@@ -7,9 +7,7 @@ extension KeychainItemProtocol {
 }
 
 enum ConvosKeychainItem: String, KeychainItemProtocol {
-    case jwt // temporary backend
     case convosJwt // convos backend
-    case xmtpDatabaseKey
 
     var account: String {
         return rawValue

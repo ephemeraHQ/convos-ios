@@ -1,6 +1,6 @@
 import Foundation
 
-struct MessageReaction: Identifiable {
+struct MessageReactionChoice: Identifiable {
     var id: String {
         emoji
     }

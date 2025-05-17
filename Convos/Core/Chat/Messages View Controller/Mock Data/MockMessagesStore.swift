@@ -13,12 +13,12 @@ final class MockMessagesStore: MessagesStoreProtocol {
             .eraseToAnyPublisher()
     }
 
-    private let currentUser: User
+    private let currentUser: MockUser
 
     let messagingService: MockMessagesService
 
     init() {
-        self.currentUser = User(id: "0", name: "You")
+        self.currentUser = MockUser(name: "You")
         self.messagingService = MockMessagesService(currentUser: currentUser)
     }
 
@@ -32,7 +32,7 @@ final class MockMessagesStore: MessagesStoreProtocol {
         return mapMessagesToSections(messages: messages)
     }
 
-    func sendMessage(_ kind: Message.Kind) async -> [MessagesCollectionSection] {
+    func sendMessage(_ kind: MessageKind) async -> [MessagesCollectionSection] {
         switch kind {
         case .text(let string):
             if let messages = try? await self.messagingService.sendMessage(to: "", content: string) {
@@ -50,14 +50,19 @@ final class MockMessagesStore: MessagesStoreProtocol {
                 lhs.timestamp < rhs.timestamp
             })
             .map { rawMessage in
-                let owner: User = User(id: rawMessage.sender.id,
-                                       name: rawMessage.sender.name)
-                let message = Message(id: rawMessage.id,
-                                      date: rawMessage.timestamp,
-                                      kind: .text(rawMessage.content),
-                                      owner: owner,
-                                      type: owner.id == self.currentUser.id ? .outgoing : .incoming,
-                                      status: .delivered)
+                let message = Message(
+                    id: rawMessage.id,
+                    conversationId: "",
+                    sender: .init(
+                        id: UUID().uuidString,
+                        name: rawMessage.sender.profile.name,
+                        username: rawMessage.sender.profile.username,
+                        avatar: rawMessage.sender.profile.avatarURL?.absoluteString
+                    ),
+                    date: rawMessage.timestamp,
+                    kind: .text(rawMessage.content),
+                    status: .published
+                )
                 return MessagesCollectionCell.message(message, bubbleType: .normal)
             }
         let sections = [MessagesCollectionSection(id: 0, title: "", cells: cells)]

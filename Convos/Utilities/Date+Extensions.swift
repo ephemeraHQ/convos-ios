@@ -10,7 +10,9 @@ extension Date {
         let week   = 7 * day
 
         switch seconds {
-        case 0..<minute:
+        case 0..<30:
+            return "now"
+        case 30..<minute:
             return "\(seconds)s"
         case minute..<hour:
             return "\(seconds / minute)m"

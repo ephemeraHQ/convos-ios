@@ -2,18 +2,6 @@ import DifferenceKit
 import Foundation
 import UIKit
 
-enum MessageType: Hashable {
-    case incoming, outgoing
-
-    var isIncoming: Bool {
-        self == .incoming
-    }
-}
-
-enum MessageStatus: Hashable {
-    case sent, delivered, read
-}
-
 struct DateGroup: Hashable {
     var id: UUID
     var date: Date
@@ -40,7 +28,7 @@ extension DateGroup: Differentiable {
 struct MessageGroup: Hashable {
     var id: UUID
     var title: String
-    var type: MessageType
+    var source: MessageSource
 }
 
 extension MessageGroup: Differentiable {
@@ -62,36 +50,6 @@ enum ImageSource: Hashable {
         case .imageURL: return false
         }
     }
-}
-
-struct User: Hashable {
-    let id: String
-    let name: String
-    let username: String? = nil
-    let displayName: String? = nil
-    let walletAddress: String? = nil
-    let chainId: Int64? = nil
-    let avatarURL: URL? = nil
-}
-
-extension User: ConvosSDK.User {
-    func sign(message: String) async throws -> Data? {
-        nil
-    }
-}
-
-struct Message: Hashable {
-    public enum Kind: Hashable {
-        case text(String)
-        case image(ImageSource, isLocallyStored: Bool)
-    }
-
-    var id: String
-    var date: Date
-    var kind: Kind
-    var owner: User
-    var type: MessageType
-    var status: MessageStatus = .sent
 }
 
 extension Message: Differentiable {

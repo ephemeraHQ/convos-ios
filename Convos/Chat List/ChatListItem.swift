@@ -1,90 +1,87 @@
 import SwiftUI
 
+extension Conversation {
+    var title: String {
+        switch kind {
+        case .dm:
+            return otherMember?.displayName ?? ""
+        case .group:
+            return topic
+        }
+    }
+}
+
 struct ChatListItem: View {
-    let conversationItem: ConversationItem
-    let onTap: () -> Void
-    let onPin: () -> Void
-    let onToggleRead: () -> Void
-    let onToggleMute: () -> Void
-    let onDelete: () -> Void
+    let conversation: Conversation
 
     @State private var isPinning: Bool = false
-    @State private var otherParticipant: ConvosSDK.User?
-    @State private var lastMessage: ConvosSDK.RawMessageType?
 
     var body: some View {
-        Button {
-            onTap()
-        } label: {
-            HStack(spacing: 12) {
-                // Avatar
-                AsyncImage(url: otherParticipant?.avatarURL) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Color(.systemGray5)
-                }
-                .frame(width: 52, height: 52)
-                .clipShape(Circle())
+        HStack(spacing: 12.0) {
+            AsyncImage(url: conversation.creator.avatarURL) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                MonogramView(name: conversation.title)
+            }
+            .frame(width: 52.0, height: 52.0)
+            .clipShape(Circle())
 
-                // Chat info
-                VStack(alignment: .leading, spacing: 4) {
-                    // Username
-                    Text(otherParticipant?.username ?? otherParticipant?.walletAddress ?? "Unknown")
-                        .font(.system(size: 17, weight: conversationItem.conversation.isUnread ? .semibold : .regular))
-                        .foregroundColor(.primary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(conversation.title)
+                    .font(.system(size: 17.0, weight: conversation.isUnread ? .semibold : .regular))
+                    .foregroundColor(.primary)
+                    .truncationMode(.tail)
+                    .lineLimit(1)
 
-                    // Message preview with timestamp
-                    HStack {
-                        if let message = lastMessage {
-                            HStack(spacing: 4) {
-                                Text(message.timestamp.relativeShort()).textCase(.lowercase)
-                                Text("•")
-                                Text(message.content)
-                            }
-                            .font(.system(size: 15))
-                            .foregroundColor(conversationItem.conversation.isUnread ? .primary : .secondary)
-                            .lineLimit(1)
+                HStack {
+                    if let message = conversation.lastMessage {
+                        HStack(spacing: 4) {
+                            RelativeDateLabel(date: message.createdAt)
+                            Text("•")
+                            Text(message.text)
+                        }
+                        .font(.system(size: 15))
+                        .foregroundColor(conversation.isUnread ? .primary : .secondary)
+                        .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    // Status indicators
+                    HStack(spacing: 4) {
+                        if conversation.isMuted {
+                            Image(systemName: "bell.slash.fill")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
                         }
 
-                        Spacer()
-
-                        // Status indicators
-                        HStack(spacing: 4) {
-                            if conversationItem.conversation.isMuted {
-                                Image(systemName: "bell.slash.fill")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.secondary)
-                            }
-
-                            if conversationItem.conversation.isUnread {
-                                Circle()
-                                    .fill(Color.black)
-                                    .frame(width: 12, height: 12)
-                            }
+                        if conversation.isUnread {
+                            Circle()
+                                .fill(Color.black)
+                                .frame(width: 12, height: 12)
                         }
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.systemBackground))
-            .contentShape(Rectangle())
         }
-        .buttonStyle(ChatListItemButtonStyle())
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.systemBackground))
+        .contentShape(Rectangle())
         .scaleEffect(isPinning ? 0.95 : 1.0)
         .opacity(isPinning ? 0.8 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPinning)
         .contextMenu {
-            if conversationItem.conversation.isPinned {
+            if conversation.isPinned {
                 Button("Unpin") {
                     withAnimation {
                         isPinning = true
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        onPin()
+//                        onPin()
                         withAnimation {
                             isPinning = false
                         }
@@ -96,7 +93,7 @@ struct ChatListItem: View {
                         isPinning = true
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        onPin()
+//                        onPin()
                         withAnimation {
                             isPinning = false
                         }
@@ -104,18 +101,18 @@ struct ChatListItem: View {
                 }
             }
 
-            Button(conversationItem.conversation.isUnread ? "Mark as Read" : "Mark as Unread") {
-                onToggleRead()
+            Button(conversation.isUnread ? "Mark as Read" : "Mark as Unread") {
+//                onToggleRead()
             }
 
-            Button(conversationItem.conversation.isMuted ? "Unmute" : "Mute") {
-                onToggleMute()
+            Button(conversation.isMuted ? "Unmute" : "Mute") {
+//                onToggleMute()
             }
 
             Divider()
 
             Button("Delete", role: .destructive) {
-                onDelete()
+//                onDelete()
             }
         }
     }
