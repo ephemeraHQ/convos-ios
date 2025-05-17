@@ -38,7 +38,7 @@ struct ChatListItem: View {
                 HStack {
                     if let message = conversation.lastMessage {
                         HStack(spacing: 4) {
-                            Text(message.createdAt.relativeShort()).textCase(.lowercase)
+                            RelativeDateLabel(date: message.createdAt)
                             Text("•")
                             Text(message.text)
                         }
