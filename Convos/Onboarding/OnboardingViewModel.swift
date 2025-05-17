@@ -17,6 +17,7 @@ final class OnboardingViewModel {
     var isEditingContactCard: Bool = true
     var authenticationError: String?
     var isAuthorized: Bool = false
+    private let minimumNameLength: Int = 3
 
     init(convos: ConvosSDK.Convos) {
         self.convos = convos
@@ -77,6 +78,7 @@ final class OnboardingViewModel {
             nameError = nil
         }
         nameIsValid = (!name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-            nameContainsOnlyLettersSpacesAndNumbers)
+                       nameContainsOnlyLettersSpacesAndNumbers &&
+                       name.count >= minimumNameLength)
     }
 }

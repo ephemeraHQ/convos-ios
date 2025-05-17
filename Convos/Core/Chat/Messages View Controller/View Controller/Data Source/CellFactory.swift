@@ -36,7 +36,7 @@ final class CellFactory {
                 in: collectionView,
                 messageId: message.id,
                 for: indexPath,
-                profile: message.userProfile,
+                profile: message.sender,
                 source: .imageURL(imageURL),
                 messageType: message.source
             )
@@ -48,7 +48,7 @@ final class CellFactory {
         for indexPath: IndexPath,
         text: String,
         bubbleType: MessagesCollectionCell.BubbleType,
-        messageType: Message.Source
+        messageType: MessageSource
     ) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TextMessageCollectionCell.reuseIdentifier,
                                                       for: indexPath) as! TextMessageCollectionCell
@@ -62,7 +62,7 @@ final class CellFactory {
         for indexPath: IndexPath,
         profile: Profile,
         source: ImageSource,
-        messageType: Message.Source
+        messageType: MessageSource
     ) -> ImageCollectionCell {
         let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: ImageCollectionCell.reuseIdentifier,

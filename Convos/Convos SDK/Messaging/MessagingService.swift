@@ -26,44 +26,6 @@ private enum MessagingServiceAction {
     case backendAuthorized
 }
 
-extension XMTPiOS.Conversation: ConvosSDK.ConversationType {
-    public var lastMessage: (any ConvosSDK.RawMessageType)? {
-        get async throws {
-            nil
-        }
-    }
-
-    public var otherParticipant: (any ConvosSDK.User)? {
-        get async throws {
-            nil
-        }
-    }
-
-    public var isPinned: Bool {
-        false
-    }
-
-    public var isUnread: Bool {
-        false
-    }
-
-    public var isRequest: Bool {
-        false
-    }
-
-    public var isMuted: Bool {
-        false
-    }
-
-    public var timestamp: Date {
-        createdAt
-    }
-
-    public var amount: Double? {
-        nil
-    }
-}
-
 final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private let authService: ConvosSDK.AuthServiceProtocol
     private let userWriter: UserWriter
@@ -106,32 +68,6 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
     func stop() async {
         await processAction(.stop)
-    }
-
-    // MARK: - Conversations
-
-    func conversations() async throws -> [ConvosSDK.ConversationType] {
-        guard let xmtpClient else { return [] }
-        return try await xmtpClient.conversations.list()
-    }
-
-    func conversationsStream() async -> AsyncThrowingStream<any ConvosSDK.ConversationType, any Error> {
-        guard let xmtpClient else { return .init {
-            nil
-        } }
-        let baseStream = await xmtpClient.conversations.stream()
-        return AsyncThrowingStream { continuation in
-            Task {
-                do {
-                    for try await conversation in baseStream {
-                        continuation.yield(conversation as any ConvosSDK.ConversationType)
-                    }
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
-            }
-        }
     }
 
     // MARK: - Messages

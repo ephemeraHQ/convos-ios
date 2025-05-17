@@ -32,7 +32,7 @@ final class MockMessagesStore: MessagesStoreProtocol {
         return mapMessagesToSections(messages: messages)
     }
 
-    func sendMessage(_ kind: Message.Kind) async -> [MessagesCollectionSection] {
+    func sendMessage(_ kind: MessageKind) async -> [MessagesCollectionSection] {
         switch kind {
         case .text(let string):
             if let messages = try? await self.messagingService.sendMessage(to: "", content: string) {
@@ -52,13 +52,13 @@ final class MockMessagesStore: MessagesStoreProtocol {
             .map { rawMessage in
                 let message = Message(
                     id: rawMessage.id,
-                    userId: rawMessage.sender.id,
-                    userProfile: .init(
+                    conversationId: "",
+                    sender: .init(
                         id: UUID().uuidString,
-                        userId: rawMessage.sender.id,
                         name: rawMessage.sender.profile.name,
                         username: rawMessage.sender.profile.username,
-                        avatar: rawMessage.sender.profile.avatarURL?.absoluteString
+                        avatar: rawMessage.sender.profile.avatarURL?.absoluteString,
+                        isCurrentUser: rawMessage.sender.id == self.currentUser.id
                     ),
                     date: rawMessage.timestamp,
                     kind: .text(rawMessage.content),

@@ -1,7 +1,19 @@
 import SwiftUI
 
+extension Conversation {
+    var title: String {
+        switch kind {
+        case .dm:
+            return otherMember?.name ?? "Unknown"
+        case .group:
+            return topic
+        }
+    }
+}
+
 struct ChatListItem: View {
-    let conversationItem: Conversation
+    let conversation: Conversation
+
     let onTap: () -> Void
     let onPin: () -> Void
     let onToggleRead: () -> Void
@@ -9,42 +21,37 @@ struct ChatListItem: View {
     let onDelete: () -> Void
 
     @State private var isPinning: Bool = false
-    @State private var otherParticipant: ConvosSDK.User?
-    @State private var lastMessage: ConvosSDK.RawMessageType?
 
     var body: some View {
         Button {
             onTap()
         } label: {
-            HStack(spacing: 12) {
-                // Avatar
-                AsyncImage(url: otherParticipant?.profile.avatarURL) { image in
+            HStack(spacing: 12.0) {
+                AsyncImage(url: conversation.creator.avatarURL) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    Color(.systemGray5)
+                    MonogramView(name: conversation.title)
                 }
-                .frame(width: 52, height: 52)
+                .frame(width: 52.0, height: 52.0)
                 .clipShape(Circle())
 
-                // Chat info
                 VStack(alignment: .leading, spacing: 4) {
-                    // Username
-                    Text(otherParticipant?.profile.username ?? "Unknown")
-                        .font(.system(size: 17, weight: conversationItem.isUnread ? .semibold : .regular))
+                    Text(conversation.title)
+                        .font(.system(size: 17.0, weight: conversation.isUnread ? .semibold : .regular))
                         .foregroundColor(.primary)
 
-                    // Message preview with timestamp
                     HStack {
-                        if let message = lastMessage {
+                        if let message = conversation.lastMessage {
                             HStack(spacing: 4) {
-                                Text(message.timestamp.relativeShort()).textCase(.lowercase)
-                                Text("•")
-                                Text(message.content)
+                                Text(message)
+//                                Text(message.timestamp.relativeShort()).textCase(.lowercase)
+//                                Text("•")
+//                                Text(message.content)
                             }
                             .font(.system(size: 15))
-                            .foregroundColor(conversationItem.isUnread ? .primary : .secondary)
+                            .foregroundColor(conversation.isUnread ? .primary : .secondary)
                             .lineLimit(1)
                         }
 
@@ -52,13 +59,13 @@ struct ChatListItem: View {
 
                         // Status indicators
                         HStack(spacing: 4) {
-                            if conversationItem.isMuted {
+                            if conversation.isMuted {
                                 Image(systemName: "bell.slash.fill")
                                     .font(.system(size: 13))
                                     .foregroundColor(.secondary)
                             }
 
-                            if conversationItem.isUnread {
+                            if conversation.isUnread {
                                 Circle()
                                     .fill(Color.black)
                                     .frame(width: 12, height: 12)
@@ -78,7 +85,7 @@ struct ChatListItem: View {
         .opacity(isPinning ? 0.8 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPinning)
         .contextMenu {
-            if conversationItem.isPinned {
+            if conversation.isPinned {
                 Button("Unpin") {
                     withAnimation {
                         isPinning = true
@@ -104,11 +111,11 @@ struct ChatListItem: View {
                 }
             }
 
-            Button(conversationItem.isUnread ? "Mark as Read" : "Mark as Unread") {
+            Button(conversation.isUnread ? "Mark as Read" : "Mark as Unread") {
                 onToggleRead()
             }
 
-            Button(conversationItem.isMuted ? "Unmute" : "Mute") {
+            Button(conversation.isMuted ? "Unmute" : "Mute") {
                 onToggleMute()
             }
 

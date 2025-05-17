@@ -30,7 +30,7 @@ class MessageReactionMenuViewModel {
         _selectedEmojiPublisher.eraseToAnyPublisher()
     }
 
-    var reactions: [MessageReaction] = [
+    var reactions: [MessageReactionChoice] = [
         .init(emoji: "❤️", isSelected: false),
         .init(emoji: "👍", isSelected: false),
         .init(emoji: "👎", isSelected: false),
@@ -43,7 +43,7 @@ class MessageReactionMenuViewModel {
         showingEmojiPicker = isCollapsed && selectedEmoji == nil
     }
 
-    func add(reaction: MessageReaction) {
+    func add(reaction: MessageReactionChoice) {
         selectedEmoji = reaction.emoji
     }
 

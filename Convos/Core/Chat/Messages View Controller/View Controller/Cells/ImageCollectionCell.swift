@@ -8,7 +8,7 @@ class ImageCollectionCell: UICollectionViewCell {
     private var imageAspectRatio: CGFloat = 1.0 // width / height
     private var currentImageURL: URL?
     private var imageLoadTask: Task<Void, Never>?
-    private var messageType: Message.Source?
+    private var messageType: MessageSource?
     private var leadingConstraint: NSLayoutConstraint?
     private var trailingConstraint: NSLayoutConstraint?
     private var dynamicConstraint: NSLayoutConstraint?
@@ -71,7 +71,7 @@ class ImageCollectionCell: UICollectionViewCell {
         ])
     }
 
-    private func updateAlignment(for messageType: Message.Source) {
+    private func updateAlignment(for messageType: MessageSource) {
         // Deactivate all alignment constraints
         leadingConstraint?.isActive = false
         trailingConstraint?.isActive = false
@@ -109,7 +109,7 @@ class ImageCollectionCell: UICollectionViewCell {
 
     // MARK: - Public Setup
 
-    func setup(with source: ImageSource, messageType: Message.Source) {
+    func setup(with source: ImageSource, messageType: MessageSource) {
         self.messageType = messageType
         updateAlignment(for: messageType)
 

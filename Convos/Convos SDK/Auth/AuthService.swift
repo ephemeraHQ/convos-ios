@@ -163,7 +163,7 @@ class MockAuthService: ConvosSDK.AuthServiceProtocol {
     }
 
     func register(displayName: String) async throws {
-        let mockUser = try MockUser(name: displayName)
+        let mockUser = MockUser(name: displayName)
         let encoder = JSONEncoder()
         let data = try encoder.encode(mockUser)
         try keychain.saveData(data, for: .mockUser)

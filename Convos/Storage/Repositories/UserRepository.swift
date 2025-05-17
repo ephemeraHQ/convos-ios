@@ -36,7 +36,7 @@ fileprivate extension Database {
         guard let session = try Session.fetchOne(self) else { return nil }
 
         guard let dbUser = try DBUser.fetchOne(self, key: session.currentUserId) else { return nil }
-        guard let profile = try Profile
+        guard let userProfile = try UserProfile
             .filter(Column("userId") == dbUser.id)
             .fetchOne(self) else { return nil }
 
@@ -44,6 +44,7 @@ fileprivate extension Database {
             .filter(Column("userId") == dbUser.id)
             .fetchAll(self)
 
+        let profile = Profile(from: userProfile)
         return User(id: dbUser.id, identities: identities, profile: profile)
     }
 }

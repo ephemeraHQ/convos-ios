@@ -68,11 +68,11 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
 
     private let currentUser: MockUser
     let otherUsers: [MockUser] = [
-        try! MockUser(name: "Emily Dickinson"),
-        try! MockUser(name: "William Shakespeare"),
-        try! MockUser(name: "Virginia Woolf"),
-        try! MockUser(name: "James Joyce"),
-        try! MockUser(name: "Oscar Wilde")
+        MockUser(name: "Emily Dickinson"),
+        MockUser(name: "William Shakespeare"),
+        MockUser(name: "Virginia Woolf"),
+        MockUser(name: "James Joyce"),
+        MockUser(name: "Oscar Wilde")
     ]
 
     private var allUsers: [MockUser] {

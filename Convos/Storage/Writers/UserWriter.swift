@@ -21,12 +21,11 @@ class UserWriter: UserWriterProtocol {
                      xmtpId: $0.xmtpId)
         }
         try await databaseWriter.write { db in
-            let existingProfile = try Profile
+            let existingProfile = try UserProfile
                 .filter(Column("userId") == user.id)
                 .fetchOne(db)
 
-            let profile = existingProfile ?? Profile(
-                id: UUID().uuidString,
+            let profile = existingProfile ?? UserProfile(
                 userId: user.id,
                 name: "",
                 username: "",
@@ -59,11 +58,10 @@ class UserWriter: UserWriterProtocol {
                      walletAddress: user.identity.turnkeyAddress,
                      xmtpId: user.identity.xmtpId)
         ]
-        let profile: Profile = .init(id: user.profile.id,
-                                     userId: user.id,
-                                     name: user.profile.name,
-                                     username: user.profile.username,
-                                     avatar: user.profile.avatar)
+        let profile: UserProfile = .init(userId: user.id,
+                                         name: user.profile.name,
+                                         username: user.profile.username,
+                                         avatar: user.profile.avatar)
         let dbUser = DBUser(id: user.id)
         try await databaseWriter.write { db in
             try dbUser.save(db)

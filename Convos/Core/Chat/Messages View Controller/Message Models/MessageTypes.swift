@@ -28,7 +28,7 @@ extension DateGroup: Differentiable {
 struct MessageGroup: Hashable {
     var id: UUID
     var title: String
-    var source: Message.Source
+    var source: MessageSource
 }
 
 extension MessageGroup: Differentiable {

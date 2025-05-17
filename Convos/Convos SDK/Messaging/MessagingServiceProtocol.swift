@@ -32,9 +32,6 @@ public extension ConvosSDK {
         func start() async throws
         func stop() async
 
-        func conversations() async throws -> [ConversationType]
-        func conversationsStream() async -> AsyncThrowingStream<any ConversationType, any Error>
-
         func sendMessage(to address: String, content: String) async throws -> [any RawMessageType]
         func messages(for address: String) -> AnyPublisher<[any RawMessageType], Never>
         func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never>

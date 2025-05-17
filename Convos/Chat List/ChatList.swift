@@ -44,7 +44,7 @@ struct ChatListView: View {
                             // Regular chats
                             ForEach(conversationsState.unpinnedConversations) { conversation in
                                 ChatListItem(
-                                    conversationItem: conversation,
+                                    conversation: conversation,
                                     onTap: {
                                         print("tapping on regular chat")
                                         selectedConversation = conversation

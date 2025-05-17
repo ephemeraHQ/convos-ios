@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 final class DatabaseManager {
-    static let shared = DatabaseManager()
+    static let shared: DatabaseManager = DatabaseManager()
 
     let dbPool: DatabasePool
 
@@ -57,17 +57,95 @@ final class DatabaseManager {
                 t.column("xmtpId", .text)
             }
 
-            try db.create(table: "profile") { t in
-                t.column("id", .text).primaryKey()
+            try db.create(table: "userProfile") { t in
                 t.column("userId", .text)
                     .notNull()
                     .unique()
                     .references("user", onDelete: .cascade)
+                    .primaryKey() // userId
                 t.column("name", .text).notNull()
                 t.column("username", .text).notNull()
                 t.column("avatar", .text)
             }
-            
+
+            try db.create(table: "memberProfile") { t in
+                t.column("inboxId", .text).primaryKey()
+                t.column("name", .text).notNull()
+                t.column("username", .text).notNull()
+                t.column("avatar", .text)
+                t.column("isCurrentUser", .boolean).notNull().defaults(to: false)
+            }
+
+            try db.create(table: "conversation") { t in
+                t.column("id", .text).primaryKey()
+                t.column("isCreator", .boolean).notNull().defaults(to: false)
+                t.column("kind", .text).notNull() // store as JSON string
+                t.column("consent", .text).notNull() // store enum as string
+                t.column("createdAt", .datetime).notNull()
+                t.column("topic", .text).notNull()
+                t.column("creatorId", .text).notNull()
+                    .references("memberProfile", onDelete: .cascade)
+                t.column("memberIds", .text).notNull() // store as JSON string
+                t.column("lastMessage", .text)
+                t.column("imageURLString", .text)
+            }
+
+            try db.create(table: "member") { t in
+                t.column("inboxId", .text).notNull()
+                t.column("conversationId", .text)
+                    .references("conversation", onDelete: .none)
+                    .notNull()
+                t.column("role", .text).notNull() // store enum as string
+                t.column("consent", .text).notNull() // store enum as string
+                t.primaryKey(["inboxId", "conversationId"])
+            }
+
+            try db.create(table: "conversationLocalState") { t in
+                t.column("id", .text)
+                    .references("conversation")
+                    .primaryKey() // conversation.id
+                t.column("isPinned", .boolean).notNull().defaults(to: false)
+                t.column("isUnread", .boolean).notNull().defaults(to: false)
+                t.column("isMuted", .boolean).notNull().defaults(to: false)
+            }
+
+            try db.create(table: "message") { t in
+                t.column("id", .text).primaryKey()
+                t.column("conversationId", .text).notNull()
+                    .references("conversation", onDelete: .cascade)
+                t.column("sender", .text).notNull() // store Profile as JSON string
+                t.column("date", .datetime).notNull()
+                t.column("kind", .text).notNull() // store as JSON string
+                t.column("source", .text).notNull() // store enum as string
+                t.column("status", .text).notNull() // store enum as string
+                t.column("sourceMessageId", .text) // nullable, for future extensibility
+            }
+
+            try db.create(table: "messageReply") { t in
+                t.column("id", .text).primaryKey()
+                t.column("conversationId", .text).notNull()
+                    .references("conversation", onDelete: .cascade)
+                t.column("sender", .text).notNull() // store Profile as JSON string
+                t.column("date", .datetime).notNull()
+                t.column("kind", .text).notNull() // store as JSON string
+                t.column("source", .text).notNull() // store enum as string
+                t.column("status", .text).notNull() // store enum as string
+                t.column("sourceMessageId", .text).notNull().references("message", column: "id", onDelete: .cascade)
+            }
+
+            try db.create(table: "messageReaction") { t in
+                t.column("id", .text).primaryKey()
+                t.column("conversationId", .text)
+                    .notNull()
+                    .references("conversation", onDelete: .cascade)
+                t.column("sender", .text).notNull() // store Profile as JSON string
+                t.column("date", .datetime).notNull()
+                t.column("source", .text).notNull() // store enum as string
+                t.column("status", .text).notNull() // store enum as string
+                t.column("sourceMessageId", .text).notNull()
+                    .references("message", column: "id", onDelete: .cascade)
+            }
+
             try db.create(table: "session") { t in
                 t.column("id", .integer).primaryKey()
                 t.column("currentUserId", .text).notNull()
