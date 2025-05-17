@@ -9,7 +9,6 @@ extension XMTPiOS.DecodedMessage {
 
     func dbRepresentation(conversationId: String,
                           sender: Profile) throws -> any MessageType {
-        let source: MessageSource = sender.isCurrentUser ? .outgoing : .incoming
         let status: MessageStatus = deliveryStatus.status
 
         let content = try content() as Any
@@ -25,7 +24,6 @@ extension XMTPiOS.DecodedMessage {
                            sender: sender,
                            date: sentAt,
                            kind: kind,
-                           source: source,
                            status: status)
         case ContentTypeReply:
             guard let contentReply = content as? Reply else {
@@ -56,7 +54,6 @@ extension XMTPiOS.DecodedMessage {
                                 sender: sender,
                                 date: sentAt,
                                 kind: kind,
-                                source: source,
                                 status: status,
                                 sourceMessageId: sourceMessageId)
         case ContentTypeReaction, ContentTypeReactionV2:
@@ -67,7 +64,6 @@ extension XMTPiOS.DecodedMessage {
                                    conversationId: conversationId,
                                    sender: sender,
                                    date: sentAt,
-                                   source: source,
                                    status: status,
                                    sourceMessageId: reaction.reference,
                                    emoji: reaction.emoji)
@@ -80,7 +76,6 @@ extension XMTPiOS.DecodedMessage {
                            sender: sender,
                            date: sentAt,
                            kind: .attachment(URL(string: "http://google.com")!),
-                           source: source,
                            status: status)
         case ContentTypeAttachment:
             throw DecodedMessageDBRepresentationError.unsupportedContentType

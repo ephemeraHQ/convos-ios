@@ -2,7 +2,8 @@ import Foundation
 import GRDB
 
 protocol UserWriterProtocol {
-    func storeUser(_ user: ConvosAPIClient.UserResponse) async throws
+    func storeUser(_ user: ConvosAPIClient.UserResponse,
+                   profile: ConvosAPIClient.ProfileResponse) async throws
     func storeUser(_ user: ConvosAPIClient.CreatedUserResponse) async throws
 }
 
@@ -13,7 +14,7 @@ class UserWriter: UserWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    func storeUser(_ user: ConvosAPIClient.UserResponse) async throws {
+    func storeUser(_ user: ConvosAPIClient.UserResponse, profile: ConvosAPIClient.ProfileResponse) async throws {
         let identities: [Identity] = user.identities.map {
             Identity(id: $0.id,
                      userId: user.id,
@@ -21,15 +22,11 @@ class UserWriter: UserWriterProtocol {
                      xmtpId: $0.xmtpId)
         }
         try await databaseWriter.write { db in
-            let existingProfile = try UserProfile
-                .filter(Column("userId") == user.id)
-                .fetchOne(db)
-
-            let profile = existingProfile ?? UserProfile(
+            let profile = UserProfile(
                 userId: user.id,
-                name: "",
-                username: "",
-                avatar: nil
+                name: profile.name,
+                username: profile.username,
+                avatar: profile.avatar
             )
 
             let dbUser = DBUser(id: user.id)

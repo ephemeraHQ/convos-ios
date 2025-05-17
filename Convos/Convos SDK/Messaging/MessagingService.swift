@@ -52,11 +52,12 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
          databaseWriter: any DatabaseWriter) {
         self.authService = authService
         self.userWriter = UserWriter(databaseWriter: databaseWriter)
-        self.syncingManager = SyncingManager(databaseWriter: databaseWriter)
         guard let apiBaseURL = URL(string: Secrets.CONVOS_API_BASE_URL) else {
             fatalError("Failed constructing API base URL")
         }
         self.apiClient = .init(baseURL: apiBaseURL)
+        self.syncingManager = SyncingManager(databaseWriter: databaseWriter,
+                                             apiClient: apiClient)
         Task {
             await observeAuthState()
         }
@@ -263,9 +264,9 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                                             privateKey: privateKey)
             try await userWriter.storeUser(user)
         } else {
-            let user = try await apiClient.getUser()
-            Logger.info("Authenticated with Convos backend: \(authResult) user: \(user)")
-            try await userWriter.storeUser(user)
+            async let user = try apiClient.getUser()
+            async let profile = try apiClient.getProfile(inboxId: client.inboxID)
+            try await userWriter.storeUser(await user, profile: await profile)
         }
         await processAction(.backendAuthorized)
     }

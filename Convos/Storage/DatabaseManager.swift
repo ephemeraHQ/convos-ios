@@ -73,7 +73,6 @@ final class DatabaseManager {
                 t.column("name", .text).notNull()
                 t.column("username", .text).notNull()
                 t.column("avatar", .text)
-                t.column("isCurrentUser", .boolean).notNull().defaults(to: false)
             }
 
             try db.create(table: "conversation") { t in
@@ -117,7 +116,6 @@ final class DatabaseManager {
                 t.column("sender", .text).notNull()
                 t.column("date", .datetime).notNull()
                 t.column("kind", .text).notNull()
-                t.column("source", .text).notNull()
                 t.column("status", .text).notNull()
                 t.column("sourceMessageId", .text)
             }
@@ -130,7 +128,6 @@ final class DatabaseManager {
                 t.column("sender", .text).notNull()
                 t.column("date", .datetime).notNull()
                 t.column("kind", .text).notNull()
-                t.column("source", .text).notNull()
                 t.column("status", .text).notNull()
                 t.column("sourceMessageId", .text).notNull().references("message", column: "id", onDelete: .cascade)
             }
@@ -142,7 +139,6 @@ final class DatabaseManager {
                     .references("conversation", onDelete: .cascade)
                 t.column("sender", .text).notNull()
                 t.column("date", .datetime).notNull()
-                t.column("source", .text).notNull()
                 t.column("status", .text).notNull()
                 t.column("sourceMessageId", .text).notNull()
                     .references("message", column: "id", onDelete: .cascade)

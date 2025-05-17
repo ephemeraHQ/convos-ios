@@ -34,21 +34,13 @@ struct Conversation: Codable, Hashable, Identifiable {
     let kind: ConversationKind
     let topic: String
     let members: [Profile]
+    let otherMember: Profile?
     let messages: [Message]
     let isPinned: Bool
     let isUnread: Bool
     let isMuted: Bool
     let lastMessage: MessagePreview?
     let imageURL: URL?
-
-    var otherMember: Profile? {
-        switch kind {
-        case .dm:
-            return members.first(where: { $0.id != creator.id })
-        case .group:
-            return nil
-        }
-    }
 }
 
 struct ConversationLocalState: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {

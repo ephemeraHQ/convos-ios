@@ -28,13 +28,19 @@ protocol MessageType: Codable, Identifiable, Hashable {
     var preview: String { get }
 }
 
+extension MessageType {
+    var source: MessageSource {
+        // TODO: Check this against a shared current user
+        .incoming
+    }
+}
+
 struct Message: MessageType, FetchableRecord, PersistableRecord {
     let id: String
     let conversationId: String
     let sender: Profile
     let date: Date
     let kind: MessageKind
-    let source: MessageSource
     let status: MessageStatus
 
     var preview: String {
@@ -53,7 +59,6 @@ struct MessageReply: MessageType, FetchableRecord, PersistableRecord {
     let sender: Profile
     let date: Date
     let kind: MessageKind
-    let source: MessageSource
     let status: MessageStatus
     let sourceMessageId: String
 
@@ -72,7 +77,6 @@ struct MessageReaction: MessageType, FetchableRecord, PersistableRecord {
     let conversationId: String
     let sender: Profile
     let date: Date
-    let source: MessageSource
     let status: MessageStatus
     let sourceMessageId: String
     let emoji: String

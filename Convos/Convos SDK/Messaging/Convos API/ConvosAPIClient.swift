@@ -72,7 +72,7 @@ final class ConvosAPIClient {
         return authResponse.token
     }
 
-    // MARK: - v1/users
+    // MARK: - Users
 
     func getUser() async throws -> UserResponse {
         let request = try authenticatedRequest(for: "v1/users/me")
@@ -81,8 +81,7 @@ final class ConvosAPIClient {
     }
 
     func createUser(_ requestBody: CreateUserRequest) async throws -> CreatedUserResponse {
-        var request = try authenticatedRequest(for: "v1/users")
-        request.httpMethod = "POST"
+        var request = try authenticatedRequest(for: "v1/users", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         Logger.info("Sending create user request with body: \(requestBody)")
         request.httpBody = try JSONEncoder().encode(requestBody)
@@ -94,6 +93,22 @@ final class ConvosAPIClient {
         let request = try authenticatedRequest(for: "v1/profiles/check/\(username)")
         let result: UsernameCheckResponse = try await performRequest(request)
         return result
+    }
+
+    // MARK: - Profiles
+
+    func getProfile(inboxId: String) async throws -> ProfileResponse {
+        let request = try authenticatedRequest(for: "v1/profiles/\(inboxId)")
+        let profile: ProfileResponse = try await performRequest(request)
+        return profile
+    }
+
+    func getProfiles(for inboxIds: [String]) async throws -> [ProfileResponse] {
+        var request = try authenticatedRequest(for: "v1/profiles/batch", method: "POST")
+        let body: [String: Any] = ["xmtpIds": inboxIds]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        return try await performRequest(request)
     }
 
     // MARK: - Private Helpers

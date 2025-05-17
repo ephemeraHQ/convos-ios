@@ -62,6 +62,16 @@ extension ConvosAPIClient {
     struct UsernameCheckResponse: Decodable {
         let taken: Bool
     }
+
+    struct ProfileResponse: Decodable {
+        let id: String
+        let name: String
+        let username: String
+        let description: String?
+        let avatar: String?
+        let xmtpId: String
+        let turnkeyAddress: String
+    }
 }
 
 extension ConvosAPIClient.CreateUserRequest.Device {

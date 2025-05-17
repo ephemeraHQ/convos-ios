@@ -44,18 +44,16 @@ class ConversationWriter: ConversationWriterProtocol {
             createdAt: conversation.createdAt,
             topic: conversation.topic,
             creatorId: try await conversation.creatorInboxId,
-            memberIds: dbMembers.map { $0.id },
+            memberIds: dbMembers.map { $0.inboxId },
             imageURLString: imageURLString,
             lastMessage: dbLastMessage
         )
 
-        let isCurrentUser = conversation.client.inboxID == dbConversation.creatorId
         let creatorProfile = MemberProfile(
             inboxId: dbConversation.creatorId,
             name: "",
             username: "",
             avatar: nil,
-            isCurrentUser: isCurrentUser
         )
 
         try await databaseWriter.write { db in

@@ -44,6 +44,8 @@ fileprivate extension Database {
             .filter(allProfileIds.contains(Column("inboxId")))
             .fetchAll(self)
 
+        let currentUserProfile = try currentUserProfile()
+
         let profileById = Dictionary(uniqueKeysWithValues: memberProfiles.map { ($0.inboxId, $0) })
         let conversations: [Conversation] = try dbConversations.compactMap { dbConv in
             let creator: Profile
@@ -62,6 +64,16 @@ fileprivate extension Database {
                 .filter(Column("id") == dbConv.id)
                 .fetchOne(self) ?? .empty
 
+            let otherMemberProfile: Profile?
+            if dbConv.kind == .dm,
+               let currentUserProfile,
+               let otherProfile = members.first(
+                where: { $0.id != currentUserProfile.id }) {
+                otherMemberProfile = otherProfile
+            } else {
+                otherMemberProfile = nil
+            }
+
             let messages: [Message] = try Message
                 .filter(Column("conversationId") == dbConv.id)
                 .order(Column("date").asc)
@@ -78,6 +90,7 @@ fileprivate extension Database {
                 kind: dbConv.kind,
                 topic: dbConv.topic,
                 members: members,
+                otherMember: otherMemberProfile,
                 messages: messages,
                 isPinned: localState.isPinned,
                 isUnread: localState.isUnread,

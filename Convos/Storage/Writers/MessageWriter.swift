@@ -24,9 +24,12 @@ class MessageWriter: MessageWriterProtocol {
             if var conversation = try DBConversation
                 .filter(Column("id") == conversationId)
                 .fetchOne(db) {
-                conversation.lastMessage = .init(text: (try? message.body) ?? "",
-                                                 createdAt: message.sentAt)
-                try conversation.update(db)
+                if let lastMessageSentAt = conversation.lastMessage?.createdAt,
+                   message.sentAt > lastMessageSentAt {
+                    conversation.lastMessage = .init(text: (try? message.body) ?? "",
+                                                     createdAt: message.sentAt)
+                    try conversation.update(db)
+                }
             }
 
             if let dbLastMessage = dbLastMessage as? any PersistableRecord {

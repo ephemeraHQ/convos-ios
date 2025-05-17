@@ -19,7 +19,6 @@ struct MemberProfile: Codable, FetchableRecord, PersistableRecord, Identifiable,
     let name: String
     let username: String
     let avatar: String?
-    let isCurrentUser: Bool
 }
 
 struct Profile: Codable, Identifiable, Hashable {
@@ -27,13 +26,16 @@ struct Profile: Codable, Identifiable, Hashable {
     let name: String
     let username: String
     let avatar: String?
-    let isCurrentUser: Bool
 
     var avatarURL: URL? {
         guard let avatar, let url = URL(string: avatar) else {
             return nil
         }
         return url
+    }
+
+    var displayName: String {
+        name.isEmpty ? username : name
     }
 
     static var empty: Profile {
@@ -43,13 +45,11 @@ struct Profile: Codable, Identifiable, Hashable {
     init(id: String,
          name: String,
          username: String,
-         avatar: String?,
-         isCurrentUser: Bool) {
+         avatar: String?) {
         self.id = id
         self.name = name
         self.username = username
         self.avatar = avatar
-        self.isCurrentUser = isCurrentUser
     }
 
     private init() {
@@ -57,15 +57,14 @@ struct Profile: Codable, Identifiable, Hashable {
         self.name = ""
         self.username = ""
         self.avatar = nil
-        self.isCurrentUser = false
     }
 
     init(from memberProfile: MemberProfile) {
         self.id = "member_\(memberProfile.inboxId)"
         self.name = memberProfile.name
-        self.username = memberProfile.username
+        self.username = (memberProfile.username.isEmpty ?
+                         memberProfile.id : memberProfile.inboxId)
         self.avatar = memberProfile.avatar
-        self.isCurrentUser = memberProfile.isCurrentUser
     }
 
     init(from userProfile: UserProfile) {
@@ -73,6 +72,5 @@ struct Profile: Codable, Identifiable, Hashable {
         self.name = userProfile.name
         self.username = userProfile.username
         self.avatar = userProfile.avatar
-        self.isCurrentUser = true
     }
 }

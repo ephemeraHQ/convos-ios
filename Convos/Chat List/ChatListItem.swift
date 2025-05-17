@@ -4,7 +4,7 @@ extension Conversation {
     var title: String {
         switch kind {
         case .dm:
-            return otherMember?.name ?? "Unknown"
+            return otherMember?.displayName ?? ""
         case .group:
             return topic
         }
@@ -32,6 +32,8 @@ struct ChatListItem: View {
                 Text(conversation.title)
                     .font(.system(size: 17.0, weight: conversation.isUnread ? .semibold : .regular))
                     .foregroundColor(.primary)
+                    .truncationMode(.tail)
+                    .lineLimit(1)
 
                 HStack {
                     if let message = conversation.lastMessage {

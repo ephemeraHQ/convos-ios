@@ -34,7 +34,6 @@ final class UserRepository: UserRepositoryProtocol {
 fileprivate extension Database {
     func composeCurrentUser() throws -> User? {
         guard let session = try Session.fetchOne(self) else { return nil }
-
         guard let dbUser = try DBUser.fetchOne(self, key: session.currentUserId) else { return nil }
         guard let userProfile = try UserProfile
             .filter(Column("userId") == dbUser.id)
@@ -46,5 +45,16 @@ fileprivate extension Database {
 
         let profile = Profile(from: userProfile)
         return User(id: dbUser.id, identities: identities, profile: profile)
+    }
+}
+
+extension Database {
+    func currentUserProfile() throws -> UserProfile? {
+        guard let session = try Session.fetchOne(self) else { return nil }
+        guard let dbUser = try DBUser.fetchOne(self, key: session.currentUserId) else { return nil }
+        guard let userProfile = try UserProfile
+            .filter(Column("userId") == dbUser.id)
+            .fetchOne(self) else { return nil }
+        return userProfile
     }
 }

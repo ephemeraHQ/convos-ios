@@ -57,12 +57,10 @@ final class MockMessagesStore: MessagesStoreProtocol {
                         id: UUID().uuidString,
                         name: rawMessage.sender.profile.name,
                         username: rawMessage.sender.profile.username,
-                        avatar: rawMessage.sender.profile.avatarURL?.absoluteString,
-                        isCurrentUser: rawMessage.sender.id == self.currentUser.id
+                        avatar: rawMessage.sender.profile.avatarURL?.absoluteString
                     ),
                     date: rawMessage.timestamp,
                     kind: .text(rawMessage.content),
-                    source: rawMessage.sender.id == self.currentUser.id ? .outgoing : .incoming,
                     status: .published
                 )
                 return MessagesCollectionCell.message(message, bubbleType: .normal)
