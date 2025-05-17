@@ -2,16 +2,12 @@ import SwiftUI
 
 struct ChatListNavigationBar: View {
     @State var userState: UserState
-    let onIdentityTap: () -> Void
-    let onQRTap: () -> Void
-    let onWalletTap: () -> Void
-    let onComposeTap: () -> Void
 
     var body: some View {
         HStack(spacing: 16) {
             // Identity selector button
             Button {
-                onIdentityTap()
+//                onIdentityTap()
             } label: {
                 HStack(spacing: 8) {
                     AsyncImage(url: userState.currentUser?.profile.avatarURL) { image in
@@ -49,7 +45,9 @@ struct ChatListNavigationBar: View {
 //                        .font(.system(size: 20))
 //                }
 
-                Button(action: onComposeTap) {
+                Button {
+                    // composer
+                } label: {
                     Image(systemName: "square.and.pencil")
                         .font(.system(size: 20))
                 }

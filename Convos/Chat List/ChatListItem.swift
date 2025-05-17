@@ -14,72 +14,61 @@ extension Conversation {
 struct ChatListItem: View {
     let conversation: Conversation
 
-    let onTap: () -> Void
-    let onPin: () -> Void
-    let onToggleRead: () -> Void
-    let onToggleMute: () -> Void
-    let onDelete: () -> Void
-
     @State private var isPinning: Bool = false
 
     var body: some View {
-        Button {
-            onTap()
-        } label: {
-            HStack(spacing: 12.0) {
-                AsyncImage(url: conversation.creator.avatarURL) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    MonogramView(name: conversation.title)
-                }
-                .frame(width: 52.0, height: 52.0)
-                .clipShape(Circle())
+        HStack(spacing: 12.0) {
+            AsyncImage(url: conversation.creator.avatarURL) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                MonogramView(name: conversation.title)
+            }
+            .frame(width: 52.0, height: 52.0)
+            .clipShape(Circle())
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(conversation.title)
-                        .font(.system(size: 17.0, weight: conversation.isUnread ? .semibold : .regular))
-                        .foregroundColor(.primary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(conversation.title)
+                    .font(.system(size: 17.0, weight: conversation.isUnread ? .semibold : .regular))
+                    .foregroundColor(.primary)
 
-                    HStack {
-                        if let message = conversation.lastMessage {
-                            HStack(spacing: 4) {
-                                Text(message.createdAt.relativeShort()).textCase(.lowercase)
-                                Text("•")
-                                Text(message.text)
-                            }
-                            .font(.system(size: 15))
-                            .foregroundColor(conversation.isUnread ? .primary : .secondary)
-                            .lineLimit(1)
+                HStack {
+                    if let message = conversation.lastMessage {
+                        HStack(spacing: 4) {
+                            Text(message.createdAt.relativeShort()).textCase(.lowercase)
+                            Text("•")
+                            Text(message.text)
+                        }
+                        .font(.system(size: 15))
+                        .foregroundColor(conversation.isUnread ? .primary : .secondary)
+                        .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    // Status indicators
+                    HStack(spacing: 4) {
+                        if conversation.isMuted {
+                            Image(systemName: "bell.slash.fill")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
                         }
 
-                        Spacer()
-
-                        // Status indicators
-                        HStack(spacing: 4) {
-                            if conversation.isMuted {
-                                Image(systemName: "bell.slash.fill")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.secondary)
-                            }
-
-                            if conversation.isUnread {
-                                Circle()
-                                    .fill(Color.black)
-                                    .frame(width: 12, height: 12)
-                            }
+                        if conversation.isUnread {
+                            Circle()
+                                .fill(Color.black)
+                                .frame(width: 12, height: 12)
                         }
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.systemBackground))
-            .contentShape(Rectangle())
         }
-        .buttonStyle(ChatListItemButtonStyle())
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.systemBackground))
+        .contentShape(Rectangle())
         .scaleEffect(isPinning ? 0.95 : 1.0)
         .opacity(isPinning ? 0.8 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPinning)
@@ -90,7 +79,7 @@ struct ChatListItem: View {
                         isPinning = true
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        onPin()
+//                        onPin()
                         withAnimation {
                             isPinning = false
                         }
@@ -102,7 +91,7 @@ struct ChatListItem: View {
                         isPinning = true
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        onPin()
+//                        onPin()
                         withAnimation {
                             isPinning = false
                         }
@@ -111,17 +100,17 @@ struct ChatListItem: View {
             }
 
             Button(conversation.isUnread ? "Mark as Read" : "Mark as Unread") {
-                onToggleRead()
+//                onToggleRead()
             }
 
             Button(conversation.isMuted ? "Unmute" : "Mute") {
-                onToggleMute()
+//                onToggleMute()
             }
 
             Divider()
 
             Button("Delete", role: .destructive) {
-                onDelete()
+//                onDelete()
             }
         }
     }
