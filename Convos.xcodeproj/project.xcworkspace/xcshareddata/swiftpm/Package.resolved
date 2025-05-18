@@ -1,5 +1,5 @@
 {
-  "originHash" : "d9e6a0a4dc7ff323ad794f91ce043c74aa81aeef01fb1d6d5b081a3b514411a0",
+  "originHash" : "1e7541a8b0815c613af72676870739920ae5981a9928193d002eaa0643c0ee69",
   "pins" : [
     {
       "identity" : "anchorkit",
@@ -76,10 +76,10 @@
     {
       "identity" : "passkeyauth",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/ephemeraHQ/PasskeyAuth.git",
+      "location" : "https://github.com/ephemeraHQ/PasskeyAuth",
       "state" : {
         "branch" : "main",
-        "revision" : "83b095bf90f715c5eede8e6e0839c6a9894252be"
+        "revision" : "aa89ebf3fb6f79c78977e08f98be8ee1d9fa56f0"
       }
     },
     {

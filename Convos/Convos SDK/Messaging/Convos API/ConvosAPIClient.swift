@@ -49,7 +49,6 @@ final class ConvosAPIClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
 
-        // Set required headers
         request.setValue(xmtpInstallationId, forHTTPHeaderField: "X-XMTP-InstallationId")
         request.setValue(xmtpId, forHTTPHeaderField: "X-XMTP-InboxId")
         request.setValue("0x\(xmtpSignature)", forHTTPHeaderField: "X-XMTP-Signature")

@@ -22,7 +22,7 @@ private enum MessagingServiceState {
 private enum MessagingServiceAction {
     case start
     case stop
-    case xmtpInitialized(Client, ConvosSDK.AuthorizedResultType, PrivateKey)
+    case xmtpInitialized(Client, ConvosSDK.AuthorizedResultType)
     case backendAuthorized
 }
 
@@ -101,11 +101,10 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                 switch (_state, action) {
                 case (.uninitialized, .start):
                     try await handleStart()
-                case (.initializing, let .xmtpInitialized(client, result, privateKey)):
+                case (.initializing, let .xmtpInitialized(client, result)):
                     syncingManager.start(with: client)
                     try await authorizeConvosBackend(client: client,
-                                                     authResult: result,
-                                                     privateKey: privateKey)
+                                                     authResult: result)
                 case (.authorizing, .backendAuthorized):
                     try handleBackendAuthorized()
                 case (.ready, .stop), (.error, .stop):
@@ -133,10 +132,9 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         }
 
         _state = .initializing
-        let privateKey = try PrivateKey(authorizedResult.privateKeyData)
-        let client = try await initializeXmtpClient(with: authorizedResult.privateKeyData,
-                                                    signingKey: privateKey)
-        await processAction(.xmtpInitialized(client, authorizedResult, privateKey))
+        let client = try await initializeXmtpClient(with: authorizedResult.databaseKey,
+                                                    signingKey: authorizedResult.signingKey)
+        await processAction(.xmtpInitialized(client, authorizedResult))
     }
 
     private func handleBackendAuthorized() throws {
@@ -166,7 +164,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     // MARK: - User Creation
 
     private func createUser(from result: ConvosSDK.RegisteredResultType,
-                            privateKey: PrivateKey) async throws -> ConvosAPIClient.CreatedUserResponse {
+                            signingKey: SigningKey) async throws -> ConvosAPIClient.CreatedUserResponse {
         let userId = UUID().uuidString
         let username = try await generateUsername(from: result.displayName)
         let xmtpId = xmtpClient?.inboxID
@@ -174,7 +172,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         let requestBody: ConvosAPIClient.CreateUserRequest = .init(
             turnkeyUserId: userId,
             device: .current(),
-            identity: .init(turnkeyAddress: privateKey.walletAddress,
+            identity: .init(turnkeyAddress: signingKey.identity.identifier,
                             xmtpId: xmtpId,
                             xmtpInstallationId: xmtpInstallationId),
             profile: .init(name: result.displayName,
@@ -245,8 +243,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     private func authorizeConvosBackend(client: Client,
-                                        authResult: ConvosSDK.AuthorizedResultType,
-                                        privateKey: PrivateKey) async throws {
+                                        authResult: ConvosSDK.AuthorizedResultType) async throws {
         _state = .authorizing
         let installationId = client.installationID
         let xmtpId = client.inboxID
@@ -259,13 +256,14 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                                              xmtpId: xmtpId,
                                              xmtpSignature: signature)
         if let registeredResult = authResult as? ConvosSDK.RegisteredResultType {
-            Logger.info("Creating user from registeredResult: \(registeredResult)")
+            Logger.info("Authorization succeeded, creating user from registeredResult: \(registeredResult)")
             let user = try await createUser(from: registeredResult,
-                                            privateKey: privateKey)
+                                            signingKey: authResult.signingKey)
             try await userWriter.storeUser(user)
         } else {
             async let user = try apiClient.getUser()
             async let profile = try apiClient.getProfile(inboxId: client.inboxID)
+            Logger.info("Authorization succeeded, storing user and profile")
             try await userWriter.storeUser(await user, profile: await profile)
         }
         await processAction(.backendAuthorized)
