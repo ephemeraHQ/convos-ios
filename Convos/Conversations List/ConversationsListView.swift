@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-struct ChatListView: View {
+struct ConversationsListView: View {
     let convos: ConvosSDK.Convos
     @State var userState: UserState
     @State var conversationsState: ConversationsState
@@ -22,7 +22,7 @@ struct ChatListView: View {
         NavigationStack {
             ZStack {
                 VStack(spacing: 0) {
-                    ChatListNavigationBar(userState: userState, signOut: {
+                    ConversationsListNavigationBar(userState: userState, signOut: {
                         Task {
                             try await convos.signOut()
                         }
@@ -31,7 +31,7 @@ struct ChatListView: View {
                         LazyVStack(spacing: 0) {
                             ForEach(conversationsState.unpinnedConversations) { conversation in
                                 NavigationLink(value: conversation) {
-                                    ChatListItem(conversation: conversation)
+                                    ConversationsListItem(conversation: conversation)
                                 }
                             }
                         }

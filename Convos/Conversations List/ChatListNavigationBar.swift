@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ChatListNavigationBar: View {
+struct ConversationsListNavigationBar: View {
     @State var userState: UserState
 
     let signOut: () -> Void
@@ -50,7 +50,7 @@ struct ChatListNavigationBar: View {
 
 // swiftlint:disable force_unwrapping
 //#Preview {
-//    ChatListNavigationBar(
+//    ConversationsListNavigationBar(
 //        currentIdentity: CTUser(
 //            id: "preview",
 //            username: "preview.eth",

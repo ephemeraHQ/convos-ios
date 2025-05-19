@@ -11,7 +11,7 @@ extension Conversation {
     }
 }
 
-struct ChatListItem: View {
+struct ConversationsListItem: View {
     let conversation: Conversation
 
     @State private var isPinning: Bool = false
@@ -49,7 +49,6 @@ struct ChatListItem: View {
 
                     Spacer()
 
-                    // Status indicators
                     HStack(spacing: 4) {
                         if conversation.isMuted {
                             Image(systemName: "bell.slash.fill")
@@ -81,7 +80,6 @@ struct ChatListItem: View {
                         isPinning = true
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-//                        onPin()
                         withAnimation {
                             isPinning = false
                         }
@@ -93,7 +91,6 @@ struct ChatListItem: View {
                         isPinning = true
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-//                        onPin()
                         withAnimation {
                             isPinning = false
                         }
@@ -102,23 +99,20 @@ struct ChatListItem: View {
             }
 
             Button(conversation.isUnread ? "Mark as Read" : "Mark as Unread") {
-//                onToggleRead()
             }
 
             Button(conversation.isMuted ? "Unmute" : "Mute") {
-//                onToggleMute()
             }
 
             Divider()
 
             Button("Delete", role: .destructive) {
-//                onDelete()
             }
         }
     }
 }
 
-struct ChatListItemButtonStyle: ButtonStyle {
+struct ConversationsListItemButtonStyle: ButtonStyle {
     @State private var isPressed: Bool = false
 
     func makeBody(configuration: Configuration) -> some View {

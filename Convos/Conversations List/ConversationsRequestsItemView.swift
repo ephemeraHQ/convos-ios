@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct RequestsHeader: View {
+struct ConversationsRequestsItemView: View {
     let requestCount: Int
     let amount: Double?
     let onTap: () -> Void
@@ -58,7 +58,7 @@ struct RequestsHeader: View {
 }
 
 #Preview {
-    RequestsHeader(
+    ConversationsRequestsItemView(
         requestCount: 5,
         amount: 50.0,
         onTap: {}

@@ -1,8 +1,7 @@
 import SwiftUI
 
-struct PinnedChatsGrid: View {
+struct PinnedConversationsGrid: View {
     let conversations: [Conversation]
-    
     let onTapChat: (Conversation) -> Void
     let onUnpin: (Conversation) -> Void
     let onToggleRead: (Conversation) -> Void
@@ -109,7 +108,7 @@ struct PinnedChatButtonStyle: ButtonStyle {
 }
 
 #Preview {
-    PinnedChatsGrid(
+    PinnedConversationsGrid(
         conversations: [
         ],
         onTapChat: { _ in },
