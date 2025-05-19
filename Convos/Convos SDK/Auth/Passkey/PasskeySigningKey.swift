@@ -17,8 +17,6 @@ extension Data {
     }
 }
 
-// swiftlint:disable force_cast force_unwrapping
-
 final class PasskeySigningKey: SigningKey {
     enum PasskeySigningKeyError: Error {
         case signingFailed(String)
@@ -73,5 +71,3 @@ final class PasskeySigningKey: SigningKey {
         )
     }
 }
-
-// swiftlint:enable force_cast force_unwrapping

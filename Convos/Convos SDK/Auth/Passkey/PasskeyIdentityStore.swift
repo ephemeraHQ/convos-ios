@@ -42,8 +42,6 @@ extension Data {
     }
 }
 
-// swiftlint:disable force_cast
-
 struct PasskeyIdentity: Codable {
     enum PasskeyIdentityError: Error {
         case failedGeneratingDatabaseKey
@@ -151,5 +149,3 @@ final class PasskeyIdentityStore {
         }
     }
 }
-
-// swiftlint:enable force_cast

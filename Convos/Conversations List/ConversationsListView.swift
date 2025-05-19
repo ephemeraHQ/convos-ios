@@ -6,6 +6,8 @@ struct ConversationsListView: View {
     @State var userState: UserState
     @State var conversationsState: ConversationsState
 
+    @State private var presentingComposer: Bool = false
+
     init(convos: ConvosSDK.Convos,
          userRepository: any UserRepositoryProtocol,
          conversationsRepository: any ConversationsRepositoryProtocol) {
@@ -20,35 +22,42 @@ struct ConversationsListView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                VStack(spacing: 0) {
-                    ConversationsListNavigationBar(userState: userState, signOut: {
-                        Task {
-                            try await convos.signOut()
-                        }
-                    })
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(conversationsState.unpinnedConversations) { conversation in
-                                NavigationLink(value: conversation) {
-                                    ConversationsListItem(conversation: conversation)
-                                }
+            VStack(spacing: 0) {
+                ConversationsListNavigationBar(userState: userState,
+                                               presentingComposer: $presentingComposer,
+                                               signOut: {
+                    Task {
+                        try await convos.signOut()
+                    }
+                })
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(conversationsState.unpinnedConversations) { conversation in
+                            NavigationLink(value: conversation) {
+                                ConversationsListItem(conversation: conversation)
                             }
                         }
-                        .navigationDestination(for: Conversation.self, destination: { conversation in
-                            MessagesView(messagesStore: MockMessagesStore())
-                                .ignoresSafeArea()
-                                .toolbarVisibility(.hidden, for: .navigationBar)
-                                .toolbarVisibility(.hidden, for: .navigationBar)
-                        })
                     }
+                    .navigationDestination(for: Conversation.self, destination: { conversation in
+                        MessagesView(messagesStore: MockMessagesStore())
+                            .ignoresSafeArea()
+                            .toolbarVisibility(.hidden, for: .navigationBar)
+                            .toolbarVisibility(.hidden, for: .navigationBar)
+                    })
                 }
                 .navigationBarHidden(true)
+            }
+            .sheet(isPresented: $presentingComposer) {
+                ConversationComposerView()
             }
         }
     }
 }
 
 #Preview {
-    //    ChatListView(conversationStore: CTConversationStore(), identityStore: CTIdentityStore())
+    @Previewable @State var userRepository = MockUserRepository()
+    @Previewable @State var conversationsRepository = MockConversationsRepository()
+    ConversationsListView(convos: .sdk(authService: MockAuthService()),
+                          userRepository: userRepository,
+                          conversationsRepository: conversationsRepository)
 }

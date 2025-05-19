@@ -4,7 +4,7 @@ import XMTPiOS
 
 struct SecureEnclaveSigningKey: SigningKey {
     var identity: XMTPiOS.PublicIdentity
-    
+
     let privateKey: SecureEnclave.P256.Signing.PrivateKey
 
     func sign(_ message: String) async throws -> XMTPiOS.SignedData {

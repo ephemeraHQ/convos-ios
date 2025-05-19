@@ -2,64 +2,51 @@ import SwiftUI
 
 struct ConversationsListNavigationBar: View {
     @State var userState: UserState
+    @Binding var presentingComposer: Bool
 
     let signOut: () -> Void
 
     var body: some View {
-        HStack(spacing: 16) {
-            HStack(spacing: 8) {
-                AsyncImage(url: userState.currentUser?.profile.avatarURL) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    MonogramView(name: userState.currentUser?.profile.name ?? "")
+        HStack(spacing: 0.0) {
+            HStack(spacing: DesignConstants.Spacing.step4x) {
+                HStack(spacing: 0.0) {
+                    if let user = userState.currentUser {
+                        ProfileAvatarView(profile: user.profile)
+                            .padding(DesignConstants.Spacing.step2x)
+                    }
+                    Text(userState.currentUser?.profile.name ?? "")
+                        .font(.system(size: 16.0, weight: .regular))
+                        .foregroundColor(.colorTextPrimary)
+                        .padding(.vertical, 10.0)
                 }
-                .frame(width: 32.0, height: 32.0)
-                .clipShape(Circle())
 
-                Text(userState.currentUser?.profile.name ?? "")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.primary)
-            }
+                Spacer()
 
-            Spacer()
-
-            HStack {
-                Button {
-                    // composer
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                        .font(.system(size: 20))
+                HStack {
+                    Button {
+                        presentingComposer = true
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 24.0))
+                            .padding(.bottom, 4.0) // vertical align based on square
+                    }
                 }
+                .foregroundColor(.colorTextPrimary)
+                .padding(.horizontal, DesignConstants.Spacing.step2x)
             }
-            .foregroundColor(.primary)
+            .padding(DesignConstants.Spacing.step4x)
         }
-        .padding(.horizontal, 16.0)
-        .frame(height: 52.0)
-        .background(Color(.systemBackground))
-        .overlay(
-            Rectangle()
-                .frame(height: 0.5)
-                .foregroundColor(Color(.systemGray4))
-                .opacity(0.5),
-            alignment: .bottom
-        )
+        .background(.colorBackgroundPrimary)
     }
 }
 
-// swiftlint:disable force_unwrapping
-//#Preview {
-//    ConversationsListNavigationBar(
-//        currentIdentity: CTUser(
-//            id: "preview",
-//            username: "preview.eth",
-//            avatarURL: URL(string: "https://picsum.photos/200")!
-//        ),
-//        onIdentityTap: {},
-//        onQRTap: {},
-//        onWalletTap: {},
-//        onComposeTap: {}
-//    )
-//}
-// swiftlint:enable force_unwrapping
+#Preview {
+    @Previewable @State var presentingComposer: Bool = false
+    @Previewable @State var userState: UserState = .init(
+        userRepository: MockUserRepository()
+    )
+
+    ConversationsListNavigationBar(userState: userState,
+                                   presentingComposer: $presentingComposer) {
+    }
+}
