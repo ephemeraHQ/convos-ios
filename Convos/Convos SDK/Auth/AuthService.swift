@@ -8,7 +8,7 @@ public extension ConvosSDK {
     }
 
     protocol AuthorizedResultType {
-        var signingKey: SigningKey { get }
+        var signingKey: any XMTPiOS.SigningKey { get }
         var databaseKey: Data { get }
     }
 

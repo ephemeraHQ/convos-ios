@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 
 final class RootViewController: UIViewController {
-    let convos: ConvosSDK.Convos = .sdk(authService: PasskeyAuthService())
+    let convos: ConvosSDK.Convos = .sdk(authService: SecureEnclaveAuthService())
     let analyticsService: AnalyticsServiceProtocol = PosthogAnalyticsService.shared
 
     override func viewDidLoad() {
