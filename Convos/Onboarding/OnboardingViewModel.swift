@@ -11,6 +11,7 @@ final class OnboardingViewModel {
         }
     }
 
+    let authAllowsSignIn: Bool
     var imageState: ContactCardImage.State = .empty
     var nameIsValid: Bool = false
     var nameError: String?
@@ -21,6 +22,7 @@ final class OnboardingViewModel {
 
     init(convos: ConvosSDK.Convos) {
         self.convos = convos
+        self.authAllowsSignIn = convos.supportsMultipleAccounts
         observeAuthState()
     }
 

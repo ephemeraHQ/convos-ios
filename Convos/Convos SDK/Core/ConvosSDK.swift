@@ -33,6 +33,10 @@ public enum ConvosSDK {
             authService.authStatePublisher().eraseToAnyPublisher()
         }
 
+        public var supportsMultipleAccounts: Bool {
+            authService.supportsMultipleAccounts
+        }
+
         public func prepare() async throws {
             try await authService.prepare()
         }

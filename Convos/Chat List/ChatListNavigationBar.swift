@@ -7,48 +7,25 @@ struct ChatListNavigationBar: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            Menu {
-                Button(role: .destructive) {
-                    signOut()
-                } label: {
-                    Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
+            HStack(spacing: 8) {
+                AsyncImage(url: userState.currentUser?.profile.avatarURL) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    MonogramView(name: userState.currentUser?.profile.name ?? "")
                 }
-            } label: {
-                HStack(spacing: 8) {
-                    AsyncImage(url: userState.currentUser?.profile.avatarURL) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        MonogramView(name: userState.currentUser?.profile.name ?? "")
-                    }
-                    .frame(width: 32, height: 32)
-                    .clipShape(Circle())
+                .frame(width: 32.0, height: 32.0)
+                .clipShape(Circle())
 
-                    Text(userState.currentUser?.profile.name ?? "")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.primary)
-
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.secondary)
-                }
+                Text(userState.currentUser?.profile.name ?? "")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary)
             }
 
             Spacer()
 
-            // Action buttons
-            HStack(spacing: 20) {
-                //                Button(action: onQRTap) {
-                //                    Image(systemName: "qrcode")
-                //                        .font(.system(size: 20))
-                //                }
-                //
-                //                Button(action: onWalletTap) {
-                //                    Image(systemName: "creditcard")
-                //                        .font(.system(size: 20))
-                //                }
-
+            HStack {
                 Button {
                     // composer
                 } label: {
@@ -58,8 +35,8 @@ struct ChatListNavigationBar: View {
             }
             .foregroundColor(.primary)
         }
-        .padding(.horizontal, 16)
-        .frame(height: 52)
+        .padding(.horizontal, 16.0)
+        .frame(height: 52.0)
         .background(Color(.systemBackground))
         .overlay(
             Rectangle()

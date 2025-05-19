@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import LocalAuthentication
 import XMTPiOS
 
 class SecureEnclaveAuthService: ConvosSDK.AuthServiceProtocol {
@@ -15,17 +14,15 @@ class SecureEnclaveAuthService: ConvosSDK.AuthServiceProtocol {
         let databaseKey: Data
     }
 
-    enum SecureEnclaveAuthServiceError: Error {
-        case biometryNotAvailable,
-             biometryAuthenticationFailed,
-             keyTagMismatch
-    }
-
     private let identityStore: SecureEnclaveIdentityStore = .init()
     private let authStateSubject: CurrentValueSubject<ConvosSDK.AuthServiceState, Never> = .init(.unknown)
 
     var state: ConvosSDK.AuthServiceState {
         authStateSubject.value
+    }
+
+    var supportsMultipleAccounts: Bool {
+        false
     }
 
     func prepare() async throws {
@@ -34,14 +31,20 @@ class SecureEnclaveAuthService: ConvosSDK.AuthServiceProtocol {
 
     func signIn() async throws {}
 
+    func signOut() async throws {}
+
     func register(displayName: String) async throws {
         let identity = try identityStore.save()
-        authStateSubject.send(.registered(EnclaveRegisteredResult(displayName: displayName,
-                                                                  signingKey: identity.privateKey,
-                                                                  databaseKey: identity.databaseKey)))
+        authStateSubject.send(.registered(
+            EnclaveRegisteredResult(
+                displayName: displayName,
+                signingKey: identity.privateKey,
+                databaseKey: identity.databaseKey
+            )
+        ))
     }
 
-    func signOut() async throws {
+    func deleteAccount() async throws {
         try identityStore.delete()
         authStateSubject.send(.unauthorized)
     }
@@ -55,10 +58,12 @@ class SecureEnclaveAuthService: ConvosSDK.AuthServiceProtocol {
     private func refreshAuthState() throws {
         do {
             if let identity = try identityStore.load() {
-                authStateSubject.send(.authorized(EnclaveAuthResult(
-                    signingKey: identity.privateKey,
-                    databaseKey: identity.databaseKey
-                )))
+                authStateSubject.send(.authorized(
+                    EnclaveAuthResult(
+                        signingKey: identity.privateKey,
+                        databaseKey: identity.databaseKey
+                    )
+                ))
             } else {
                 authStateSubject.send(.unauthorized)
             }

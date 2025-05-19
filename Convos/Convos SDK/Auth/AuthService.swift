@@ -41,6 +41,7 @@ public extension ConvosSDK {
 
     protocol AuthServiceProtocol {
         var state: AuthServiceState { get }
+        var supportsMultipleAccounts: Bool { get }
 
         func prepare() async throws
 
@@ -50,4 +51,8 @@ public extension ConvosSDK {
 
         func authStatePublisher() -> AnyPublisher<AuthServiceState, Never>
     }
+}
+
+extension ConvosSDK.AuthServiceProtocol {
+    var supportsMultipleAccounts: Bool { true }
 }

@@ -27,7 +27,7 @@ final class UserState {
         do {
             currentUser = try await userRepository.getCurrentUser()
         } catch {
-            print("Failed to load user:", error)
+            Logger.error("Failed to load user: \(error)")
         }
     }
 }

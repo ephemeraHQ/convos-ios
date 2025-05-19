@@ -114,10 +114,8 @@ final class SecureEnclaveIdentityStore {
             kSecAttrAccessControl as String: accessControl
         ]
 
-        // Delete any existing key
         SecItemDelete(attributes as CFDictionary)
 
-        // Add new one
         let status = SecItemAdd(attributes as CFDictionary, nil)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedGeneratingPrivateKey
