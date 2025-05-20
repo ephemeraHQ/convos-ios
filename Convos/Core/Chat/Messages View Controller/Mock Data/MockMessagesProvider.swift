@@ -93,12 +93,12 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
     private var startingTimestamp: Double = Date().timeIntervalSince1970
     private let enableNewMessages: Bool = true
 
+    // swiftlint:disable line_length force_unwrapping
     private let websiteUrls: [URL] = [
         URL(string: "https://ephemerahq.com")!,
         URL(string: "https://xmtp.org"),
     ].compactMap { $0 }
 
-    // swiftlint:disable line_length
     private let imageUrls: [URL] = [
         URL(string: "https://upload.wikimedia.org/wikipedia/commons/5/56/Black-white_photograph_of_Emily_Dickinson2.png")!,
         URL(string: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/William_Shakespeare_by_John_Taylor%2C_edited.jpg/1920px-"
@@ -109,7 +109,7 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
         URL(string: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Portrait_of_James_Joyce_P529.jpg/1920px-"
             + "Portrait_of_James_Joyce_P529.jpg")!
     ]
-    // swiftlint:enable line_length
+    // swiftlint:enable line_length force_unwrapping
 
     // MARK: - Initialization
 

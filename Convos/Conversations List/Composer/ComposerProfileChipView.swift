@@ -48,7 +48,7 @@ private struct SelectionBarOverlay: View {
     SelectionBarOverlay()
 }
 
-struct ComposerProfileTagView: View {
+struct ComposerProfileChipView: View {
     let profile: Profile
     var isSelected: Bool
 
@@ -87,8 +87,8 @@ struct ComposerProfileTagView: View {
 #Preview {
     @Previewable @State var isSelected: Bool = false
 
-    ComposerProfileTagView(profile: .mock(),
-                           isSelected: isSelected)
+    ComposerProfileChipView(profile: .mock(),
+                            isSelected: isSelected)
     .onTapGesture {
         isSelected.toggle()
     }

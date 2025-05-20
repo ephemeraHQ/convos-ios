@@ -6,21 +6,20 @@ struct ConversationsListView: View {
         case composer, conversation(Conversation)
     }
 
+    @Environment(MessagingServiceObservable.self)
+    private var messagingService: MessagingServiceObservable
+
     let convos: ConvosSDK.ConvosClient
-    @State var userState: UserState
-    @State var conversationsState: ConversationsState
+    var userState: UserState
+    var conversationsState: ConversationsState
     @State private var path: [Route] = []
 
     init(convos: ConvosSDK.ConvosClient,
          userRepository: any UserRepositoryProtocol,
          conversationsRepository: any ConversationsRepositoryProtocol) {
         self.convos = convos
-        _userState = State(wrappedValue: .init(userRepository: userRepository))
-        _conversationsState = State(
-            wrappedValue: ConversationsState(
-                conversationsRepository: conversationsRepository
-            )
-        )
+        self.userState = .init(userRepository: userRepository)
+        self.conversationsState = .init(conversationsRepository: conversationsRepository)
     }
 
     var body: some View {
@@ -28,6 +27,7 @@ struct ConversationsListView: View {
             VStack(spacing: 0) {
                 ConversationsListNavigationBar(
                     userState: userState,
+                    isComposeEnabled: messagingService.canStartConversation,
                     onCompose: {
                         path.append(.composer)
                     },
@@ -74,7 +74,11 @@ struct ConversationsListView: View {
 #Preview {
     @Previewable @State var userRepository = MockUserRepository()
     @Previewable @State var conversationsRepository = MockConversationsRepository()
+    @Previewable @State var messagingService: MessagingServiceObservable = .init(
+        messagingService: MockMessagingService()
+    )
     ConversationsListView(convos: .sdk(authService: MockAuthService()),
                           userRepository: userRepository,
                           conversationsRepository: conversationsRepository)
+    .environment(messagingService)
 }

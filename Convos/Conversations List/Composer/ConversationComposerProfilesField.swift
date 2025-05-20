@@ -1,6 +1,8 @@
 import OrderedCollections
 import SwiftUI
 
+// This exists to get around the selected state for Profile "chips"
+// needing to go outside the scroll view clipping area
 struct VerticalEdgeClipShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -13,7 +15,7 @@ struct VerticalEdgeClipShape: Shape {
 }
 
 struct ConversationComposerProfilesField: View {
-    @State private var profileTagsHeight: CGFloat = 0.0
+    @State private var profileChipsHeight: CGFloat = 0.0
     @Binding var searchText: String
     @Binding var selectedProfile: Profile? {
         didSet {
@@ -23,7 +25,7 @@ struct ConversationComposerProfilesField: View {
     @State var searchTextEditingEnabled: Bool = true
     @Binding var profiles: OrderedSet<Profile>
 
-    private let profileTagsMaxHeight: CGFloat = 150.0
+    private let profileChipsMaxHeight: CGFloat = 150.0
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -31,8 +33,8 @@ struct ConversationComposerProfilesField: View {
                 ScrollView(.vertical, showsIndicators: false) {
                     FlowLayout(spacing: DesignConstants.Spacing.step2x) {
                         ForEach(profiles, id: \.id) { profile in
-                            ComposerProfileTagView(profile: profile,
-                                                   isSelected: selectedProfile == profile)
+                            ComposerProfileChipView(profile: profile,
+                                                    isSelected: selectedProfile == profile)
                             .tag(profile)
                             .onTapGesture {
                                 selected(profile: profile)
@@ -52,7 +54,7 @@ struct ConversationComposerProfilesField: View {
                     .padding(.vertical, DesignConstants.Spacing.step4x)
                     .background(HeightReader())
                     .onPreferenceChange(HeightPreferenceKey.self) { height in
-                        profileTagsHeight = min(height, profileTagsMaxHeight)
+                        profileChipsHeight = min(height, profileChipsMaxHeight)
                     }
                     .padding(.top, 4.0)
                     .onChange(of: selectedProfile) {
@@ -63,7 +65,7 @@ struct ConversationComposerProfilesField: View {
                     }
                     .onChange(of: searchText) {
                         textChanged(searchText)
-                        if profileTagsHeight >= profileTagsMaxHeight {
+                        if profileChipsHeight >= profileChipsMaxHeight {
                             withAnimation {
                                 proxy.scrollTo("textField", anchor: .center)
                             }
@@ -75,7 +77,7 @@ struct ConversationComposerProfilesField: View {
                 .clipShape(VerticalEdgeClipShape())
             }
         }
-        .frame(height: profileTagsHeight)
+        .frame(height: profileChipsHeight)
     }
 
     func selected(profile: Profile) {

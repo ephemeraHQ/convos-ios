@@ -50,5 +50,14 @@ extension ConvosSDK {
         case ready
         case stopping
         case error(Error)
+
+        var isReady: Bool {
+            switch self {
+            case .ready:
+                return true
+            default:
+                return false
+            }
+        }
     }
 }

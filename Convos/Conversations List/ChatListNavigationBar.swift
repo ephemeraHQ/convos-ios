@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ConversationsListNavigationBar: View {
     @State var userState: UserState
+    let isComposeEnabled: Bool
 
     let onCompose: () -> Void
     let onSignOut: () -> Void
@@ -30,6 +31,7 @@ struct ConversationsListNavigationBar: View {
                             .font(.system(size: 24.0))
                             .padding(.bottom, 4.0) // vertical align based on square
                     }
+                    .disabled(isComposeEnabled)
                 }
                 .foregroundColor(.colorTextPrimary)
                 .padding(.horizontal, DesignConstants.Spacing.step2x)
@@ -47,6 +49,7 @@ struct ConversationsListNavigationBar: View {
 
     ConversationsListNavigationBar(
         userState: userState,
+        isComposeEnabled: true,
         onCompose: {},
         onSignOut: {}
     )

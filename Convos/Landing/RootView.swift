@@ -6,6 +6,7 @@ struct RootView: View {
     private let userRepository: UserRepositoryProtocol
     private let conversationsRepository: ConversationsRepositoryProtocol
 
+    @State var messagingService: MessagingServiceObservable
     @State var viewModel: AppViewModel
 
     init(convos: ConvosSDK.ConvosClient,
@@ -14,6 +15,7 @@ struct RootView: View {
         self.analyticsService = analyticsService
         self.userRepository = UserRepository(dbReader: convos.databaseReader)
         self.conversationsRepository = ConversationsRepository(dbReader: convos.databaseReader)
+        self.messagingService = .init(messagingService: convos.messaging)
         _viewModel = .init(initialValue: .init(convos: convos))
     }
 
@@ -31,6 +33,7 @@ struct RootView: View {
                 userRepository: userRepository,
                 conversationsRepository: conversationsRepository
             )
+            .environment(messagingService)
         case .signedOut:
             OnboardingView(convos: convos)
         }

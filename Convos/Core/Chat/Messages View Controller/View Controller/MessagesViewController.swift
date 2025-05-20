@@ -264,7 +264,7 @@ final class MessagesViewController: UIViewController {
         Task {
             let sections = await messagesStore.loadInitialMessages()
             currentControllerActions.options.remove(.loadingInitialMessages)
-            processUpdates(with: sections, animated: true, requiresIsolatedProcess: false)
+            processUpdates(with: sections, animated: true, requiresIsolatedProcess: true)
         }
     }
 
