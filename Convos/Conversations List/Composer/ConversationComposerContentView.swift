@@ -156,7 +156,7 @@ struct ConversationComposerContentView: View {
 
             resultsList
 
-            Spacer()
+            Spacer().frame(height: 0.0)
         }
     }
 }
