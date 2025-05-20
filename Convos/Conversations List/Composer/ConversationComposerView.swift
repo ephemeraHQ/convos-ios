@@ -29,7 +29,7 @@ struct ConversationComposerView: View {
                 HStack(spacing: DesignConstants.Spacing.stepHalf) {
                     Button {
                     } label: {
-                        Image(systemName: "xmark")
+                        Image(systemName: "chevron.left")
                             .font(.system(size: 24.0))
                             .foregroundColor(.colorTextPrimary)
                             .padding(.horizontal, DesignConstants.Spacing.step2x)
