@@ -73,42 +73,42 @@ struct ConversationsListItem: View {
         .scaleEffect(isPinning ? 0.95 : 1.0)
         .opacity(isPinning ? 0.8 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPinning)
-        .contextMenu {
-            if conversation.isPinned {
-                Button("Unpin") {
-                    withAnimation {
-                        isPinning = true
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation {
-                            isPinning = false
-                        }
-                    }
-                }
-            } else {
-                Button("Pin") {
-                    withAnimation {
-                        isPinning = true
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation {
-                            isPinning = false
-                        }
-                    }
-                }
-            }
-
-            Button(conversation.isUnread ? "Mark as Read" : "Mark as Unread") {
-            }
-
-            Button(conversation.isMuted ? "Unmute" : "Mute") {
-            }
-
-            Divider()
-
-            Button("Delete", role: .destructive) {
-            }
-        }
+//        .contextMenu {
+//            if conversation.isPinned {
+//                Button("Unpin") {
+//                    withAnimation {
+//                        isPinning = true
+//                    }
+//                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+//                        withAnimation {
+//                            isPinning = false
+//                        }
+//                    }
+//                }
+//            } else {
+//                Button("Pin") {
+//                    withAnimation {
+//                        isPinning = true
+//                    }
+//                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+//                        withAnimation {
+//                            isPinning = false
+//                        }
+//                    }
+//                }
+//            }
+//
+//            Button(conversation.isUnread ? "Mark as Read" : "Mark as Unread") {
+//            }
+//
+//            Button(conversation.isMuted ? "Unmute" : "Mute") {
+//            }
+//
+//            Divider()
+//
+//            Button("Delete", role: .destructive) {
+//            }
+//        }
     }
 }
 

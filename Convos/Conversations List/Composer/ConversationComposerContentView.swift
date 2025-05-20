@@ -16,7 +16,7 @@ class ConversationComposerViewModel {
     ]
 }
 
-struct ConversationComposerView: View {
+struct ConversationComposerContentView: View {
     @State private var selectedProfile: Profile?
     @State private var viewModel: ConversationComposerViewModel = .init()
 
@@ -25,32 +25,32 @@ struct ConversationComposerView: View {
     var body: some View {
         VStack(spacing: 0.0) {
             // navigation bar
-            Group {
-                HStack(spacing: DesignConstants.Spacing.stepHalf) {
-                    Button {
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 24.0))
-                            .foregroundColor(.colorTextPrimary)
-                            .padding(.horizontal, DesignConstants.Spacing.step2x)
-                            .padding(.vertical, 10.0)
-                    }
-
-                    Text("New chat")
-                        .font(.system(size: 16.0))
-                        .foregroundStyle(.colorTextPrimary)
-                        .padding(.vertical, 10.0)
-
-                    Spacer()
-                }
-                .padding(DesignConstants.Spacing.step4x)
-            }
-            .overlay(
-                Rectangle()
-                    .frame(height: 0.5)
-                    .foregroundStyle(Color.colorBorderSubtle2),
-                alignment: .bottom
-            )
+//            Group {
+//                HStack(spacing: DesignConstants.Spacing.stepHalf) {
+//                    Button {
+//                    } label: {
+//                        Image(systemName: "chevron.left")
+//                            .font(.system(size: 24.0))
+//                            .foregroundColor(.colorTextPrimary)
+//                            .padding(.horizontal, DesignConstants.Spacing.step2x)
+//                            .padding(.vertical, 10.0)
+//                    }
+//
+//                    Text("New chat")
+//                        .font(.system(size: 16.0))
+//                        .foregroundStyle(.colorTextPrimary)
+//                        .padding(.vertical, 10.0)
+//
+//                    Spacer()
+//                }
+//                .padding(DesignConstants.Spacing.step4x)
+//            }
+//            .overlay(
+//                Rectangle()
+//                    .frame(height: 0.5)
+//                    .foregroundStyle(Color.colorBorderSubtle2),
+//                alignment: .bottom
+//            )
 
             // profile search header
             HStack(alignment: .top,
@@ -134,5 +134,5 @@ struct ConversationComposerView: View {
 }
 
 #Preview {
-    ConversationComposerView()
+    ConversationComposerContentView()
 }

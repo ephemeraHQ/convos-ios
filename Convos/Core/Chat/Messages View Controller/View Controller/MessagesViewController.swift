@@ -40,10 +40,10 @@ final class MessagesViewController: UIViewController {
     private var currentInterfaceActions: SetActor<Set<InterfaceActions>, ReactionTypes> = SetActor()
     private var currentControllerActions: SetActor<Set<ControllerActions>, ReactionTypes> = SetActor()
 
-    internal let collectionView: UICollectionView
+    let collectionView: UICollectionView
     private var messagesLayout: MessagesCollectionLayout = MessagesCollectionLayout()
     private let inputBarView: MessagesInputView = MessagesInputView()
-    private let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
+    let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
 
     private let messagesStore: MessagesStoreProtocol
     private let dataSource: MessagesCollectionDataSource
@@ -83,6 +83,12 @@ final class MessagesViewController: UIViewController {
     @available(*, unavailable, message: "Use init(messageController:) instead")
     required init?(coder: NSCoder) {
         fatalError()
+    }
+
+    // MARK: - Public
+
+    func set(title: String, avatarImage: UIImage?) {
+        navigationBar.configure(title: title, avatar: avatarImage)
     }
 
     // MARK: - Lifecycle Methods
@@ -155,11 +161,10 @@ final class MessagesViewController: UIViewController {
             for: .normal)
         navigationBar.leftButton.addTarget(self, action: #selector(onBack), for: .touchUpInside)
         navigationBar.leftButton.addTarget(self, action: #selector(onBack), for: .touchUpInside)
-        navigationBar.rightButton.setImage(
-            UIImage(systemName: "timer",
-                    withConfiguration: UIImage.SymbolConfiguration(weight: .medium)),
-            for: .normal)
-        navigationBar.configure(title: "Terry Gross", avatar: nil)
+//        navigationBar.rightButton.setImage(
+//            UIImage(systemName: "timer",
+//                    withConfiguration: UIImage.SymbolConfiguration(weight: .medium)),
+//            for: .normal)
         view.addSubview(navigationBar)
 
         // Setup Auto Layout for navigation bar

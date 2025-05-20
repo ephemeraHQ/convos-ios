@@ -2,9 +2,14 @@ import Foundation
 import SwiftUI
 
 struct ConversationsListView: View {
+    enum Route: Hashable {
+        case composer, conversation(Conversation)
+    }
+
     let convos: ConvosSDK.Convos
     @State var userState: UserState
     @State var conversationsState: ConversationsState
+    @State private var path: [Route] = []
 
     @State private var presentingComposer: Bool = false
 
@@ -21,34 +26,50 @@ struct ConversationsListView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             VStack(spacing: 0) {
-                ConversationsListNavigationBar(userState: userState,
-                                               presentingComposer: $presentingComposer,
-                                               signOut: {
-                    Task {
-                        try await convos.signOut()
+                ConversationsListNavigationBar(
+                    userState: userState,
+                    onCompose: {
+                        path.append(.composer)
+                    },
+                    onSignOut: {
+                        Task {
+                            try await convos.signOut()
+                        }
                     }
-                })
+                )
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(conversationsState.unpinnedConversations) { conversation in
-                            NavigationLink(value: conversation) {
+                            NavigationLink(value: Route.conversation(conversation)) {
                                 ConversationsListItem(conversation: conversation)
                             }
                         }
                     }
-                    .navigationDestination(for: Conversation.self, destination: { conversation in
-                        MessagesView(messagesStore: MockMessagesStore())
+                    .navigationDestination(for: Route.self) { route in
+                        switch route {
+                        case .composer:
+                            ConversationComposerView(
+                                draftConversationRepository: MockDraftConversationRepository(),
+                                messagesStore: MockMessagesStore()
+                            )
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)
+                        case .conversation:
+                            MessagesView(
+                                conversationRepository: MockConversationRepository(),
+                                messagesStore: MockMessagesStore()
+                            )
+                            .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)
-                    })
+                        }
+                    }
                 }
                 .navigationBarHidden(true)
             }
             .sheet(isPresented: $presentingComposer) {
-                ConversationComposerView()
+                ConversationComposerContentView()
             }
         }
     }

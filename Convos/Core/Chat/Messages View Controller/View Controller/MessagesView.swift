@@ -1,7 +1,20 @@
 import SwiftUI
 
 struct MessagesView: UIViewControllerRepresentable {
-    let messagesStore: MessagesStoreProtocol
+    let conversationRepository: any ConversationRepositoryProtocol
+    let messagesStore: any MessagesStoreProtocol
+    @State private var conversationState: ConversationState
+
+    init(conversationRepository: ConversationRepositoryProtocol,
+         messagesStore: MessagesStoreProtocol) {
+        self.conversationRepository = conversationRepository
+        self.messagesStore = messagesStore
+        _conversationState = State(
+            initialValue: .init(
+                conversationRepository: conversationRepository
+            )
+        )
+    }
 
     func makeUIViewController(context: Context) -> MessagesViewController {
         let messageViewController = MessagesViewController(messagesStore: messagesStore)
@@ -13,6 +26,7 @@ struct MessagesView: UIViewControllerRepresentable {
 }
 
 #Preview {
-    MessagesView(messagesStore: MockMessagesStore())
+    MessagesView(conversationRepository: MockConversationRepository(),
+                 messagesStore: MockMessagesStore())
         .ignoresSafeArea()
 }

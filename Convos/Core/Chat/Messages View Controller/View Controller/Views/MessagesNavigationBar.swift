@@ -62,6 +62,7 @@ class MessagesNavigationBar: UIView {
     func configure(title: String, avatar: UIImage? = nil) {
         titleLabel.text = title
         avatarImageView.image = avatar
+        avatarImageView.isHidden = avatar == nil
     }
 
     // MARK: - Private Methods

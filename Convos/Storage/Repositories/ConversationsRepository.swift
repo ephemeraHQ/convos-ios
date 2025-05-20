@@ -31,10 +31,9 @@ final class ConversationsRepository: ConversationsRepositoryProtocol {
     }
 }
 
-fileprivate extension Database {
-    func composeAllConversations() throws -> [Conversation] {
-        let dbConversations = try DBConversation
-            .fetchAll(self)
+extension Array where Element == DBConversation {
+    func composeConversations(from database: Database) throws -> [Conversation] {
+        let dbConversations: [DBConversation] = self
 
         let memberIds = dbConversations.flatMap { $0.memberIds }
         let creatorIds = dbConversations.map { $0.creatorId }
@@ -42,9 +41,9 @@ fileprivate extension Database {
 
         let memberProfiles = try MemberProfile
             .filter(allProfileIds.contains(Column("inboxId")))
-            .fetchAll(self)
+            .fetchAll(database)
 
-        let currentUserProfile = try currentUserProfile()
+        let currentUserProfile = try database.currentUserProfile()
 
         let profileById = Dictionary(uniqueKeysWithValues: memberProfiles.map { ($0.inboxId, $0) })
         let conversations: [Conversation] = try dbConversations.compactMap { dbConv in
@@ -62,7 +61,7 @@ fileprivate extension Database {
 
             let localState = try ConversationLocalState
                 .filter(Column("id") == dbConv.id)
-                .fetchOne(self) ?? .empty
+                .fetchOne(database) ?? .empty
 
             let otherMemberProfile: Profile?
             if dbConv.kind == .dm,
@@ -77,7 +76,7 @@ fileprivate extension Database {
             let messages: [Message] = try Message
                 .filter(Column("conversationId") == dbConv.id)
                 .order(Column("date").asc)
-                .fetchAll(self)
+                .fetchAll(database)
             let imageURL: URL?
             if let imageURLString = dbConv.imageURLString {
                 imageURL = URL(string: imageURLString)
@@ -105,5 +104,15 @@ fileprivate extension Database {
             let rhsDate = rhs.lastMessage?.createdAt ?? .distantPast
             return lhsDate > rhsDate
         }
+
+    }
+}
+
+fileprivate extension Database {
+    func composeAllConversations() throws -> [Conversation] {
+        let dbConversations = try DBConversation
+            .fetchAll(self)
+
+        return try dbConversations.composeConversations(from: self)
     }
 }

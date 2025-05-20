@@ -2,9 +2,9 @@ import SwiftUI
 
 struct ConversationsListNavigationBar: View {
     @State var userState: UserState
-    @Binding var presentingComposer: Bool
 
-    let signOut: () -> Void
+    let onCompose: () -> Void
+    let onSignOut: () -> Void
 
     var body: some View {
         HStack(spacing: 0.0) {
@@ -24,7 +24,7 @@ struct ConversationsListNavigationBar: View {
 
                 HStack {
                     Button {
-                        presentingComposer = true
+                        onCompose()
                     } label: {
                         Image(systemName: "square.and.pencil")
                             .font(.system(size: 24.0))
@@ -41,12 +41,10 @@ struct ConversationsListNavigationBar: View {
 }
 
 #Preview {
-    @Previewable @State var presentingComposer: Bool = false
     @Previewable @State var userState: UserState = .init(
         userRepository: MockUserRepository()
     )
 
-    ConversationsListNavigationBar(userState: userState,
-                                   presentingComposer: $presentingComposer) {
+    ConversationsListNavigationBar(userState: userState, onCompose: {}) {
     }
 }
