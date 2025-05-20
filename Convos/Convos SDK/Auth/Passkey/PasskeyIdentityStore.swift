@@ -1,5 +1,7 @@
+import CryptoKit
 import Foundation
 import Security
+import SwiftCBOR
 
 extension String {
     func base64URLToBase64() -> Data? {
@@ -7,9 +9,13 @@ extension String {
             .replacingOccurrences(of: "-", with: "+")
             .replacingOccurrences(of: "_", with: "/")
 
-        let padding = 4 - base64.count % 4
-        if padding < 4 {
-            base64 += String(repeating: "=", count: padding)
+        let rem = base64.count % 4
+        if rem == 2 {
+            base64 += "=="
+        } else if rem == 3 {
+            base64 += "="
+        } else if rem == 1 {
+            return nil
         }
 
         return Data(base64Encoded: base64)
@@ -18,26 +24,54 @@ extension String {
 
 extension Data {
     func coseToSec1PublicKey() -> Data? {
-        // Remove overly strict length check
-        // Find the X and Y coordinates in the COSE key
-        guard let xRange = self.range(of: Data([0x21, 0x58, 0x20])),
-              let yRange = self.range(of: Data([0x22, 0x58, 0x20])) else {
+        guard let decoded = try? CBORDecoder(input: bytes).decodeItem() else {
+            print("Failed to decode CBOR")
             return nil
         }
 
-        let xStart = xRange.upperBound
-        let yStart = yRange.upperBound
+        let coseMap: [CBOR: CBOR]?
 
-        guard xStart + 32 <= self.count, yStart + 32 <= self.count else {
+        switch decoded {
+        case CBOR.map(let map):
+            coseMap = map
+
+        case CBOR.tagged(_, let tagged):
+            if case CBOR.map(let map) = tagged {
+                coseMap = map
+            } else {
+                coseMap = nil
+            }
+
+        case CBOR.array(let array):
+            if array.count == 1, case CBOR.map(let map) = array[0] {
+                coseMap = map
+            } else {
+                coseMap = nil
+            }
+
+        default:
+            coseMap = nil
+        }
+
+        guard let map = coseMap else {
+            print("COSE structure is not a valid map")
             return nil
         }
 
-        let x = self[xStart..<xStart+32]
-        let y = self[yStart..<yStart+32]
+        let xLabel = CBOR.negativeInt(1)
+        let yLabel = CBOR.negativeInt(2)
+
+        guard let xVal = map[xLabel], let yVal = map[yLabel],
+              case let CBOR.byteString(xBytes) = xVal,
+              case let CBOR.byteString(yBytes) = yVal,
+              xBytes.count == 32, yBytes.count == 32 else {
+            print("Missing or invalid x/y values")
+            return nil
+        }
 
         var sec1 = Data([0x04])
-        sec1.append(x)
-        sec1.append(y)
+        sec1.append(contentsOf: xBytes)
+        sec1.append(contentsOf: yBytes)
         return sec1
     }
 }
