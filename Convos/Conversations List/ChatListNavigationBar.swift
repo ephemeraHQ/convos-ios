@@ -45,6 +45,9 @@ struct ConversationsListNavigationBar: View {
         userRepository: MockUserRepository()
     )
 
-    ConversationsListNavigationBar(userState: userState, onCompose: {}) {
-    }
+    ConversationsListNavigationBar(
+        userState: userState,
+        onCompose: {},
+        onSignOut: {}
+    )
 }

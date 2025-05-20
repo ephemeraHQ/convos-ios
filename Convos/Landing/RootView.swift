@@ -1,14 +1,14 @@
 import SwiftUI
 
 struct RootView: View {
-    private let convos: ConvosSDK.Convos
+    private let convos: ConvosSDK.ConvosClient
     private let analyticsService: AnalyticsServiceProtocol
     private let userRepository: UserRepositoryProtocol
     private let conversationsRepository: ConversationsRepositoryProtocol
 
     @State var viewModel: AppViewModel
 
-    init(convos: ConvosSDK.Convos,
+    init(convos: ConvosSDK.ConvosClient,
          analyticsService: AnalyticsServiceProtocol) {
         self.convos = convos
         self.analyticsService = analyticsService
@@ -26,9 +26,11 @@ struct RootView: View {
                 Spacer()
             }
         case .signedIn:
-            ConversationsListView(convos: convos,
-                         userRepository: userRepository,
-                         conversationsRepository: conversationsRepository)
+            ConversationsListView(
+                convos: convos,
+                userRepository: userRepository,
+                conversationsRepository: conversationsRepository
+            )
         case .signedOut:
             OnboardingView(convos: convos)
         }

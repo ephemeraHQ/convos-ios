@@ -1,95 +1,75 @@
+import OrderedCollections
 import SwiftUI
 
 @Observable
 class ConversationComposerViewModel {
-    var searchText: String = ""
+    private let profileSearchRepo: any ProfileSearchRepositoryProtocol
 
-    var conversationResults: [Conversation] = [
-        .mock(),
-        .mock(),
-    ]
+    var searchText: String = "" {
+        didSet {
+            guard !searchText.isEmpty else {
+                profileResults = []
+                return
+            }
 
-    var profileResults: [Profile] = [
-        .mock(),
-        .mock(),
-        .mock()
-    ]
+            Task {
+                let results: [Profile]
+                do {
+                    results = try await profileSearchRepo.search(using: searchText)
+                } catch {
+                    Logger.error("Error searching for profiles: \(error)")
+                    results = []
+                }
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    self.profileResults = results.filter { !self.profilesAdded.contains($0) }
+                }
+            }
+        }
+    }
+    var conversationResults: [Conversation] = []
+    var profilesAdded: OrderedSet<Profile> = []
+    var profileResults: [Profile] = []
+
+    init(
+        messagingService: any ConvosSDK.MessagingServiceProtocol
+    ) {
+        self.profileSearchRepo = messagingService.profileSearchRepository()
+    }
+
+    func add(profile: Profile) {
+        searchText = ""
+        profilesAdded.append(profile)
+    }
 }
 
 struct ConversationComposerContentView: View {
     @State private var selectedProfile: Profile?
-    @State private var viewModel: ConversationComposerViewModel = .init()
+    @State private var viewModel: ConversationComposerViewModel
+
+    init(
+        messagingService: any ConvosSDK.MessagingServiceProtocol,
+        selectedProfile: Profile? = nil
+    ) {
+        self.selectedProfile = selectedProfile
+        _viewModel = State(initialValue: .init(messagingService: messagingService))
+    }
 
     private let headerHeight: CGFloat = 72.0
 
-    var body: some View {
-        VStack(spacing: 0.0) {
-            // navigation bar
-//            Group {
-//                HStack(spacing: DesignConstants.Spacing.stepHalf) {
-//                    Button {
-//                    } label: {
-//                        Image(systemName: "chevron.left")
-//                            .font(.system(size: 24.0))
-//                            .foregroundColor(.colorTextPrimary)
-//                            .padding(.horizontal, DesignConstants.Spacing.step2x)
-//                            .padding(.vertical, 10.0)
-//                    }
-//
-//                    Text("New chat")
-//                        .font(.system(size: 16.0))
-//                        .foregroundStyle(.colorTextPrimary)
-//                        .padding(.vertical, 10.0)
-//
-//                    Spacer()
-//                }
-//                .padding(DesignConstants.Spacing.step4x)
-//            }
-//            .overlay(
-//                Rectangle()
-//                    .frame(height: 0.5)
-//                    .foregroundStyle(Color.colorBorderSubtle2),
-//                alignment: .bottom
-//            )
-
-            // profile search header
-            HStack(alignment: .top,
-                   spacing: DesignConstants.Spacing.step2x) {
-                Text("To")
-                    .font(.system(size: 14.0))
-                    .foregroundStyle(.colorTextSecondary)
-                    .frame(height: headerHeight)
-
-                ConversationComposerProfilesField(searchText: $viewModel.searchText,
-                                                  selectedProfile: $selectedProfile,
-                                                  profiles: $viewModel.profileResults)
-
-                Button {
-                } label: {
-                    Image(systemName: "qrcode.viewfinder")
-                        .font(.system(size: 24.0))
-                        .foregroundStyle(.colorTextPrimary)
-                        .padding(.horizontal, DesignConstants.Spacing.step2x)
-                }
-                .opacity(viewModel.searchText.isEmpty ? 1.0 : 0.2)
-                .frame(height: headerHeight)
-            }
-                   .contentShape(Rectangle())
-                   .onTapGesture {
-                       selectedProfile = nil
-                   }
-                   .padding(.horizontal, DesignConstants.Spacing.step4x)
-
-            List {
-                ForEach(viewModel.conversationResults, id: \.id) { conversation in
+    var resultsList: some View {
+        List {
+            ForEach(viewModel.conversationResults, id: \.id) { conversation in
+                FlashingListRowButton {
+                } content: {
                     HStack(spacing: DesignConstants.Spacing.step3x) {
-                        ConversationAvatarView(conversation: conversation,
-                                               size: 40.0)
+                        ConversationAvatarView(conversation: conversation, size: 40.0)
 
                         VStack(alignment: .leading, spacing: 0.0) {
                             Text(conversation.topic)
                                 .font(.system(size: 16.0))
                                 .foregroundStyle(.colorTextPrimary)
+
                             switch conversation.kind {
                             case .dm:
                                 Text(conversation.otherMember?.username ?? "")
@@ -107,9 +87,17 @@ struct ConversationComposerContentView: View {
                         Image(systemName: "chevron.right")
                             .foregroundStyle(.colorTextSecondary)
                     }
-                    .listRowSeparator(.hidden)
                 }
-                ForEach(viewModel.profileResults, id: \.id) { profile in
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
+                .listRowSpacing(0.0)
+            }
+
+            ForEach(viewModel.profileResults, id: \.id) { profile in
+                FlashingListRowButton {
+                    viewModel.add(profile: profile)
+                } content: {
                     HStack(spacing: DesignConstants.Spacing.step3x) {
                         ProfileAvatarView(profile: profile, size: 40.0)
 
@@ -121,12 +109,52 @@ struct ConversationComposerContentView: View {
                                 .font(.system(size: 14.0))
                                 .foregroundStyle(.colorTextSecondary)
                         }
+
+                        Spacer()
                     }
-                    .listRowSeparator(.hidden)
                 }
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
+                .listRowSpacing(0.0)
             }
-            .padding(0.0)
-            .listStyle(.plain)
+        }
+        .listStyle(.plain)
+        .listRowSpacing(0.0)
+        .padding(0)
+    }
+
+    var body: some View {
+        VStack(spacing: 0.0) {
+            // profile search header
+            HStack(alignment: .top,
+                   spacing: DesignConstants.Spacing.step2x) {
+                Text("To")
+                    .font(.system(size: 16.0))
+                    .foregroundStyle(.colorTextSecondary)
+                    .frame(height: headerHeight)
+
+                ConversationComposerProfilesField(searchText: $viewModel.searchText,
+                                                  selectedProfile: $selectedProfile,
+                                                  profiles: $viewModel.profilesAdded)
+
+                Button {
+                } label: {
+                    Image(systemName: "qrcode.viewfinder")
+                        .font(.system(size: 24.0))
+                        .foregroundStyle(.colorTextPrimary)
+                        .padding(.horizontal, DesignConstants.Spacing.step2x)
+                }
+                .opacity(viewModel.searchText.isEmpty ? 1.0 : 0.2)
+                .frame(height: headerHeight)
+            }
+                   .contentShape(Rectangle())
+                   .onTapGesture {
+                       selectedProfile = nil
+                   }
+                   .padding(.horizontal, DesignConstants.Spacing.step4x)
+
+            resultsList
 
             Spacer()
         }
@@ -134,5 +162,7 @@ struct ConversationComposerContentView: View {
 }
 
 #Preview {
-    ConversationComposerContentView()
+    ConversationComposerContentView(
+        messagingService: MockMessagingService()
+    )
 }

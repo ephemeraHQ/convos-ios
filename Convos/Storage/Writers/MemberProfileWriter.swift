@@ -3,7 +3,7 @@ import GRDB
 import XMTPiOS
 
 protocol MemberProfileWriterProtocol {
-    func store(profiles: [ConvosAPIClient.ProfileResponse]) async throws
+    func store(profiles: [ConvosAPI.ProfileResponse]) async throws
 }
 
 class MemberProfileWriter: MemberProfileWriterProtocol {
@@ -13,7 +13,7 @@ class MemberProfileWriter: MemberProfileWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    func store(profiles: [ConvosAPIClient.ProfileResponse]) async throws {
+    func store(profiles: [ConvosAPI.ProfileResponse]) async throws {
         let memberProfiles: [MemberProfile] = profiles.map { profile in
                 .init(inboxId: profile.xmtpId,
                       name: profile.name,

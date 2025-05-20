@@ -2,20 +2,20 @@ import Combine
 import Foundation
 import GRDB
 
-public enum ConvosSDK {
-    public final class Convos {
+enum ConvosSDK {
+    final class ConvosClient {
         private let authService: AuthServiceProtocol
         private let messagingService: any MessagingServiceProtocol
 
-        public var databaseWriter: any DatabaseWriter {
+        var databaseWriter: any DatabaseWriter {
             DatabaseManager.shared.dbWriter
         }
 
-        public var databaseReader: any DatabaseReader {
+        var databaseReader: any DatabaseReader {
             DatabaseManager.shared.dbReader
         }
 
-        static func sdk(authService: AuthServiceProtocol) -> Convos {
+        static func sdk(authService: AuthServiceProtocol) -> ConvosClient {
             let databaseWriter = DatabaseManager.shared.dbWriter
             let messagingService = MessagingService(authService: authService,
                                                     databaseWriter: databaseWriter)
@@ -29,31 +29,31 @@ public enum ConvosSDK {
             self.messagingService = messagingService
         }
 
-        public var authState: AnyPublisher<AuthServiceState, Never> {
+        var authState: AnyPublisher<AuthServiceState, Never> {
             authService.authStatePublisher().eraseToAnyPublisher()
         }
 
-        public var supportsMultipleAccounts: Bool {
+        var supportsMultipleAccounts: Bool {
             authService.supportsMultipleAccounts
         }
 
-        public func prepare() async throws {
+        func prepare() async throws {
             try await authService.prepare()
         }
 
-        public func signIn() async throws {
+        func signIn() async throws {
             try await authService.signIn()
         }
 
-        public func register(displayName: String) async throws {
+        func register(displayName: String) async throws {
             try await authService.register(displayName: displayName)
         }
 
-        public func signOut() async throws {
+        func signOut() async throws {
             try await authService.signOut()
         }
 
-        public var messaging: any MessagingServiceProtocol {
+        var messaging: any MessagingServiceProtocol {
             messagingService
         }
     }

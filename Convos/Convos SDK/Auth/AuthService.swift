@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import XMTPiOS
 
-public extension ConvosSDK {
+extension ConvosSDK {
     protocol RegisteredResultType: AuthorizedResultType {
         var displayName: String { get }
     }

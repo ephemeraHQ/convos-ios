@@ -52,10 +52,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
          databaseWriter: any DatabaseWriter) {
         self.authService = authService
         self.userWriter = UserWriter(databaseWriter: databaseWriter)
-        guard let apiBaseURL = URL(string: Secrets.CONVOS_API_BASE_URL) else {
-            fatalError("Failed constructing API base URL")
-        }
-        self.apiClient = .init(baseURL: apiBaseURL)
+        self.apiClient = ConvosAPIClient.shared
         self.syncingManager = SyncingManager(databaseWriter: databaseWriter,
                                              apiClient: apiClient)
         Task {
@@ -84,6 +81,13 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
     func loadPreviousMessages() async -> [ConvosSDK.RawMessageType] {
         []
+    }
+
+    // MARK: Profile Search
+
+    nonisolated
+    func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
+        ProfileSearchRepository(apiClient: ConvosAPIClient.shared)
     }
 
     // MARK: -
@@ -164,12 +168,12 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     // MARK: - User Creation
 
     private func createUser(from result: ConvosSDK.RegisteredResultType,
-                            signingKey: SigningKey) async throws -> ConvosAPIClient.CreatedUserResponse {
+                            signingKey: SigningKey) async throws -> ConvosAPI.CreatedUserResponse {
         let userId = UUID().uuidString
         let username = try await generateUsername(from: result.displayName)
         let xmtpId = xmtpClient?.inboxID
         let xmtpInstallationId = xmtpClient?.installationID
-        let requestBody: ConvosAPIClient.CreateUserRequest = .init(
+        let requestBody: ConvosAPI.CreateUserRequest = .init(
             turnkeyUserId: userId,
             device: .current(),
             identity: .init(turnkeyAddress: signingKey.identity.identifier,

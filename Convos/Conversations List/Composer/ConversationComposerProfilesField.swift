@@ -1,9 +1,10 @@
+import OrderedCollections
 import SwiftUI
 
 struct VerticalEdgeClipShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        path.addRect(CGRect(x: rect.minX-(rect.width / 2.0),
+        path.addRect(CGRect(x: rect.minX - (rect.width / 2.0),
                             y: rect.minY,
                             width: rect.width * 2.0,
                             height: rect.height))
@@ -20,14 +21,14 @@ struct ConversationComposerProfilesField: View {
         }
     }
     @State var searchTextEditingEnabled: Bool = true
-    @Binding var profiles: [Profile]
+    @Binding var profiles: OrderedSet<Profile>
 
     private let profileTagsMaxHeight: CGFloat = 150.0
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: false) {
-                GeometryReader { reader in
+            GeometryReader { reader in
+                ScrollView(.vertical, showsIndicators: false) {
                     FlowLayout(spacing: DesignConstants.Spacing.step2x) {
                         ForEach(profiles, id: \.id) { profile in
                             ComposerProfileTagView(profile: profile,
@@ -36,6 +37,7 @@ struct ConversationComposerProfilesField: View {
                             .onTapGesture {
                                 selected(profile: profile)
                             }
+                            .offset(y: -1.75)
                         }
 
                         FlowLayoutTextEditor(text: $searchText,
@@ -43,6 +45,7 @@ struct ConversationComposerProfilesField: View {
                                              maxTextFieldWidth: reader.size.width) {
                             backspaceOnEmpty()
                         }
+                                             .id("textField")
                                              .padding(.bottom, 4.0)
                                              .opacity(selectedProfile != nil ? 0.0 : 1.0)
                     }
@@ -51,25 +54,26 @@ struct ConversationComposerProfilesField: View {
                     .onPreferenceChange(HeightPreferenceKey.self) { height in
                         profileTagsHeight = min(height, profileTagsMaxHeight)
                     }
-                }
-                .padding(.top, 4.0)
-                .frame(height: profileTagsHeight)
-                .onChange(of: selectedProfile) {
-                    withAnimation {
-                        proxy.scrollTo(selectedProfile,
-                                       anchor: .center)
+                    .padding(.top, 4.0)
+                    .onChange(of: selectedProfile) {
+                        withAnimation {
+                            proxy.scrollTo(selectedProfile,
+                                           anchor: .center)
+                        }
                     }
-                }
-                .onChange(of: searchText) {
-                    textChanged(searchText)
-                    withAnimation {
-                        proxy.scrollTo("textField", anchor: .leading)
+                    .onChange(of: searchText) {
+                        textChanged(searchText)
+                        if profileTagsHeight >= profileTagsMaxHeight {
+                            withAnimation {
+                                proxy.scrollTo("textField", anchor: .center)
+                            }
+                        }
                     }
+                    .scrollBounceBehavior(.always)
                 }
-                .scrollBounceBehavior(.always)
+                .scrollClipDisabled()
+                .clipShape(VerticalEdgeClipShape())
             }
-            .scrollClipDisabled()
-            .clipShape(VerticalEdgeClipShape())
         }
         .frame(height: profileTagsHeight)
     }
@@ -80,7 +84,7 @@ struct ConversationComposerProfilesField: View {
 
     func backspaceOnEmpty() {
         if let selectedProfile {
-            profiles.removeAll { $0.id == selectedProfile.id }
+            profiles.remove(selectedProfile)
             self.selectedProfile = nil
         } else {
             selectedProfile = profiles.last
@@ -93,9 +97,11 @@ struct ConversationComposerProfilesField: View {
 
 #Preview {
     @Previewable @State var searchText: String = ""
-    @Previewable @State var selectedProfile: Profile? = nil
-    @Previewable @State var profileResults: [Profile] = [
-        .mock(), .mock(), .mock(), .mock()
+    @Previewable @State var selectedProfile: Profile?
+    @Previewable @State var profileResults: OrderedSet<Profile> = [
+        .mock(), .mock(), .mock(), .mock(), .mock(),
+        .mock(), .mock(), .mock(), .mock(), .mock(),
+        .mock(), .mock(), .mock(), .mock(), .mock()
     ]
 
     VStack {
@@ -106,6 +112,7 @@ struct ConversationComposerProfilesField: View {
                                               profiles: $profileResults)
             Spacer().frame(width: 40)
         }
+        Text("Content Below")
 
         Spacer()
     }

@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 
-extension ConvosAPIClient {
+enum ConvosAPI {
     struct UserResponse: Decodable {
         let id: String
         let identities: [Identity]
@@ -74,7 +74,7 @@ extension ConvosAPIClient {
     }
 }
 
-extension ConvosAPIClient.CreateUserRequest.Device {
+extension ConvosAPI.CreateUserRequest.Device {
     static func current() -> Self {
         #if targetEnvironment(macCatalyst)
         let osString = "macos"

@@ -2,8 +2,6 @@ import Combine
 import Foundation
 import UIKit
 
-// swiftlint:disable force_unwrapping force_try
-
 final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
     private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
     CurrentValueSubject<ConvosSDK.MessagingServiceState, Never>(.uninitialized)
@@ -39,6 +37,10 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
         return .init {
             nil
         }
+    }
+
+    func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
+        MockProfileSearchRepository()
     }
 
     func loadInitialMessages() async -> [any ConvosSDK.RawMessageType] {
@@ -166,5 +168,3 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
         return Date(timeIntervalSince1970: randomTimeInterval)
     }
 }
-
-// swiftlint:enable force_unwrapping force_try

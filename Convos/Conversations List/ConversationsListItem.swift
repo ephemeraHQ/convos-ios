@@ -13,7 +13,7 @@ extension Conversation {
 
 struct ConversationsListItem: View {
     let conversation: Conversation
-    
+
     @State private var isPinning: Bool = false
 
     var body: some View {

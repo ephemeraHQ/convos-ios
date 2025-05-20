@@ -104,7 +104,6 @@ extension Array where Element == DBConversation {
             let rhsDate = rhs.lastMessage?.createdAt ?? .distantPast
             return lhsDate > rhsDate
         }
-
     }
 }
 

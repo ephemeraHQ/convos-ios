@@ -12,6 +12,7 @@
 		7A349CA62DD7017B00E526A3 /* GRDB-dynamic in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		7A349D042DD96EA400E526A3 /* PasskeyAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7A349D032DD96EA400E526A3 /* PasskeyAuth */; };
 		7ACA83952DDC395600848799 /* SwiftCBOR in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA83942DDC395600848799 /* SwiftCBOR */; };
+		7ACA83B22DDD19B200848799 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA83B12DDD19B200848799 /* OrderedCollections */; };
 		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
@@ -134,6 +135,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7ACA83B22DDD19B200848799 /* OrderedCollections in Frameworks */,
 				D834386F2DB19D8C00A50F45 /* Factory in Frameworks */,
 				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
 				D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */,
@@ -251,6 +253,7 @@
 				7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */,
 				7A349D032DD96EA400E526A3 /* PasskeyAuth */,
 				7ACA83942DDC395600848799 /* SwiftCBOR */,
+				7ACA83B12DDD19B200848799 /* OrderedCollections */,
 			);
 			productName = Convos;
 			productReference = D8A2B6912DA4BA4B00EF8577 /* Convos.app */;
@@ -294,6 +297,7 @@
 				7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 				7A349D022DD96EA400E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */,
 				7ACA83932DDC395600848799 /* XCRemoteSwiftPackageReference "SwiftCBOR" */,
+				7ACA83B02DDD19B200848799 /* XCRemoteSwiftPackageReference "swift-collections" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
@@ -661,6 +665,14 @@
 				kind = branch;
 			};
 		};
+		7ACA83B02DDD19B200848799 /* XCRemoteSwiftPackageReference "swift-collections" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-collections.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.0;
+			};
+		};
 		D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ra1028/DifferenceKit.git";
@@ -731,6 +743,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7ACA83932DDC395600848799 /* XCRemoteSwiftPackageReference "SwiftCBOR" */;
 			productName = SwiftCBOR;
+		};
+		7ACA83B12DDD19B200848799 /* OrderedCollections */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7ACA83B02DDD19B200848799 /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = OrderedCollections;
 		};
 		D8084BA82DC9193A00E708B0 /* DifferenceKit */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -40,7 +40,6 @@ struct ProfileView: View {
             .padding(.horizontal, DesignConstants.Spacing.step3x)
             .padding(.bottom, DesignConstants.Spacing.step3x)
             .zIndex(0)
-
         }
         .opacity(isVisible ? 1.0 : 0.0)
         .padding(.horizontal, DesignConstants.Spacing.step3x)

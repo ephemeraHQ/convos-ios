@@ -10,8 +10,11 @@ struct BackspaceTextField: UIViewRepresentable {
         let textField = BackspaceUITextField()
         textField.delegate = context.coordinator
         textField.onBackspaceWhenEmpty = onBackspaceWhenEmpty
-        textField.font = UIFont.systemFont(ofSize: 14.0)
+        textField.font = UIFont.systemFont(ofSize: 16.0)
+        textField.autocapitalizationType = .words
+        textField.autocorrectionType = .no
         textField.textColor = UIColor.colorTextPrimary
+        textField.tintColor = UIColor.colorTextPrimary
         textField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         textField.setContentHuggingPriority(.defaultHigh, for: .horizontal)
         return textField
@@ -48,7 +51,9 @@ struct BackspaceTextField: UIViewRepresentable {
         }
 
         func textFieldDidChangeSelection(_ textField: UITextField) {
-            text = textField.text ?? ""
+            DispatchQueue.main.async { [weak self] in
+                self?.text = textField.text ?? ""
+            }
         }
     }
 }

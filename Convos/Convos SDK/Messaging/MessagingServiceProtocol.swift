@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-public extension ConvosSDK {
+extension ConvosSDK {
     protocol User {
         var id: String { get }
         var profile: ConvosSDK.Profile { get }
@@ -29,15 +29,18 @@ public extension ConvosSDK {
     }
 
     protocol MessagingServiceProtocol {
+        var state: MessagingServiceState { get }
+
         func start() async throws
         func stop() async
+
+        func profileSearchRepository() -> any ProfileSearchRepositoryProtocol
 
         func sendMessage(to address: String, content: String) async throws -> [any RawMessageType]
         func messages(for address: String) -> AnyPublisher<[any RawMessageType], Never>
         func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never>
         func loadInitialMessages() async -> [any RawMessageType]
         func loadPreviousMessages() async -> [any RawMessageType]
-        var state: MessagingServiceState { get }
     }
 
     enum MessagingServiceState {

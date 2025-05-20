@@ -32,19 +32,42 @@ struct Passkey: Codable {
     let attestation: PasskeyAttestation
 }
 
-final class ConvosAPIClient {
+protocol ConvosAPIClientProtocol {
+    func authenticate(xmtpInstallationId: String,
+                      xmtpId: String,
+                      xmtpSignature: String) async throws -> String
+
+    func getUser() async throws -> ConvosAPI.UserResponse
+    func createUser(_ requestBody: ConvosAPI.CreateUserRequest) async throws -> ConvosAPI.CreatedUserResponse
+    func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse
+
+    func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse
+    func getProfiles(for inboxIds: [String]) async throws -> [ConvosAPI.ProfileResponse]
+    func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse]
+}
+
+final class ConvosAPIClient: ConvosAPIClientProtocol {
     internal let baseURL: URL
     private let keychainService: KeychainService<ConvosKeychainItem> = .init()
     internal let session: URLSession
 
-    init(baseURL: URL) {
+    static var shared: ConvosAPIClient = {
+        guard let apiBaseURL = URL(string: Secrets.CONVOS_API_BASE_URL) else {
+            fatalError("Failed constructing API base URL")
+        }
+        return ConvosAPIClient(baseURL: apiBaseURL)
+    }()
+
+    private init(baseURL: URL) {
         self.baseURL = baseURL
         self.session = URLSession(configuration: .default)
     }
 
     // MARK: - Authentication
 
-    func authenticate(xmtpInstallationId: String, xmtpId: String, xmtpSignature: String) async throws -> String {
+    func authenticate(xmtpInstallationId: String,
+                      xmtpId: String,
+                      xmtpSignature: String) async throws -> String {
         let url = baseURL.appendingPathComponent("v1/authenticate")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -73,13 +96,13 @@ final class ConvosAPIClient {
 
     // MARK: - Users
 
-    func getUser() async throws -> UserResponse {
+    func getUser() async throws -> ConvosAPI.UserResponse {
         let request = try authenticatedRequest(for: "v1/users/me")
-        let user: UserResponse = try await performRequest(request)
+        let user: ConvosAPI.UserResponse = try await performRequest(request)
         return user
     }
 
-    func createUser(_ requestBody: CreateUserRequest) async throws -> CreatedUserResponse {
+    func createUser(_ requestBody: ConvosAPI.CreateUserRequest) async throws -> ConvosAPI.CreatedUserResponse {
         var request = try authenticatedRequest(for: "v1/users", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         Logger.info("Sending create user request with body: \(requestBody)")
@@ -88,21 +111,21 @@ final class ConvosAPIClient {
         return try await performRequest(request)
     }
 
-    func checkUsername(_ username: String) async throws -> UsernameCheckResponse {
+    func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse {
         let request = try authenticatedRequest(for: "v1/profiles/check/\(username)")
-        let result: UsernameCheckResponse = try await performRequest(request)
+        let result: ConvosAPI.UsernameCheckResponse = try await performRequest(request)
         return result
     }
 
     // MARK: - Profiles
 
-    func getProfile(inboxId: String) async throws -> ProfileResponse {
+    func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse {
         let request = try authenticatedRequest(for: "v1/profiles/\(inboxId)")
-        let profile: ProfileResponse = try await performRequest(request)
+        let profile: ConvosAPI.ProfileResponse = try await performRequest(request)
         return profile
     }
 
-    func getProfiles(for inboxIds: [String]) async throws -> [ProfileResponse] {
+    func getProfiles(for inboxIds: [String]) async throws -> [ConvosAPI.ProfileResponse] {
         var request = try authenticatedRequest(for: "v1/profiles/batch", method: "POST")
         let body: [String: Any] = ["xmtpIds": inboxIds]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -110,13 +133,34 @@ final class ConvosAPIClient {
         return try await performRequest(request)
     }
 
+    func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse] {
+        let request = try authenticatedRequest(
+            for: "v1/profiles/search",
+            queryParameters: ["query": query]
+        )
+        return try await performRequest(request)
+    }
+
     // MARK: - Private Helpers
 
-    private func authenticatedRequest(for path: String, method: String = "GET") throws -> URLRequest {
+    private func authenticatedRequest(
+        for path: String,
+        method: String = "GET",
+        queryParameters: [String: String]? = nil
+    ) throws -> URLRequest {
         guard let jwt = try keychainService.retrieveString(.convosJwt) else {
             throw APIError.notAuthenticated
         }
-        let url = baseURL.appendingPathComponent(path)
+
+        var urlComponents = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)
+        if let queryParameters = queryParameters {
+            urlComponents?.queryItems = queryParameters.map { URLQueryItem(name: $0.key, value: $0.value) }
+        }
+
+        guard let url = urlComponents?.url else {
+            throw APIError.invalidURL
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
@@ -150,6 +194,7 @@ final class ConvosAPIClient {
 // MARK: - Error Handling
 
 enum APIError: Error {
+    case invalidURL
     case authenticationFailed
     case notAuthenticated
     case forbidden

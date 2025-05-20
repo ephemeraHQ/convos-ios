@@ -6,14 +6,12 @@ struct ConversationsListView: View {
         case composer, conversation(Conversation)
     }
 
-    let convos: ConvosSDK.Convos
+    let convos: ConvosSDK.ConvosClient
     @State var userState: UserState
     @State var conversationsState: ConversationsState
     @State private var path: [Route] = []
 
-    @State private var presentingComposer: Bool = false
-
-    init(convos: ConvosSDK.Convos,
+    init(convos: ConvosSDK.ConvosClient,
          userRepository: any UserRepositoryProtocol,
          conversationsRepository: any ConversationsRepositoryProtocol) {
         self.convos = convos
@@ -52,6 +50,7 @@ struct ConversationsListView: View {
                         case .composer:
                             ConversationComposerView(
                                 draftConversationRepository: MockDraftConversationRepository(),
+                                messagingService: convos.messaging,
                                 messagesStore: MockMessagesStore()
                             )
                             .ignoresSafeArea()
@@ -67,9 +66,6 @@ struct ConversationsListView: View {
                     }
                 }
                 .navigationBarHidden(true)
-            }
-            .sheet(isPresented: $presentingComposer) {
-                ConversationComposerContentView()
             }
         }
     }

@@ -2,9 +2,9 @@ import Foundation
 import GRDB
 
 protocol UserWriterProtocol {
-    func storeUser(_ user: ConvosAPIClient.UserResponse,
-                   profile: ConvosAPIClient.ProfileResponse) async throws
-    func storeUser(_ user: ConvosAPIClient.CreatedUserResponse) async throws
+    func storeUser(_ user: ConvosAPI.UserResponse,
+                   profile: ConvosAPI.ProfileResponse) async throws
+    func storeUser(_ user: ConvosAPI.CreatedUserResponse) async throws
 }
 
 class UserWriter: UserWriterProtocol {
@@ -14,7 +14,7 @@ class UserWriter: UserWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    func storeUser(_ user: ConvosAPIClient.UserResponse, profile: ConvosAPIClient.ProfileResponse) async throws {
+    func storeUser(_ user: ConvosAPI.UserResponse, profile: ConvosAPI.ProfileResponse) async throws {
         let identities: [Identity] = user.identities.map {
             Identity(id: $0.id,
                      userId: user.id,
@@ -48,7 +48,7 @@ class UserWriter: UserWriterProtocol {
         }
     }
 
-    func storeUser(_ user: ConvosAPIClient.CreatedUserResponse) async throws {
+    func storeUser(_ user: ConvosAPI.CreatedUserResponse) async throws {
         let identities: [Identity] = [
             Identity(id: user.identity.id,
                      userId: user.id,

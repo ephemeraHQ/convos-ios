@@ -3,12 +3,15 @@ import UIKit
 
 class ConversationComposerViewController: UIViewController {
     let messagesViewController: MessagesViewController
+    let messagingService: any ConvosSDK.MessagingServiceProtocol
     private var composerHostingController: UIHostingController<ConversationComposerContentView>?
 
     init(
-        messagesStore: MessagesStoreProtocol
+        messagesStore: MessagesStoreProtocol,
+        messagingService: any ConvosSDK.MessagingServiceProtocol
     ) {
         self.messagesViewController = MessagesViewController(messagesStore: messagesStore)
+        self.messagingService = messagingService
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -27,7 +30,7 @@ class ConversationComposerViewController: UIViewController {
         messagesViewController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         messagesViewController.didMove(toParent: self)
 
-        let composerView = ConversationComposerContentView()
+        let composerView = ConversationComposerContentView(messagingService: messagingService)
         let hosting = UIHostingController(rootView: composerView)
         hosting.navigationController?.setNavigationBarHidden(true, animated: false)
         addChild(hosting)

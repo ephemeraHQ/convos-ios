@@ -5,7 +5,7 @@ struct OnboardingView: View {
     @State var presentingCreateContactCard: Bool = false
     @State var presentingImportContactCard: Bool = false
 
-    init(convos: ConvosSDK.Convos) {
+    init(convos: ConvosSDK.ConvosClient) {
         _viewModel = State(initialValue: .init(convos: convos))
     }
 

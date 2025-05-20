@@ -2,7 +2,7 @@ import SwiftUI
 
 private struct SelectionBarOverlay: View {
     let color: Color = .black
-    private let circleSize: CGFloat = 18.0
+    private let circleSize: CGFloat = 14.0
     private let barWidth: CGFloat = 2.0
 
     var body: some View {
@@ -57,7 +57,7 @@ struct ComposerProfileTagView: View {
             HStack(spacing: DesignConstants.Spacing.stepX) {
                 ProfileAvatarView(profile: profile, size: DesignConstants.ImageSizes.extraSmallAvatar)
                 Text(profile.displayName)
-                    .font(.system(size: 14.0))
+                    .font(.system(size: 16.0))
                     .foregroundStyle(.colorTextPrimary)
                     .padding(.vertical, DesignConstants.Spacing.step2x)
             }

@@ -10,19 +10,16 @@ struct FlowLayoutTextEditor: View {
 
     var body: some View {
         Group {
-            BackspaceTextField(text: $text,
-                               editingEnabled: $editingEnabled,
-                               onBackspaceWhenEmpty: onBackspaceWhenEmpty)
-                .font(.system(size: 14.0))
-                .tint(.colorTextPrimary)
-                .padding(.horizontal, 10.0)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.words)
-                .padding(.vertical, DesignConstants.Spacing.step2x)
-                .frame(maxWidth: maxTextFieldWidth)
-                .truncationMode(.head)
-                .lineLimit(1)
-                .focused($isFocused)
+            BackspaceTextField(
+                text: $text,
+                editingEnabled: $editingEnabled,
+                onBackspaceWhenEmpty: onBackspaceWhenEmpty
+            )
+            .padding(.horizontal, 10.0)
+            .padding(.vertical, DesignConstants.Spacing.step2x)
+            .frame(maxWidth: maxTextFieldWidth)
+            .focused($isFocused)
+            .offset(y: -2.75)
         }
         .fixedSize(horizontal: true, vertical: false)
         .frame(minWidth: minTextFieldWidth, alignment: .leading)

@@ -57,6 +57,10 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
     func stop() {
     }
 
+    func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
+        MockProfileSearchRepository()
+    }
+
     func conversations() async throws -> [any ConvosSDK.ConversationType] {
         return []
     }

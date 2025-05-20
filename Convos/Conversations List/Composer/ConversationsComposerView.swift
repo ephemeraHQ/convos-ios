@@ -2,14 +2,17 @@ import SwiftUI
 
 struct ConversationComposerView: UIViewControllerRepresentable {
     let draftConversationRepository: any ConversationRepositoryProtocol
+    let messagingService: any ConvosSDK.MessagingServiceProtocol
     let messagesStore: MessagesStoreProtocol
     @State private var draftConversationState: DraftConversationState
 
     init(
         draftConversationRepository: any ConversationRepositoryProtocol,
+        messagingService: any ConvosSDK.MessagingServiceProtocol,
         messagesStore: MessagesStoreProtocol
     ) {
         self.draftConversationRepository = draftConversationRepository
+        self.messagingService = messagingService
         self.messagesStore = messagesStore
         _draftConversationState = State(
             initialValue: .init(
@@ -20,7 +23,8 @@ struct ConversationComposerView: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> ConversationComposerViewController {
         let composerViewController = ConversationComposerViewController(
-            messagesStore: messagesStore
+            messagesStore: messagesStore,
+            messagingService: messagingService
         )
         return composerViewController
     }
@@ -34,6 +38,7 @@ struct ConversationComposerView: UIViewControllerRepresentable {
 #Preview {
     ConversationComposerView(
         draftConversationRepository: MockDraftConversationRepository(),
+        messagingService: MockMessagingService(),
         messagesStore: MockMessagesStore()
     )
     .ignoresSafeArea()
