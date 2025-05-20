@@ -2,13 +2,16 @@ import SwiftUI
 
 struct FlowLayoutTextEditor: View {
     @Binding var text: String
+    @Binding var editingEnabled: Bool
     @FocusState private var isFocused: Bool
     let maxTextFieldWidth: CGFloat
+    let minTextFieldWidth: CGFloat = 75.0
     let onBackspaceWhenEmpty: () -> Void
 
     var body: some View {
         Group {
             BackspaceTextField(text: $text,
+                               editingEnabled: $editingEnabled,
                                onBackspaceWhenEmpty: onBackspaceWhenEmpty)
                 .font(.system(size: 14.0))
                 .tint(.colorTextPrimary)
@@ -22,7 +25,7 @@ struct FlowLayoutTextEditor: View {
                 .focused($isFocused)
         }
         .fixedSize(horizontal: true, vertical: false)
-        .frame(minWidth: 75.0, alignment: .leading)
+        .frame(minWidth: minTextFieldWidth, alignment: .leading)
         .clipped()
         .onAppear {
             isFocused = true
@@ -37,7 +40,12 @@ private struct FlowLayoutTextEditorExample: View {
     let maxHeight: CGFloat = 150.0
 
     @State var searchText: String = ""
-    @State var selectedItem: String?
+    @State var editingEnabled: Bool = true
+    @State var selectedItem: String? {
+        didSet {
+            editingEnabled = selectedItem == nil
+        }
+    }
     @State var items: [String] = [
         "Alex", "Jordan", "Taylor", "Morgan", "Casey", "Riley", "Cameron", "Skylar",
         "Emerson", "Quinn", "Avery", "Hayden", "Rowan", "Sage", "Finley", "Dakota",
@@ -72,6 +80,7 @@ private struct FlowLayoutTextEditorExample: View {
                     }
 
                     FlowLayoutTextEditor(text: $searchText,
+                                         editingEnabled: $editingEnabled,
                                          maxTextFieldWidth: reader.size.width) {
                         backspaceOnEmpty()
                     }

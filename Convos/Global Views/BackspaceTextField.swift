@@ -3,6 +3,7 @@ import UIKit
 
 struct BackspaceTextField: UIViewRepresentable {
     @Binding var text: String
+    @Binding var editingEnabled: Bool
     var onBackspaceWhenEmpty: () -> Void
 
     func makeUIView(context: Context) -> UITextField {
@@ -23,14 +24,27 @@ struct BackspaceTextField: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text)
+        Coordinator(text: $text, editingEnabled: $editingEnabled)
     }
 
     class Coordinator: NSObject, UITextFieldDelegate {
         @Binding var text: String
+        @Binding var editingEnabled: Bool
 
-        init(text: Binding<String>) {
+        init(text: Binding<String>, editingEnabled: Binding<Bool>) {
             _text = text
+            _editingEnabled = editingEnabled
+        }
+
+        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            return true
+        }
+
+        func textField(_ textField: UITextField,
+                       shouldChangeCharactersIn range: NSRange,
+                       replacementString string: String) -> Bool {
+            guard editingEnabled else { return false }
+            return true
         }
 
         func textFieldDidChangeSelection(_ textField: UITextField) {

@@ -1,13 +1,13 @@
 import Combine
 import Foundation
 
-class MockConversationsRepository: ConversationsRepositoryProtocol {
-    private let conversations: [Conversation] = [
+extension Conversation {
+    static func mock() -> Self {
         .init(
-            id: "1",
+            id: UUID().uuidString,
             creator: .mock(),
-            kind: .dm,
-            topic: "",
+            kind: .group,
+            topic: "My Conversation \(Int.random(in: 1..<11))",
             members: [.mock(), .mock()],
             otherMember: .mock(),
             messages: [],
@@ -17,7 +17,17 @@ class MockConversationsRepository: ConversationsRepositoryProtocol {
             lastMessage: nil,
             imageURL: nil
         )
+    }
+}
+
+class MockConversationsRepository: ConversationsRepositoryProtocol {
+    private let conversations: [Conversation] = [
+        .mock(),
+        .mock(),
+        .mock(),
+        .mock()
     ]
+
     func fetchAll() throws -> [Conversation] {
         conversations
     }

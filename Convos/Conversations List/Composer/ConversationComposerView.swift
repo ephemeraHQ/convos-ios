@@ -4,6 +4,11 @@ import SwiftUI
 class ConversationComposerViewModel {
     var searchText: String = ""
 
+    var conversationResults: [Conversation] = [
+        .mock(),
+        .mock(),
+    ]
+
     var profileResults: [Profile] = [
         .mock(),
         .mock(),
@@ -56,6 +61,7 @@ struct ConversationComposerView: View {
                     .frame(height: headerHeight)
 
                 ConversationComposerProfilesField(searchText: $viewModel.searchText,
+                                                  selectedProfile: $selectedProfile,
                                                   profiles: $viewModel.profileResults)
 
                 Button {
@@ -68,22 +74,56 @@ struct ConversationComposerView: View {
                 .opacity(viewModel.searchText.isEmpty ? 1.0 : 0.2)
                 .frame(height: headerHeight)
             }
-            .padding(.horizontal, DesignConstants.Spacing.step4x)
+                   .contentShape(Rectangle())
+                   .onTapGesture {
+                       selectedProfile = nil
+                   }
+                   .padding(.horizontal, DesignConstants.Spacing.step4x)
 
-            List(viewModel.profileResults) { profile in
-                HStack(spacing: DesignConstants.Spacing.step3x) {
-                    ProfileAvatarView(profile: profile, size: 40.0)
+            List {
+                ForEach(viewModel.conversationResults, id: \.id) { conversation in
+                    HStack(spacing: DesignConstants.Spacing.step3x) {
+                        ConversationAvatarView(conversation: conversation,
+                                               size: 40.0)
 
-                    VStack(alignment: .leading, spacing: 0.0) {
-                        Text(profile.name)
-                            .font(.system(size: 16.0))
-                            .foregroundStyle(.colorTextPrimary)
-                        Text(profile.username)
-                            .font(.system(size: 14.0))
+                        VStack(alignment: .leading, spacing: 0.0) {
+                            Text(conversation.topic)
+                                .font(.system(size: 16.0))
+                                .foregroundStyle(.colorTextPrimary)
+                            switch conversation.kind {
+                            case .dm:
+                                Text(conversation.otherMember?.username ?? "")
+                                    .font(.system(size: 14.0))
+                                    .foregroundStyle(.colorTextSecondary)
+                            case .group:
+                                Text(conversation.memberNamesString)
+                                    .font(.system(size: 14.0))
+                                    .foregroundStyle(.colorTextSecondary)
+                            }
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
                             .foregroundStyle(.colorTextSecondary)
                     }
+                    .listRowSeparator(.hidden)
                 }
-                .listRowSeparator(.hidden)
+                ForEach(viewModel.profileResults, id: \.id) { profile in
+                    HStack(spacing: DesignConstants.Spacing.step3x) {
+                        ProfileAvatarView(profile: profile, size: 40.0)
+
+                        VStack(alignment: .leading, spacing: 0.0) {
+                            Text(profile.name)
+                                .font(.system(size: 16.0))
+                                .foregroundStyle(.colorTextPrimary)
+                            Text(profile.username)
+                                .font(.system(size: 14.0))
+                                .foregroundStyle(.colorTextSecondary)
+                        }
+                    }
+                    .listRowSeparator(.hidden)
+                }
             }
             .padding(0.0)
             .listStyle(.plain)

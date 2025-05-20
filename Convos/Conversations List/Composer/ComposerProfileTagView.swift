@@ -70,6 +70,7 @@ struct ComposerProfileTagView: View {
                 }
             }
         )
+        .zIndex(isSelected ? 100 : 0)
         .background(
             RoundedRectangle(cornerRadius: isSelected ? 0.0 : DesignConstants.CornerRadius.regular)
                 .fill(isSelected ? Color.colorBorderSubtle2 : Color.colorBackgroundPrimary)

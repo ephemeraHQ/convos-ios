@@ -43,6 +43,12 @@ struct Conversation: Codable, Hashable, Identifiable {
     let imageURL: URL?
 }
 
+extension Conversation {
+    var memberNamesString: String {
+        members.map { $0.name }.joined(separator: ", ")
+    }
+}
+
 struct ConversationLocalState: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
     var id: String // conversation.id
     let isPinned: Bool

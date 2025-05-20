@@ -100,7 +100,7 @@ fileprivate extension Database {
             )
         }
 
-        return conversations.sorted { (lhs, rhs) in
+        return conversations.sorted { lhs, rhs in
             let lhsDate = lhs.lastMessage?.createdAt ?? .distantPast
             let rhsDate = rhs.lastMessage?.createdAt ?? .distantPast
             return lhsDate > rhsDate

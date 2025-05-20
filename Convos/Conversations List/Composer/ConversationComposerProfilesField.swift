@@ -1,10 +1,25 @@
 import SwiftUI
 
+struct VerticalEdgeClipShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.addRect(CGRect(x: rect.minX-(rect.width / 2.0),
+                            y: rect.minY,
+                            width: rect.width * 2.0,
+                            height: rect.height))
+        return path
+    }
+}
+
 struct ConversationComposerProfilesField: View {
     @State private var profileTagsHeight: CGFloat = 0.0
     @Binding var searchText: String
-
-    @State private var selectedProfile: Profile?
+    @Binding var selectedProfile: Profile? {
+        didSet {
+            searchTextEditingEnabled = selectedProfile == nil
+        }
+    }
+    @State var searchTextEditingEnabled: Bool = true
     @Binding var profiles: [Profile]
 
     private let profileTagsMaxHeight: CGFloat = 150.0
@@ -24,6 +39,7 @@ struct ConversationComposerProfilesField: View {
                         }
 
                         FlowLayoutTextEditor(text: $searchText,
+                                             editingEnabled: $searchTextEditingEnabled,
                                              maxTextFieldWidth: reader.size.width) {
                             backspaceOnEmpty()
                         }
@@ -52,6 +68,8 @@ struct ConversationComposerProfilesField: View {
                 }
                 .scrollBounceBehavior(.always)
             }
+            .scrollClipDisabled()
+            .clipShape(VerticalEdgeClipShape())
         }
         .frame(height: profileTagsHeight)
     }
@@ -75,6 +93,7 @@ struct ConversationComposerProfilesField: View {
 
 #Preview {
     @Previewable @State var searchText: String = ""
+    @Previewable @State var selectedProfile: Profile? = nil
     @Previewable @State var profileResults: [Profile] = [
         .mock(), .mock(), .mock(), .mock()
     ]
@@ -83,11 +102,10 @@ struct ConversationComposerProfilesField: View {
         HStack {
             Spacer().frame(width: 40)
             ConversationComposerProfilesField(searchText: $searchText,
+                                              selectedProfile: $selectedProfile,
                                               profiles: $profileResults)
             Spacer().frame(width: 40)
         }
-
-        Text("test")
 
         Spacer()
     }
