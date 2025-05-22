@@ -13,7 +13,7 @@ extension MemberProfile {
     func hydrateProfile() -> Profile {
         Profile(id: "member_\(inboxId)",
                 name: name,
-                username: username,
+                username: username.isEmpty ? inboxId : username,
                 avatar: avatar)
     }
 }
