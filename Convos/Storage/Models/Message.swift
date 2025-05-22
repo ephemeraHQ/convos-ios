@@ -71,35 +71,50 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
     }
 
     static let sourceMessageForeignKey: ForeignKey = ForeignKey(["sourceMessageId"], to: ["id"])
+    static let senderForeignKey: ForeignKey = ForeignKey(["senderId"], to: ["inboxId"])
+    static let conversationForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
 
     static let conversation: HasOneAssociation<DBMessage, DBConversation> = hasOne(
-        DBConversation.self
+        DBConversation.self,
+        using: conversationForeignKey
     )
 
     static let sender: BelongsToAssociation<DBMessage, Member> = belongsTo(
-        Member.self
+        Member.self,
+        key: "messageSender",
+        using: senderForeignKey
+    )
+
+    static let senderProfile: HasOneThroughAssociation<DBMessage, MemberProfile> = hasOne(
+        MemberProfile.self,
+        through: sender,
+        using: Member.profile,
+        key: "messageSenderProfile"
     )
 
     static let replies: HasManyAssociation<DBMessage, DBMessage> = hasMany(
         DBMessage.self,
+        key: "messageReplies",
         using: ForeignKey(["id"], to: ["sourceMessageId"])
     ).filter(Column("messageType") == DBMessageType.reply.rawValue)
 
     static let reactions: HasManyAssociation<DBMessage, DBMessage> = hasMany(
         DBMessage.self,
-        using: ForeignKey(["id"], to: ["sourceMessageId"])
+        key: "messageReactions",
+        using: ForeignKey(["id"], to: ["sourceMessageId"]),
     ).filter(Column("messageType") == DBMessageType.reaction.rawValue)
 
     static let sourceMessage: BelongsToAssociation<DBMessage, DBMessage> = belongsTo(
         DBMessage.self,
+        key: "sourceMessage",
         using: sourceMessageForeignKey
     )
 }
 
 struct MessageWithDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
     let message: DBMessage
-    let sender: MemberProfile
-    let reactions: [DBMessage]
+    let messageSenderProfile: MemberProfile
+    let messageReactions: [DBMessage]
     let sourceMessage: DBMessage?
 }
 

@@ -51,11 +51,7 @@ extension Array where Element == DBConversationDetails {
             )
         }
 
-        return conversations.sorted { lhs, rhs in
-            let lhsDate = lhs.lastMessage?.createdAt ?? lhs.createdAt
-            let rhsDate = rhs.lastMessage?.createdAt ?? rhs.createdAt
-            return lhsDate > rhsDate
-        }
+        return conversations
     }
 }
 

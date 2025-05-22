@@ -66,6 +66,7 @@ class ConversationWriter: ConversationWriterProtocol {
             try dbConversation.save(db)
 
             if let lastMessage {
+                try Member(inboxId: lastMessage.senderInboxId).save(db)
                 let dbLastMessage = try lastMessage.dbRepresentation(
                     conversationId: conversation.id
                 )

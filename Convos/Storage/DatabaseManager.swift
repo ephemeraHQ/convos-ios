@@ -136,6 +136,7 @@ final class DatabaseManager {
                     .references("conversation", onDelete: .cascade)
                 t.column("senderId", .text)
                     .notNull()
+                    .references("member", onDelete: .none)
                 t.column("date", .datetime).notNull()
                 t.column("status", .text).notNull()
                 t.column("messageType", .text).notNull()

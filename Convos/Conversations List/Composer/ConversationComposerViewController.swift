@@ -7,10 +7,10 @@ class ConversationComposerViewController: UIViewController {
     private var composerHostingController: UIHostingController<ConversationComposerContentView>?
 
     init(
-        messagesStore: MessagesStoreProtocol,
+        messagesRepository: any MessagesRepositoryProtocol,
         messagingService: any ConvosSDK.MessagingServiceProtocol
     ) {
-        self.messagesViewController = MessagesViewController(messagesStore: messagesStore)
+        self.messagesViewController = MessagesViewController(messagesRepository: messagesRepository)
         self.messagingService = messagingService
         super.init(nibName: nil, bundle: nil)
     }

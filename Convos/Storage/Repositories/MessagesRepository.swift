@@ -28,7 +28,13 @@ class MessagesRepository: MessagesRepositoryProtocol {
         ValueObservation
             .tracking { [weak self] db in
                 guard let self else { return [] }
-                return try db.composeMessages(for: conversationId)
+                do {
+                    let messages = try db.composeMessages(for: conversationId)
+                    return messages
+                } catch {
+                    Logger.error("Error in messages publisher: \(error)")
+                }
+                return []
             }
             .publisher(in: dbReader)
             .replaceError(with: [])
@@ -43,8 +49,8 @@ extension Array where Element == MessageWithDetails {
 
         return dbMessagesWithDetails.compactMap { dbMessageWithDetails -> AnyMessage? in
             let dbMessage = dbMessageWithDetails.message
-            let dbReactions = dbMessageWithDetails.reactions
-            let dbSender = dbMessageWithDetails.sender
+            let dbReactions = dbMessageWithDetails.messageReactions
+            let dbSender = dbMessageWithDetails.messageSenderProfile
             let sender: Profile = dbSender.hydrateProfile()
             let reactions: [MessageReaction] = dbReactions.map {
                 .init(id: $0.id,
@@ -73,7 +79,7 @@ extension Array where Element == MessageWithDetails {
                                       sender: sender,
                                       status: dbMessage.status,
                                       content: messageContent,
-                                      reactions: [])
+                                      reactions: reactions)
                 return .message(message)
             case .reply:
                 switch dbMessage.contentType {
@@ -106,20 +112,24 @@ fileprivate extension Database {
             return []
         }
 
-        guard let dbConversation = try DBConversationDetails
-            .fetchOne(self, key: conversationId) else {
+        guard let dbConversationDetails = try DBConversation
+            .filter(Column("id") == conversationId)
+            .including(required: DBConversation.creatorProfile)
+            .including(required: DBConversation.localState)
+            .including(all: DBConversation.memberProfiles)
+            .asRequest(of: DBConversationDetails.self)
+            .fetchOne(self) else {
             return []
         }
 
-        let conversation = dbConversation.hydrateConversation(
+        let conversation = dbConversationDetails.hydrateConversation(
             currentUser: currentUser
         )
         let dbMessages = try DBMessage
             .filter(Column("conversationId") == conversationId)
-            .including(required: DBMessage.sender)
-            .including(required: DBMessage.conversation)
+            .including(required: DBMessage.senderProfile)
             .including(all: DBMessage.reactions)
-            .including(all: DBMessage.replies)
+            // .including(all: DBMessage.replies)
             .including(optional: DBMessage.sourceMessage)
             .asRequest(of: MessageWithDetails.self)
             .fetchAll(self)

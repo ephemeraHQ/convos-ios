@@ -20,14 +20,16 @@ class MessageWriter: MessageWriterProtocol {
             let conversationId = message.conversationId
 //            let conversation = try DBConversation
 //                .filter(Column("id") == message.conversationId)
-//                .fetchCount(db)
-            let sender = try MemberProfile
+//                .fetchOne(db)
+            let sender = Member(inboxId: message.senderInboxId)
+            let senderProfile = try MemberProfile
                 .filter(Column("inboxId") == message.senderInboxId)
                 .fetchOne(db)
             let message = try message.dbRepresentation(
                 conversationId: conversationId
             )
 
+            try sender.save(db)
             try message.save(db)
         }
     }

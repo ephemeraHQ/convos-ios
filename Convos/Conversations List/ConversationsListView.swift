@@ -51,14 +51,15 @@ struct ConversationsListView: View {
                             ConversationComposerView(
                                 draftConversationRepository: MockDraftConversationRepository(),
                                 messagingService: convos.messaging,
-                                messagesStore: MockMessagesStore()
+                                messagesRepository: convos.messaging.messagesRepository(for: "draft") // TODO: better way
                             )
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)
-                        case .conversation:
+                        case .conversation(let conversation):
                             MessagesView(
                                 conversationRepository: MockConversationRepository(),
-                                messagesStore: MockMessagesStore()
+                                messagesRepository: convos.messaging
+                                    .messagesRepository(for: conversation.id)
                             )
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)

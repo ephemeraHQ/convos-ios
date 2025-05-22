@@ -11,7 +11,6 @@ extension XMTPiOS.DecodedMessage {
         let status: MessageStatus = deliveryStatus.status
         let content = try content() as Any
         let encodedContentType = try encodedContent.type
-        let source: MessageSource = .incoming
         let messageType: DBMessageType
         let contentType: MessageContentType
         let sourceMessageId: String?

@@ -3,17 +3,17 @@ import SwiftUI
 struct ConversationComposerView: UIViewControllerRepresentable {
     let draftConversationRepository: any ConversationRepositoryProtocol
     let messagingService: any ConvosSDK.MessagingServiceProtocol
-    let messagesStore: MessagesStoreProtocol
+    let messagesRepository: any MessagesRepositoryProtocol
     @State private var draftConversationState: DraftConversationState
 
     init(
         draftConversationRepository: any ConversationRepositoryProtocol,
         messagingService: any ConvosSDK.MessagingServiceProtocol,
-        messagesStore: MessagesStoreProtocol
+        messagesRepository: any MessagesRepositoryProtocol
     ) {
         self.draftConversationRepository = draftConversationRepository
         self.messagingService = messagingService
-        self.messagesStore = messagesStore
+        self.messagesRepository = messagesRepository
         _draftConversationState = State(
             initialValue: .init(
                 draftConversationRepository: draftConversationRepository
@@ -23,7 +23,7 @@ struct ConversationComposerView: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> ConversationComposerViewController {
         let composerViewController = ConversationComposerViewController(
-            messagesStore: messagesStore,
+            messagesRepository: messagesRepository,
             messagingService: messagingService
         )
         return composerViewController
@@ -39,7 +39,7 @@ struct ConversationComposerView: UIViewControllerRepresentable {
     ConversationComposerView(
         draftConversationRepository: MockDraftConversationRepository(),
         messagingService: MockMessagingService(),
-        messagesStore: MockMessagesStore()
+        messagesRepository: MockMessagesRepository()
     )
     .ignoresSafeArea()
 }

@@ -45,7 +45,7 @@ final class MessagesViewController: UIViewController {
     private let inputBarView: MessagesInputView = MessagesInputView()
     let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
 
-    private let messagesStore: MessagesStoreProtocol
+    private let messagesRepository: MessagesRepositoryProtocol
     private let dataSource: MessagesCollectionDataSource
 
     private var animator: ManualAnimator?
@@ -63,8 +63,8 @@ final class MessagesViewController: UIViewController {
 
     // MARK: - Initialization
 
-    init(messagesStore: MessagesStoreProtocol) {
-        self.messagesStore = messagesStore
+    init(messagesRepository: any MessagesRepositoryProtocol) {
+        self.messagesRepository = messagesRepository
         self.dataSource = MessagesCollectionViewDataSource()
         self.collectionView = UICollectionView(frame: .zero,
                                                collectionViewLayout: messagesLayout)
@@ -111,13 +111,14 @@ final class MessagesViewController: UIViewController {
 
         reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
 
-        messagesStore.updates.receive(on: DispatchQueue.main)
-            .sink { [weak self] update in
+        messagesRepository.messagesPublisher()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] messages in
                 guard let self else { return }
                 processUpdates(
-                    with: update.sections,
+                    with: messages,
                     animated: true,
-                    requiresIsolatedProcess: update.requiresIsolatedProcess
+                    requiresIsolatedProcess: false
                 )
             }
             .store(in: &cancellables)
@@ -262,9 +263,9 @@ final class MessagesViewController: UIViewController {
     private func loadInitialData() {
         currentControllerActions.options.insert(.loadingInitialMessages)
         Task {
-            let sections = await messagesStore.loadInitialMessages()
+            let messages = try messagesRepository.fetchAll()
             currentControllerActions.options.remove(.loadingInitialMessages)
-            processUpdates(with: sections, animated: true, requiresIsolatedProcess: true)
+            processUpdates(with: messages, animated: true, requiresIsolatedProcess: true)
         }
     }
 
@@ -300,14 +301,14 @@ final class MessagesViewController: UIViewController {
     // MARK: - Scrolling Methods
 
     private func loadPreviousMessages() {
-        currentControllerActions.options.insert(.loadingPreviousMessages)
-        Task {
-            let sections = await messagesStore.loadPreviousMessages()
-            let animated = !isUserInitiatedScrolling
-            processUpdates(with: sections, animated: animated, requiresIsolatedProcess: true) {
-                self.currentControllerActions.options.remove(.loadingPreviousMessages)
-            }
-        }
+//        currentControllerActions.options.insert(.loadingPreviousMessages)
+//        Task {
+//            let sections = await messagesStore.loadPreviousMessages()
+//            let animated = !isUserInitiatedScrolling
+//            processUpdates(with: sections, animated: animated, requiresIsolatedProcess: true) {
+//                self.currentControllerActions.options.remove(.loadingPreviousMessages)
+//            }
+//        }
     }
 
     func scrollToBottom(completion: (() -> Void)? = nil) {
@@ -374,17 +375,24 @@ final class MessagesViewController: UIViewController {
 // MARK: - MessagesControllerDelegate
 
 extension MessagesViewController {
-    private func processUpdates(with sections: [MessagesCollectionSection],
+    private func processUpdates(with messages: [AnyMessage],
                                 animated: Bool = true,
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
+        let cells: [MessagesCollectionCell] = messages.map { message in
+            MessagesCollectionCell.message(message,
+                                           bubbleType: .normal)
+        }
+        let sections: [MessagesCollectionSection] = [
+            .init(id: 0, title: "", cells: cells)
+        ]
         guard isViewLoaded else {
             dataSource.sections = sections
             return
         }
 
         guard currentInterfaceActions.options.isEmpty else {
-            scheduleDelayedUpdate(with: sections,
+            scheduleDelayedUpdate(with: messages,
                                   animated: animated,
                                   requiresIsolatedProcess: requiresIsolatedProcess,
                                   completion: completion)
@@ -397,7 +405,7 @@ extension MessagesViewController {
                       completion: completion)
     }
 
-    private func scheduleDelayedUpdate(with sections: [MessagesCollectionSection],
+    private func scheduleDelayedUpdate(with messages: [AnyMessage],
                                        animated: Bool,
                                        requiresIsolatedProcess: Bool,
                                        completion: (() -> Void)?) {
@@ -407,7 +415,7 @@ extension MessagesViewController {
             executionType: .once,
             actionBlock: { [weak self] in
                 guard let self else { return }
-                processUpdates(with: sections,
+                processUpdates(with: messages,
                                animated: animated,
                                requiresIsolatedProcess: requiresIsolatedProcess,
                                completion: completion)
@@ -540,9 +548,10 @@ extension MessagesViewController: MessagesInputViewDelegate {
         currentInterfaceActions.options.insert(.sendingMessage)
         scrollToBottom()
         Task {
-            let sections = await messagesStore.sendMessage(.text(text))
-            currentInterfaceActions.options.remove(.sendingMessage)
-            processUpdates(with: sections, animated: true, requiresIsolatedProcess: false)
+            // TODO: Use messagingService
+//            let sections = await messagesStore.sendMessage(.text(text))
+//            currentInterfaceActions.options.remove(.sendingMessage)
+//            processUpdates(with: sections, animated: true, requiresIsolatedProcess: false)
         }
     }
 
