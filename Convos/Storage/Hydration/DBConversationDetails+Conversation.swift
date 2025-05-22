@@ -2,7 +2,9 @@ import Foundation
 
 extension DBConversationDetails {
     func hydrateConversation(currentUser: User) -> Conversation {
-        let lastMessage: MessagePreview? = conversationLastMessage?.hydrateMessagePreview()
+        let lastMessage: MessagePreview? = conversationLastMessage?.hydrateMessagePreview(
+            conversationKind: conversation.kind
+        )
         let creatorProfile = conversationCreatorProfile.hydrateProfile()
 
         let otherMemberProfile: Profile?
@@ -23,12 +25,13 @@ extension DBConversationDetails {
         } else {
             imageURL = nil
         }
+
         return Conversation(
             id: conversation.id,
             creator: creatorProfile,
             createdAt: conversation.createdAt,
             kind: conversation.kind,
-            topic: conversation.topic,
+            name: conversation.name,
             members: conversationMemberProfiles.map { $0.hydrateProfile() },
             otherMember: otherMemberProfile,
             messages: messages,

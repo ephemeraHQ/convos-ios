@@ -1,9 +1,10 @@
 import Foundation
 
 extension DBMessage {
-    func hydrateMessagePreview() -> MessagePreview {
+    func hydrateMessagePreview(conversationKind: ConversationKind) -> MessagePreview {
         let text: String
-        let sender: String = "Sender"
+        let senderString: String = "Sender "
+        let optionalSender: String = conversationKind == .group ? senderString : ""
         let attachmentsCount = attachmentUrls.count
         let attachmentsString = attachmentsCount <= 1 ? "a photo" : "\(attachmentsCount) photos"
 
@@ -11,7 +12,7 @@ extension DBMessage {
         case .original:
             switch contentType {
             case .attachments:
-                text = "\(sender) sent \(attachmentsString)"
+                text = "\(optionalSender)sent \(attachmentsString)".capitalized
             case .text, .emoji:
                 text = self.text ?? ""
             }
@@ -20,21 +21,19 @@ extension DBMessage {
             let originalMessage: String = "original"
             switch contentType {
             case .attachments:
-                text = "\(sender) replied with \(attachmentsString)"
+                text = "\(optionalSender)replied with \(attachmentsString)".capitalized
             case .text, .emoji:
-                text = "\(sender) replied: \(self.text ?? "") to \"\(originalMessage)\""
+                text = "\(optionalSender)replied: \(self.text ?? "") to \"\(originalMessage)\"".capitalized
             }
 
         case .reaction:
             let originalMessage: String = "original"
             switch contentType {
             case .attachments:
-                let count = attachmentUrls.count
-                text = "\(sender) sent \(attachmentsString)"
+                text = "\(optionalSender)sent \(attachmentsString)".capitalized
             case .text, .emoji:
-                text = "\(sender) \(emoji ?? "")'d \(originalMessage)"
+                text = "\(senderString)\(emoji ?? "")'d \(originalMessage)".capitalized
             }
-
         }
         return .init(text: text, createdAt: date)
     }

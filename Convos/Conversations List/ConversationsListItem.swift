@@ -6,7 +6,7 @@ extension Conversation {
         case .dm:
             return otherMember?.displayName ?? ""
         case .group:
-            return topic
+            return name ?? ""
         }
     }
 }

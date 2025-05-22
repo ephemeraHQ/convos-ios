@@ -92,7 +92,7 @@ final class DatabaseManager {
                 t.column("kind", .text).notNull()
                 t.column("consent", .text).notNull()
                 t.column("createdAt", .datetime).notNull()
-                t.column("topic", .text).notNull()
+                t.column("name", .text)
                 t.column("imageURLString", .text)
             }
 

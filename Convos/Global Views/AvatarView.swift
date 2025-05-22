@@ -49,7 +49,7 @@ struct ConversationAvatarView: View {
 
     var body: some View {
         AvatarView(imageURL: conversation.imageURL,
-                   fallbackName: conversation.topic,
+                   fallbackName: conversation.title,
                    size: size)
     }
 

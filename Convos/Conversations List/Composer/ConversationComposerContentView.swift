@@ -66,7 +66,7 @@ struct ConversationComposerContentView: View {
                         ConversationAvatarView(conversation: conversation, size: 40.0)
 
                         VStack(alignment: .leading, spacing: 0.0) {
-                            Text(conversation.topic)
+                            Text(conversation.title)
                                 .font(.system(size: 16.0))
                                 .foregroundStyle(.colorTextPrimary)
 

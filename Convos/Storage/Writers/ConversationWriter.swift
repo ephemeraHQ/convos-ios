@@ -3,7 +3,8 @@ import GRDB
 import XMTPiOS
 
 protocol ConversationWriterProtocol {
-    func store(conversation: XMTPiOS.Conversation) async throws
+    @discardableResult
+    func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation
 }
 
 class ConversationWriter: ConversationWriterProtocol {
@@ -13,17 +14,21 @@ class ConversationWriter: ConversationWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    func store(conversation: XMTPiOS.Conversation) async throws {
+    @discardableResult
+    func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation {
         let dbMembers: [DBConversationMember] = try await conversation.members()
             .map { $0.dbRepresentation(conversationId: conversation.id) }
         let kind: ConversationKind
         let imageURLString: String?
+        let name: String?
         switch conversation {
         case .dm:
             kind = .dm
             imageURLString = nil
+            name = nil
         case .group(let group):
             kind = .group
+            name = try? group.name()
             imageURLString = try? group.imageUrl()
         }
 
@@ -41,7 +46,7 @@ class ConversationWriter: ConversationWriterProtocol {
             kind: kind,
             consent: try conversation.consentState().consent,
             createdAt: conversation.createdAt,
-            topic: conversation.topic,
+            name: name,
             imageURLString: imageURLString
         )
 
@@ -74,6 +79,8 @@ class ConversationWriter: ConversationWriterProtocol {
                 try member.save(db)
             }
         }
+
+        return dbConversation
     }
 }
 

@@ -117,7 +117,10 @@ fileprivate extension Database {
         let dbMessages = try DBMessage
             .filter(Column("conversationId") == conversationId)
             .including(required: DBMessage.sender)
-            .including(required: DBMessage.reactions)
+            .including(required: DBMessage.conversation)
+            .including(all: DBMessage.reactions)
+            .including(all: DBMessage.replies)
+            .including(optional: DBMessage.sourceMessage)
             .asRequest(of: MessageWithDetails.self)
             .fetchAll(self)
         return try dbMessages.composeMessages(from: self, in: conversation)

@@ -9,7 +9,7 @@ extension Conversation {
             creator: .empty,
             createdAt: .distantFuture,
             kind: .dm,
-            topic: "",
+            name: "",
             members: [],
             otherMember: nil,
             messages: [],

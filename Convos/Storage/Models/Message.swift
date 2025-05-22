@@ -70,6 +70,8 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
         }
     }
 
+    static let sourceMessageForeignKey: ForeignKey = ForeignKey(["sourceMessageId"], to: ["id"])
+
     static let conversation: HasOneAssociation<DBMessage, DBConversation> = hasOne(
         DBConversation.self
     )
@@ -80,60 +82,32 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
 
     static let replies: HasManyAssociation<DBMessage, DBMessage> = hasMany(
         DBMessage.self,
-        using: ForeignKey(["sourceMessageId"])
+        using: ForeignKey(["id"], to: ["sourceMessageId"])
     ).filter(Column("messageType") == DBMessageType.reply.rawValue)
 
     static let reactions: HasManyAssociation<DBMessage, DBMessage> = hasMany(
         DBMessage.self,
-        using: ForeignKey(
-            ["sourceMessageId"]
-        )
+        using: ForeignKey(["id"], to: ["sourceMessageId"])
     ).filter(Column("messageType") == DBMessageType.reaction.rawValue)
 
-//    static let sourceMessage: BelongsToAssociation<DBMessage, DBMessage?> = belongsTo(
-//        DBMessage.self
-//    )
+    static let sourceMessage: BelongsToAssociation<DBMessage, DBMessage> = belongsTo(
+        DBMessage.self,
+        using: sourceMessageForeignKey
+    )
 }
 
-struct MessageWithDetails: FetchableRecord {
+struct MessageWithDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
     let message: DBMessage
     let sender: MemberProfile
     let reactions: [DBMessage]
-
-    init(row: GRDB.Row) throws {
-        message = try DBMessage(row: row)
-        guard let conversationRow = row.scopes["conversation"],
-              let senderRow = row.scopes["sender"],
-        let reactionsRow = row.prefetchedRows["reactions"] else {
-            throw DatabaseError(
-                message: "Missing required scopes 'conversation' or 'sender' in MessageWithConversationAndSender"
-            )
-        }
-        sender = try MemberProfile(row: senderRow)
-        reactions = try reactionsRow.map { try DBMessage(row: $0) }
-    }
+    let sourceMessage: DBMessage?
 }
 
-struct MessageWithDetailsAndReplies: FetchableRecord {
+struct MessageWithDetailsAndReplies: Codable, FetchableRecord, PersistableRecord, Hashable {
     let message: DBMessage
     let sender: MemberProfile
     let reactions: [DBMessage]
     let replies: [DBMessage]
-
-    init(row: GRDB.Row) throws {
-        message = try DBMessage(row: row)
-        guard let conversationRow = row.scopes["conversation"],
-              let senderRow = row.scopes["sender"],
-              let reactionsRow = row.prefetchedRows["reactions"],
-        let repliesRow = row.prefetchedRows["replies"] else {
-            throw DatabaseError(
-                message: "Missing required scopes 'conversation' or 'sender' in MessageWithConversationAndSender"
-            )
-        }
-        sender = try MemberProfile(row: senderRow)
-        reactions = try reactionsRow.map { try DBMessage(row: $0) }
-        replies = try repliesRow.map { try DBMessage(row: $0) }
-    }
 }
 
 protocol MessageType {

@@ -23,7 +23,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
         static let kind: Column = Column("kind")
         static let consent: Column = Column("consent")
         static let createdAt: Column = Column("createdAt")
-        static let topic: Column = Column("topic")
+        static let name: Column = Column("name")
         static let imageURLString: Column = Column("imageURLString")
     }
 
@@ -32,7 +32,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     let kind: ConversationKind
     let consent: Consent
     let createdAt: Date
-    let topic: String
+    let name: String?
     let imageURLString: String?
 
     static let creatorForeignKey: ForeignKey = ForeignKey(["creatorId"], to: ["inboxId"])
@@ -141,7 +141,7 @@ struct Conversation: Codable, Hashable, Identifiable {
     let creator: Profile
     let createdAt: Date
     let kind: ConversationKind
-    let topic: String
+    let name: String?
     let members: [Profile]
     let otherMember: Profile?
     let messages: [Message]

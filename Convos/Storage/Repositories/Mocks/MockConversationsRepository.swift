@@ -8,7 +8,7 @@ extension Conversation {
             creator: .mock(),
             createdAt: Date(),
             kind: .group,
-            topic: "My Conversation \(Int.random(in: 1..<11))",
+            name: "My Conversation \(Int.random(in: 1..<11))",
             members: [.mock(), .mock()],
             otherMember: .mock(),
             messages: [],

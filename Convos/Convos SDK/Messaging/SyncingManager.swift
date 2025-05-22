@@ -52,12 +52,16 @@ class SyncingManager: SyncingManagerProtocol {
         Task {
             do {
                 for try await message in await client.conversations.streamAllMessages() {
-                    let conversation = try await client.conversations.findConversation(
-                        conversationId: message.conversationId)
-                    if let conversation {
-                        try await conversationWriter.store(conversation: conversation)
+                    guard let conversation = try await client.conversations.findConversation(
+                        conversationId: message.conversationId) else {
+                        Logger.error("Failed finding conversation for message in `streamAllMessages()`")
+                        continue
                     }
-                    try await messageWriter.store(message: message)
+                    let dbConversation = try await conversationWriter.store(
+                        conversation: conversation
+                    )
+                    try await messageWriter.store(message: message,
+                                                  for: dbConversation)
                 }
             } catch {
                 Logger.error("Error streaming all messages: \(error)")
