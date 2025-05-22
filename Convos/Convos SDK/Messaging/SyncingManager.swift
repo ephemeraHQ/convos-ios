@@ -57,7 +57,7 @@ class SyncingManager: SyncingManagerProtocol {
                     if let conversation {
                         try await conversationWriter.store(conversation: conversation)
                     }
-                    try await messageWriter.store(message: message, in: conversation)
+                    try await messageWriter.store(message: message)
                 }
             } catch {
                 Logger.error("Error streaming all messages: \(error)")

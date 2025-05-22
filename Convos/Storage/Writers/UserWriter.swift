@@ -34,7 +34,7 @@ class UserWriter: UserWriterProtocol {
 
             try profile.save(db)
 
-            let session = Session(currentUserId: user.id)
+            let session = Session(userId: user.id)
             try Session.deleteAll(db) // ensure only one row
             try session.save(db)
 
@@ -63,7 +63,7 @@ class UserWriter: UserWriterProtocol {
         try await databaseWriter.write { db in
             try dbUser.save(db)
 
-            let session = Session(currentUserId: user.id)
+            let session = Session(userId: user.id)
             try Session.deleteAll(db) // ensure only one row
             try session.save(db)
 

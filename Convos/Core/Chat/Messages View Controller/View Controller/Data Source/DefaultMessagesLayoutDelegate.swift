@@ -25,10 +25,10 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
             let item = sections[indexPath.section].cells[indexPath.item]
             switch item {
             case let .message(message, bubbleType: _):
-                switch message.kind {
-                case .text:
+                switch message.base.content {
+                case .text, .emoji:
                     return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 36))
-                case .attachment:
+                case .attachment, .attachments:
                     return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 120.0))
                 }
             case .date:
@@ -130,14 +130,14 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
 
     // MARK: - Private Helpers
 
-    private func applyMessageAnimation(for message: Message, to attributes: MessagesLayoutAttributes) {
+    private func applyMessageAnimation(for message: AnyMessage, to attributes: MessagesLayoutAttributes) {
         attributes.transform = .init(scaleX: 0.9, y: 0.9)
         attributes.transform = attributes
             .transform
             .concatenating(
-                .init(rotationAngle: message.source == .incoming ? -0.05 : 0.05)
+                .init(rotationAngle: message.base.source == .incoming ? -0.05 : 0.05)
             )
-        attributes.center.x += (message.source == .incoming ? -20 : 20)
+        attributes.center.x += (message.base.source == .incoming ? -20 : 20)
         attributes.center.y += 40
     }
 

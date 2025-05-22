@@ -30,6 +30,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private let authService: ConvosSDK.AuthServiceProtocol
     private let userWriter: UserWriter
     private let syncingManager: SyncingManagerProtocol
+    private let databaseReader: any DatabaseReader
 
     private var xmtpClient: XMTPiOS.Client?
     private var cancellables: Set<AnyCancellable> = []
@@ -49,12 +50,14 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private let stateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> = .init(.uninitialized)
 
     init(authService: ConvosSDK.AuthServiceProtocol,
-         databaseWriter: any DatabaseWriter) {
+         databaseWriter: any DatabaseWriter,
+         databaseReader: any DatabaseReader) {
         self.authService = authService
         self.userWriter = UserWriter(databaseWriter: databaseWriter)
         self.apiClient = ConvosAPIClient.shared
         self.syncingManager = SyncingManager(databaseWriter: databaseWriter,
                                              apiClient: apiClient)
+        self.databaseReader = databaseReader
         Task {
             await observeAuthState()
         }
@@ -88,6 +91,12 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     nonisolated
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
         ProfileSearchRepository(apiClient: ConvosAPIClient.shared)
+    }
+
+    nonisolated
+    func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
+        MessagesRepository(dbReader: databaseReader,
+                           conversationId: conversationId)
     }
 
     // MARK: -
@@ -265,9 +274,9 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                                             signingKey: authResult.signingKey)
             try await userWriter.storeUser(user)
         } else {
+            Logger.info("Authorization succeeded, fetching user and profile")
             async let user = try apiClient.getUser()
             async let profile = try apiClient.getProfile(inboxId: client.inboxID)
-            Logger.info("Authorization succeeded, storing user and profile")
             try await userWriter.storeUser(await user, profile: await profile)
         }
         await processAction(.backendAuthorized)

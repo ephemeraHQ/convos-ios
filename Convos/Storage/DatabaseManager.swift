@@ -34,21 +34,28 @@ final class DatabaseManager {
         var config = Configuration()
         config.label = "ConvosDB"
         config.foreignKeysEnabled = true
+        config.prepareDatabase { db in
+            db.trace { print($0) }
+        }
 
         let dbPool = try DatabasePool(path: dbURL.path, configuration: config)
         var migrator = DatabaseMigrator()
 
-#if DEBUG
+//#if DEBUG
         migrator.eraseDatabaseOnSchemaChange = true
-#endif
+//#endif
 
         migrator.registerMigration("createUserSchema") { db in
             try db.create(table: "user") { t in
-                t.column("id", .text).primaryKey()
+                t.column("id", .text)
+                    .unique()
+                    .primaryKey()
             }
 
             try db.create(table: "identity") { t in
-                t.column("id", .text).primaryKey()
+                t.column("id", .text)
+                    .unique()
+                    .primaryKey()
                 t.column("userId", .text)
                     .notNull()
                     .indexed()
@@ -68,41 +75,55 @@ final class DatabaseManager {
                 t.column("avatar", .text)
             }
 
+            try db.create(table: "member") { t in
+                t.column("inboxId", .text)
+                    .unique()
+                    .notNull()
+                    .primaryKey()
+            }
+
+            try db.create(table: "conversation") { t in
+                t.column("id", .text)
+                    .unique()
+                    .primaryKey()
+                t.column("creatorId", .text)
+                    .notNull()
+                    .references("member", onDelete: .none)
+                t.column("kind", .text).notNull()
+                t.column("consent", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+                t.column("topic", .text).notNull()
+                t.column("imageURLString", .text)
+            }
+
             try db.create(table: "memberProfile") { t in
-                t.column("inboxId", .text).primaryKey()
+                t.column("inboxId", .text)
+                    .notNull()
+                    .unique()
+                    .primaryKey()
                 t.column("name", .text).notNull()
                 t.column("username", .text).notNull()
                 t.column("avatar", .text)
             }
 
-            try db.create(table: "conversation") { t in
-                t.column("id", .text).primaryKey()
-                t.column("isCreator", .boolean).notNull().defaults(to: false)
-                t.column("kind", .text).notNull()
-                t.column("consent", .text).notNull()
-                t.column("createdAt", .datetime).notNull()
-                t.column("topic", .text).notNull()
-                t.column("creatorId", .text).notNull()
-                    .references("memberProfile", onDelete: .cascade)
-                t.column("memberIds", .text).notNull()
-                t.column("imageURLString", .text)
-                t.column("lastMessage", .text)
-            }
-
-            try db.create(table: "member") { t in
-                t.column("inboxId", .text).notNull()
+            try db.create(table: "conversation_members") { t in
                 t.column("conversationId", .text)
-                    .references("conversation", onDelete: .none)
                     .notNull()
+                    .references("conversation", onDelete: .cascade)
+                t.column("memberId", .text)
+                    .notNull()
+                    .references("member", onDelete: .cascade)
                 t.column("role", .text).notNull()
                 t.column("consent", .text).notNull()
-                t.primaryKey(["inboxId", "conversationId"])
+                t.primaryKey(["conversationId", "memberId"])
             }
 
             try db.create(table: "conversationLocalState") { t in
-                t.column("id", .text)
-                    .references("conversation")
-                    .primaryKey() // conversation.id
+                t.column("conversationId", .text)
+                    .notNull()
+                    .unique()
+                    .primaryKey()
+                    .references("conversation", onDelete: .cascade)
                 t.column("isPinned", .boolean).notNull().defaults(to: false)
                 t.column("isUnread", .boolean).notNull().defaults(to: false)
                 t.column("isMuted", .boolean).notNull().defaults(to: false)
@@ -113,40 +134,23 @@ final class DatabaseManager {
                 t.column("conversationId", .text)
                     .notNull()
                     .references("conversation", onDelete: .cascade)
-                t.column("sender", .text).notNull()
+                t.column("senderId", .text)
+                    .notNull()
                 t.column("date", .datetime).notNull()
-                t.column("kind", .text).notNull()
                 t.column("status", .text).notNull()
+                t.column("messageType", .text).notNull()
+                t.column("contentType", .text).notNull()
+                t.column("text", .text)
+                t.column("emoji", .text)
                 t.column("sourceMessageId", .text)
-            }
-
-            try db.create(table: "messageReply") { t in
-                t.column("id", .text).primaryKey()
-                t.column("conversationId", .text)
-                    .notNull()
-                    .references("conversation", onDelete: .cascade)
-                t.column("sender", .text).notNull()
-                t.column("date", .datetime).notNull()
-                t.column("kind", .text).notNull()
-                t.column("status", .text).notNull()
-                t.column("sourceMessageId", .text).notNull().references("message", column: "id", onDelete: .cascade)
-            }
-
-            try db.create(table: "messageReaction") { t in
-                t.column("id", .text).primaryKey()
-                t.column("conversationId", .text)
-                    .notNull()
-                    .references("conversation", onDelete: .cascade)
-                t.column("sender", .text).notNull()
-                t.column("date", .datetime).notNull()
-                t.column("status", .text).notNull()
-                t.column("sourceMessageId", .text).notNull()
-                    .references("message", column: "id", onDelete: .cascade)
+                t.column("attachmentUrls", .text)
             }
 
             try db.create(table: "session") { t in
-                t.column("id", .integer).primaryKey()
-                t.column("currentUserId", .text)
+                t.column("id", .integer)
+                    .unique()
+                    .primaryKey()
+                t.column("userId", .text)
                     .notNull()
                     .references("user", onDelete: .cascade)
             }

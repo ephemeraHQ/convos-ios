@@ -20,26 +20,53 @@ final class CellFactory {
 
     private static func createMessageCell(in collectionView: UICollectionView,
                                           for indexPath: IndexPath,
-                                          message: Message,
+                                          message: AnyMessage,
                                           bubbleType: MessagesCollectionCell.BubbleType) -> UICollectionViewCell {
-        switch message.kind {
-        case let .text(text):
-            return createTextCell(
-                in: collectionView,
-                for: indexPath,
-                text: text,
-                bubbleType: bubbleType,
-                messageType: message.source
-            )
-        case let .attachment(imageURL):
-            return createImageCell(
-                in: collectionView,
-                messageId: message.id,
-                for: indexPath,
-                profile: message.sender,
-                source: .imageURL(imageURL),
-                messageType: message.source
-            )
+        switch message {
+        case .message(let message):
+            switch message.content {
+            case .text(let string), .emoji(let string):
+                return createTextCell(
+                    in: collectionView,
+                    for: indexPath,
+                    text: string,
+                    bubbleType: bubbleType,
+                    messageType: message.source
+                )
+            case .attachment(let attachmentURL):
+                return createImageCell(
+                    in: collectionView,
+                    messageId: message.id,
+                    for: indexPath,
+                    profile: message.sender,
+                    source: .imageURL(attachmentURL),
+                    messageType: message.source
+                )
+            case .attachments(let attachmentURLs):
+                return UICollectionViewCell()
+            }
+        case .reply(let reply):
+            switch reply.content {
+            case .text(let string), .emoji(let string):
+                return createTextCell(
+                    in: collectionView,
+                    for: indexPath,
+                    text: string,
+                    bubbleType: bubbleType,
+                    messageType: reply.source
+                )
+            case .attachment(let attachmentURL):
+                return createImageCell(
+                    in: collectionView,
+                    messageId: reply.id,
+                    for: indexPath,
+                    profile: reply.sender,
+                    source: .imageURL(attachmentURL),
+                    messageType: reply.source
+                )
+            case .attachments(let attachmentURLs):
+                return UICollectionViewCell()
+            }
         }
     }
 

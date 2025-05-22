@@ -32,8 +32,8 @@ final class MockMessagesStore: MessagesStoreProtocol {
         return mapMessagesToSections(messages: messages)
     }
 
-    func sendMessage(_ kind: MessageKind) async -> [MessagesCollectionSection] {
-        switch kind {
+    func sendMessage(_ content: MessageContent) async -> [MessagesCollectionSection] {
+        switch content {
         case .text(let string):
             if let messages = try? await self.messagingService.sendMessage(to: "", content: string) {
                 return mapMessagesToSections(messages: messages)
@@ -50,20 +50,13 @@ final class MockMessagesStore: MessagesStoreProtocol {
                 lhs.timestamp < rhs.timestamp
             })
             .map { rawMessage in
-                let message = Message(
-                    id: rawMessage.id,
-                    conversationId: "",
-                    sender: .init(
-                        id: UUID().uuidString,
-                        name: rawMessage.sender.profile.name,
-                        username: rawMessage.sender.profile.username,
-                        avatar: rawMessage.sender.profile.avatarURL?.absoluteString
-                    ),
-                    date: rawMessage.timestamp,
-                    kind: .text(rawMessage.content),
-                    status: .published
-                )
-                return MessagesCollectionCell.message(message, bubbleType: .normal)
+                let message = Message(id: rawMessage.id,
+                                      conversation: .mock(),
+                                      sender: .mock(),
+                                      status: .published,
+                                      content: .text(rawMessage.content),
+                                      reactions: [])
+                return MessagesCollectionCell.message(.message(message), bubbleType: .normal)
             }
         let sections = [MessagesCollectionSection(id: 0, title: "", cells: cells)]
         return sections

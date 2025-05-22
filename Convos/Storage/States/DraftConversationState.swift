@@ -7,6 +7,7 @@ extension Conversation {
         .init(
             id: Conversation.draftPrimaryKey,
             creator: .empty,
+            createdAt: .distantFuture,
             kind: .dm,
             topic: "",
             members: [],

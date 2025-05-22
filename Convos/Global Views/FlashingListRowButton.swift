@@ -4,26 +4,25 @@ struct FlashingListRowButton<Content: View>: View {
     let action: () -> Void
     @ViewBuilder let content: () -> Content
 
-    @State private var isPressed = false
+    @State private var isPressed: Bool = false
 
     var body: some View {
-        Button(action: {
+        Button {
             withAnimation(.easeInOut(duration: 0.2)) {
                 isPressed = true
             }
 
-            // Optional delay to show flash before navigating
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                 withAnimation(.easeOut(duration: 0.2)) {
                     isPressed = false
                 }
                 action()
             }
-        }) {
+        } label: {
             content()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal)
-                .padding(.vertical, 12) // default spacing, can be overridden by content
+                .padding(.vertical, DesignConstants.Spacing.step3x)
                 .background(
                     Color.gray.opacity(isPressed ? 0.2 : 0.0)
                 )

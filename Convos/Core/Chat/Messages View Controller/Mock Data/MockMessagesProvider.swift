@@ -43,6 +43,10 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
         MockProfileSearchRepository()
     }
 
+    func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
+        MockMessagesRepository()
+    }
+
     func loadInitialMessages() async -> [any ConvosSDK.RawMessageType] {
         let messages = createBunchOfMessages(number: 20)
         messagesSubject.value.append(contentsOf: messages)

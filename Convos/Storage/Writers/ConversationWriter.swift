@@ -14,7 +14,7 @@ class ConversationWriter: ConversationWriterProtocol {
     }
 
     func store(conversation: XMTPiOS.Conversation) async throws {
-        let dbMembers: [Member] = try await conversation.members()
+        let dbMembers: [DBConversationMember] = try await conversation.members()
             .map { $0.dbRepresentation(conversationId: conversation.id) }
         let kind: ConversationKind
         let imageURLString: String?
@@ -27,27 +27,25 @@ class ConversationWriter: ConversationWriterProtocol {
             imageURLString = try? group.imageUrl()
         }
 
+        let localState = ConversationLocalState(
+            conversationId: conversation.id,
+            isPinned: false,
+            isUnread: false,
+            isMuted: false
+        )
+
         let lastMessage = try await conversation.lastMessage()
-        let dbLastMessage: MessagePreview?
-        if let lastMessage {
-            let text = try? lastMessage.body
-            dbLastMessage = .init(text: text ?? "",
-                                  createdAt: lastMessage.sentAt)
-        } else {
-            dbLastMessage = nil
-        }
         let dbConversation = DBConversation(
             id: conversation.id,
-            isCreator: try await conversation.isCreator(),
+            creatorId: try await conversation.creatorInboxId,
             kind: kind,
             consent: try conversation.consentState().consent,
             createdAt: conversation.createdAt,
             topic: conversation.topic,
-            creatorId: try await conversation.creatorInboxId,
-            memberIds: dbMembers.map { $0.inboxId },
-            imageURLString: imageURLString,
-            lastMessage: dbLastMessage
+            imageURLString: imageURLString
         )
+
+        let creator = Member(inboxId: dbConversation.creatorId)
 
         let creatorProfile = MemberProfile(
             inboxId: dbConversation.creatorId,
@@ -57,23 +55,22 @@ class ConversationWriter: ConversationWriterProtocol {
         )
 
         try await databaseWriter.write { db in
+            try creator.save(db)
             try creatorProfile.save(db)
-
-            if let lastMessage {
-                let dbLastMessage = try lastMessage.dbRepresentation(
-                    conversationId: conversation.id,
-                    sender: .empty
-                )
-                if let dbLastMessage = dbLastMessage as? any PersistableRecord {
-//                    try dbLastMessage.save(db)
-                } else {
-                    Logger.error("Error saving last message, could not cast to PersistableRecord")
-                }
-            }
 
             try dbConversation.save(db)
 
+            if let lastMessage {
+                let dbLastMessage = try lastMessage.dbRepresentation(
+                    conversationId: conversation.id
+                )
+                try dbLastMessage.save(db)
+            }
+
+            try localState.save(db)
+
             for member in dbMembers {
+                try Member(inboxId: member.memberId).save(db)
                 try member.save(db)
             }
         }
@@ -93,16 +90,16 @@ extension Attachment {
 }
 
 fileprivate extension XMTPiOS.Member {
-    func dbRepresentation(conversationId: String) -> Member {
-        .init(inboxId: inboxId,
-              conversationId: conversationId,
+    func dbRepresentation(conversationId: String) -> DBConversationMember {
+        .init(conversationId: conversationId,
+              memberId: inboxId,
               role: permissionLevel.role,
               consent: consentState.memberConsent)
     }
 }
 
 fileprivate extension XMTPiOS.PermissionLevel {
-    var role: Member.Role {
+    var role: DBConversationMember.Role {
         switch self {
         case .SuperAdmin: return .superAdmin
         case .Admin: return .admin
@@ -125,7 +122,7 @@ fileprivate extension XMTPiOS.Conversation {
 }
 
 fileprivate extension XMTPiOS.ConsentState {
-    var memberConsent: Member.Consent {
+    var memberConsent: DBConversationMember.Consent {
         switch self {
         case .allowed: return .allowed
         case .denied: return .denied

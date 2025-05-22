@@ -2,23 +2,29 @@ import Foundation
 import GRDB
 
 struct UserProfile: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
-    var id: String {
-        userId
-    }
+    var id: String { userId }
     let userId: String // DBUser.id
     let name: String
     let username: String
     let avatar: String?
+
+    static let user: BelongsToAssociation<UserProfile, DBUser> = belongsTo(
+        DBUser.self
+    )
 }
 
-struct MemberProfile: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
-    var id: String {
-        inboxId
-    }
+struct MemberProfile: Codable, FetchableRecord, PersistableRecord, Hashable {
     let inboxId: String
     let name: String
     let username: String
     let avatar: String?
+
+    static let memberForeignKey: ForeignKey = ForeignKey(["inboxId"], to: ["inboxId"])
+
+    static let member: BelongsToAssociation<MemberProfile, Member> = belongsTo(
+        Member.self,
+        using: memberForeignKey
+    )
 }
 
 struct Profile: Codable, Identifiable, Hashable {
@@ -39,7 +45,12 @@ struct Profile: Codable, Identifiable, Hashable {
     }
 
     static var empty: Profile {
-        .init()
+        .init(
+            id: UUID().uuidString,
+            name: "",
+            username: "",
+            avatar: nil
+        )
     }
 
     init(id: String,
@@ -50,27 +61,5 @@ struct Profile: Codable, Identifiable, Hashable {
         self.name = name
         self.username = username
         self.avatar = avatar
-    }
-
-    private init() {
-        self.id = UUID().uuidString
-        self.name = ""
-        self.username = ""
-        self.avatar = nil
-    }
-
-    init(from memberProfile: MemberProfile) {
-        self.id = "member_\(memberProfile.inboxId)"
-        self.name = memberProfile.name
-        self.username = (memberProfile.username.isEmpty ?
-                         memberProfile.id : memberProfile.inboxId)
-        self.avatar = memberProfile.avatar
-    }
-
-    init(from userProfile: UserProfile) {
-        self.id = "user_\(userProfile.id)"
-        self.name = userProfile.name
-        self.username = userProfile.username
-        self.avatar = userProfile.avatar
     }
 }

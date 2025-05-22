@@ -6,6 +6,7 @@ extension Conversation {
         .init(
             id: UUID().uuidString,
             creator: .mock(),
+            createdAt: Date(),
             kind: .group,
             topic: "My Conversation \(Int.random(in: 1..<11))",
             members: [.mock(), .mock()],

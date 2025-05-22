@@ -36,6 +36,8 @@ extension ConvosSDK {
 
         func profileSearchRepository() -> any ProfileSearchRepositoryProtocol
 
+        func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol
+
         func sendMessage(to address: String, content: String) async throws -> [any RawMessageType]
         func messages(for address: String) -> AnyPublisher<[any RawMessageType], Never>
         func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never>

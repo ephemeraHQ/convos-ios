@@ -7,80 +7,109 @@ extension XMTPiOS.DecodedMessage {
         case mismatchedContentType, unsupportedContentType
     }
 
-    func dbRepresentation(conversationId: String,
-                          sender: Profile) throws -> any MessageType {
+    func dbRepresentation(conversationId: String) throws -> DBMessage {
         let status: MessageStatus = deliveryStatus.status
-
         let content = try content() as Any
         let encodedContentType = try encodedContent.type
+        let source: MessageSource = .incoming
+        let messageType: DBMessageType
+        let contentType: MessageContentType
+        let sourceMessageId: String?
+        let emoji: String?
+        let attachmentUrls: [String]
+        let text: String?
+
         switch encodedContentType {
         case ContentTypeText:
             guard let contentString = content as? String else {
                 throw DecodedMessageDBRepresentationError.mismatchedContentType
             }
-            let kind: MessageKind = .text(contentString)
-            return Message(id: id,
-                           conversationId: conversationId,
-                           sender: sender,
-                           date: sentAt,
-                           kind: kind,
-                           status: status)
+            text = contentString
+            messageType = .original
+            contentType = .text
+            attachmentUrls = []
+            emoji = nil
+            sourceMessageId = nil
         case ContentTypeReply:
             guard let contentReply = content as? Reply else {
                 throw DecodedMessageDBRepresentationError.mismatchedContentType
             }
-            let sourceMessageId = contentReply.reference
-            let kind: MessageKind
+            sourceMessageId = contentReply.reference
+            messageType = .reply
+            emoji = nil
+
             switch contentReply.contentType {
             case ContentTypeText:
                 guard let contentString = contentReply.content as? String else {
                     throw DecodedMessageDBRepresentationError.mismatchedContentType
                 }
-                kind = .text(contentString)
+                text = contentString
+                contentType = .text
+                attachmentUrls = []
             case ContentTypeRemoteAttachment:
                 guard let remoteAttachment = content as? RemoteAttachment else {
                     throw DecodedMessageDBRepresentationError.mismatchedContentType
-                    //                      let encodedContent: EncodedContent = try? await remoteAttachment.content(),
-                    //                      let attachment: Attachment = try? encodedContent.decoded(),
-                    //                      let localURL = try? attachment.saveToTmpFile() else {
+//                      let encodedContent: EncodedContent = try? await remoteAttachment.content(),
+//                      let attachment: Attachment = try? encodedContent.decoded(),
+//                      let localURL = try? attachment.saveToTmpFile() else {
                 }
-                kind = .attachment(URL(string: "http://google.com")!)
+                attachmentUrls = [remoteAttachment.url]
+                contentType = .attachments
+                text = nil
             default:
                 Logger.error("Unhandled contentType \(contentReply.contentType)")
-                kind = .text("")
+                contentType = .text
+                text = nil
+                attachmentUrls = []
             }
-            return MessageReply(id: id,
-                                conversationId: conversationId,
-                                sender: sender,
-                                date: sentAt,
-                                kind: kind,
-                                status: status,
-                                sourceMessageId: sourceMessageId)
         case ContentTypeReaction, ContentTypeReactionV2:
             guard let reaction = content as? Reaction else {
                 throw DecodedMessageDBRepresentationError.mismatchedContentType
             }
-            return MessageReaction(id: id,
-                                   conversationId: conversationId,
-                                   sender: sender,
-                                   date: sentAt,
-                                   status: status,
-                                   sourceMessageId: reaction.reference,
-                                   emoji: reaction.emoji)
+            sourceMessageId = reaction.reference
+            messageType = .reaction
+            emoji = reaction.emoji
+            contentType = .emoji
+            text = nil
+            attachmentUrls = []
+        case ContentTypeMultiRemoteAttachment:
+            guard let remoteAttachments = content as? [RemoteAttachment] else {
+                throw DecodedMessageDBRepresentationError.mismatchedContentType
+            }
+            messageType = .original
+            attachmentUrls = remoteAttachments.map { $0.url }
+            contentType = .attachments
+            text = nil
+            emoji = nil
+            sourceMessageId = nil
         case ContentTypeRemoteAttachment:
             guard let remoteAttachment = content as? RemoteAttachment else {
                 throw DecodedMessageDBRepresentationError.mismatchedContentType
             }
-            return Message(id: id,
-                           conversationId: conversationId,
-                           sender: sender,
-                           date: sentAt,
-                           kind: .attachment(URL(string: "http://google.com")!),
-                           status: status)
+            messageType = .original
+            attachmentUrls = [remoteAttachment.url]
+            contentType = .attachments
+            text = nil
+            emoji = nil
+            sourceMessageId = nil
         case ContentTypeAttachment:
             throw DecodedMessageDBRepresentationError.unsupportedContentType
         default:
             throw DecodedMessageDBRepresentationError.unsupportedContentType
         }
+
+        return .init(
+            id: id,
+            conversationId: conversationId,
+            senderId: senderInboxId,
+            date: sentAt,
+            status: status,
+            messageType: messageType,
+            contentType: contentType,
+            text: text,
+            emoji: emoji,
+            sourceMessageId: sourceMessageId,
+            attachmentUrls: attachmentUrls
+        )
     }
 }

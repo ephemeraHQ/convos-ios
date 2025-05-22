@@ -31,77 +31,29 @@ final class ConversationsRepository: ConversationsRepositoryProtocol {
     }
 }
 
-extension Array where Element == DBConversation {
+extension Array where Element == DBConversationDetails {
     func composeConversations(from database: Database) throws -> [Conversation] {
-        let dbConversations: [DBConversation] = self
+        let dbConversations: [DBConversationDetails] = self
 
-        let memberIds = dbConversations.flatMap { $0.memberIds }
-        let creatorIds = dbConversations.map { $0.creatorId }
-        let allProfileIds = Set(memberIds + creatorIds)
+        // TODO: this will be in DBConversationDetails
+        let memberProfiles: [MemberProfile] = []
+//        try MemberProfile
+//            .filter(allProfileIds.contains(Column("inboxId")))
+//            .fetchAll(database)
 
-        let memberProfiles = try MemberProfile
-            .filter(allProfileIds.contains(Column("inboxId")))
-            .fetchAll(database)
+        guard let currentUser = try database.currentUser() else {
+            return []
+        }
 
-        let currentUserProfile = try database.currentUserProfile()
-
-        let profileById = Dictionary(uniqueKeysWithValues: memberProfiles.map { ($0.inboxId, $0) })
-        let conversations: [Conversation] = try dbConversations.compactMap { dbConv in
-            let creator: Profile
-            if let creatorProfile = profileById[dbConv.creatorId] {
-                creator = Profile(from: creatorProfile)
-            } else {
-                creator = .empty
-            }
-
-            // Find member profiles
-            let members: [Profile] = dbConv.memberIds.map { memberId in
-                profileById[memberId].map(Profile.init(from:)) ?? .empty
-            }
-
-            let localState = try ConversationLocalState
-                .filter(Column("id") == dbConv.id)
-                .fetchOne(database) ?? .empty
-
-            let otherMemberProfile: Profile?
-            if dbConv.kind == .dm,
-               let currentUserProfile,
-               let otherProfile = members.first(
-                where: { $0.id != currentUserProfile.id }) {
-                otherMemberProfile = otherProfile
-            } else {
-                otherMemberProfile = nil
-            }
-
-            let messages: [Message] = try Message
-                .filter(Column("conversationId") == dbConv.id)
-                .order(Column("date").asc)
-                .fetchAll(database)
-            let imageURL: URL?
-            if let imageURLString = dbConv.imageURLString {
-                imageURL = URL(string: imageURLString)
-            } else {
-                imageURL = nil
-            }
-            return Conversation(
-                id: dbConv.id,
-                creator: creator,
-                kind: dbConv.kind,
-                topic: dbConv.topic,
-                members: members,
-                otherMember: otherMemberProfile,
-                messages: messages,
-                isPinned: localState.isPinned,
-                isUnread: localState.isUnread,
-                isMuted: localState.isMuted,
-                lastMessage: dbConv.lastMessage,
-                imageURL: imageURL
+        let conversations: [Conversation] = dbConversations.compactMap { dbConversationDetails in
+            dbConversationDetails.hydrateConversation(
+                currentUser: currentUser
             )
         }
 
         return conversations.sorted { lhs, rhs in
-            let lhsDate = lhs.lastMessage?.createdAt ?? .distantPast
-            let rhsDate = rhs.lastMessage?.createdAt ?? .distantPast
+            let lhsDate = lhs.lastMessage?.createdAt ?? lhs.createdAt
+            let rhsDate = rhs.lastMessage?.createdAt ?? rhs.createdAt
             return lhsDate > rhsDate
         }
     }
@@ -109,9 +61,21 @@ extension Array where Element == DBConversation {
 
 fileprivate extension Database {
     func composeAllConversations() throws -> [Conversation] {
-        let dbConversations = try DBConversation
+        let lastMessage = DBConversation.association(
+            to: DBConversation.lastMessageCTE,
+            on: { conversation, lastMessage in
+                conversation.id == lastMessage.conversationId
+            }).forKey("conversationLastMessage")
+            .order(\.date.desc)
+        let dbConversationDetails = try DBConversation
+            .including(required: DBConversation.creatorProfile)
+            .including(required: DBConversation.localState)
+            .including(all: DBConversation.memberProfiles)
+            .with(DBConversation.lastMessageCTE)
+            .including(optional: lastMessage)
+            .asRequest(of: DBConversationDetails.self)
             .fetchAll(self)
 
-        return try dbConversations.composeConversations(from: self)
+        return try dbConversationDetails.composeConversations(from: self)
     }
 }

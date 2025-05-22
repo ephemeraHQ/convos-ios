@@ -52,12 +52,12 @@ enum ImageSource: Hashable {
     }
 }
 
-extension Message: Differentiable {
+extension AnyMessage: Differentiable {
     var differenceIdentifier: Int {
-        id.hashValue
+        base.id.hashValue
     }
 
-    func isContentEqual(to source: Message) -> Bool {
+    func isContentEqual(to source: AnyMessage) -> Bool {
         self == source
     }
 }

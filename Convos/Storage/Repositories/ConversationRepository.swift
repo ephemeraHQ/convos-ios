@@ -20,11 +20,17 @@ class ConversationRepository: ConversationRepositoryProtocol {
             .tracking { [weak self] db in
                 guard let self else { return nil }
 
-                guard let dbConversation = try DBConversation.fetchOne(db, key: conversationId) else {
+                guard let currentUser = try db.currentUser() else {
                     return nil
                 }
 
-                return try [dbConversation].composeConversations(from: db).first
+                guard let dbConversation = try DBConversationDetails.fetchOne(db, key: conversationId) else {
+                    return nil
+                }
+
+                return dbConversation.hydrateConversation(
+                    currentUser: currentUser
+                )
             }
             .publisher(in: dbReader)
             .replaceError(with: nil)

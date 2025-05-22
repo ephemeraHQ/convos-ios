@@ -3,7 +3,7 @@ import GRDB
 import XMTPiOS
 
 protocol MessageWriterProtocol {
-    func store(message: XMTPiOS.DecodedMessage, in conversation: XMTPiOS.Conversation?) async throws
+    func store(message: XMTPiOS.DecodedMessage) async throws
 }
 
 class MessageWriter: MessageWriterProtocol {
@@ -13,29 +13,20 @@ class MessageWriter: MessageWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    func store(message: DecodedMessage, in conversation: XMTPiOS.Conversation?) async throws {
-        let conversationId = message.conversationId
-        let dbLastMessage = try message.dbRepresentation(
-            conversationId: conversationId,
-            sender: .empty
-        )
+    func store(message: DecodedMessage) async throws {
         try await databaseWriter.write { db in
-            if var conversation = try DBConversation
-                .filter(Column("id") == conversationId)
-                .fetchOne(db) {
-                if let lastMessageSentAt = conversation.lastMessage?.createdAt,
-                   message.sentAt > lastMessageSentAt {
-                    conversation.lastMessage = .init(text: (try? message.body) ?? "",
-                                                     createdAt: message.sentAt)
-                    try conversation.update(db)
-                }
-            }
+            let conversationId = message.conversationId
+            let conversation = try DBConversation
+                .filter(Column("id") == message.conversationId)
+                .fetchCount(db)
+            let sender = try MemberProfile
+                .filter(Column("inboxId") == message.senderInboxId)
+                .fetchOne(db)
+            let dbLastMessage = try message.dbRepresentation(
+                conversationId: conversationId
+            )
 
-            if let dbLastMessage = dbLastMessage as? any PersistableRecord {
-                try dbLastMessage.save(db)
-            } else {
-                Logger.error("Error saving last message, could not cast to PersistableRecord")
-            }
+            try dbLastMessage.save(db)
         }
     }
 }

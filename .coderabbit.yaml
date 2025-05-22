@@ -8,7 +8,7 @@ reviews:
   changed_files_summary: false
   sequence_diagrams: false
   poem: false
-  review_status: true
+  review_status: false
   collapse_walkthrough: false
   auto_review:
     enabled: true

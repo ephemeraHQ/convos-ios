@@ -1,26 +1,14 @@
 import Foundation
 import GRDB
 
-struct Member: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
-    enum Role: Codable, Hashable {
-        case member, admin, superAdmin
-    }
-
-    enum Consent: Hashable, Codable {
-        case allowed, denied, unknown
-    }
-
-    static func primaryKey(inboxId: String,
-                           conversationId: String) -> String {
-        "\(inboxId)|\(conversationId)"
-    }
-
-    var id: String {
-        Self.primaryKey(inboxId: inboxId,
-                        conversationId: conversationId)
-    }
+// TODO: Not needed?
+struct Member: Codable, FetchableRecord, PersistableRecord, Hashable {
     let inboxId: String
-    let conversationId: String
-    let role: Role
-    let consent: Consent
+
+    static let profileForeignKey: ForeignKey = ForeignKey(["inboxId"], to: ["inboxId"])
+
+    static let profile: HasOneAssociation<Member, MemberProfile> = hasOne(
+        MemberProfile.self,
+        using: profileForeignKey
+    )
 }

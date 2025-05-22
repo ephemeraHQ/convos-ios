@@ -17,8 +17,10 @@ enum ConvosSDK {
 
         static func sdk(authService: AuthServiceProtocol) -> ConvosClient {
             let databaseWriter = DatabaseManager.shared.dbWriter
+            let databaseReader = DatabaseManager.shared.dbReader
             let messagingService = MessagingService(authService: authService,
-                                                    databaseWriter: databaseWriter)
+                                                    databaseWriter: databaseWriter,
+                                                    databaseReader: databaseReader)
             return .init(authService: authService,
                          messagingService: messagingService)
         }
