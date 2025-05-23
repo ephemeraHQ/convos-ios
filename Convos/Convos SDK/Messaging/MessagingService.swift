@@ -154,8 +154,15 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         }
 
         _state = .initializing
-        let client = try await initializeXmtpClient(with: authorizedResult.databaseKey,
-                                                    signingKey: authorizedResult.signingKey)
+        let client: Client
+        let clientOptions = ClientOptions(dbEncryptionKey: authorizedResult.databaseKey)
+        if authorizedResult is ConvosSDK.RegisteredResultType {
+            client = try await createXmtpClient(signingKey: authorizedResult.signingKey,
+                                                options: clientOptions)
+        } else {
+            client = try await buildXmtpClient(identity: authorizedResult.signingKey.identity,
+                                               options: clientOptions)
+        }
         await processAction(.xmtpInitialized(client, authorizedResult))
     }
 
@@ -240,17 +247,29 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
     // MARK: - Helpers
 
-    private func initializeXmtpClient(with databaseKey: Data,
-                                      signingKey: SigningKey) async throws -> Client {
-        Logger.info("Initializing XMTP client...")
+    private func createXmtpClient(signingKey: SigningKey,
+                                  options: ClientOptions) async throws -> Client {
+        Logger.info("Atteming to create XMTP client, checking for existing...")
         guard xmtpClient == nil else {
             throw MessagingServiceError.xmtpClientAlreadyInitialized
         }
-        let options = ClientOptions(dbEncryptionKey: databaseKey)
-        Logger.info("Initializing XMTP client...")
+        Logger.info("Creating XMTP client...")
         let client = try await Client.create(account: signingKey, options: options)
         xmtpClient = client
-        Logger.info("XMTP Client initialized, returning signing key.")
+        Logger.info("XMTP Client created.")
+        return client
+    }
+
+    private func buildXmtpClient(identity: PublicIdentity,
+                                 options: ClientOptions) async throws -> Client {
+        Logger.info("Attempting to build XMTP client, checking for existing...")
+        guard xmtpClient == nil else {
+            throw MessagingServiceError.xmtpClientAlreadyInitialized
+        }
+        Logger.info("Building XMTP client...")
+        let client = try await Client.build(publicIdentity: identity, options: options)
+        xmtpClient = client
+        Logger.info("XMTP Client built.")
         return client
     }
 
