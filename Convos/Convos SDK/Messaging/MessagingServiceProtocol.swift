@@ -30,6 +30,7 @@ extension ConvosSDK {
 
     protocol MessagingServiceProtocol {
         var state: MessagingServiceState { get }
+        var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> { get }
 
         func start() async throws
         func stop() async
@@ -37,12 +38,9 @@ extension ConvosSDK {
         func profileSearchRepository() -> any ProfileSearchRepositoryProtocol
 
         func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol
+        func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol
 
-        func sendMessage(to address: String, content: String) async throws -> [any RawMessageType]
-        func messages(for address: String) -> AnyPublisher<[any RawMessageType], Never>
         func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never>
-        func loadInitialMessages() async -> [any RawMessageType]
-        func loadPreviousMessages() async -> [any RawMessageType]
     }
 
     enum MessagingServiceState {

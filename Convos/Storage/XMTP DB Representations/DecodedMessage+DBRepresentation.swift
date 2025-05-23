@@ -7,7 +7,7 @@ extension XMTPiOS.DecodedMessage {
         case mismatchedContentType, unsupportedContentType
     }
 
-    func dbRepresentation(conversationId: String) throws -> DBMessage {
+    func dbRepresentation() throws -> DBMessage {
         let status: MessageStatus = deliveryStatus.status
         let content = try content() as Any
         let encodedContentType = try encodedContent.type
@@ -99,6 +99,7 @@ extension XMTPiOS.DecodedMessage {
 
         return .init(
             id: id,
+            clientMessageId: id,
             conversationId: conversationId,
             senderId: senderInboxId,
             date: sentAt,

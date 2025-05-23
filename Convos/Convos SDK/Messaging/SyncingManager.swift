@@ -8,14 +8,16 @@ protocol SyncingManagerProtocol {
 
 class SyncingManager: SyncingManagerProtocol {
     private let conversationWriter: ConversationWriterProtocol
-    private let messageWriter: MessageWriterProtocol
+    private let messageWriter: IncomingMessageWriterProtocol
     private let apiClient: ConvosAPIClient
 
     init(databaseWriter: any DatabaseWriter,
          apiClient: ConvosAPIClient) {
         self.apiClient = apiClient
-        self.conversationWriter = ConversationWriter(databaseWriter: databaseWriter)
-        self.messageWriter = MessageWriter(databaseWriter: databaseWriter)
+        let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
+        self.conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
+                                                     messageWriter: messageWriter)
+        self.messageWriter = messageWriter
     }
 
     func start(with client: Client) {

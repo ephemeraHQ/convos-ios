@@ -9,9 +9,12 @@ protocol ConversationWriterProtocol {
 
 class ConversationWriter: ConversationWriterProtocol {
     private let databaseWriter: any DatabaseWriter
+    private let messageWriter: any IncomingMessageWriterProtocol
 
-    init(databaseWriter: any DatabaseWriter) {
+    init(databaseWriter: any DatabaseWriter,
+         messageWriter: any IncomingMessageWriterProtocol) {
         self.databaseWriter = databaseWriter
+        self.messageWriter = messageWriter
     }
 
     @discardableResult
@@ -65,20 +68,19 @@ class ConversationWriter: ConversationWriterProtocol {
 
             try dbConversation.save(db)
 
-            if let lastMessage {
-                try Member(inboxId: lastMessage.senderInboxId).save(db)
-                let dbLastMessage = try lastMessage.dbRepresentation(
-                    conversationId: conversation.id
-                )
-                try dbLastMessage.save(db)
-            }
-
             try localState.save(db)
 
             for member in dbMembers {
                 try Member(inboxId: member.memberId).save(db)
                 try member.save(db)
             }
+        }
+
+        if let lastMessage {
+            try await messageWriter.store(
+                message: lastMessage,
+                for: dbConversation
+            )
         }
 
         return dbConversation

@@ -45,7 +45,8 @@ final class MessagesViewController: UIViewController {
     private let inputBarView: MessagesInputView = MessagesInputView()
     let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
 
-    private let messagesRepository: MessagesRepositoryProtocol
+    private let messageWriter: any OutgoingMessageWriterProtocol
+    private let messagesRepository: any MessagesRepositoryProtocol
     private let dataSource: MessagesCollectionDataSource
 
     private var animator: ManualAnimator?
@@ -63,7 +64,9 @@ final class MessagesViewController: UIViewController {
 
     // MARK: - Initialization
 
-    init(messagesRepository: any MessagesRepositoryProtocol) {
+    init(messageWriter: any OutgoingMessageWriterProtocol,
+         messagesRepository: any MessagesRepositoryProtocol) {
+        self.messageWriter = messageWriter
         self.messagesRepository = messagesRepository
         self.dataSource = MessagesCollectionViewDataSource()
         self.collectionView = UICollectionView(frame: .zero,
@@ -548,10 +551,12 @@ extension MessagesViewController: MessagesInputViewDelegate {
         currentInterfaceActions.options.insert(.sendingMessage)
         scrollToBottom()
         Task {
-            // TODO: Use messagingService
-//            let sections = await messagesStore.sendMessage(.text(text))
-//            currentInterfaceActions.options.remove(.sendingMessage)
-//            processUpdates(with: sections, animated: true, requiresIsolatedProcess: false)
+            do {
+                try await messageWriter.send(text: text)
+            } catch {
+                Logger.error("Error sending message: \(error)")
+            }
+            currentInterfaceActions.options.remove(.sendingMessage)
         }
     }
 

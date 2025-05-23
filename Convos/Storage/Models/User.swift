@@ -3,12 +3,25 @@ import GRDB
 
 struct DBUser: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
     let id: String
+    let inboxId: String
 
     static let databaseTableName: String = "user"
 
     static let profile: HasOneAssociation<DBUser, UserProfile> = hasOne(
         UserProfile.self,
         key: "userProfile"
+    )
+
+    private static let _member: HasOneAssociation<DBUser, Member> = hasOne(
+        Member.self,
+        key: "userMember"
+    )
+
+    static let memberProfile: HasOneThroughAssociation<DBUser, MemberProfile> = hasOne(
+        MemberProfile.self,
+        through: _member.forKey("userMember"),
+        using: Member.profile,
+        key: "userMemberProfile"
     )
 
     static let identities: HasManyAssociation<DBUser, Identity> = hasMany(
@@ -20,6 +33,7 @@ struct DBUser: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashab
 
 struct User: Codable, Identifiable, Hashable {
     let id: String
+    let inboxId: String
     let identities: [Identity]
     let profile: Profile
 }

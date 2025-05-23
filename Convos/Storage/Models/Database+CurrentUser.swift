@@ -14,6 +14,7 @@ extension Database {
 
         let user = User(
             id: currentSession.sessionUser.id,
+            inboxId: currentSession.sessionUser.inboxId,
             identities: currentSession.sessionIdentities,
             profile: currentSession.sessionProfile.hydrateProfile()
         )

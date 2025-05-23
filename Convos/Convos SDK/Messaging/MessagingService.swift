@@ -31,8 +31,19 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private let userWriter: UserWriter
     private let syncingManager: SyncingManagerProtocol
     private let databaseReader: any DatabaseReader
+    private let databaseWriter: any DatabaseWriter
 
-    private var xmtpClient: XMTPiOS.Client?
+    nonisolated
+    var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
+        clientSubject.eraseToAnyPublisher()
+    }
+    nonisolated
+    private let clientSubject: CurrentValueSubject<(any XMTPClientProvider)?, Never> = .init(nil)
+    private var xmtpClient: XMTPiOS.Client? {
+        didSet {
+            clientSubject.send(xmtpClient)
+        }
+    }
     private var cancellables: Set<AnyCancellable> = []
     private let apiClient: ConvosAPIClient
     private var _state: ConvosSDK.MessagingServiceState = .uninitialized {
@@ -47,7 +58,9 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         stateSubject.value
     }
     nonisolated
-    private let stateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> = .init(.uninitialized)
+    private let stateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> = .init(
+        .uninitialized
+    )
 
     init(authService: ConvosSDK.AuthServiceProtocol,
          databaseWriter: any DatabaseWriter,
@@ -58,6 +71,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         self.syncingManager = SyncingManager(databaseWriter: databaseWriter,
                                              apiClient: apiClient)
         self.databaseReader = databaseReader
+        self.databaseWriter = databaseWriter
         Task {
             await observeAuthState()
         }
@@ -71,21 +85,6 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         await processAction(.stop)
     }
 
-    // MARK: - Messages
-
-    nonisolated
-    func messages(for address: String) -> AnyPublisher<[ConvosSDK.RawMessageType], Never> {
-        Just([]).eraseToAnyPublisher()
-    }
-
-    func loadInitialMessages() async -> [ConvosSDK.RawMessageType] {
-        []
-    }
-
-    func loadPreviousMessages() async -> [ConvosSDK.RawMessageType] {
-        []
-    }
-
     // MARK: Profile Search
 
     nonisolated
@@ -93,15 +92,25 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         ProfileSearchRepository(apiClient: ConvosAPIClient.shared)
     }
 
+    // MARK: Getting/Sending Messages
+
     nonisolated
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
         MessagesRepository(dbReader: databaseReader,
                            conversationId: conversationId)
     }
 
+    nonisolated
+    func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
+        OutgoingMessageWriter(clientPublisher: clientPublisher,
+                              databaseWriter: databaseWriter,
+                              conversationId: conversationId)
+    }
+
     // MARK: -
 
-    nonisolated func messagingStatePublisher() -> AnyPublisher<ConvosSDK.MessagingServiceState, Never> {
+    nonisolated
+    func messagingStatePublisher() -> AnyPublisher<ConvosSDK.MessagingServiceState, Never> {
         stateSubject.eraseToAnyPublisher()
     }
 
@@ -229,16 +238,6 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         return "\(baseUsername)\(random)"
     }
 
-    // MARK: - Messaging
-
-    func sendMessage(to address: String, content: String) async throws -> [any ConvosSDK.RawMessageType] {
-        guard xmtpClient != nil else {
-            throw MessagingServiceError.notInitialized
-        }
-        // Implement XMTP message sending
-        return []
-    }
-
     // MARK: - Helpers
 
     private func initializeXmtpClient(with databaseKey: Data,
@@ -272,12 +271,14 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
             Logger.info("Authorization succeeded, creating user from registeredResult: \(registeredResult)")
             let user = try await createUser(from: registeredResult,
                                             signingKey: authResult.signingKey)
-            try await userWriter.storeUser(user)
+            try await userWriter.storeUser(user, inboxId: client.inboxID)
         } else {
             Logger.info("Authorization succeeded, fetching user and profile")
             async let user = try apiClient.getUser()
             async let profile = try apiClient.getProfile(inboxId: client.inboxID)
-            try await userWriter.storeUser(await user, profile: await profile)
+            try await userWriter.storeUser(await user,
+                                           profile: await profile,
+                                           inboxId: client.inboxID)
         }
         await processAction(.backendAuthorized)
     }

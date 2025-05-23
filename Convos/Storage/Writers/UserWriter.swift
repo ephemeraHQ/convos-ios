@@ -3,8 +3,10 @@ import GRDB
 
 protocol UserWriterProtocol {
     func storeUser(_ user: ConvosAPI.UserResponse,
-                   profile: ConvosAPI.ProfileResponse) async throws
-    func storeUser(_ user: ConvosAPI.CreatedUserResponse) async throws
+                   profile: ConvosAPI.ProfileResponse,
+                   inboxId: String) async throws
+    func storeUser(_ user: ConvosAPI.CreatedUserResponse,
+                   inboxId: String) async throws
 }
 
 class UserWriter: UserWriterProtocol {
@@ -14,13 +16,16 @@ class UserWriter: UserWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    func storeUser(_ user: ConvosAPI.UserResponse, profile: ConvosAPI.ProfileResponse) async throws {
+    func storeUser(_ user: ConvosAPI.UserResponse,
+                   profile: ConvosAPI.ProfileResponse,
+                   inboxId: String) async throws {
         let identities: [Identity] = user.identities.map {
             Identity(id: $0.id,
                      userId: user.id,
                      walletAddress: $0.turnkeyAddress,
                      xmtpId: $0.xmtpId)
         }
+        let member: Member = .init(inboxId: inboxId)
         try await databaseWriter.write { db in
             let profile = UserProfile(
                 userId: user.id,
@@ -28,8 +33,14 @@ class UserWriter: UserWriterProtocol {
                 username: profile.username,
                 avatar: profile.avatar
             )
+            let memberProfile: MemberProfile = .init(inboxId: inboxId,
+                                                     name: profile.name,
+                                                     username: profile.username,
+                                                     avatar: profile.avatar)
 
-            let dbUser = DBUser(id: user.id)
+            try member.save(db)
+            try memberProfile.save(db)
+            let dbUser = DBUser(id: user.id, inboxId: inboxId)
             try dbUser.save(db)
 
             try profile.save(db)
@@ -48,18 +59,24 @@ class UserWriter: UserWriterProtocol {
         }
     }
 
-    func storeUser(_ user: ConvosAPI.CreatedUserResponse) async throws {
+    func storeUser(_ user: ConvosAPI.CreatedUserResponse,
+                   inboxId: String) async throws {
         let identities: [Identity] = [
             Identity(id: user.identity.id,
                      userId: user.id,
                      walletAddress: user.identity.turnkeyAddress,
                      xmtpId: user.identity.xmtpId)
         ]
+        let member: Member = .init(inboxId: inboxId)
+        let memberProfile: MemberProfile = .init(inboxId: inboxId,
+                                                 name: user.profile.name,
+                                                 username: user.profile.username,
+                                                 avatar: user.profile.avatar)
         let profile: UserProfile = .init(userId: user.id,
                                          name: user.profile.name,
                                          username: user.profile.username,
                                          avatar: user.profile.avatar)
-        let dbUser = DBUser(id: user.id)
+        let dbUser = DBUser(id: user.id, inboxId: inboxId)
         try await databaseWriter.write { db in
             try dbUser.save(db)
 
@@ -71,6 +88,8 @@ class UserWriter: UserWriterProtocol {
                 try identity.save(db)
             }
 
+            try member.save(db)
+            try memberProfile.save(db)
             try profile.save(db)
         }
     }

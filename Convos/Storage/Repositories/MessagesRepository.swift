@@ -47,15 +47,22 @@ extension Array where Element == MessageWithDetails {
                          in conversation: Conversation) throws -> [AnyMessage] {
         let dbMessagesWithDetails = self
 
+        guard let currentUser = try database.currentUser() else {
+            return []
+        }
+
         return dbMessagesWithDetails.compactMap { dbMessageWithDetails -> AnyMessage? in
             let dbMessage = dbMessageWithDetails.message
             let dbReactions = dbMessageWithDetails.messageReactions
             let dbSender = dbMessageWithDetails.messageSenderProfile
             let sender: Profile = dbSender.hydrateProfile()
+            let isCurrentUser: Bool = dbSender.inboxId == currentUser.inboxId
+            let source: MessageSource = isCurrentUser ? .outgoing : .incoming
             let reactions: [MessageReaction] = dbReactions.map {
-                .init(id: $0.id,
+                .init(id: $0.clientMessageId,
                       conversation: conversation,
                       sender: sender,
+                      source: source,
                       status: $0.status,
                       content: .emoji($0.emoji ?? ""),
                       emoji: $0.emoji ?? "")
@@ -74,9 +81,10 @@ extension Array where Element == MessageWithDetails {
                     messageContent = .emoji(dbMessage.emoji ?? "")
                 }
 
-                let message = Message(id: dbMessage.id,
+                let message = Message(id: dbMessage.clientMessageId,
                                       conversation: conversation,
                                       sender: sender,
+                                      source: source,
                                       status: dbMessage.status,
                                       content: messageContent,
                                       reactions: reactions)

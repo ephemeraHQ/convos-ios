@@ -18,13 +18,13 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     }
 
     enum Columns {
-        static let id: Column = Column("id")
-        static let creatorId: Column = Column("creatorId")
-        static let kind: Column = Column("kind")
-        static let consent: Column = Column("consent")
-        static let createdAt: Column = Column("createdAt")
-        static let name: Column = Column("name")
-        static let imageURLString: Column = Column("imageURLString")
+        static let id: Column = Column(CodingKeys.id)
+        static let creatorId: Column = Column(CodingKeys.creatorId)
+        static let kind: Column = Column(CodingKeys.kind)
+        static let consent: Column = Column(CodingKeys.consent)
+        static let createdAt: Column = Column(CodingKeys.createdAt)
+        static let name: Column = Column(CodingKeys.name)
+        static let imageURLString: Column = Column(CodingKeys.imageURLString)
     }
 
     let id: String

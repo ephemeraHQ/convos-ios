@@ -10,7 +10,10 @@ class ConversationComposerViewController: UIViewController {
         messagesRepository: any MessagesRepositoryProtocol,
         messagingService: any ConvosSDK.MessagingServiceProtocol
     ) {
-        self.messagesViewController = MessagesViewController(messagesRepository: messagesRepository)
+        self.messagesViewController = MessagesViewController(
+            messageWriter: MockOutgoingMessageWriter(), // TODO: handle this
+            messagesRepository: messagesRepository
+        )
         self.messagingService = messagingService
         super.init(nibName: nil, bundle: nil)
     }

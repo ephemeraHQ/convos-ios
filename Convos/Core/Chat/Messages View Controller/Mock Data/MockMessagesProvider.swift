@@ -7,6 +7,9 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
     CurrentValueSubject<ConvosSDK.MessagingServiceState, Never>(.uninitialized)
     private var messagesSubject: CurrentValueSubject<[any ConvosSDK.RawMessageType], Never> =
     CurrentValueSubject<[any ConvosSDK.RawMessageType], Never>([])
+    var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
+        Just(nil).eraseToAnyPublisher()
+    }
 
     var state: ConvosSDK.MessagingServiceState {
         messagingStateSubject.value
@@ -47,25 +50,8 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
         MockMessagesRepository()
     }
 
-    func loadInitialMessages() async -> [any ConvosSDK.RawMessageType] {
-        let messages = createBunchOfMessages(number: 20)
-        messagesSubject.value.append(contentsOf: messages)
-        return messagesSubject.value
-    }
-
-    func loadPreviousMessages() async -> [any ConvosSDK.RawMessageType] {
-        let messages = createBunchOfMessages(number: 20)
-        messagesSubject.value.append(contentsOf: messages)
-        return messagesSubject.value
-    }
-
-    func sendMessage(to address: String, content: String) async throws -> [any ConvosSDK.RawMessageType] {
-        messagesSubject.value.append(MockMessage.message(content, sender: currentUser))
-        return messagesSubject.value
-    }
-
-    func messages(for address: String) -> AnyPublisher<[any ConvosSDK.RawMessageType], Never> {
-        messagesSubject.eraseToAnyPublisher()
+    func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
+        MockOutgoingMessageWriter()
     }
 
     func messagingStatePublisher() -> AnyPublisher<ConvosSDK.MessagingServiceState, Never> {

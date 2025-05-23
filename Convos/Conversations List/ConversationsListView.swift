@@ -56,10 +56,17 @@ struct ConversationsListView: View {
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)
                         case .conversation(let conversation):
+                            let conversationRepository = MockConversationRepository()
+                            let messageWriter = convos.messaging.messageWriter(
+                                for: conversation.id
+                            )
+                            let messagesRepository = convos.messaging.messagesRepository(
+                                for: conversation.id
+                            )
                             MessagesView(
-                                conversationRepository: MockConversationRepository(),
-                                messagesRepository: convos.messaging
-                                    .messagesRepository(for: conversation.id)
+                                conversationRepository: conversationRepository,
+                                messageWriter: messageWriter,
+                                messagesRepository: messagesRepository
                             )
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)

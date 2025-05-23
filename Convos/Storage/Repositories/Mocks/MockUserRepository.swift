@@ -5,6 +5,7 @@ extension User {
     static func mock() -> User {
         .init(
             id: UUID().uuidString,
+            inboxId: UUID().uuidString,
             identities: [],
             profile: .mock()
         )

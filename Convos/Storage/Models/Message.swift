@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-enum MessageStatus: Hashable, Codable {
+enum MessageStatus: String, Hashable, Codable {
     case unpublished, published, failed, unknown
 }
 
@@ -27,20 +27,22 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
     static var databaseTableName: String = "message"
 
     enum Columns {
-        static let id: Column = Column("id")
-        static let conversationId: Column = Column("conversationId")
-        static let senderId: Column = Column("senderId")
-        static let date: Column = Column("date")
-        static let status: Column = Column("status")
-        static let messageType: Column = Column("messageType")
-        static let contentType: Column = Column("contentType")
-        static let text: Column = Column("text")
-        static let emoji: Column = Column("emoji")
-        static let sourceMessageId: Column = Column("sourceMessageId")
-        static let attachmentUrls: Column = Column("attachmentUrls")
+        static let id: Column = Column(CodingKeys.id)
+        static let clientMessageId: Column = Column(CodingKeys.clientMessageId)
+        static let conversationId: Column = Column(CodingKeys.conversationId)
+        static let senderId: Column = Column(CodingKeys.senderId)
+        static let date: Column = Column(CodingKeys.date)
+        static let status: Column = Column(CodingKeys.status)
+        static let messageType: Column = Column(CodingKeys.messageType)
+        static let contentType: Column = Column(CodingKeys.contentType)
+        static let text: Column = Column(CodingKeys.text)
+        static let emoji: Column = Column(CodingKeys.emoji)
+        static let sourceMessageId: Column = Column(CodingKeys.sourceMessageId)
+        static let attachmentUrls: Column = Column(CodingKeys.attachmentUrls)
     }
 
-    let id: String
+    let id: String // external
+    let clientMessageId: String // always the same, used for optimistic send
     let conversationId: String
     let senderId: String
     let date: Date
@@ -57,17 +59,6 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
 
     var attachmentUrl: String? {
         attachmentUrls.first
-    }
-
-    var preview: String {
-        switch messageType {
-        case .original:
-            ""
-        case .reply:
-            ""
-        case .reaction:
-            ""
-        }
     }
 
     static let sourceMessageForeignKey: ForeignKey = ForeignKey(["sourceMessageId"], to: ["id"])
@@ -111,6 +102,41 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
     )
 }
 
+extension DBMessage {
+    func with(id: String) -> DBMessage {
+        .init(
+            id: id,
+            clientMessageId: clientMessageId,
+            conversationId: conversationId,
+            senderId: senderId,
+            date: date,
+            status: status,
+            messageType: messageType,
+            contentType: contentType,
+            text: text,
+            emoji: emoji,
+            sourceMessageId: sourceMessageId,
+            attachmentUrls: attachmentUrls
+        )
+    }
+    func with(clientMessageId: String) -> DBMessage {
+        .init(
+            id: id,
+            clientMessageId: clientMessageId,
+            conversationId: conversationId,
+            senderId: senderId,
+            date: date,
+            status: status,
+            messageType: messageType,
+            contentType: contentType,
+            text: text,
+            emoji: emoji,
+            sourceMessageId: sourceMessageId,
+            attachmentUrls: attachmentUrls
+        )
+    }
+}
+
 struct MessageWithDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
     let message: DBMessage
     let messageSenderProfile: MemberProfile
@@ -132,12 +158,6 @@ protocol MessageType {
     var source: MessageSource { get }
     var status: MessageStatus { get }
     var content: MessageContent { get }
-}
-
-extension MessageType {
-    var source: MessageSource {
-        return .incoming
-    }
 }
 
 enum AnyMessage: Hashable, Codable {
@@ -165,6 +185,7 @@ struct Message: MessageType, Hashable, Codable {
     let id: String
     let conversation: Conversation
     let sender: Profile
+    let source: MessageSource
     let status: MessageStatus
     let content: MessageContent
 
@@ -175,6 +196,7 @@ struct MessageReply: MessageType, Hashable, Codable {
     let id: String
     let conversation: Conversation
     let sender: Profile
+    let source: MessageSource
     let status: MessageStatus
     let content: MessageContent
 
@@ -186,6 +208,7 @@ struct MessageReaction: MessageType, Hashable, Codable {
     let id: String
     let conversation: Conversation
     let sender: Profile
+    let source: MessageSource
     let status: MessageStatus
     let content: MessageContent
 

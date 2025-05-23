@@ -34,22 +34,35 @@ final class DatabaseManager {
         var config = Configuration()
         config.label = "ConvosDB"
         config.foreignKeysEnabled = true
-        config.prepareDatabase { db in
-            db.trace { print($0) }
-        }
+         config.prepareDatabase { db in
+ #if DEBUG
+//             db.trace { print($0) }
+ #endif
+         }
 
         let dbPool = try DatabasePool(path: dbURL.path, configuration: config)
         var migrator = DatabaseMigrator()
 
-//#if DEBUG
+#if DEBUG
         migrator.eraseDatabaseOnSchemaChange = true
-//#endif
+#endif
 
         migrator.registerMigration("createUserSchema") { db in
+            try db.create(table: "member") { t in
+                t.column("inboxId", .text)
+                    .unique()
+                    .notNull()
+                    .primaryKey()
+            }
+
             try db.create(table: "user") { t in
                 t.column("id", .text)
                     .unique()
                     .primaryKey()
+                t.column("inboxId", .text)
+                    .unique()
+                    .indexed()
+                    .references("member", onDelete: .none)
             }
 
             try db.create(table: "identity") { t in
@@ -73,13 +86,6 @@ final class DatabaseManager {
                 t.column("name", .text).notNull()
                 t.column("username", .text).notNull()
                 t.column("avatar", .text)
-            }
-
-            try db.create(table: "member") { t in
-                t.column("inboxId", .text)
-                    .unique()
-                    .notNull()
-                    .primaryKey()
             }
 
             try db.create(table: "conversation") { t in
@@ -130,7 +136,13 @@ final class DatabaseManager {
             }
 
             try db.create(table: "message") { t in
-                t.column("id", .text).primaryKey()
+                t.column("id", .text)
+                    .notNull()
+                    .unique(onConflict: .replace)
+                t.column("clientMessageId", .text)
+                    .notNull()
+                    .primaryKey()
+                    .unique(onConflict: .replace)
                 t.column("conversationId", .text)
                     .notNull()
                     .references("conversation", onDelete: .cascade)
