@@ -42,7 +42,7 @@ final class CellFactory {
                     source: .imageURL(attachmentURL),
                     messageType: message.source
                 )
-            case .attachments(let attachmentURLs):
+            case .attachments:
                 return UICollectionViewCell()
             }
         case .reply(let reply):
@@ -64,7 +64,7 @@ final class CellFactory {
                     source: .imageURL(attachmentURL),
                     messageType: reply.source
                 )
-            case .attachments(let attachmentURLs):
+            case .attachments:
                 return UICollectionViewCell()
             }
         }

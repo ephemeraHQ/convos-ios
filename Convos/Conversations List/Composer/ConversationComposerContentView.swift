@@ -4,29 +4,14 @@ import SwiftUI
 @Observable
 class ConversationComposerViewModel {
     private let profileSearchRepo: any ProfileSearchRepositoryProtocol
+    private var searchTask: Task<Void, Never>?
 
     var searchText: String = "" {
         didSet {
-            guard !searchText.isEmpty else {
-                profileResults = []
-                return
-            }
-
-            Task {
-                let results: [Profile]
-                do {
-                    results = try await profileSearchRepo.search(using: searchText)
-                } catch {
-                    Logger.error("Error searching for profiles: \(error)")
-                    results = []
-                }
-                DispatchQueue.main.async { [weak self] in
-                    guard let self else { return }
-                    self.profileResults = results.filter { !self.profilesAdded.contains($0) }
-                }
-            }
+            performSearch()
         }
     }
+
     var conversationResults: [Conversation] = []
     var profilesAdded: OrderedSet<Profile> = []
     var profileResults: [Profile] = []
@@ -40,6 +25,29 @@ class ConversationComposerViewModel {
     func add(profile: Profile) {
         searchText = ""
         profilesAdded.append(profile)
+    }
+
+    private func performSearch() {
+        searchTask?.cancel()
+
+        guard !searchText.isEmpty else {
+            profileResults = []
+            return
+        }
+
+        searchTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+
+            do {
+                let results = try await profileSearchRepo.search(using: searchText)
+                let filtered = results.filter { !self.profilesAdded.contains($0) }
+                self.profileResults = filtered
+            } catch {
+                Logger.error("Search failed: \(error)")
+                self.profileResults = []
+            }
+        }
     }
 }
 

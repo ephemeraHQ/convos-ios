@@ -51,7 +51,9 @@ struct ConversationsListView: View {
                             ConversationComposerView(
                                 draftConversationRepository: MockDraftConversationRepository(),
                                 messagingService: convos.messaging,
-                                messagesRepository: convos.messaging.messagesRepository(for: "draft") // TODO: better way
+                                messagesRepository: convos.messaging.messagesRepository(
+                                    for: "draft"
+                                ) // TODO: better way
                             )
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)

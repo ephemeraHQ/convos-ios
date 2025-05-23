@@ -1,6 +1,8 @@
 import Foundation
 import GRDB
 
+// swiftlint:disable function_body_length
+
 final class DatabaseManager {
     static let shared: DatabaseManager = DatabaseManager()
 
@@ -36,7 +38,7 @@ final class DatabaseManager {
         config.foreignKeysEnabled = true
          config.prepareDatabase { db in
  #if DEBUG
-//             db.trace { print($0) }
+             db.trace { print($0) }
  #endif
          }
 
@@ -138,10 +140,10 @@ final class DatabaseManager {
             try db.create(table: "message") { t in
                 t.column("id", .text)
                     .notNull()
+                    .primaryKey()
                     .unique(onConflict: .replace)
                 t.column("clientMessageId", .text)
                     .notNull()
-                    .primaryKey()
                     .unique(onConflict: .replace)
                 t.column("conversationId", .text)
                     .notNull()
@@ -173,3 +175,5 @@ final class DatabaseManager {
         return dbPool
     }
 }
+
+// swiftlint:enable function_body_length

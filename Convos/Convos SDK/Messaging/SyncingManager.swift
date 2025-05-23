@@ -102,8 +102,8 @@ class SyncingManager: SyncingManagerProtocol {
             let maxMembersPerChunk = 100
             for chunk in allMemberIds.chunked(into: maxMembersPerChunk) {
                 Task {
-                    let profiles = try await apiClient.getProfiles(for: chunk)
-                    // store profiles
+                    _ = try await apiClient.getProfiles(for: chunk)
+                    // TODO: MemberProfileWriter
                 }
             }
         }

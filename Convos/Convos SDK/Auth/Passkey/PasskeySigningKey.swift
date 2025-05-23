@@ -19,7 +19,8 @@ extension Data {
 
 final class PasskeySigningKey: SigningKey {
     enum PasskeySigningKeyError: Error {
-        case signingFailed(String)
+        case signingFailed(String),
+             failedEncoding(String)
     }
 
 	let credentialID: Data
@@ -40,8 +41,12 @@ final class PasskeySigningKey: SigningKey {
 
 	var type: SignerType { .EOA }
 
-    func base64URLEncoded(_ string: String) -> String {
-        let raw = string.data(using: .utf8)!
+    func base64URLEncoded(_ string: String) throws -> String {
+        guard let raw = string.data(using: .utf8) else {
+            throw PasskeySigningKeyError.failedEncoding(
+                "Could not encode challenge string as UTF-8"
+            )
+        }
         return raw.base64EncodedString()
             .replacingOccurrences(of: "=", with: "")
             .replacingOccurrences(of: "+", with: "-")
@@ -49,7 +54,7 @@ final class PasskeySigningKey: SigningKey {
     }
 
     func sign(_ message: String) async throws -> SignedData {
-        let base64urlEncodedMessage = base64URLEncoded(message)
+        let base64urlEncodedMessage = try base64URLEncoded(message)
 
         guard let challengeData = base64urlEncodedMessage.data(using: .utf8) else {
             throw PasskeySigningKeyError.signingFailed("Could not encode challenge string as UTF-8")
@@ -62,6 +67,7 @@ final class PasskeySigningKey: SigningKey {
         let sec1Key = try P256.Signing.PublicKey(x963Representation: publicKey)
         let signature = try P256.Signing.ECDSASignature(derRepresentation: assertion.signature)
         let isValid = sec1Key.isValidSignature(signature, for: verificationData)
+        Logger.info("Internal signing validation check returned `isValid`: \(isValid)")
 
         return SignedData(
             rawData: assertion.signature,

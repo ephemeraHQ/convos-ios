@@ -35,12 +35,6 @@ extension Array where Element == DBConversationDetails {
     func composeConversations(from database: Database) throws -> [Conversation] {
         let dbConversations: [DBConversationDetails] = self
 
-        // TODO: this will be in DBConversationDetails
-        let memberProfiles: [MemberProfile] = []
-//        try MemberProfile
-//            .filter(allProfileIds.contains(Column("inboxId")))
-//            .fetchAll(database)
-
         guard let currentUser = try database.currentUser() else {
             return []
         }
