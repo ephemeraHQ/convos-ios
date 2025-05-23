@@ -17,7 +17,7 @@
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
 		D834386F2DB19D8C00A50F45 /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = D834386E2DB19D8C00A50F45 /* Factory */; };
-		D85B9B9F2DD26BC400831D58 /* (null) in Embed Frameworks */ = {isa = PBXBuildFile; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		D85B9B9F2DD26BC400831D58 /* BuildFile in Embed Frameworks */ = {isa = PBXBuildFile; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */; };
 		D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = D8B5A9032DC272BD006003A4 /* XMTPiOS */; };
 /* End PBXBuildFile section */
@@ -60,7 +60,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				D85B9B9F2DD26BC400831D58 /* (null) in Embed Frameworks */,
+				D85B9B9F2DD26BC400831D58 /* BuildFile in Embed Frameworks */,
 				7A349CA62DD7017B00E526A3 /* GRDB-dynamic in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
@@ -110,6 +110,8 @@
 		};
 		D83A7ABA2DA5C98400879441 /* Config */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = Config;
 			sourceTree = "<group>";
 		};
@@ -165,13 +167,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		D80850432DC94FF300E708B0 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
 		D8A2B6882DA4BA4B00EF8577 = {
 			isa = PBXGroup;
 			children = (
@@ -181,7 +176,6 @@
 				D83A7ABA2DA5C98400879441 /* Config */,
 				D8A2B6932DA4BA4B00EF8577 /* Convos */,
 				D80850352DC94F4C00E708B0 /* NotificationService */,
-				D80850432DC94FF300E708B0 /* Frameworks */,
 				D8A2B6922DA4BA4B00EF8577 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -216,8 +210,6 @@
 				D80850352DC94F4C00E708B0 /* NotificationService */,
 			);
 			name = NotificationService;
-			packageProductDependencies = (
-			);
 			productName = NotificationService;
 			productReference = D80850342DC94F4C00E708B0 /* NotificationService.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -357,7 +349,7 @@
 /* Begin PBXTargetDependency section */
 		D8084C1C2DC91F1300E708B0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = D8084C1B2DC91F1300E708B0 /* SwiftLintBuildToolPlugin */;
+			productRef = D8084C1B2DC91F1300E708B0 /* plugin:SwiftLintBuildToolPlugin */;
 		};
 		D808503A2DC94F4C00E708B0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -366,7 +358,7 @@
 		};
 		D80850422DC94FA000E708B0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			productRef = D80850412DC94FA000E708B0 /* SwiftLintBuildToolPlugin */;
+			productRef = D80850412DC94FA000E708B0 /* plugin:SwiftLintBuildToolPlugin */;
 		};
 /* End PBXTargetDependency section */
 
@@ -754,12 +746,12 @@
 			package = D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */;
 			productName = DifferenceKit;
 		};
-		D8084C1B2DC91F1300E708B0 /* SwiftLintBuildToolPlugin */ = {
+		D8084C1B2DC91F1300E708B0 /* plugin:SwiftLintBuildToolPlugin */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
 			productName = "plugin:SwiftLintBuildToolPlugin";
 		};
-		D80850412DC94FA000E708B0 /* SwiftLintBuildToolPlugin */ = {
+		D80850412DC94FA000E708B0 /* plugin:SwiftLintBuildToolPlugin */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
 			productName = "plugin:SwiftLintBuildToolPlugin";

@@ -62,6 +62,15 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         .uninitialized
     )
 
+    private var cachedInboxId: String? {
+        get {
+            UserDefaults.standard.string(forKey: "cachedInboxId")
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "cachedInboxId")
+        }
+    }
+
     init(authService: ConvosSDK.AuthServiceProtocol,
          databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader) {
@@ -255,6 +264,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         }
         Logger.info("Creating XMTP client...")
         let client = try await Client.create(account: signingKey, options: options)
+        cachedInboxId = client.inboxID
         xmtpClient = client
         Logger.info("XMTP Client created.")
         return client
@@ -267,7 +277,11 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
             throw MessagingServiceError.xmtpClientAlreadyInitialized
         }
         Logger.info("Building XMTP client...")
-        let client = try await Client.build(publicIdentity: identity, options: options)
+        let client = try await Client.build(
+            publicIdentity: identity,
+            options: options,
+            inboxId: cachedInboxId
+        )
         xmtpClient = client
         Logger.info("XMTP Client built.")
         return client
