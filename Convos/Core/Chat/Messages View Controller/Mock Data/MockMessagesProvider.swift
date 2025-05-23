@@ -5,8 +5,6 @@ import UIKit
 final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
     private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
     CurrentValueSubject<ConvosSDK.MessagingServiceState, Never>(.uninitialized)
-    private var messagesSubject: CurrentValueSubject<[any ConvosSDK.RawMessageType], Never> =
-    CurrentValueSubject<[any ConvosSDK.RawMessageType], Never>([])
     var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
         Just(nil).eraseToAnyPublisher()
     }
@@ -32,16 +30,6 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
         messageTimer = nil
     }
 
-    func conversations() async throws -> [any ConvosSDK.ConversationType] {
-        return []
-    }
-
-    func conversationsStream() async -> AsyncThrowingStream<any ConvosSDK.ConversationType, any Error> {
-        return .init {
-            nil
-        }
-    }
-
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
         MockProfileSearchRepository()
     }
@@ -59,23 +47,19 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
     }
 
     private let currentUser: MockUser
-    let otherUsers: [MockUser] = [
-        MockUser(name: "Emily Dickinson"),
-        MockUser(name: "William Shakespeare"),
-        MockUser(name: "Virginia Woolf"),
-        MockUser(name: "James Joyce"),
-        MockUser(name: "Oscar Wilde")
+    let otherUsers: [Profile] = [
+        .mock(name: "Emily Dickinson"),
+        .mock(name: "William Shakespeare"),
+        .mock(name: "Virginia Woolf"),
+        .mock(name: "James Joyce"),
+        .mock(name: "Oscar Wilde")
     ]
 
-    private var allUsers: [MockUser] {
-        [currentUser] + otherUsers
+    private var allUsers: [Profile] {
+        [currentUser.profile] + otherUsers
     }
 
     // MARK: - User Access
-
-    var users: (current: MockUser, others: [MockUser]) {
-        (currentUser, otherUsers)
-    }
 
     // MARK: - Private Properties
 
@@ -114,7 +98,7 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
             return
         }
         let message = createRandomMessage()
-        messagesSubject.value.append(message)
+//        messagesSubject.value.append(message)
         restartMessageTimer()
     }
 
@@ -131,17 +115,21 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
             )
     }
 
-    private func createRandomMessage(date: Date = Date()) -> MockMessage {
+    private func createRandomMessage(date: Date = Date()) -> any MessageType {
         let sender = allUsers[Int.random(in: 0..<allUsers.count)]
-        return MockMessage(id: UUID().uuidString,
-                           content: TextGenerator.getString(of: Int.random(in: 1...20)),
-                           sender: sender,
-                           timestamp: date,
-                           replies: [])
+        return Message(
+            id: UUID().uuidString,
+            conversation: .mock(),
+            sender: sender,
+            source: .incoming,
+            status: .published,
+            content: .text(TextGenerator.getString(of: Int.random(in: 1...20))),
+            reactions: []
+        )
     }
 
-    private func createBunchOfMessages(number: Int = 50) -> [any ConvosSDK.RawMessageType] {
-        let messages = (0..<number).map { _ -> any ConvosSDK.RawMessageType in
+    private func createBunchOfMessages(number: Int = 50) -> [any MessageType] {
+        let messages = (0..<number).map { _ -> any MessageType in
             startingTimestamp -= TimeInterval(Int.random(in: 100...1000))
             return self.createRandomMessage(date: Date(timeIntervalSince1970: startingTimestamp))
         }

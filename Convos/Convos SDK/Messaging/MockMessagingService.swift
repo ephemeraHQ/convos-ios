@@ -1,38 +1,23 @@
 import Combine
 import Foundation
 
-struct MockMessage: ConvosSDK.RawMessageType {
-    var id: String
-    var content: String
-    var sender: any ConvosSDK.User
-    var timestamp: Date
-    var replies: [any ConvosSDK.RawMessageType]
+class MockMessageSender: MessageSender {
 
-    static func message(_ content: String, sender: any ConvosSDK.User) -> MockMessage {
-        .init(
-            id: UUID().uuidString,
-            content: content,
-            sender: sender,
-            timestamp: Date(),
-            replies: []
-        )
+    func prepare(text: String) async throws -> String {
+        return ""
+    }
+
+    func publish() async throws {
+
     }
 }
 
-struct MockConversation: ConvosSDK.ConversationType {
-    var id: String
-    var lastMessage: (any ConvosSDK.RawMessageType)? {
-        get async throws {
-            nil
-        }
+class MockClientProvder: XMTPClientProvider {
+    let mockConversation: Conversation = .mock()
+
+    func messageSender(for conversationId: String) async throws -> (any MessageSender)? {
+        return nil
     }
-    var otherParticipant: (any ConvosSDK.User)?
-    var isPinned: Bool
-    var isUnread: Bool
-    var isRequest: Bool
-    var isMuted: Bool
-    var timestamp: Date
-    var amount: Double?
 }
 
 class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
@@ -42,12 +27,13 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
 
     private let currentUser: MockUser? = nil
 
+    private let mockClient = MockClientProvder()
+
     private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
-    CurrentValueSubject<ConvosSDK.MessagingServiceState, Never>(.uninitialized)
-    private var messagesSubject: CurrentValueSubject<[any ConvosSDK.RawMessageType], Never> =
-    CurrentValueSubject<[any ConvosSDK.RawMessageType], Never>([])
+        .init(.uninitialized)
+
     var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
-        Just(nil).eraseToAnyPublisher()
+        Just(mockClient).eraseToAnyPublisher()
     }
 
     var state: ConvosSDK.MessagingServiceState {
@@ -55,9 +41,14 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     func start() async throws {
+        messagingStateSubject.send(.initializing)
+        messagingStateSubject.send(.authorizing)
+        messagingStateSubject.send(.ready)
     }
 
     func stop() {
+        messagingStateSubject.send(.stopping)
+        messagingStateSubject.send(.uninitialized)
     }
 
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
@@ -70,10 +61,6 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
         MockOutgoingMessageWriter()
-    }
-
-    func messages(for address: String) -> AnyPublisher<[any ConvosSDK.RawMessageType], Never> {
-        messagesSubject.eraseToAnyPublisher()
     }
 
     func messagingStatePublisher() -> AnyPublisher<ConvosSDK.MessagingServiceState, Never> {

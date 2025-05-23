@@ -16,14 +16,8 @@ extension PrivateKey {
     }
 }
 
-struct MockProfile: ConvosSDK.Profile {
-    let name: String
-    let username: String
-    let avatarURL: URL? = nil
-}
-
-struct MockUser: ConvosSDK.User, ConvosSDK.AuthorizedResultType, Codable {
-    var profile: any ConvosSDK.Profile
+struct MockUser: ConvosSDK.AuthorizedResultType, Codable {
+    var profile: Profile
     var id: String
     let privateKey: PrivateKey!
 
@@ -48,7 +42,7 @@ struct MockUser: ConvosSDK.User, ConvosSDK.AuthorizedResultType, Codable {
 
     init(name: String) {
         self.id = UUID().uuidString
-        self.profile = MockProfile(name: name, username: "")
+        self.profile = .mock()
         self.privateKey = try? PrivateKey.generate()
     }
 
@@ -56,7 +50,7 @@ struct MockUser: ConvosSDK.User, ConvosSDK.AuthorizedResultType, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(String.self, forKey: .id)
         let name = try container.decode(String.self, forKey: .name)
-        self.profile = MockProfile(name: name, username: "")
+        self.profile = .mock()
         let privateKeyData = try container.decode(Data.self, forKey: .privateKeyData)
         self.privateKey = try PrivateKey(privateKeyData)
     }
@@ -85,7 +79,7 @@ class MockAuthService: ConvosSDK.AuthServiceProtocol {
     private let keychain: KeychainService<MockKeychainItem> = .init()
     private var _currentUser: MockUser?
 
-    var currentUser: ConvosSDK.User? {
+    var currentUser: MockUser? {
         _currentUser
     }
 

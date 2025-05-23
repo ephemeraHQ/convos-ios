@@ -13,11 +13,11 @@ extension User {
 }
 
 extension Profile {
-    static func mock() -> Profile {
+    static func mock(name: String = "Andrew") -> Profile {
         .init(
             id: UUID().uuidString,
-            name: "Andrew",
-            username: "courter",
+            name: name,
+            username: name.lowercased(),
             avatar: nil
         )
     }
