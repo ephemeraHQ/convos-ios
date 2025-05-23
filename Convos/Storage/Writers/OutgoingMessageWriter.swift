@@ -30,7 +30,7 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
             return
         }
 
-        let clientMessageId: String = UUID().uuidString
+        let clientMessageId: String = try await sender.prepare(text: text)
 
         try await databaseWriter.write { [weak self] db in
             guard let self else { return }
@@ -61,41 +61,8 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
 
         Task {
             Logger.info("Sending local message with local id: \(clientMessageId)")
-            let messageId = try await sender.send(text: text)
-            Logger.info("Sent local message with local id: \(clientMessageId), external id: \(messageId)")
-            do {
-                try await databaseWriter.write { db in
-                    // maybe background stream has published our message
-                    if let publishedMessage = try DBMessage
-                        .filter(Column("id") == messageId)
-                        .filter(Column("clientMessageId") == messageId)
-                        .fetchOne(db) {
-                        let updatedMessage = publishedMessage.with(
-                            clientMessageId: clientMessageId
-                        )
-                        Logger.info("Found published message with local id: \(clientMessageId)")
-                        try updatedMessage.save(db)
-                        Logger.info("Updated published clientMessageId from \(messageId) to \(clientMessageId)")
-                    } else if let unpublishedMessage = try DBMessage
-                        .filter(Column("id") == clientMessageId)
-                        .filter(Column("clientMessageId") == clientMessageId)
-                        .filter(Column("status") == MessageStatus.unpublished.rawValue)
-                        .fetchOne(db) {
-                        Logger.info("Found unpublished message with local id: \(clientMessageId)")
-                        let updatedMessage = unpublishedMessage.with(
-                            id: messageId
-                        )
-                        try updatedMessage.save(db)
-                        Logger.info("Updated local message id from \(clientMessageId) to \(messageId)")
-                    } else {
-                        Logger.error(
-                            "Neither published or unpublished message found for \(clientMessageId) after send"
-                        )
-                    }
-                }
-            } catch {
-                Logger.error("Error updating local message after sending message: \(error)")
-            }
+            try await sender.publish()
+            Logger.info("Sent local message with local id: \(clientMessageId)")
         }
     }
 }

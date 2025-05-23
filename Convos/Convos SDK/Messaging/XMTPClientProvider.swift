@@ -2,7 +2,8 @@ import Foundation
 import XMTPiOS
 
 protocol MessageSender {
-    func send(text: String) async throws -> String
+    func prepare(text: String) async throws -> String
+    func publish() async throws
 }
 
 protocol XMTPClientProvider: AnyObject {
@@ -16,7 +17,11 @@ extension XMTPiOS.Client: XMTPClientProvider {
 }
 
 extension XMTPiOS.Conversation: MessageSender {
-    func send(text: String) async throws -> String {
-        return try await send(text: text, options: nil)
+    func prepare(text: String) async throws -> String {
+        return try await prepareMessage(content: text)
+    }
+
+    func publish() async throws {
+        try await publishMessages()
     }
 }
