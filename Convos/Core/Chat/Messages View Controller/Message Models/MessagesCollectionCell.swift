@@ -11,7 +11,7 @@ enum MessagesCollectionCell: Hashable {
         case normal, tailed
     }
 
-    case message(Message, bubbleType: BubbleType)
+    case message(AnyMessage, bubbleType: BubbleType)
     case typingIndicator
     case messageGroup(MessageGroup)
     case date(DateGroup)
@@ -19,11 +19,11 @@ enum MessagesCollectionCell: Hashable {
     var alignment: MessagesCollectionCell.Alignment {
         switch self {
         case let .message(message, _):
-            message.type == .incoming ? .leading : .trailing
+            message.base.source == .incoming ? .leading : .trailing
         case .typingIndicator:
             .leading
         case let .messageGroup(group):
-            group.type == .incoming ? .leading : .trailing
+            group.source == .incoming ? .leading : .trailing
         case .date:
             .center
         }

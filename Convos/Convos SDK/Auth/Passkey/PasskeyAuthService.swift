@@ -1,18 +1,18 @@
 import Combine
 import Foundation
+import PasskeyAuth
+import XMTPiOS
 
 class PasskeyAuthService: ConvosSDK.AuthServiceProtocol {
     struct PasskeyAuthResult: ConvosSDK.AuthorizedResultType {
-        let privateKeyData: Data
+        let signingKey: any SigningKey
+        let databaseKey: Data
     }
 
     struct PasskeyRegisteredResult: ConvosSDK.RegisteredResultType {
         let displayName: String
-        let privateKeyData: Data
-    }
-
-    enum PasskeyAuthServiceError: Error {
-        case invalidBaseURL
+        let signingKey: any SigningKey
+        let databaseKey: Data
     }
 
     var state: ConvosSDK.AuthServiceState {
@@ -20,8 +20,8 @@ class PasskeyAuthService: ConvosSDK.AuthServiceProtocol {
     }
 
     private var authStateSubject: CurrentValueSubject<ConvosSDK.AuthServiceState, Never> = .init(.unknown)
-
-    private let passkeyHelper: PasskeyAuthHelper
+    private let passkeyAuth: PasskeyAuth
+    private let passkeyIdentityStore: PasskeyIdentityStore = .init()
 
     init() {
         guard let passkeyBaseURL = URL(string: Secrets.PASSKEY_API_BASE_URL) else {
@@ -29,8 +29,11 @@ class PasskeyAuthService: ConvosSDK.AuthServiceProtocol {
         }
 
         do {
-            passkeyHelper = try PasskeyAuthHelper(baseURL: passkeyBaseURL,
-                                                  rpID: Secrets.API_RP_ID)
+            let config = try PasskeyConfiguration(
+                baseURL: passkeyBaseURL,
+                rpID: Secrets.API_RP_ID
+            )
+            passkeyAuth = PasskeyAuth(configuration: config)
         } catch {
             fatalError(error.localizedDescription)
         }
@@ -44,23 +47,43 @@ class PasskeyAuthService: ConvosSDK.AuthServiceProtocol {
 
     func prepare() async throws {
         Task { @MainActor in
-            await passkeyHelper.setupPasskeyPresentationProvider()
+            let presentationProvider = PasskeyPresentationProvider()
+            await passkeyAuth.setPresentationContextProvider(presentationProvider)
         }
     }
 
     func signIn() async throws {
-        let privateKey = try await passkeyHelper.loginWithPasskey()
-        authStateSubject.send(.authorized(PasskeyAuthResult(privateKeyData: privateKey)))
+        let (assertion, response) = try await passkeyAuth.loginWithPasskey()
+        let identity = try passkeyIdentityStore.save(
+            credentialID: assertion.credentialID,
+            publicKey: response.publicKey,
+            userID: response.userID
+        )
+        let signingKey = PasskeySigningKey(credentialID: identity.credentialID,
+                                           publicKey: identity.publicKey,
+                                           passkeyAuth: passkeyAuth)
+        authStateSubject.send(.authorized(PasskeyAuthResult(signingKey: signingKey,
+                                                            databaseKey: identity.databaseKey)))
     }
 
     func register(displayName: String) async throws {
-        let privateKey = try await passkeyHelper.registerPasskey(displayName: displayName)
-        authStateSubject.send(.registered(PasskeyRegisteredResult(displayName: displayName,
-                                                                  privateKeyData: privateKey)))
+        let (assertion, response) = try await passkeyAuth.registerPasskey(displayName: displayName)
+        let identity = try passkeyIdentityStore.save(
+            credentialID: assertion.credentialID,
+            publicKey: response.publicKey,
+            userID: response.userID
+        )
+        let signingKey = PasskeySigningKey(credentialID: identity.credentialID,
+                                           publicKey: identity.publicKey,
+                                           passkeyAuth: passkeyAuth)
+        let result = PasskeyRegisteredResult(displayName: displayName,
+                                             signingKey: signingKey,
+                                             databaseKey: identity.databaseKey)
+        authStateSubject.send(.registered(result))
     }
 
     func signOut() async throws {
-        passkeyHelper.logout()
+        try passkeyIdentityStore.delete()
         authStateSubject.send(.unauthorized)
     }
 
@@ -71,8 +94,13 @@ class PasskeyAuthService: ConvosSDK.AuthServiceProtocol {
     // MARK: - Private
 
     private func refreshAuthState() throws {
-        if let privateKey = try passkeyHelper.activePrivateKey() {
-            authStateSubject.send(.authorized(PasskeyAuthResult(privateKeyData: privateKey)))
+        if let identity = try passkeyIdentityStore.load() {
+            let signingKey = PasskeySigningKey(credentialID: identity.credentialID,
+                                               publicKey: identity.publicKey,
+                                               passkeyAuth: passkeyAuth)
+            let result = PasskeyAuthResult(signingKey: signingKey,
+                                           databaseKey: identity.databaseKey)
+            authStateSubject.send(.authorized(result))
         } else {
             authStateSubject.send(.unauthorized)
         }

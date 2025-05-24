@@ -40,12 +40,13 @@ final class MessagesViewController: UIViewController {
     private var currentInterfaceActions: SetActor<Set<InterfaceActions>, ReactionTypes> = SetActor()
     private var currentControllerActions: SetActor<Set<ControllerActions>, ReactionTypes> = SetActor()
 
-    internal let collectionView: UICollectionView
+    let collectionView: UICollectionView
     private var messagesLayout: MessagesCollectionLayout = MessagesCollectionLayout()
     private let inputBarView: MessagesInputView = MessagesInputView()
-    private let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
+    let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
 
-    private let messagesStore: MessagesStoreProtocol
+    private let messageWriter: any OutgoingMessageWriterProtocol
+    private let messagesRepository: any MessagesRepositoryProtocol
     private let dataSource: MessagesCollectionDataSource
 
     private var animator: ManualAnimator?
@@ -63,8 +64,10 @@ final class MessagesViewController: UIViewController {
 
     // MARK: - Initialization
 
-    init(messagesStore: MessagesStoreProtocol) {
-        self.messagesStore = messagesStore
+    init(messageWriter: any OutgoingMessageWriterProtocol,
+         messagesRepository: any MessagesRepositoryProtocol) {
+        self.messageWriter = messageWriter
+        self.messagesRepository = messagesRepository
         self.dataSource = MessagesCollectionViewDataSource()
         self.collectionView = UICollectionView(frame: .zero,
                                                collectionViewLayout: messagesLayout)
@@ -83,6 +86,12 @@ final class MessagesViewController: UIViewController {
     @available(*, unavailable, message: "Use init(messageController:) instead")
     required init?(coder: NSCoder) {
         fatalError()
+    }
+
+    // MARK: - Public
+
+    func set(title: String, avatarImage: UIImage?) {
+        navigationBar.configure(title: title, avatar: avatarImage)
     }
 
     // MARK: - Lifecycle Methods
@@ -105,13 +114,14 @@ final class MessagesViewController: UIViewController {
 
         reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
 
-        messagesStore.updates.receive(on: DispatchQueue.main)
-            .sink { [weak self] update in
+        messagesRepository.messagesPublisher()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] messages in
                 guard let self else { return }
                 processUpdates(
-                    with: update.sections,
+                    with: messages,
                     animated: true,
-                    requiresIsolatedProcess: update.requiresIsolatedProcess
+                    requiresIsolatedProcess: false
                 )
             }
             .store(in: &cancellables)
@@ -155,11 +165,10 @@ final class MessagesViewController: UIViewController {
             for: .normal)
         navigationBar.leftButton.addTarget(self, action: #selector(onBack), for: .touchUpInside)
         navigationBar.leftButton.addTarget(self, action: #selector(onBack), for: .touchUpInside)
-        navigationBar.rightButton.setImage(
-            UIImage(systemName: "timer",
-                    withConfiguration: UIImage.SymbolConfiguration(weight: .medium)),
-            for: .normal)
-        navigationBar.configure(title: "Terry Gross", avatar: nil)
+//        navigationBar.rightButton.setImage(
+//            UIImage(systemName: "timer",
+//                    withConfiguration: UIImage.SymbolConfiguration(weight: .medium)),
+//            for: .normal)
         view.addSubview(navigationBar)
 
         // Setup Auto Layout for navigation bar
@@ -257,9 +266,9 @@ final class MessagesViewController: UIViewController {
     private func loadInitialData() {
         currentControllerActions.options.insert(.loadingInitialMessages)
         Task {
-            let sections = await messagesStore.loadInitialMessages()
+            let messages = try messagesRepository.fetchAll()
             currentControllerActions.options.remove(.loadingInitialMessages)
-            processUpdates(with: sections, animated: true, requiresIsolatedProcess: false)
+            processUpdates(with: messages, animated: true, requiresIsolatedProcess: true)
         }
     }
 
@@ -295,14 +304,14 @@ final class MessagesViewController: UIViewController {
     // MARK: - Scrolling Methods
 
     private func loadPreviousMessages() {
-        currentControllerActions.options.insert(.loadingPreviousMessages)
-        Task {
-            let sections = await messagesStore.loadPreviousMessages()
-            let animated = !isUserInitiatedScrolling
-            processUpdates(with: sections, animated: animated, requiresIsolatedProcess: true) {
-                self.currentControllerActions.options.remove(.loadingPreviousMessages)
-            }
-        }
+//        currentControllerActions.options.insert(.loadingPreviousMessages)
+//        Task {
+//            let sections = await messagesStore.loadPreviousMessages()
+//            let animated = !isUserInitiatedScrolling
+//            processUpdates(with: sections, animated: animated, requiresIsolatedProcess: true) {
+//                self.currentControllerActions.options.remove(.loadingPreviousMessages)
+//            }
+//        }
     }
 
     func scrollToBottom(completion: (() -> Void)? = nil) {
@@ -369,17 +378,24 @@ final class MessagesViewController: UIViewController {
 // MARK: - MessagesControllerDelegate
 
 extension MessagesViewController {
-    private func processUpdates(with sections: [MessagesCollectionSection],
+    private func processUpdates(with messages: [AnyMessage],
                                 animated: Bool = true,
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
+        let cells: [MessagesCollectionCell] = messages.map { message in
+            MessagesCollectionCell.message(message,
+                                           bubbleType: .normal)
+        }
+        let sections: [MessagesCollectionSection] = [
+            .init(id: 0, title: "", cells: cells)
+        ]
         guard isViewLoaded else {
             dataSource.sections = sections
             return
         }
 
         guard currentInterfaceActions.options.isEmpty else {
-            scheduleDelayedUpdate(with: sections,
+            scheduleDelayedUpdate(with: messages,
                                   animated: animated,
                                   requiresIsolatedProcess: requiresIsolatedProcess,
                                   completion: completion)
@@ -392,7 +408,7 @@ extension MessagesViewController {
                       completion: completion)
     }
 
-    private func scheduleDelayedUpdate(with sections: [MessagesCollectionSection],
+    private func scheduleDelayedUpdate(with messages: [AnyMessage],
                                        animated: Bool,
                                        requiresIsolatedProcess: Bool,
                                        completion: (() -> Void)?) {
@@ -402,7 +418,7 @@ extension MessagesViewController {
             executionType: .once,
             actionBlock: { [weak self] in
                 guard let self else { return }
-                processUpdates(with: sections,
+                processUpdates(with: messages,
                                animated: animated,
                                requiresIsolatedProcess: requiresIsolatedProcess,
                                completion: completion)
@@ -535,9 +551,12 @@ extension MessagesViewController: MessagesInputViewDelegate {
         currentInterfaceActions.options.insert(.sendingMessage)
         scrollToBottom()
         Task {
-            let sections = await messagesStore.sendMessage(.text(text))
+            do {
+                try await messageWriter.send(text: text)
+            } catch {
+                Logger.error("Error sending message: \(error)")
+            }
             currentInterfaceActions.options.remove(.sendingMessage)
-            processUpdates(with: sections, animated: true, requiresIsolatedProcess: false)
         }
     }
 

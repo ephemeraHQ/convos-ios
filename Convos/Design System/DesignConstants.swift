@@ -3,6 +3,7 @@ import UIKit
 
 enum DesignConstants {
     enum ImageSizes {
+        static let extraSmallAvatar: CGFloat = 16.0
         static let smallAvatar: CGFloat = 24.0
     }
 
@@ -10,6 +11,7 @@ enum DesignConstants {
         static let small: CGFloat = 16.0
         static let medium: CGFloat = 24.0
 
+        static let stepHalf: CGFloat = 2.0
         static let stepX: CGFloat = 4.0
         static let step2x: CGFloat = 8.0
         static let step3x: CGFloat = 12.0

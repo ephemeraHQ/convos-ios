@@ -1,40 +1,94 @@
 import Combine
 import Foundation
+import GRDB
 
-public enum ConvosSDK {
-    public final class Convos {
+enum ConvosSDK {
+    final class ConvosClient {
         private let authService: AuthServiceProtocol
         private let messagingService: any MessagingServiceProtocol
+        private let databaseManager: any DatabaseManagerProtocol
 
-        public static let shared: Convos = .init(authService: TurnkeyAuthService())
-        public static let mock: Convos = .init(authService: PasskeyAuthService())
-
-        private init(authService: AuthServiceProtocol) {
-            self.authService = authService
-            self.messagingService = MessagingService(authService: authService)
+        var databaseWriter: any DatabaseWriter {
+            databaseManager.dbWriter
         }
 
-        public var authState: AnyPublisher<AuthServiceState, Never> {
+        var databaseReader: any DatabaseReader {
+            databaseManager.dbReader
+        }
+
+        static func testBundle(
+            authService: AuthServiceProtocol = MockAuthService()
+        ) -> ConvosClient {
+            let databaseManager = MockDatabaseManager.shared
+            let messagingService = MessagingService(
+                authService: authService,
+                databaseWriter: databaseManager.dbWriter,
+                databaseReader: databaseManager.dbReader,
+                apiClient: MockAPIClient(),
+                environment: .local
+            )
+            return .init(authService: authService,
+                         messagingService: messagingService,
+                         databaseManager: databaseManager)
+        }
+
+        static func mock() -> ConvosClient {
+            let authService = MockAuthService()
+            let databaseManager = MockDatabaseManager.shared
+            let messagingService = MockMessagingService()
+            return .init(authService: authService,
+                         messagingService: messagingService,
+                         databaseManager: databaseManager)
+        }
+
+        static func sdk(authService: AuthServiceProtocol = SecureEnclaveAuthService(),
+                        databaseManager: any DatabaseManagerProtocol = DatabaseManager.shared,
+                        environment: MessagingServiceEnvironment) -> ConvosClient {
+            let databaseWriter = databaseManager.dbWriter
+            let databaseReader = databaseManager.dbReader
+            let messagingService = MessagingService(authService: authService,
+                                                    databaseWriter: databaseWriter,
+                                                    databaseReader: databaseReader,
+                                                    apiClient: ConvosAPIClient.shared,
+                                                    environment: environment)
+            return .init(authService: authService,
+                         messagingService: messagingService,
+                         databaseManager: databaseManager)
+        }
+
+        private init(authService: any AuthServiceProtocol,
+                     messagingService: any MessagingServiceProtocol,
+                     databaseManager: any DatabaseManagerProtocol) {
+            self.authService = authService
+            self.messagingService = messagingService
+            self.databaseManager = databaseManager
+        }
+
+        var authState: AnyPublisher<AuthServiceState, Never> {
             authService.authStatePublisher().eraseToAnyPublisher()
         }
 
-        public func prepare() async throws {
+        var supportsMultipleAccounts: Bool {
+            authService.supportsMultipleAccounts
+        }
+
+        func prepare() async throws {
             try await authService.prepare()
         }
 
-        public func signIn() async throws {
+        func signIn() async throws {
             try await authService.signIn()
         }
 
-        public func register(displayName: String) async throws {
+        func register(displayName: String) async throws {
             try await authService.register(displayName: displayName)
         }
 
-        public func signOut() async throws {
+        func signOut() async throws {
             try await authService.signOut()
         }
 
-        public var messaging: any MessagingServiceProtocol {
+        var messaging: any MessagingServiceProtocol {
             messagingService
         }
     }
