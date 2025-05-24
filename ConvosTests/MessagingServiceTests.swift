@@ -5,7 +5,7 @@ struct MessagingServiceTests {
     func makeClient(
         authService: MockAuthService = MockAuthService()
     ) -> ConvosClient {
-        .testBundle(authService: authService)
+        .testClient(authService: authService)
     }
 
     @Test("Registering a user starts the messaging service")

@@ -15,7 +15,7 @@ final class ConvosClient {
         databaseManager.dbReader
     }
 
-    static func testBundle(
+    static func testClient(
         authService: AuthServiceProtocol = MockAuthService()
     ) -> ConvosClient {
         let databaseManager = MockDatabaseManager.shared
