@@ -50,7 +50,7 @@ struct MockUser: ConvosSDK.AuthorizedResultType, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(String.self, forKey: .id)
         let name = try container.decode(String.self, forKey: .name)
-        self.profile = .mock()
+        self.profile = .mock(name: name)
         let privateKeyData = try container.decode(Data.self, forKey: .privateKeyData)
         self.privateKey = try PrivateKey(privateKeyData)
     }

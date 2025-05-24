@@ -1,37 +1,22 @@
 import Combine
 import Foundation
 
-class MockMessageSender: MessageSender {
-    func prepare(text: String) async throws -> String {
-        return ""
-    }
-
-    func publish() async throws {
-    }
-}
-
-class MockClientProvder: XMTPClientProvider {
-    let mockConversation: Conversation = .mock()
-
-    func messageSender(for conversationId: String) async throws -> (any MessageSender)? {
-        return nil
-    }
-}
-
 class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
-    enum MockMessagingServiceError: Error {
-        case unauthorized
+    // MARK: - State
+
+    let authService = MockAuthService()
+
+    init() {
+
     }
 
-    private let currentUser: MockUser? = nil
-
-    private let mockClient = MockClientProvder()
+    // MARK: - Protocol Conformance
 
     private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
         .init(.uninitialized)
 
     var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
-        Just(mockClient).eraseToAnyPublisher()
+        Just(self).eraseToAnyPublisher()
     }
 
     var state: ConvosSDK.MessagingServiceState {
@@ -50,30 +35,92 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     func userRepository() -> any UserRepositoryProtocol {
-        MockUserRepository()
+        self
     }
 
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
-        MockProfileSearchRepository()
+        self
     }
 
     func conversationsRepository() -> any ConversationsRepositoryProtocol {
-        MockConversationsRepository()
+        self
     }
 
     func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
-        MockConversationRepository()
+        self
     }
 
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
-        MockMessagesRepository(conversation: .mock())
+        self
     }
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
-        MockOutgoingMessageWriter()
+        self
     }
 
     func messagingStatePublisher() -> AnyPublisher<ConvosSDK.MessagingServiceState, Never> {
         messagingStateSubject.eraseToAnyPublisher()
+    }
+}
+
+extension MockMessagingService: UserRepositoryProtocol {
+    func getCurrentUser() async throws -> User? {
+        return .mock()
+    }
+
+    func userPublisher() -> AnyPublisher<User?, Never> {
+        Just(nil).eraseToAnyPublisher()
+    }
+}
+
+extension MockMessagingService: ProfileSearchRepositoryProtocol {
+    func search(using query: String) async throws -> [Profile] {
+        []
+    }
+}
+
+extension MockMessagingService: ConversationsRepositoryProtocol {
+    func fetchAll() throws -> [Conversation] {
+        []
+    }
+
+    func conversationsPublisher() -> AnyPublisher<[Conversation], Never> {
+        Just([]).eraseToAnyPublisher()
+    }
+}
+
+extension MockMessagingService: ConversationRepositoryProtocol {
+    func conversationPublisher() -> AnyPublisher<Conversation?, Never> {
+        Just(nil).eraseToAnyPublisher()
+    }
+}
+
+extension MockMessagingService: MessagesRepositoryProtocol {
+    func fetchAll() throws -> [AnyMessage] {
+        []
+    }
+
+    func messagesPublisher() -> AnyPublisher<[AnyMessage], Never> {
+        Just([]).eraseToAnyPublisher()
+    }
+}
+
+extension MockMessagingService: OutgoingMessageWriterProtocol {
+    func send(text: String) async throws {
+    }
+}
+
+extension MockMessagingService: XMTPClientProvider {
+    func messageSender(for conversationId: String) async throws -> (any MessageSender)? {
+        self
+    }
+}
+
+extension MockMessagingService: MessageSender {
+    func prepare(text: String) async throws -> String {
+        // return id
+        ""
+    }
+    func publish() async throws {
     }
 }

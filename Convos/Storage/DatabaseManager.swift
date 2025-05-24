@@ -23,12 +23,29 @@ final class DatabaseManager: DatabaseManagerProtocol {
         do {
             dbPool = try Self.makeDatabasePool()
         } catch {
-            fatalError("Failed to initialize mock database: \(error)")
+            fatalError("Failed to initialize database: \(error)")
         }
     }
 
     private static func makeDatabasePool() throws -> DatabasePool {
-        let dbPool = try DatabasePool(path: ":memory:")
+        let fileManager = FileManager.default
+        let dbURL = try fileManager
+            .url(for: .applicationSupportDirectory,
+                 in: .userDomainMask,
+                 appropriateFor: nil,
+                 create: true)
+            .appendingPathComponent("convos.sqlite")
+
+        var config = Configuration()
+        config.label = "ConvosDB"
+        config.foreignKeysEnabled = true
+        config.prepareDatabase { db in
+#if DEBUG
+            db.trace { print($0) }
+#endif
+        }
+
+        let dbPool = try DatabasePool(path: dbURL.path, configuration: config)
         let migrator = SharedDatabaseMigrator.shared
         try migrator.migrate(database: dbPool)
         return dbPool
