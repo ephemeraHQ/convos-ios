@@ -3,12 +3,12 @@ import UIKit
 
 class ConversationComposerViewController: UIViewController {
     let messagesViewController: MessagesViewController
-    let messagingService: any ConvosSDK.MessagingServiceProtocol
+    let messagingService: any MessagingServiceProtocol
     private var composerHostingController: UIHostingController<ConversationComposerContentView>?
 
     init(
         messagesRepository: any MessagesRepositoryProtocol,
-        messagingService: any ConvosSDK.MessagingServiceProtocol
+        messagingService: any MessagingServiceProtocol
     ) {
         self.messagesViewController = MessagesViewController(
             messageWriter: MockOutgoingMessageWriter(), // TODO: handle this

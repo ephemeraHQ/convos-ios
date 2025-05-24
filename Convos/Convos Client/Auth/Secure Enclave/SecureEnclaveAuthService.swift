@@ -2,22 +2,22 @@ import Combine
 import Foundation
 import XMTPiOS
 
-class SecureEnclaveAuthService: ConvosSDK.AuthServiceProtocol {
-    struct EnclaveAuthResult: ConvosSDK.AuthorizedResultType {
+class SecureEnclaveAuthService: AuthServiceProtocol {
+    struct EnclaveAuthResult: AuthorizedResultType {
         let signingKey: SigningKey
         let databaseKey: Data
     }
 
-    struct EnclaveRegisteredResult: ConvosSDK.RegisteredResultType {
+    struct EnclaveRegisteredResult: RegisteredResultType {
         let displayName: String
         let signingKey: SigningKey
         let databaseKey: Data
     }
 
     private let identityStore: SecureEnclaveIdentityStore = .init()
-    private let authStateSubject: CurrentValueSubject<ConvosSDK.AuthServiceState, Never> = .init(.unknown)
+    private let authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
-    var state: ConvosSDK.AuthServiceState {
+    var state: AuthServiceState {
         authStateSubject.value
     }
 
@@ -49,7 +49,7 @@ class SecureEnclaveAuthService: ConvosSDK.AuthServiceProtocol {
         authStateSubject.send(.unauthorized)
     }
 
-    func authStatePublisher() -> AnyPublisher<ConvosSDK.AuthServiceState, Never> {
+    func authStatePublisher() -> AnyPublisher<AuthServiceState, Never> {
         authStateSubject.eraseToAnyPublisher()
     }
 

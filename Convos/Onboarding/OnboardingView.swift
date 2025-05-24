@@ -5,7 +5,7 @@ struct OnboardingView: View {
     @State var presentingCreateContactCard: Bool = false
     @State var presentingImportContactCard: Bool = false
 
-    init(convos: ConvosSDK.ConvosClient) {
+    init(convos: ConvosClient) {
         _viewModel = State(initialValue: .init(convos: convos))
     }
 
@@ -93,7 +93,7 @@ private struct LegalView: View {
 
 #Preview {
     OnboardingView(
-        convos: .sdk(
+        convos: .client(
             authService: MockAuthService(),
             environment: .dev
         )

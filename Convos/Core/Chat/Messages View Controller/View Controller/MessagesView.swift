@@ -31,7 +31,7 @@ struct MessagesView: UIViewControllerRepresentable {
 }
 
 #Preview {
-    let convos = ConvosSDK.ConvosClient.mock()
+    let convos = ConvosClient.mock()
     let conversationId: String = "1"
     MessagesView(
         conversationRepository: convos.messaging.conversationRepository(for: conversationId),

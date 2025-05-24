@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RootView: View {
-    private let convos: ConvosSDK.ConvosClient
+    private let convos: ConvosClient
     private let analyticsService: AnalyticsServiceProtocol
     private let userRepository: UserRepositoryProtocol
     private let conversationsRepository: ConversationsRepositoryProtocol
@@ -9,7 +9,7 @@ struct RootView: View {
     @State var messagingService: MessagingServiceObservable
     @State var viewModel: AppViewModel
 
-    init(convos: ConvosSDK.ConvosClient,
+    init(convos: ConvosClient,
          analyticsService: AnalyticsServiceProtocol) {
         self.convos = convos
         self.analyticsService = analyticsService

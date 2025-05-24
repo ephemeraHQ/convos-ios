@@ -25,9 +25,9 @@ enum TurnkeyAuthServiceError: Error {
          failedCreatingSubOrganization
 }
 
-final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
+final class TurnkeyAuthService: AuthServiceProtocol {
     private var client: TurnkeyClient?
-    private var authState: ConvosSDK.AuthServiceState = .notReady
+    private var authState: AuthServiceState = .notReady
     private let apiClient: ConvosAPIClient
     private var passkeyRegistrationTask: Task<Void, Never>?
 
@@ -35,7 +35,7 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
         return authState
     }
 
-    var currentUser: ConvosSDK.User? {
+    var currentUser: User? {
         return nil
     }
 
@@ -94,7 +94,7 @@ final class TurnkeyAuthService: ConvosSDK.AuthServiceProtocol {
         authState = .unauthorized
     }
 
-    func authStatePublisher() -> AnyPublisher<ConvosSDK.AuthServiceState, Never> {
+    func authStatePublisher() -> AnyPublisher<AuthServiceState, Never> {
         // Create a publisher that emits the current auth state
         return Just(authState).eraseToAnyPublisher()
     }

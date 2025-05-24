@@ -9,12 +9,12 @@ struct ConversationsListView: View {
     @Environment(MessagingServiceObservable.self)
     private var messagingService: MessagingServiceObservable
 
-    let convos: ConvosSDK.ConvosClient
+    let convos: ConvosClient
     var userState: UserState
     var conversationsState: ConversationsState
     @State private var path: [Route] = []
 
-    init(convos: ConvosSDK.ConvosClient,
+    init(convos: ConvosClient,
          userRepository: any UserRepositoryProtocol,
          conversationsRepository: any ConversationsRepositoryProtocol) {
         self.convos = convos
@@ -82,7 +82,7 @@ struct ConversationsListView: View {
 }
 
 #Preview {
-    let convos = ConvosSDK.ConvosClient.mock()
+    let convos = ConvosClient.mock()
     let messagingService = MessagingServiceObservable(messagingService: convos.messaging)
     let userRepository = convos.messaging.userRepository()
     let conversationsRepository = convos.messaging.conversationsRepository()

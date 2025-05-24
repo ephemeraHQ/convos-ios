@@ -4,13 +4,13 @@ import Observation
 
 @Observable
 class MessagingServiceObservable {
-    let messagingService: any ConvosSDK.MessagingServiceProtocol
+    let messagingService: any MessagingServiceProtocol
     private var cancellables: Set<AnyCancellable> = .init()
 
-    private var state: ConvosSDK.MessagingServiceState
+    private var state: MessagingServiceState
     private(set) var canStartConversation: Bool
 
-    init(messagingService: any ConvosSDK.MessagingServiceProtocol) {
+    init(messagingService: any MessagingServiceProtocol) {
         self.messagingService = messagingService
         self.state = messagingService.state
         self.canStartConversation = messagingService.state.isReady

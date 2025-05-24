@@ -16,7 +16,7 @@ extension PrivateKey {
     }
 }
 
-struct MockUser: ConvosSDK.AuthorizedResultType, ConvosSDK.RegisteredResultType, Codable {
+struct MockUser: AuthorizedResultType, RegisteredResultType, Codable {
     var profile: Profile
     var id: String
     let privateKey: PrivateKey!
@@ -72,7 +72,7 @@ struct MockUser: ConvosSDK.AuthorizedResultType, ConvosSDK.RegisteredResultType,
     }
 }
 
-class MockAuthService: ConvosSDK.AuthServiceProtocol {
+class MockAuthService: AuthServiceProtocol {
     enum MockKeychainItem: String, KeychainItemProtocol {
         case mockUser
 
@@ -89,11 +89,11 @@ class MockAuthService: ConvosSDK.AuthServiceProtocol {
         _currentUser
     }
 
-    var state: ConvosSDK.AuthServiceState {
+    var state: AuthServiceState {
         authStateSubject.value
     }
 
-    private var authStateSubject: CurrentValueSubject<ConvosSDK.AuthServiceState, Never> = .init(.unknown)
+    private var authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
     init(persist: Bool = false) {
         self.persist = persist
@@ -130,7 +130,7 @@ class MockAuthService: ConvosSDK.AuthServiceProtocol {
         authStateSubject.send(.unauthorized)
     }
 
-    func authStatePublisher() -> AnyPublisher<ConvosSDK.AuthServiceState, Never> {
+    func authStatePublisher() -> AnyPublisher<AuthServiceState, Never> {
         return authStateSubject.eraseToAnyPublisher()
     }
 

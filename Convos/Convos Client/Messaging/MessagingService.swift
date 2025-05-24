@@ -10,23 +10,14 @@ private enum MessagingServiceError: Error {
     case xmtpClientMissingRequiredValuesForAuth
 }
 
-private enum MessagingServiceState {
-    case uninitialized
-    case initializing
-    case authorizing
-    case ready
-    case stopping
-    case error(Error)
-}
-
 private enum MessagingServiceAction {
     case start
     case stop
-    case xmtpInitialized(Client, ConvosSDK.AuthorizedResultType)
+    case xmtpInitialized(Client, AuthorizedResultType)
     case backendAuthorized
 }
 
-private extension ConvosSDK.MessagingServiceEnvironment {
+private extension MessagingServiceEnvironment {
     var xmtpEnv: XMTPEnvironment {
         switch self {
         case .local: return .local
@@ -45,13 +36,13 @@ private extension ConvosSDK.MessagingServiceEnvironment {
     }
 }
 
-final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
-    private let authService: ConvosSDK.AuthServiceProtocol
+final actor MessagingService: MessagingServiceProtocol {
+    private let authService: AuthServiceProtocol
     private let userWriter: UserWriter
     private let syncingManager: SyncingManagerProtocol
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
-    private let environment: ConvosSDK.MessagingServiceEnvironment
+    private let environment: MessagingServiceEnvironment
 
     nonisolated
     var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
@@ -66,7 +57,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     }
     private var cancellables: Set<AnyCancellable> = []
     private let apiClient: any ConvosAPIClientProtocol
-    private var _state: ConvosSDK.MessagingServiceState = .uninitialized {
+    private var _state: MessagingServiceState = .uninitialized {
         didSet {
             stateSubject.send(_state)
         }
@@ -74,11 +65,11 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private var currentTask: Task<Void, Never>?
 
     nonisolated
-    var state: ConvosSDK.MessagingServiceState {
+    var state: MessagingServiceState {
         stateSubject.value
     }
     nonisolated
-    private let stateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> = .init(
+    private let stateSubject: CurrentValueSubject<MessagingServiceState, Never> = .init(
         .uninitialized
     )
 
@@ -91,11 +82,11 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         }
     }
 
-    init(authService: ConvosSDK.AuthServiceProtocol,
+    init(authService: AuthServiceProtocol,
          databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader,
          apiClient: any ConvosAPIClientProtocol,
-         environment: ConvosSDK.MessagingServiceEnvironment) {
+         environment: MessagingServiceEnvironment) {
         self.authService = authService
         self.userWriter = UserWriter(databaseWriter: databaseWriter)
         self.apiClient = apiClient
@@ -163,7 +154,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     // MARK: -
 
     nonisolated
-    func messagingStatePublisher() -> AnyPublisher<ConvosSDK.MessagingServiceState, Never> {
+    func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never> {
         stateSubject.eraseToAnyPublisher()
     }
 
@@ -215,7 +206,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
             ),
             dbEncryptionKey: authorizedResult.databaseKey,
         )
-        if authorizedResult is ConvosSDK.RegisteredResultType {
+        if authorizedResult is RegisteredResultType {
             client = try await createXmtpClient(signingKey: authorizedResult.signingKey,
                                                 options: clientOptions)
         } else {
@@ -251,7 +242,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
     // MARK: - User Creation
 
-    private func createUser(from result: ConvosSDK.RegisteredResultType,
+    private func createUser(from result: RegisteredResultType,
                             signingKey: SigningKey) async throws -> ConvosAPI.CreatedUserResponse {
         let userId = UUID().uuidString
         let username = try await generateUsername(from: result.displayName)
@@ -338,7 +329,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     private func authorizeConvosBackend(client: Client,
-                                        authResult: ConvosSDK.AuthorizedResultType) async throws {
+                                        authResult: AuthorizedResultType) async throws {
         _state = .authorizing
         let installationId = client.installationID
         let xmtpId = client.inboxID
@@ -350,7 +341,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         _ = try await apiClient.authenticate(xmtpInstallationId: installationId,
                                              xmtpId: xmtpId,
                                              xmtpSignature: signature)
-        if let registeredResult = authResult as? ConvosSDK.RegisteredResultType {
+        if let registeredResult = authResult as? RegisteredResultType {
             Logger.info("Authorization succeeded, creating user from registeredResult: \(registeredResult)")
             let user = try await createUser(from: registeredResult,
                                             signingKey: authResult.signingKey)

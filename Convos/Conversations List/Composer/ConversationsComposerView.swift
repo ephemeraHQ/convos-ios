@@ -2,13 +2,13 @@ import SwiftUI
 
 struct ConversationComposerView: UIViewControllerRepresentable {
     let draftConversationRepository: any ConversationRepositoryProtocol
-    let messagingService: any ConvosSDK.MessagingServiceProtocol
+    let messagingService: any MessagingServiceProtocol
     let messagesRepository: any MessagesRepositoryProtocol
     @State private var draftConversationState: DraftConversationState
 
     init(
         draftConversationRepository: any ConversationRepositoryProtocol,
-        messagingService: any ConvosSDK.MessagingServiceProtocol,
+        messagingService: any MessagingServiceProtocol,
         messagesRepository: any MessagesRepositoryProtocol
     ) {
         self.draftConversationRepository = draftConversationRepository

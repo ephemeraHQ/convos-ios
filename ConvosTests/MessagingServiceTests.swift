@@ -4,7 +4,7 @@ import Testing
 struct MessagingServiceTests {
     func makeClient(
         authService: MockAuthService = MockAuthService()
-    ) -> ConvosSDK.ConvosClient {
+    ) -> ConvosClient {
         .testBundle(authService: authService)
     }
 

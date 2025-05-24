@@ -3,7 +3,7 @@ import Foundation
 
 // swiftlint: disable force_unwrapping
 
-class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
+class MockMessagingService: MessagingServiceProtocol {
     // MARK: - State
 
     let currentUser: User = .mock()
@@ -15,7 +15,7 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
     private var messages: [AnyMessage]
     private var messagesSubject: CurrentValueSubject<[AnyMessage], Never>
     private var messageTimer: Timer?
-    private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
+    private var messagingStateSubject: CurrentValueSubject<MessagingServiceState, Never> =
         .init(.uninitialized)
 
     init() {
@@ -42,7 +42,7 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
         Just(self).eraseToAnyPublisher()
     }
 
-    var state: ConvosSDK.MessagingServiceState {
+    var state: MessagingServiceState {
         messagingStateSubject.value
     }
 
@@ -90,7 +90,7 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
         self
     }
 
-    func messagingStatePublisher() -> AnyPublisher<ConvosSDK.MessagingServiceState, Never> {
+    func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never> {
         messagingStateSubject.eraseToAnyPublisher()
     }
 }

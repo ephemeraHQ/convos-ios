@@ -3,7 +3,7 @@ import SwiftUI
 
 @Observable
 final class OnboardingViewModel {
-    let convos: ConvosSDK.ConvosClient
+    let convos: ConvosClient
     private var cancellables: Set<AnyCancellable> = .init()
     var name: String = "" {
         didSet {
@@ -20,7 +20,7 @@ final class OnboardingViewModel {
     var isAuthorized: Bool = false
     private let minimumNameLength: Int = 3
 
-    init(convos: ConvosSDK.ConvosClient) {
+    init(convos: ConvosClient) {
         self.convos = convos
         self.authAllowsSignIn = convos.supportsMultipleAccounts
         observeAuthState()

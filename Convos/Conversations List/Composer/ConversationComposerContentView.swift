@@ -17,7 +17,7 @@ class ConversationComposerViewModel {
     var profileResults: [Profile] = []
 
     init(
-        messagingService: any ConvosSDK.MessagingServiceProtocol
+        messagingService: any MessagingServiceProtocol
     ) {
         self.profileSearchRepo = messagingService.profileSearchRepository()
     }
@@ -56,7 +56,7 @@ struct ConversationComposerContentView: View {
     @State private var viewModel: ConversationComposerViewModel
 
     init(
-        messagingService: any ConvosSDK.MessagingServiceProtocol,
+        messagingService: any MessagingServiceProtocol,
         selectedProfile: Profile? = nil
     ) {
         self.selectedProfile = selectedProfile

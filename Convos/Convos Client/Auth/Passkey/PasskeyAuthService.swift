@@ -3,23 +3,23 @@ import Foundation
 import PasskeyAuth
 import XMTPiOS
 
-class PasskeyAuthService: ConvosSDK.AuthServiceProtocol {
-    struct PasskeyAuthResult: ConvosSDK.AuthorizedResultType {
+class PasskeyAuthService: AuthServiceProtocol {
+    struct PasskeyAuthResult: AuthorizedResultType {
         let signingKey: any SigningKey
         let databaseKey: Data
     }
 
-    struct PasskeyRegisteredResult: ConvosSDK.RegisteredResultType {
+    struct PasskeyRegisteredResult: RegisteredResultType {
         let displayName: String
         let signingKey: any SigningKey
         let databaseKey: Data
     }
 
-    var state: ConvosSDK.AuthServiceState {
+    var state: AuthServiceState {
         authStateSubject.value
     }
 
-    private var authStateSubject: CurrentValueSubject<ConvosSDK.AuthServiceState, Never> = .init(.unknown)
+    private var authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
     private let passkeyAuth: PasskeyAuth
     private let passkeyIdentityStore: PasskeyIdentityStore = .init()
 
@@ -87,7 +87,7 @@ class PasskeyAuthService: ConvosSDK.AuthServiceProtocol {
         authStateSubject.send(.unauthorized)
     }
 
-    func authStatePublisher() -> AnyPublisher<ConvosSDK.AuthServiceState, Never> {
+    func authStatePublisher() -> AnyPublisher<AuthServiceState, Never> {
         return authStateSubject.eraseToAnyPublisher()
     }
 
