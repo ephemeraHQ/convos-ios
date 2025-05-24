@@ -115,6 +115,7 @@
 				"Convos Client/ConvosClient.swift",
 				"Convos Client/Messaging/MessagingService.swift",
 				"Convos Client/Messaging/MessagingServiceProtocol.swift",
+				"Convos Client/Messaging/MessagingServiceStateMachine.swift",
 				"Convos Client/Messaging/MockMessagingService.swift",
 				"Convos Client/Messaging/SyncingManager.swift",
 				"Convos Client/Messaging/XMTPClientProvider.swift",
