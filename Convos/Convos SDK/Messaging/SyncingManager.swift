@@ -9,10 +9,10 @@ protocol SyncingManagerProtocol {
 class SyncingManager: SyncingManagerProtocol {
     private let conversationWriter: ConversationWriterProtocol
     private let messageWriter: IncomingMessageWriterProtocol
-    private let apiClient: ConvosAPIClient
+    private let apiClient: any ConvosAPIClientProtocol
 
     init(databaseWriter: any DatabaseWriter,
-         apiClient: ConvosAPIClient) {
+         apiClient: any ConvosAPIClientProtocol) {
         self.apiClient = apiClient
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(databaseWriter: databaseWriter,

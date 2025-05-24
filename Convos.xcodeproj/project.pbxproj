@@ -112,6 +112,7 @@
 				"Convos SDK/Core/ConvosSDK.swift",
 				"Convos SDK/Messaging/Convos API/ConvosAPIClient.swift",
 				"Convos SDK/Messaging/Convos API/ConvosAPIClient+Models.swift",
+				"Convos SDK/Messaging/Convos API/MockAPIClient.swift",
 				"Convos SDK/Messaging/MessagingService.swift",
 				"Convos SDK/Messaging/MessagingServiceProtocol.swift",
 				"Convos SDK/Messaging/MockMessagingService.swift",

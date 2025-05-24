@@ -65,7 +65,7 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         }
     }
     private var cancellables: Set<AnyCancellable> = []
-    private let apiClient: ConvosAPIClient
+    private let apiClient: any ConvosAPIClientProtocol
     private var _state: ConvosSDK.MessagingServiceState = .uninitialized {
         didSet {
             stateSubject.send(_state)
@@ -94,10 +94,11 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     init(authService: ConvosSDK.AuthServiceProtocol,
          databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader,
+         apiClient: any ConvosAPIClientProtocol,
          environment: ConvosSDK.MessagingServiceEnvironment) {
         self.authService = authService
         self.userWriter = UserWriter(databaseWriter: databaseWriter)
-        self.apiClient = ConvosAPIClient.shared
+        self.apiClient = apiClient
         self.syncingManager = SyncingManager(databaseWriter: databaseWriter,
                                              apiClient: apiClient)
         self.databaseReader = databaseReader

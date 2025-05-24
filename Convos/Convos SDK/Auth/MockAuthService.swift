@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import XMTPiOS
 
-// swiftlint:disable force_try implicitly_unwrapped_optional
+// swiftlint:disable implicitly_unwrapped_optional
 
 extension PrivateKey {
     var walletAddress: String {
@@ -147,4 +147,4 @@ class MockAuthService: ConvosSDK.AuthServiceProtocol {
     }
 }
 
-// swiftlint:enable force_try implicitly_unwrapped_optional
+// swiftlint:enable implicitly_unwrapped_optional

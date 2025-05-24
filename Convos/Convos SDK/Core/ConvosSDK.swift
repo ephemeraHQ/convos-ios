@@ -24,6 +24,7 @@ enum ConvosSDK {
                 authService: authService,
                 databaseWriter: databaseManager.dbWriter,
                 databaseReader: databaseManager.dbReader,
+                apiClient: MockAPIClient(),
                 environment: .local
             )
             return .init(authService: authService,
@@ -48,6 +49,7 @@ enum ConvosSDK {
             let messagingService = MessagingService(authService: authService,
                                                     databaseWriter: databaseWriter,
                                                     databaseReader: databaseReader,
+                                                    apiClient: ConvosAPIClient.shared,
                                                     environment: environment)
             return .init(authService: authService,
                          messagingService: messagingService,
