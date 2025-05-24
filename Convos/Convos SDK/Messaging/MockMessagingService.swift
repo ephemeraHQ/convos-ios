@@ -9,6 +9,7 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
     let currentUser: User = .mock()
     let allUsers: [Profile]
     let conversations: [Conversation]
+    private var unpublishedMessages: [AnyMessage] = []
 
     private var currentConversation: Conversation?
     private var messages: [AnyMessage]
@@ -29,6 +30,10 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
         )
         self.messages = initialMessages
         self.messagesSubject = CurrentValueSubject(initialMessages)
+
+        Task {
+            try await start()
+        }
     }
 
     // MARK: - Protocol Conformance
@@ -134,6 +139,8 @@ extension MockMessagingService: MessagesRepositoryProtocol {
 
 extension MockMessagingService: OutgoingMessageWriterProtocol {
     func send(text: String) async throws {
+        _ = try await prepare(text: text)
+        try await publish()
     }
 }
 
@@ -145,10 +152,25 @@ extension MockMessagingService: XMTPClientProvider {
 
 extension MockMessagingService: MessageSender {
     func prepare(text: String) async throws -> String {
-        // return id
-        ""
+        guard let conversation = currentConversation else { return "" }
+        let message: AnyMessage = .message(
+            .init(id: UUID().uuidString,
+                  conversation: conversation,
+                  sender: currentUser.profile,
+                  source: .outgoing,
+                  status: .published,
+                  content: .text(text),
+                  reactions: []
+                 )
+        )
+        unpublishedMessages.append(message)
+        return message.base.id
     }
+
     func publish() async throws {
+        messages.append(contentsOf: unpublishedMessages)
+        unpublishedMessages.removeAll()
+        messagesSubject.send(messages)
     }
 }
 
@@ -208,7 +230,12 @@ extension MockMessagingService {
             name: randomName,
             members: randomMembers,
             otherMember: otherMember,
-            messages: []
+            messages: [],
+            lastMessage: .init(
+                text: TextGenerator.getString(
+                    of: Int.random(in: 1...10)),
+                createdAt: Date().addingTimeInterval(-TimeInterval.random(in: 0...86400))
+            )
         )
     }
 
@@ -218,14 +245,17 @@ extension MockMessagingService {
     }
 
     private func scheduleNextMessage() {
-        let interval = Double.random(in: 0...2)
-        messageTimer = Timer.scheduledTimer(
-            timeInterval: interval,
-            target: self,
-            selector: #selector(handleTimer),
-            userInfo: nil,
-            repeats: false
-        )
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let interval = TimeInterval.random(in: 0.0...2.0)
+            messageTimer = Timer.scheduledTimer(
+                timeInterval: interval,
+                target: self,
+                selector: #selector(handleTimer),
+                userInfo: nil,
+                repeats: false
+            )
+        }
     }
 
     @objc

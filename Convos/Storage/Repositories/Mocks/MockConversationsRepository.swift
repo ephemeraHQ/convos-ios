@@ -10,7 +10,8 @@ extension Conversation {
         name: String = "The Convo",
         members: [Profile] = [],
         otherMember: Profile? = .mock(),
-        messages: [Message] = []
+        messages: [Message] = [],
+        lastMessage: MessagePreview? = nil
     ) -> Self {
         .init(
             id: id,
@@ -24,7 +25,7 @@ extension Conversation {
             isPinned: false,
             isUnread: false,
             isMuted: false,
-            lastMessage: nil,
+            lastMessage: lastMessage,
             imageURL: nil
         )
     }
