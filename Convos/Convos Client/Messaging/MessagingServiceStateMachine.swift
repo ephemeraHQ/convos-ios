@@ -131,9 +131,7 @@ final actor MessagingServiceStateMachine {
                 case (.uninitialized, .start):
                     try await handleStart()
                 case (.initializing, let .xmtpInitialized(client, result)):
-                    syncingManager.start(with: client)
-                    try await authorizeConvosBackend(client: client,
-                                                     authResult: result)
+                    try await handleXMTPInitialized(with: client, authResult: result)
                 case (.authorizing, .backendAuthorized):
                     try handleBackendAuthorized()
                 case (.ready, .stop), (.error, .stop):
@@ -152,6 +150,13 @@ final actor MessagingServiceStateMachine {
                 _state = .error(error)
             }
         }
+    }
+
+    private func handleXMTPInitialized(with client: Client,
+                                       authResult: AuthServiceResultType) async throws {
+        syncingManager.start(with: client)
+        try await authorizeConvosBackend(client: client,
+                                         authResult: authResult)
     }
 
     private func handleStart() async throws {
@@ -185,6 +190,7 @@ final actor MessagingServiceStateMachine {
 
     private func handleStop() throws {
         _state = .stopping
+        syncingManager.stop()
         try cleanupResources()
         _state = .uninitialized
     }

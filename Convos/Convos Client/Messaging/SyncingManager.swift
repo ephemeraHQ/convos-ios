@@ -4,13 +4,20 @@ import XMTPiOS
 
 protocol SyncingManagerProtocol {
     func start(with client: Client)
+    func stop()
 }
 
-class SyncingManager: SyncingManagerProtocol {
+final class SyncingManager: SyncingManagerProtocol {
     private let conversationWriter: any ConversationWriterProtocol
     private let messageWriter: any IncomingMessageWriterProtocol
     private let apiClient: any ConvosAPIClientProtocol
     private let profileWriter: any MemberProfileWriterProtocol
+
+    private var syncAllTask: Task<Void, Never>?
+    private var listConversationsTask: Task<Void, Never>?
+    private var streamMessagesTask: Task<Void, Never>?
+    private var streamConversationsTask: Task<Void, Never>?
+    private var syncMemberProfilesTasks: [Task<Void, Never>] = []
 
     init(databaseWriter: any DatabaseWriter,
          apiClient: any ConvosAPIClientProtocol) {
@@ -23,14 +30,14 @@ class SyncingManager: SyncingManagerProtocol {
     }
 
     func start(with client: Client) {
-        Task {
+        syncAllTask = Task {
             do {
                 _ = try await client.conversations.syncAllConversations()
             } catch {
                 Logger.error("Error syncing all conversations: \(error)")
             }
         }
-        Task {
+        listConversationsTask = Task {
             do {
                 let maxConcurrentTasks = 5
                 let conversations = try await client.conversations.list()
@@ -53,7 +60,7 @@ class SyncingManager: SyncingManagerProtocol {
                 Logger.error("Error syncing conversations: \(error)")
             }
         }
-        Task {
+        streamMessagesTask = Task {
             do {
                 for try await message in await client.conversations.streamAllMessages() {
                     guard let conversation = try await client.conversations.findConversation(
@@ -71,7 +78,7 @@ class SyncingManager: SyncingManagerProtocol {
                 Logger.error("Error streaming all messages: \(error)")
             }
         }
-        Task {
+        streamConversationsTask = Task {
             do {
                 for try await conversation in await client.conversations.stream() {
                     try await conversation.sync()
@@ -83,10 +90,23 @@ class SyncingManager: SyncingManagerProtocol {
         }
     }
 
+    func stop() {
+        syncAllTask?.cancel()
+        syncAllTask = nil
+        listConversationsTask?.cancel()
+        listConversationsTask = nil
+        streamMessagesTask?.cancel()
+        streamMessagesTask = nil
+        streamConversationsTask?.cancel()
+        streamConversationsTask = nil
+        syncMemberProfilesTasks.forEach { $0.cancel() }
+        syncMemberProfilesTasks.removeAll()
+    }
+
     // MARK: - Private
 
     private func syncMemberProfiles(for conversations: [XMTPiOS.Conversation]) {
-        Task {
+        let syncProfilesTask = Task {
             let allMemberIds = await withTaskGroup(
                 of: [XMTPiOS.Member].self,
                 returning: [String].self) { group in
@@ -109,6 +129,7 @@ class SyncingManager: SyncingManagerProtocol {
                 }
             }
         }
+        syncMemberProfilesTasks.append(syncProfilesTask)
     }
 }
 
