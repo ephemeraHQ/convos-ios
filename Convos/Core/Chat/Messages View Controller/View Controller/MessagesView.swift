@@ -31,8 +31,12 @@ struct MessagesView: UIViewControllerRepresentable {
 }
 
 #Preview {
-    MessagesView(conversationRepository: MockConversationRepository(),
-                 messageWriter: MockOutgoingMessageWriter(),
-                 messagesRepository: MockMessagesRepository(conversation: .mock()))
-        .ignoresSafeArea()
+    let convos = ConvosSDK.ConvosClient.mock()
+    let conversationId: String = "1"
+    MessagesView(
+        conversationRepository: convos.messaging.conversationRepository(for: conversationId),
+        messageWriter: convos.messaging.messageWriter(for: conversationId),
+        messagesRepository: convos.messaging.messagesRepository(for: conversationId)
+    )
+    .ignoresSafeArea()
 }

@@ -10,16 +10,28 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
     let allUsers: [Profile]
     let conversations: [Conversation]
 
+    private var currentConversation: Conversation?
+    private var messages: [AnyMessage]
+    private var messagesSubject: CurrentValueSubject<[AnyMessage], Never>
+    private var messageTimer: Timer?
+    private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
+        .init(.uninitialized)
+
     init() {
         let users = Self.randomUsers()
         allUsers = users
         conversations = Self.randomConversations(with: users)
+        currentConversation = conversations.randomElement()
+        let initialMessages = Self.generateRandomMessages(
+            count: Int.random(in: 5...50),
+            conversation: currentConversation ?? conversations[0],
+            users: allUsers
+        )
+        self.messages = initialMessages
+        self.messagesSubject = CurrentValueSubject(initialMessages)
     }
 
     // MARK: - Protocol Conformance
-
-    private var messagingStateSubject: CurrentValueSubject<ConvosSDK.MessagingServiceState, Never> =
-        .init(.uninitialized)
 
     var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
         Just(self).eraseToAnyPublisher()
@@ -33,9 +45,12 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
         messagingStateSubject.send(.initializing)
         messagingStateSubject.send(.authorizing)
         messagingStateSubject.send(.ready)
+        startMessageTimer()
     }
 
     func stop() {
+        messageTimer?.invalidate()
+        messageTimer = nil
         messagingStateSubject.send(.stopping)
         messagingStateSubject.send(.uninitialized)
     }
@@ -53,11 +68,17 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
     }
 
     func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
-        self
+        if let found = conversations.first(where: { $0.id == conversationId }) {
+            currentConversation = found
+        }
+        return self
     }
 
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
-        self
+        if let found = conversations.first(where: { $0.id == conversationId }) {
+            currentConversation = found
+        }
+        return self
     }
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
@@ -103,11 +124,11 @@ extension MockMessagingService: ConversationRepositoryProtocol {
 
 extension MockMessagingService: MessagesRepositoryProtocol {
     func fetchAll() throws -> [AnyMessage] {
-        []
+        messages
     }
 
     func messagesPublisher() -> AnyPublisher<[AnyMessage], Never> {
-        Just([]).eraseToAnyPublisher()
+        messagesSubject.eraseToAnyPublisher()
     }
 }
 
@@ -135,8 +156,8 @@ extension MockMessagingService: MessageSender {
 
 extension MockMessagingService {
     static func randomConversations(with users: [Profile]) -> [Conversation] {
-        (0..<Int.random(in: 4...10)).map { _ in
-            Self.generateRandomConversation(from: users)
+        (0..<Int.random(in: 4...10)).map { index in
+            Self.generateRandomConversation(id: "\(index)", from: users)
         }
     }
 
@@ -155,7 +176,7 @@ extension MockMessagingService {
         ]
     }
 
-    static func generateRandomConversation(from users: [Profile]) -> Conversation {
+    static func generateRandomConversation(id: String, from users: [Profile]) -> Conversation {
         var availableUsers = users
         let randomCreator = availableUsers.randomElement()!
         availableUsers.removeAll { $0 == randomCreator }
@@ -180,6 +201,7 @@ extension MockMessagingService {
         ].randomElement()!
 
         return .mock(
+            id: id,
             creator: randomCreator,
             date: Date(),
             kind: kind,
@@ -188,6 +210,61 @@ extension MockMessagingService {
             otherMember: otherMember,
             messages: []
         )
+    }
+
+    private func startMessageTimer() {
+        messageTimer?.invalidate()
+        scheduleNextMessage()
+    }
+
+    private func scheduleNextMessage() {
+        let interval = Double.random(in: 0...2)
+        messageTimer = Timer.scheduledTimer(
+            timeInterval: interval,
+            target: self,
+            selector: #selector(handleTimer),
+            userInfo: nil,
+            repeats: false
+        )
+    }
+
+    @objc
+    private func handleTimer() {
+        generateRandomMessageAndAppend()
+        scheduleNextMessage()
+    }
+
+    private func generateRandomMessageAndAppend() {
+        guard let conversation = currentConversation ?? conversations.first else { return }
+        let sender = conversation.members.randomElement() ?? allUsers.randomElement() ?? currentUser.profile
+        let message = Message(
+            id: UUID().uuidString,
+            conversation: conversation,
+            sender: sender,
+            source: .incoming,
+            status: .published,
+            content: .text(TextGenerator.getString(of: Int.random(in: 1...20))),
+            reactions: []
+        )
+        let anyMessage = AnyMessage.message(message)
+        messages.append(anyMessage)
+        messagesSubject.send(messages)
+    }
+
+    static func generateRandomMessages(count: Int, conversation: Conversation, users: [Profile]) -> [AnyMessage] {
+        (0..<count).map { _ in
+            let sender = conversation.members.randomElement() ?? users.randomElement() ?? users[0]
+            let message = Message(
+                id: UUID().uuidString,
+                conversation: conversation,
+                sender: sender,
+                source: .incoming,
+                status: .published,
+                content: .text(TextGenerator.getString(of: Int.random(in: 1...20))),
+                reactions: []
+            )
+            return AnyMessage.message(message)
+        }
     }
 }
 

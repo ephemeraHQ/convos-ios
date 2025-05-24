@@ -3,6 +3,7 @@ import Foundation
 
 extension Conversation {
     static func mock(
+        id: String = UUID().uuidString,
         creator: Profile = .mock(),
         date: Date = Date(),
         kind: ConversationKind = .dm,
@@ -12,7 +13,7 @@ extension Conversation {
         messages: [Message] = []
     ) -> Self {
         .init(
-            id: UUID().uuidString,
+            id: id,
             creator: creator,
             createdAt: Date(),
             kind: kind,

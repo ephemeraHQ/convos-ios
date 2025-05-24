@@ -135,7 +135,7 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
             sender: sender,
             source: .incoming,
             status: .published,
-            content: .text(TextGenerator.getString(of: Int.random(in: 1...20))),
+            content: .text("Hey what's going on?"),
             reactions: []
         )
     }

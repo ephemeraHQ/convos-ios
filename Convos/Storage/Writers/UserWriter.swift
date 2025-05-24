@@ -78,6 +78,8 @@ class UserWriter: UserWriterProtocol {
                                          avatar: user.profile.avatar)
         let dbUser = DBUser(id: user.id, inboxId: inboxId)
         try await databaseWriter.write { db in
+            try member.save(db)
+            try memberProfile.save(db)
             try dbUser.save(db)
 
             let session = Session(userId: user.id)
@@ -88,8 +90,6 @@ class UserWriter: UserWriterProtocol {
                 try identity.save(db)
             }
 
-            try member.save(db)
-            try memberProfile.save(db)
             try profile.save(db)
         }
     }
