@@ -16,6 +16,21 @@ enum ConvosSDK {
             databaseManager.dbReader
         }
 
+        static func testBundle(
+            authService: AuthServiceProtocol = MockAuthService()
+        ) -> ConvosClient {
+            let databaseManager = MockDatabaseManager.shared
+            let messagingService = MessagingService(
+                authService: authService,
+                databaseWriter: databaseManager.dbWriter,
+                databaseReader: databaseManager.dbReader,
+                environment: .local
+            )
+            return .init(authService: authService,
+                         messagingService: messagingService,
+                         databaseManager: databaseManager)
+        }
+
         static func mock() -> ConvosClient {
             let authService = MockAuthService()
             let databaseManager = MockDatabaseManager.shared
@@ -26,12 +41,14 @@ enum ConvosSDK {
         }
 
         static func sdk(authService: AuthServiceProtocol = SecureEnclaveAuthService(),
-                        databaseManager: any DatabaseManagerProtocol = DatabaseManager.shared) -> ConvosClient {
+                        databaseManager: any DatabaseManagerProtocol = DatabaseManager.shared,
+                        environment: MessagingServiceEnvironment) -> ConvosClient {
             let databaseWriter = databaseManager.dbWriter
             let databaseReader = databaseManager.dbReader
             let messagingService = MessagingService(authService: authService,
                                                     databaseWriter: databaseWriter,
-                                                    databaseReader: databaseReader)
+                                                    databaseReader: databaseReader,
+                                                    environment: environment)
             return .init(authService: authService,
                          messagingService: messagingService,
                          databaseManager: databaseManager)

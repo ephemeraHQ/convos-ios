@@ -16,16 +16,21 @@ extension PrivateKey {
     }
 }
 
-struct MockUser: ConvosSDK.AuthorizedResultType, Codable {
+struct MockUser: ConvosSDK.AuthorizedResultType, ConvosSDK.RegisteredResultType, Codable {
     var profile: Profile
     var id: String
     let privateKey: PrivateKey!
 
+    var displayName: String {
+        profile.name
+    }
+
     var signingKey: any SigningKey {
         privateKey
     }
+
     var databaseKey: Data {
-        try! privateKey.serializedData()
+        Data((0..<32).map { _ in UInt8.random(in: UInt8.min...UInt8.max) })
     }
 
     var chainId: Int64? {
@@ -42,7 +47,7 @@ struct MockUser: ConvosSDK.AuthorizedResultType, Codable {
 
     init(name: String) {
         self.id = UUID().uuidString
-        self.profile = .mock()
+        self.profile = .mock(name: name)
         self.privateKey = try? PrivateKey.generate()
     }
 
@@ -76,6 +81,7 @@ class MockAuthService: ConvosSDK.AuthServiceProtocol {
         }
     }
 
+    private let persist: Bool
     private let keychain: KeychainService<MockKeychainItem> = .init()
     private var _currentUser: MockUser?
 
@@ -89,17 +95,12 @@ class MockAuthService: ConvosSDK.AuthServiceProtocol {
 
     private var authStateSubject: CurrentValueSubject<ConvosSDK.AuthServiceState, Never> = .init(.unknown)
 
-    init() {
+    init(persist: Bool = false) {
+        self.persist = persist
         authStateSubject.send(.unauthorized)
     }
 
     func prepare() async throws {
-        guard let mockUser = try getCurrentUser() else {
-            authStateSubject.send(.unauthorized)
-            return
-        }
-        _currentUser = mockUser
-        authStateSubject.send(.authorized(mockUser))
     }
 
     func signIn() async throws {
@@ -112,15 +113,19 @@ class MockAuthService: ConvosSDK.AuthServiceProtocol {
 
     func register(displayName: String) async throws {
         let mockUser = MockUser(name: displayName)
-        let encoder = JSONEncoder()
-        let data = try encoder.encode(mockUser)
-        try keychain.saveData(data, for: .mockUser)
+        if persist {
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(mockUser)
+            try keychain.saveData(data, for: .mockUser)
+        }
         _currentUser = mockUser
-        authStateSubject.send(.authorized(mockUser))
+        authStateSubject.send(.registered(mockUser))
     }
 
     func signOut() async throws {
-        try keychain.delete(.mockUser)
+        if persist {
+            try keychain.delete(.mockUser)
+        }
         _currentUser = nil
         authStateSubject.send(.unauthorized)
     }
@@ -130,6 +135,7 @@ class MockAuthService: ConvosSDK.AuthServiceProtocol {
     }
 
     private func getCurrentUser() throws -> MockUser? {
+        guard persist else { return nil }
         guard let mockUserData = try keychain.retrieveData(.mockUser) else {
             authStateSubject.send(.unauthorized)
             return nil

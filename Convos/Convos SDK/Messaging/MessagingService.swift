@@ -26,12 +26,32 @@ private enum MessagingServiceAction {
     case backendAuthorized
 }
 
+private extension ConvosSDK.MessagingServiceEnvironment {
+    var xmtpEnv: XMTPEnvironment {
+        switch self {
+        case .local: return .local
+        case .dev: return .dev
+        case .production: return .production
+        }
+    }
+
+    var isSecure: Bool {
+        switch self {
+        case .local:
+            return false
+        default:
+            return true
+        }
+    }
+}
+
 final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
     private let authService: ConvosSDK.AuthServiceProtocol
     private let userWriter: UserWriter
     private let syncingManager: SyncingManagerProtocol
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
+    private let environment: ConvosSDK.MessagingServiceEnvironment
 
     nonisolated
     var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
@@ -73,7 +93,8 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
     init(authService: ConvosSDK.AuthServiceProtocol,
          databaseWriter: any DatabaseWriter,
-         databaseReader: any DatabaseReader) {
+         databaseReader: any DatabaseReader,
+         environment: ConvosSDK.MessagingServiceEnvironment) {
         self.authService = authService
         self.userWriter = UserWriter(databaseWriter: databaseWriter)
         self.apiClient = ConvosAPIClient.shared
@@ -81,6 +102,8 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
                                              apiClient: apiClient)
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
+        self.environment = environment
+
         Task {
             await observeAuthState()
         }
@@ -184,7 +207,13 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
 
         _state = .initializing
         let client: Client
-        let clientOptions = ClientOptions(dbEncryptionKey: authorizedResult.databaseKey)
+        let clientOptions = ClientOptions(
+            api: .init(
+                env: environment.xmtpEnv,
+                isSecure: environment.isSecure
+            ),
+            dbEncryptionKey: authorizedResult.databaseKey,
+        )
         if authorizedResult is ConvosSDK.RegisteredResultType {
             client = try await createXmtpClient(signingKey: authorizedResult.signingKey,
                                                 options: clientOptions)

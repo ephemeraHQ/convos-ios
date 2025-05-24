@@ -22,7 +22,11 @@ extension ConvosSDK {
         func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never>
     }
 
-    enum MessagingServiceState {
+    enum MessagingServiceEnvironment {
+        case local, dev, production
+    }
+
+    enum MessagingServiceState: Equatable {
         case uninitialized
         case initializing
         case authorizing
@@ -33,6 +37,21 @@ extension ConvosSDK {
         var isReady: Bool {
             switch self {
             case .ready:
+                return true
+            default:
+                return false
+            }
+        }
+
+        static func == (lhs: MessagingServiceState, rhs: MessagingServiceState) -> Bool {
+            switch (lhs, rhs) {
+            case (.uninitialized, .uninitialized),
+                (.initializing, .initializing),
+                (.authorizing, .authorizing),
+                (.ready, .ready),
+                (.stopping, .stopping):
+                return true
+            case (.error, .error):
                 return true
             default:
                 return false

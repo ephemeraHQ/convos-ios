@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 
 final class RootViewController: UIViewController {
-    let convos: ConvosSDK.ConvosClient = .sdk()
+    let convos: ConvosSDK.ConvosClient = .sdk(environment: .dev)
     let analyticsService: AnalyticsServiceProtocol = PosthogAnalyticsService.shared
 
     override func viewDidLoad() {

@@ -92,5 +92,10 @@ private struct LegalView: View {
 }
 
 #Preview {
-    OnboardingView(convos: .sdk(authService: MockAuthService()))
+    OnboardingView(
+        convos: .sdk(
+            authService: MockAuthService(),
+            environment: .dev
+        )
+    )
 }
