@@ -30,12 +30,24 @@ final class MockMessagesService: ConvosSDK.MessagingServiceProtocol {
         messageTimer = nil
     }
 
+    func userRepository() -> any UserRepositoryProtocol {
+        MockUserRepository()
+    }
+
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
         MockProfileSearchRepository()
     }
 
+    func conversationsRepository() -> any ConversationsRepositoryProtocol {
+        MockConversationsRepository()
+    }
+
+    func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
+        MockConversationRepository()
+    }
+
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
-        MockMessagesRepository()
+        MockMessagesRepository(conversation: .mock())
     }
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {

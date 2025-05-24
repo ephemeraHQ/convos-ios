@@ -13,8 +13,8 @@ struct RootView: View {
          analyticsService: AnalyticsServiceProtocol) {
         self.convos = convos
         self.analyticsService = analyticsService
-        self.userRepository = UserRepository(dbReader: convos.databaseReader)
-        self.conversationsRepository = ConversationsRepository(dbReader: convos.databaseReader)
+        self.userRepository = convos.messaging.userRepository()
+        self.conversationsRepository = convos.messaging.conversationsRepository()
         self.messagingService = .init(messagingService: convos.messaging)
         _viewModel = .init(initialValue: .init(convos: convos))
     }
@@ -40,6 +40,7 @@ struct RootView: View {
     }
 }
 
-// #Preview {
-//     RootView(convos: .mock, analyticsService: MockAnalyticsService())
-// }
+ #Preview {
+     RootView(convos: .mock(),
+              analyticsService: MockAnalyticsService())
+ }

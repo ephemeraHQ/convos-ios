@@ -6,29 +6,45 @@ enum ConvosSDK {
     final class ConvosClient {
         private let authService: AuthServiceProtocol
         private let messagingService: any MessagingServiceProtocol
+        private let databaseManager: any DatabaseManagerProtocol
 
         var databaseWriter: any DatabaseWriter {
-            DatabaseManager.shared.dbWriter
+            databaseManager.dbWriter
         }
 
         var databaseReader: any DatabaseReader {
-            DatabaseManager.shared.dbReader
+            databaseManager.dbReader
         }
 
-        static func sdk(authService: AuthServiceProtocol) -> ConvosClient {
-            let databaseWriter = DatabaseManager.shared.dbWriter
-            let databaseReader = DatabaseManager.shared.dbReader
+        static func mock() -> ConvosClient {
+            let authService = MockAuthService()
+            let databaseManager = MockDatabaseManager.shared
+            let messagingService = MessagingService(authService: authService,
+                                                    databaseWriter: databaseManager.dbWriter,
+                                                    databaseReader: databaseManager.dbReader)
+            return .init(authService: authService,
+                         messagingService: messagingService,
+                         databaseManager: databaseManager)
+        }
+
+        static func sdk(authService: AuthServiceProtocol = SecureEnclaveAuthService(),
+                        databaseManager: any DatabaseManagerProtocol = DatabaseManager.shared) -> ConvosClient {
+            let databaseWriter = databaseManager.dbWriter
+            let databaseReader = databaseManager.dbReader
             let messagingService = MessagingService(authService: authService,
                                                     databaseWriter: databaseWriter,
                                                     databaseReader: databaseReader)
             return .init(authService: authService,
-                         messagingService: messagingService)
+                         messagingService: messagingService,
+                         databaseManager: databaseManager)
         }
 
-        private init(authService: AuthServiceProtocol,
-                     messagingService: MessagingServiceProtocol) {
+        private init(authService: any AuthServiceProtocol,
+                     messagingService: any MessagingServiceProtocol,
+                     databaseManager: any DatabaseManagerProtocol) {
             self.authService = authService
             self.messagingService = messagingService
+            self.databaseManager = databaseManager
         }
 
         var authState: AnyPublisher<AuthServiceState, Never> {

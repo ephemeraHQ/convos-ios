@@ -87,7 +87,7 @@ struct ConversationsListView: View {
     @Previewable @State var messagingService: MessagingServiceObservable = .init(
         messagingService: MockMessagingService()
     )
-    ConversationsListView(convos: .sdk(authService: MockAuthService()),
+    ConversationsListView(convos: .mock(),
                           userRepository: userRepository,
                           conversationsRepository: conversationsRepository)
     .environment(messagingService)

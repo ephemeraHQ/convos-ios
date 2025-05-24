@@ -94,11 +94,31 @@ final actor MessagingService: ConvosSDK.MessagingServiceProtocol {
         await processAction(.stop)
     }
 
+    // MARK: User
+
+    nonisolated
+    func userRepository() -> any UserRepositoryProtocol {
+        UserRepository(dbReader: databaseReader)
+    }
+
     // MARK: Profile Search
 
     nonisolated
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
         ProfileSearchRepository(apiClient: ConvosAPIClient.shared)
+    }
+
+    // MARK: Conversations
+
+    nonisolated
+    func conversationsRepository() -> any ConversationsRepositoryProtocol {
+        ConversationsRepository(dbReader: databaseReader)
+    }
+
+    nonisolated
+    func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
+        ConversationRepository(conversationId: conversationId,
+                               dbReader: databaseReader)
     }
 
     // MARK: Getting/Sending Messages

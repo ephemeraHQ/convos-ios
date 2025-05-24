@@ -33,6 +33,6 @@ struct MessagesView: UIViewControllerRepresentable {
 #Preview {
     MessagesView(conversationRepository: MockConversationRepository(),
                  messageWriter: MockOutgoingMessageWriter(),
-                 messagesRepository: MockMessagesRepository())
+                 messagesRepository: MockMessagesRepository(conversation: .mock()))
         .ignoresSafeArea()
 }

@@ -39,7 +39,7 @@ struct ConversationComposerView: UIViewControllerRepresentable {
     ConversationComposerView(
         draftConversationRepository: MockDraftConversationRepository(),
         messagingService: MockMessagingService(),
-        messagesRepository: MockMessagesRepository()
+        messagesRepository: MockMessagesRepository(conversation: .mock())
     )
     .ignoresSafeArea()
 }

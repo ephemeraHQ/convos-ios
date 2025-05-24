@@ -2,13 +2,11 @@ import Combine
 import Foundation
 
 class MockMessageSender: MessageSender {
-
     func prepare(text: String) async throws -> String {
         return ""
     }
 
     func publish() async throws {
-
     }
 }
 
@@ -51,12 +49,24 @@ class MockMessagingService: ConvosSDK.MessagingServiceProtocol {
         messagingStateSubject.send(.uninitialized)
     }
 
+    func userRepository() -> any UserRepositoryProtocol {
+        MockUserRepository()
+    }
+
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
         MockProfileSearchRepository()
     }
 
+    func conversationsRepository() -> any ConversationsRepositoryProtocol {
+        MockConversationsRepository()
+    }
+
+    func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
+        MockConversationRepository()
+    }
+
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
-        MockMessagesRepository()
+        MockMessagesRepository(conversation: .mock())
     }
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {

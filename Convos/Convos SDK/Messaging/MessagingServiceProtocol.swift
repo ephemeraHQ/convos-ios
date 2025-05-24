@@ -9,7 +9,12 @@ extension ConvosSDK {
         func start() async throws
         func stop() async
 
+        func userRepository() -> any UserRepositoryProtocol
+
         func profileSearchRepository() -> any ProfileSearchRepositoryProtocol
+
+        func conversationsRepository() -> any ConversationsRepositoryProtocol
+        func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol
 
         func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol
         func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol
