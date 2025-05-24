@@ -104,15 +104,15 @@
 		7ACA8BD52DE180B800848799 /* Exceptions for "Convos" folder in "ConvosTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"Convos Client/Auth/AuthService.swift",
+				"Convos Client/Auth/AuthServiceProtocol.swift",
 				"Convos Client/Auth/KeychainService.swift",
 				"Convos Client/Auth/MockAuthService.swift",
 				"Convos Client/Auth/Secure Enclave/SecureEnclaveAuthService.swift",
 				"Convos Client/Auth/Secure Enclave/SecureEnclaveIdentityStore.swift",
+				"Convos Client/Convos API/ConvosAPIClient.swift",
+				"Convos Client/Convos API/ConvosAPIClient+Models.swift",
+				"Convos Client/Convos API/MockAPIClient.swift",
 				"Convos Client/ConvosClient.swift",
-				"Convos Client/Messaging/Convos API/ConvosAPIClient.swift",
-				"Convos Client/Messaging/Convos API/ConvosAPIClient+Models.swift",
-				"Convos Client/Messaging/Convos API/MockAPIClient.swift",
 				"Convos Client/Messaging/MessagingService.swift",
 				"Convos Client/Messaging/MessagingServiceProtocol.swift",
 				"Convos Client/Messaging/MockMessagingService.swift",

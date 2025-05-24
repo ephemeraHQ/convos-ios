@@ -23,7 +23,7 @@ class DraftConversationRepository: ConversationRepositoryProtocol {
                 guard let self else { return nil }
 
                 guard let currentUser = try db.currentUser() else {
-                    return nil
+                    throw CurrentSessionError.missingCurrentUser
                 }
 
                 guard let dbConversation = try DBConversationDetails.fetchOne(db, key: conversationId) else {

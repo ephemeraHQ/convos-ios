@@ -8,6 +8,10 @@ protocol OutgoingMessageWriterProtocol {
 }
 
 class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
+    enum OutgoingMessageWriterError: Error {
+        case missingClientProvider
+    }
+
     private weak var clientProvider: XMTPClientProvider?
     private var cancellable: AnyCancellable?
     private let databaseWriter: any DatabaseWriter
@@ -25,9 +29,10 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
     }
 
     func send(text: String) async throws {
-        guard let sender = try await clientProvider?.messageSender(for: conversationId) else {
-            // TODO: throw error, or add writer 'state'
-            return
+        guard let sender = try await clientProvider?.messageSender(
+            for: conversationId
+        ) else {
+            throw OutgoingMessageWriterError.missingClientProvider
         }
 
         let clientMessageId: String = try await sender.prepare(text: text)
@@ -36,8 +41,7 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
             guard let self else { return }
 
             guard let currentUser = try db.currentUser() else {
-                // fail
-                return
+                throw CurrentSessionError.missingCurrentUser
             }
 
             let localMessage = DBMessage(

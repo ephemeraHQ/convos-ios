@@ -84,3 +84,7 @@ struct CurrentSessionDetails: Codable, FetchableRecord, PersistableRecord, Hasha
     let sessionIdentities: [Identity]
     let sessionProfile: UserProfile
 }
+
+enum CurrentSessionError: Error {
+    case missingCurrentUser
+}

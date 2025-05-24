@@ -12,6 +12,7 @@ protocol MessagingServiceProtocol {
 
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol
 
+    func draftConversationComposer() -> any DraftConversationComposerProtocol
     func conversationsRepository() -> any ConversationsRepositoryProtocol
     func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol
 

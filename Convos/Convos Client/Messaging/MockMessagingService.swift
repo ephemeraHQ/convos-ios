@@ -68,6 +68,10 @@ class MockMessagingService: MessagingServiceProtocol {
         self
     }
 
+    func draftConversationComposer() -> any DraftConversationComposerProtocol {
+        MockDraftConversationComposer()
+    }
+
     func conversationsRepository() -> any ConversationsRepositoryProtocol {
         self
     }

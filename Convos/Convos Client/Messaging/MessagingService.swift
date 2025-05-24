@@ -13,7 +13,7 @@ private enum MessagingServiceError: Error {
 private enum MessagingServiceAction {
     case start
     case stop
-    case xmtpInitialized(Client, AuthorizedResultType)
+    case xmtpInitialized(Client, AuthServiceResultType)
     case backendAuthorized
 }
 
@@ -56,6 +56,7 @@ final actor MessagingService: MessagingServiceProtocol {
         }
     }
     private var cancellables: Set<AnyCancellable> = []
+    nonisolated
     private let apiClient: any ConvosAPIClientProtocol
     private var _state: MessagingServiceState = .uninitialized {
         didSet {
@@ -124,6 +125,27 @@ final actor MessagingService: MessagingServiceProtocol {
     }
 
     // MARK: Conversations
+
+    nonisolated
+    func draftConversationComposer() -> any DraftConversationComposerProtocol {
+        DraftConversationComposer(
+            draftConversationRepository: DraftConversationRepository(
+                dbReader: databaseReader
+            ),
+            profileSearchRepository: ProfileSearchRepository(
+                apiClient: apiClient
+            ),
+            messagesRepository: MessagesRepository(
+                dbReader: databaseReader,
+                conversationId: Conversation.draftPrimaryKey
+            ),
+            outgoingMessageWriter: OutgoingMessageWriter(
+                clientPublisher: clientPublisher,
+                databaseWriter: databaseWriter,
+                conversationId: Conversation.draftPrimaryKey
+            )
+        )
+    }
 
     nonisolated
     func conversationsRepository() -> any ConversationsRepositoryProtocol {
@@ -206,7 +228,7 @@ final actor MessagingService: MessagingServiceProtocol {
             ),
             dbEncryptionKey: authorizedResult.databaseKey,
         )
-        if authorizedResult is RegisteredResultType {
+        if authorizedResult is AuthServiceRegisteredResultType {
             client = try await createXmtpClient(signingKey: authorizedResult.signingKey,
                                                 options: clientOptions)
         } else {
@@ -242,7 +264,7 @@ final actor MessagingService: MessagingServiceProtocol {
 
     // MARK: - User Creation
 
-    private func createUser(from result: RegisteredResultType,
+    private func createUser(from result: AuthServiceRegisteredResultType,
                             signingKey: SigningKey) async throws -> ConvosAPI.CreatedUserResponse {
         let userId = UUID().uuidString
         let username = try await generateUsername(from: result.displayName)
@@ -329,7 +351,7 @@ final actor MessagingService: MessagingServiceProtocol {
     }
 
     private func authorizeConvosBackend(client: Client,
-                                        authResult: AuthorizedResultType) async throws {
+                                        authResult: AuthServiceResultType) async throws {
         _state = .authorizing
         let installationId = client.installationID
         let xmtpId = client.inboxID
@@ -341,7 +363,7 @@ final actor MessagingService: MessagingServiceProtocol {
         _ = try await apiClient.authenticate(xmtpInstallationId: installationId,
                                              xmtpId: xmtpId,
                                              xmtpSignature: signature)
-        if let registeredResult = authResult as? RegisteredResultType {
+        if let registeredResult = authResult as? AuthServiceRegisteredResultType {
             Logger.info("Authorization succeeded, creating user from registeredResult: \(registeredResult)")
             let user = try await createUser(from: registeredResult,
                                             signingKey: authResult.signingKey)

@@ -7,9 +7,10 @@ protocol SyncingManagerProtocol {
 }
 
 class SyncingManager: SyncingManagerProtocol {
-    private let conversationWriter: ConversationWriterProtocol
-    private let messageWriter: IncomingMessageWriterProtocol
+    private let conversationWriter: any ConversationWriterProtocol
+    private let messageWriter: any IncomingMessageWriterProtocol
     private let apiClient: any ConvosAPIClientProtocol
+    private let profileWriter: any MemberProfileWriterProtocol
 
     init(databaseWriter: any DatabaseWriter,
          apiClient: any ConvosAPIClientProtocol) {
@@ -18,6 +19,7 @@ class SyncingManager: SyncingManagerProtocol {
         self.conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
                                                      messageWriter: messageWriter)
         self.messageWriter = messageWriter
+        self.profileWriter = MemberProfileWriter(databaseWriter: databaseWriter)
     }
 
     func start(with client: Client) {
@@ -102,8 +104,8 @@ class SyncingManager: SyncingManagerProtocol {
             let maxMembersPerChunk = 100
             for chunk in allMemberIds.chunked(into: maxMembersPerChunk) {
                 Task {
-                    _ = try await apiClient.getProfiles(for: chunk)
-                    // TODO: MemberProfileWriter
+                    let profiles = try await apiClient.getProfiles(for: chunk)
+                    try await profileWriter.store(profiles: profiles)
                 }
             }
         }

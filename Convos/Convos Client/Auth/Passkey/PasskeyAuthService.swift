@@ -4,12 +4,12 @@ import PasskeyAuth
 import XMTPiOS
 
 class PasskeyAuthService: AuthServiceProtocol {
-    struct PasskeyAuthResult: AuthorizedResultType {
+    struct PasskeyAuthResult: AuthServiceResultType {
         let signingKey: any SigningKey
         let databaseKey: Data
     }
 
-    struct PasskeyRegisteredResult: RegisteredResultType {
+    struct PasskeyRegisteredResult: AuthServiceRegisteredResultType {
         let displayName: String
         let signingKey: any SigningKey
         let databaseKey: Data

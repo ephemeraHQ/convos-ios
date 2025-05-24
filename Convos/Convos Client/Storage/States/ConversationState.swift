@@ -18,11 +18,10 @@ final class ConversationState {
     private func observe() {
         conversationRepository.conversationPublisher()
             .receive(on: DispatchQueue.main)
+            .compactMap { $0 }
             .sink { [weak self] conversation in
                 guard let self else { return }
-                // TODO: we should really never not have a conversation here,
-                // but figure out a better way to handle this
-                self.conversation = conversation ?? .draft()
+                self.conversation = conversation
             }
             .store(in: &cancellables)
     }

@@ -16,7 +16,7 @@ extension PrivateKey {
     }
 }
 
-struct MockUser: AuthorizedResultType, RegisteredResultType, Codable {
+struct MockUser: AuthServiceResultType, AuthServiceRegisteredResultType, Codable {
     var profile: Profile
     var id: String
     let privateKey: PrivateKey!

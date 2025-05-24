@@ -3,18 +3,19 @@ import UIKit
 
 class ConversationComposerViewController: UIViewController {
     let messagesViewController: MessagesViewController
-    let messagingService: any MessagingServiceProtocol
+    let profileSearchRepository: any ProfileSearchRepositoryProtocol
     private var composerHostingController: UIHostingController<ConversationComposerContentView>?
 
     init(
         messagesRepository: any MessagesRepositoryProtocol,
-        messagingService: any MessagingServiceProtocol
+        outgoingMessageWriter: any OutgoingMessageWriterProtocol,
+        profileSearchRepository: any ProfileSearchRepositoryProtocol,
     ) {
         self.messagesViewController = MessagesViewController(
-            messageWriter: MockOutgoingMessageWriter(), // TODO: handle this
+            outgoingMessageWriter: outgoingMessageWriter,
             messagesRepository: messagesRepository
         )
-        self.messagingService = messagingService
+        self.profileSearchRepository = profileSearchRepository
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -33,7 +34,9 @@ class ConversationComposerViewController: UIViewController {
         messagesViewController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         messagesViewController.didMove(toParent: self)
 
-        let composerView = ConversationComposerContentView(messagingService: messagingService)
+        let composerView = ConversationComposerContentView(
+            profileSearchRepository: profileSearchRepository
+        )
         let hosting = UIHostingController(rootView: composerView)
         hosting.navigationController?.setNavigationBarHidden(true, animated: false)
         addChild(hosting)

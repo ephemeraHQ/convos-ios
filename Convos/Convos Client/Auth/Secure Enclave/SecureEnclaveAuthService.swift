@@ -3,12 +3,12 @@ import Foundation
 import XMTPiOS
 
 class SecureEnclaveAuthService: AuthServiceProtocol {
-    struct EnclaveAuthResult: AuthorizedResultType {
+    struct EnclaveAuthResult: AuthServiceResultType {
         let signingKey: SigningKey
         let databaseKey: Data
     }
 
-    struct EnclaveRegisteredResult: RegisteredResultType {
+    struct EnclaveRegisteredResult: AuthServiceRegisteredResultType {
         let displayName: String
         let signingKey: SigningKey
         let databaseKey: Data

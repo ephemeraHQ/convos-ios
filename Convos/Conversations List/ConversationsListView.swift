@@ -49,11 +49,9 @@ struct ConversationsListView: View {
                         switch route {
                         case .composer:
                             ConversationComposerView(
-                                draftConversationRepository: MockDraftConversationRepository(),
-                                messagingService: convos.messaging,
-                                messagesRepository: convos.messaging.messagesRepository(
-                                    for: "draft"
-                                ) // TODO: better way
+                                draftConversationComposer: messagingService
+                                    .messagingService
+                                    .draftConversationComposer()
                             )
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)
@@ -67,7 +65,7 @@ struct ConversationsListView: View {
                             )
                             MessagesView(
                                 conversationRepository: conversationRepository,
-                                messageWriter: messageWriter,
+                                outgoingMessageWriter: messageWriter,
                                 messagesRepository: messagesRepository
                             )
                             .ignoresSafeArea()

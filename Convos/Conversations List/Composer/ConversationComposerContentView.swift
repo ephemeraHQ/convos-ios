@@ -17,9 +17,9 @@ class ConversationComposerViewModel {
     var profileResults: [Profile] = []
 
     init(
-        messagingService: any MessagingServiceProtocol
+        profileSearchRepository: any ProfileSearchRepositoryProtocol
     ) {
-        self.profileSearchRepo = messagingService.profileSearchRepository()
+        self.profileSearchRepo = profileSearchRepository
     }
 
     func add(profile: Profile) {
@@ -56,11 +56,13 @@ struct ConversationComposerContentView: View {
     @State private var viewModel: ConversationComposerViewModel
 
     init(
-        messagingService: any MessagingServiceProtocol,
+        profileSearchRepository: any ProfileSearchRepositoryProtocol,
         selectedProfile: Profile? = nil
     ) {
         self.selectedProfile = selectedProfile
-        _viewModel = State(initialValue: .init(messagingService: messagingService))
+        _viewModel = State(
+            initialValue: .init(profileSearchRepository: profileSearchRepository)
+        )
     }
 
     private let headerHeight: CGFloat = 72.0
@@ -171,6 +173,6 @@ struct ConversationComposerContentView: View {
 
 #Preview {
     ConversationComposerContentView(
-        messagingService: MockMessagingService()
+        profileSearchRepository: MockProfileSearchRepository()
     )
 }

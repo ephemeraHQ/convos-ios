@@ -2,11 +2,11 @@ import Combine
 import Foundation
 import XMTPiOS
 
-protocol RegisteredResultType: AuthorizedResultType {
+protocol AuthServiceRegisteredResultType: AuthServiceResultType {
     var displayName: String { get }
 }
 
-protocol AuthorizedResultType {
+protocol AuthServiceResultType {
     var signingKey: any XMTPiOS.SigningKey { get }
     var databaseKey: Data { get }
 }
@@ -14,8 +14,8 @@ protocol AuthorizedResultType {
 enum AuthServiceState {
     case unknown,
          notReady,
-         registered(RegisteredResultType),
-         authorized(AuthorizedResultType),
+         registered(AuthServiceRegisteredResultType),
+         authorized(AuthServiceResultType),
          unauthorized
 
     var isAuthenticated: Bool {
@@ -26,7 +26,7 @@ enum AuthServiceState {
         }
     }
 
-    var authorizedResult: AuthorizedResultType? {
+    var authorizedResult: AuthServiceResultType? {
         switch self {
         case .authorized(let result):
             return result

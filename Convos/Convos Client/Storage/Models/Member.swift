@@ -1,7 +1,6 @@
 import Foundation
 import GRDB
 
-// TODO: Not needed?
 struct Member: Codable, FetchableRecord, PersistableRecord, Hashable {
     let inboxId: String
 

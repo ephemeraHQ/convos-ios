@@ -1,30 +1,26 @@
 import SwiftUI
 
 struct ConversationComposerView: UIViewControllerRepresentable {
-    let draftConversationRepository: any ConversationRepositoryProtocol
-    let messagingService: any MessagingServiceProtocol
-    let messagesRepository: any MessagesRepositoryProtocol
+    let draftConversationComposer: any DraftConversationComposerProtocol
     @State private var draftConversationState: DraftConversationState
 
     init(
-        draftConversationRepository: any ConversationRepositoryProtocol,
-        messagingService: any MessagingServiceProtocol,
-        messagesRepository: any MessagesRepositoryProtocol
+        draftConversationComposer: any DraftConversationComposerProtocol
     ) {
-        self.draftConversationRepository = draftConversationRepository
-        self.messagingService = messagingService
-        self.messagesRepository = messagesRepository
+        self.draftConversationComposer = draftConversationComposer
         _draftConversationState = State(
             initialValue: .init(
-                draftConversationRepository: draftConversationRepository
+                draftConversationRepository:
+                    draftConversationComposer.draftConversationRepository
             )
         )
     }
 
     func makeUIViewController(context: Context) -> ConversationComposerViewController {
         let composerViewController = ConversationComposerViewController(
-            messagesRepository: messagesRepository,
-            messagingService: messagingService
+            messagesRepository: draftConversationComposer.messagesRepository,
+            outgoingMessageWriter: draftConversationComposer.outgoingMessageWriter,
+            profileSearchRepository: draftConversationComposer.profileSearchRepository
         )
         return composerViewController
     }
@@ -37,9 +33,7 @@ struct ConversationComposerView: UIViewControllerRepresentable {
 
 #Preview {
     ConversationComposerView(
-        draftConversationRepository: MockDraftConversationRepository(),
-        messagingService: MockMessagingService(),
-        messagesRepository: MockMessagesRepository(conversation: .mock())
+        draftConversationComposer: MockDraftConversationComposer()
     )
     .ignoresSafeArea()
 }

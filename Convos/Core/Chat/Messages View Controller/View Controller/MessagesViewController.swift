@@ -45,7 +45,7 @@ final class MessagesViewController: UIViewController {
     private let inputBarView: MessagesInputView = MessagesInputView()
     let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
 
-    private let messageWriter: any OutgoingMessageWriterProtocol
+    private let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     private let messagesRepository: any MessagesRepositoryProtocol
     private let dataSource: MessagesCollectionDataSource
 
@@ -64,9 +64,9 @@ final class MessagesViewController: UIViewController {
 
     // MARK: - Initialization
 
-    init(messageWriter: any OutgoingMessageWriterProtocol,
+    init(outgoingMessageWriter: any OutgoingMessageWriterProtocol,
          messagesRepository: any MessagesRepositoryProtocol) {
-        self.messageWriter = messageWriter
+        self.outgoingMessageWriter = outgoingMessageWriter
         self.messagesRepository = messagesRepository
         self.dataSource = MessagesCollectionViewDataSource()
         self.collectionView = UICollectionView(frame: .zero,
@@ -552,7 +552,7 @@ extension MessagesViewController: MessagesInputViewDelegate {
         scrollToBottom()
         Task {
             do {
-                try await messageWriter.send(text: text)
+                try await outgoingMessageWriter.send(text: text)
             } catch {
                 Logger.error("Error sending message: \(error)")
             }
