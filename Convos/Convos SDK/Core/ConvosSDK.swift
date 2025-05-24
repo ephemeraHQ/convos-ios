@@ -19,9 +19,7 @@ enum ConvosSDK {
         static func mock() -> ConvosClient {
             let authService = MockAuthService()
             let databaseManager = MockDatabaseManager.shared
-            let messagingService = MessagingService(authService: authService,
-                                                    databaseWriter: databaseManager.dbWriter,
-                                                    databaseReader: databaseManager.dbReader)
+            let messagingService = MockMessagingService()
             return .init(authService: authService,
                          messagingService: messagingService,
                          databaseManager: databaseManager)

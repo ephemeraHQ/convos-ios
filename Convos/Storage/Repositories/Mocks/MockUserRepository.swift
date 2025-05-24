@@ -2,12 +2,19 @@ import Combine
 import Foundation
 
 extension User {
-    static func mock() -> User {
-        .init(
-            id: UUID().uuidString,
-            inboxId: UUID().uuidString,
-            identities: [],
-            profile: .mock()
+    static func mock(displayName: String = "Andrew") -> User {
+        let userId = UUID().uuidString
+        let inboxId = UUID().uuidString
+        return .init(
+            id: userId,
+            inboxId: inboxId,
+            identities: [
+                .init(id: UUID().uuidString,
+                      userId: userId,
+                      walletAddress: "0x\(UUID().uuidString.lowercased())",
+                      xmtpId: inboxId)
+            ],
+            profile: .mock(name: displayName)
         )
     }
 }

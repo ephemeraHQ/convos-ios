@@ -82,13 +82,15 @@ struct ConversationsListView: View {
 }
 
 #Preview {
-    @Previewable @State var userRepository = MockUserRepository()
-    @Previewable @State var conversationsRepository = MockConversationsRepository()
-    @Previewable @State var messagingService: MessagingServiceObservable = .init(
-        messagingService: MockMessagingService()
+    let convos = ConvosSDK.ConvosClient.mock()
+    let messagingService = MessagingServiceObservable(messagingService: convos.messaging)
+    let userRepository = convos.messaging.userRepository()
+    let conversationsRepository = convos.messaging.conversationsRepository()
+
+    ConversationsListView(
+        convos: convos,
+        userRepository: userRepository,
+        conversationsRepository: conversationsRepository
     )
-    ConversationsListView(convos: .mock(),
-                          userRepository: userRepository,
-                          conversationsRepository: conversationsRepository)
     .environment(messagingService)
 }

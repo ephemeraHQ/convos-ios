@@ -2,16 +2,24 @@ import Combine
 import Foundation
 
 extension Conversation {
-    static func mock() -> Self {
+    static func mock(
+        creator: Profile = .mock(),
+        date: Date = Date(),
+        kind: ConversationKind = .dm,
+        name: String = "The Convo",
+        members: [Profile] = [],
+        otherMember: Profile? = .mock(),
+        messages: [Message] = []
+    ) -> Self {
         .init(
             id: UUID().uuidString,
-            creator: .mock(),
+            creator: creator,
             createdAt: Date(),
-            kind: .group,
-            name: "My Conversation \(Int.random(in: 1..<11))",
-            members: [.mock(), .mock()],
-            otherMember: .mock(),
-            messages: [],
+            kind: kind,
+            name: name,
+            members: members,
+            otherMember: otherMember,
+            messages: messages,
             isPinned: false,
             isUnread: false,
             isMuted: false,
