@@ -18,15 +18,8 @@ struct ConversationsListItem: View {
 
     var body: some View {
         HStack(spacing: 12.0) {
-            AsyncImage(url: conversation.creator.avatarURL) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                MonogramView(name: conversation.title)
-            }
-            .frame(width: 52.0, height: 52.0)
-            .clipShape(Circle())
+            ConversationAvatarView(conversation: conversation)
+                .frame(maxHeight: 56.0)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(conversation.title)
@@ -120,4 +113,8 @@ struct ConversationsListItemButtonStyle: ButtonStyle {
             .background(configuration.isPressed ? Color(.systemGray6) : Color(.systemBackground))
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
+}
+
+#Preview {
+    ConversationsListItem(conversation: .mock())
 }

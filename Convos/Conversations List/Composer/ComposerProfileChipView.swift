@@ -55,7 +55,7 @@ struct ComposerProfileChipView: View {
     var body: some View {
         HStack {
             HStack(spacing: DesignConstants.Spacing.stepX) {
-                ProfileAvatarView(profile: profile, size: DesignConstants.ImageSizes.extraSmallAvatar)
+                ProfileAvatarView(profile: profile)
                 Text(profile.displayName)
                     .font(.system(size: 16.0))
                     .foregroundStyle(.colorTextPrimary)

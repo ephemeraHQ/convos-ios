@@ -13,8 +13,8 @@ class ConversationComposerViewModel {
     }
 
     var conversationResults: [Conversation] = []
-    var profilesAdded: OrderedSet<Profile> = []
-    var profileResults: [Profile] = []
+    var profilesAdded: OrderedSet<ProfileSearchResult> = []
+    var profileResults: [ProfileSearchResult] = []
 
     init(
         profileSearchRepository: any ProfileSearchRepositoryProtocol
@@ -22,7 +22,7 @@ class ConversationComposerViewModel {
         self.profileSearchRepo = profileSearchRepository
     }
 
-    func add(profile: Profile) {
+    func add(profile: ProfileSearchResult) {
         searchText = ""
         profilesAdded.append(profile)
     }
@@ -52,12 +52,12 @@ class ConversationComposerViewModel {
 }
 
 struct ConversationComposerContentView: View {
-    @State private var selectedProfile: Profile?
+    @State private var selectedProfile: ProfileSearchResult?
     @State private var viewModel: ConversationComposerViewModel
 
     init(
         profileSearchRepository: any ProfileSearchRepositoryProtocol,
-        selectedProfile: Profile? = nil
+        selectedProfile: ProfileSearchResult? = nil
     ) {
         self.selectedProfile = selectedProfile
         _viewModel = State(
@@ -73,7 +73,7 @@ struct ConversationComposerContentView: View {
                 FlashingListRowButton {
                 } content: {
                     HStack(spacing: DesignConstants.Spacing.step3x) {
-                        ConversationAvatarView(conversation: conversation, size: 40.0)
+                        ConversationAvatarView(conversation: conversation)
 
                         VStack(alignment: .leading, spacing: 0.0) {
                             Text(conversation.title)
@@ -104,12 +104,13 @@ struct ConversationComposerContentView: View {
                 .listRowSpacing(0.0)
             }
 
-            ForEach(viewModel.profileResults, id: \.id) { profile in
+            ForEach(viewModel.profileResults, id: \.id) { profileResult in
+                let profile = profileResult.profile
                 FlashingListRowButton {
-                    viewModel.add(profile: profile)
+                    viewModel.add(profile: profileResult)
                 } content: {
                     HStack(spacing: DesignConstants.Spacing.step3x) {
-                        ProfileAvatarView(profile: profile, size: 40.0)
+                        ProfileAvatarView(profile: profile)
 
                         VStack(alignment: .leading, spacing: 0.0) {
                             Text(profile.name)

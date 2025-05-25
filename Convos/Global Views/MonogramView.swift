@@ -5,19 +5,30 @@ struct MonogramView: View {
     private let backgroundColor: Color
 
     init(name: String) {
-        self.initials = Self.initials(from: name)
-        self.backgroundColor = Self.colorForName(name)
+        let initials = Self.initials(from: name)
+        self.initials = initials
+        self.backgroundColor = Self.colorForName(initials)
     }
 
     var body: some View {
-        GeometryReader { reader in
-            Text(initials)
-                .font(.system(size: reader.size.width * 0.3, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(width: reader.size.width, height: reader.size.height)
-                .background(backgroundColor)
-                .clipShape(Circle())
+        GeometryReader { geometry in
+            let side = min(geometry.size.width, geometry.size.height)
+            let fontSize = side * 0.5
+            let padding = side * 0.25
+
+            Group {
+                Text(initials)
+                    .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                    .minimumScaleFactor(0.01)
+                    .lineLimit(1)
+                    .foregroundColor(.white)
+                    .padding(padding)
+            }
+            .frame(width: side, height: side)
+            .background(backgroundColor)
+            .clipShape(Circle())
         }
+        .aspectRatio(1.0, contentMode: .fit)
     }
 
     private static func initials(from fullName: String) -> String {
@@ -35,6 +46,14 @@ struct MonogramView: View {
 }
 
 #Preview {
-    MonogramView(name: "Robert Adams")
-        .frame(width: 96.0, height: 96.0)
+    VStack {
+        MonogramView(name: "Robert Adams")
+            .frame(width: 24.0)
+        MonogramView(name: "Robert Adams")
+            .frame(width: 36.0)
+        MonogramView(name: "Robert Adams")
+            .frame(width: 52.0)
+        MonogramView(name: "Robert Adams")
+            .frame(width: 96.0)
+    }
 }

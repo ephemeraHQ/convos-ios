@@ -6,7 +6,7 @@ struct MessagesView: UIViewControllerRepresentable {
     let messagesRepository: any MessagesRepositoryProtocol
     @State private var conversationState: ConversationState
 
-    init(conversationRepository: ConversationRepositoryProtocol,
+    init(conversationRepository: any ConversationRepositoryProtocol,
          outgoingMessageWriter: any OutgoingMessageWriterProtocol,
          messagesRepository: any MessagesRepositoryProtocol) {
         self.conversationRepository = conversationRepository
@@ -26,7 +26,12 @@ struct MessagesView: UIViewControllerRepresentable {
         return messageViewController
     }
 
-    func updateUIViewController(_ uiViewController: MessagesViewController, context: Context) {
+    func updateUIViewController(_ messagesViewController: MessagesViewController, context: Context) {
+            messagesViewController
+                .navigationBar
+                .configure(
+                    conversation: conversationState.conversation
+                )
     }
 }
 

@@ -88,12 +88,6 @@ final class MessagesViewController: UIViewController {
         fatalError()
     }
 
-    // MARK: - Public
-
-    func set(title: String, avatarImage: UIImage?) {
-        navigationBar.configure(title: title, avatar: avatarImage)
-    }
-
     // MARK: - Lifecycle Methods
 
     override func didMove(toParent parent: UIViewController?) {
@@ -143,8 +137,8 @@ final class MessagesViewController: UIViewController {
 
         // Set content inset to just the base navigation bar height plus safe area
         let navHeight = (traitCollection.verticalSizeClass == .compact ?
-                         MessagesNavigationBar.Constant.compactHeight :
-                            MessagesNavigationBar.Constant.regularHeight)
+                         MessagesToolbarView.Constant.compactHeight :
+                            MessagesToolbarView.Constant.regularHeight)
         collectionView.contentInset.top = navHeight
         collectionView.verticalScrollIndicatorInsets.top = collectionView.contentInset.top
     }
@@ -158,18 +152,11 @@ final class MessagesViewController: UIViewController {
     // MARK: - Private Setup Methods
 
     private func setupUI() {
-        view.backgroundColor = .systemBackground
-        navigationBar.leftButton.setImage(
-            UIImage(systemName: "chevron.left",
-                    withConfiguration: UIImage.SymbolConfiguration(weight: .medium)),
-            for: .normal)
-        navigationBar.leftButton.addTarget(self, action: #selector(onBack), for: .touchUpInside)
-        navigationBar.leftButton.addTarget(self, action: #selector(onBack), for: .touchUpInside)
-//        navigationBar.rightButton.setImage(
-//            UIImage(systemName: "timer",
-//                    withConfiguration: UIImage.SymbolConfiguration(weight: .medium)),
-//            for: .normal)
+        view.backgroundColor = .colorBackgroundPrimary
         view.addSubview(navigationBar)
+        navigationBar.viewModel.onBack = { [weak self] in
+            self?.onBack()
+        }
 
         // Setup Auto Layout for navigation bar
         navigationBar.translatesAutoresizingMaskIntoConstraints = false
@@ -205,8 +192,8 @@ final class MessagesViewController: UIViewController {
 
     private func updateNavigationBarHeight(_ constraint: NSLayoutConstraint) {
         let baseHeight = traitCollection.verticalSizeClass == .compact ?
-        MessagesNavigationBar.Constant.compactHeight :
-        MessagesNavigationBar.Constant.regularHeight
+        MessagesToolbarView.Constant.compactHeight :
+        MessagesToolbarView.Constant.regularHeight
         constraint.constant = baseHeight + view.safeAreaInsets.top
     }
 

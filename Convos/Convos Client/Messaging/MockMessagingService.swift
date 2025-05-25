@@ -110,8 +110,10 @@ extension MockMessagingService: UserRepositoryProtocol {
 }
 
 extension MockMessagingService: ProfileSearchRepositoryProtocol {
-    func search(using query: String) async throws -> [Profile] {
-        allUsers.filter { $0.name.contains(query) }
+    func search(using query: String) async throws -> [ProfileSearchResult] {
+        allUsers.filter { $0.name.contains(query) }.map { profile in
+                .init(profile: profile, xmtpId: profile.id)
+        }
     }
 }
 

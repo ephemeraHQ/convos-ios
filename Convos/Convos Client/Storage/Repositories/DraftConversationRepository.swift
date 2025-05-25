@@ -26,7 +26,13 @@ class DraftConversationRepository: ConversationRepositoryProtocol {
                     throw CurrentSessionError.missingCurrentUser
                 }
 
-                guard let dbConversation = try DBConversationDetails.fetchOne(db, key: conversationId) else {
+                guard let dbConversation = try DBConversation
+                    .filter(Column("id") == self.conversationId)
+                    .including(required: DBConversation.creatorProfile)
+                    .including(required: DBConversation.localState)
+                    .including(all: DBConversation.memberProfiles)
+                    .asRequest(of: DBConversationDetails.self)
+                    .fetchOne(db) else {
                     return nil
                 }
 

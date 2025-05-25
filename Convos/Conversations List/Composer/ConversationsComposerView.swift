@@ -27,7 +27,10 @@ struct ConversationComposerView: UIViewControllerRepresentable {
 
     func updateUIViewController(_ composerViewController: ConversationComposerViewController, context: Context) {
         composerViewController.messagesViewController
-            .set(title: "New chat", avatarImage: nil)
+            .navigationBar.configure(
+                conversation: nil,
+                placeholderTitle: "New chat"
+            )
     }
 }
 

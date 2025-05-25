@@ -13,6 +13,7 @@ struct ConversationsListNavigationBar: View {
                 HStack(spacing: 0.0) {
                     if let user = userState.currentUser {
                         ProfileAvatarView(profile: user.profile)
+                            .frame(maxHeight: 24.0)
                             .padding(DesignConstants.Spacing.step2x)
                     }
                     Text(userState.currentUser?.profile.name ?? "")

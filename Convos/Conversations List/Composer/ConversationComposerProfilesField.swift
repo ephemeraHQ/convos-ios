@@ -17,13 +17,13 @@ struct VerticalEdgeClipShape: Shape {
 struct ConversationComposerProfilesField: View {
     @State private var profileChipsHeight: CGFloat = 0.0
     @Binding var searchText: String
-    @Binding var selectedProfile: Profile? {
+    @Binding var selectedProfile: ProfileSearchResult? {
         didSet {
             searchTextEditingEnabled = selectedProfile == nil
         }
     }
     @State var searchTextEditingEnabled: Bool = true
-    @Binding var profiles: OrderedSet<Profile>
+    @Binding var profiles: OrderedSet<ProfileSearchResult>
 
     private let profileChipsMaxHeight: CGFloat = 150.0
 
@@ -32,12 +32,13 @@ struct ConversationComposerProfilesField: View {
             GeometryReader { reader in
                 ScrollView(.vertical, showsIndicators: false) {
                     FlowLayout(spacing: DesignConstants.Spacing.step2x) {
-                        ForEach(profiles, id: \.id) { profile in
+                        ForEach(profiles, id: \.id) { profileResult in
+                            let profile = profileResult.profile
                             ComposerProfileChipView(profile: profile,
-                                                    isSelected: selectedProfile == profile)
+                                                    isSelected: selectedProfile == profileResult)
                             .tag(profile)
                             .onTapGesture {
-                                selected(profile: profile)
+                                selected(profile: profileResult)
                             }
                             .offset(y: -1.75)
                         }
@@ -80,7 +81,7 @@ struct ConversationComposerProfilesField: View {
         .frame(height: profileChipsHeight)
     }
 
-    func selected(profile: Profile) {
+    func selected(profile: ProfileSearchResult) {
         selectedProfile = selectedProfile == profile ? nil : profile
     }
 
@@ -99,8 +100,8 @@ struct ConversationComposerProfilesField: View {
 
 #Preview {
     @Previewable @State var searchText: String = ""
-    @Previewable @State var selectedProfile: Profile?
-    @Previewable @State var profileResults: OrderedSet<Profile> = [
+    @Previewable @State var selectedProfile: ProfileSearchResult?
+    @Previewable @State var profileResults: OrderedSet<ProfileSearchResult> = [
         .mock(), .mock(), .mock(), .mock(), .mock(),
         .mock(), .mock(), .mock(), .mock(), .mock(),
         .mock(), .mock(), .mock(), .mock(), .mock()
