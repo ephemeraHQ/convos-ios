@@ -74,6 +74,7 @@ struct ConversationComposerContentView: View {
                 } content: {
                     HStack(spacing: DesignConstants.Spacing.step3x) {
                         ConversationAvatarView(conversation: conversation)
+                            .frame(maxHeight: 40.0)
 
                         VStack(alignment: .leading, spacing: 0.0) {
                             Text(conversation.title)
@@ -111,6 +112,7 @@ struct ConversationComposerContentView: View {
                 } content: {
                     HStack(spacing: DesignConstants.Spacing.step3x) {
                         ProfileAvatarView(profile: profile)
+                            .frame(height: 40.0)
 
                         VStack(alignment: .leading, spacing: 0.0) {
                             Text(profile.name)

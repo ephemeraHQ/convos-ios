@@ -18,6 +18,7 @@ struct AvatarView: View {
         } placeholder: {
             MonogramView(name: fallbackName)
         }
+        .aspectRatio(1.0, contentMode: .fit)
         .clipShape(Circle())
     }
 }

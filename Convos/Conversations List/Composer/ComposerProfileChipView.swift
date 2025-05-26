@@ -56,6 +56,7 @@ struct ComposerProfileChipView: View {
         HStack {
             HStack(spacing: DesignConstants.Spacing.stepX) {
                 ProfileAvatarView(profile: profile)
+                    .frame(height: 16.0)
                 Text(profile.displayName)
                     .font(.system(size: 16.0))
                     .foregroundStyle(.colorTextPrimary)
