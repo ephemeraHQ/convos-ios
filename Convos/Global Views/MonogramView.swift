@@ -5,9 +5,8 @@ struct MonogramView: View {
     private let backgroundColor: Color
 
     init(name: String) {
-        let initials = Self.initials(from: name)
-        self.initials = initials
-        self.backgroundColor = Self.colorForName(initials)
+        self.initials = Self.initials(from: name)
+        self.backgroundColor = Self.colorForName(name)
     }
 
     var body: some View {

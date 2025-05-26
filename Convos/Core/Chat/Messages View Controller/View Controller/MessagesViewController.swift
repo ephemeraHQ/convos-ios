@@ -103,12 +103,28 @@ final class MessagesViewController: UIViewController {
 
         setupCollectionView()
         setupInputBar()
-        loadInitialData()
         setupUI()
-
         reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
 
+        self.collectionView.contentInset.bottom = MessagesInputView.Constant.defaultHeight
+        self.collectionView.verticalScrollIndicatorInsets.bottom = MessagesInputView.Constant.defaultHeight
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            do {
+                let messages = try messagesRepository.fetchAll()
+                processUpdates(
+                    with: messages,
+                    animated: true,
+                    requiresIsolatedProcess: false
+                )
+            } catch {
+                Logger.error("Error fetching messages: \(error)")
+            }
+        }
+
         messagesRepository.messagesPublisher()
+            .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] messages in
                 guard let self else { return }
@@ -208,9 +224,9 @@ final class MessagesViewController: UIViewController {
     private func configureMessagesLayout() {
         messagesLayout.settings.interItemSpacing = 8
         messagesLayout.settings.interSectionSpacing = 8
-        messagesLayout.settings.additionalInsets = UIEdgeInsets(top: 8, left: 5, bottom: 8, right: 5)
+        messagesLayout.settings.additionalInsets = UIEdgeInsets(top: 8, left: 5, bottom: 8.0, right: 5)
         messagesLayout.keepContentOffsetAtBottomOnBatchUpdates = true
-        messagesLayout.processOnlyVisibleItemsOnAnimatedBatchUpdates = false
+        messagesLayout.processOnlyVisibleItemsOnAnimatedBatchUpdates = true
     }
 
     private func setupCollectionViewInstance() {
@@ -248,15 +264,6 @@ final class MessagesViewController: UIViewController {
         inputBarView.delegate = self
         inputBarView.translatesAutoresizingMaskIntoConstraints = false
         KeyboardListener.shared.add(delegate: self)
-    }
-
-    private func loadInitialData() {
-        currentControllerActions.options.insert(.loadingInitialMessages)
-        Task {
-            let messages = try messagesRepository.fetchAll()
-            currentControllerActions.options.remove(.loadingInitialMessages)
-            processUpdates(with: messages, animated: true, requiresIsolatedProcess: true)
-        }
     }
 
     private func handleViewTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
