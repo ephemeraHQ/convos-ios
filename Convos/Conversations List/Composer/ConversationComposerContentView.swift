@@ -54,6 +54,7 @@ class ConversationComposerViewModel {
 struct ConversationComposerContentView: View {
     @State private var selectedProfile: ProfileSearchResult?
     @State private var viewModel: ConversationComposerViewModel
+    @FocusState private var isTextFieldFocused: Bool
 
     init(
         profileSearchRepository: any ProfileSearchRepositoryProtocol,
@@ -148,6 +149,7 @@ struct ConversationComposerContentView: View {
                     .frame(height: headerHeight)
 
                 ConversationComposerProfilesField(searchText: $viewModel.searchText,
+                                                  isTextFieldFocused: $isTextFieldFocused,
                                                   selectedProfile: $selectedProfile,
                                                   profiles: $viewModel.profilesAdded)
 
@@ -164,12 +166,16 @@ struct ConversationComposerContentView: View {
                    .contentShape(Rectangle())
                    .onTapGesture {
                        selectedProfile = nil
+                       isTextFieldFocused = true
                    }
                    .padding(.horizontal, DesignConstants.Spacing.step4x)
 
             resultsList
 
             Spacer().frame(height: 0.0)
+        }
+        .onAppear {
+            isTextFieldFocused = true
         }
     }
 }

@@ -17,6 +17,7 @@ struct VerticalEdgeClipShape: Shape {
 struct ConversationComposerProfilesField: View {
     @State private var profileChipsHeight: CGFloat = 0.0
     @Binding var searchText: String
+    var isTextFieldFocused: FocusState<Bool>.Binding
     @Binding var selectedProfile: ProfileSearchResult? {
         didSet {
             searchTextEditingEnabled = selectedProfile == nil
@@ -43,14 +44,20 @@ struct ConversationComposerProfilesField: View {
                             .offset(y: -1.75)
                         }
 
-                        FlowLayoutTextEditor(text: $searchText,
-                                             editingEnabled: $searchTextEditingEnabled,
-                                             maxTextFieldWidth: reader.size.width) {
-                            backspaceOnEmpty()
-                        }
-                                             .id("textField")
-                                             .padding(.bottom, 4.0)
-                                             .opacity(selectedProfile != nil ? 0.0 : 1.0)
+                        FlowLayoutTextEditor(
+                            text: $searchText,
+                            editingEnabled: $searchTextEditingEnabled,
+                            isFocused: isTextFieldFocused,
+                            maxTextFieldWidth: reader.size.width,
+                            onBackspaceWhenEmpty: {
+                                backspaceOnEmpty()
+                            }, onEndedEditing: {
+                                selectedProfile = nil
+                            }
+                        )
+                        .id("textField")
+                        .padding(.bottom, 4.0)
+                        .opacity(selectedProfile != nil ? 0.0 : 1.0)
                     }
                     .padding(.vertical, DesignConstants.Spacing.step4x)
                     .background(HeightReader())
@@ -59,6 +66,8 @@ struct ConversationComposerProfilesField: View {
                     }
                     .padding(.top, 4.0)
                     .onChange(of: selectedProfile) {
+                        guard selectedProfile != nil else { return }
+                        isTextFieldFocused.wrappedValue = true
                         withAnimation {
                             proxy.scrollTo(selectedProfile,
                                            anchor: .center)
@@ -106,11 +115,13 @@ struct ConversationComposerProfilesField: View {
         .mock(), .mock(), .mock(), .mock(), .mock(),
         .mock(), .mock(), .mock(), .mock(), .mock()
     ]
+    @Previewable @FocusState var textFieldFocusState: Bool
 
     VStack {
         HStack {
             Spacer().frame(width: 40)
             ConversationComposerProfilesField(searchText: $searchText,
+                                              isTextFieldFocused: $textFieldFocusState,
                                               selectedProfile: $selectedProfile,
                                               profiles: $profileResults)
             Spacer().frame(width: 40)

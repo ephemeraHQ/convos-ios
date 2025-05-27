@@ -3,32 +3,34 @@ import SwiftUI
 struct FlowLayoutTextEditor: View {
     @Binding var text: String
     @Binding var editingEnabled: Bool
-    @FocusState private var isFocused: Bool
+    var isFocused: FocusState<Bool>.Binding
     let maxTextFieldWidth: CGFloat
     let minTextFieldWidth: CGFloat = 75.0
     let onBackspaceWhenEmpty: () -> Void
+    let onEndedEditing: () -> Void
 
     var body: some View {
         Group {
             BackspaceTextField(
                 text: $text,
                 editingEnabled: $editingEnabled,
-                onBackspaceWhenEmpty: onBackspaceWhenEmpty
+                onBackspaceWhenEmpty: onBackspaceWhenEmpty,
+                onEndedEditing: onEndedEditing
             )
             .padding(.horizontal, 10.0)
             .padding(.vertical, DesignConstants.Spacing.step2x)
             .frame(maxWidth: maxTextFieldWidth)
-            .focused($isFocused)
+            .focused(isFocused.projectedValue)
             .offset(y: -2.75)
         }
         .fixedSize(horizontal: true, vertical: false)
         .frame(minWidth: minTextFieldWidth, alignment: .leading)
         .clipped()
         .onAppear {
-            isFocused = true
+            isFocused.wrappedValue = true
         }
         .onTapGesture {
-            isFocused = true
+            isFocused.wrappedValue = true
         }
     }
 }
@@ -36,6 +38,7 @@ struct FlowLayoutTextEditor: View {
 private struct FlowLayoutTextEditorExample: View {
     let maxHeight: CGFloat = 150.0
 
+    @FocusState var isFocused: Bool
     @State var searchText: String = ""
     @State var editingEnabled: Bool = true
     @State var selectedItem: String? {
@@ -76,18 +79,26 @@ private struct FlowLayoutTextEditorExample: View {
                             .cornerRadius(DesignConstants.CornerRadius.small)
                     }
 
-                    FlowLayoutTextEditor(text: $searchText,
-                                         editingEnabled: $editingEnabled,
-                                         maxTextFieldWidth: reader.size.width) {
-                        backspaceOnEmpty()
-                    }
-                                         .opacity(selectedItem != nil ? 0.0 : 1.0)
+                    FlowLayoutTextEditor(
+                        text: $searchText,
+                        editingEnabled: $editingEnabled,
+                        isFocused: $isFocused,
+                        maxTextFieldWidth: reader.size.width,
+                        onBackspaceWhenEmpty: {
+                            backspaceOnEmpty()
+                        }, onEndedEditing: {
+                        }
+                    )
+                    .opacity(selectedItem != nil ? 0.0 : 1.0)
                 }
             }
             .scrollIndicators(.hidden)
             .frame(maxHeight: maxHeight)
         }
         .frame(maxHeight: maxHeight)
+        .onAppear {
+            isFocused = true
+        }
     }
 }
 

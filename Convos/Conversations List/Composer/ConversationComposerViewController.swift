@@ -4,7 +4,7 @@ import UIKit
 class ConversationComposerViewController: UIViewController {
     let messagesViewController: MessagesViewController
     let profileSearchRepository: any ProfileSearchRepositoryProtocol
-    private var composerHostingController: UIHostingController<ConversationComposerContentView>?
+    private let composerHostingController: UIHostingController<ConversationComposerContentView>
 
     init(
         messagesRepository: any MessagesRepositoryProtocol,
@@ -16,6 +16,11 @@ class ConversationComposerViewController: UIViewController {
             messagesRepository: messagesRepository
         )
         self.profileSearchRepository = profileSearchRepository
+        let composerView = ConversationComposerContentView(
+            profileSearchRepository: profileSearchRepository
+        )
+        let hosting = UIHostingController(rootView: composerView)
+        self.composerHostingController = hosting
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -34,41 +39,37 @@ class ConversationComposerViewController: UIViewController {
         messagesViewController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         messagesViewController.didMove(toParent: self)
 
-        let composerView = ConversationComposerContentView(
-            profileSearchRepository: profileSearchRepository
-        )
-        let hosting = UIHostingController(rootView: composerView)
-        hosting.navigationController?.setNavigationBarHidden(true, animated: false)
-        addChild(hosting)
-        messagesViewController.view.insertSubview(hosting.view,
+        composerHostingController.navigationController?.setNavigationBarHidden(true, animated: false)
+        addChild(composerHostingController)
+        messagesViewController.view.insertSubview(composerHostingController.view,
                                                   aboveSubview: messagesViewController.collectionView)
-        hosting.view.translatesAutoresizingMaskIntoConstraints = false
+        composerHostingController.view.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            hosting.view.leadingAnchor.constraint(
+            composerHostingController.view.leadingAnchor.constraint(
                 equalTo: messagesViewController.view.safeAreaLayoutGuide.leadingAnchor
             ),
-            hosting.view.trailingAnchor.constraint(
+            composerHostingController.view.trailingAnchor.constraint(
                 equalTo: messagesViewController.view.safeAreaLayoutGuide.trailingAnchor
             ),
-            hosting.view.topAnchor.constraint(
+            composerHostingController.view.topAnchor.constraint(
                 equalTo: messagesViewController.navigationBar.bottomAnchor
             ),
-            hosting.view.bottomAnchor.constraint(
+            composerHostingController.view.bottomAnchor.constraint(
                 equalTo: messagesViewController.view.safeAreaLayoutGuide.bottomAnchor
             )
         ])
-        hosting.didMove(toParent: self)
-        self.composerHostingController = hosting
+        composerHostingController.didMove(toParent: self)
     }
 
     func animateComposerOut(completion: (() -> Void)? = nil) {
-        guard let composer = composerHostingController else { completion?(); return }
-        UIView.animate(withDuration: 0.3, animations: {
-            composer.view.alpha = 0
-        }, completion: { _ in
-            composer.willMove(toParent: nil)
-            composer.view.removeFromSuperview()
-            composer.removeFromParent()
+        UIView.animate(withDuration: 0.3, animations: { [weak self] in
+            guard let self else { return }
+            composerHostingController.view.alpha = 0
+        }, completion: { [weak self] _ in
+            guard let self else { return }
+            composerHostingController.willMove(toParent: nil)
+            composerHostingController.view.removeFromSuperview()
+            composerHostingController.removeFromParent()
             completion?()
         })
     }

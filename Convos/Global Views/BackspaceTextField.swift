@@ -5,6 +5,7 @@ struct BackspaceTextField: UIViewRepresentable {
     @Binding var text: String
     @Binding var editingEnabled: Bool
     var onBackspaceWhenEmpty: () -> Void
+    var onEndedEditing: () -> Void
 
     func makeUIView(context: Context) -> UITextField {
         let textField = BackspaceUITextField()
@@ -27,20 +28,37 @@ struct BackspaceTextField: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, editingEnabled: $editingEnabled)
+        Coordinator(
+            text: $text,
+            editingEnabled: $editingEnabled,
+            onEndedEditing: onEndedEditing
+        )
     }
 
     class Coordinator: NSObject, UITextFieldDelegate {
         @Binding var text: String
         @Binding var editingEnabled: Bool
+        let onEndedEditing: (() -> Void)?
 
-        init(text: Binding<String>, editingEnabled: Binding<Bool>) {
+        init(text: Binding<String>,
+             editingEnabled: Binding<Bool>,
+             onEndedEditing: (() -> Void)?) {
             _text = text
             _editingEnabled = editingEnabled
+            self.onEndedEditing = onEndedEditing
         }
 
         func textFieldShouldReturn(_ textField: UITextField) -> Bool {
             return true
+        }
+
+        func textFieldDidBeginEditing(_ textField: UITextField) {
+            Logger.info("Started editing textfield")
+        }
+
+        func textFieldDidEndEditing(_ textField: UITextField) {
+            Logger.info("Ended editing textfield")
+            onEndedEditing?()
         }
 
         func textField(_ textField: UITextField,
