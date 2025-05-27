@@ -4,23 +4,54 @@ import SwiftUI
 
 @Observable
 class MessageReactionMenuViewModel {
-    var isCollapsed: Bool = false {
+    enum ViewState {
+        case minimized, // scale 0
+             collapsed, // smallest
+             compact,
+             expanded // largest
+
+        var isCollapsed: Bool {
+            self == .collapsed
+        }
+
+        var isMinimized: Bool {
+            self == .minimized
+        }
+
+        var hidesContent: Bool {
+            switch self {
+            case .minimized, .compact, .collapsed:
+                return true
+            case .expanded:
+                return false
+            }
+        }
+
+        var isCompact: Bool {
+            self == .compact
+        }
+
+        var isExpanded: Bool {
+            self == .expanded
+        }
+    }
+
+    var alignment: Alignment = .leading
+
+    var viewState: ViewState = .minimized {
         didSet {
-            updateShowingEmojiPicker()
-            _isCollapsedPublisher.send(isCollapsed)
+            showingEmojiPicker = viewState == .compact && selectedEmoji == nil
         }
     }
 
     var showingEmojiPicker: Bool = false
 
-    private let _isCollapsedPublisher: PassthroughSubject<Bool, Never> = .init()
-    var isCollapsedPublisher: AnyPublisher<Bool, Never> {
-        _isCollapsedPublisher.eraseToAnyPublisher()
-    }
-
     var selectedEmoji: String? {
         didSet {
-            updateShowingEmojiPicker()
+            viewState = .collapsed
+            if showingEmojiPicker {
+                showingEmojiPicker = false
+            }
             _selectedEmojiPublisher.send(selectedEmoji)
         }
     }
@@ -39,18 +70,7 @@ class MessageReactionMenuViewModel {
         .init(emoji: "🤔", isSelected: false),
     ]
 
-    private func updateShowingEmojiPicker() {
-        showingEmojiPicker = isCollapsed && selectedEmoji == nil
-    }
-
     func add(reaction: MessageReactionChoice) {
         selectedEmoji = reaction.emoji
-    }
-
-    func showMoreReactions() {
-    }
-
-    func toggleCollapsed() {
-        isCollapsed.toggle()
     }
 }

@@ -50,6 +50,7 @@ class MessageReactionMenuCoordinator: UIPercentDrivenInteractiveTransition {
         let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
         longPressRecognizer.delegate = self
         longPressRecognizer.minimumPressDuration = 0.2
+        longPressRecognizer.allowableMovement = 0.0
         collectionView.addGestureRecognizer(longPressRecognizer)
         self.longPressRecognizer = longPressRecognizer
 
@@ -316,12 +317,12 @@ final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnima
                     transitionContext.completeTransition(false)
                     return
                 }
-
                 toVC.dimmingView.alpha = 1.0
                 toVC.view.alpha = 1.0
             }
         }, completion: { [weak self] _ in
             guard let self else { return }
+            toVC.animateReactionToEndPosition()
             UIView.animate(withDuration: 0.5,
                            delay: 0.0,
                            usingSpringWithDamping: 0.8,
@@ -392,8 +393,7 @@ final class MessageReactionDismissalAnimator: NSObject, UIViewControllerAnimated
                 previewView.frame = fromVC.configuration.sourceRect
             }
             UIView.addKeyframe(withRelativeStartTime: 0.2, relativeDuration: 0.5) {
-                fromVC.shapeView.transform = CGAffineTransform(scaleX: 0.0, y: 0.0)
-                fromVC.shapeView.alpha = 0.0
+                fromVC.animateReactionToStartPosition()
             }
             UIView.addKeyframe(withRelativeStartTime: 0.0, relativeDuration: 0.3) {
                 guard !transitionContext.transitionWasCancelled else {
