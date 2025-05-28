@@ -1,5 +1,5 @@
-import Testing
 @testable import Convos
+import Testing
 
 struct MessagingServiceTests {
     func makeClient(
