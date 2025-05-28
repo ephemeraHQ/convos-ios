@@ -66,6 +66,7 @@ class SharedDatabaseMigrator {
                 t.column("consent", .text).notNull()
                 t.column("createdAt", .datetime).notNull()
                 t.column("name", .text)
+                t.column("description", .text)
                 t.column("imageURLString", .text)
             }
 

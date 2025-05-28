@@ -24,14 +24,17 @@ class ConversationWriter: ConversationWriterProtocol {
         let kind: ConversationKind
         let imageURLString: String?
         let name: String?
+        let description: String?
         switch conversation {
         case .dm:
             kind = .dm
             imageURLString = nil
             name = nil
+            description = nil
         case .group(let group):
             kind = .group
             name = try? group.name()
+            description = try? group.description()
             imageURLString = try? group.imageUrl()
         }
 
@@ -50,6 +53,7 @@ class ConversationWriter: ConversationWriterProtocol {
             consent: try conversation.consentState().consent,
             createdAt: conversation.createdAt,
             name: name,
+            description: description,
             imageURLString: imageURLString
         )
 

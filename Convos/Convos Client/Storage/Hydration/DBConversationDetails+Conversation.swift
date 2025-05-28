@@ -32,6 +32,7 @@ extension DBConversationDetails {
             createdAt: conversation.createdAt,
             kind: conversation.kind,
             name: conversation.name,
+            description: conversation.description,
             members: conversationMemberProfiles.map { $0.hydrateProfile() },
             otherMember: otherMemberProfile,
             messages: messages,
