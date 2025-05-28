@@ -3,7 +3,7 @@ import SwiftUI
 
 @Observable
 final class OnboardingViewModel {
-    let convos: ConvosSDK.Convos
+    let convos: ConvosClient
     private var cancellables: Set<AnyCancellable> = .init()
     var name: String = "" {
         didSet {
@@ -11,15 +11,18 @@ final class OnboardingViewModel {
         }
     }
 
+    let authAllowsSignIn: Bool
     var imageState: ContactCardImage.State = .empty
     var nameIsValid: Bool = false
     var nameError: String?
     var isEditingContactCard: Bool = true
     var authenticationError: String?
     var isAuthorized: Bool = false
+    private let minimumNameLength: Int = 3
 
-    init(convos: ConvosSDK.Convos) {
+    init(convos: ConvosClient) {
         self.convos = convos
+        self.authAllowsSignIn = convos.supportsMultipleAccounts
         observeAuthState()
     }
 
@@ -77,6 +80,7 @@ final class OnboardingViewModel {
             nameError = nil
         }
         nameIsValid = (!name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-            nameContainsOnlyLettersSpacesAndNumbers)
+                       nameContainsOnlyLettersSpacesAndNumbers &&
+                       name.count >= minimumNameLength)
     }
 }

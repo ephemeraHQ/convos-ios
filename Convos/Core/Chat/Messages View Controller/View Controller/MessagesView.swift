@@ -1,18 +1,47 @@
 import SwiftUI
 
 struct MessagesView: UIViewControllerRepresentable {
-    let messagesStore: MessagesStoreProtocol
+    let conversationRepository: any ConversationRepositoryProtocol
+    let outgoingMessageWriter: any OutgoingMessageWriterProtocol
+    let messagesRepository: any MessagesRepositoryProtocol
+    @State private var conversationState: ConversationState
+
+    init(conversationRepository: any ConversationRepositoryProtocol,
+         outgoingMessageWriter: any OutgoingMessageWriterProtocol,
+         messagesRepository: any MessagesRepositoryProtocol) {
+        self.conversationRepository = conversationRepository
+        self.outgoingMessageWriter = outgoingMessageWriter
+        self.messagesRepository = messagesRepository
+        _conversationState = State(
+            initialValue: .init(
+                conversationRepository: conversationRepository
+            )
+        )
+    }
 
     func makeUIViewController(context: Context) -> MessagesViewController {
-        let messageViewController = MessagesViewController(messagesStore: messagesStore)
+        let messageViewController = MessagesViewController(
+            outgoingMessageWriter: outgoingMessageWriter,
+            messagesRepository: messagesRepository)
         return messageViewController
     }
 
-    func updateUIViewController(_ uiViewController: MessagesViewController, context: Context) {
+    func updateUIViewController(_ messagesViewController: MessagesViewController, context: Context) {
+            messagesViewController
+                .navigationBar
+                .configure(
+                    conversation: conversationState.conversation
+                )
     }
 }
 
 #Preview {
-    MessagesView(messagesStore: MockMessagesStore())
-        .ignoresSafeArea()
+    let convos = ConvosClient.mock()
+    let conversationId: String = "1"
+    MessagesView(
+        conversationRepository: convos.messaging.conversationRepository(for: conversationId),
+        outgoingMessageWriter: convos.messaging.messageWriter(for: conversationId),
+        messagesRepository: convos.messaging.messagesRepository(for: conversationId)
+    )
+    .ignoresSafeArea()
 }

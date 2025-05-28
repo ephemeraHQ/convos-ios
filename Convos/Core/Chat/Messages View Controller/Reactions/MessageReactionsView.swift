@@ -4,12 +4,22 @@ struct MessageReactionsView: View {
     @State var viewModel: MessageReactionMenuViewModel
     @State private var emojiAppeared: [Bool] = []
     @State private var showMoreAppeared: Bool = false
-    @State private var didAppear: Bool = false
     @State private var customEmoji: String?
     @State private var popScale: CGFloat = 1.0
 
     init(viewModel: MessageReactionMenuViewModel) {
         _viewModel = State(initialValue: viewModel)
+    }
+
+    var containerWidth: CGFloat {
+        switch viewModel.viewState {
+        case .collapsed, .minimized:
+            Constant.height + (DesignConstants.Spacing.step4x)
+        case .expanded:
+            280.0
+        case .compact:
+            Constant.height * 2.0
+        }
     }
 
     var body: some View {
@@ -24,28 +34,41 @@ struct MessageReactionsView: View {
                         expandCollapseButton(contentHeight: contentHeight)
                     }
                 }
+                .padding(0.0)
+                .animation(
+                    .spring(response: Constant.springResponse,
+                            dampingFraction: Constant.springDampingFractionPlus),
+                    value: viewModel.viewState
+                )
             }
-            .padding(0.0)
-            .animation(
-                .spring(response: Constant.springResponse,
-                        dampingFraction: Constant.springDampingFractionPlus),
-                value: viewModel.isCollapsed
+            .frame(width: containerWidth, height: Constant.height)
+            .background(.colorBackgroundPrimary)
+            .clipShape(Capsule())
+            .shadow(
+                color: Color.black.opacity(0.15),
+                radius: 10.0,
+                x: 0, y: 0
             )
-            .onAppear {
-                guard !didAppear else { return }
-                didAppear = true
-                if emojiAppeared.count != viewModel.reactions.count {
-                    emojiAppeared = Array(repeating: false, count: viewModel.reactions.count)
-                }
-                let totalDelay = (Constant.emojiAppearanceDelay +
-                                  (Constant.emojiAppearanceDelayStep * Double(viewModel.reactions.count)))
-                DispatchQueue.main.asyncAfter(deadline: .now() + totalDelay) {
-                    withAnimation {
-                        showMoreAppeared = true
+            .scaleEffect(viewModel.viewState.isMinimized ? 0.0 : 1.0)
+            .opacity(viewModel.viewState.isMinimized ? 0.0 : 1.0)
+            .animation(.spring(response: 0.6, dampingFraction: 0.8), value: viewModel.viewState)
+            .onChange(of: viewModel.viewState) { lhs, _ in
+                if lhs == .minimized {
+                    if emojiAppeared.count != viewModel.reactions.count {
+                        emojiAppeared = Array(repeating: false, count: viewModel.reactions.count)
+                    }
+                    let totalDelay = (Constant.emojiAppearanceDelay +
+                                      (Constant.emojiAppearanceDelayStep * Double(viewModel.reactions.count)))
+                    DispatchQueue.main.asyncAfter(deadline: .now() + totalDelay) {
+                        withAnimation {
+                            showMoreAppeared = true
+                        }
                     }
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: viewModel.alignment)
+        .background(.clear)
         .emojiPicker(
             isPresented: $viewModel.showingEmojiPicker,
             onPick: { emoji in
@@ -71,12 +94,12 @@ struct MessageReactionsView: View {
                             .font(.system(size: Constant.emojiFontSize))
                             .padding(Constant.padding)
                             .blur(
-                                radius: (viewModel.isCollapsed ? Constant.blurRadius :
+                                radius: (viewModel.viewState.hidesContent ? Constant.blurRadius :
                                             emojiAppeared.indices.contains(index)
                                          && emojiAppeared[index] ? 0.0 : Constant.blurRadius)
                             )
                             .scaleEffect(
-                                viewModel.isCollapsed ? Constant.collapsedScale :
+                                viewModel.viewState.hidesContent ? Constant.collapsedScale :
                                     (emojiAppeared.indices.contains(index) &&
                                      emojiAppeared[index] ? Constant.popScaleNormal : Constant.collapsedScale)
                             )
@@ -86,11 +109,13 @@ struct MessageReactionsView: View {
                                         Constant.emojiRotationCollapsed
                                 )
                             )
-                            .opacity(viewModel.isCollapsed ? Constant.hiddenOpacity : Constant.visibleOpacity)
+                            .opacity(
+                                viewModel.viewState.hidesContent ? Constant.hiddenOpacity : Constant.visibleOpacity
+                            )
                             .animation(
                                 .spring(response: Constant.springResponse,
                                         dampingFraction: Constant.springDampingFractionCollapsed),
-                                value: viewModel.isCollapsed
+                                value: viewModel.viewState
                             )
                             .animation(
                                 .spring(response: Constant.springResponse,
@@ -98,14 +123,15 @@ struct MessageReactionsView: View {
                                 value: emojiAppeared.indices.contains(index) ? emojiAppeared[index] : false
                             )
                     }
+                    .disabled(viewModel.viewState.hidesContent)
                     .scaleEffect(
                         (viewModel.selectedEmoji == nil ? Constant.popScaleNormal : Constant.collapsedScale)
                     )
-                    .onAppear {
+                    .onChange(of: showMoreAppeared) {
                         // Staggered animation
                         if emojiAppeared.indices.contains(index) && !emojiAppeared[index] {
                             DispatchQueue.main.asyncAfter(
-                                deadline: (.now() + Constant.emojiAppearanceDelay +
+                                deadline: (.now() +
                                            (Constant.emojiAppearanceDelayStep * Double(index)))
                             ) {
                                 withAnimation {
@@ -143,7 +169,7 @@ struct MessageReactionsView: View {
         )
         .animation(
             .spring(response: Constant.springResponse, dampingFraction: Constant.springDampingFraction),
-            value: viewModel.isCollapsed
+            value: viewModel.viewState
         )
     }
 
@@ -155,7 +181,7 @@ struct MessageReactionsView: View {
                 .frame(width: Constant.selectedEmojiFrame, height: Constant.selectedEmojiFrame)
                 .scaleEffect(
                     popScale * (
-                        (viewModel.isCollapsed && customEmoji != nil) ||
+                        (viewModel.viewState.isCollapsed && customEmoji != nil) ||
                         viewModel.selectedEmoji != nil ? Constant.popScaleNormal : Constant.collapsedScale
                     )
                 )
@@ -188,21 +214,23 @@ struct MessageReactionsView: View {
                 .font(.system(size: Constant.faceSmilingFontSize))
                 .tint(Constant.faceSmilingColor)
                 .opacity(
-                    viewModel.isCollapsed ? Constant.faceSmilingOpacity : Constant.faceSmilingOpacityHidden
+                    (viewModel.viewState.isCompact && showMoreAppeared ?
+                     Constant.faceSmilingOpacity : Constant.faceSmilingOpacityHidden)
                 )
                 .blur(
-                    radius: viewModel.isCollapsed ? Constant.faceSmilingOpacityHidden : Constant.blurRadius
+                    radius: (viewModel.viewState.isCompact && showMoreAppeared ?
+                             Constant.faceSmilingOpacityHidden : Constant.blurRadius)
                 )
                 .rotationEffect(
-                    .degrees(viewModel.isCollapsed ? 0.0 : Constant.faceSmilingRotationCollapsed)
+                    .degrees(viewModel.viewState.isCompact ? 0.0 : Constant.faceSmilingRotationCollapsed)
                 )
                 .scaleEffect(
-                    viewModel.isCollapsed && customEmoji == nil && viewModel.selectedEmoji == nil ?
-                        Constant.popScaleNormal : Constant.collapsedScale
+                    viewModel.viewState.isCompact && customEmoji == nil && viewModel.selectedEmoji == nil ?
+                    Constant.popScaleNormal : Constant.collapsedScale
                 )
                 .animation(
                     .spring(response: Constant.springResponse, dampingFraction: Constant.springDampingFraction),
-                    value: viewModel.isCollapsed
+                    value: viewModel.viewState
                 )
         }
         .frame(width: reader.size.height, height: reader.size.height)
@@ -214,22 +242,32 @@ struct MessageReactionsView: View {
                 .spring(response: Constant.springResponse,
                         dampingFraction: Constant.springDampingFractionPlus)
             ) {
-                viewModel.toggleCollapsed()
+                switch viewModel.viewState {
+                case .collapsed, .compact:
+                    viewModel.viewState = .expanded
+                case .expanded:
+                    viewModel.viewState = .compact
+                case .minimized:
+                    break
+                }
             }
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: Constant.plusIconFontSize))
                 .padding(Constant.padding)
                 .tint(Constant.plusIconColor)
-                .offset(x: showMoreAppeared ? 0 : Constant.plusOffset)
-                .opacity(showMoreAppeared ? Constant.visibleOpacity : Constant.hiddenOpacity)
+                .offset(x: viewModel.viewState.isCollapsed || !showMoreAppeared ? Constant.plusOffset : 0.0)
+                .opacity(
+                    (viewModel.viewState.isCollapsed || !showMoreAppeared
+                     ? Constant.hiddenOpacity : Constant.visibleOpacity)
+                )
                 .animation(
                     .spring(response: Constant.springResponse,
                             dampingFraction: Constant.springDampingFractionPlus),
-                    value: showMoreAppeared
+                    value: viewModel.viewState
                 )
                 .rotationEffect(
-                    .degrees(viewModel.isCollapsed ? Constant.plusRotationCollapsed : 0.0)
+                    .degrees(viewModel.viewState.isCompact ? Constant.plusRotationCollapsed : 0.0)
                 )
         }
         .frame(minWidth: contentHeight)
@@ -239,13 +277,14 @@ struct MessageReactionsView: View {
         )
         .animation(
             .spring(response: Constant.springResponse, dampingFraction: Constant.springDampingFraction),
-            value: viewModel.isCollapsed
+            value: viewModel.viewState
         )
     }
 
     private enum Constant {
+        static let height: CGFloat = 56.0
         static let padding: CGFloat = 8.0
-        static let emojiAppearanceDelay: TimeInterval = 0.4
+        static let emojiAppearanceDelay: TimeInterval = 0.0
         static let emojiAppearanceDelayStep: TimeInterval = 0.05
         static let emojiFontSize: CGFloat = 24.0
         static let selectedEmojiFontSize: CGFloat = 28.0
@@ -283,8 +322,25 @@ struct MessageReactionsView: View {
 }
 
 #Preview {
-    MessageReactionsView(viewModel: MessageReactionMenuViewModel())
-        .frame(width: 280.0, height: 56.0)
-        .background(Color.gray.opacity(0.1))
-        .clipShape(Capsule())
+    @Previewable @State var viewModel: MessageReactionMenuViewModel = .init()
+    VStack {
+        HStack {
+            MessageReactionsView(viewModel: viewModel)
+        }
+        .frame(width: .infinity, alignment: .trailing)
+        .onAppear {
+            viewModel.viewState = .expanded
+        }
+        Button {
+            viewModel.selectedEmoji = nil
+            viewModel.viewState = .minimized
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                withAnimation {
+                    viewModel.viewState = .expanded
+                }
+            }
+        } label: {
+            Text("Reset")
+        }
+    }
 }

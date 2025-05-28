@@ -20,26 +20,53 @@ final class CellFactory {
 
     private static func createMessageCell(in collectionView: UICollectionView,
                                           for indexPath: IndexPath,
-                                          message: Message,
+                                          message: AnyMessage,
                                           bubbleType: MessagesCollectionCell.BubbleType) -> UICollectionViewCell {
-        switch message.kind {
-        case let .text(text):
-            return createTextCell(
-                in: collectionView,
-                for: indexPath,
-                text: text,
-                bubbleType: bubbleType,
-                messageType: message.type
-            )
-        case let .image(source, _):
-            return createImageCell(
-                in: collectionView,
-                messageId: message.id,
-                for: indexPath,
-                user: message.owner,
-                source: source,
-                messageType: message.type
-            )
+        switch message {
+        case .message(let message):
+            switch message.content {
+            case .text(let string), .emoji(let string):
+                return createTextCell(
+                    in: collectionView,
+                    for: indexPath,
+                    text: string,
+                    bubbleType: bubbleType,
+                    messageType: message.source
+                )
+            case .attachment(let attachmentURL):
+                return createImageCell(
+                    in: collectionView,
+                    messageId: message.id,
+                    for: indexPath,
+                    profile: message.sender,
+                    source: .imageURL(attachmentURL),
+                    messageType: message.source
+                )
+            case .attachments:
+                return UICollectionViewCell()
+            }
+        case .reply(let reply):
+            switch reply.content {
+            case .text(let string), .emoji(let string):
+                return createTextCell(
+                    in: collectionView,
+                    for: indexPath,
+                    text: string,
+                    bubbleType: bubbleType,
+                    messageType: reply.source
+                )
+            case .attachment(let attachmentURL):
+                return createImageCell(
+                    in: collectionView,
+                    messageId: reply.id,
+                    for: indexPath,
+                    profile: reply.sender,
+                    source: .imageURL(attachmentURL),
+                    messageType: reply.source
+                )
+            case .attachments:
+                return UICollectionViewCell()
+            }
         }
     }
 
@@ -48,7 +75,7 @@ final class CellFactory {
         for indexPath: IndexPath,
         text: String,
         bubbleType: MessagesCollectionCell.BubbleType,
-        messageType: MessageType
+        messageType: MessageSource
     ) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TextMessageCollectionCell.reuseIdentifier,
                                                       for: indexPath) as! TextMessageCollectionCell
@@ -60,9 +87,9 @@ final class CellFactory {
         in collectionView: UICollectionView,
         messageId: String,
         for indexPath: IndexPath,
-        user: User,
+        profile: Profile,
         source: ImageSource,
-        messageType: MessageType
+        messageType: MessageSource
     ) -> ImageCollectionCell {
         let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: ImageCollectionCell.reuseIdentifier,

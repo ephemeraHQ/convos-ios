@@ -1,16 +1,21 @@
 import SwiftUI
 
 struct RootView: View {
-    private let convos: ConvosSDK.Convos
+    private let convos: ConvosClient
     private let analyticsService: AnalyticsServiceProtocol
-    private let identityStore: CTIdentityStore = CTIdentityStore()
+    private let userRepository: UserRepositoryProtocol
+    private let conversationsRepository: ConversationsRepositoryProtocol
 
+    @State var messagingService: MessagingServiceObservable
     @State var viewModel: AppViewModel
 
-    init(convos: ConvosSDK.Convos,
+    init(convos: ConvosClient,
          analyticsService: AnalyticsServiceProtocol) {
         self.convos = convos
         self.analyticsService = analyticsService
+        self.userRepository = convos.messaging.userRepository()
+        self.conversationsRepository = convos.messaging.conversationsRepository()
+        self.messagingService = .init(messagingService: convos.messaging)
         _viewModel = .init(initialValue: .init(convos: convos))
     }
 
@@ -23,13 +28,19 @@ struct RootView: View {
                 Spacer()
             }
         case .signedIn:
-            ChatListView(messagingService: convos.messaging)
+            ConversationsListView(
+                convos: convos,
+                userRepository: userRepository,
+                conversationsRepository: conversationsRepository
+            )
+            .environment(messagingService)
         case .signedOut:
             OnboardingView(convos: convos)
         }
     }
 }
 
-#Preview {
-    RootView(convos: .mock, analyticsService: MockAnalyticsService())
-}
+ #Preview {
+     RootView(convos: .mock(),
+              analyticsService: MockAnalyticsService())
+ }

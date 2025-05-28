@@ -50,6 +50,7 @@ class MessageReactionMenuCoordinator: UIPercentDrivenInteractiveTransition {
         let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
         longPressRecognizer.delegate = self
         longPressRecognizer.minimumPressDuration = 0.2
+        longPressRecognizer.allowableMovement = 0.0
         collectionView.addGestureRecognizer(longPressRecognizer)
         self.longPressRecognizer = longPressRecognizer
 
@@ -229,7 +230,8 @@ extension MessageReactionMenuCoordinator: UIViewControllerTransitioningDelegate 
         guard let cell = transitionSourceCell, let rect = transitionSourceRect else { return nil }
         return MessageReactionPresentationAnimator(
             sourceCell: cell,
-            sourceRect: rect) { [weak self] in
+            sourceRect: rect,
+            isInteractive: isInteractive) { [weak self] in
                 guard let self else { return }
                 delegate?.messageReactionMenuCoordinatorWasPresented(self)
             } transitionEnded: {
@@ -240,7 +242,8 @@ extension MessageReactionMenuCoordinator: UIViewControllerTransitioningDelegate 
         guard let cell = transitionSourceCell, let rect = transitionSourceRect else { return nil }
         return MessageReactionDismissalAnimator(
             sourceCell: cell,
-            sourceRect: rect) {
+            sourceRect: rect,
+            isInteractive: isInteractive) {
             } transitionEnded: { [weak self] in
                 guard let self else { return }
                 delegate?.messageReactionMenuCoordinatorWasDismissed(self)
@@ -253,22 +256,25 @@ final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnima
     private let sourceRect: CGRect
     private let transitionBegan: () -> Void
     private let transitionEnded: () -> Void
+    private let isInteractive: Bool
 
     static var activationDuration: CGFloat = 0.25
 
     init(sourceCell: PreviewableCollectionViewCell,
          sourceRect: CGRect,
+         isInteractive: Bool,
          transitionBegan: @escaping () -> Void,
          transitionEnded: @escaping () -> Void) {
         self.sourceCell = sourceCell
         self.sourceRect = sourceRect
         self.transitionBegan = transitionBegan
         self.transitionEnded = transitionEnded
+        self.isInteractive = isInteractive
         super.init()
     }
 
     func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
-        MessageReactionPresentationAnimator.activationDuration + 0.01
+        isInteractive ? (MessageReactionPresentationAnimator.activationDuration + 0.01) : 0.15
     }
 
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
@@ -316,12 +322,12 @@ final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnima
                     transitionContext.completeTransition(false)
                     return
                 }
-
                 toVC.dimmingView.alpha = 1.0
                 toVC.view.alpha = 1.0
             }
         }, completion: { [weak self] _ in
             guard let self else { return }
+            toVC.animateReactionToEndPosition()
             UIView.animate(withDuration: 0.5,
                            delay: 0.0,
                            usingSpringWithDamping: 0.8,
@@ -342,15 +348,18 @@ final class MessageReactionPresentationAnimator: NSObject, UIViewControllerAnima
 final class MessageReactionDismissalAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     private let sourceCell: PreviewableCollectionViewCell
     private let sourceRect: CGRect
+    private let isInteractive: Bool
     private let transitionBegan: () -> Void
     private let transitionEnded: () -> Void
 
     init(sourceCell: PreviewableCollectionViewCell,
          sourceRect: CGRect,
+         isInteractive: Bool,
          transitionBegan: @escaping () -> Void,
          transitionEnded: @escaping () -> Void) {
         self.sourceCell = sourceCell
         self.sourceRect = sourceRect
+        self.isInteractive = isInteractive
         self.transitionBegan = transitionBegan
         self.transitionEnded = transitionEnded
 
@@ -358,7 +367,7 @@ final class MessageReactionDismissalAnimator: NSObject, UIViewControllerAnimated
     }
 
     func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
-        0.35
+        isInteractive ? 0.35 : 0.15
     }
 
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
@@ -392,8 +401,7 @@ final class MessageReactionDismissalAnimator: NSObject, UIViewControllerAnimated
                 previewView.frame = fromVC.configuration.sourceRect
             }
             UIView.addKeyframe(withRelativeStartTime: 0.2, relativeDuration: 0.5) {
-                fromVC.shapeView.transform = CGAffineTransform(scaleX: 0.0, y: 0.0)
-                fromVC.shapeView.alpha = 0.0
+                fromVC.animateReactionToStartPosition()
             }
             UIView.addKeyframe(withRelativeStartTime: 0.0, relativeDuration: 0.3) {
                 guard !transitionContext.transitionWasCancelled else {

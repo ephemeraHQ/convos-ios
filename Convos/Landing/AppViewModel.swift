@@ -8,12 +8,12 @@ final class AppViewModel {
         case signedIn, signedOut, loading
     }
 
-    let convos: ConvosSDK.Convos
+    let convos: ConvosClient
     private var cancellables: Set<AnyCancellable> = .init()
 
     private(set) var appState: AppState = .loading
 
-    init(convos: ConvosSDK.Convos) {
+    init(convos: ConvosClient) {
         self.convos = convos
 
         Task {

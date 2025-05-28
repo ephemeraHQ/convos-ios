@@ -190,7 +190,10 @@ final class MessagesInputView: UIView {
         handleTextChange()
     }
 
-    private enum Constant {
+    enum Constant {
+        static var defaultHeight: CGFloat {
+            (baseHeight) + (margin * 2.0)
+        }
         static let bottomInset: CGFloat = 14.0
         static let margin: CGFloat = 14.0
         static let sendButtonSize: CGFloat = 36.0

@@ -14,11 +14,13 @@ private class ReactionsViewController: UIViewController {
         let reactionsView = MessageReactionsView(viewModel: viewModel)
         self.hostingVC = UIHostingController(rootView: reactionsView)
         self.hostingVC.sizingOptions = .intrinsicContentSize
+        self.hostingVC.view.backgroundColor = .clear
         super.init(nibName: nil, bundle: nil)
         self.addChild(hostingVC)
         self.view.addSubview(hostingVC.view)
         hostingVC.didMove(toParent: self)
-        self.view.layer.masksToBounds = true
+        self.view.layer.masksToBounds = false
+        self.view.backgroundColor = .clear
     }
 
     required init?(coder: NSCoder) {
@@ -59,23 +61,11 @@ class MessageReactionMenuController: UIViewController {
         static let leftMargin: CGFloat = 24.0
         static let rightMargin: CGFloat = shapeViewHeight
 
-        var shapeViewStartingRect: CGRect {
-            let horizontalInset = sourceCell.horizontalInset
+        var shapeViewStartingSize: CGSize {
             let previewFrame = sourceRect
             let endSize = Self.shapeViewHeight
             let startSize = min(endSize, previewFrame.height)
-            let view = containerView
-            let xPosition: CGFloat
-            switch sourceCellEdge {
-            case .leading:
-                xPosition = view.bounds.minX + (horizontalInset / 2.0)
-            case .trailing:
-                xPosition = view.bounds.minX + view.bounds.maxX - startSize - (horizontalInset / 2.0)
-            }
-            let yPosition = previewFrame.minY
-            return CGRect(
-                x: xPosition,
-                y: yPosition,
+            return CGSize(
                 width: endSize,
                 height: startSize
             )
@@ -92,19 +82,11 @@ class MessageReactionMenuController: UIViewController {
             return CGRect(x: finalX, y: desiredY, width: sourceRect.width, height: sourceRect.height)
         }
 
-        var shapeViewEndingRect: CGRect {
-            let yPosition = endPosition.minY - Self.spacing - shapeViewStartingRect.height
-            var targetFrame = shapeViewStartingRect
+        var shapeViewEndingSize: CGSize {
             let horizontalInset = sourceCell.horizontalInset
             let endWidth = containerView.bounds.width - Self.leftMargin - Self.rightMargin - horizontalInset
             let endHeight = Self.shapeViewHeight
-            targetFrame.size.width = endWidth
-            targetFrame.origin.y = yPosition - (endHeight - shapeViewStartingRect.height)
-            targetFrame.size.height = endHeight
-            if sourceCellEdge == .trailing {
-                targetFrame.origin.x -= (endWidth - shapeViewStartingRect.width)
-            }
-            return targetFrame
+            return .init(width: endWidth, height: endHeight)
         }
     }
 
@@ -118,13 +100,13 @@ class MessageReactionMenuController: UIViewController {
 
     let configuration: Configuration
     let actualPreviewSourceSize: CGSize
-    let shapeViewStartingRect: CGRect
+    let shapeViewStartingSize: CGSize
     let endPosition: CGRect
 
     let dimmingView: UIVisualEffectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
     let previewView: UIView
-    let shapeView: ReactionMenuShapeView
     let previewSourceView: UIView
+    let shapeContainerView: UIView
 
     fileprivate let reactionsVC: ReactionsViewController
     private var tapGestureRecognizer: UITapGestureRecognizer?
@@ -141,34 +123,23 @@ class MessageReactionMenuController: UIViewController {
         self.previewSourceView = configuration.sourceCell.previewSourceView
         self.actualPreviewSourceSize = configuration.sourceCell.actualPreviewSourceSize
         self.previewView.frame = configuration.sourceRect
-        self.shapeViewStartingRect = configuration.shapeViewStartingRect
+        self.shapeViewStartingSize = configuration.shapeViewStartingSize
         self.endPosition = configuration.endPosition
 
-        // Create initial shape view
-        let startSize = CGSize(width: Configuration.shapeViewHeight, height: Configuration.shapeViewHeight)
-        let startFrame = CGRect(origin: .zero, size: startSize)
-        self.shapeView = ReactionMenuShapeView(frame: startFrame)
-        self.shapeView.fillColor = configuration.startColor
+        self.shapeContainerView = UIView(frame: .zero)
+        self.shapeContainerView.backgroundColor = .clear
+//        self.shapeContainerView.backgroundColor = .red.withAlphaComponent(0.2)
 
+        viewModel.alignment = configuration.sourceCellEdge == .leading ? .leading : .trailing
         self.reactionsVC = ReactionsViewController(viewModel: viewModel)
 
         super.init(nibName: nil, bundle: nil)
-
-        viewModel.isCollapsedPublisher
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isCollapsed in
-                guard let self else { return }
-                animateShapeView(to: isCollapsed ? .collapsed : .expanded)
-            }
-            .store(in: &cancellables)
 
         viewModel.selectedEmojiPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] selectedEmoji in
                 guard let self else { return }
                 if selectedEmoji != nil {
-                    animateShapeView(to: .compact)
-
                     DispatchQueue.main.asyncAfter(deadline: .now() + Configuration.dismissDelay) {
                         self.dismiss(animated: true)
                     }
@@ -185,23 +156,6 @@ class MessageReactionMenuController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
-    // MARK: - End Position Helper
-
-    private func animateShapeView(to size: ReactionsViewSize) {
-        var shapeRect = shapeView.frame
-        switch size {
-        case .expanded:
-            shapeRect.size.width = configuration.shapeViewEndingRect.width
-        case .collapsed:
-            shapeRect.size.width = configuration.shapeViewStartingRect.width * 2.0
-        case .compact:
-            shapeRect.size.width = configuration.shapeViewStartingRect.width + (Configuration.spacing * 2.0)
-        }
-        shapeView.animateToShape(frame: shapeRect,
-                                 alpha: 1.0,
-                                 color: .systemBackground)
-    }
-
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
@@ -213,26 +167,12 @@ class MessageReactionMenuController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
 
-        reactionsVC.view.frame = shapeView.bounds
-        reactionsVC.view.layer.cornerRadius = shapeView.bounds.height / 2.0
-    }
-
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-
-        shapeView.animateToShape(frame: shapeViewStartingRect,
-                                 alpha: 0.0,
-                                 color: .systemBackground)
+        reactionsVC.view.frame = shapeContainerView.bounds
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
-        shapeView.animateToShape(frame: configuration.shapeViewEndingRect,
-                                 alpha: 1.0,
-                                 color: .systemBackground)
-
-        // Attach pan handler to previewView
         previewPanHandler = PreviewViewPanHandler(containerView: view) { [weak self] in
             guard let self else { return nil }
             return previewView
@@ -240,6 +180,33 @@ class MessageReactionMenuController: UIViewController {
         previewPanHandler?.onShouldDismiss = { [weak self] in
             self?.dismiss(animated: true)
         }
+    }
+
+    func animateReactionToEndPosition() {
+        reactionsVC.viewModel.viewState = .expanded
+        animateReactionContainer(to: endPosition.origin.y - shapeContainerView.frame.height - Configuration.spacing)
+    }
+
+    func animateReactionToStartPosition() {
+        let yPosition = configuration.sourceRect.origin.y
+        animateReactionContainer(to: yPosition)
+        reactionsVC.viewModel.viewState = .minimized
+    }
+
+    private func animateReactionContainer(to yPosition: CGFloat) {
+        var shapeContainerRect = shapeContainerView.frame
+        shapeContainerRect.origin.y = yPosition
+        UIView.animate(
+            withDuration: 0.5,
+            delay: 0,
+            usingSpringWithDamping: 0.8,
+            initialSpringVelocity: 0.0,
+            options: [.curveEaseInOut, .layoutSubviews, .beginFromCurrentState],
+            animations: { [weak self] in
+                guard let self else { return }
+                shapeContainerView.frame = shapeContainerRect
+            }
+        )
     }
 
     // MARK: - Setup
@@ -255,12 +222,16 @@ class MessageReactionMenuController: UIViewController {
             dimmingView.addGestureRecognizer(tapGestureRecognizer)
         }
 
-        shapeView.frame = shapeViewStartingRect
-        shapeView.configureShadow()
-        view.addSubview(shapeView)
+        var shapeContainerRect = configuration.sourceRect
+        shapeContainerRect.size.height = configuration.shapeViewEndingSize.height
+        shapeContainerView.frame = shapeContainerRect.insetBy(
+            dx: configuration.sourceCell.horizontalInset / 2.0,
+            dy: 0.0
+        )
+        view.addSubview(shapeContainerView)
 
         addChild(reactionsVC)
-        shapeView.addSubview(reactionsVC.view)
+        shapeContainerView.addSubview(reactionsVC.view)
         reactionsVC.didMove(toParent: self)
     }
 

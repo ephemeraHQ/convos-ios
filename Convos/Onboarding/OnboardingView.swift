@@ -5,7 +5,7 @@ struct OnboardingView: View {
     @State var presentingCreateContactCard: Bool = false
     @State var presentingImportContactCard: Bool = false
 
-    init(convos: ConvosSDK.Convos) {
+    init(convos: ConvosClient) {
         _viewModel = State(initialValue: .init(convos: convos))
     }
 
@@ -22,10 +22,12 @@ struct OnboardingView: View {
 
                 Spacer()
 
-                Button("Sign in") {
-                    viewModel.signIn()
+                if viewModel.authAllowsSignIn {
+                    Button("Sign in") {
+                        viewModel.signIn()
+                    }
+                    .convosButtonStyle(.text)
                 }
-                .convosButtonStyle(.text)
             }
             .padding(.leading, DesignConstants.Spacing.step3x)
             .padding(.top, 10.0)
@@ -90,5 +92,10 @@ private struct LegalView: View {
 }
 
 #Preview {
-    OnboardingView(convos: .mock)
+    OnboardingView(
+        convos: .client(
+            authService: MockAuthService(),
+            environment: .dev
+        )
+    )
 }

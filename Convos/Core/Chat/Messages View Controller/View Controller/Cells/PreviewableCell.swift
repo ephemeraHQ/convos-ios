@@ -30,7 +30,7 @@ extension PreviewableCell where Self: UICollectionViewCell {
     }
 
     var horizontalInset: CGFloat {
-        (layoutMargins.left + layoutMargins.right) + 10.0
+        (layoutMargins.left + layoutMargins.right)
     }
 
     func previewView() -> UIView {

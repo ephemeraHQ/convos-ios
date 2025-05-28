@@ -1,0 +1,49 @@
+import Foundation
+import GRDB
+import XMTPiOS
+
+protocol IncomingMessageWriterProtocol {
+    func store(message: XMTPiOS.DecodedMessage,
+               for conversation: DBConversation) async throws
+}
+
+class IncomingMessageWriter: IncomingMessageWriterProtocol {
+    private let databaseWriter: any DatabaseWriter
+
+    init(databaseWriter: any DatabaseWriter) {
+        self.databaseWriter = databaseWriter
+    }
+
+    func store(message: DecodedMessage,
+               for conversation: DBConversation) async throws {
+        try await databaseWriter.write { db in
+            let sender = Member(inboxId: message.senderInboxId)
+            try sender.save(db)
+            let message = try message.dbRepresentation()
+
+            Logger.info("Storing incoming message \(message.id) localId \(message.clientMessageId)")
+            // see if this message has a local version
+            if let localMessage = try DBMessage
+                .filter(Column("id") == message.id)
+                .filter(Column("clientMessageId") != message.id)
+                .fetchOne(db) {
+                // keep using the same local id
+                Logger.info("Found local message \(localMessage.clientMessageId) for incoming message \(message.id)")
+                let updatedMessage = message.with(
+                    clientMessageId: localMessage.clientMessageId
+                )
+                try updatedMessage.save(db)
+                Logger
+                    .info(
+                        "Updated incoming message with local message \(localMessage.clientMessageId)"
+                    )
+            } else {
+                do {
+                    try message.save(db)
+                } catch {
+                    Logger.error("Failed saving incoming message \(message.id): \(error)")
+                }
+            }
+        }
+    }
+}
