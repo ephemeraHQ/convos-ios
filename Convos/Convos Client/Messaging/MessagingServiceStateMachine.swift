@@ -198,7 +198,6 @@ final actor MessagingServiceStateMachine {
     private func cleanupResources() throws {
         if let client = xmtpClient {
             Logger.info("Deleting local XMTP database")
-            try client.deleteLocalDatabase()
             let saltPath = client.dbPath + ".sqlcipher_salt"
             if FileManager.default.fileExists(atPath: saltPath) {
                 try FileManager.default.removeItem(atPath: saltPath)

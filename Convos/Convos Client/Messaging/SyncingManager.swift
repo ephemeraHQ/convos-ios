@@ -13,7 +13,6 @@ final class SyncingManager: SyncingManagerProtocol {
     private let apiClient: any ConvosAPIClientProtocol
     private let profileWriter: any MemberProfileWriterProtocol
 
-    private var syncAllTask: Task<Void, Never>?
     private var listConversationsTask: Task<Void, Never>?
     private var streamMessagesTask: Task<Void, Never>?
     private var streamConversationsTask: Task<Void, Never>?
@@ -30,17 +29,15 @@ final class SyncingManager: SyncingManagerProtocol {
     }
 
     func start(with client: Client) {
-        syncAllTask = Task {
-            do {
-                _ = try await client.conversations.syncAllConversations()
-            } catch {
-                Logger.error("Error syncing all conversations: \(error)")
-            }
-        }
         listConversationsTask = Task {
             do {
+                do {
+                    _ = try await client.conversations.syncAllConversations(consentStates: [.allowed])
+                } catch {
+                    Logger.error("Error syncing all conversations: \(error)")
+                }
                 let maxConcurrentTasks = 5
-                let conversations = try await client.conversations.list()
+                let conversations = try await client.conversations.list(consentStates: [.allowed])
                 for chunk in conversations.chunked(into: maxConcurrentTasks) {
                     // we also want to:
                     // - fetch the last message for each conversation after saving
@@ -49,7 +46,6 @@ final class SyncingManager: SyncingManagerProtocol {
                     try await withThrowingTaskGroup(of: Void.self) { group in
                         for conversation in chunk {
                             group.addTask {
-                                try await conversation.sync()
                                 try await self.conversationWriter.store(conversation: conversation)
                             }
                         }
@@ -91,8 +87,6 @@ final class SyncingManager: SyncingManagerProtocol {
     }
 
     func stop() {
-        syncAllTask?.cancel()
-        syncAllTask = nil
         listConversationsTask?.cancel()
         listConversationsTask = nil
         streamMessagesTask?.cancel()
