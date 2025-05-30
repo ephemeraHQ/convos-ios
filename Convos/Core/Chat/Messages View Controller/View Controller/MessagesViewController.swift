@@ -76,6 +76,8 @@ final class MessagesViewController: UIViewController {
     private var cancellables: Set<AnyCancellable> = []
     private var conversationHasMembers: Bool = false
 
+    private var shouldBecomeFirstResponder = true
+
     // Add coordinator property
     private var reactionMenuCoordinator: MessageReactionMenuCoordinator?
 
@@ -185,10 +187,25 @@ final class MessagesViewController: UIViewController {
 
     // MARK: - Lifecycle Methods
 
-    override func didMove(toParent parent: UIViewController?) {
-        super.didMove(toParent: parent)
-        guard parent != nil else { return }
-        becomeFirstResponder()
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        collectionView.collectionViewLayout.invalidateLayout()
+
+        if shouldBecomeFirstResponder {
+            shouldBecomeFirstResponder = false
+            if let coordinator = transitionCoordinator {
+                coordinator.animate(alongsideTransition: nil) { _ in
+                    DispatchQueue.main.async { [weak self] in
+                        self?.becomeFirstResponder()
+                    }
+                }
+            } else {
+                DispatchQueue.main.async { [weak self] in
+                    self?.becomeFirstResponder()
+                }
+            }
+        }
     }
 
     override func viewDidLoad() {
@@ -206,11 +223,6 @@ final class MessagesViewController: UIViewController {
 
         observeMessagesRepository()
         observeConversationRepository()
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        collectionView.collectionViewLayout.invalidateLayout()
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -369,14 +381,14 @@ final class MessagesViewController: UIViewController {
     // MARK: - Scrolling Methods
 
     private func loadPreviousMessages() {
-//        currentControllerActions.options.insert(.loadingPreviousMessages)
-//        Task {
-//            let sections = await messagesStore.loadPreviousMessages()
-//            let animated = !isUserInitiatedScrolling
-//            processUpdates(with: sections, animated: animated, requiresIsolatedProcess: true) {
-//                self.currentControllerActions.options.remove(.loadingPreviousMessages)
-//            }
-//        }
+        //        currentControllerActions.options.insert(.loadingPreviousMessages)
+        //        Task {
+        //            let sections = await messagesStore.loadPreviousMessages()
+        //            let animated = !isUserInitiatedScrolling
+        //            processUpdates(with: sections, animated: animated, requiresIsolatedProcess: true) {
+        //                self.currentControllerActions.options.remove(.loadingPreviousMessages)
+        //            }
+        //        }
     }
 
     func scrollToBottom(completion: (() -> Void)? = nil) {

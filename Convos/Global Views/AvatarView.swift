@@ -24,33 +24,40 @@ struct AvatarView: View {
 }
 
 struct ProfileAvatarView: View {
-    let profile: Profile
-
-    var body: some View {
-        AvatarView(imageURL: profile.avatarURL,
-                   fallbackName: profile.name)
-    }
+    private let avatar: AvatarData
 
     init(profile: Profile) {
-        self.profile = profile
+        self.avatar = .init(
+            id: profile.id,
+            imageURL: profile.avatarURL,
+            fallbackName: profile.displayName
+        )
+    }
+
+    var body: some View {
+        AvatarView(imageURL: avatar.imageURL,
+                   fallbackName: avatar.fallbackName)
+        .id(avatar.id)
     }
 }
 
 struct ConversationAvatarView: View {
-    let conversation: Conversation
-
-    var body: some View {
-        AvatarCloudView(avatars: conversation.members.sorted { $0.name < $1.name }.map {
-            .init(
-                id: $0.id,
-                imageURL: $0.avatarURL,
-                fallbackName: $0.name
-            )
-        })
-    }
+    private let avatars: [AvatarData]
 
     init(conversation: Conversation) {
-        self.conversation = conversation
+        self.avatars = conversation.members
+            .sorted { $0.id < $1.id }
+            .map {
+                .init(
+                    id: $0.id,
+                    imageURL: $0.avatarURL,
+                    fallbackName: $0.name
+                )
+            }
+    }
+
+    var body: some View {
+        AvatarCloudView(avatars: avatars)
     }
 }
 

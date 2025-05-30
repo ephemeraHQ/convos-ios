@@ -4,7 +4,7 @@ struct BubbleCloudLayout: Layout {
     var spacing: CGFloat = 4
     struct CacheKey: Hashable {
         let count: Int
-        let base: CGFloat
+        let baseBucket: Int
     }
     typealias Cache = [CacheKey: [(offset: CGSize, size: CGFloat)]]
 
@@ -22,8 +22,9 @@ struct BubbleCloudLayout: Layout {
         let center = CGPoint(x: bounds.midX, y: bounds.midY)
         let count = subviews.count
         let base = min(bounds.width, bounds.height)
+        let baseBucket = Int((base / 2).rounded(.toNearestOrAwayFromZero) * 2)
 
-        let key = CacheKey(count: count, base: base)
+        let key = CacheKey(count: count, baseBucket: baseBucket)
         let layout: [(offset: CGSize, size: CGFloat)]
         if let cached = cache[key] {
             layout = cached
@@ -119,13 +120,16 @@ struct AvatarCloudView: View {
                 fallbackName: avatar.fallbackName
             )
         } else {
-            BubbleCloudLayout(spacing: 6) {
-                ForEach(visibleAvatars) { avatar in
-                    AvatarView(imageURL: avatar.imageURL, fallbackName: avatar.fallbackName)
-                }
+            ZStack {
+                BubbleCloudLayout(spacing: 6) {
+                    ForEach(visibleAvatars) { avatar in
+                        AvatarView(imageURL: avatar.imageURL, fallbackName: avatar.fallbackName)
+                            .id(avatar.id)
+                    }
 
-                if overflowCount > 0 {
-                    MonogramView(text: "\(overflowCount)+")
+                    if overflowCount > 0 {
+                        MonogramView(text: "\(overflowCount)+")
+                    }
                 }
             }
             .background(.colorBorderSubtle2)
