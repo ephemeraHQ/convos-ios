@@ -76,7 +76,7 @@ final class MessagesViewController: UIViewController {
     private var cancellables: Set<AnyCancellable> = []
     private var conversationHasMembers: Bool = false
 
-    private var shouldBecomeFirstResponder = true
+    var shouldBecomeFirstResponder: Bool = true
 
     // Add coordinator property
     private var reactionMenuCoordinator: MessageReactionMenuCoordinator?
@@ -194,17 +194,7 @@ final class MessagesViewController: UIViewController {
 
         if shouldBecomeFirstResponder {
             shouldBecomeFirstResponder = false
-            if let coordinator = transitionCoordinator {
-                coordinator.animate(alongsideTransition: nil) { _ in
-                    DispatchQueue.main.async { [weak self] in
-                        self?.becomeFirstResponder()
-                    }
-                }
-            } else {
-                DispatchQueue.main.async { [weak self] in
-                    self?.becomeFirstResponder()
-                }
-            }
+            becomeFirstResponderAfterTransitionCompletes()
         }
     }
 
@@ -232,7 +222,7 @@ final class MessagesViewController: UIViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        ensureInputBarVisibility()
+//        ensureInputBarVisibility()
 
         // Set content inset to just the base navigation bar height plus safe area
         let navHeight = (traitCollection.verticalSizeClass == .compact ?

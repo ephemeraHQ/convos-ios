@@ -240,6 +240,14 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                     throw DraftConversationWriterError.failedFindingConversation
                 }
 
+                let draftConversation = try await databaseReader.read { [weak self] db -> DBConversation? in
+                    guard let self else { return nil }
+                    return try DBConversation.fetchOne(db, key: draftConversationId)
+                }?.with(id: externalConersationId)
+                try await databaseWriter.write { db in
+                    try draftConversation?.save(db)
+                }
+
                 let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
                 let conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
                                                             messageWriter: messageWriter)

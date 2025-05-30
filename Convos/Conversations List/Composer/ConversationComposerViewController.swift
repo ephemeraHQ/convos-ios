@@ -2,11 +2,28 @@ import Combine
 import SwiftUI
 import UIKit
 
+extension UIViewController {
+    func becomeFirstResponderAfterTransitionCompletes() {
+        if let coordinator = transitionCoordinator {
+            coordinator.animate(alongsideTransition: nil) { _ in
+                DispatchQueue.main.async { [weak self] in
+                    self?.becomeFirstResponder()
+                }
+            }
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.becomeFirstResponder()
+            }
+        }
+    }
+}
+
 class ConversationComposerViewController: UIViewController {
     let messagesViewController: MessagesViewController
     let profileSearchRepository: any ProfileSearchRepositoryProtocol
     private let composerHostingController: UIHostingController<ConversationComposerContentView>
     private var cancellables: Set<AnyCancellable> = []
+    private var shouldBecomeFirstResponder: Bool = true
 
     init(
         composerState: ConversationComposerState,
@@ -34,6 +51,7 @@ class ConversationComposerViewController: UIViewController {
 
         navigationController?.setNavigationBarHidden(true, animated: false)
 
+        messagesViewController.shouldBecomeFirstResponder = false
         addChild(messagesViewController)
         view.addSubview(messagesViewController.view)
         messagesViewController.view.frame = view.bounds
@@ -69,6 +87,15 @@ class ConversationComposerViewController: UIViewController {
             )
         ])
         composerHostingController.didMove(toParent: self)
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+
+        if shouldBecomeFirstResponder {
+            shouldBecomeFirstResponder = false
+            becomeFirstResponderAfterTransitionCompletes()
+        }
     }
 
     func animateComposerOut(completion: (() -> Void)? = nil) {
