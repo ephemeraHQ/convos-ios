@@ -91,6 +91,16 @@ extension XMTPiOS.DecodedMessage {
             text = nil
             emoji = nil
             sourceMessageId = nil
+        case ContentTypeGroupUpdated:
+            guard let groupUpdated = content as? GroupUpdated else {
+                throw DecodedMessageDBRepresentationError.mismatchedContentType
+            }
+            messageType = .original
+            attachmentUrls = []
+            contentType = .update
+            text = ""
+            emoji = nil
+            sourceMessageId = nil
         case ContentTypeAttachment:
             throw DecodedMessageDBRepresentationError.unsupportedContentType
         default:

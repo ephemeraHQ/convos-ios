@@ -48,21 +48,21 @@ final class MessagingService: MessagingServiceProtocol {
     // MARK: Conversations
 
     func draftConversationComposer() -> any DraftConversationComposerProtocol {
-        DraftConversationComposer(
+        let clientConversationId: String = DBConversation.generateDraftConversationId()
+        let draftConversationWriter = DraftConversationWriter(
+            clientPublisher: stateMachine.clientPublisher,
+            databaseReader: databaseReader,
+            databaseWriter: databaseWriter,
+            draftConversationId: clientConversationId
+        )
+        return DraftConversationComposer(
+            draftConversationWriter: draftConversationWriter,
             draftConversationRepository: DraftConversationRepository(
-                dbReader: databaseReader
+                dbReader: databaseReader,
+                draftConversationId: clientConversationId
             ),
             profileSearchRepository: ProfileSearchRepository(
                 apiClient: apiClient
-            ),
-            messagesRepository: MessagesRepository(
-                dbReader: databaseReader,
-                conversationId: Conversation.draftPrimaryKey
-            ),
-            outgoingMessageWriter: OutgoingMessageWriter(
-                clientPublisher: stateMachine.clientPublisher,
-                databaseWriter: databaseWriter,
-                conversationId: Conversation.draftPrimaryKey
             )
         )
     }

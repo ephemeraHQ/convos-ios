@@ -57,8 +57,12 @@ class SharedDatabaseMigrator {
 
             try db.create(table: "conversation") { t in
                 t.column("id", .text)
-                    .unique()
+                    .notNull()
                     .primaryKey()
+                    .unique(onConflict: .replace)
+                t.column("clientConversationId", .text)
+                    .notNull()
+                    .unique(onConflict: .replace)
                 t.column("creatorId", .text)
                     .notNull()
                     .references("member", onDelete: .none)
@@ -89,6 +93,7 @@ class SharedDatabaseMigrator {
                     .references("member", onDelete: .cascade)
                 t.column("role", .text).notNull()
                 t.column("consent", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
                 t.primaryKey(["conversationId", "memberId"])
             }
 

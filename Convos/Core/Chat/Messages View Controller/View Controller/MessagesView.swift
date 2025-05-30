@@ -3,15 +3,12 @@ import SwiftUI
 struct MessagesView: UIViewControllerRepresentable {
     let conversationRepository: any ConversationRepositoryProtocol
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
-    let messagesRepository: any MessagesRepositoryProtocol
     @State private var conversationState: ConversationState
 
     init(conversationRepository: any ConversationRepositoryProtocol,
-         outgoingMessageWriter: any OutgoingMessageWriterProtocol,
-         messagesRepository: any MessagesRepositoryProtocol) {
+         outgoingMessageWriter: any OutgoingMessageWriterProtocol) {
         self.conversationRepository = conversationRepository
         self.outgoingMessageWriter = outgoingMessageWriter
-        self.messagesRepository = messagesRepository
         _conversationState = State(
             initialValue: .init(
                 conversationRepository: conversationRepository
@@ -21,8 +18,9 @@ struct MessagesView: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> MessagesViewController {
         let messageViewController = MessagesViewController(
-            outgoingMessageWriter: outgoingMessageWriter,
-            messagesRepository: messagesRepository)
+            conversationRepository: conversationRepository,
+            outgoingMessageWriter: outgoingMessageWriter
+        )
         return messageViewController
     }
 
@@ -40,8 +38,7 @@ struct MessagesView: UIViewControllerRepresentable {
     let conversationId: String = "1"
     MessagesView(
         conversationRepository: convos.messaging.conversationRepository(for: conversationId),
-        outgoingMessageWriter: convos.messaging.messageWriter(for: conversationId),
-        messagesRepository: convos.messaging.messagesRepository(for: conversationId)
+        outgoingMessageWriter: convos.messaging.messageWriter(for: conversationId)
     )
     .ignoresSafeArea()
 }

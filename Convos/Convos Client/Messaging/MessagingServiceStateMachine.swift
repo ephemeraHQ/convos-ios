@@ -181,6 +181,12 @@ final actor MessagingServiceStateMachine {
             client = try await buildXmtpClient(identity: authorizedResult.signingKey.identity,
                                                options: clientOptions)
         }
+        Client.register(codec: TextCodec())
+        Client.register(codec: ReplyCodec())
+        Client.register(codec: ReactionCodec())
+        Client.register(codec: AttachmentCodec())
+        Client.register(codec: RemoteAttachmentCodec())
+        Client.register(codec: GroupUpdatedCodec())
         await processAction(.xmtpInitialized(client, authorizedResult))
     }
 

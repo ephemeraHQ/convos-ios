@@ -42,7 +42,7 @@ protocol ConvosAPIClientProtocol {
     func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse
 
     func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse
-    func getProfiles(for inboxIds: [String]) async throws -> [ConvosAPI.ProfileResponse]
+    func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse
     func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse]
 }
 
@@ -125,7 +125,7 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
         return profile
     }
 
-    func getProfiles(for inboxIds: [String]) async throws -> [ConvosAPI.ProfileResponse] {
+    func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse {
         var request = try authenticatedRequest(for: "v1/profiles/batch", method: "POST")
         let body: [String: Any] = ["xmtpIds": inboxIds]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)

@@ -9,7 +9,7 @@ class MessagesToolbarViewModel {
 }
 
 struct MessagesToolbarView: View {
-    @State var viewModel: MessagesToolbarViewModel
+    let viewModel: MessagesToolbarViewModel
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
 
     enum Constant {
@@ -49,7 +49,7 @@ struct MessagesToolbarView: View {
                     .foregroundStyle(.colorTextPrimary)
                     .lineLimit(1)
                 if let conversation = viewModel.conversation, conversation.kind == .group {
-                    Text(conversation.memberNamesString)
+                    Text(conversation.membersCountString)
                         .font(.system(size: 12.0))
                         .foregroundStyle(.colorTextSecondary)
                         .lineLimit(1)

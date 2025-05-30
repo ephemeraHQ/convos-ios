@@ -26,6 +26,10 @@ extension DBConversationDetails {
             imageURL = nil
         }
 
+        let members = conversationMemberProfiles
+            .filter { $0.inboxId != currentUser.inboxId }
+            .map { $0.hydrateProfile() }
+
         return Conversation(
             id: conversation.id,
             creator: creatorProfile,
@@ -33,14 +37,15 @@ extension DBConversationDetails {
             kind: conversation.kind,
             name: conversation.name,
             description: conversation.description,
-            members: conversationMemberProfiles.map { $0.hydrateProfile() },
+            members: members,
             otherMember: otherMemberProfile,
             messages: messages,
             isPinned: conversationLocalState.isPinned,
             isUnread: conversationLocalState.isUnread,
             isMuted: conversationLocalState.isMuted,
             lastMessage: lastMessage,
-            imageURL: imageURL
+            imageURL: imageURL,
+            isDraft: conversation.isDraft
         )
     }
 }

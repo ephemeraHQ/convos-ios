@@ -15,6 +15,7 @@ struct VerticalEdgeClipShape: Shape {
 }
 
 struct ConversationComposerProfilesField: View {
+    let composerState: ConversationComposerState
     @State private var profileChipsHeight: CGFloat = 0.0
     @Binding var searchText: String
     var isTextFieldFocused: FocusState<Bool>.Binding
@@ -24,7 +25,6 @@ struct ConversationComposerProfilesField: View {
         }
     }
     @State var searchTextEditingEnabled: Bool = true
-    @Binding var profiles: OrderedSet<ProfileSearchResult>
 
     private let profileChipsMaxHeight: CGFloat = 150.0
 
@@ -33,7 +33,7 @@ struct ConversationComposerProfilesField: View {
             GeometryReader { reader in
                 ScrollView(.vertical, showsIndicators: false) {
                     FlowLayout(spacing: DesignConstants.Spacing.step2x) {
-                        ForEach(profiles, id: \.id) { profileResult in
+                        ForEach(composerState.profilesAdded, id: \.id) { profileResult in
                             let profile = profileResult.profile
                             ComposerProfileChipView(profile: profile,
                                                     isSelected: selectedProfile == profileResult)
@@ -96,10 +96,10 @@ struct ConversationComposerProfilesField: View {
 
     func backspaceOnEmpty() {
         if let selectedProfile {
-            profiles.remove(selectedProfile)
+            composerState.remove(profile: selectedProfile)
             self.selectedProfile = nil
         } else {
-            selectedProfile = profiles.last
+            selectedProfile = composerState.profilesAdded.last
         }
     }
 
@@ -108,22 +108,22 @@ struct ConversationComposerProfilesField: View {
 }
 
 #Preview {
-    @Previewable @State var searchText: String = ""
-    @Previewable @State var selectedProfile: ProfileSearchResult?
-    @Previewable @State var profileResults: OrderedSet<ProfileSearchResult> = [
-        .mock(), .mock(), .mock(), .mock(), .mock(),
-        .mock(), .mock(), .mock(), .mock(), .mock(),
-        .mock(), .mock(), .mock(), .mock(), .mock()
-    ]
+    @Previewable @State var composerState: ConversationComposerState = .init(
+        profileSearchRepository: MockProfileSearchRepository(),
+        draftConversationRepo: MockDraftConversationRepository(),
+        draftConversationWriter: MockDraftConversationWriter()
+    )
     @Previewable @FocusState var textFieldFocusState: Bool
 
     VStack {
         HStack {
             Spacer().frame(width: 40)
-            ConversationComposerProfilesField(searchText: $searchText,
-                                              isTextFieldFocused: $textFieldFocusState,
-                                              selectedProfile: $selectedProfile,
-                                              profiles: $profileResults)
+            ConversationComposerProfilesField(
+                composerState: composerState,
+                searchText: $composerState.searchText,
+                isTextFieldFocused: $textFieldFocusState,
+                selectedProfile: $composerState.selectedProfile
+            )
             Spacer().frame(width: 40)
         }
         Text("Content Below")

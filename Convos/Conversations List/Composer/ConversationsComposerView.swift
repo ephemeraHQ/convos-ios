@@ -1,41 +1,40 @@
 import SwiftUI
 
 struct ConversationComposerView: UIViewControllerRepresentable {
+    let messagingService: any MessagingServiceProtocol
     let draftConversationComposer: any DraftConversationComposerProtocol
-    @State private var draftConversationState: DraftConversationState
+    @State private var conversationComposerState: ConversationComposerState
 
     init(
+        messagingService: any MessagingServiceProtocol,
         draftConversationComposer: any DraftConversationComposerProtocol
     ) {
+        self.messagingService = messagingService
         self.draftConversationComposer = draftConversationComposer
-        _draftConversationState = State(
+        _conversationComposerState = State(
             initialValue: .init(
-                draftConversationRepository:
-                    draftConversationComposer.draftConversationRepository
+                profileSearchRepository: draftConversationComposer.profileSearchRepository,
+                draftConversationRepo: draftConversationComposer.draftConversationRepository,
+                draftConversationWriter: draftConversationComposer.draftConversationWriter
             )
         )
     }
 
     func makeUIViewController(context: Context) -> ConversationComposerViewController {
         let composerViewController = ConversationComposerViewController(
-            messagesRepository: draftConversationComposer.messagesRepository,
-            outgoingMessageWriter: draftConversationComposer.outgoingMessageWriter,
+            composerState: conversationComposerState,
             profileSearchRepository: draftConversationComposer.profileSearchRepository
         )
         return composerViewController
     }
 
     func updateUIViewController(_ composerViewController: ConversationComposerViewController, context: Context) {
-        composerViewController.messagesViewController
-            .navigationBar.configure(
-                conversation: nil,
-                placeholderTitle: "New chat"
-            )
     }
 }
 
 #Preview {
     ConversationComposerView(
+        messagingService: MockMessagingService(),
         draftConversationComposer: MockDraftConversationComposer()
     )
     .ignoresSafeArea()

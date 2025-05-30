@@ -49,6 +49,7 @@ struct ConversationsListView: View {
                         switch route {
                         case .composer:
                             ConversationComposerView(
+                                messagingService: messagingService.messagingService,
                                 draftConversationComposer: messagingService
                                     .messagingService
                                     .draftConversationComposer()
@@ -62,13 +63,9 @@ struct ConversationsListView: View {
                             let messageWriter = convos.messaging.messageWriter(
                                 for: conversation.id
                             )
-                            let messagesRepository = convos.messaging.messagesRepository(
-                                for: conversation.id
-                            )
                             MessagesView(
                                 conversationRepository: conversationRepository,
-                                outgoingMessageWriter: messageWriter,
-                                messagesRepository: messagesRepository
+                                outgoingMessageWriter: messageWriter
                             )
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)

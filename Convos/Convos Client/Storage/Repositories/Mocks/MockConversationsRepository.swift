@@ -28,7 +28,8 @@ extension Conversation {
             isUnread: false,
             isMuted: false,
             lastMessage: lastMessage,
-            imageURL: nil
+            imageURL: nil,
+            isDraft: false
         )
     }
 }

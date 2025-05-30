@@ -19,6 +19,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
 
     enum Columns {
         static let id: Column = Column(CodingKeys.id)
+        static let clientConversationId: Column = Column(CodingKeys.clientConversationId)
         static let creatorId: Column = Column(CodingKeys.creatorId)
         static let kind: Column = Column(CodingKeys.kind)
         static let consent: Column = Column(CodingKeys.consent)
@@ -29,6 +30,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     }
 
     let id: String
+    let clientConversationId: String // always the same, used for conversation drafts
     let creatorId: String
     let kind: ConversationKind
     let consent: Consent
@@ -56,7 +58,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     private static let _members: HasManyAssociation<DBConversation, DBConversationMember> = hasMany(
         DBConversationMember.self,
         key: "conversationMembers"
-    )
+    ).order(Column("createdAt").asc)
 
     private static let members: HasManyThroughAssociation<DBConversation, Member> = hasMany(
         Member.self,
@@ -94,6 +96,82 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     )
 }
 
+extension DBConversation {
+    private static var draftPrefix: String { "draft-" }
+
+    static func generateDraftConversationId() -> String {
+        "\(draftPrefix)\(UUID().uuidString)"
+    }
+
+    var isDraft: Bool {
+        (id.hasPrefix(Self.draftPrefix) &&
+         clientConversationId.hasPrefix(Self.draftPrefix))
+    }
+
+    func with(id: String) -> Self {
+        .init(
+            id: id,
+            clientConversationId: clientConversationId,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
+
+    func with(clientConversationId: String) -> Self {
+        .init(
+            id: id,
+            clientConversationId: clientConversationId,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
+
+    func with(kind: ConversationKind) -> Self {
+        .init(
+            id: id,
+            clientConversationId: clientConversationId,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
+}
+
+extension DBConversation {
+    static func findConversationWith(members ids: [String]) -> SQLRequest<DBConversation>? {
+        let sql = """
+        SELECT *
+        FROM conversation
+        WHERE id IN (
+            SELECT conversationId
+            FROM conversationMember
+            WHERE memberId IN (\(ids.map { _ in "?" }.joined(separator: ", ")))
+            GROUP BY conversationId
+            HAVING COUNT(*) = ?
+               AND COUNT(DISTINCT memberId) = ?
+        )
+        """
+        guard let arguments = StatementArguments(ids + [ids.count, ids.count]) else {
+            return nil
+        }
+        return SQLRequest<DBConversation>(sql: sql, arguments: arguments)
+    }
+}
+
 struct DBConversationDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
     let conversation: DBConversation
     let conversationCreatorProfile: MemberProfile
@@ -115,6 +193,7 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
     let memberId: String
     let role: Role
     let consent: Consent
+    let createdAt: Date
 
     static var databaseTableName: String { "conversation_members" }
 
@@ -153,11 +232,19 @@ struct Conversation: Codable, Hashable, Identifiable {
     let isMuted: Bool
     let lastMessage: MessagePreview?
     let imageURL: URL?
+    let isDraft: Bool
 }
 
 extension Conversation {
     var memberNamesString: String {
-        members.map { $0.name }.joined(separator: ", ")
+        members.map { $0.displayName }
+            .filter { !$0.isEmpty }
+            .sorted()
+            .joined(separator: ", ")
+    }
+
+    var membersCountString: String {
+        "\(members.count) \(members.count == 1 ? "member" : "members")"
     }
 }
 

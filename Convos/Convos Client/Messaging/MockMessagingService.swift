@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import XMTPiOS
 
 // swiftlint: disable force_unwrapping
 
@@ -112,7 +113,7 @@ extension MockMessagingService: UserRepositoryProtocol {
 extension MockMessagingService: ProfileSearchRepositoryProtocol {
     func search(using query: String) async throws -> [ProfileSearchResult] {
         allUsers.filter { $0.name.contains(query) }.map { profile in
-                .init(profile: profile, xmtpId: profile.id)
+                .init(profile: profile, inboxId: profile.id)
         }
     }
 }
@@ -128,8 +129,17 @@ extension MockMessagingService: ConversationsRepositoryProtocol {
 }
 
 extension MockMessagingService: ConversationRepositoryProtocol {
-    func conversationPublisher() -> AnyPublisher<Conversation?, Never> {
-        Just(conversations.randomElement()).eraseToAnyPublisher()
+    var messagesRepositoryPublisher: AnyPublisher<any MessagesRepositoryProtocol, Never> {
+        Just(MockMessagesRepository(conversation: conversation ?? .mock()))
+            .eraseToAnyPublisher()
+    }
+
+    var conversation: Conversation? {
+        conversations.randomElement()
+    }
+
+    var conversationPublisher: AnyPublisher<Conversation?, Never> {
+        Just(conversation).eraseToAnyPublisher()
     }
 }
 
@@ -144,13 +154,51 @@ extension MockMessagingService: MessagesRepositoryProtocol {
 }
 
 extension MockMessagingService: OutgoingMessageWriterProtocol {
+    var canSend: Bool { true }
+    var canSendPublisher: AnyPublisher<Bool, Never> { Just(true).eraseToAnyPublisher() }
+
     func send(text: String) async throws {
         _ = try await prepare(text: text)
         try await publish()
     }
 }
 
+extension MockMessagingService: ConversationSender {
+    func add(members inboxIds: [String]) async throws {
+    }
+
+    func remove(members inboxIds: [String]) async throws {
+    }
+}
+
 extension MockMessagingService: XMTPClientProvider {
+    func canMessage(identity: String) async throws -> Bool {
+        true
+    }
+
+    func canMessage(identities: [String]) async throws -> [String: Bool] {
+        return Dictionary(uniqueKeysWithValues: identities.map { ($0, true) })
+    }
+
+    func prepareConversation() async throws -> ConversationSender {
+        self
+    }
+
+    func newConversation(with memberInboxIds: [String],
+                         name: String,
+                         description: String,
+                         imageUrl: String) async throws -> String {
+        return UUID().uuidString
+    }
+
+    func newConversation(with memberInboxId: String) async throws -> String {
+        return UUID().uuidString
+    }
+
+    func conversation(with id: String) async throws -> XMTPiOS.Conversation? {
+        nil
+    }
+
     func messageSender(for conversationId: String) async throws -> (any MessageSender)? {
         self
     }
