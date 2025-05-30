@@ -2,20 +2,29 @@ import Combine
 import Foundation
 import GRDB
 
-protocol ConversationRepositoryProtocol {
-    func conversationPublisher() -> AnyPublisher<Conversation?, Never>
+protocol ConversationRepositoryProtocol {    
+    var messagesRepositoryPublisher: AnyPublisher<any MessagesRepositoryProtocol, Never> { get }
+    var conversationPublisher: AnyPublisher<Conversation?, Never> { get }
 }
 
 class ConversationRepository: ConversationRepositoryProtocol {
     private let dbReader: any DatabaseReader
     private let conversationId: String
+    private let messagesRepository: MessagesRepository
+    var messagesRepositoryPublisher: AnyPublisher<any MessagesRepositoryProtocol, Never> {
+        Just(messagesRepository).eraseToAnyPublisher()
+    }
 
     init(conversationId: String, dbReader: any DatabaseReader) {
         self.dbReader = dbReader
         self.conversationId = conversationId
+        self.messagesRepository = MessagesRepository(
+            dbReader: dbReader,
+            conversationId: conversationId
+        )
     }
 
-    func conversationPublisher() -> AnyPublisher<Conversation?, Never> {
+    lazy var conversationPublisher: AnyPublisher<Conversation?, Never> = {
         ValueObservation
             .tracking { [weak self] db in
                 guard let self else { return nil }
@@ -41,5 +50,5 @@ class ConversationRepository: ConversationRepositoryProtocol {
             .publisher(in: dbReader)
             .replaceError(with: nil)
             .eraseToAnyPublisher()
-    }
+    }()
 }

@@ -20,7 +20,7 @@ enum DBMessageType: String, Codable {
 }
 
 enum MessageContentType: String, Codable {
-    case text, emoji, attachments
+    case text, emoji, attachments, update
 }
 
 struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
@@ -119,6 +119,7 @@ extension DBMessage {
             attachmentUrls: attachmentUrls
         )
     }
+
     func with(clientMessageId: String) -> DBMessage {
         .init(
             id: id,
@@ -135,7 +136,24 @@ extension DBMessage {
             attachmentUrls: attachmentUrls
         )
     }
-}
+
+    func with(conversationId: String) -> DBMessage {
+        .init(
+            id: id,
+            clientMessageId: clientMessageId,
+            conversationId: conversationId,
+            senderId: senderId,
+            date: date,
+            status: status,
+            messageType: messageType,
+            contentType: contentType,
+            text: text,
+            emoji: emoji,
+            sourceMessageId: sourceMessageId,
+            attachmentUrls: attachmentUrls
+        )
+    }
+ }
 
 struct MessageWithDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
     let message: DBMessage

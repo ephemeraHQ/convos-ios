@@ -11,12 +11,12 @@ final class ConversationState {
 
     init(conversationRepository: ConversationRepositoryProtocol) {
         self.conversationRepository = conversationRepository
-        self.conversation = .draft()
+        self.conversation = .mock()
         observe()
     }
 
     private func observe() {
-        conversationRepository.conversationPublisher()
+        conversationRepository.conversationPublisher
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
             .sink { [weak self] conversation in

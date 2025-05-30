@@ -5,6 +5,8 @@ import XMTPiOS
 protocol ConversationWriterProtocol {
     @discardableResult
     func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation
+    func store(conversation: XMTPiOS.Conversation,
+               clientConversationId: String) async throws -> DBConversation
 }
 
 class ConversationWriter: ConversationWriterProtocol {
@@ -17,8 +19,16 @@ class ConversationWriter: ConversationWriterProtocol {
         self.messageWriter = messageWriter
     }
 
-    @discardableResult
     func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation {
+        return try await _store(conversation: conversation)
+    }
+
+    func store(conversation: XMTPiOS.Conversation, clientConversationId: String) async throws -> DBConversation {
+        return try await _store(conversation: conversation, clientConversationId: clientConversationId)
+    }
+
+    private func _store(conversation: XMTPiOS.Conversation,
+                        clientConversationId: String? = nil) async throws -> DBConversation {
         let dbMembers: [DBConversationMember] = try await conversation.members()
             .map { $0.dbRepresentation(conversationId: conversation.id) }
         let kind: ConversationKind
@@ -48,6 +58,7 @@ class ConversationWriter: ConversationWriterProtocol {
         let lastMessage = try await conversation.lastMessage()
         let dbConversation = DBConversation(
             id: conversation.id,
+            clientConversationId: clientConversationId ?? conversation.id,
             creatorId: try await conversation.creatorInboxId,
             kind: kind,
             consent: try conversation.consentState().consent,
@@ -68,9 +79,31 @@ class ConversationWriter: ConversationWriterProtocol {
 
         try await databaseWriter.write { db in
             try creator.save(db)
-            try creatorProfile.save(db)
+            try creatorProfile.insert(db, onConflict: .ignore)
 
-            try dbConversation.save(db)
+            if let localConversation = try DBConversation
+                .filter(Column("id") == conversation.id)
+                .filter(Column("clientConversationId") != clientConversationId)
+                .fetchOne(db) {
+                // keep using the same local id
+                Logger.info(
+                    "Found local conversation \(localConversation.clientConversationId) for incoming conversation \(conversation.id)"
+                )
+                let updatedConversation = dbConversation.with(
+                    clientConversationId: localConversation.clientConversationId
+                )
+                try updatedConversation.save(db)
+                Logger
+                    .info(
+                        "Updated incoming conversation with local conversation \(localConversation.clientConversationId)"
+                    )
+            } else {
+                do {
+                    try dbConversation.save(db)
+                } catch {
+                    Logger.error("Failed saving incoming conversation \(conversation.id): \(error)")
+                }
+            }
 
             try localState.save(db)
 
@@ -108,7 +141,8 @@ fileprivate extension XMTPiOS.Member {
         .init(conversationId: conversationId,
               memberId: inboxId,
               role: permissionLevel.role,
-              consent: consentState.memberConsent)
+              consent: consentState.memberConsent,
+              createdAt: Date())
     }
 }
 

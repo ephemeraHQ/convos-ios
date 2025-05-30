@@ -38,12 +38,11 @@ final class MessagesInputView: UIView {
         return tv
     }()
 
-    private lazy var sendButton: UIButton = {
+    lazy var sendButton: UIButton = {
         let button = UIButton(type: .system)
         button.setImage(UIImage(systemName: "arrow.up.circle.fill"), for: .normal)
         button.tintColor = .black
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.alpha = 0.0
         button.addTarget(self, action: #selector(handleSendButtonTap), for: .touchUpInside)
         return button
     }()
@@ -163,7 +162,6 @@ final class MessagesInputView: UIView {
 
     @objc private func handleTextChange() {
         updateTextViewHeight()
-        updateSendButtonVisibility()
         invalidateIntrinsicContentSize()
     }
 
@@ -174,10 +172,6 @@ final class MessagesInputView: UIView {
         textViewHeightConstraint?.constant = newHeight
     }
 
-    private func updateSendButtonVisibility() {
-        sendButton.alpha = textView.text.isEmpty ? 0.0 : 1.0
-    }
-
     @objc private func handleSendButtonTap() {
         guard let text = textView.text, !text.isEmpty else { return }
         delegate?.messagesInputView(self, didTapSend: text)
@@ -186,8 +180,8 @@ final class MessagesInputView: UIView {
 
     private func clearTextView() {
         textView.text = ""
-        sendButton.alpha = 0.0
         handleTextChange()
+        delegate?.messagesInputView(self, didChangeText: textView.text)
     }
 
     enum Constant {

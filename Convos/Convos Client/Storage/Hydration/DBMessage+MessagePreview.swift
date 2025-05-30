@@ -15,6 +15,8 @@ extension DBMessage {
                 text = "\(optionalSender)sent \(attachmentsString)".capitalized
             case .text, .emoji:
                 text = self.text ?? ""
+            case .update:
+                text = ""
             }
 
         case .reply:
@@ -24,6 +26,8 @@ extension DBMessage {
                 text = "\(optionalSender)replied with \(attachmentsString)".capitalized
             case .text, .emoji:
                 text = "\(optionalSender)replied: \(self.text ?? "") to \"\(originalMessage)\"".capitalized
+            case .update:
+                text = ""
             }
 
         case .reaction:
@@ -33,6 +37,8 @@ extension DBMessage {
                 text = "\(optionalSender)sent \(attachmentsString)".capitalized
             case .text, .emoji:
                 text = "\(senderString)\(emoji ?? "")'d \(originalMessage)".capitalized
+            case .update:
+                text = ""
             }
         }
         return .init(text: text, createdAt: date)

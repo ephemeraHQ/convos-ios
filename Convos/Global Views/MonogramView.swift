@@ -4,6 +4,11 @@ struct MonogramView: View {
     private let initials: String
     private let backgroundColor: Color
 
+    init(text: String) {
+        self.initials = text
+        self.backgroundColor = Self.colorForName(text)
+    }
+
     init(name: String) {
         self.initials = Self.initials(from: name)
         self.backgroundColor = Self.colorForName(name)
@@ -53,6 +58,8 @@ struct MonogramView: View {
         MonogramView(name: "Robert Adams")
             .frame(width: 52.0)
         MonogramView(name: "Robert Adams")
+            .frame(width: 96.0)
+        MonogramView(name: "Robert, John, Diana, Jessica, Tom")
             .frame(width: 96.0)
     }
 }

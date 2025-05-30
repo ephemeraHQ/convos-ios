@@ -40,7 +40,8 @@ extension DBConversationDetails {
             isUnread: conversationLocalState.isUnread,
             isMuted: conversationLocalState.isMuted,
             lastMessage: lastMessage,
-            imageURL: imageURL
+            imageURL: imageURL,
+            isDraft: conversation.isDraft
         )
     }
 }

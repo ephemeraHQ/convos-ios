@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import UIKit
 
@@ -5,19 +6,19 @@ class ConversationComposerViewController: UIViewController {
     let messagesViewController: MessagesViewController
     let profileSearchRepository: any ProfileSearchRepositoryProtocol
     private let composerHostingController: UIHostingController<ConversationComposerContentView>
+    private var cancellables: Set<AnyCancellable> = []
 
     init(
-        messagesRepository: any MessagesRepositoryProtocol,
-        outgoingMessageWriter: any OutgoingMessageWriterProtocol,
+        composerState: ConversationComposerState,
         profileSearchRepository: any ProfileSearchRepositoryProtocol,
     ) {
         self.messagesViewController = MessagesViewController(
-            outgoingMessageWriter: outgoingMessageWriter,
-            messagesRepository: messagesRepository
+            conversationRepository: composerState.draftConversationRepo,
+            outgoingMessageWriter: composerState.draftConversationWriter
         )
         self.profileSearchRepository = profileSearchRepository
         let composerView = ConversationComposerContentView(
-            profileSearchRepository: profileSearchRepository
+            composerState: composerState
         )
         let hosting = UIHostingController(rootView: composerView)
         self.composerHostingController = hosting
@@ -39,10 +40,19 @@ class ConversationComposerViewController: UIViewController {
         messagesViewController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         messagesViewController.didMove(toParent: self)
 
+        messagesViewController.didSendPublisher
+            .dropFirst()
+            .sink { [weak self] in
+            guard let self else { return }
+            animateComposerOut()
+        }.store(in: &cancellables)
+
         composerHostingController.navigationController?.setNavigationBarHidden(true, animated: false)
         addChild(composerHostingController)
-        messagesViewController.view.insertSubview(composerHostingController.view,
-                                                  aboveSubview: messagesViewController.collectionView)
+        messagesViewController.view.insertSubview(
+            composerHostingController.view,
+            aboveSubview: messagesViewController.collectionView
+        )
         composerHostingController.view.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             composerHostingController.view.leadingAnchor.constraint(

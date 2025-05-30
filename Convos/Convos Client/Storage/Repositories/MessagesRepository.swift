@@ -71,7 +71,7 @@ extension Array where Element == MessageWithDetails {
             case .original:
                 let messageContent: MessageContent
                 switch dbMessage.contentType {
-                case .text:
+                case .text, .update:
                     messageContent = .text(dbMessage.text ?? "")
                 case .attachments:
                     messageContent = .attachments(dbMessage.attachmentUrls.compactMap { urlString in
@@ -97,11 +97,13 @@ extension Array where Element == MessageWithDetails {
                     break
                 case .emoji:
                     break
+                case .update:
+                    return nil
                 }
 
             case .reaction:
                 switch dbMessage.contentType {
-                case .text, .attachments:
+                case .text, .attachments, .update:
                     // invalid
                     return nil
                 case .emoji:

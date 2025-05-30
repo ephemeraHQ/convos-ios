@@ -2,31 +2,6 @@ import Combine
 import Foundation
 import Observation
 
-extension Conversation {
-    static func draft() -> Self {
-        .init(
-            id: Conversation.draftPrimaryKey,
-            creator: .empty,
-            createdAt: .distantFuture,
-            kind: .dm,
-            name: nil,
-            description: nil,
-            members: [],
-            otherMember: nil,
-            messages: [],
-            isPinned: false,
-            isUnread: false,
-            isMuted: false,
-            lastMessage: nil,
-            imageURL: nil
-        )
-    }
-
-    var isDraft: Bool {
-        id == Conversation.draftPrimaryKey
-    }
-}
-
 @Observable
 final class DraftConversationState {
     var draftConversation: Conversation?
@@ -40,7 +15,7 @@ final class DraftConversationState {
     }
 
     private func observe() {
-        draftConversationRepository.conversationPublisher()
+        draftConversationRepository.conversationPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] conversation in
                 guard let self else { return }

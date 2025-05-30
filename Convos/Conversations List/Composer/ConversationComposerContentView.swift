@@ -1,76 +1,18 @@
-import OrderedCollections
 import SwiftUI
 
-@Observable
-class ConversationComposerViewModel {
-    private let profileSearchRepo: any ProfileSearchRepositoryProtocol
-    private var searchTask: Task<Void, Never>?
-
-    var searchText: String = "" {
-        didSet {
-            performSearch()
-        }
-    }
-
-    var conversationResults: [Conversation] = []
-    var profilesAdded: OrderedSet<ProfileSearchResult> = []
-    var profileResults: [ProfileSearchResult] = []
-
-    init(
-        profileSearchRepository: any ProfileSearchRepositoryProtocol
-    ) {
-        self.profileSearchRepo = profileSearchRepository
-    }
-
-    func add(profile: ProfileSearchResult) {
-        searchText = ""
-        profilesAdded.append(profile)
-    }
-
-    private func performSearch() {
-        searchTask?.cancel()
-
-        guard !searchText.isEmpty else {
-            profileResults = []
-            return
-        }
-
-        searchTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
-
-            do {
-                let results = try await profileSearchRepo.search(using: searchText)
-                let filtered = results.filter { !self.profilesAdded.contains($0) }
-                self.profileResults = filtered
-            } catch {
-                Logger.error("Search failed: \(error)")
-                self.profileResults = []
-            }
-        }
-    }
-}
-
 struct ConversationComposerContentView: View {
-    @State private var selectedProfile: ProfileSearchResult?
-    @State private var viewModel: ConversationComposerViewModel
+    @State private var composerState: ConversationComposerState
     @FocusState private var isTextFieldFocused: Bool
 
-    init(
-        profileSearchRepository: any ProfileSearchRepositoryProtocol,
-        selectedProfile: ProfileSearchResult? = nil
-    ) {
-        self.selectedProfile = selectedProfile
-        _viewModel = State(
-            initialValue: .init(profileSearchRepository: profileSearchRepository)
-        )
+    init(composerState: ConversationComposerState) {
+        self.composerState = composerState
     }
 
     private let headerHeight: CGFloat = 72.0
 
     var resultsList: some View {
         List {
-            ForEach(viewModel.conversationResults, id: \.id) { conversation in
+            ForEach(composerState.conversationResults, id: \.id) { conversation in
                 FlashingListRowButton {
                 } content: {
                     HStack(spacing: DesignConstants.Spacing.step3x) {
@@ -106,10 +48,10 @@ struct ConversationComposerContentView: View {
                 .listRowSpacing(0.0)
             }
 
-            ForEach(viewModel.profileResults, id: \.id) { profileResult in
+            ForEach(composerState.profileResults, id: \.id) { profileResult in
                 let profile = profileResult.profile
                 FlashingListRowButton {
-                    viewModel.add(profile: profileResult)
+                    composerState.add(profile: profileResult)
                 } content: {
                     HStack(spacing: DesignConstants.Spacing.step3x) {
                         ProfileAvatarView(profile: profile)
@@ -148,10 +90,12 @@ struct ConversationComposerContentView: View {
                     .foregroundStyle(.colorTextSecondary)
                     .frame(height: headerHeight)
 
-                ConversationComposerProfilesField(searchText: $viewModel.searchText,
-                                                  isTextFieldFocused: $isTextFieldFocused,
-                                                  selectedProfile: $selectedProfile,
-                                                  profiles: $viewModel.profilesAdded)
+                ConversationComposerProfilesField(
+                    composerState: composerState,
+                    searchText: $composerState.searchText,
+                    isTextFieldFocused: $isTextFieldFocused,
+                    selectedProfile: $composerState.selectedProfile
+                )
 
                 Button {
                 } label: {
@@ -160,12 +104,12 @@ struct ConversationComposerContentView: View {
                         .foregroundStyle(.colorTextPrimary)
                         .padding(.horizontal, DesignConstants.Spacing.step2x)
                 }
-                .opacity(viewModel.searchText.isEmpty ? 1.0 : 0.2)
+                .opacity(composerState.searchText.isEmpty ? 1.0 : 0.2)
                 .frame(height: headerHeight)
             }
                    .contentShape(Rectangle())
                    .onTapGesture {
-                       selectedProfile = nil
+                       composerState.selectedProfile = nil
                        isTextFieldFocused = true
                    }
                    .padding(.horizontal, DesignConstants.Spacing.step4x)
@@ -181,7 +125,12 @@ struct ConversationComposerContentView: View {
 }
 
 #Preview {
+    @Previewable @State var composerState = ConversationComposerState(
+        profileSearchRepository: MockProfileSearchRepository(),
+        draftConversationRepo: MockDraftConversationRepository(),
+        draftConversationWriter: MockDraftConversationWriter()
+    )
     ConversationComposerContentView(
-        profileSearchRepository: MockProfileSearchRepository()
+        composerState: composerState
     )
 }

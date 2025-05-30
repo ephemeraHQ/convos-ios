@@ -41,7 +41,7 @@ final class DatabaseManager: DatabaseManagerProtocol {
         config.foreignKeysEnabled = true
         config.prepareDatabase { db in
 #if DEBUG
-            db.trace { print($0) }
+//            db.trace { print($0) }
 #endif
         }
 

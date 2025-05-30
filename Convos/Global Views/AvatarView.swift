@@ -40,8 +40,13 @@ struct ConversationAvatarView: View {
     let conversation: Conversation
 
     var body: some View {
-        AvatarView(imageURL: conversation.imageURL,
-                   fallbackName: conversation.title)
+        AvatarCloudView(avatars: conversation.members.sorted { $0.name < $1.name }.map {
+            .init(
+                id: $0.id,
+                imageURL: $0.avatarURL,
+                fallbackName: $0.name
+            )
+        })
     }
 
     init(conversation: Conversation) {
@@ -58,4 +63,9 @@ struct ConversationAvatarView: View {
     )
 
     ProfileAvatarView(profile: profile)
+}
+
+#Preview {
+    let conversation = Conversation.mock(members: [.mock(), .mock()])
+    ConversationAvatarView(conversation: conversation)
 }

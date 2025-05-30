@@ -6,7 +6,10 @@ extension Conversation {
         case .dm:
             return otherMember?.displayName ?? ""
         case .group:
-            return name ?? ""
+            guard let name else {
+                return memberNamesString
+            }
+            return name.isEmpty ? memberNamesString : name
         }
     }
 }
