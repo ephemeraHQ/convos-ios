@@ -87,7 +87,7 @@ class ConversationWriter: ConversationWriterProtocol {
                 .fetchOne(db) {
                 // keep using the same local id
                 Logger.info(
-                    "Found local conversation \(localConversation.clientConversationId) for incoming conversation \(conversation.id)"
+                    "Found local conversation \(localConversation.clientConversationId) for incoming \(conversation.id)"
                 )
                 let updatedConversation = dbConversation.with(
                     clientConversationId: localConversation.clientConversationId
@@ -95,7 +95,7 @@ class ConversationWriter: ConversationWriterProtocol {
                 try updatedConversation.save(db)
                 Logger
                     .info(
-                        "Updated incoming conversation with local conversation \(localConversation.clientConversationId)"
+                        "Updated incoming conversation with local \(localConversation.clientConversationId)"
                     )
             } else {
                 do {

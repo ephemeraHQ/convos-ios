@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import GRDB
 
-protocol ConversationRepositoryProtocol {    
+protocol ConversationRepositoryProtocol {
     var messagesRepositoryPublisher: AnyPublisher<any MessagesRepositoryProtocol, Never> { get }
     var conversationPublisher: AnyPublisher<Conversation?, Never> { get }
 }

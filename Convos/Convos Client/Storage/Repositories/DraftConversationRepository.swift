@@ -40,7 +40,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
         conversationPublisher
             .compactMap { $0 }
             .removeDuplicates(by: { lhs, rhs in
-                return lhs.id == rhs.id
+                lhs.id == rhs.id
             })
             .map { MessagesRepository(dbReader: self.dbReader, conversationId: $0.id) }
             .sink { [weak self] repository in

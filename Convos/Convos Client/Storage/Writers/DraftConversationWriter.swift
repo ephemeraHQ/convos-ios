@@ -146,10 +146,9 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         }
 
         // save a temporary message to the draft conversation
-        let localMessage: DBMessage?
         if createdConversationId == nil {
-            localMessage = try await databaseWriter.write { [weak self] db in
-                guard let self else { return nil }
+            try await databaseWriter.write { [weak self] db in
+                guard let self else { return }
 
                 guard let currentUser = try db.currentUser() else {
                     throw CurrentSessionError.missingCurrentUser
@@ -191,10 +190,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
                 try localMessage.save(db)
                 Logger.info("Saved local message with local id: \(localMessage.clientMessageId)")
-                return localMessage
             }
-        } else {
-            localMessage = nil
         }
 
         Task {
@@ -251,9 +247,9 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                 let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
                 let conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
                                                             messageWriter: messageWriter)
-                let dbConversation = try await conversationWriter.store(conversation: createdConversation,
-                                                                        clientConversationId: draftConversationId)
-                let clientMessageId = try await createdConversation.prepare(text: text)
+                _ = try await conversationWriter.store(conversation: createdConversation,
+                                                       clientConversationId: draftConversationId)
+                _ = try await createdConversation.prepare(text: text)
                 try await createdConversation.publish()
             }
         }

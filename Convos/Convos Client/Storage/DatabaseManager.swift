@@ -39,11 +39,11 @@ final class DatabaseManager: DatabaseManagerProtocol {
         var config = Configuration()
         config.label = "ConvosDB"
         config.foreignKeysEnabled = true
-        config.prepareDatabase { db in
 #if DEBUG
-//            db.trace { print($0) }
-#endif
+        config.prepareDatabase { db in
+            db.trace { print($0) }
         }
+#endif
 
         let dbPool = try DatabasePool(path: dbURL.path, configuration: config)
         let migrator = SharedDatabaseMigrator.shared
