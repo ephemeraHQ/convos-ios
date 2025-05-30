@@ -17,6 +17,7 @@ extension XMTPiOS.DecodedMessage {
         let emoji: String?
         let attachmentUrls: [String]
         let text: String?
+        let update: DBConversationUpdate?
 
         switch encodedContentType {
         case ContentTypeText:
@@ -29,6 +30,7 @@ extension XMTPiOS.DecodedMessage {
             attachmentUrls = []
             emoji = nil
             sourceMessageId = nil
+            update = nil
         case ContentTypeReply:
             guard let contentReply = content as? Reply else {
                 throw DecodedMessageDBRepresentationError.mismatchedContentType
@@ -36,6 +38,7 @@ extension XMTPiOS.DecodedMessage {
             sourceMessageId = contentReply.reference
             messageType = .reply
             emoji = nil
+            update = nil
 
             switch contentReply.contentType {
             case ContentTypeText:
@@ -71,6 +74,7 @@ extension XMTPiOS.DecodedMessage {
             contentType = .emoji
             text = nil
             attachmentUrls = []
+            update = nil
         case ContentTypeMultiRemoteAttachment:
             guard let remoteAttachments = content as? [RemoteAttachment] else {
                 throw DecodedMessageDBRepresentationError.mismatchedContentType
@@ -81,6 +85,7 @@ extension XMTPiOS.DecodedMessage {
             text = nil
             emoji = nil
             sourceMessageId = nil
+            update = nil
         case ContentTypeRemoteAttachment:
             guard let remoteAttachment = content as? RemoteAttachment else {
                 throw DecodedMessageDBRepresentationError.mismatchedContentType
@@ -91,6 +96,7 @@ extension XMTPiOS.DecodedMessage {
             text = nil
             emoji = nil
             sourceMessageId = nil
+            update = nil
         case ContentTypeGroupUpdated:
             guard let groupUpdated = content as? GroupUpdated else {
                 throw DecodedMessageDBRepresentationError.mismatchedContentType
@@ -98,9 +104,22 @@ extension XMTPiOS.DecodedMessage {
             messageType = .original
             attachmentUrls = []
             contentType = .update
-            text = ""
+            text = nil
             emoji = nil
             sourceMessageId = nil
+            update = .init(
+                initiatedByInboxId: groupUpdated.initiatedByInboxID,
+                addedInboxIds: groupUpdated.addedInboxes.map { $0.inboxID },
+                removedInboxIds: groupUpdated.removedInboxes.map { $0.inboxID },
+                metadataChanges: groupUpdated.metadataFieldChanges
+                    .map {
+                        .init(
+                            field: $0.fieldName,
+                            oldValue: $0.hasOldValue ? $0.oldValue : nil,
+                            newValue: $0.hasNewValue ? $0.newValue : nil
+                        )
+                    }
+            )
         case ContentTypeAttachment:
             throw DecodedMessageDBRepresentationError.unsupportedContentType
         default:
@@ -119,7 +138,8 @@ extension XMTPiOS.DecodedMessage {
             text: text,
             emoji: emoji,
             sourceMessageId: sourceMessageId,
-            attachmentUrls: attachmentUrls
+            attachmentUrls: attachmentUrls,
+            update: update
         )
     }
 }

@@ -185,7 +185,8 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                     text: text,
                     emoji: nil,
                     sourceMessageId: nil,
-                    attachmentUrls: []
+                    attachmentUrls: [],
+                    update: nil
                 )
 
                 try localMessage.save(db)

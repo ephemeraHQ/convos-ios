@@ -67,7 +67,8 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
                 text: text,
                 emoji: nil,
                 sourceMessageId: nil,
-                attachmentUrls: []
+                attachmentUrls: [],
+                update: nil
             )
 
             try localMessage.save(db)

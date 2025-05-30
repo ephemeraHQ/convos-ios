@@ -23,6 +23,19 @@ enum MessageContentType: String, Codable {
     case text, emoji, attachments, update
 }
 
+struct DBConversationUpdate: Codable, Hashable {
+    struct MetadataChange: Codable, Hashable {
+        let field: String
+        let oldValue: String?
+        let newValue: String?
+    }
+
+    let initiatedByInboxId: String
+    let addedInboxIds: [String]
+    let removedInboxIds: [String]
+    let metadataChanges: [MetadataChange]
+}
+
 struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
     static var databaseTableName: String = "message"
 
@@ -56,6 +69,7 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
     let emoji: String?
     let sourceMessageId: String? // replies and reactions
     let attachmentUrls: [String]
+    let update: DBConversationUpdate?
 
     var attachmentUrl: String? {
         attachmentUrls.first
@@ -116,7 +130,8 @@ extension DBMessage {
             text: text,
             emoji: emoji,
             sourceMessageId: sourceMessageId,
-            attachmentUrls: attachmentUrls
+            attachmentUrls: attachmentUrls,
+            update: update
         )
     }
 
@@ -133,7 +148,8 @@ extension DBMessage {
             text: text,
             emoji: emoji,
             sourceMessageId: sourceMessageId,
-            attachmentUrls: attachmentUrls
+            attachmentUrls: attachmentUrls,
+            update: update
         )
     }
 
@@ -150,7 +166,8 @@ extension DBMessage {
             text: text,
             emoji: emoji,
             sourceMessageId: sourceMessageId,
-            attachmentUrls: attachmentUrls
+            attachmentUrls: attachmentUrls,
+            update: update
         )
     }
  }

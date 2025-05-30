@@ -130,6 +130,7 @@ class SharedDatabaseMigrator {
                 t.column("emoji", .text)
                 t.column("sourceMessageId", .text)
                 t.column("attachmentUrls", .text)
+                t.column("update", .jsonText)
             }
 
             try db.create(table: "session") { t in
