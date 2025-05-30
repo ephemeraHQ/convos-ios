@@ -22,7 +22,7 @@ struct ConversationsListItem: View {
     var body: some View {
         HStack(spacing: 12.0) {
             ConversationAvatarView(conversation: conversation)
-                .frame(maxHeight: 56.0)
+                .frame(width: 56.0, height: 56.0)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(conversation.title)
