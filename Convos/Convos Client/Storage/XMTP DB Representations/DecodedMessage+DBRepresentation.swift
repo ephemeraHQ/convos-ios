@@ -17,7 +17,7 @@ extension XMTPiOS.DecodedMessage {
         let emoji: String?
         let attachmentUrls: [String]
         let text: String?
-        let update: DBConversationUpdate?
+        let update: DBMessage.Update?
 
         switch encodedContentType {
         case ContentTypeText:

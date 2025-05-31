@@ -23,21 +23,22 @@ enum MessageContentType: String, Codable {
     case text, emoji, attachments, update
 }
 
-struct DBConversationUpdate: Codable, Hashable {
-    struct MetadataChange: Codable, Hashable {
-        let field: String
-        let oldValue: String?
-        let newValue: String?
-    }
-
-    let initiatedByInboxId: String
-    let addedInboxIds: [String]
-    let removedInboxIds: [String]
-    let metadataChanges: [MetadataChange]
-}
-
 struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
     static var databaseTableName: String = "message"
+
+    struct Update: Codable, Hashable {
+        struct MetadataChange: Codable, Hashable {
+            let field: String
+            let oldValue: String?
+            let newValue: String?
+        }
+
+        let initiatedByInboxId: String
+        let addedInboxIds: [String]
+        let removedInboxIds: [String]
+        let metadataChanges: [MetadataChange]
+    }
+
 
     enum Columns {
         static let id: Column = Column(CodingKeys.id)
@@ -69,7 +70,7 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
     let emoji: String?
     let sourceMessageId: String? // replies and reactions
     let attachmentUrls: [String]
-    let update: DBConversationUpdate?
+    let update: Update?
 
     var attachmentUrl: String? {
         attachmentUrls.first
@@ -209,11 +210,31 @@ enum AnyMessage: Hashable, Codable {
     }
 }
 
+struct ConversationUpdate: Hashable, Codable {
+    let creator: Profile
+    let addedMembers: [Profile]
+    let removedMembers: [Profile]
+    // add metadata fields
+
+    var summary: String {
+        if !addedMembers.isEmpty && !removedMembers.isEmpty {
+            "\(creator.displayName) added and removed members from the group"
+        } else if !addedMembers.isEmpty {
+            "\(creator.displayName) added \(addedMembers.formattedNamesString) to the group"
+        } else if !removedMembers.isEmpty {
+            "\(creator.displayName) removed \(removedMembers.formattedNamesString) from the group"
+        } else {
+            "Unknown update"
+        }
+    }
+}
+
 enum MessageContent: Hashable, Codable {
     case text(String),
          emoji(String), // all emoji, not a reaction
          attachment(URL),
-         attachments([URL])
+         attachments([URL]),
+         update(ConversationUpdate)
 }
 
 struct Message: MessageType, Hashable, Codable {

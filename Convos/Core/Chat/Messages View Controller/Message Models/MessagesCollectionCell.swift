@@ -19,7 +19,12 @@ enum MessagesCollectionCell: Hashable {
     var alignment: MessagesCollectionCell.Alignment {
         switch self {
         case let .message(message, _):
-            message.base.source == .incoming ? .leading : .trailing
+            switch message.base.content {
+            case .update:
+                .center
+            default:
+                message.base.source == .incoming ? .leading : .trailing
+            }
         case .typingIndicator:
             .leading
         case let .messageGroup(group):

@@ -25,6 +25,8 @@ final class CellFactory {
         switch message {
         case .message(let message):
             switch message.content {
+            case .update(let update):
+                return createConversationUpdate(in: collectionView, for: indexPath, update: update)
             case .text(let string), .emoji(let string):
                 return createTextCell(
                     in: collectionView,
@@ -64,7 +66,7 @@ final class CellFactory {
                     source: .imageURL(attachmentURL),
                     messageType: reply.source
                 )
-            case .attachments:
+            case .attachments, .update:
                 return UICollectionViewCell()
             }
         }
@@ -118,6 +120,17 @@ final class CellFactory {
             for: indexPath
         ) as! UserTitleCollectionCell
         cell.setup(name: title)
+        return cell
+    }
+
+    private static func createConversationUpdate(in collectionView: UICollectionView,
+                                                 for indexPath: IndexPath,
+                                                 update: ConversationUpdate) -> TextTitleCell {
+        let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: TextTitleCell.reuseIdentifier,
+            for: indexPath
+        ) as! TextTitleCell
+        cell.setup(title: update.summary)
         return cell
     }
 

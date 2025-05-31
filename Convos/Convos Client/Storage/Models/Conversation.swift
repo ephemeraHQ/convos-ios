@@ -237,14 +237,11 @@ struct Conversation: Codable, Hashable, Identifiable {
 
 extension Conversation {
     var memberNamesString: String {
-        members.map { $0.displayName }
-            .filter { !$0.isEmpty }
-            .sorted()
-            .joined(separator: ", ")
+        members.formattedNamesString
     }
 
     var membersCountString: String {
-        "\(members.count) \(members.count == 1 ? "member" : "members")"
+        "\(members.count) \(members.count == 1 ? "person" : "people")"
     }
 }
 
@@ -260,4 +257,24 @@ struct ConversationLocalState: Codable, FetchableRecord, PersistableRecord, Hash
         DBConversation.self,
         using: conversationForeignKey
     )
+}
+
+extension Array where Element == Profile {
+    var formattedNamesString: String {
+        let displayNames = self.map { $0.displayName }
+            .filter { !$0.isEmpty }
+            .sorted()
+
+        switch displayNames.count {
+        case 0:
+            return ""
+        case 1:
+            return displayNames[0]
+        case 2:
+            return displayNames.joined(separator: " & ")
+        default:
+            let allButLast = displayNames.dropLast().joined(separator: ", ")
+            return "\(allButLast) and \(displayNames.last!)"
+        }
+    }
 }

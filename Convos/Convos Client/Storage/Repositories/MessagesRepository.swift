@@ -51,7 +51,7 @@ extension Array where Element == MessageWithDetails {
             return []
         }
 
-        return dbMessagesWithDetails.compactMap { dbMessageWithDetails -> AnyMessage? in
+        return try dbMessagesWithDetails.compactMap { dbMessageWithDetails -> AnyMessage? in
             let dbMessage = dbMessageWithDetails.message
             let dbReactions = dbMessageWithDetails.messageReactions
             let dbSender = dbMessageWithDetails.messageSenderProfile
@@ -71,7 +71,7 @@ extension Array where Element == MessageWithDetails {
             case .original:
                 let messageContent: MessageContent
                 switch dbMessage.contentType {
-                case .text, .update:
+                case .text:
                     messageContent = .text(dbMessage.text ?? "")
                 case .attachments:
                     messageContent = .attachments(dbMessage.attachmentUrls.compactMap { urlString in
@@ -79,6 +79,24 @@ extension Array where Element == MessageWithDetails {
                     })
                 case .emoji:
                     messageContent = .emoji(dbMessage.emoji ?? "")
+                case .update:
+                    guard let update = dbMessage.update,
+                          let initiatedByMember = try MemberProfile.fetchOne(
+                            database,
+                            key: update.initiatedByInboxId
+                          ) else {
+                        Logger.error("Update message type is missing update object")
+                        return nil
+                    }
+                    let addedMembers = try MemberProfile.fetchAll(database, keys: update.addedInboxIds)
+                    let removedMembers = try MemberProfile.fetchAll(database, keys: update.removedInboxIds)
+                    messageContent = .update(
+                        .init(
+                            creator: initiatedByMember.hydrateProfile(),
+                            addedMembers: addedMembers.map { $0.hydrateProfile() },
+                            removedMembers: removedMembers.map { $0.hydrateProfile() }
+                        )
+                    )
                 }
 
                 let message = Message(id: dbMessage.clientMessageId,
