@@ -3,7 +3,9 @@ import Foundation
 import GRDB
 
 protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
+    // this should just be a publisher for the current conversation
     var selectedConversationId: String? { get set }
+    // "selecting" a conversation is really just adding all members from that conversation
     func add(profile: MemberProfile) async throws
     func remove(profile: MemberProfile) async throws
 }
@@ -22,9 +24,13 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     private weak var clientProvider: XMTPClientProvider?
     private var cancellable: AnyCancellable?
 
+    // the conversation id of the conversation we're publishing for the conversation repo
     private var conversationId: String
+    // the id of the draft conversation we create when a profile is added
     private let draftConversationId: String
+    // the id of the conversation if it has been created on XMTP
     private var createdConversationId: String?
+    // we can get rid of this
     var selectedConversationId: String?
 
     init(clientPublisher: AnyPublisher<XMTPClientProvider?, Never>,
@@ -78,6 +84,23 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
         // check if there's an existing conversation with the current conversation members
         // plus the one we're adding
+        let existingConversation: DBConversation? = try await databaseReader.read { db in
+            var memberInboxIds = try conversation.request(for: DBConversation.memberProfiles)
+                .fetchAll(db)
+                .map { $0.inboxId }
+            memberInboxIds.append(profile.inboxId)
+            guard let conversationsRequest = DBConversation.findConversationWith(
+                members: memberInboxIds
+            ) else {
+                return nil
+            }
+
+            let conversations: [DBConversation] = try conversationsRequest.fetchAll(db)
+            return conversations.first
+        }
+        // if we've found an existing conversation with those members, we need to publish it
+        // so the messages repository publishes those messages
+
         let membersCount: Int = try await databaseReader.read { db in
             try conversation.request(for: DBConversation.memberProfiles).fetchCount(db)
         }
@@ -121,7 +144,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         let membersCount: Int = try await databaseReader.read { db in
             try conversation.request(for: DBConversation.memberProfiles).fetchCount(db)
         }
-        let updatedConversation = conversation.with(kind: membersCount == 1 ? .dm : .group)
+        let updatedConversation = conversation.with(kind: membersCount - 1 <= 1 ? .dm : .group)
 
         _ = try await databaseWriter.write { db in
             try conversationMember.delete(db)

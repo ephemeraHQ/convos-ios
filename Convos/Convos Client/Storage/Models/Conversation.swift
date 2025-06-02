@@ -55,12 +55,12 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
         key: "conversationCreatorProfile"
     )
 
-    private static let _members: HasManyAssociation<DBConversation, DBConversationMember> = hasMany(
+    static let _members: HasManyAssociation<DBConversation, DBConversationMember> = hasMany(
         DBConversationMember.self,
         key: "conversationMembers"
     ).order(Column("createdAt").asc)
 
-    private static let members: HasManyThroughAssociation<DBConversation, Member> = hasMany(
+    static let members: HasManyThroughAssociation<DBConversation, Member> = hasMany(
         Member.self,
         through: _members,
         using: DBConversationMember.member,
@@ -153,19 +153,21 @@ extension DBConversation {
 
 extension DBConversation {
     static func findConversationWith(members ids: [String]) -> SQLRequest<DBConversation>? {
+         let questionMarks = databaseQuestionMarks(count: ids.count) // "?,?,?"
         let sql = """
         SELECT *
-        FROM conversation
+        FROM \(DBConversation.databaseTableName)
         WHERE id IN (
             SELECT conversationId
-            FROM conversationMember
-            WHERE memberId IN (\(ids.map { _ in "?" }.joined(separator: ", ")))
+            FROM \(DBConversationMember.databaseTableName)
+            WHERE memberId IN (\(questionMarks))
             GROUP BY conversationId
-            HAVING COUNT(*) = ?
-               AND COUNT(DISTINCT memberId) = ?
+            HAVING COUNT(*) = \(ids.count)
+               AND COUNT(DISTINCT memberId) = \(ids.count)
         )
         """
-        guard let arguments = StatementArguments(ids + [ids.count, ids.count]) else {
+        let allArguments: [DatabaseValueConvertible] = ids
+        guard let arguments = StatementArguments(allArguments) else {
             return nil
         }
         return SQLRequest<DBConversation>(sql: sql, arguments: arguments)
