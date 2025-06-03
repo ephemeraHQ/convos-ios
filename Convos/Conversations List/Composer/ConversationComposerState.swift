@@ -22,11 +22,6 @@ class ConversationComposerState {
     var conversationResults: [Conversation] = []
     private(set) var profilesAdded: OrderedSet<ProfileSearchResult> = []
     var profileResults: [ProfileSearchResult] = []
-    var selectedConversation: Conversation? {
-        didSet {
-            draftConversationRepo.selectedConversationId = selectedConversation?.id
-        }
-    }
 
     init(
         profileSearchRepository: any ProfileSearchRepositoryProtocol,

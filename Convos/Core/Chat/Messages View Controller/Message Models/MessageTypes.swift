@@ -19,7 +19,7 @@ extension ConversationUpdate: Differentiable {
     var differenceIdentifier: Int {
         hashValue
     }
-    
+
     func isContentEqual(to source: ConversationUpdate) -> Bool {
         self == source
     }

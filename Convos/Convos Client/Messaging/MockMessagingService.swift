@@ -141,6 +141,10 @@ extension MockMessagingService: ConversationRepositoryProtocol {
     var conversationPublisher: AnyPublisher<Conversation?, Never> {
         Just(conversation).eraseToAnyPublisher()
     }
+
+    func fetchConversation() throws -> Conversation? {
+        conversation
+    }
 }
 
 extension MockMessagingService: MessagesRepositoryProtocol {
@@ -154,9 +158,6 @@ extension MockMessagingService: MessagesRepositoryProtocol {
 }
 
 extension MockMessagingService: OutgoingMessageWriterProtocol {
-    var canSend: Bool { true }
-    var canSendPublisher: AnyPublisher<Bool, Never> { Just(true).eraseToAnyPublisher() }
-
     func send(text: String) async throws {
         _ = try await prepare(text: text)
         try await publish()

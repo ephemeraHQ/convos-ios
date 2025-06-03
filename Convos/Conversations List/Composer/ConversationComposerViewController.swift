@@ -66,6 +66,7 @@ class ConversationComposerViewController: UIViewController {
         }.store(in: &cancellables)
 
         composerHostingController.navigationController?.setNavigationBarHidden(true, animated: false)
+        composerHostingController.view.backgroundColor = .clear
         addChild(composerHostingController)
         messagesViewController.view.insertSubview(
             composerHostingController.view,

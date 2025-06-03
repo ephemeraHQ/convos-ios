@@ -17,9 +17,6 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
     private let databaseWriter: any DatabaseWriter
     private let conversationId: String
 
-    var canSend: Bool { true }
-    var canSendPublisher: AnyPublisher<Bool, Never> { Just(true).eraseToAnyPublisher() }
-
     init(clientProvider: XMTPClientProvider,
          databaseWriter: any DatabaseWriter,
          conversationId: String) {

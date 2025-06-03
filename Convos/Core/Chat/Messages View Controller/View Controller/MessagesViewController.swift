@@ -159,23 +159,16 @@ final class MessagesViewController: UIViewController {
     func observeConversationRepository() {
         conversationRepositoryCancellable?.cancel()
         conversationRepositoryCancellable = nil
+        do {
+            let conversation = try conversationRepository.fetchConversation()
+            configure(with: conversation)
+        } catch {
+            Logger.error("Error fetching conversation: \(error)")
+        }
         conversationRepositoryCancellable = conversationRepository.conversationPublisher
             .sink { [weak self] conversation in
                 guard let self else { return }
-                if let conversation {
-                    conversationHasMembers = !conversation.members.isEmpty
-                } else {
-                    conversationHasMembers = false
-                }
-                updateSendButtonEnabled()
-                if let conversation, !conversation.isDraft || conversation.lastMessage != nil {
-                    navigationBar.configure(conversation: conversation)
-                } else {
-                    navigationBar.configure(
-                        conversation: nil,
-                        placeholderTitle: "New chat"
-                    )
-                }
+                configure(with: conversation)
             }
         conversationRepository.messagesRepositoryPublisher
             .sink { [weak self] messagesRepository in
@@ -183,6 +176,23 @@ final class MessagesViewController: UIViewController {
                 self.messagesRepository = messagesRepository
             }
             .store(in: &cancellables)
+    }
+
+    private func configure(with conversation: Conversation?) {
+        if let conversation {
+            conversationHasMembers = !conversation.members.isEmpty
+        } else {
+            conversationHasMembers = false
+        }
+        updateSendButtonEnabled()
+        if let conversation, !conversation.isDraft || conversation.lastMessage != nil {
+            navigationBar.configure(conversation: conversation)
+        } else {
+            navigationBar.configure(
+                conversation: nil,
+                placeholderTitle: "New chat"
+            )
+        }
     }
 
     // MARK: - Lifecycle Methods

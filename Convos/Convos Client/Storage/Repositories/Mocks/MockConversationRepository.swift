@@ -11,11 +11,13 @@ class MockConversationRepository: ConversationRepositoryProtocol {
     }
 
     private let conversation: Conversation = .mock()
+
+    func fetchConversation() throws -> Conversation? {
+        conversation
+    }
 }
 
 class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
-    var selectedConversationId: String?
-
     var messagesRepositoryPublisher: AnyPublisher<any MessagesRepositoryProtocol, Never> {
         Just(MockMessagesRepository(conversation: conversation)).eraseToAnyPublisher()
     }
@@ -24,5 +26,12 @@ class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
         Just(conversation).eraseToAnyPublisher()
     }
 
+    func subscribe(to writer: any DraftConversationWriterProtocol) {
+    }
+
     private let conversation: Conversation = .mock()
+
+    func fetchConversation() throws -> Conversation? {
+        conversation
+    }
 }

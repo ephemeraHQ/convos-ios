@@ -59,7 +59,7 @@ final class MessagingService: MessagingServiceProtocol {
             draftConversationWriter: draftConversationWriter,
             draftConversationRepository: DraftConversationRepository(
                 dbReader: databaseReader,
-                draftConversationId: clientConversationId
+                writer: draftConversationWriter
             ),
             profileSearchRepository: ProfileSearchRepository(
                 apiClient: apiClient

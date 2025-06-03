@@ -39,7 +39,6 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
         let metadataChanges: [MetadataChange]
     }
 
-
     enum Columns {
         static let id: Column = Column(CodingKeys.id)
         static let clientMessageId: Column = Column(CodingKeys.clientMessageId)

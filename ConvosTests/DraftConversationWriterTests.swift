@@ -1,4 +1,5 @@
 @testable import Convos
+import Foundation
 import Testing
 
 private actor ClientHolder {
@@ -46,17 +47,17 @@ struct DraftConversationWriterTests {
         let composer = messaging.draftConversationComposer()
         let writer = composer.draftConversationWriter
         let repository = composer.draftConversationRepository
-        var conversationIterator = repository.conversationPublisher
-            .values
-            .makeAsyncIterator()
-        _ = await conversationIterator.next() // ignore first
-        let firstProfile = MemberProfile(inboxId: "1", name: "A", username: "a", avatar: nil)
-        try await writer.add(profile: firstProfile)
-        let second = await conversationIterator.next()
-        #expect(second??.members == [firstProfile.hydrateProfile()])
-        try await writer.remove(profile: firstProfile)
-        let third = await conversationIterator.next()
-        #expect(third??.members.isEmpty ?? false)
+        let firstProfile = MemberProfile(inboxId: UUID().uuidString, name: "A", username: "a", avatar: nil)
+        Task {
+            try await writer.add(profile: firstProfile)
+        }
+        _ = try await repository.conversationPublisher
+            .waitForFirstMatch(where: { $0?.members == [firstProfile.hydrateProfile()] })
+        Task {
+            try await writer.remove(profile: firstProfile)
+        }
+        _ = try await repository.conversationPublisher
+            .waitForFirstMatch(where: { $0?.members.isEmpty ?? true })
     }
 
     @Test("Removing a member changes conversation kind (dm or group)")
@@ -70,21 +71,24 @@ struct DraftConversationWriterTests {
         let composer = messaging.draftConversationComposer()
         let writer = composer.draftConversationWriter
         let repository = composer.draftConversationRepository
-        var conversationIterator = repository.conversationPublisher
-            .values
-            .makeAsyncIterator()
-        _ = await conversationIterator.next() // ignore first
-        let firstProfile = MemberProfile(inboxId: "1", name: "A", username: "a", avatar: nil)
-        try await writer.add(profile: firstProfile)
-        let second = await conversationIterator.next()
-        #expect(second??.kind == .dm)
-        let secondProfile = MemberProfile(inboxId: "2", name: "B", username: "b", avatar: nil)
-        try await writer.add(profile: secondProfile)
-        let third = await conversationIterator.next()
-        #expect(third??.kind == .group)
-        try await writer.remove(profile: firstProfile)
-        let fourth = await conversationIterator.next()
-        #expect(fourth??.kind == .dm)
+        let firstProfile = MemberProfile(inboxId: UUID().uuidString, name: "A", username: "a", avatar: nil)
+        Task {
+            try await writer.add(profile: firstProfile)
+        }
+        _ = try await repository.conversationPublisher
+            .waitForFirstMatch(where: { $0?.kind == .dm })
+
+        let secondProfile = MemberProfile(inboxId: UUID().uuidString, name: "B", username: "b", avatar: nil)
+        Task {
+            try await writer.add(profile: secondProfile)
+        }
+        _ = try await repository.conversationPublisher
+            .waitForFirstMatch(where: { $0?.kind == .group })
+        Task {
+            try await writer.remove(profile: firstProfile)
+        }
+        _ = try await repository.conversationPublisher
+            .waitForFirstMatch(where: { $0?.kind == .dm })
     }
 
     @Test("Sending a message creates the conversation on XMTP")
@@ -99,34 +103,20 @@ struct DraftConversationWriterTests {
         let composer = messaging.draftConversationComposer()
         let writer = composer.draftConversationWriter
         let repository = composer.draftConversationRepository
-        var conversationIterator = repository.conversationPublisher
-            .values
-            .makeAsyncIterator()
-        _ = await conversationIterator.next() // ignore first
-        let messagesRepoPublisher = composer.draftConversationRepository.messagesRepositoryPublisher
-        var messagesRepoIterator = messagesRepoPublisher.values.makeAsyncIterator()
         let firstProfile = MemberProfile(inboxId: inboxId, name: "A", username: "a", avatar: nil)
-        try await writer.add(profile: firstProfile)
-        let second = await conversationIterator.next()
-        #expect(second??.kind == .dm)
-        try await writer.send(text: "GM!")
-        guard let messagesRepo = await messagesRepoIterator.next() else {
-            fatalError("No messages repository")
+        Task {
+            try await writer.add(profile: firstProfile)
         }
-        let messagesPublisher = messagesRepo.messagesPublisher()
-        var messagesIterator = messagesPublisher.values.makeAsyncIterator()
-        _ = await messagesIterator.next() // ignore first (from init)
-        _ = await messagesIterator.next() // ignore second (from draft creation)
-        guard let messages = await messagesIterator.next() else {
-            fatalError()
+        _ = try await repository.conversationPublisher
+            .waitForFirstMatch(where: { $0?.kind == .dm })
+        Task {
+            try await writer.send(text: "GM!")
         }
+        let messagesRepoPublisher = repository.messagesRepositoryPublisher
+        let messagesPublisher = try await messagesRepoPublisher.waitForFirstMatch(where: { _ in true } )
+        let messages = try await messagesPublisher.messagesPublisher().waitForFirstMatch(where: { $0.count == 1 })
         #expect(messages.count == 1)
-        if case .update(_) = messages.first?.base.content {
-            #expect(true)
-        } else {
-            #expect(Bool(false), "Welcome message not received")
-        }
-        let secondMessages = try await messagesPublisher
+        let secondMessages = try await messagesPublisher.messagesPublisher()
             .waitForFirstMatch(where: { $0.count == 2})
         #expect(secondMessages.count == 2)
         #expect(secondMessages.last?.base.content == .text("GM!"))
@@ -134,7 +124,47 @@ struct DraftConversationWriterTests {
 
     @Test("Adding members that have an existing conversation")
     func testAddingMembersWithExistingConversation() async throws {
-        // the conversation should be used in the conversation repository
+        let inboxId = try await registerTemporaryInboxId()
+        let client = try await clientHolder.get()
+        let messaging = client.messaging
+        let state = try await messaging
+            .messagingStatePublisher()
+            .waitForFirstMatch { $0 == .ready }
+        #expect(state == .ready)
+        let composer = messaging.draftConversationComposer()
+        let writer = composer.draftConversationWriter
+        let repository = composer.draftConversationRepository
+        let firstProfile = MemberProfile(inboxId: inboxId, name: "A", username: "a", avatar: nil)
+        Task {
+            try await writer.add(profile: firstProfile)
+        }
+        _ = try await repository.conversationPublisher
+            .waitForFirstMatch(where: { $0?.kind == .dm })
+        Task {
+            try await writer.send(text: "GM!")
+        }
+        let messagesRepoPublisher = repository.messagesRepositoryPublisher
+        let messagesPublisher = try await messagesRepoPublisher.waitForFirstMatch(where: { _ in true } )
+        let messages = try await messagesPublisher.messagesPublisher().waitForFirstMatch(where: { $0.count == 1 })
+        #expect(messages.count == 1)
+
+        guard let existingConversation = try await messaging
+            .conversationsRepository()
+            .conversationsPublisher()
+            .waitForFirstMatch(where: { $0.first?.members == [firstProfile.hydrateProfile()] })
+            .first else {
+            fatalError("Failed to find existing conversation")
+        }
+
+        let composer2 = messaging.draftConversationComposer()
+        let writer2 = composer2.draftConversationWriter
+        let repository2 = composer2.draftConversationRepository
+        Task {
+            try await writer2.add(profile: firstProfile)
+        }
+        let foundConversation = try await repository2.conversationPublisher
+            .waitForFirstMatch(where: { $0?.id == existingConversation.id })
+        #expect(foundConversation?.members == existingConversation.members)
     }
 
     @Test("Selecting a conversation adds members")

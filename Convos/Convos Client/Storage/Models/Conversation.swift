@@ -152,25 +152,42 @@ extension DBConversation {
 }
 
 extension DBConversation {
-    static func findConversationWith(members ids: [String]) -> SQLRequest<DBConversation>? {
-         let questionMarks = databaseQuestionMarks(count: ids.count) // "?,?,?"
+    static func findConversationWith(members ids: [String], db: Database) throws -> DBConversation? {
+        let ids = Array(Set<String>(ids))
+        guard !ids.isEmpty else { return nil }
+        let count = ids.count
+
+        // Step 1: Find candidate conversation IDs
+        let placeholders = databaseQuestionMarks(count: count)
         let sql = """
-        SELECT *
-        FROM \(DBConversation.databaseTableName)
-        WHERE id IN (
-            SELECT conversationId
-            FROM \(DBConversationMember.databaseTableName)
-            WHERE memberId IN (\(questionMarks))
-            GROUP BY conversationId
-            HAVING COUNT(*) = \(ids.count)
-               AND COUNT(DISTINCT memberId) = \(ids.count)
-        )
+        SELECT conversationId
+        FROM \(DBConversationMember.databaseTableName)
+        WHERE memberId IN (\(placeholders))
+          AND conversationId NOT LIKE 'draft-%'
+        GROUP BY conversationId
+        HAVING COUNT(DISTINCT memberId) = :count
         """
-        let allArguments: [DatabaseValueConvertible] = ids
-        guard let arguments = StatementArguments(allArguments) else {
-            return nil
+        var arguments = StatementArguments()
+        for id in ids {
+            arguments += [id]
         }
-        return SQLRequest<DBConversation>(sql: sql, arguments: arguments)
+        arguments += ["count": count]
+
+        let candidateIds = try String.fetchAll(db, sql: sql, arguments: arguments)
+
+        // Step 2: For each candidate, check if the set of member IDs matches exactly
+        for conversationId in candidateIds {
+            let memberIds = try String.fetchAll(
+                db,
+                sql: "SELECT memberId FROM \(DBConversationMember.databaseTableName) WHERE conversationId = ?",
+                arguments: [conversationId]
+            )
+            if Set(memberIds) == Set(ids) {
+                // Found exact match
+                return try DBConversation.fetchOne(db, key: conversationId)
+            }
+        }
+        return nil
     }
 }
 
@@ -183,11 +200,11 @@ struct DBConversationDetails: Codable, FetchableRecord, PersistableRecord, Hasha
 }
 
 struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashable {
-    enum Role: Codable, Hashable {
-        case member, admin, superAdmin
+    enum Role: String, Codable, Hashable {
+        case member, admin, superAdmin = "super_admin"
     }
 
-    enum Consent: Hashable, Codable {
+    enum Consent: String, Codable, Hashable {
         case allowed, denied, unknown
     }
 
@@ -276,7 +293,8 @@ extension Array where Element == Profile {
             return displayNames.joined(separator: " & ")
         default:
             let allButLast = displayNames.dropLast().joined(separator: ", ")
-            return "\(allButLast) and \(displayNames.last!)"
+            let last = displayNames.last ?? ""
+            return "\(allButLast) and \(last)"
         }
     }
 }

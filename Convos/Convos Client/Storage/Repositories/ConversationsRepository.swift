@@ -39,7 +39,9 @@ extension Array where Element == DBConversationDetails {
             return []
         }
 
-        let conversations: [Conversation] = dbConversations.compactMap { dbConversationDetails in
+        let conversations: [Conversation] = dbConversations
+            .filter { !$0.conversation.isDraft }
+            .compactMap { dbConversationDetails in
             dbConversationDetails.hydrateConversation(
                 currentUser: currentUser
             )

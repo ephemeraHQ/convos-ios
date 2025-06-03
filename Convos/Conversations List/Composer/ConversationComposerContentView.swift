@@ -70,13 +70,16 @@ struct ConversationComposerContentView: View {
                     }
                 }
                 .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
+                .listRowBackground(Color.colorBackgroundPrimary)
                 .listRowInsets(EdgeInsets())
                 .listRowSpacing(0.0)
             }
         }
         .listStyle(.plain)
         .listRowSpacing(0.0)
+        .opacity(
+            (!composerState.profileResults.isEmpty ||
+             !composerState.conversationResults.isEmpty ? 1.0 : 0.0))
         .padding(0)
     }
 
@@ -113,11 +116,13 @@ struct ConversationComposerContentView: View {
                        isTextFieldFocused = true
                    }
                    .padding(.horizontal, DesignConstants.Spacing.step4x)
+                   .background(.colorBackgroundPrimary)
 
             resultsList
 
             Spacer().frame(height: 0.0)
         }
+        .background(.clear)
         .onAppear {
             isTextFieldFocused = true
         }
