@@ -216,7 +216,10 @@ extension MessagesContainerViewController: MessagesInputViewDelegate {
 
     func messagesInputView(_ view: MessagesInputView, didTapSend text: String) {
         currentInterfaceActions.options.insert(.sendingMessage)
-        delegate?.messagesContainerViewControllerDidSendMessage(self) // TODO:        scrollToBottom()
+        delegate?.messagesContainerViewControllerDidSendMessage(self)
+        if let messagesVC = children.first(where: { $0 is MessagesViewController }) as? MessagesViewController {
+            messagesVC.scrollToBottom()
+        }
         Task {
             do {
                 try await outgoingMessageWriter.send(text: text)

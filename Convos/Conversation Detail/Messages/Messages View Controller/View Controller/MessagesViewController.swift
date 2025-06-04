@@ -130,9 +130,6 @@ final class MessagesViewController: UIViewController {
         setupUI()
         reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
 
-        //        collectionView.contentInset.bottom = MessagesInputView.Constant.defaultHeight
-        //        collectionView.verticalScrollIndicatorInsets.bottom = MessagesInputView.Constant.defaultHeight
-
         reloadMessagesFromRepository()
         observe(messagesRepository: messagesRepository)
     }
@@ -140,17 +137,6 @@ final class MessagesViewController: UIViewController {
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         handleViewTransition(to: size, with: coordinator)
         super.viewWillTransition(to: size, with: coordinator)
-    }
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-
-        // Set content inset to just the base navigation bar height plus safe area
-        //        let navHeight = (traitCollection.verticalSizeClass == .compact ?
-        //                         MessagesToolbarView.Constant.compactHeight :
-        //                            MessagesToolbarView.Constant.regularHeight)
-        //        collectionView.contentInset.top = navHeight
-        //        collectionView.verticalScrollIndicatorInsets.top = collectionView.contentInset.top
     }
 
     // MARK: - Private Setup Methods
