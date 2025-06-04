@@ -13,6 +13,10 @@ final class MessagingService: MessagingServiceProtocol {
         stateMachine.state
     }
 
+    var messagingStatePublisher: AnyPublisher<MessagingServiceState, Never> {
+        stateMachine.statePublisher
+    }
+
     init(authService: any AuthServiceProtocol,
          databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader,
@@ -101,9 +105,5 @@ final class MessagingService: MessagingServiceProtocol {
 
     func stop() async {
         await stateMachine.stop()
-    }
-
-    func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never> {
-        stateMachine.statePublisher
     }
 }

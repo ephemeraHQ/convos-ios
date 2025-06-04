@@ -28,7 +28,7 @@ struct DraftConversationWriterTests {
         let userRepo = client.messaging.userRepository()
         try await client.register(displayName: "Test")
         _ = try await client.messaging
-            .messagingStatePublisher()
+            .messagingStatePublisher
             .waitForFirstMatch { $0 == .ready }
         guard let user = try await userRepo.getCurrentUser() else {
             fatalError("Error creating temp inbox id")
@@ -41,7 +41,7 @@ struct DraftConversationWriterTests {
         let client = try await clientHolder.get()
         let messaging = client.messaging
         let state = try await messaging
-            .messagingStatePublisher()
+            .messagingStatePublisher
             .waitForFirstMatch { $0 == .ready }
         #expect(state == .ready)
         let composer = messaging.draftConversationComposer()
@@ -65,7 +65,7 @@ struct DraftConversationWriterTests {
         let client = try await clientHolder.get()
         let messaging = client.messaging
         let state = try await messaging
-            .messagingStatePublisher()
+            .messagingStatePublisher
             .waitForFirstMatch { $0 == .ready }
         #expect(state == .ready)
         let composer = messaging.draftConversationComposer()
@@ -91,7 +91,7 @@ struct DraftConversationWriterTests {
         let client = try await clientHolder.get()
         let messaging = client.messaging
         let state = try await messaging
-            .messagingStatePublisher()
+            .messagingStatePublisher
             .waitForFirstMatch { $0 == .ready }
         #expect(state == .ready)
         let composer = messaging.draftConversationComposer()
@@ -125,7 +125,7 @@ struct DraftConversationWriterTests {
         let client = try await clientHolder.get()
         let messaging = client.messaging
         let state = try await messaging
-            .messagingStatePublisher()
+            .messagingStatePublisher
             .waitForFirstMatch { $0 == .ready }
         #expect(state == .ready)
         let composer = messaging.draftConversationComposer()

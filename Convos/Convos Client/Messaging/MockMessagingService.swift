@@ -95,7 +95,7 @@ class MockMessagingService: MessagingServiceProtocol {
         self
     }
 
-    func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never> {
+    var messagingStatePublisher: AnyPublisher<MessagingServiceState, Never> {
         messagingStateSubject.eraseToAnyPublisher()
     }
 }
