@@ -131,20 +131,18 @@ struct DraftConversationWriterTests {
         let composer = messaging.draftConversationComposer()
         let writer = composer.draftConversationWriter
         let repository = composer.draftConversationRepository
+        var conversationIterator = repository.conversationPublisher.values.makeAsyncIterator()
+        var messagesIterator = repository.messagesRepository.messagesPublisher.values.makeAsyncIterator()
         let firstProfile = MemberProfile(inboxId: inboxId, name: "A", username: "a", avatar: nil)
-        Task {
-            try await writer.add(profile: firstProfile)
-        }
-        _ = try await repository.conversationPublisher
-            .waitForFirstMatch(where: { $0?.kind == .dm })
-        Task {
-            try await writer.send(text: "GM!")
-        }
-        let messages = try await repository
-            .messagesRepository
-            .messagesPublisher
-            .waitForFirstMatch(where: { $0.count == 1 })
-        #expect(messages.count == 1)
+        try await writer.add(profile: firstProfile)
+        let conversation1 = await conversationIterator.next()
+        #expect(conversation1??.kind == .dm)
+        let messages0 = await messagesIterator.next()
+        #expect(messages0?.count == 0)
+        try await writer.send(text: "GM!")
+
+        let messages1 = await messagesIterator.next()
+        #expect(messages1?.count == 1)
 
         guard let existingConversation = try await messaging
             .conversationsRepository()
@@ -157,15 +155,10 @@ struct DraftConversationWriterTests {
         let composer2 = messaging.draftConversationComposer()
         let writer2 = composer2.draftConversationWriter
         let repository2 = composer2.draftConversationRepository
-        Task {
-            try await writer2.add(profile: firstProfile)
-        }
-        let foundConversation = try await repository2.conversationPublisher
-            .waitForFirstMatch(where: { $0?.id == existingConversation.id })
-        #expect(foundConversation?.members == existingConversation.members)
-    }
-
-    @Test("Selecting a conversation adds members")
-    func testSelectingConversationAddsMembers() async throws {        
+        var conversationIterator2 = repository2.conversationPublisher.values.makeAsyncIterator()
+        try await writer2.add(profile: firstProfile)
+        let foundConversation = await conversationIterator2.next()
+        #expect(foundConversation??.id == existingConversation.id)
+        #expect(foundConversation??.members == existingConversation.members)
     }
 }
