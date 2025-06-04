@@ -477,10 +477,6 @@ extension MessagesViewController: KeyboardListenerDelegate {
         currentInterfaceActions.options.remove(.changingKeyboardFrame)
     }
 
-    func keyboardWillHide(info: KeyboardInfo) {
-        becomeFirstResponder()
-    }
-
     private func handleKeyboardFrameChange(info: KeyboardInfo) {
         guard shouldHandleKeyboardFrameChange(info: info) else { return }
 

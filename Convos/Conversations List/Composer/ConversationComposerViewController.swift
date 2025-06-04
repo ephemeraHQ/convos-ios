@@ -23,7 +23,6 @@ class ConversationComposerViewController: UIViewController {
     let profileSearchRepository: any ProfileSearchRepositoryProtocol
     private let composerHostingController: UIHostingController<ConversationComposerContentView>
     private var cancellables: Set<AnyCancellable> = []
-    private var shouldBecomeFirstResponder: Bool = true
 
     init(
         composerState: ConversationComposerState,
@@ -61,15 +60,6 @@ class ConversationComposerViewController: UIViewController {
 
         composerHostingController.navigationController?.setNavigationBarHidden(true, animated: false)
         messagesContainerViewController.embedContentController(composerHostingController)
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-
-        if shouldBecomeFirstResponder {
-            shouldBecomeFirstResponder = false
-            becomeFirstResponderAfterTransitionCompletes()
-        }
     }
 }
 

@@ -132,6 +132,7 @@ struct ConversationComposerContentView: View {
             }
 
             MessagesView(messagesRepository: composerState.messagesRepository)
+                .ignoresSafeArea()
                 .overlay {
                     if composerState.showResultsList {
                         resultsList
@@ -142,6 +143,7 @@ struct ConversationComposerContentView: View {
         .onAppear {
             isTextFieldFocused = true
         }
+        .ignoresSafeArea()
     }
 }
 

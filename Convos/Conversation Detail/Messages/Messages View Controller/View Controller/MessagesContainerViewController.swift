@@ -63,10 +63,16 @@ class MessagesContainerViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
+    deinit {
+        KeyboardListener.shared.remove(delegate: self)
+    }
+
     // MARK: - Lifecycle
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        KeyboardListener.shared.add(delegate: self)
         observeConversationRepository()
     }
 
@@ -189,6 +195,14 @@ class MessagesContainerViewController: UIViewController {
                 placeholderTitle: "New chat"
             )
         }
+    }
+}
+
+// MARK: - Keyboard
+
+extension MessagesContainerViewController: KeyboardListenerDelegate {
+    func keyboardWillHide(info: KeyboardInfo) {
+        becomeFirstResponder()
     }
 }
 

@@ -7,12 +7,10 @@ struct MessagesView: UIViewControllerRepresentable {
         let messageViewController = MessagesViewController(
             messagesRepository: messagesRepository
         )
-        Logger.info("makeUIViewController: \(messagesRepository)")
         return messageViewController
     }
 
     func updateUIViewController(_ messagesViewController: MessagesViewController, context: Context) {
-        Logger.info("Updating messages view: \(messagesRepository)")
     }
 }
 
