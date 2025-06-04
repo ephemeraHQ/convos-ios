@@ -132,3 +132,7 @@ custom_rules:
     name: "Assertions In Non-Test Code"
     message: "Log an error using Sentry or something else rather than using assertions in non-test code"
     severity: warning
+
+excluded:
+  - ConvosTests
+  - ConvosTests/Helpers
