@@ -5,6 +5,8 @@ protocol MessagingServiceProtocol {
     var state: MessagingServiceState { get }
     var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> { get }
 
+    var messagingStatePublisher: AnyPublisher<MessagingServiceState, Never> { get }
+
     func start() async throws
     func stop() async
 
@@ -18,8 +20,6 @@ protocol MessagingServiceProtocol {
 
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol
-
-    func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never>
 }
 
 enum MessagingServiceEnvironment {

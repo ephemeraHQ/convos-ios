@@ -141,6 +141,7 @@
 				"Convos Client/Storage/Repositories/MessagesRepository.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockConversationRepository.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockConversationsRepository.swift",
+				"Convos Client/Storage/Repositories/Mocks/MockDraftConversationWriter.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockMessagesRepository.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockOutgoingMessageWriter.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockProfileSearchRepository.swift",
@@ -916,7 +917,7 @@
 			repositoryURL = "https://github.com/xmtp/xmtp-ios.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 4.0.7;
+				minimumVersion = 4.2.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

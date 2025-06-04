@@ -7,12 +7,12 @@ protocol ProfileSearchRepositoryProtocol {
 struct ProfileSearchResult: Hashable, Identifiable {
     var id: String { profile.id }
     let profile: Profile
-    let xmtpId: String
+    let inboxId: String
 
     static func mock() -> ProfileSearchResult {
         .init(
             profile: .mock(),
-            xmtpId: "mock-xmtp-id-\(UUID().uuidString.prefix(10))"
+            inboxId: "mock-xmtp-id-\(UUID().uuidString.prefix(10))"
         )
     }
 }
@@ -28,12 +28,12 @@ class ProfileSearchRepository: ProfileSearchRepositoryProtocol {
         let profiles = try await apiClient.getProfiles(matching: query)
         return profiles.map { apiProfile in
                 .init(profile: .init(
-                    id: apiProfile.id,
+                    id: apiProfile.xmtpId,
                     name: apiProfile.name,
                     username: apiProfile.username,
                     avatar: apiProfile.avatar
                 ),
-                      xmtpId: apiProfile.xmtpId
+                      inboxId: apiProfile.xmtpId
                 )
         }
     }

@@ -7,92 +7,34 @@ extension XMTPiOS.DecodedMessage {
         case mismatchedContentType, unsupportedContentType
     }
 
+    private struct DBMessageComponents {
+        var messageType: DBMessageType
+        var contentType: MessageContentType
+        var sourceMessageId: String?
+        var emoji: String?
+        var attachmentUrls: [String]
+        var text: String?
+        var update: DBMessage.Update?
+    }
+
     func dbRepresentation() throws -> DBMessage {
         let status: MessageStatus = deliveryStatus.status
-        let content = try content() as Any
         let encodedContentType = try encodedContent.type
-        let messageType: DBMessageType
-        let contentType: MessageContentType
-        let sourceMessageId: String?
-        let emoji: String?
-        let attachmentUrls: [String]
-        let text: String?
+        let components: DBMessageComponents
 
         switch encodedContentType {
         case ContentTypeText:
-            guard let contentString = content as? String else {
-                throw DecodedMessageDBRepresentationError.mismatchedContentType
-            }
-            text = contentString
-            messageType = .original
-            contentType = .text
-            attachmentUrls = []
-            emoji = nil
-            sourceMessageId = nil
+            components = try handleTextContent()
         case ContentTypeReply:
-            guard let contentReply = content as? Reply else {
-                throw DecodedMessageDBRepresentationError.mismatchedContentType
-            }
-            sourceMessageId = contentReply.reference
-            messageType = .reply
-            emoji = nil
-
-            switch contentReply.contentType {
-            case ContentTypeText:
-                guard let contentString = contentReply.content as? String else {
-                    throw DecodedMessageDBRepresentationError.mismatchedContentType
-                }
-                text = contentString
-                contentType = .text
-                attachmentUrls = []
-            case ContentTypeRemoteAttachment:
-                guard let remoteAttachment = content as? RemoteAttachment else {
-                    throw DecodedMessageDBRepresentationError.mismatchedContentType
-//                      let encodedContent: EncodedContent = try? await remoteAttachment.content(),
-//                      let attachment: Attachment = try? encodedContent.decoded(),
-//                      let localURL = try? attachment.saveToTmpFile() else {
-                }
-                attachmentUrls = [remoteAttachment.url]
-                contentType = .attachments
-                text = nil
-            default:
-                Logger.error("Unhandled contentType \(contentReply.contentType)")
-                contentType = .text
-                text = nil
-                attachmentUrls = []
-            }
+            components = try handleReplyContent()
         case ContentTypeReaction, ContentTypeReactionV2:
-            guard let reaction = content as? Reaction else {
-                throw DecodedMessageDBRepresentationError.mismatchedContentType
-            }
-            sourceMessageId = reaction.reference
-            messageType = .reaction
-            emoji = reaction.emoji
-            contentType = .emoji
-            text = nil
-            attachmentUrls = []
+            components = try handleReactionContent()
         case ContentTypeMultiRemoteAttachment:
-            guard let remoteAttachments = content as? [RemoteAttachment] else {
-                throw DecodedMessageDBRepresentationError.mismatchedContentType
-            }
-            messageType = .original
-            attachmentUrls = remoteAttachments.map { $0.url }
-            contentType = .attachments
-            text = nil
-            emoji = nil
-            sourceMessageId = nil
+            components = try handleMultiRemoteAttachmentContent()
         case ContentTypeRemoteAttachment:
-            guard let remoteAttachment = content as? RemoteAttachment else {
-                throw DecodedMessageDBRepresentationError.mismatchedContentType
-            }
-            messageType = .original
-            attachmentUrls = [remoteAttachment.url]
-            contentType = .attachments
-            text = nil
-            emoji = nil
-            sourceMessageId = nil
-        case ContentTypeAttachment:
-            throw DecodedMessageDBRepresentationError.unsupportedContentType
+            components = try handleRemoteAttachmentContent()
+        case ContentTypeGroupUpdated:
+            components = try handleGroupUpdatedContent()
         default:
             throw DecodedMessageDBRepresentationError.unsupportedContentType
         }
@@ -104,12 +46,153 @@ extension XMTPiOS.DecodedMessage {
             senderId: senderInboxId,
             date: sentAt,
             status: status,
-            messageType: messageType,
-            contentType: contentType,
-            text: text,
-            emoji: emoji,
-            sourceMessageId: sourceMessageId,
-            attachmentUrls: attachmentUrls
+            messageType: components.messageType,
+            contentType: components.contentType,
+            text: components.text,
+            emoji: components.emoji,
+            sourceMessageId: components.sourceMessageId,
+            attachmentUrls: components.attachmentUrls,
+            update: components.update
+        )
+    }
+
+    private func handleTextContent() throws -> DBMessageComponents {
+        let content = try content() as Any
+        guard let contentString = content as? String else {
+            throw DecodedMessageDBRepresentationError.mismatchedContentType
+        }
+        return DBMessageComponents(
+            messageType: .original,
+            contentType: .text,
+            sourceMessageId: nil,
+            emoji: nil,
+            attachmentUrls: [],
+            text: contentString,
+            update: nil
+        )
+    }
+
+    private func handleReplyContent() throws -> DBMessageComponents {
+        let content = try content() as Any
+        guard let contentReply = content as? Reply else {
+            throw DecodedMessageDBRepresentationError.mismatchedContentType
+        }
+        let sourceMessageId = contentReply.reference
+        switch contentReply.contentType {
+        case ContentTypeText:
+            guard let contentString = contentReply.content as? String else {
+                throw DecodedMessageDBRepresentationError.mismatchedContentType
+            }
+            return DBMessageComponents(
+                messageType: .reply,
+                contentType: .text,
+                sourceMessageId: sourceMessageId,
+                emoji: nil,
+                attachmentUrls: [],
+                text: contentString,
+                update: nil
+            )
+        case ContentTypeRemoteAttachment:
+            guard let remoteAttachment = content as? RemoteAttachment else {
+                throw DecodedMessageDBRepresentationError.mismatchedContentType
+            }
+            return DBMessageComponents(
+                messageType: .reply,
+                contentType: .attachments,
+                sourceMessageId: sourceMessageId,
+                emoji: nil,
+                attachmentUrls: [remoteAttachment.url],
+                text: nil,
+                update: nil
+            )
+        default:
+            Logger.error("Unhandled contentType \(contentReply.contentType)")
+            return DBMessageComponents(
+                messageType: .reply,
+                contentType: .text,
+                sourceMessageId: sourceMessageId,
+                emoji: nil,
+                attachmentUrls: [],
+                text: nil,
+                update: nil
+            )
+        }
+    }
+
+    private func handleReactionContent() throws -> DBMessageComponents {
+        let content = try content() as Any
+        guard let reaction = content as? Reaction else {
+            throw DecodedMessageDBRepresentationError.mismatchedContentType
+        }
+        return DBMessageComponents(
+            messageType: .reaction,
+            contentType: .emoji,
+            sourceMessageId: reaction.reference,
+            emoji: reaction.emoji,
+            attachmentUrls: [],
+            text: nil,
+            update: nil
+        )
+    }
+
+    private func handleMultiRemoteAttachmentContent() throws -> DBMessageComponents {
+        let content = try content() as Any
+        guard let remoteAttachments = content as? [RemoteAttachment] else {
+            throw DecodedMessageDBRepresentationError.mismatchedContentType
+        }
+        return DBMessageComponents(
+            messageType: .original,
+            contentType: .attachments,
+            sourceMessageId: nil,
+            emoji: nil,
+            attachmentUrls: remoteAttachments.map { $0.url },
+            text: nil,
+            update: nil
+        )
+    }
+
+    private func handleRemoteAttachmentContent() throws -> DBMessageComponents {
+        let content = try content() as Any
+        guard let remoteAttachment = content as? RemoteAttachment else {
+            throw DecodedMessageDBRepresentationError.mismatchedContentType
+        }
+        return DBMessageComponents(
+            messageType: .original,
+            contentType: .attachments,
+            sourceMessageId: nil,
+            emoji: nil,
+            attachmentUrls: [remoteAttachment.url],
+            text: nil,
+            update: nil
+        )
+    }
+
+    private func handleGroupUpdatedContent() throws -> DBMessageComponents {
+        let content = try content() as Any
+        guard let groupUpdated = content as? GroupUpdated else {
+            throw DecodedMessageDBRepresentationError.mismatchedContentType
+        }
+        let update = DBMessage.Update(
+            initiatedByInboxId: groupUpdated.initiatedByInboxID,
+            addedInboxIds: groupUpdated.addedInboxes.map { $0.inboxID },
+            removedInboxIds: groupUpdated.removedInboxes.map { $0.inboxID },
+            metadataChanges: groupUpdated.metadataFieldChanges
+                .map {
+                    .init(
+                        field: $0.fieldName,
+                        oldValue: $0.hasOldValue ? $0.oldValue : nil,
+                        newValue: $0.hasNewValue ? $0.newValue : nil
+                    )
+                }
+        )
+        return DBMessageComponents(
+            messageType: .original,
+            contentType: .update,
+            sourceMessageId: nil,
+            emoji: nil,
+            attachmentUrls: [],
+            text: nil,
+            update: update
         )
     }
 }

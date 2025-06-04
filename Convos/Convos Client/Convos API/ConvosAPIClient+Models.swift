@@ -63,6 +63,10 @@ enum ConvosAPI {
         let taken: Bool
     }
 
+    struct BatchProfilesResponse: Decodable {
+        let profiles: [String: ProfileResponse]
+    }
+
     struct ProfileResponse: Decodable {
         let id: String
         let name: String

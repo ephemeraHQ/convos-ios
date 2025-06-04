@@ -18,7 +18,7 @@ class MessagingServiceObservable {
     }
 
     private func observe() {
-        messagingService.messagingStatePublisher()
+        messagingService.messagingStatePublisher
             .receive(on: DispatchQueue.main)
             .sink(receiveValue: { state in
                 print("State changed: \(state)")

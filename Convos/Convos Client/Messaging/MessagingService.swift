@@ -13,6 +13,10 @@ final class MessagingService: MessagingServiceProtocol {
         stateMachine.state
     }
 
+    var messagingStatePublisher: AnyPublisher<MessagingServiceState, Never> {
+        stateMachine.statePublisher
+    }
+
     init(authService: any AuthServiceProtocol,
          databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader,
@@ -48,21 +52,21 @@ final class MessagingService: MessagingServiceProtocol {
     // MARK: Conversations
 
     func draftConversationComposer() -> any DraftConversationComposerProtocol {
-        DraftConversationComposer(
+        let clientConversationId: String = DBConversation.generateDraftConversationId()
+        let draftConversationWriter = DraftConversationWriter(
+            clientPublisher: stateMachine.clientPublisher,
+            databaseReader: databaseReader,
+            databaseWriter: databaseWriter,
+            draftConversationId: clientConversationId
+        )
+        return DraftConversationComposer(
+            draftConversationWriter: draftConversationWriter,
             draftConversationRepository: DraftConversationRepository(
-                dbReader: databaseReader
+                dbReader: databaseReader,
+                writer: draftConversationWriter
             ),
             profileSearchRepository: ProfileSearchRepository(
                 apiClient: apiClient
-            ),
-            messagesRepository: MessagesRepository(
-                dbReader: databaseReader,
-                conversationId: Conversation.draftPrimaryKey
-            ),
-            outgoingMessageWriter: OutgoingMessageWriter(
-                clientPublisher: stateMachine.clientPublisher,
-                databaseWriter: databaseWriter,
-                conversationId: Conversation.draftPrimaryKey
             )
         )
     }
@@ -101,9 +105,5 @@ final class MessagingService: MessagingServiceProtocol {
 
     func stop() async {
         await stateMachine.stop()
-    }
-
-    func messagingStatePublisher() -> AnyPublisher<MessagingServiceState, Never> {
-        stateMachine.statePublisher
     }
 }

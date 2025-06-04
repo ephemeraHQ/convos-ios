@@ -12,7 +12,7 @@ class MockMessagesRepository: MessagesRepositoryProtocol {
         return []
     }
 
-    func messagesPublisher() -> AnyPublisher<[AnyMessage], Never> {
-        Just([]).eraseToAnyPublisher()
+    var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> {
+        Just((conversation.id, [])).eraseToAnyPublisher()
     }
 }

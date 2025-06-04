@@ -16,7 +16,7 @@ final class SyncingManager: SyncingManagerProtocol {
     private var listConversationsTask: Task<Void, Never>?
     private var streamMessagesTask: Task<Void, Never>?
     private var streamConversationsTask: Task<Void, Never>?
-    private var syncMemberProfilesTasks: [Task<Void, Never>] = []
+    private var syncMemberProfilesTasks: [Task<Void, Error>] = []
 
     init(databaseWriter: any DatabaseWriter,
          apiClient: any ConvosAPIClientProtocol) {
@@ -38,11 +38,8 @@ final class SyncingManager: SyncingManagerProtocol {
                 }
                 let maxConcurrentTasks = 5
                 let conversations = try await client.conversations.list(consentStates: [.allowed])
+                syncMemberProfiles(for: conversations)
                 for chunk in conversations.chunked(into: maxConcurrentTasks) {
-                    // we also want to:
-                    // - fetch the last message for each conversation after saving
-                    // - for all dms, fetch the profile of the other participant
-                    syncMemberProfiles(for: chunk)
                     try await withThrowingTaskGroup(of: Void.self) { group in
                         for conversation in chunk {
                             group.addTask {
@@ -101,26 +98,39 @@ final class SyncingManager: SyncingManagerProtocol {
 
     private func syncMemberProfiles(for conversations: [XMTPiOS.Conversation]) {
         let syncProfilesTask = Task {
-            let allMemberIds = await withTaskGroup(
-                of: [XMTPiOS.Member].self,
-                returning: [String].self) { group in
+            do {
+                let allMemberIds = try await withThrowingTaskGroup(
+                    of: [XMTPiOS.Member].self,
+                    returning: [String].self
+                ) { group in
                     for conversation in conversations {
                         group.addTask {
-                            (try? await conversation.members()) ?? []
+                            try await conversation.members()
                         }
                     }
                     var allMemberIds: Set<InboxId> = .init()
-                    for await members in group {
+                    for try await members in group {
                         allMemberIds.formUnion(members.map(\.inboxId))
                     }
                     return allMemberIds.map { $0 as String }
                 }
-            let maxMembersPerChunk = 100
-            for chunk in allMemberIds.chunked(into: maxMembersPerChunk) {
-                Task {
-                    let profiles = try await apiClient.getProfiles(for: chunk)
-                    try await profileWriter.store(profiles: profiles)
+                let maxMembersPerChunk = 100
+                for chunk in allMemberIds.chunked(into: maxMembersPerChunk) {
+                    let chunkTask = Task {
+                        do {
+                            let batchProfiles = try await apiClient.getProfiles(for: chunk)
+                            let profiles = Array(batchProfiles.profiles.values)
+                            try await profileWriter.store(profiles: profiles)
+                        } catch {
+                            Logger.error("Error syncing member profiles: \(error)")
+                            throw error
+                        }
+                    }
+                    syncMemberProfilesTasks.append(chunkTask)
                 }
+            } catch {
+                Logger.error("Error syncing member profiles: \(error)")
+                throw error
             }
         }
         syncMemberProfilesTasks.append(syncProfilesTask)

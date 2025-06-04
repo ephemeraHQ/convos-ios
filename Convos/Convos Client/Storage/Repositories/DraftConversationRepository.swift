@@ -2,46 +2,105 @@ import Combine
 import Foundation
 import GRDB
 
-extension Conversation {
-    static var draftPrimaryKey: String {
-        "draft"
-    }
+protocol DraftConversationRepositoryProtocol: ConversationRepositoryProtocol {
+    var membersPublisher: AnyPublisher<[Profile], Never> { get }
+    var messagesRepository: any MessagesRepositoryProtocol { get }
 }
 
-class DraftConversationRepository: ConversationRepositoryProtocol {
+class DraftConversationRepository: DraftConversationRepositoryProtocol {
     private let dbReader: any DatabaseReader
-    private let conversationId: String
+    private let writer: any DraftConversationWriterProtocol
+    let messagesRepository: any MessagesRepositoryProtocol
 
-    init(dbReader: any DatabaseReader) {
+    init(dbReader: any DatabaseReader, writer: any DraftConversationWriterProtocol) {
         self.dbReader = dbReader
-        self.conversationId = Conversation.draftPrimaryKey
+        self.writer = writer
+        messagesRepository = MessagesRepository(
+            dbReader: dbReader,
+            conversationId: writer.conversationId,
+            conversationIdPublisher: writer.conversationIdPublisher
+        )
     }
 
-    func conversationPublisher() -> AnyPublisher<Conversation?, Never> {
+    lazy var membersPublisher: AnyPublisher<[Profile], Never> = {
         ValueObservation
             .tracking { [weak self] db in
-                guard let self else { return nil }
-
+                guard let self else { return [] }
                 guard let currentUser = try db.currentUser() else {
-                    throw CurrentSessionError.missingCurrentUser
+                    return []
                 }
-
                 guard let dbConversation = try DBConversation
-                    .filter(Column("id") == self.conversationId)
+                    .filter(Column("clientConversationId") == writer.draftConversationId)
                     .including(required: DBConversation.creatorProfile)
                     .including(required: DBConversation.localState)
                     .including(all: DBConversation.memberProfiles)
                     .asRequest(of: DBConversationDetails.self)
                     .fetchOne(db) else {
-                    return nil
+                    return []
                 }
-
-                return dbConversation.hydrateConversation(
-                    currentUser: currentUser
-                )
+                return dbConversation
+                    .hydrateConversation(currentUser: currentUser)
+                    .members
             }
             .publisher(in: dbReader)
-            .replaceError(with: nil)
+            .replaceError(with: [])
             .eraseToAnyPublisher()
+    }()
+
+    lazy var conversationPublisher: AnyPublisher<Conversation?, Never> = {
+        writer.conversationIdPublisher
+            .removeDuplicates()
+            .flatMap { [weak self] conversationId -> AnyPublisher<Conversation?, Never> in
+                guard let self else {
+                    return Just(nil).eraseToAnyPublisher()
+                }
+
+                return ValueObservation
+                    .tracking { [weak self] db in
+                        guard let self else { return nil }
+                        return try db.composeConversation(for: conversationId)
+                    }
+                    .publisher(in: dbReader)
+                    .replaceError(with: nil)
+                    .eraseToAnyPublisher()
+            }
+            .eraseToAnyPublisher()
+    }()
+
+    func fetchConversation() throws -> Conversation? {
+        try dbReader.read { [weak self] db in
+            guard let self else { return nil }
+            return try db.composeConversation(for: writer.conversationId)
+        }
+    }
+}
+
+fileprivate extension Database {
+    func composeConversation(for conversationId: String) throws -> Conversation? {
+        guard let currentUser = try currentUser() else {
+            throw CurrentSessionError.missingCurrentUser
+        }
+
+        let lastMessage = DBConversation.association(
+            to: DBConversation.lastMessageCTE,
+            on: { conversation, lastMessage in
+                conversation.clientConversationId == lastMessage.conversationId
+            }).forKey("conversationLastMessage")
+            .order(\.date.desc)
+        guard let dbConversation = try DBConversation
+            .filter(Column("clientConversationId") == conversationId)
+            .including(required: DBConversation.creatorProfile)
+            .including(required: DBConversation.localState)
+            .including(all: DBConversation.memberProfiles)
+            .with(DBConversation.lastMessageCTE)
+            .including(optional: lastMessage)
+            .asRequest(of: DBConversationDetails.self)
+            .fetchOne(self) else {
+            return nil
+        }
+
+        return dbConversation.hydrateConversation(
+            currentUser: currentUser
+        )
     }
 }

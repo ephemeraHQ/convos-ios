@@ -30,6 +30,8 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
                     return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 36))
                 case .attachment, .attachments:
                     return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 120.0))
+                case .update:
+                    return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 18))
                 }
             case .date:
                 return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 18))
@@ -54,8 +56,13 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
             switch item {
             case .date:
                 return .center
-            case .message:
-                return .fullWidth
+            case .message(let message, _):
+                switch message.base.content {
+                case .update:
+                    return .center
+                default:
+                    return .fullWidth
+                }
             case .messageGroup, .typingIndicator:
                 return .leading
             }

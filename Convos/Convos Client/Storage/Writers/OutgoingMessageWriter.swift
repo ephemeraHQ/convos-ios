@@ -17,6 +17,14 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
     private let databaseWriter: any DatabaseWriter
     private let conversationId: String
 
+    init(clientProvider: XMTPClientProvider,
+         databaseWriter: any DatabaseWriter,
+         conversationId: String) {
+        self.clientProvider = clientProvider
+        self.databaseWriter = databaseWriter
+        self.conversationId = conversationId
+    }
+
     init(clientPublisher: AnyPublisher<XMTPClientProvider?, Never>,
          databaseWriter: any DatabaseWriter,
          conversationId: String) {
@@ -56,7 +64,8 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
                 text: text,
                 emoji: nil,
                 sourceMessageId: nil,
-                attachmentUrls: []
+                attachmentUrls: [],
+                update: nil
             )
 
             try localMessage.save(db)

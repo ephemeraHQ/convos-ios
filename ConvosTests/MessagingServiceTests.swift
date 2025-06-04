@@ -13,7 +13,7 @@ struct MessagingServiceTests {
         let authService = MockAuthService()
         let client = makeClient(authService: authService)
         var stateIterator = client.messaging
-            .messagingStatePublisher()
+            .messagingStatePublisher
             .values
             .makeAsyncIterator()
         try await client.register(displayName: "Name")

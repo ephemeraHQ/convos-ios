@@ -58,9 +58,9 @@ class MockAPIClient: ConvosAPIClientProtocol {
         )
     }
 
-    func getProfiles(for inboxIds: [String]) async throws -> [ConvosAPI.ProfileResponse] {
-        return inboxIds.map { id in
-            ConvosAPI.ProfileResponse(
+    func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse {
+        let profilesById: [String: ConvosAPI.ProfileResponse] = inboxIds.reduce(into: [:]) { result, id in
+            let profile = ConvosAPI.ProfileResponse(
                 id: id,
                 name: "Mock User \(id)",
                 username: "mockuser\(id)",
@@ -69,7 +69,11 @@ class MockAPIClient: ConvosAPIClientProtocol {
                 xmtpId: "mock-xmtp-id-\(id)",
                 turnkeyAddress: "0xMOCKADDRESS\(id)"
             )
+            result[id] = profile
         }
+        return ConvosAPI.BatchProfilesResponse(
+            profiles: profilesById
+        )
     }
 
     func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse] {

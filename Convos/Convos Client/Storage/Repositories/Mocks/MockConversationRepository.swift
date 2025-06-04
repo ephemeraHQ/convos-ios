@@ -2,17 +2,32 @@ import Combine
 import Foundation
 
 class MockConversationRepository: ConversationRepositoryProtocol {
+    var conversationPublisher: AnyPublisher<Conversation?, Never> {
+        Just(conversation).eraseToAnyPublisher()
+    }
+
     private let conversation: Conversation = .mock()
 
-    func conversationPublisher() -> AnyPublisher<Conversation?, Never> {
-        Just(conversation).eraseToAnyPublisher()
+    func fetchConversation() throws -> Conversation? {
+        conversation
     }
 }
 
-class MockDraftConversationRepository: ConversationRepositoryProtocol {
-    private let conversation: Conversation = .draft()
+class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
+    var membersPublisher: AnyPublisher<[Profile], Never> {
+        Just([]).eraseToAnyPublisher()
+    }
+    var messagesRepository: any MessagesRepositoryProtocol {
+        MockMessagesRepository(conversation: conversation)
+    }
 
-    func conversationPublisher() -> AnyPublisher<Conversation?, Never> {
+    var conversationPublisher: AnyPublisher<Conversation?, Never> {
         Just(conversation).eraseToAnyPublisher()
+    }
+
+    private let conversation: Conversation = .mock()
+
+    func fetchConversation() throws -> Conversation? {
+        conversation
     }
 }

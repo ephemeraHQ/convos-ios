@@ -19,6 +19,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
 
     enum Columns {
         static let id: Column = Column(CodingKeys.id)
+        static let clientConversationId: Column = Column(CodingKeys.clientConversationId)
         static let creatorId: Column = Column(CodingKeys.creatorId)
         static let kind: Column = Column(CodingKeys.kind)
         static let consent: Column = Column(CodingKeys.consent)
@@ -29,6 +30,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     }
 
     let id: String
+    let clientConversationId: String // always the same, used for conversation drafts
     let creatorId: String
     let kind: ConversationKind
     let consent: Consent
@@ -53,12 +55,12 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
         key: "conversationCreatorProfile"
     )
 
-    private static let _members: HasManyAssociation<DBConversation, DBConversationMember> = hasMany(
+    static let _members: HasManyAssociation<DBConversation, DBConversationMember> = hasMany(
         DBConversationMember.self,
         key: "conversationMembers"
-    )
+    ).order(Column("createdAt").asc)
 
-    private static let members: HasManyThroughAssociation<DBConversation, Member> = hasMany(
+    static let members: HasManyThroughAssociation<DBConversation, Member> = hasMany(
         Member.self,
         through: _members,
         using: DBConversationMember.member,
@@ -94,6 +96,101 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     )
 }
 
+extension DBConversation {
+    private static var draftPrefix: String { "draft-" }
+
+    static func generateDraftConversationId() -> String {
+        "\(draftPrefix)\(UUID().uuidString)"
+    }
+
+    var isDraft: Bool {
+        (id.hasPrefix(Self.draftPrefix) &&
+         clientConversationId.hasPrefix(Self.draftPrefix))
+    }
+
+    func with(id: String) -> Self {
+        .init(
+            id: id,
+            clientConversationId: clientConversationId,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
+
+    func with(clientConversationId: String) -> Self {
+        .init(
+            id: id,
+            clientConversationId: clientConversationId,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
+
+    func with(kind: ConversationKind) -> Self {
+        .init(
+            id: id,
+            clientConversationId: clientConversationId,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
+}
+
+extension DBConversation {
+    static func findConversationWith(members ids: [String], db: Database) throws -> DBConversation? {
+        let ids = Array(Set<String>(ids))
+        guard !ids.isEmpty else { return nil }
+        let count = ids.count
+
+        // Step 1: Find candidate conversation IDs
+        let placeholders = databaseQuestionMarks(count: count)
+        let sql = """
+        SELECT conversationId
+        FROM \(DBConversationMember.databaseTableName)
+        WHERE memberId IN (\(placeholders))
+          AND conversationId NOT LIKE 'draft-%'
+        GROUP BY conversationId
+        HAVING COUNT(DISTINCT memberId) = :count
+        """
+        var arguments = StatementArguments()
+        for id in ids {
+            arguments += [id]
+        }
+        arguments += ["count": count]
+
+        let candidateIds = try String.fetchAll(db, sql: sql, arguments: arguments)
+
+        // Step 2: For each candidate, check if the set of member IDs matches exactly
+        for conversationId in candidateIds {
+            let memberIds = try String.fetchAll(
+                db,
+                sql: "SELECT memberId FROM \(DBConversationMember.databaseTableName) WHERE conversationId = ?",
+                arguments: [conversationId]
+            )
+            if Set(memberIds) == Set(ids) {
+                // Found exact match
+                return try DBConversation.fetchOne(db, key: conversationId)
+            }
+        }
+        return nil
+    }
+}
+
 struct DBConversationDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
     let conversation: DBConversation
     let conversationCreatorProfile: MemberProfile
@@ -103,11 +200,11 @@ struct DBConversationDetails: Codable, FetchableRecord, PersistableRecord, Hasha
 }
 
 struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashable {
-    enum Role: Codable, Hashable {
-        case member, admin, superAdmin
+    enum Role: String, Codable, Hashable {
+        case member, admin, superAdmin = "super_admin"
     }
 
-    enum Consent: Hashable, Codable {
+    enum Consent: String, Codable, Hashable {
         case allowed, denied, unknown
     }
 
@@ -115,6 +212,7 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
     let memberId: String
     let role: Role
     let consent: Consent
+    let createdAt: Date
 
     static var databaseTableName: String { "conversation_members" }
 
@@ -153,11 +251,16 @@ struct Conversation: Codable, Hashable, Identifiable {
     let isMuted: Bool
     let lastMessage: MessagePreview?
     let imageURL: URL?
+    let isDraft: Bool
 }
 
 extension Conversation {
     var memberNamesString: String {
-        members.map { $0.name }.joined(separator: ", ")
+        members.formattedNamesString
+    }
+
+    var membersCountString: String {
+        "\(members.count) \(members.count == 1 ? "person" : "people")"
     }
 }
 
@@ -173,4 +276,25 @@ struct ConversationLocalState: Codable, FetchableRecord, PersistableRecord, Hash
         DBConversation.self,
         using: conversationForeignKey
     )
+}
+
+extension Array where Element == Profile {
+    var formattedNamesString: String {
+        let displayNames = self.map { $0.displayName }
+            .filter { !$0.isEmpty }
+            .sorted()
+
+        switch displayNames.count {
+        case 0:
+            return ""
+        case 1:
+            return displayNames[0]
+        case 2:
+            return displayNames.joined(separator: " & ")
+        default:
+            let allButLast = displayNames.dropLast().joined(separator: ", ")
+            let last = displayNames.last ?? ""
+            return "\(allButLast) and \(last)"
+        }
+    }
 }
