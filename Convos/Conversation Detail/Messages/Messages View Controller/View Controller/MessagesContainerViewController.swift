@@ -92,15 +92,21 @@ class MessagesContainerViewController: UIViewController {
             guard let self else { return }
             navigationController?.popViewController(animated: true)
         }
-
         navigationBar.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .colorBackgroundPrimary
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(contentView)
 
         let heightConstraint = navigationBar.heightAnchor.constraint(equalToConstant: 0)
         NSLayoutConstraint.activate([
             navigationBar.topAnchor.constraint(equalTo: view.topAnchor),
             navigationBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             navigationBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            heightConstraint
+            heightConstraint,
+            contentView.topAnchor.constraint(equalTo: navigationBar.bottomAnchor),
+            contentView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
         registerForTraitChanges(
@@ -111,23 +117,6 @@ class MessagesContainerViewController: UIViewController {
 
         updateNavigationBarHeight(heightConstraint)
         navigationBarHeightConstraint = heightConstraint
-
-        view.backgroundColor = .colorBackgroundPrimary
-        navigationBar.translatesAutoresizingMaskIntoConstraints = false
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(navigationBar)
-        view.addSubview(contentView)
-
-        NSLayoutConstraint.activate([
-            navigationBar.topAnchor.constraint(equalTo: view.topAnchor),
-            navigationBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            navigationBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-
-            contentView.topAnchor.constraint(equalTo: navigationBar.bottomAnchor),
-            contentView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
     }
 
     private func setupInputBar() {

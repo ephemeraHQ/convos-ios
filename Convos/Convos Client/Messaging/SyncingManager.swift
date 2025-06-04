@@ -116,15 +116,17 @@ final class SyncingManager: SyncingManagerProtocol {
                 }
                 let maxMembersPerChunk = 100
                 for chunk in allMemberIds.chunked(into: maxMembersPerChunk) {
-                    Task {
+                    let chunkTask = Task {
                         do {
                             let batchProfiles = try await apiClient.getProfiles(for: chunk)
                             let profiles = Array(batchProfiles.profiles.values)
                             try await profileWriter.store(profiles: profiles)
                         } catch {
                             Logger.error("Error syncing member profiles: \(error)")
+                            throw error
                         }
                     }
+                    syncMemberProfilesTasks.append(chunkTask)
                 }
             } catch {
                 Logger.error("Error syncing member profiles: \(error)")

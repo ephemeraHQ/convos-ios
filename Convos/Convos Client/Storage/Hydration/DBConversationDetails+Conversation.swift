@@ -10,7 +10,7 @@ extension DBConversationDetails {
         let otherMemberProfile: Profile?
         if conversation.kind == .dm,
             let otherProfile = conversationMemberProfiles.first(
-                where: { $0.inboxId != currentUser.profile.id }) {
+                where: { $0.inboxId != currentUser.inboxId }) {
             otherMemberProfile = otherProfile.hydrateProfile()
         } else {
             otherMemberProfile = nil
