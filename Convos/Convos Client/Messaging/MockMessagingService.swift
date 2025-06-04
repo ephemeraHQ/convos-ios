@@ -129,11 +129,6 @@ extension MockMessagingService: ConversationsRepositoryProtocol {
 }
 
 extension MockMessagingService: ConversationRepositoryProtocol {
-    var messagesRepositoryPublisher: AnyPublisher<any MessagesRepositoryProtocol, Never> {
-        Just(MockMessagesRepository(conversation: conversation ?? .mock()))
-            .eraseToAnyPublisher()
-    }
-
     var conversation: Conversation? {
         conversations.randomElement()
     }
@@ -152,8 +147,11 @@ extension MockMessagingService: MessagesRepositoryProtocol {
         messages
     }
 
-    func messagesPublisher() -> AnyPublisher<[AnyMessage], Never> {
-        messagesSubject.eraseToAnyPublisher()
+    var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> {
+        let conversationId = currentConversation?.id ?? ""
+        return messagesSubject
+            .map { (conversationId, $0) }
+            .eraseToAnyPublisher()
     }
 }
 

@@ -25,16 +25,6 @@ final class MessagesViewController: UIViewController {
         case updatingCollection
     }
 
-    // MARK: - UIViewController Overrides
-
-    override var inputAccessoryView: UIView? {
-        inputBarView
-    }
-
-    override var canBecomeFirstResponder: Bool {
-        true
-    }
-
     // MARK: - Properties
 
     private var currentInterfaceActions: SetActor<Set<InterfaceActions>, ReactionTypes> = SetActor()
@@ -42,8 +32,6 @@ final class MessagesViewController: UIViewController {
 
     let collectionView: UICollectionView
     private var messagesLayout: MessagesCollectionLayout = MessagesCollectionLayout()
-    private let inputBarView: MessagesInputView = MessagesInputView()
-    let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
 
     private let dataSource: MessagesCollectionDataSource
 
@@ -53,45 +41,22 @@ final class MessagesViewController: UIViewController {
         collectionView.isDragging || collectionView.isDecelerating
     }
 
-    private var navigationBarHeightConstraint: NSLayoutConstraint?
-
-    private(set) var outgoingMessageWriter: any OutgoingMessageWriterProtocol
-    private(set) var conversationRepository: any ConversationRepositoryProtocol {
-        didSet {
-            observeConversationRepository()
-        }
-    }
-    private(set) var messagesRepository: (any MessagesRepositoryProtocol)? {
-        didSet {
-            observeMessagesRepository()
-        }
-    }
-    private var messageWriterCancellable: AnyCancellable?
+    let messagesRepository: any MessagesRepositoryProtocol
     private var messagesRepositoryCancellable: AnyCancellable?
-    private var conversationRepositoryCancellable: AnyCancellable?
-    private var didSendSubject: CurrentValueSubject<Void, Never> = .init(())
-    var didSendPublisher: AnyPublisher<Void, Never> {
-        didSendSubject.eraseToAnyPublisher()
-    }
     private var cancellables: Set<AnyCancellable> = []
     private var conversationHasMembers: Bool = false
 
-    var shouldBecomeFirstResponder: Bool = true
-
-    // Add coordinator property
     private var reactionMenuCoordinator: MessageReactionMenuCoordinator?
 
     // MARK: - Initialization
 
-    init(conversationRepository: any ConversationRepositoryProtocol,
-         outgoingMessageWriter: any OutgoingMessageWriterProtocol) {
-        self.conversationRepository = conversationRepository
-        self.outgoingMessageWriter = outgoingMessageWriter
+    init(messagesRepository: any MessagesRepositoryProtocol) {
         self.dataSource = MessagesCollectionViewDataSource()
         self.collectionView = UICollectionView(
             frame: .zero,
             collectionViewLayout: messagesLayout
         )
+        self.messagesRepository = messagesRepository
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -111,24 +76,28 @@ final class MessagesViewController: UIViewController {
 
     // MARK: -
 
-    func update(with conversationRepository: any ConversationRepositoryProtocol,
-                outgoingMessageWriter: any OutgoingMessageWriterProtocol) {
-        self.conversationRepository = conversationRepository
-        self.outgoingMessageWriter = outgoingMessageWriter
-    }
-
-    // MARK: -
-
-    func updateSendButtonEnabled() {
-        let enabled = conversationHasMembers && !inputBarView.textView.text.isEmpty
-        inputBarView.sendButton.isEnabled = enabled
-        inputBarView.sendButton.alpha = enabled ? 1 : 0.2
-    }
-
-    func observeMessagesRepository() {
-        guard let messagesRepository else { return }
+    func observe(messagesRepository: (any MessagesRepositoryProtocol)) {
         messagesRepositoryCancellable?.cancel()
         messagesRepositoryCancellable = nil
+        self.messagesRepositoryCancellable = messagesRepository
+            .conversationMessagesPublisher
+            .withPrevious()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] previous, current in
+                guard let self else { return }
+                let animated = previous.conversationId == current.conversationId
+                processUpdates(
+                    with: current.messages,
+                    animated: animated,
+                    requiresIsolatedProcess: false
+                )
+                if previous.conversationId != current.conversationId {
+                    scrollToBottom()
+                }
+            }
+    }
+
+    private func reloadMessagesFromRepository() {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             do {
@@ -142,57 +111,6 @@ final class MessagesViewController: UIViewController {
                 Logger.error("Error fetching messages: \(error)")
             }
         }
-        self.messagesRepositoryCancellable = messagesRepository
-            .messagesPublisher()
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] messages in
-                guard let self else { return }
-                processUpdates(
-                    with: messages,
-                    animated: true,
-                    requiresIsolatedProcess: false
-                )
-            }
-    }
-
-    func observeConversationRepository() {
-        conversationRepositoryCancellable?.cancel()
-        conversationRepositoryCancellable = nil
-        do {
-            let conversation = try conversationRepository.fetchConversation()
-            configure(with: conversation)
-        } catch {
-            Logger.error("Error fetching conversation: \(error)")
-        }
-        conversationRepositoryCancellable = conversationRepository.conversationPublisher
-            .sink { [weak self] conversation in
-                guard let self else { return }
-                configure(with: conversation)
-            }
-        conversationRepository.messagesRepositoryPublisher
-            .sink { [weak self] messagesRepository in
-                guard let self else { return }
-                self.messagesRepository = messagesRepository
-            }
-            .store(in: &cancellables)
-    }
-
-    private func configure(with conversation: Conversation?) {
-        if let conversation {
-            conversationHasMembers = !conversation.members.isEmpty
-        } else {
-            conversationHasMembers = false
-        }
-        updateSendButtonEnabled()
-        if let conversation, !conversation.isDraft || conversation.lastMessage != nil {
-            navigationBar.configure(conversation: conversation)
-        } else {
-            navigationBar.configure(
-                conversation: nil,
-                placeholderTitle: "New chat"
-            )
-        }
     }
 
     // MARK: - Lifecycle Methods
@@ -201,11 +119,6 @@ final class MessagesViewController: UIViewController {
         super.viewDidAppear(animated)
 
         collectionView.collectionViewLayout.invalidateLayout()
-
-        if shouldBecomeFirstResponder {
-            shouldBecomeFirstResponder = false
-            becomeFirstResponderAfterTransitionCompletes()
-        }
     }
 
     override func viewDidLoad() {
@@ -214,15 +127,14 @@ final class MessagesViewController: UIViewController {
         navigationController?.setNavigationBarHidden(true, animated: false)
 
         setupCollectionView()
-        setupInputBar()
         setupUI()
         reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
 
-        self.collectionView.contentInset.bottom = MessagesInputView.Constant.defaultHeight
-        self.collectionView.verticalScrollIndicatorInsets.bottom = MessagesInputView.Constant.defaultHeight
+        //        collectionView.contentInset.bottom = MessagesInputView.Constant.defaultHeight
+        //        collectionView.verticalScrollIndicatorInsets.bottom = MessagesInputView.Constant.defaultHeight
 
-        observeMessagesRepository()
-        observeConversationRepository()
+        reloadMessagesFromRepository()
+        observe(messagesRepository: messagesRepository)
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -232,68 +144,20 @@ final class MessagesViewController: UIViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-//        ensureInputBarVisibility()
 
         // Set content inset to just the base navigation bar height plus safe area
-        let navHeight = (traitCollection.verticalSizeClass == .compact ?
-                         MessagesToolbarView.Constant.compactHeight :
-                            MessagesToolbarView.Constant.regularHeight)
-        collectionView.contentInset.top = navHeight
-        collectionView.verticalScrollIndicatorInsets.top = collectionView.contentInset.top
-    }
-
-    // MARK: - Actions
-
-    @objc private func onBack() {
-        navigationController?.popViewController(animated: true)
+        //        let navHeight = (traitCollection.verticalSizeClass == .compact ?
+        //                         MessagesToolbarView.Constant.compactHeight :
+        //                            MessagesToolbarView.Constant.regularHeight)
+        //        collectionView.contentInset.top = navHeight
+        //        collectionView.verticalScrollIndicatorInsets.top = collectionView.contentInset.top
     }
 
     // MARK: - Private Setup Methods
 
     private func setupUI() {
         view.backgroundColor = .colorBackgroundPrimary
-        view.addSubview(navigationBar)
-        navigationBar.viewModel.onBack = { [weak self] in
-            self?.onBack()
-        }
-
-        // Setup Auto Layout for navigation bar
-        navigationBar.translatesAutoresizingMaskIntoConstraints = false
-
-        // Store height constraint for updates
-        let heightConstraint = navigationBar.heightAnchor.constraint(equalToConstant: 0)
-
-        NSLayoutConstraint.activate([
-            navigationBar.topAnchor.constraint(equalTo: view.topAnchor),
-            navigationBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            navigationBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            heightConstraint
-        ])
-
-        // Register for trait changes
-        registerForTraitChanges(
-            [UITraitVerticalSizeClass.self]
-        ) { (self: MessagesViewController, _: UITraitCollection) in
-            self.updateNavigationBarHeight(heightConstraint)
-        }
-
-        // Set initial height
-        updateNavigationBarHeight(heightConstraint)
-        navigationBarHeightConstraint = heightConstraint
-    }
-
-    override func viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-        if let constraint = navigationBarHeightConstraint {
-            updateNavigationBarHeight(constraint)
-        }
-    }
-
-    private func updateNavigationBarHeight(_ constraint: NSLayoutConstraint) {
-        let baseHeight = traitCollection.verticalSizeClass == .compact ?
-        MessagesToolbarView.Constant.compactHeight :
-        MessagesToolbarView.Constant.regularHeight
-        constraint.constant = baseHeight + view.safeAreaInsets.top
+        KeyboardListener.shared.add(delegate: self)
     }
 
     private func setupCollectionView() {
@@ -343,12 +207,6 @@ final class MessagesViewController: UIViewController {
         dataSource.prepare(with: collectionView)
     }
 
-    private func setupInputBar() {
-        inputBarView.delegate = self
-        inputBarView.translatesAutoresizingMaskIntoConstraints = false
-        KeyboardListener.shared.add(delegate: self)
-    }
-
     private func handleViewTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         guard isViewLoaded else { return }
 
@@ -369,15 +227,6 @@ final class MessagesViewController: UIViewController {
         })
     }
 
-    private func ensureInputBarVisibility() {
-        if inputBarView.superview == nil,
-           topMostViewController() is MessagesViewController {
-            DispatchQueue.main.async { [weak self] in
-                self?.reloadInputViews()
-            }
-        }
-    }
-
     // MARK: - Scrolling Methods
 
     private func loadPreviousMessages() {
@@ -392,11 +241,11 @@ final class MessagesViewController: UIViewController {
     }
 
     func scrollToBottom(completion: (() -> Void)? = nil) {
-        let contentOffsetAtBottom: CGPoint = CGPoint(
+        let contentOffsetAtBottom = CGPoint(
             x: collectionView.contentOffset.x,
-            y: messagesLayout.collectionViewContentSize.height -
-            collectionView.frame.height +
-            collectionView.adjustedContentInset.bottom
+            y: (messagesLayout.collectionViewContentSize.height -
+                collectionView.frame.height +
+                collectionView.adjustedContentInset.bottom)
         )
 
         guard contentOffsetAtBottom.y > collectionView.contentOffset.y else {
@@ -613,33 +462,6 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
                 self.collectionView.collectionViewLayout.invalidateLayout(with: context)
             })
         }
-    }
-}
-
-// MARK: - MessagesInputViewDelegate
-
-extension MessagesViewController: MessagesInputViewDelegate {
-    func messagesInputView(_ view: MessagesInputView, didChangeIntrinsicContentSize size: CGSize) {
-        guard !currentInterfaceActions.options.contains(.sendingMessage) else { return }
-        //        scrollToBottom()
-    }
-
-    func messagesInputView(_ view: MessagesInputView, didTapSend text: String) {
-        didSendSubject.send(())
-        currentInterfaceActions.options.insert(.sendingMessage)
-        scrollToBottom()
-        Task {
-            do {
-                try await outgoingMessageWriter.send(text: text)
-            } catch {
-                Logger.error("Error sending message: \(error)")
-            }
-            currentInterfaceActions.options.remove(.sendingMessage)
-        }
-    }
-
-    func messagesInputView(_ view: MessagesInputView, didChangeText text: String) {
-        updateSendButtonEnabled()
     }
 }
 

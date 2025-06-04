@@ -72,23 +72,17 @@ struct DraftConversationWriterTests {
         let writer = composer.draftConversationWriter
         let repository = composer.draftConversationRepository
         let firstProfile = MemberProfile(inboxId: UUID().uuidString, name: "A", username: "a", avatar: nil)
-        Task {
-            try await writer.add(profile: firstProfile)
-        }
-        _ = try await repository.conversationPublisher
-            .waitForFirstMatch(where: { $0?.kind == .dm })
-
+        var conversationIterator = repository.conversationPublisher.values.makeAsyncIterator()
+        try await writer.add(profile: firstProfile)
+        let conversation1 = await conversationIterator.next()
+        #expect(conversation1??.kind == .dm)
         let secondProfile = MemberProfile(inboxId: UUID().uuidString, name: "B", username: "b", avatar: nil)
-        Task {
-            try await writer.add(profile: secondProfile)
-        }
-        _ = try await repository.conversationPublisher
-            .waitForFirstMatch(where: { $0?.kind == .group })
-        Task {
-            try await writer.remove(profile: firstProfile)
-        }
-        _ = try await repository.conversationPublisher
-            .waitForFirstMatch(where: { $0?.kind == .dm })
+        try await writer.add(profile: secondProfile)
+        let conversation2 = await conversationIterator.next()
+        #expect(conversation2??.kind == .group)
+        try await writer.remove(profile: firstProfile)
+        let conversation3 = await conversationIterator.next()
+        #expect(conversation3??.kind == .dm)
     }
 
     @Test("Sending a message creates the conversation on XMTP")
@@ -112,11 +106,14 @@ struct DraftConversationWriterTests {
         Task {
             try await writer.send(text: "GM!")
         }
-        let messagesRepoPublisher = repository.messagesRepositoryPublisher
-        let messagesPublisher = try await messagesRepoPublisher.waitForFirstMatch(where: { _ in true } )
-        let messages = try await messagesPublisher.messagesPublisher().waitForFirstMatch(where: { $0.count == 1 })
+        let messages = try await repository
+            .messagesRepository
+            .messagesPublisher
+            .waitForFirstMatch(where: { $0.count == 1 })
         #expect(messages.count == 1)
-        let secondMessages = try await messagesPublisher.messagesPublisher()
+        let secondMessages = try await repository
+            .messagesRepository
+            .messagesPublisher
             .waitForFirstMatch(where: { $0.count == 2})
         #expect(secondMessages.count == 2)
         #expect(secondMessages.last?.base.content == .text("GM!"))
@@ -143,9 +140,10 @@ struct DraftConversationWriterTests {
         Task {
             try await writer.send(text: "GM!")
         }
-        let messagesRepoPublisher = repository.messagesRepositoryPublisher
-        let messagesPublisher = try await messagesRepoPublisher.waitForFirstMatch(where: { _ in true } )
-        let messages = try await messagesPublisher.messagesPublisher().waitForFirstMatch(where: { $0.count == 1 })
+        let messages = try await repository
+            .messagesRepository
+            .messagesPublisher
+            .waitForFirstMatch(where: { $0.count == 1 })
         #expect(messages.count == 1)
 
         guard let existingConversation = try await messaging

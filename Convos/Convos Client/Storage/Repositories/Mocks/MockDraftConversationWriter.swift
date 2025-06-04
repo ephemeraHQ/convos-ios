@@ -2,7 +2,13 @@ import Combine
 import Foundation
 
 class MockDraftConversationWriter: DraftConversationWriterProtocol {
-    var conversationIdPublisher: AnyPublisher<String, Never> { Just("").eraseToAnyPublisher() }
+    var draftConversationId: String = ""
+
+    var conversationId: String {
+        UUID().uuidString
+    }
+
+    var conversationIdPublisher: AnyPublisher<String, Never> { Just(conversationId).eraseToAnyPublisher() }
 
     func add(profile: MemberProfile) async throws {
     }

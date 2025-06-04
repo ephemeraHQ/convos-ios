@@ -15,7 +15,8 @@ struct ConversationComposerView: UIViewControllerRepresentable {
             initialValue: .init(
                 profileSearchRepository: draftConversationComposer.profileSearchRepository,
                 draftConversationRepo: draftConversationComposer.draftConversationRepository,
-                draftConversationWriter: draftConversationComposer.draftConversationWriter
+                draftConversationWriter: draftConversationComposer.draftConversationWriter,
+                messagesRepository: draftConversationComposer.draftConversationRepository.messagesRepository
             )
         )
     }

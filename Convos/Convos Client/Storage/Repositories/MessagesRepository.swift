@@ -2,19 +2,45 @@ import Combine
 import Foundation
 import GRDB
 
+typealias ConversationMessages = (conversationId: String, messages: [AnyMessage])
+
 protocol MessagesRepositoryProtocol {
     func fetchAll() throws -> [AnyMessage]
-    func messagesPublisher() -> AnyPublisher<[AnyMessage], Never>
+    var messagesPublisher: AnyPublisher<[AnyMessage], Never> { get }
+    var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> { get }
+}
+
+extension MessagesRepositoryProtocol {
+    var messagesPublisher: AnyPublisher<[AnyMessage], Never> {
+        conversationMessagesPublisher
+            .map { $0.messages }
+            .eraseToAnyPublisher()
+    }
 }
 
 class MessagesRepository: MessagesRepositoryProtocol {
     private let dbReader: any DatabaseReader
-    private let conversationId: String
+    private var conversationId: String {
+        conversationIdSubject.value
+    }
+    private let conversationIdSubject: CurrentValueSubject<String, Never>
     private let messages: [AnyMessage] = []
+    private var conversationIdCancellable: AnyCancellable?
 
     init(dbReader: any DatabaseReader, conversationId: String) {
         self.dbReader = dbReader
-        self.conversationId = conversationId
+        self.conversationIdSubject = .init(conversationId)
+    }
+
+    init(dbReader: any DatabaseReader,
+         conversationId: String,
+         conversationIdPublisher: AnyPublisher<String, Never>) {
+        self.dbReader = dbReader
+        self.conversationIdSubject = .init(conversationId)
+        conversationIdCancellable = conversationIdPublisher.sink { [weak self] conversationId in
+            guard let self else { return }
+            conversationIdSubject.send(conversationId)
+        }
     }
 
     func fetchAll() throws -> [AnyMessage] {
@@ -24,22 +50,32 @@ class MessagesRepository: MessagesRepositoryProtocol {
         }
     }
 
-    func messagesPublisher() -> AnyPublisher<[AnyMessage], Never> {
-        ValueObservation
-            .tracking { [weak self] db in
-                guard let self else { return [] }
-                do {
-                    let messages = try db.composeMessages(for: conversationId)
-                    return messages
-                } catch {
-                    Logger.error("Error in messages publisher: \(error)")
+    lazy var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> = {
+        conversationIdSubject
+            .removeDuplicates()
+            .flatMap { [weak self] conversationId -> AnyPublisher<ConversationMessages, Never> in
+                guard let self else {
+                    return Just((conversationId, [])).eraseToAnyPublisher()
                 }
-                return []
+
+                return ValueObservation
+                    .tracking { [weak self] db in
+                        guard let self else { return [] }
+                        do {
+                            let messages = try db.composeMessages(for: conversationId)
+                            return messages
+                        } catch {
+                            Logger.error("Error in messages publisher: \(error)")
+                        }
+                        return []
+                    }
+                    .publisher(in: dbReader)
+                    .replaceError(with: [])
+                    .map { (conversationId, $0) }
+                    .eraseToAnyPublisher()
             }
-            .publisher(in: dbReader)
-            .replaceError(with: [])
             .eraseToAnyPublisher()
-    }
+    }()
 }
 
 extension Array where Element == MessageWithDetails {

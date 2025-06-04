@@ -2,10 +2,6 @@ import Combine
 import Foundation
 
 class MockConversationRepository: ConversationRepositoryProtocol {
-    var messagesRepositoryPublisher: AnyPublisher<any MessagesRepositoryProtocol, Never> {
-        Just(MockMessagesRepository(conversation: conversation)).eraseToAnyPublisher()
-    }
-
     var conversationPublisher: AnyPublisher<Conversation?, Never> {
         Just(conversation).eraseToAnyPublisher()
     }
@@ -18,15 +14,15 @@ class MockConversationRepository: ConversationRepositoryProtocol {
 }
 
 class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
-    var messagesRepositoryPublisher: AnyPublisher<any MessagesRepositoryProtocol, Never> {
-        Just(MockMessagesRepository(conversation: conversation)).eraseToAnyPublisher()
+    var membersPublisher: AnyPublisher<[Profile], Never> {
+        Just([]).eraseToAnyPublisher()
+    }
+    var messagesRepository: any MessagesRepositoryProtocol {
+        MockMessagesRepository(conversation: conversation)
     }
 
     var conversationPublisher: AnyPublisher<Conversation?, Never> {
         Just(conversation).eraseToAnyPublisher()
-    }
-
-    func subscribe(to writer: any DraftConversationWriterProtocol) {
     }
 
     private let conversation: Conversation = .mock()

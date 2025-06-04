@@ -3,7 +3,6 @@ import Foundation
 import GRDB
 
 protocol ConversationRepositoryProtocol {
-    var messagesRepositoryPublisher: AnyPublisher<any MessagesRepositoryProtocol, Never> { get }
     var conversationPublisher: AnyPublisher<Conversation?, Never> { get }
 
     func fetchConversation() throws -> Conversation?
@@ -13,9 +12,6 @@ class ConversationRepository: ConversationRepositoryProtocol {
     private let dbReader: any DatabaseReader
     private let conversationId: String
     private let messagesRepository: MessagesRepository
-    var messagesRepositoryPublisher: AnyPublisher<any MessagesRepositoryProtocol, Never> {
-        Just(messagesRepository).eraseToAnyPublisher()
-    }
 
     init(conversationId: String, dbReader: any DatabaseReader) {
         self.dbReader = dbReader

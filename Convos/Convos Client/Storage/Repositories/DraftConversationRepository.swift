@@ -3,46 +3,52 @@ import Foundation
 import GRDB
 
 protocol DraftConversationRepositoryProtocol: ConversationRepositoryProtocol {
-    func subscribe(to writer: any DraftConversationWriterProtocol)
+    var membersPublisher: AnyPublisher<[Profile], Never> { get }
+    var messagesRepository: any MessagesRepositoryProtocol { get }
 }
 
 class DraftConversationRepository: DraftConversationRepositoryProtocol {
     private let dbReader: any DatabaseReader
-    private var cancellables: Set<AnyCancellable> = []
-    private var conversationWriterCancellable: AnyCancellable?
-
-    private let messagesRepositoryPassThroughSubject: PassthroughSubject<any MessagesRepositoryProtocol, Never> =
-        .init()
-    var messagesRepositoryPublisher: AnyPublisher<any MessagesRepositoryProtocol, Never> {
-        messagesRepositoryPassThroughSubject.eraseToAnyPublisher()
-    }
-
-    private let conversationIdSubject: CurrentValueSubject<String?, Never> = .init(nil)
+    private let writer: any DraftConversationWriterProtocol
+    let messagesRepository: any MessagesRepositoryProtocol
 
     init(dbReader: any DatabaseReader, writer: any DraftConversationWriterProtocol) {
         self.dbReader = dbReader
-        conversationPublisher
-            .compactMap { $0 }
-            .map { MessagesRepository(dbReader: self.dbReader, conversationId: $0.id) }
-            .sink { [weak self] repository in
-                guard let self else { return }
-                messagesRepositoryPassThroughSubject.send(repository)
-            }
-            .store(in: &cancellables)
-        subscribe(to: writer)
+        self.writer = writer
+        messagesRepository = MessagesRepository(
+            dbReader: dbReader,
+            conversationId: writer.conversationId,
+            conversationIdPublisher: writer.conversationIdPublisher
+        )
     }
 
-    func subscribe(to writer: any DraftConversationWriterProtocol) {
-        conversationWriterCancellable = writer.conversationIdPublisher
-            .sink { [weak self] conversationId in
-                guard let self else { return }
-                conversationIdSubject.send(conversationId)
+    lazy var membersPublisher: AnyPublisher<[Profile], Never> = {
+        ValueObservation
+            .tracking { [weak self] db in
+                guard let self else { return [] }
+                guard let currentUser = try db.currentUser() else {
+                    return []
+                }
+                guard let dbConversation = try DBConversation
+                    .filter(Column("clientConversationId") == writer.draftConversationId)
+                    .including(required: DBConversation.creatorProfile)
+                    .including(required: DBConversation.localState)
+                    .including(all: DBConversation.memberProfiles)
+                    .asRequest(of: DBConversationDetails.self)
+                    .fetchOne(db) else {
+                    return []
+                }
+                return dbConversation
+                    .hydrateConversation(currentUser: currentUser)
+                    .members
             }
-    }
+            .publisher(in: dbReader)
+            .replaceError(with: [])
+            .eraseToAnyPublisher()
+    }()
 
     lazy var conversationPublisher: AnyPublisher<Conversation?, Never> = {
-        conversationIdSubject
-            .compactMap { $0 }
+        writer.conversationIdPublisher
             .removeDuplicates()
             .flatMap { [weak self] conversationId -> AnyPublisher<Conversation?, Never> in
                 guard let self else {
@@ -64,10 +70,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
     func fetchConversation() throws -> Conversation? {
         try dbReader.read { [weak self] db in
             guard let self else { return nil }
-            guard let conversationId = conversationIdSubject.value else {
-                return nil
-            }
-            return try db.composeConversation(for: conversationId)
+            return try db.composeConversation(for: writer.conversationId)
         }
     }
 }

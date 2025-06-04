@@ -3,6 +3,8 @@ import Foundation
 import GRDB
 
 protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
+    var draftConversationId: String { get }
+    var conversationId: String { get }
     var conversationIdPublisher: AnyPublisher<String, Never> { get }
 
     func add(profile: MemberProfile) async throws
@@ -52,9 +54,9 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         }
     }
 
-    private let draftConversationId: String
-    private let conversationIdSubject: CurrentValueSubject<String, Never>
-    private var conversationId: String {
+    let draftConversationId: String
+    private let conversationIdSubject: PassthroughSubject<String, Never> = .init()
+    var conversationId: String {
         state.id
     }
     var conversationIdPublisher: AnyPublisher<String, Never> {
@@ -68,17 +70,12 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
         self.state = .draft(id: draftConversationId)
-        self.conversationIdSubject = CurrentValueSubject(draftConversationId)
         self.draftConversationId = draftConversationId
         cancellable = clientPublisher.sink { [weak self] clientProvider in
             guard let self else { return }
             self.clientProvider = clientProvider
         }
         removeOldDraftConversations()
-    }
-
-    enum Action {
-        case removing, adding
     }
 
     private func removeOldDraftConversations() {
@@ -93,7 +90,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         }
     }
 
-    private func findMatchingConversation(_ action: Action, profile: MemberProfile) async throws -> DBConversation? {
+    private func findMatchingConversation() async throws -> DBConversation? {
         return try await databaseReader.read { [weak self] db -> DBConversation? in
             guard let self else { return nil }
             let conversation = try DBConversation
@@ -108,11 +105,6 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                 .fetchAll(db)
                 .map { $0.inboxId } ?? []
             memberInboxIds.append(currentUser.inboxId)
-            if action == .adding {
-                memberInboxIds.append(profile.inboxId)
-            } else {
-                memberInboxIds.removeAll(where: { $0 == profile.inboxId })
-            }
             guard let conversation = try DBConversation.findConversationWith(
                 members: memberInboxIds, db: db
             ) else {
@@ -122,10 +114,6 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         }
     }
 
-    struct DebugMember: Decodable, FetchableRecord {
-        let conversationId: String
-        let memberId: String
-    }
     func add(profile: MemberProfile) async throws {
         guard state.canEditMembers else {
             throw DraftConversationWriterError.modifyingMembersOnExistingConversation
@@ -159,12 +147,6 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             throw DraftConversationWriterError.failedFindingConversation
         }
 
-        if let existingConversation = try await findMatchingConversation(.adding, profile: profile) {
-            state = .existing(id: existingConversation.id)
-        } else {
-            state = .draft(id: draftConversationId)
-        }
-
         let membersCount: Int = try await databaseReader.read { db in
             try conversation.request(for: DBConversation.memberProfiles).fetchCount(db)
         }
@@ -189,15 +171,21 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                 consent: .allowed,
                 createdAt: Date()
             )
-            let currentUserMember = DBConversationMember(
-                conversationId: updatedConversation.id,
-                memberId: updatedConversation.creatorId,
-                role: .superAdmin,
-                consent: .allowed,
-                createdAt: Date()
-            )
-            try? currentUserMember.insert(db)
+//            let currentUserMember = DBConversationMember(
+//                conversationId: updatedConversation.id,
+//                memberId: updatedConversation.creatorId,
+//                role: .superAdmin,
+//                consent: .allowed,
+//                createdAt: Date()
+//            )
+//            try? currentUserMember.insert(db)
             try conversationMember.save(db)
+        }
+
+        if let existingConversation = try await findMatchingConversation() {
+            state = .existing(id: existingConversation.id)
+        } else {
+            state = .draft(id: draftConversationId)
         }
     }
 
@@ -226,12 +214,6 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             throw DraftConversationWriterError.failedFindingConversation
         }
 
-        if let existingConversation = try await findMatchingConversation(.removing, profile: profile) {
-            state = .existing(id: existingConversation.id)
-        } else {
-            state = .draft(id: draftConversationId)
-        }
-
         let membersCount: Int = try await databaseReader.read { db in
             try conversation.request(for: DBConversation.memberProfiles).fetchCount(db)
         }
@@ -240,6 +222,12 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         _ = try await databaseWriter.write { db in
             try conversationMember.delete(db)
             try updatedConversation.save(db)
+        }
+
+        if let existingConversation = try await findMatchingConversation() {
+            state = .existing(id: existingConversation.id)
+        } else {
+            state = .draft(id: draftConversationId)
         }
     }
 

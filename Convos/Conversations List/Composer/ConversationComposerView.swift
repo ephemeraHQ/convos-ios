@@ -8,6 +8,17 @@ struct ConversationComposerContentView: View {
         self.composerState = composerState
     }
 
+    init(composer: any DraftConversationComposerProtocol) {
+        _composerState = State(
+            initialValue: .init(
+                profileSearchRepository: composer.profileSearchRepository,
+                draftConversationRepo: composer.draftConversationRepository,
+                draftConversationWriter: composer.draftConversationWriter,
+                messagesRepository: composer.draftConversationRepository.messagesRepository
+            )
+        )
+    }
+
     private let headerHeight: CGFloat = 72.0
 
     var resultsList: some View {
@@ -85,44 +96,49 @@ struct ConversationComposerContentView: View {
 
     var body: some View {
         VStack(spacing: 0.0) {
-            // profile search header
-            HStack(alignment: .top,
-                   spacing: DesignConstants.Spacing.step2x) {
-                Text("To")
-                    .font(.system(size: 16.0))
-                    .foregroundStyle(.colorTextSecondary)
+            if !composerState.hasSentMessage {
+                // profile search header
+                HStack(alignment: .top,
+                       spacing: DesignConstants.Spacing.step2x) {
+                    Text("To")
+                        .font(.system(size: 16.0))
+                        .foregroundStyle(.colorTextSecondary)
+                        .frame(height: headerHeight)
+
+                    ConversationComposerProfilesField(
+                        composerState: composerState,
+                        searchText: $composerState.searchText,
+                        isTextFieldFocused: $isTextFieldFocused,
+                        selectedProfile: $composerState.selectedProfile
+                    )
+
+                    Button {
+                    } label: {
+                        Image(systemName: "qrcode.viewfinder")
+                            .font(.system(size: 24.0))
+                            .foregroundStyle(.colorTextPrimary)
+                            .padding(.horizontal, DesignConstants.Spacing.step2x)
+                    }
+                    .opacity(composerState.searchText.isEmpty ? 1.0 : 0.2)
                     .frame(height: headerHeight)
-
-                ConversationComposerProfilesField(
-                    composerState: composerState,
-                    searchText: $composerState.searchText,
-                    isTextFieldFocused: $isTextFieldFocused,
-                    selectedProfile: $composerState.selectedProfile
-                )
-
-                Button {
-                } label: {
-                    Image(systemName: "qrcode.viewfinder")
-                        .font(.system(size: 24.0))
-                        .foregroundStyle(.colorTextPrimary)
-                        .padding(.horizontal, DesignConstants.Spacing.step2x)
                 }
-                .opacity(composerState.searchText.isEmpty ? 1.0 : 0.2)
-                .frame(height: headerHeight)
+                       .contentShape(Rectangle())
+                       .onTapGesture {
+                           composerState.selectedProfile = nil
+                           isTextFieldFocused = true
+                       }
+                       .padding(.horizontal, DesignConstants.Spacing.step4x)
+                       .background(.colorBackgroundPrimary)
             }
-                   .contentShape(Rectangle())
-                   .onTapGesture {
-                       composerState.selectedProfile = nil
-                       isTextFieldFocused = true
-                   }
-                   .padding(.horizontal, DesignConstants.Spacing.step4x)
-                   .background(.colorBackgroundPrimary)
 
-            resultsList
-
+            MessagesView(messagesRepository: composerState.messagesRepository)
+                .overlay {
+                    if composerState.showResultsList {
+                        resultsList
+                    }
+                }
             Spacer().frame(height: 0.0)
         }
-        .background(.clear)
         .onAppear {
             isTextFieldFocused = true
         }
@@ -133,7 +149,8 @@ struct ConversationComposerContentView: View {
     @Previewable @State var composerState = ConversationComposerState(
         profileSearchRepository: MockProfileSearchRepository(),
         draftConversationRepo: MockDraftConversationRepository(),
-        draftConversationWriter: MockDraftConversationWriter()
+        draftConversationWriter: MockDraftConversationWriter(),
+        messagesRepository: MockMessagesRepository(conversation: .mock())
     )
     ConversationComposerContentView(
         composerState: composerState

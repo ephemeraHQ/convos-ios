@@ -8,6 +8,8 @@ class ConversationComposerState {
     private(set) var draftConversationRepo: any DraftConversationRepositoryProtocol
     let draftConversationWriter: any DraftConversationWriterProtocol
     private var cancellables: Set<AnyCancellable> = []
+    private(set) var hasSentMessage: Bool = false
+    private(set) var messagesRepository: any MessagesRepositoryProtocol
 
     private var searchTask: Task<Void, Never>?
 
@@ -23,21 +25,26 @@ class ConversationComposerState {
     private(set) var profilesAdded: OrderedSet<ProfileSearchResult> = []
     var profileResults: [ProfileSearchResult] = []
 
+    var showResultsList: Bool {
+        return (!profileResults.isEmpty || !conversationResults.isEmpty) && !hasSentMessage
+    }
+
     init(
         profileSearchRepository: any ProfileSearchRepositoryProtocol,
         draftConversationRepo: any DraftConversationRepositoryProtocol,
-        draftConversationWriter: any DraftConversationWriterProtocol
+        draftConversationWriter: any DraftConversationWriterProtocol,
+        messagesRepository: any MessagesRepositoryProtocol
     ) {
         self.profileSearchRepo = profileSearchRepository
         self.draftConversationRepo = draftConversationRepo
         self.draftConversationWriter = draftConversationWriter
+        self.messagesRepository = messagesRepository
         draftConversationRepo
-            .conversationPublisher
-            .compactMap { $0 }
+            .membersPublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] conversation in
+            .sink { [weak self] members in
                 guard let self else { return }
-                profilesAdded = OrderedSet<ProfileSearchResult>(conversation.members.map {
+                profilesAdded = OrderedSet<ProfileSearchResult>(members.map {
                     .init(profile: $0, inboxId: $0.id)
                 })
             }
@@ -75,6 +82,10 @@ class ConversationComposerState {
                 Logger.error("Error removing profile: \(error)")
             }
         }
+    }
+
+    func didSendMessage() {
+        hasSentMessage = true
     }
 
     private func performSearch() {

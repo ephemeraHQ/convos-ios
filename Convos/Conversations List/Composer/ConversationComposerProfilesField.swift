@@ -111,7 +111,8 @@ struct ConversationComposerProfilesField: View {
     @Previewable @State var composerState: ConversationComposerState = .init(
         profileSearchRepository: MockProfileSearchRepository(),
         draftConversationRepo: MockDraftConversationRepository(),
-        draftConversationWriter: MockDraftConversationWriter()
+        draftConversationWriter: MockDraftConversationWriter(),
+        messagesRepository: MockMessagesRepository(conversation: .mock())
     )
     @Previewable @FocusState var textFieldFocusState: Bool
 

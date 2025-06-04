@@ -60,11 +60,15 @@ struct ConversationsListView: View {
                             let conversationRepository = convos.messaging.conversationRepository(
                                 for: conversation.id
                             )
+                            let messagesRepository = convos.messaging.messagesRepository(
+                                for: conversation.id
+                            )
                             let messageWriter = convos.messaging.messageWriter(
                                 for: conversation.id
                             )
-                            MessagesView(
+                            ConversationView(
                                 conversationRepository: conversationRepository,
+                                messagesRepository: messagesRepository,
                                 outgoingMessageWriter: messageWriter
                             )
                             .ignoresSafeArea()
