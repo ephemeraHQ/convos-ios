@@ -61,6 +61,7 @@ final class MessagesViewController: UIViewController {
     }
 
     deinit {
+        messagesRepositoryCancellable?.cancel()
         KeyboardListener.shared.remove(delegate: self)
     }
 

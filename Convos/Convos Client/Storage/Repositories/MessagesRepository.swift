@@ -44,6 +44,10 @@ class MessagesRepository: MessagesRepositoryProtocol {
         }
     }
 
+    deinit {
+        conversationIdCancellable?.cancel()
+    }
+
     func fetchAll() throws -> [AnyMessage] {
         try dbReader.read { [weak self] db in
             guard let self else { return [] }

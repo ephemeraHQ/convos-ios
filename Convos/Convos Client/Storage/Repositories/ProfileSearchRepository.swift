@@ -46,6 +46,10 @@ class ProfileSearchRepository: ProfileSearchRepositoryProtocol {
         }
     }
 
+    deinit {
+        cancellable?.cancel()
+    }
+
     func search(using query: String) async throws -> [ProfileSearchResult] {
         if query.isValidEthereumAddressFormat {
             guard let clientProvider else {

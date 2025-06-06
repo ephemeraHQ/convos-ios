@@ -79,6 +79,10 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         removeOldDraftConversations()
     }
 
+    deinit {
+        cancellable?.cancel()
+    }
+
     private func removeOldDraftConversations() {
         Task {
             try await databaseWriter.write { [weak self] db in
