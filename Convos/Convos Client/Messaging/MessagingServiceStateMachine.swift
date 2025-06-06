@@ -341,7 +341,8 @@ final actor MessagingServiceStateMachine {
     }
 
     private func observeAuthState() async {
-        authService.authStatePublisher()
+        authService
+            .authStatePublisher
             .sink(receiveValue: { [weak self] authState in
                 Logger.info("Auth state changed from messaging service observer: \(authState)")
                 Task {

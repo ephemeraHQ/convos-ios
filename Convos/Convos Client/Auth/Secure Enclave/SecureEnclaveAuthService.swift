@@ -21,6 +21,10 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
         authStateSubject.value
     }
 
+    var authStatePublisher: AnyPublisher<AuthServiceState, Never> {
+        authStateSubject.eraseToAnyPublisher()
+    }
+
     var supportsMultipleAccounts: Bool {
         false
     }
@@ -47,10 +51,6 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
     func deleteAccount() async throws {
         try identityStore.delete()
         authStateSubject.send(.unauthorized)
-    }
-
-    func authStatePublisher() -> AnyPublisher<AuthServiceState, Never> {
-        authStateSubject.eraseToAnyPublisher()
     }
 
     // MARK: - Private Helpers
