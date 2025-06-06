@@ -49,7 +49,6 @@ fileprivate extension Database {
 
         guard let dbConversation = try DBConversation
             .filter(DBConversation.Columns.id == conversationId)
-            .filter(DBConversation.Columns.consent == DBConversation.Consent.allowed.rawValue)
             .including(required: DBConversation.creatorProfile)
             .including(required: DBConversation.localState)
             .including(all: DBConversation.memberProfiles)

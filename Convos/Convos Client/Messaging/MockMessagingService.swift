@@ -235,7 +235,7 @@ extension MockMessagingService: MessageSender {
 
 extension MockMessagingService {
     static func randomConversations(with users: [Profile]) -> [Conversation] {
-        (0..<Int.random(in: 4...10)).map { index in
+        (0..<Int.random(in: 10...50)).map { index in
             Self.generateRandomConversation(id: "\(index)", from: users)
         }
     }
@@ -283,6 +283,7 @@ extension MockMessagingService {
             id: id,
             creator: randomCreator,
             date: Date(),
+            consent: Bool.random() ? .allowed : .denied,
             kind: kind,
             name: randomName,
             members: randomMembers,

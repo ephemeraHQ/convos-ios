@@ -3,7 +3,7 @@ import SwiftUI
 
 struct ConversationsListView: View {
     enum Route: Hashable {
-        case composer, conversation(Conversation)
+        case composer, securityLine, conversation(Conversation)
     }
 
     @Environment(MessagingServiceObservable.self)
@@ -39,6 +39,12 @@ struct ConversationsListView: View {
                 )
                 ScrollView {
                     LazyVStack(spacing: 0) {
+                        if !conversationsState.securityLineConversations.isEmpty {
+                            NavigationLink(value: Route.securityLine) {
+                                SecurityLineListItem(count: conversationsState.securityLineConversations.count)
+                            }
+                        }
+
                         ForEach(conversationsState.unpinnedConversations) { conversation in
                             NavigationLink(value: Route.conversation(conversation)) {
                                 ConversationsListItem(conversation: conversation)
@@ -55,6 +61,12 @@ struct ConversationsListView: View {
                                     .draftConversationComposer()
                             )
                             .ignoresSafeArea()
+                            .toolbarVisibility(.hidden, for: .navigationBar)
+                        case .securityLine:
+                            SecurityLineView(
+                                path: $path,
+                                conversationsState: conversationsState
+                            )
                             .toolbarVisibility(.hidden, for: .navigationBar)
                         case .conversation(let conversation):
                             let conversationRepository = convos.messaging.conversationRepository(

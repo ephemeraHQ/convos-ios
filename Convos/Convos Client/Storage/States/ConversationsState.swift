@@ -4,12 +4,25 @@ import Observation
 
 @Observable
 final class ConversationsState {
-    var conversations: [Conversation]
+    private var conversations: [Conversation]
+
+    private var allowedConversation: [Conversation] {
+        conversations.filter { $0.consent == .allowed }
+    }
+
+    var securityLineConversations: [Conversation] {
+        conversations.filter { $0.consent == .unknown }
+    }
+
+    var deniedConversations: [Conversation] {
+        conversations.filter { $0.consent == .denied }
+    }
+
     var pinnedConversations: [Conversation] {
-        conversations.filter { $0.isPinned }
+        allowedConversation.filter { $0.isPinned }
     }
     var unpinnedConversations: [Conversation] {
-        conversations.filter { !$0.isPinned }
+        allowedConversation.filter { !$0.isPinned }
     }
 
     private let conversationsRepository: ConversationsRepositoryProtocol

@@ -13,10 +13,6 @@ struct MessagePreview: Codable, Equatable, Hashable {
 struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
     static var databaseTableName: String = "conversation"
 
-    enum Consent: String, Hashable, Codable {
-        case allowed, denied, unknown
-    }
-
     enum Columns {
         static let id: Column = Column(CodingKeys.id)
         static let clientConversationId: Column = Column(CodingKeys.clientConversationId)
@@ -199,13 +195,13 @@ struct DBConversationDetails: Codable, FetchableRecord, PersistableRecord, Hasha
     let conversationLocalState: ConversationLocalState
 }
 
+enum Consent: String, Codable, Hashable {
+    case allowed, denied, unknown
+}
+
 struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashable {
     enum Role: String, Codable, Hashable {
         case member, admin, superAdmin = "super_admin"
-    }
-
-    enum Consent: String, Codable, Hashable {
-        case allowed, denied, unknown
     }
 
     let conversationId: String
@@ -240,6 +236,7 @@ struct Conversation: Codable, Hashable, Identifiable {
     let id: String
     let creator: Profile
     let createdAt: Date
+    let consent: Consent
     let kind: ConversationKind
     let name: String?
     let description: String?

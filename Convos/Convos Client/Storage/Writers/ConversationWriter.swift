@@ -170,7 +170,7 @@ fileprivate extension XMTPiOS.Conversation {
 }
 
 fileprivate extension XMTPiOS.ConsentState {
-    var memberConsent: DBConversationMember.Consent {
+    var memberConsent: Consent {
         switch self {
         case .allowed: return .allowed
         case .denied: return .denied
@@ -178,7 +178,7 @@ fileprivate extension XMTPiOS.ConsentState {
         }
     }
 
-    var consent: DBConversation.Consent {
+    var consent: Consent {
         switch self {
         case .allowed: return .allowed
         case .denied: return .denied

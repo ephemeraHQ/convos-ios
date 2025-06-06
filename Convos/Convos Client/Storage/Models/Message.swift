@@ -5,7 +5,7 @@ enum MessageStatus: String, Hashable, Codable {
     case unpublished, published, failed, unknown
 }
 
-enum MessageSource: Hashable, Codable {
+enum MessageSource: String, Hashable, Codable {
     case incoming, outgoing
 
     var isIncoming: Bool {

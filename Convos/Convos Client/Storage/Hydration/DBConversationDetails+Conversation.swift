@@ -34,6 +34,7 @@ extension DBConversationDetails {
             id: conversation.id,
             creator: creatorProfile,
             createdAt: conversation.createdAt,
+            consent: conversation.consent,
             kind: conversation.kind,
             name: conversation.name,
             description: conversation.description,
