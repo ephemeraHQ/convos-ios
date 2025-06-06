@@ -13,7 +13,7 @@ struct MessagePreview: Codable, Equatable, Hashable {
 struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
     static var databaseTableName: String = "conversation"
 
-    enum Consent: Hashable, Codable {
+    enum Consent: String, Hashable, Codable {
         case allowed, denied, unknown
     }
 

@@ -60,6 +60,7 @@ fileprivate extension Database {
             }).forKey("conversationLastMessage")
             .order(\.date.desc)
         let dbConversationDetails = try DBConversation
+            .filter(DBConversation.Columns.consent == DBConversation.Consent.allowed.rawValue)
             .including(required: DBConversation.creatorProfile)
             .including(required: DBConversation.localState)
             .including(all: DBConversation.memberProfiles)
