@@ -55,7 +55,7 @@ final class SyncingManager: SyncingManagerProtocol {
         }
         streamMessagesTask = Task {
             do {
-                for try await message in await client.conversations.streamAllMessages(consentStates: [.allowed]) {
+                for try await message in await client.conversations.streamAllMessages() {
                     guard let conversation = try await client.conversations.findConversation(
                         conversationId: message.conversationId) else {
                         Logger.error("Failed finding conversation for message in `streamAllMessages()`")

@@ -14,6 +14,7 @@ struct ConversationComposerContentView: View {
                 profileSearchRepository: composer.profileSearchRepository,
                 draftConversationRepo: composer.draftConversationRepository,
                 draftConversationWriter: composer.draftConversationWriter,
+                conversationConsentWriter: composer.conversationConsentWriter,
                 messagesRepository: composer.draftConversationRepository.messagesRepository
             )
         )
@@ -152,6 +153,7 @@ struct ConversationComposerContentView: View {
         profileSearchRepository: MockProfileSearchRepository(),
         draftConversationRepo: MockDraftConversationRepository(),
         draftConversationWriter: MockDraftConversationWriter(),
+        conversationConsentWriter: MockMessagingService(),
         messagesRepository: MockMessagesRepository(conversation: .mock())
     )
     ConversationComposerContentView(

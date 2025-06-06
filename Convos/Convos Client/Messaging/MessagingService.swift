@@ -71,7 +71,8 @@ final class MessagingService: MessagingServiceProtocol {
             profileSearchRepository: ProfileSearchRepository(
                 apiClient: apiClient,
                 clientPublisher: stateMachine.clientPublisher
-            )
+            ),
+            conversationConsentWriter: conversationConsentWriter()
         )
     }
 
@@ -82,6 +83,10 @@ final class MessagingService: MessagingServiceProtocol {
     func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
         ConversationRepository(conversationId: conversationId,
                                dbReader: databaseReader)
+    }
+
+    func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
+        ConversationConsentWriter(databaseWriter: databaseWriter, clientPublisher: clientPublisher)
     }
 
     // MARK: Getting/Sending Messages

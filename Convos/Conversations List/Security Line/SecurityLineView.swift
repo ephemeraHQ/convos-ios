@@ -82,7 +82,6 @@ struct SecurityLineView: View {
 #Preview {
     @Previewable @State var path: [ConversationsListView.Route] = []
     let convos = ConvosClient.mock()
-    let messagingService = MessagingServiceObservable(messagingService: convos.messaging)
     let conversationsRepository = convos.messaging.conversationsRepository()
 
     NavigationStack {

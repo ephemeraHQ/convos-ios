@@ -145,6 +145,20 @@ extension DBConversation {
             imageURLString: imageURLString
         )
     }
+
+    func with(consent: Consent) -> Self {
+        .init(
+            id: id,
+            clientConversationId: clientConversationId,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
 }
 
 extension DBConversation {

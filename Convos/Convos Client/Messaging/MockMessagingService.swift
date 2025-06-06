@@ -84,6 +84,10 @@ class MockMessagingService: MessagingServiceProtocol {
         return self
     }
 
+    func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
+        self
+    }
+
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
         if let found = conversations.first(where: { $0.id == conversationId }) {
             currentConversation = found
@@ -125,6 +129,14 @@ extension MockMessagingService: ConversationsRepositoryProtocol {
 
     func conversationsPublisher() -> AnyPublisher<[Conversation], Never> {
         Just(conversations).eraseToAnyPublisher()
+    }
+}
+
+extension MockMessagingService: ConversationConsentWriterProtocol {
+    func join(conversation: Conversation) async throws {
+    }
+
+    func delete(conversation: Conversation) async throws {
     }
 }
 
@@ -204,6 +216,9 @@ extension MockMessagingService: XMTPClientProvider {
 
     func inboxId(for ethereumAddress: String) async throws -> String? {
         nil
+    }
+
+    func update(consent: Consent, for conversation: Conversation) async throws {
     }
 }
 

@@ -17,6 +17,7 @@ protocol MessagingServiceProtocol {
     func draftConversationComposer() -> any DraftConversationComposerProtocol
     func conversationsRepository() -> any ConversationsRepositoryProtocol
     func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol
+    func conversationConsentWriter() -> any ConversationConsentWriterProtocol
 
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol
