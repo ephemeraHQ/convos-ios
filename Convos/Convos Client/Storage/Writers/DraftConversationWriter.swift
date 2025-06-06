@@ -55,9 +55,9 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     }
 
     let draftConversationId: String
-    private let conversationIdSubject: PassthroughSubject<String, Never> = .init()
+    private let conversationIdSubject: CurrentValueSubject<String, Never>
     var conversationId: String {
-        state.id
+        conversationIdSubject.value
     }
     var conversationIdPublisher: AnyPublisher<String, Never> {
         conversationIdSubject.eraseToAnyPublisher()
@@ -70,6 +70,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
         self.state = .draft(id: draftConversationId)
+        self.conversationIdSubject = .init(draftConversationId)
         self.draftConversationId = draftConversationId
         cancellable = clientPublisher.sink { [weak self] clientProvider in
             guard let self else { return }

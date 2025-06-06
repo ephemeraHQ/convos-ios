@@ -89,11 +89,13 @@ final class MessagesViewController: UIViewController {
                 processUpdates(
                     with: current.messages,
                     animated: animated,
-                    requiresIsolatedProcess: false
-                )
-                if previous.conversationId != current.conversationId {
-                    scrollToBottom()
-                }
+                    requiresIsolatedProcess: true) {
+                        if previous.conversationId != current.conversationId {
+                            UIView.performWithoutAnimation {
+                                self.scrollToBottom()
+                            }
+                        }
+                    }
             }
     }
 

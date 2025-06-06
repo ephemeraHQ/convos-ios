@@ -160,6 +160,7 @@ class MessagesContainerViewController: UIViewController {
             Logger.error("Error fetching conversation: \(error)")
         }
         conversationRepositoryCancellable = conversationRepository.conversationPublisher
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] conversation in
                 guard let self else { return }
                 configure(with: conversation)

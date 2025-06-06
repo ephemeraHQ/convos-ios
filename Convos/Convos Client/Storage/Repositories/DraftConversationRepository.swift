@@ -50,7 +50,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
     lazy var conversationPublisher: AnyPublisher<Conversation?, Never> = {
         writer.conversationIdPublisher
             .removeDuplicates()
-            .flatMap { [weak self] conversationId -> AnyPublisher<Conversation?, Never> in
+            .map { [weak self] conversationId -> AnyPublisher<Conversation?, Never> in
                 guard let self else {
                     return Just(nil).eraseToAnyPublisher()
                 }
@@ -64,6 +64,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
                     .replaceError(with: nil)
                     .eraseToAnyPublisher()
             }
+            .switchToLatest()
             .eraseToAnyPublisher()
     }()
 
