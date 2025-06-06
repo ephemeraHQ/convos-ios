@@ -36,6 +36,10 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
         }
     }
 
+    deinit {
+        cancellable?.cancel()
+    }
+
     func send(text: String) async throws {
         guard let sender = try await clientProvider?.messageSender(
             for: conversationId

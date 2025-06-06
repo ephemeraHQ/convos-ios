@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 
 protocol ProfileSearchRepositoryProtocol {
@@ -17,24 +18,63 @@ struct ProfileSearchResult: Hashable, Identifiable {
     }
 }
 
-class ProfileSearchRepository: ProfileSearchRepositoryProtocol {
-    let apiClient: any ConvosAPIClientProtocol
+extension ConvosAPI.ProfileResponse {
+    var profileSearchResult: ProfileSearchResult {
+        .init(
+            profile: .init(
+                id: xmtpId,
+                name: name, username: username, avatar: avatar
+            ),
+            inboxId: xmtpId
+        )
+    }
+}
 
-    init(apiClient: any ConvosAPIClientProtocol) {
+class ProfileSearchRepository: ProfileSearchRepositoryProtocol {
+    private let apiClient: any ConvosAPIClientProtocol
+    private let clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never>
+    private var clientProvider: (any XMTPClientProvider)?
+    private var cancellable: AnyCancellable?
+
+    init(apiClient: any ConvosAPIClientProtocol,
+         clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never>) {
         self.apiClient = apiClient
+        self.clientPublisher = clientPublisher
+        cancellable = clientPublisher.sink { [weak self] clientProvider in
+            guard let self else { return }
+            self.clientProvider = clientProvider
+        }
+    }
+
+    deinit {
+        cancellable?.cancel()
     }
 
     func search(using query: String) async throws -> [ProfileSearchResult] {
-        let profiles = try await apiClient.getProfiles(matching: query)
-        return profiles.map { apiProfile in
-                .init(profile: .init(
-                    id: apiProfile.xmtpId,
-                    name: apiProfile.name,
-                    username: apiProfile.username,
-                    avatar: apiProfile.avatar
-                ),
-                      inboxId: apiProfile.xmtpId
-                )
+        if query.isValidEthereumAddressFormat {
+            guard let clientProvider else {
+                Logger.error("Attempting profile search from wallet address without XMTP Client Provider")
+                return []
+            }
+            guard let inboxId = try await clientProvider.inboxId(for: query) else {
+                return []
+            }
+            guard let profile = try? await apiClient.getProfile(inboxId: inboxId) else {
+                return [
+                    .init(
+                        profile: .init(
+                            id: inboxId,
+                            name: inboxId,
+                            username: inboxId,
+                            avatar: nil
+                        ), inboxId: inboxId
+                    )
+                ]
+            }
+            return [profile.profileSearchResult]
+        } else {
+            let profiles = try await apiClient.getProfiles(matching: query)
+            return profiles.map { $0.profileSearchResult }
         }
     }
 }

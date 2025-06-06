@@ -39,8 +39,13 @@ class MessagesRepository: MessagesRepositoryProtocol {
         self.conversationIdSubject = .init(conversationId)
         conversationIdCancellable = conversationIdPublisher.sink { [weak self] conversationId in
             guard let self else { return }
+            Logger.info("Sending updated conversation id: \(conversationId)")
             conversationIdSubject.send(conversationId)
         }
+    }
+
+    deinit {
+        conversationIdCancellable?.cancel()
     }
 
     func fetchAll() throws -> [AnyMessage] {
@@ -53,7 +58,7 @@ class MessagesRepository: MessagesRepositoryProtocol {
     lazy var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> = {
         conversationIdSubject
             .removeDuplicates()
-            .flatMap { [weak self] conversationId -> AnyPublisher<ConversationMessages, Never> in
+            .map { [weak self] conversationId -> AnyPublisher<ConversationMessages, Never> in
                 guard let self else {
                     return Just((conversationId, [])).eraseToAnyPublisher()
                 }
@@ -74,6 +79,7 @@ class MessagesRepository: MessagesRepositoryProtocol {
                     .map { (conversationId, $0) }
                     .eraseToAnyPublisher()
             }
+            .switchToLatest()
             .eraseToAnyPublisher()
     }()
 }
