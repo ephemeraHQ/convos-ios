@@ -201,6 +201,10 @@ extension MockMessagingService: XMTPClientProvider {
     func messageSender(for conversationId: String) async throws -> (any MessageSender)? {
         self
     }
+
+    func inboxId(for ethereumAddress: String) async throws -> String? {
+        nil
+    }
 }
 
 extension MockMessagingService: MessageSender {

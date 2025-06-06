@@ -46,7 +46,10 @@ final class MessagingService: MessagingServiceProtocol {
     // MARK: Profile Search
 
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
-        ProfileSearchRepository(apiClient: apiClient)
+        ProfileSearchRepository(
+            apiClient: apiClient,
+            clientPublisher: stateMachine.clientPublisher
+        )
     }
 
     // MARK: Conversations
@@ -66,7 +69,8 @@ final class MessagingService: MessagingServiceProtocol {
                 writer: draftConversationWriter
             ),
             profileSearchRepository: ProfileSearchRepository(
-                apiClient: apiClient
+                apiClient: apiClient,
+                clientPublisher: stateMachine.clientPublisher
             )
         )
     }

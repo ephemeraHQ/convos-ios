@@ -24,6 +24,7 @@ protocol XMTPClientProvider: AnyObject {
                          imageUrl: String) async throws -> String
     func newConversation(with memberInboxId: String) async throws -> String
     func conversation(with id: String) async throws -> XMTPiOS.Conversation?
+    func inboxId(for ethereumAddress: String) async throws -> String?
 }
 
 extension XMTPiOS.Group: ConversationSender {
@@ -90,6 +91,10 @@ extension XMTPiOS.Client: XMTPClientProvider {
 
     func messageSender(for conversationId: String) async throws -> (any MessageSender)? {
         return try await conversations.findConversation(conversationId: conversationId)
+    }
+
+    func inboxId(for ethereumAddress: String) async throws -> String? {
+        return try await inboxIdFromIdentity(identity: .init(kind: .ethereum, identifier: ethereumAddress))
     }
 }
 
