@@ -11,6 +11,14 @@ protocol ConversationConsentWriterProtocol {
 class ConversationConsentWriter: ConversationConsentWriterProtocol {
     enum ConversationConsentWriterError: Error {
         case missingXMTPClient
+        case deleteAllFailedWithErrors([Error])
+    }
+
+    actor ErrorCollector {
+        var errors: [Error] = []
+        func append(_ error: Error) {
+            errors.append(error)
+        }
     }
 
     private let databaseWriter: any DatabaseWriter
@@ -71,13 +79,30 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
                 .filter(DBConversation.Columns.consent == Consent.unknown)
                 .fetchAll(db)
         }
-        for dbConversation in conversationsToDeny {
-            try await clientProvider.update(consent: .denied, for: dbConversation.id)
-            try await databaseWriter.write { db in
-                let updatedConversation = dbConversation.with(consent: .denied)
-                try updatedConversation.save(db)
-                Logger.info("Updated conversation \(dbConversation.id) consent state to denied")
+
+        let errorCollector = ErrorCollector()
+
+        await withTaskGroup(of: Void.self) { group in
+            for dbConversation in conversationsToDeny {
+                group.addTask {
+                    do {
+                        try await clientProvider.update(consent: .denied, for: dbConversation.id)
+                        try await self.databaseWriter.write { db in
+                            let updatedConversation = dbConversation.with(consent: .denied)
+                            try updatedConversation.save(db)
+                            Logger.info("Updated conversation \(dbConversation.id) consent state to denied")
+                        }
+                    } catch {
+                        await errorCollector.append(error)
+                    }
+                }
             }
+            await group.waitForAll()
+        }
+
+        let errors = await errorCollector.errors
+        if !errors.isEmpty {
+            throw ConversationConsentWriterError.deleteAllFailedWithErrors(errors)
         }
     }
 }

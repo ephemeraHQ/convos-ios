@@ -313,7 +313,7 @@ extension MockMessagingService {
             id: id,
             creator: randomCreator,
             date: Date(),
-            consent: Bool.random() ? .allowed : .denied,
+            consent: Consent.allCases.randomElement() ?? .allowed,
             kind: kind,
             name: randomName,
             members: randomMembers,
