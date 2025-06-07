@@ -33,11 +33,11 @@ extension Profile {
 class MockUserRepository: UserRepositoryProtocol {
     let currentUser: User = .mock()
 
+    lazy var userPublisher: AnyPublisher<User?, Never> = {
+        Just(currentUser).eraseToAnyPublisher()
+    }()
+
     func getCurrentUser() async throws -> User? {
         currentUser
-    }
-
-    func userPublisher() -> AnyPublisher<User?, Never> {
-        Just(currentUser).eraseToAnyPublisher()
     }
 }

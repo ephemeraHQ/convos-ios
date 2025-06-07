@@ -209,7 +209,25 @@ struct DBConversationDetails: Codable, FetchableRecord, PersistableRecord, Hasha
     let conversationLocalState: ConversationLocalState
 }
 
-enum Consent: String, Codable, Hashable {
+extension Array where Element == Consent {
+    static var all: [Consent] {
+        Consent.allCases
+    }
+
+    static var allowed: [Consent] {
+        [.allowed]
+    }
+
+    static var denied: [Consent] {
+        [.denied]
+    }
+
+    static var securityLine: [Consent] {
+        [.unknown]
+    }
+}
+
+enum Consent: String, Codable, Hashable, SQLExpressible, CaseIterable {
     case allowed, denied, unknown
 }
 

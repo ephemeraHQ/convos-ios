@@ -5,8 +5,6 @@ import XMTPiOS
 // swiftlint: disable force_unwrapping
 
 class MockMessagingService: MessagingServiceProtocol {
-    // MARK: - State
-
     let currentUser: User = .mock()
     let allUsers: [Profile]
     let conversations: [Conversation]
@@ -73,7 +71,11 @@ class MockMessagingService: MessagingServiceProtocol {
         MockDraftConversationComposer()
     }
 
-    func conversationsRepository() -> any ConversationsRepositoryProtocol {
+    func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
+        self
+    }
+
+    func conversationsCountRepo(for consent: [Consent]) -> any ConversationsCountRepositoryProtocol {
         self
     }
 
@@ -105,12 +107,12 @@ class MockMessagingService: MessagingServiceProtocol {
 }
 
 extension MockMessagingService: UserRepositoryProtocol {
-    func getCurrentUser() async throws -> User? {
-        return currentUser
+    var userPublisher: AnyPublisher<User?, Never> {
+        Just(currentUser).eraseToAnyPublisher()
     }
 
-    func userPublisher() -> AnyPublisher<User?, Never> {
-        Just(currentUser).eraseToAnyPublisher()
+    func getCurrentUser() async throws -> User? {
+        return currentUser
     }
 }
 
@@ -129,6 +131,16 @@ extension MockMessagingService: ConversationsRepositoryProtocol {
 
     func fetchAll() throws -> [Conversation] {
         conversations
+    }
+}
+
+extension MockMessagingService: ConversationsCountRepositoryProtocol {
+    var conversationsCount: AnyPublisher<Int, Never> {
+        Just(1).eraseToAnyPublisher()
+    }
+
+    func fetchCount() throws -> Int {
+        1
     }
 }
 

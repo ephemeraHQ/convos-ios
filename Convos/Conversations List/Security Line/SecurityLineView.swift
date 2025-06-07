@@ -7,11 +7,18 @@ struct SecurityLineView: View {
     }
 
     @Binding var path: [ConversationsListView.Route]
-    var conversationsState: ConversationsState
+    private var conversationsState: ConversationsState
     let title: String = "Security line"
     let subtitle: String? = nil
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
     @Environment(\.dismiss) private var dismiss: DismissAction
+
+    init(messagingService: any MessagingServiceProtocol, path: Binding<[ConversationsListView.Route]>) {
+        conversationsState = .init(
+            conversationsRepository: messagingService.conversationsRepository(for: .securityLine)
+        )
+        _path = path
+    }
 
     var barHeight: CGFloat {
         verticalSizeClass == .compact ? Constant.compactHeight : Constant.regularHeight
@@ -20,7 +27,7 @@ struct SecurityLineView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(conversationsState.securityLineConversations) { conversation in
+                ForEach(conversationsState.conversations) { conversation in
                     NavigationLink(value: ConversationsListView.Route.conversation(conversation)) {
                         ConversationsListItem(conversation: conversation)
                     }
@@ -82,14 +89,11 @@ struct SecurityLineView: View {
 #Preview {
     @Previewable @State var path: [ConversationsListView.Route] = []
     let convos = ConvosClient.mock()
-    let conversationsRepository = convos.messaging.conversationsRepository()
 
     NavigationStack {
         SecurityLineView(
-            path: $path,
-            conversationsState: .init(
-                conversationsRepository: conversationsRepository
-            )
+            messagingService: convos.messaging,
+            path: $path
         )
         .toolbarVisibility(.hidden, for: .navigationBar)
     }

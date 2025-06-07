@@ -76,8 +76,12 @@ final class MessagingService: MessagingServiceProtocol {
         )
     }
 
-    func conversationsRepository() -> any ConversationsRepositoryProtocol {
-        ConversationsRepository(dbReader: databaseReader)
+    func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
+        ConversationsRepository(dbReader: databaseReader, consent: consent)
+    }
+
+    func conversationsCountRepo(for consent: [Consent]) -> any ConversationsCountRepositoryProtocol {
+        ConversationsCountRepository(databaseReader: databaseReader, consent: consent)
     }
 
     func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {

@@ -136,6 +136,7 @@
 				"Convos Client/Storage/Models/Profile.swift",
 				"Convos Client/Storage/Models/User.swift",
 				"Convos Client/Storage/Repositories/ConversationRepository.swift",
+				"Convos Client/Storage/Repositories/ConversationsCountRepository.swift",
 				"Convos Client/Storage/Repositories/ConversationsRepository.swift",
 				"Convos Client/Storage/Repositories/DraftConversationRepository.swift",
 				"Convos Client/Storage/Repositories/MessagesRepository.swift",

@@ -14,7 +14,7 @@ struct RootView: View {
         self.convos = convos
         self.analyticsService = analyticsService
         self.userRepository = convos.messaging.userRepository()
-        self.conversationsRepository = convos.messaging.conversationsRepository()
+        self.conversationsRepository = convos.messaging.conversationsRepository(for: .allowed)
         self.messagingService = .init(messagingService: convos.messaging)
         _viewModel = .init(initialValue: .init(convos: convos))
     }

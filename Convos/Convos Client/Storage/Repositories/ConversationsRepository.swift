@@ -9,24 +9,28 @@ protocol ConversationsRepositoryProtocol {
 
 final class ConversationsRepository: ConversationsRepositoryProtocol {
     private let dbReader: any DatabaseReader
+    private let consent: [Consent]
 
     lazy var conversationsPublisher: AnyPublisher<[Conversation], Never> = {
         ValueObservation
-            .tracking { db in
-                try db.composeAllConversations()
+            .tracking { [weak self] db in
+                guard let self else { return [] }
+                return try db.composeAllConversations(consent: consent)
             }
             .publisher(in: dbReader)
             .replaceError(with: [])
             .eraseToAnyPublisher()
     }()
 
-    init(dbReader: any DatabaseReader) {
+    init(dbReader: any DatabaseReader, consent: [Consent]) {
         self.dbReader = dbReader
+        self.consent = consent
     }
 
     func fetchAll() throws -> [Conversation] {
-        try dbReader.read { db in
-            try db.composeAllConversations()
+        try dbReader.read { [weak self] db in
+            guard let self else { return [] }
+            return try db.composeAllConversations(consent: consent)
         }
     }
 }
@@ -40,7 +44,6 @@ extension Array where Element == DBConversationDetails {
         }
 
         let conversations: [Conversation] = dbConversations
-            .filter { !$0.conversation.isDraft }
             .compactMap { dbConversationDetails in
             dbConversationDetails.hydrateConversation(
                 currentUser: currentUser
@@ -52,7 +55,7 @@ extension Array where Element == DBConversationDetails {
 }
 
 fileprivate extension Database {
-    func composeAllConversations() throws -> [Conversation] {
+    func composeAllConversations(consent: [Consent]) throws -> [Conversation] {
         let lastMessage = DBConversation.association(
             to: DBConversation.lastMessageCTE,
             on: { conversation, lastMessage in
@@ -60,6 +63,8 @@ fileprivate extension Database {
             }).forKey("conversationLastMessage")
             .order(\.date.desc)
         let dbConversationDetails = try DBConversation
+            .filter(!Column("id").like("draft-%"))
+            .filter(consent.contains(DBConversation.Columns.consent))
             .including(required: DBConversation.creatorProfile)
             .including(required: DBConversation.localState)
             .including(all: DBConversation.memberProfiles)

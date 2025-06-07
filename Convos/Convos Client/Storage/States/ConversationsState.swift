@@ -4,37 +4,17 @@ import Observation
 
 @Observable
 final class ConversationsState {
-    private var conversations: [Conversation]
+    private(set) var conversations: [Conversation]
 
-    private var allowedConversation: [Conversation] {
-        conversations.filter { $0.consent == .allowed }
-    }
-
-    var securityLineConversations: [Conversation] {
-        conversations.filter { $0.consent == .unknown }
-    }
-
-    var deniedConversations: [Conversation] {
-        conversations.filter { $0.consent == .denied }
-    }
-
-    var pinnedConversations: [Conversation] {
-        allowedConversation.filter { $0.isPinned }
-    }
-    var unpinnedConversations: [Conversation] {
-        allowedConversation.filter { !$0.isPinned }
-    }
-
-    private let conversationsRepository: ConversationsRepositoryProtocol
+    private let conversationsRepository: any ConversationsRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = .init()
 
-    init(conversationsRepository: ConversationsRepositoryProtocol) {
-        print("initializing conversations state")
+    init(conversationsRepository: any ConversationsRepositoryProtocol) {
         self.conversationsRepository = conversationsRepository
         do {
             self.conversations = try conversationsRepository.fetchAll()
         } catch {
-            Logger.error("Error fetching conversations in: \(error)")
+            Logger.error("Error fetching conversations: \(error)")
             self.conversations = []
         }
         observe()
