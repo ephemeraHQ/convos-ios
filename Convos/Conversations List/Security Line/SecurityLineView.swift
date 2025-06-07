@@ -7,7 +7,9 @@ struct SecurityLineView: View {
     }
 
     @Binding var path: [ConversationsListView.Route]
-    private var conversationsState: ConversationsState
+    private let conversationsState: ConversationsState
+    private let deniedConversationsCount: ConversationsCountState
+    private let consentStateWriter: any ConversationConsentWriterProtocol
     let title: String = "Security line"
     let subtitle: String? = nil
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
@@ -17,7 +19,11 @@ struct SecurityLineView: View {
         conversationsState = .init(
             conversationsRepository: messagingService.conversationsRepository(for: .securityLine)
         )
+        deniedConversationsCount = .init(
+            conversationsCountRepository: messagingService.conversationsCountRepo(for: .denied)
+        )
         _path = path
+        self.consentStateWriter = messagingService.conversationConsentWriter()
     }
 
     var barHeight: CGFloat {
@@ -31,8 +37,9 @@ struct SecurityLineView: View {
                     Spacer()
                     Text("All clear")
                         .font(.system(size: 16.0))
-                        .foregroundStyle(.colorTextPrimary)
+                        .foregroundStyle(.colorTextSecondary)
                         .multilineTextAlignment(.center)
+                        .padding(.vertical, DesignConstants.Spacing.step10x)
                     Spacer()
                 } else {
                     ForEach(conversationsState.conversations) { conversation in
@@ -41,6 +48,11 @@ struct SecurityLineView: View {
                         }
                     }
                 }
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if !deniedConversationsCount.isEmpty {
+                DeniedConversationsListItem(count: deniedConversationsCount.count)
             }
         }
         .safeAreaInset(edge: .top) {
@@ -73,6 +85,13 @@ struct SecurityLineView: View {
                 Spacer()
 
                 Button {
+                    Task {
+                        do {
+                            try await consentStateWriter.deleteAll()
+                        } catch {
+                            Logger.error("Error deleting all conversations: \(error)")
+                        }
+                    }
                 } label: {
                     Image(systemName: "trash")
                         .font(.system(size: 24.0))
@@ -80,6 +99,7 @@ struct SecurityLineView: View {
                         .padding(.vertical, 10.0)
                         .padding(.horizontal, DesignConstants.Spacing.step2x)
                 }
+                .disabled(conversationsState.conversations.isEmpty)
             }
             .padding(.leading, DesignConstants.Spacing.step2x)
             .padding(.trailing, DesignConstants.Spacing.step4x)

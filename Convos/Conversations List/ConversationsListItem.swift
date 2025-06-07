@@ -14,12 +14,13 @@ extension Conversation {
     }
 }
 
-struct ListItemView<LeadingContent: View, SubtitleContent: View>: View {
+struct ListItemView<LeadingContent: View, SubtitleContent: View, AccessoryContent: View>: View {
     let title: String
     let isMuted: Bool
     let isUnread: Bool
     @ViewBuilder let leadingContent: () -> LeadingContent
     @ViewBuilder let subtitle: () -> SubtitleContent
+    @ViewBuilder let accessoryContent: () -> AccessoryContent
 
     var body: some View {
         HStack(spacing: 12.0) {
@@ -56,6 +57,8 @@ struct ListItemView<LeadingContent: View, SubtitleContent: View>: View {
                     }
                 }
             }
+
+            accessoryContent()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -86,7 +89,8 @@ struct ConversationsListItem: View {
                         Text(message.text)
                     }
                 }
-            }
+            },
+            accessoryContent: {}
         )
         .scaleEffect(isPinning ? 0.95 : 1.0)
         .opacity(isPinning ? 0.8 : 1.0)

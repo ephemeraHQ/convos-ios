@@ -150,6 +150,9 @@ extension MockMessagingService: ConversationConsentWriterProtocol {
 
     func delete(conversation: Conversation) async throws {
     }
+
+    func deleteAll() async throws {
+    }
 }
 
 extension MockMessagingService: ConversationRepositoryProtocol {
@@ -230,7 +233,7 @@ extension MockMessagingService: XMTPClientProvider {
         nil
     }
 
-    func update(consent: Consent, for conversation: Conversation) async throws {
+    func update(consent: Consent, for conversationId: String) async throws {
     }
 }
 

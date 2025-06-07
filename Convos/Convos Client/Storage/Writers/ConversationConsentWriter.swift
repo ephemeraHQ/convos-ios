@@ -30,7 +30,7 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
         guard let clientProvider else {
             throw ConversationConsentWriterError.missingXMTPClient
         }
-        try await clientProvider.update(consent: .allowed, for: conversation)
+        try await clientProvider.update(consent: .allowed, for: conversation.id)
         try await databaseWriter.write { db in
             if let localConversation = try DBConversation
                 .filter(DBConversation.Columns.id == conversation.id)
@@ -48,7 +48,7 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
         guard let clientProvider else {
             throw ConversationConsentWriterError.missingXMTPClient
         }
-        try await clientProvider.update(consent: .denied, for: conversation)
+        try await clientProvider.update(consent: .denied, for: conversation.id)
         try await databaseWriter.write { db in
             if let localConversation = try DBConversation
                 .filter(DBConversation.Columns.id == conversation.id)
@@ -65,6 +65,19 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
     func deleteAll() async throws {
         guard let clientProvider else {
             throw ConversationConsentWriterError.missingXMTPClient
+        }
+        let conversationsToDeny: [DBConversation] = try await databaseWriter.read { db in
+            try DBConversation
+                .filter(DBConversation.Columns.consent == Consent.unknown)
+                .fetchAll(db)
+        }
+        for dbConversation in conversationsToDeny {
+            try await clientProvider.update(consent: .denied, for: dbConversation.id)
+            try await databaseWriter.write { db in
+                let updatedConversation = dbConversation.with(consent: .denied)
+                try updatedConversation.save(db)
+                Logger.info("Updated conversation \(dbConversation.id) consent state to denied")
+            }
         }
     }
 }

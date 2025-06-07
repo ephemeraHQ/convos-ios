@@ -1,41 +1,45 @@
 import SwiftUI
 
-struct SecurityLineEmblemView: View {
+struct DeniedConversationsEmblemView: View {
     var body: some View {
         HStack {
-            Image(systemName: "shield.fill")
+            Image(systemName: "trash.fill")
                 .font(.system(size: 24.0))
                 .multilineTextAlignment(.center)
                 .padding(.vertical, 9.0)
                 .padding(.horizontal, 15.0)
-                .foregroundStyle(.colorTextPrimaryInverted)
+                .foregroundStyle(.colorBorderSubtle)
                 .aspectRatio(1.0, contentMode: .fit)
         }
         .aspectRatio(1.0, contentMode: .fit)
         .frame(maxHeight: .infinity)
-        .background(.colorOrange)
+        .background(.colorBorderSubtle2)
         .clipShape(RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.medium))
     }
 }
 
-struct SecurityLineListItem: View {
+struct DeniedConversationsListItem: View {
     let count: Int
     var body: some View {
         ListItemView(
-            title: "Security",
+            title: "Trash",
             isMuted: false,
             isUnread: false,
             leadingContent: {
-                SecurityLineEmblemView()
+                DeniedConversationsEmblemView()
             },
             subtitle: {
                 Text("\(count) \(count == 1 ? "chat" : "chats")")
             },
-            accessoryContent: {}
+            accessoryContent: {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 17.0))
+                    .foregroundColor(.secondary)
+            }
         )
     }
 }
 
 #Preview {
-    SecurityLineListItem(count: 10)
+    DeniedConversationsListItem(count: 10)
 }

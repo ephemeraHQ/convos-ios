@@ -25,7 +25,7 @@ protocol XMTPClientProvider: AnyObject {
     func newConversation(with memberInboxId: String) async throws -> String
     func conversation(with id: String) async throws -> XMTPiOS.Conversation?
     func inboxId(for ethereumAddress: String) async throws -> String?
-    func update(consent: Consent, for conversation: Conversation) async throws
+    func update(consent: Consent, for conversationId: String) async throws
 }
 
 enum XMTPClientProviderError: Error {
@@ -102,9 +102,9 @@ extension XMTPiOS.Client: XMTPClientProvider {
         return try await inboxIdFromIdentity(identity: .init(kind: .ethereum, identifier: ethereumAddress))
     }
 
-    func update(consent: Consent, for conversation: Conversation) async throws {
-        guard let foundConversation = try await self.conversation(with: conversation.id) else {
-            throw XMTPClientProviderError.conversationNotFound(id: conversation.id)
+    func update(consent: Consent, for conversationId: String) async throws {
+        guard let foundConversation = try await self.conversation(with: conversationId) else {
+            throw XMTPClientProviderError.conversationNotFound(id: conversationId)
         }
         try await foundConversation.updateConsentState(state: consent.consentState)
     }

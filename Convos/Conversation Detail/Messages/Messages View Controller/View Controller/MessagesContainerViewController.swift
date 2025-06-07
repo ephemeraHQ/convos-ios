@@ -175,6 +175,7 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
 
     func deleteConversation() {
         guard let conversation else { return }
+        navigationController?.popViewController(animated: true)
         Task {
             do {
                 try await conversationConsentWriter.delete(conversation: conversation)
