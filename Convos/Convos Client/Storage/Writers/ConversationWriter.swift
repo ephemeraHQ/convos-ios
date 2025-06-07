@@ -110,6 +110,13 @@ class ConversationWriter: ConversationWriterProtocol {
             for member in dbMembers {
                 try Member(inboxId: member.memberId).save(db)
                 try member.save(db)
+                let memberProfile = MemberProfile(
+                    inboxId: member.memberId,
+                    name: "",
+                    username: "",
+                    avatar: nil
+                )
+                try? memberProfile.insert(db)
             }
         }
 

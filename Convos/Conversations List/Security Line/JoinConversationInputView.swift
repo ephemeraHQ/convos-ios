@@ -38,13 +38,14 @@ struct JoinConversationInputView: View {
     }
 }
 
-fileprivate class MockViewModel: JoinConversationInputViewModelType {
+private class MockViewModel: JoinConversationInputViewModelType {
     func joinConversation() {
     }
 
     func deleteConversation() {
     }
 }
+
 #Preview {
     @Previewable var viewModel: JoinConversationInputViewModelType = MockViewModel()
     JoinConversationInputView(viewModel: viewModel)

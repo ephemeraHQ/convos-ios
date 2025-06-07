@@ -34,8 +34,7 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
     var shouldBecomeFirstResponder: Bool = true
 
     override var inputAccessoryView: UIView? {
-        guard let conversation else { return messagesInputView }
-        guard !conversation.isDraft else {
+        guard let conversation, !conversation.isDraft else {
             return messagesInputView
         }
         switch conversation.consent {

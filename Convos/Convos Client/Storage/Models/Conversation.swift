@@ -239,7 +239,7 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
         using: memberForeignKey
     )
 
-    static let memberProfile: HasManyThroughAssociation<DBConversationMember, MemberProfile> = hasMany(
+    static let memberProfile: HasOneThroughAssociation<DBConversationMember, MemberProfile> = hasOne(
         MemberProfile.self,
         through: member,
         using: Member.profile
