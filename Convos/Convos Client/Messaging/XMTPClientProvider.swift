@@ -28,6 +28,10 @@ protocol XMTPClientProvider: AnyObject {
     func update(consent: Consent, for conversation: Conversation) async throws
 }
 
+enum XMTPClientProviderError: Error {
+    case conversationNotFound(id: String)
+}
+
 extension XMTPiOS.Group: ConversationSender {
     func add(members inboxIds: [String]) async throws {
         _ = try await addMembers(inboxIds: inboxIds)
@@ -100,7 +104,7 @@ extension XMTPiOS.Client: XMTPClientProvider {
 
     func update(consent: Consent, for conversation: Conversation) async throws {
         guard let foundConversation = try await self.conversation(with: conversation.id) else {
-            return
+            throw XMTPClientProviderError.conversationNotFound(id: conversation.id)
         }
         try await foundConversation.updateConsentState(state: consent.consentState)
     }

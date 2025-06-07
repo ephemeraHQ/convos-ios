@@ -38,6 +38,7 @@ class ConversationsCountRepository: ConversationsCountRepositoryProtocol {
 fileprivate extension Database {
     func composeConversationsCount(consent: [Consent]) throws -> Int {
         try DBConversation
+            .filter(!Column("id").like("draft-%"))
             .filter(consent.contains(DBConversation.Columns.consent))
             .fetchCount(self)
     }

@@ -5,6 +5,7 @@ import GRDB
 protocol ConversationConsentWriterProtocol {
     func join(conversation: Conversation) async throws
     func delete(conversation: Conversation) async throws
+    func deleteAll() async throws
 }
 
 class ConversationConsentWriter: ConversationConsentWriterProtocol {
@@ -58,6 +59,12 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
                 try updatedConversation.save(db)
                 Logger.info("Updated conversation consent state to denied")
             }
+        }
+    }
+
+    func deleteAll() async throws {
+        guard let clientProvider else {
+            throw ConversationConsentWriterError.missingXMTPClient
         }
     }
 }

@@ -27,9 +27,18 @@ struct SecurityLineView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(conversationsState.conversations) { conversation in
-                    NavigationLink(value: ConversationsListView.Route.conversation(conversation)) {
-                        ConversationsListItem(conversation: conversation)
+                if conversationsState.conversations.isEmpty {
+                    Spacer()
+                    Text("All clear")
+                        .font(.system(size: 16.0))
+                        .foregroundStyle(.colorTextPrimary)
+                        .multilineTextAlignment(.center)
+                    Spacer()
+                } else {
+                    ForEach(conversationsState.conversations) { conversation in
+                        NavigationLink(value: ConversationsListView.Route.conversation(conversation)) {
+                            ConversationsListItem(conversation: conversation)
+                        }
                     }
                 }
             }
