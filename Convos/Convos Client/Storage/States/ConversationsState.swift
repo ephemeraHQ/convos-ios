@@ -41,7 +41,7 @@ final class ConversationsState {
     }
 
     private func observe() {
-        conversationsRepository.conversationsPublisher()
+        conversationsRepository.conversationsPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] conversations in
                 self?.conversations = conversations

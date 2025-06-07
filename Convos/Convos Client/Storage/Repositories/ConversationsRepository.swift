@@ -3,12 +3,22 @@ import Foundation
 import GRDB
 
 protocol ConversationsRepositoryProtocol {
+    var conversationsPublisher: AnyPublisher<[Conversation], Never> { get }
     func fetchAll() throws -> [Conversation]
-    func conversationsPublisher() -> AnyPublisher<[Conversation], Never>
 }
 
 final class ConversationsRepository: ConversationsRepositoryProtocol {
     private let dbReader: any DatabaseReader
+
+    lazy var conversationsPublisher: AnyPublisher<[Conversation], Never> = {
+        ValueObservation
+            .tracking { db in
+                try db.composeAllConversations()
+            }
+            .publisher(in: dbReader)
+            .replaceError(with: [])
+            .eraseToAnyPublisher()
+    }()
 
     init(dbReader: any DatabaseReader) {
         self.dbReader = dbReader
@@ -18,16 +28,6 @@ final class ConversationsRepository: ConversationsRepositoryProtocol {
         try dbReader.read { db in
             try db.composeAllConversations()
         }
-    }
-
-    func conversationsPublisher() -> AnyPublisher<[Conversation], Never> {
-        ValueObservation
-            .tracking { db in
-                try db.composeAllConversations()
-            }
-            .publisher(in: dbReader)
-            .replaceError(with: [])
-            .eraseToAnyPublisher()
     }
 }
 

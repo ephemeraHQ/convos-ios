@@ -123,12 +123,12 @@ extension MockMessagingService: ProfileSearchRepositoryProtocol {
 }
 
 extension MockMessagingService: ConversationsRepositoryProtocol {
-    func fetchAll() throws -> [Conversation] {
-        conversations
+    var conversationsPublisher: AnyPublisher<[Conversation], Never> {
+        Just(conversations).eraseToAnyPublisher()
     }
 
-    func conversationsPublisher() -> AnyPublisher<[Conversation], Never> {
-        Just(conversations).eraseToAnyPublisher()
+    func fetchAll() throws -> [Conversation] {
+        conversations
     }
 }
 

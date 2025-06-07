@@ -5,9 +5,10 @@ import GRDB
 typealias ConversationMessages = (conversationId: String, messages: [AnyMessage])
 
 protocol MessagesRepositoryProtocol {
-    func fetchAll() throws -> [AnyMessage]
     var messagesPublisher: AnyPublisher<[AnyMessage], Never> { get }
     var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> { get }
+
+    func fetchAll() throws -> [AnyMessage]
 }
 
 extension MessagesRepositoryProtocol {

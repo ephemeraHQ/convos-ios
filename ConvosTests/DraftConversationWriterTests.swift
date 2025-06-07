@@ -146,7 +146,7 @@ struct DraftConversationWriterTests {
 
         guard let existingConversation = try await messaging
             .conversationsRepository()
-            .conversationsPublisher()
+            .conversationsPublisher
             .waitForFirstMatch(where: { $0.first?.members == [firstProfile.hydrateProfile()] })
             .first else {
             fatalError("Failed to find existing conversation")

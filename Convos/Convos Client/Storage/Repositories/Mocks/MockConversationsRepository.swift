@@ -44,11 +44,11 @@ class MockConversationsRepository: ConversationsRepositoryProtocol {
         .mock()
     ]
 
+    lazy var conversationsPublisher: AnyPublisher<[Conversation], Never> = {
+        Just(conversations).eraseToAnyPublisher()
+    }()
+
     func fetchAll() throws -> [Conversation] {
         conversations
-    }
-
-    func conversationsPublisher() -> AnyPublisher<[Conversation], Never> {
-        Just(conversations).eraseToAnyPublisher()
     }
 }
