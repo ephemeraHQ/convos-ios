@@ -138,6 +138,7 @@
 				"Convos Client/Storage/Repositories/ConversationRepository.swift",
 				"Convos Client/Storage/Repositories/ConversationsCountRepository.swift",
 				"Convos Client/Storage/Repositories/ConversationsRepository.swift",
+				"Convos Client/Storage/Repositories/DB XMTP Representations/Consent+ConsentState.swift",
 				"Convos Client/Storage/Repositories/DraftConversationRepository.swift",
 				"Convos Client/Storage/Repositories/MessagesRepository.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockConversationConsentWriter.swift",
@@ -163,6 +164,7 @@
 				"Convos Client/Storage/XMTP DB Representations/MessageDeliveryStatus+DBRepresentation.swift",
 				"Convos Client/Storage/XMTP DB Representations/Reaction+DBRepresentation.swift",
 				Logging/Logger.swift,
+				"Utilities/EthereumAddress+Validation.swift",
 			);
 			target = 7ACA8BA22DE16DE200848799 /* ConvosTests */;
 		};
