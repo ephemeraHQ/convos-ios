@@ -110,6 +110,13 @@ class ConversationWriter: ConversationWriterProtocol {
             for member in dbMembers {
                 try Member(inboxId: member.memberId).save(db)
                 try member.save(db)
+                let memberProfile = MemberProfile(
+                    inboxId: member.memberId,
+                    name: "",
+                    username: "",
+                    avatar: nil
+                )
+                try? memberProfile.insert(db)
             }
         }
 
@@ -170,7 +177,7 @@ fileprivate extension XMTPiOS.Conversation {
 }
 
 fileprivate extension XMTPiOS.ConsentState {
-    var memberConsent: DBConversationMember.Consent {
+    var memberConsent: Consent {
         switch self {
         case .allowed: return .allowed
         case .denied: return .denied
@@ -178,7 +185,7 @@ fileprivate extension XMTPiOS.ConsentState {
         }
     }
 
-    var consent: DBConversation.Consent {
+    var consent: Consent {
         switch self {
         case .allowed: return .allowed
         case .denied: return .denied

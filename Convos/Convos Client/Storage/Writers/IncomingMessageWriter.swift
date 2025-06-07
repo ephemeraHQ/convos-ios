@@ -19,6 +19,13 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
         try await databaseWriter.write { db in
             let sender = Member(inboxId: message.senderInboxId)
             try sender.save(db)
+            let senderProfile = MemberProfile(
+                inboxId: message.senderInboxId,
+                name: "",
+                username: "",
+                avatar: nil
+            )
+            try? senderProfile.insert(db)
             let message = try message.dbRepresentation()
 
             Logger.info("Storing incoming message \(message.id) localId \(message.clientMessageId)")

@@ -71,17 +71,26 @@ final class MessagingService: MessagingServiceProtocol {
             profileSearchRepository: ProfileSearchRepository(
                 apiClient: apiClient,
                 clientPublisher: stateMachine.clientPublisher
-            )
+            ),
+            conversationConsentWriter: conversationConsentWriter()
         )
     }
 
-    func conversationsRepository() -> any ConversationsRepositoryProtocol {
-        ConversationsRepository(dbReader: databaseReader)
+    func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
+        ConversationsRepository(dbReader: databaseReader, consent: consent)
+    }
+
+    func conversationsCountRepo(for consent: [Consent]) -> any ConversationsCountRepositoryProtocol {
+        ConversationsCountRepository(databaseReader: databaseReader, consent: consent)
     }
 
     func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
         ConversationRepository(conversationId: conversationId,
                                dbReader: databaseReader)
+    }
+
+    func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
+        ConversationConsentWriter(databaseWriter: databaseWriter, clientPublisher: clientPublisher)
     }
 
     // MARK: Getting/Sending Messages

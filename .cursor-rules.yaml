@@ -1,0 +1,10 @@
+# .cursor-rules.yaml
+
+rules:
+  no-superfluous-comments-in-generated-code:
+    description: >
+      Do not add comments to generated code unless they are strictly necessary for understanding complex logic.
+      Avoid boilerplate, redundant, or obvious comments (e.g., "This is a function", "End of class", etc.).
+      Generated code should be as clean and concise as possible.
+    severity: warning
+    applies_to: [generated]

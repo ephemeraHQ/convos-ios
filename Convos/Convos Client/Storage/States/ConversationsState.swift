@@ -4,31 +4,24 @@ import Observation
 
 @Observable
 final class ConversationsState {
-    var conversations: [Conversation]
-    var pinnedConversations: [Conversation] {
-        conversations.filter { $0.isPinned }
-    }
-    var unpinnedConversations: [Conversation] {
-        conversations.filter { !$0.isPinned }
-    }
+    private(set) var conversations: [Conversation]
 
-    private let conversationsRepository: ConversationsRepositoryProtocol
+    private let conversationsRepository: any ConversationsRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = .init()
 
-    init(conversationsRepository: ConversationsRepositoryProtocol) {
-        print("initializing conversations state")
+    init(conversationsRepository: any ConversationsRepositoryProtocol) {
         self.conversationsRepository = conversationsRepository
         do {
             self.conversations = try conversationsRepository.fetchAll()
         } catch {
-            Logger.error("Error fetching conversations in: \(error)")
+            Logger.error("Error fetching conversations: \(error)")
             self.conversations = []
         }
         observe()
     }
 
     private func observe() {
-        conversationsRepository.conversationsPublisher()
+        conversationsRepository.conversationsPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] conversations in
                 self?.conversations = conversations

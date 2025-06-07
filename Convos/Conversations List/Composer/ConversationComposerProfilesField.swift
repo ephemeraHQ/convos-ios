@@ -112,6 +112,7 @@ struct ConversationComposerProfilesField: View {
         profileSearchRepository: MockProfileSearchRepository(),
         draftConversationRepo: MockDraftConversationRepository(),
         draftConversationWriter: MockDraftConversationWriter(),
+        conversationConsentWriter: MockMessagingService(),
         messagesRepository: MockMessagesRepository(conversation: .mock())
     )
     @Previewable @FocusState var textFieldFocusState: Bool

@@ -3,7 +3,7 @@ import SwiftUI
 
 struct ConversationsListView: View {
     enum Route: Hashable {
-        case composer, conversation(Conversation)
+        case composer, securityLine, conversation(Conversation)
     }
 
     @Environment(MessagingServiceObservable.self)
@@ -11,7 +11,7 @@ struct ConversationsListView: View {
 
     let convos: ConvosClient
     var userState: UserState
-    var conversationsState: ConversationsState
+    var conversationsState: ConversationsListState
     @State private var path: [Route] = []
 
     init(convos: ConvosClient,
@@ -19,7 +19,11 @@ struct ConversationsListView: View {
          conversationsRepository: any ConversationsRepositoryProtocol) {
         self.convos = convos
         self.userState = .init(userRepository: userRepository)
-        self.conversationsState = .init(conversationsRepository: conversationsRepository)
+        let securityLineConversationsCountRepo = convos.messaging.conversationsCountRepo(for: .securityLine)
+        self.conversationsState = .init(
+            conversationsRepository: conversationsRepository,
+            securityLineConversationsCountRepo: securityLineConversationsCountRepo
+        )
     }
 
     var body: some View {
@@ -33,12 +37,22 @@ struct ConversationsListView: View {
                     },
                     onSignOut: {
                         Task {
-                            try await convos.signOut()
+                            do {
+                                try await convos.signOut()
+                            } catch {
+                                Logger.error("Error signing out: \(error)")
+                            }
                         }
                     }
                 )
                 ScrollView {
                     LazyVStack(spacing: 0) {
+                        if conversationsState.securityLineConversationsCount != 0 {
+                            NavigationLink(value: Route.securityLine) {
+                                SecurityLineListItem(count: conversationsState.securityLineConversationsCount)
+                            }
+                        }
+
                         ForEach(conversationsState.unpinnedConversations) { conversation in
                             NavigationLink(value: Route.conversation(conversation)) {
                                 ConversationsListItem(conversation: conversation)
@@ -56,6 +70,12 @@ struct ConversationsListView: View {
                             )
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)
+                        case .securityLine:
+                            SecurityLineView(
+                                messagingService: convos.messaging,
+                                path: $path
+                            )
+                            .toolbarVisibility(.hidden, for: .navigationBar)
                         case .conversation(let conversation):
                             let conversationRepository = convos.messaging.conversationRepository(
                                 for: conversation.id
@@ -66,10 +86,12 @@ struct ConversationsListView: View {
                             let messageWriter = convos.messaging.messageWriter(
                                 for: conversation.id
                             )
+                            let consentWriter = convos.messaging.conversationConsentWriter()
                             ConversationView(
                                 conversationRepository: conversationRepository,
                                 messagesRepository: messagesRepository,
-                                outgoingMessageWriter: messageWriter
+                                outgoingMessageWriter: messageWriter,
+                                conversationConsentWriter: consentWriter
                             )
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)
@@ -86,7 +108,7 @@ struct ConversationsListView: View {
     let convos = ConvosClient.mock()
     let messagingService = MessagingServiceObservable(messagingService: convos.messaging)
     let userRepository = convos.messaging.userRepository()
-    let conversationsRepository = convos.messaging.conversationsRepository()
+    let conversationsRepository = convos.messaging.conversationsRepository(for: .allowed)
 
     ConversationsListView(
         convos: convos,

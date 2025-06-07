@@ -142,11 +142,11 @@ struct DraftConversationWriterTests {
         try await writer.send(text: "GM!")
 
         let messages1 = await messagesIterator.next()
-        #expect(messages1?.count == 1)
+        #expect(messages1?.count == 2)
 
         guard let existingConversation = try await messaging
-            .conversationsRepository()
-            .conversationsPublisher()
+            .conversationsRepository(for: .allowed)
+            .conversationsPublisher
             .waitForFirstMatch(where: { $0.first?.members == [firstProfile.hydrateProfile()] })
             .first else {
             fatalError("Failed to find existing conversation")

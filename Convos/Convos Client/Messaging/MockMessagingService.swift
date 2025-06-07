@@ -5,8 +5,6 @@ import XMTPiOS
 // swiftlint: disable force_unwrapping
 
 class MockMessagingService: MessagingServiceProtocol {
-    // MARK: - State
-
     let currentUser: User = .mock()
     let allUsers: [Profile]
     let conversations: [Conversation]
@@ -73,7 +71,11 @@ class MockMessagingService: MessagingServiceProtocol {
         MockDraftConversationComposer()
     }
 
-    func conversationsRepository() -> any ConversationsRepositoryProtocol {
+    func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
+        self
+    }
+
+    func conversationsCountRepo(for consent: [Consent]) -> any ConversationsCountRepositoryProtocol {
         self
     }
 
@@ -82,6 +84,10 @@ class MockMessagingService: MessagingServiceProtocol {
             currentConversation = found
         }
         return self
+    }
+
+    func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
+        self
     }
 
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
@@ -101,12 +107,12 @@ class MockMessagingService: MessagingServiceProtocol {
 }
 
 extension MockMessagingService: UserRepositoryProtocol {
-    func getCurrentUser() async throws -> User? {
-        return currentUser
+    var userPublisher: AnyPublisher<User?, Never> {
+        Just(currentUser).eraseToAnyPublisher()
     }
 
-    func userPublisher() -> AnyPublisher<User?, Never> {
-        Just(currentUser).eraseToAnyPublisher()
+    func getCurrentUser() async throws -> User? {
+        return currentUser
     }
 }
 
@@ -119,12 +125,33 @@ extension MockMessagingService: ProfileSearchRepositoryProtocol {
 }
 
 extension MockMessagingService: ConversationsRepositoryProtocol {
+    var conversationsPublisher: AnyPublisher<[Conversation], Never> {
+        Just(conversations).eraseToAnyPublisher()
+    }
+
     func fetchAll() throws -> [Conversation] {
         conversations
     }
+}
 
-    func conversationsPublisher() -> AnyPublisher<[Conversation], Never> {
-        Just(conversations).eraseToAnyPublisher()
+extension MockMessagingService: ConversationsCountRepositoryProtocol {
+    var conversationsCount: AnyPublisher<Int, Never> {
+        Just(1).eraseToAnyPublisher()
+    }
+
+    func fetchCount() throws -> Int {
+        1
+    }
+}
+
+extension MockMessagingService: ConversationConsentWriterProtocol {
+    func join(conversation: Conversation) async throws {
+    }
+
+    func delete(conversation: Conversation) async throws {
+    }
+
+    func deleteAll() async throws {
     }
 }
 
@@ -205,6 +232,9 @@ extension MockMessagingService: XMTPClientProvider {
     func inboxId(for ethereumAddress: String) async throws -> String? {
         nil
     }
+
+    func update(consent: Consent, for conversationId: String) async throws {
+    }
 }
 
 extension MockMessagingService: MessageSender {
@@ -235,7 +265,7 @@ extension MockMessagingService: MessageSender {
 
 extension MockMessagingService {
     static func randomConversations(with users: [Profile]) -> [Conversation] {
-        (0..<Int.random(in: 4...10)).map { index in
+        (0..<Int.random(in: 10...50)).map { index in
             Self.generateRandomConversation(id: "\(index)", from: users)
         }
     }
@@ -283,6 +313,7 @@ extension MockMessagingService {
             id: id,
             creator: randomCreator,
             date: Date(),
+            consent: Consent.allCases.randomElement() ?? .allowed,
             kind: kind,
             name: randomName,
             members: randomMembers,

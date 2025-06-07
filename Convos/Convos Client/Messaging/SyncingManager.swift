@@ -17,6 +17,7 @@ final class SyncingManager: SyncingManagerProtocol {
     private var streamMessagesTask: Task<Void, Never>?
     private var streamConversationsTask: Task<Void, Never>?
     private var syncMemberProfilesTasks: [Task<Void, Error>] = []
+    private let consentStates: [ConsentState] = [.allowed, .unknown]
 
     init(databaseWriter: any DatabaseWriter,
          apiClient: any ConvosAPIClientProtocol) {
@@ -32,12 +33,12 @@ final class SyncingManager: SyncingManagerProtocol {
         listConversationsTask = Task {
             do {
                 do {
-                    _ = try await client.conversations.syncAllConversations(consentStates: [.allowed])
+                    _ = try await client.conversations.syncAllConversations(consentStates: consentStates)
                 } catch {
                     Logger.error("Error syncing all conversations: \(error)")
                 }
                 let maxConcurrentTasks = 5
-                let conversations = try await client.conversations.list(consentStates: [.allowed])
+                let conversations = try await client.conversations.list(consentStates: consentStates)
                 syncMemberProfiles(for: conversations)
                 for chunk in conversations.chunked(into: maxConcurrentTasks) {
                     try await withThrowingTaskGroup(of: Void.self) { group in
@@ -55,7 +56,7 @@ final class SyncingManager: SyncingManagerProtocol {
         }
         streamMessagesTask = Task {
             do {
-                for try await message in await client.conversations.streamAllMessages() {
+                for try await message in await client.conversations.streamAllMessages(consentStates: consentStates) {
                     guard let conversation = try await client.conversations.findConversation(
                         conversationId: message.conversationId) else {
                         Logger.error("Failed finding conversation for message in `streamAllMessages()`")
@@ -74,7 +75,7 @@ final class SyncingManager: SyncingManagerProtocol {
         streamConversationsTask = Task {
             do {
                 for try await conversation in await client.conversations.stream() {
-                    try await conversation.sync()
+                    syncMemberProfiles(for: [conversation])
                     try await conversationWriter.store(conversation: conversation)
                 }
             } catch {

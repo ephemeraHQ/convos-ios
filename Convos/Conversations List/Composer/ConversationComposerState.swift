@@ -7,6 +7,7 @@ class ConversationComposerState {
     private let profileSearchRepo: any ProfileSearchRepositoryProtocol
     private(set) var draftConversationRepo: any DraftConversationRepositoryProtocol
     let draftConversationWriter: any DraftConversationWriterProtocol
+    let conversationConsentWriter: any ConversationConsentWriterProtocol
     private var cancellables: Set<AnyCancellable> = []
     private(set) var hasSentMessage: Bool = false
     private(set) var messagesRepository: any MessagesRepositoryProtocol
@@ -33,12 +34,14 @@ class ConversationComposerState {
         profileSearchRepository: any ProfileSearchRepositoryProtocol,
         draftConversationRepo: any DraftConversationRepositoryProtocol,
         draftConversationWriter: any DraftConversationWriterProtocol,
+        conversationConsentWriter: any ConversationConsentWriterProtocol,
         messagesRepository: any MessagesRepositoryProtocol
     ) {
         self.profileSearchRepo = profileSearchRepository
         self.draftConversationRepo = draftConversationRepo
         self.draftConversationWriter = draftConversationWriter
         self.messagesRepository = messagesRepository
+        self.conversationConsentWriter = conversationConsentWriter
         draftConversationRepo
             .membersPublisher
             .receive(on: DispatchQueue.main)

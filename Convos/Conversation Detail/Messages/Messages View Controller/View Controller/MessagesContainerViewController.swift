@@ -1,11 +1,12 @@
 import Combine
+import SwiftUI
 import UIKit
 
 protocol MessagesContainerViewControllerDelegate: AnyObject {
     func messagesContainerViewControllerDidSendMessage(_ viewController: MessagesContainerViewController)
 }
 
-class MessagesContainerViewController: UIViewController {
+class MessagesContainerViewController: UIViewController, JoinConversationInputViewModelType {
     weak var delegate: MessagesContainerViewControllerDelegate?
 
     // MARK: - Interface Actions
@@ -24,7 +25,8 @@ class MessagesContainerViewController: UIViewController {
 
     let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
     let contentView: UIView = UIView()
-    private let inputBarView: MessagesInputView = MessagesInputView()
+    private let messagesInputView: MessagesInputView = MessagesInputView()
+    private var joinConversationInputView: JoinConversationInputHostingController?
     private var navigationBarHeightConstraint: NSLayoutConstraint?
 
     // MARK: - First Responder Management
@@ -32,7 +34,17 @@ class MessagesContainerViewController: UIViewController {
     var shouldBecomeFirstResponder: Bool = true
 
     override var inputAccessoryView: UIView? {
-        inputBarView
+        guard let conversation, !conversation.isDraft else {
+            return messagesInputView
+        }
+        switch conversation.consent {
+        case .allowed:
+            return messagesInputView
+        case .denied:
+            return nil
+        case .unknown:
+            return joinConversationInputView
+        }
     }
 
     override var canBecomeFirstResponder: Bool {
@@ -42,21 +54,29 @@ class MessagesContainerViewController: UIViewController {
     // MARK: - Conversation
 
     private var conversationRepositoryCancellable: AnyCancellable?
-    private var conversation: Conversation?
+    private var conversation: Conversation? {
+        didSet {
+            configure(with: conversation)
+        }
+    }
     private(set) var conversationRepository: any ConversationRepositoryProtocol {
         didSet {
             observeConversationRepository()
         }
     }
     private(set) var outgoingMessageWriter: any OutgoingMessageWriterProtocol
+    private let conversationConsentWriter: any ConversationConsentWriterProtocol
 
     // MARK: - Init
 
     init(conversationRepository: any ConversationRepositoryProtocol,
-         outgoingMessageWriter: any OutgoingMessageWriterProtocol) {
+         outgoingMessageWriter: any OutgoingMessageWriterProtocol,
+         conversationConsentWriter: any ConversationConsentWriterProtocol) {
         self.conversationRepository = conversationRepository
         self.outgoingMessageWriter = outgoingMessageWriter
+        self.conversationConsentWriter = conversationConsentWriter
         super.init(nibName: nil, bundle: nil)
+        self.joinConversationInputView = .init(viewModel: self)
     }
 
     required init?(coder: NSCoder) {
@@ -121,8 +141,9 @@ class MessagesContainerViewController: UIViewController {
     }
 
     private func setupInputBar() {
-        inputBarView.delegate = self
-        inputBarView.translatesAutoresizingMaskIntoConstraints = false
+        messagesInputView.delegate = self
+        messagesInputView.translatesAutoresizingMaskIntoConstraints = false
+        joinConversationInputView?.translatesAutoresizingMaskIntoConstraints = false
     }
 
     override func viewSafeAreaInsetsDidChange() {
@@ -137,6 +158,31 @@ class MessagesContainerViewController: UIViewController {
         MessagesToolbarView.Constant.compactHeight :
         MessagesToolbarView.Constant.regularHeight
         constraint.constant = baseHeight + view.safeAreaInsets.top
+    }
+
+    // MARK: - JoinConversationInputViewDelegate
+
+    func joinConversation() {
+        guard let conversation else { return }
+        Task {
+            do {
+                try await conversationConsentWriter.join(conversation: conversation)
+            } catch {
+                Logger.error("Error joining conversation: \(error)")
+            }
+        }
+    }
+
+    func deleteConversation() {
+        guard let conversation else { return }
+        navigationController?.popViewController(animated: true)
+        Task {
+            do {
+                try await conversationConsentWriter.delete(conversation: conversation)
+            } catch {
+                Logger.error("Error deleting conversation: \(error)")
+            }
+        }
     }
 
     // MARK: - Child VC Embedding
@@ -155,8 +201,7 @@ class MessagesContainerViewController: UIViewController {
         conversationRepositoryCancellable?.cancel()
         conversationRepositoryCancellable = nil
         do {
-            let conversation = try conversationRepository.fetchConversation()
-            configure(with: conversation)
+            conversation = try conversationRepository.fetchConversation()
         } catch {
             Logger.error("Error fetching conversation: \(error)")
         }
@@ -164,19 +209,18 @@ class MessagesContainerViewController: UIViewController {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] conversation in
                 guard let self else { return }
-                configure(with: conversation)
+                self.conversation = conversation
             }
     }
 
     private func updateSendButtonEnabled(for conversation: Conversation?) {
         let conversationHasMembers: Bool = !(conversation?.members.isEmpty ?? true)
-        let enabled = conversationHasMembers && !inputBarView.textView.text.isEmpty
-        inputBarView.sendButton.isEnabled = enabled
-        inputBarView.sendButton.alpha = enabled ? 1 : 0.2
+        let enabled = conversationHasMembers && !messagesInputView.textView.text.isEmpty
+        messagesInputView.sendButton.isEnabled = enabled
+        messagesInputView.sendButton.alpha = enabled ? 1 : 0.2
     }
 
     private func configure(with conversation: Conversation?) {
-        self.conversation = conversation
         updateSendButtonEnabled(for: conversation)
         if let conversation, !conversation.isDraft || conversation.lastMessage != nil {
             navigationBar.configure(conversation: conversation)
@@ -186,6 +230,7 @@ class MessagesContainerViewController: UIViewController {
                 placeholderTitle: "New chat"
             )
         }
+        reloadInputViews()
     }
 }
 

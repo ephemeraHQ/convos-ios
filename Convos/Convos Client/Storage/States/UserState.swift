@@ -15,7 +15,7 @@ final class UserState {
     }
 
     private func observe() {
-        userRepository.userPublisher()
+        userRepository.userPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] user in
                 self?.currentUser = user

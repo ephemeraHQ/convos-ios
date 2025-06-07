@@ -6,6 +6,7 @@ extension Conversation {
         id: String = UUID().uuidString,
         creator: Profile = .mock(),
         date: Date = Date(),
+        consent: Consent = .allowed,
         kind: ConversationKind = .dm,
         name: String = "The Convo",
         description: String = "Where we talk about all things Convos.",
@@ -18,6 +19,7 @@ extension Conversation {
             id: id,
             creator: creator,
             createdAt: Date(),
+            consent: consent,
             kind: kind,
             name: name,
             description: description,
@@ -42,11 +44,11 @@ class MockConversationsRepository: ConversationsRepositoryProtocol {
         .mock()
     ]
 
+    lazy var conversationsPublisher: AnyPublisher<[Conversation], Never> = {
+        Just(conversations).eraseToAnyPublisher()
+    }()
+
     func fetchAll() throws -> [Conversation] {
         conversations
-    }
-
-    func conversationsPublisher() -> AnyPublisher<[Conversation], Never> {
-        Just(conversations).eraseToAnyPublisher()
     }
 }

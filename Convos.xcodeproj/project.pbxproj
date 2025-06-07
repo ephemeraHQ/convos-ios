@@ -136,9 +136,12 @@
 				"Convos Client/Storage/Models/Profile.swift",
 				"Convos Client/Storage/Models/User.swift",
 				"Convos Client/Storage/Repositories/ConversationRepository.swift",
+				"Convos Client/Storage/Repositories/ConversationsCountRepository.swift",
 				"Convos Client/Storage/Repositories/ConversationsRepository.swift",
+				"Convos Client/Storage/Repositories/DB XMTP Representations/Consent+ConsentState.swift",
 				"Convos Client/Storage/Repositories/DraftConversationRepository.swift",
 				"Convos Client/Storage/Repositories/MessagesRepository.swift",
+				"Convos Client/Storage/Repositories/Mocks/MockConversationConsentWriter.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockConversationRepository.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockConversationsRepository.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockDraftConversationWriter.swift",
@@ -150,6 +153,7 @@
 				"Convos Client/Storage/Repositories/UserRepository.swift",
 				"Convos Client/Storage/SharedDatabaseMigrator.swift",
 				"Convos Client/Storage/States/DraftConversationState.swift",
+				"Convos Client/Storage/Writers/ConversationConsentWriter.swift",
 				"Convos Client/Storage/Writers/ConversationWriter.swift",
 				"Convos Client/Storage/Writers/DraftConversationWriter.swift",
 				"Convos Client/Storage/Writers/IncomingMessageWriter.swift",
@@ -160,6 +164,7 @@
 				"Convos Client/Storage/XMTP DB Representations/MessageDeliveryStatus+DBRepresentation.swift",
 				"Convos Client/Storage/XMTP DB Representations/Reaction+DBRepresentation.swift",
 				Logging/Logger.swift,
+				"Utilities/EthereumAddress+Validation.swift",
 			);
 			target = 7ACA8BA22DE16DE200848799 /* ConvosTests */;
 		};
