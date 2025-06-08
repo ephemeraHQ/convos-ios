@@ -67,8 +67,8 @@ struct MessageBubble: View {
             MessageContainer(style: style, isOutgoing: isOutgoing) {
                 Text(message)
                     .foregroundColor(isOutgoing ? .white : .primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, DesignConstants.Spacing.step3x)
+                    .padding(.vertical, DesignConstants.Spacing.step2x)
             } avatarView: {
                 Group {
                     if isOutgoing {
