@@ -27,10 +27,11 @@ final class MessagesInputView: UIView {
     private(set) lazy var textView: UITextView = {
         let tv = UITextView()
         tv.font = .systemFont(ofSize: Constant.textViewFontSize)
-        tv.backgroundColor = .white
+        tv.textColor = UIColor.colorTextPrimary
+        tv.backgroundColor = .colorBackgroundPrimary
         tv.layer.masksToBounds = true
         tv.layer.borderWidth = 1
-        tv.layer.borderColor = UIColor.systemGray6.cgColor
+        tv.layer.borderColor = UIColor.colorBorderSubtle2.cgColor
         tv.textContainerInset = Constant.textViewInset
         tv.translatesAutoresizingMaskIntoConstraints = false
         tv.isScrollEnabled = false
@@ -41,7 +42,7 @@ final class MessagesInputView: UIView {
     lazy var sendButton: UIButton = {
         let button = UIButton(type: .system)
         button.setImage(UIImage(systemName: "arrow.up.circle.fill"), for: .normal)
-        button.tintColor = .black
+        button.tintColor = .colorBackgroundInverted
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(handleSendButtonTap), for: .touchUpInside)
         return button
@@ -69,7 +70,7 @@ final class MessagesInputView: UIView {
     }
 
     private func configureBackground() {
-        backgroundColor = .white.withAlphaComponent(0.8)
+        backgroundColor = .colorBackgroundPrimary.withAlphaComponent(0.8)
     }
 
     private func addSubviews() {

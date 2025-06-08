@@ -59,8 +59,8 @@ struct MessageContainer<Content: View, AvatarView: View>: View {
             }
 
             content()
-                .background(isOutgoing ? Color.black : Color(hue: 0.0, saturation: 0.0, brightness: 0.96))
-                .foregroundColor(isOutgoing ? .white : .primary)
+                .background(isOutgoing ? Color.colorBubble : Color.colorBubbleIncoming)
+                .foregroundColor(isOutgoing ? .colorTextPrimaryInverted : .colorTextPrimary)
                 .mask(mask)
 
             if !isOutgoing {

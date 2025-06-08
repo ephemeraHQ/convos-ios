@@ -66,7 +66,6 @@ struct MessageBubble: View {
         HStack {
             MessageContainer(style: style, isOutgoing: isOutgoing) {
                 Text(message)
-                    .foregroundColor(isOutgoing ? .white : .primary)
                     .padding(.horizontal, DesignConstants.Spacing.step3x)
                     .padding(.vertical, DesignConstants.Spacing.step2x)
             } avatarView: {
