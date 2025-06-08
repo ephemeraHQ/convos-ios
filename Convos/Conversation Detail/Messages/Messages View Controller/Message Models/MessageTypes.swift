@@ -3,14 +3,12 @@ import Foundation
 import UIKit
 
 struct DateGroup: Hashable {
-    var id: UUID
     var date: Date
     var value: String {
         MessagesDateFormatter.shared.string(from: date)
     }
 
-    init(id: UUID, date: Date) {
-        self.id = id
+    init(date: Date) {
         self.date = date
     }
 }
@@ -36,7 +34,7 @@ extension DateGroup: Differentiable {
 }
 
 struct MessageGroup: Hashable {
-    var id: UUID
+    var id: String
     var title: String
     var source: MessageSource
 }

@@ -10,7 +10,7 @@ final class CellFactory {
         case let .message(message, bubbleType: bubbleType):
             return createMessageCell(in: collectionView, for: indexPath, message: message, bubbleType: bubbleType)
         case let .messageGroup(group):
-            return createGroupTitle(in: collectionView, for: indexPath, title: group.title)
+            return createGroupTitle(in: collectionView, for: indexPath, title: group.title, source: group.source)
         case let .date(group):
             return createDateTitle(in: collectionView, for: indexPath, title: group.value)
         case .typingIndicator:
@@ -117,12 +117,13 @@ final class CellFactory {
 
     private static func createGroupTitle(in collectionView: UICollectionView,
                                          for indexPath: IndexPath,
-                                         title: String) -> UserTitleCollectionCell {
+                                         title: String,
+                                         source: MessageSource) -> UserTitleCollectionCell {
         let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: UserTitleCollectionCell.reuseIdentifier,
             for: indexPath
         ) as! UserTitleCollectionCell
-        cell.setup(name: title)
+        cell.setup(name: title, source: source)
         return cell
     }
 

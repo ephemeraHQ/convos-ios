@@ -193,6 +193,7 @@ protocol MessageType {
     var source: MessageSource { get }
     var status: MessageStatus { get }
     var content: MessageContent { get }
+    var date: Date { get }
 }
 
 enum AnyMessage: Hashable, Codable {
@@ -243,6 +244,7 @@ struct Message: MessageType, Hashable, Codable {
     let source: MessageSource
     let status: MessageStatus
     let content: MessageContent
+    let date: Date
 
     let reactions: [MessageReaction]
 }
@@ -254,6 +256,7 @@ struct MessageReply: MessageType, Hashable, Codable {
     let source: MessageSource
     let status: MessageStatus
     let content: MessageContent
+    let date: Date
 
     let parentMessage: Message
     let reactions: [MessageReaction]
@@ -266,6 +269,7 @@ struct MessageReaction: MessageType, Hashable, Codable {
     let source: MessageSource
     let status: MessageStatus
     let content: MessageContent
+    let date: Date
 
     let emoji: String // same as content.text
 }

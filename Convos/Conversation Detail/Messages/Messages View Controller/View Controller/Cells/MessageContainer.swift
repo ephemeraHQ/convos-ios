@@ -47,7 +47,6 @@ struct MessageContainer<Content: View, AvatarView: View>: View {
         avatarView()
             .frame(width: DesignConstants.ImageSizes.smallAvatar,
                    height: DesignConstants.ImageSizes.smallAvatar)
-            .padding(.horizontal, DesignConstants.Spacing.step2x)
     }
 
     var body: some View {
@@ -56,6 +55,7 @@ struct MessageContainer<Content: View, AvatarView: View>: View {
                 spacer
             } else {
                 avatar
+                    .padding(.trailing, DesignConstants.Spacing.step2x)
             }
 
             content()
@@ -67,6 +67,7 @@ struct MessageContainer<Content: View, AvatarView: View>: View {
                 spacer
             } else {
                 avatar
+                    .padding(.leading, DesignConstants.Spacing.step2x)
             }
         }
     }

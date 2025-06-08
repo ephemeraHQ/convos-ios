@@ -71,10 +71,14 @@ struct MessageBubble: View {
                     .padding(.vertical, 8)
             } avatarView: {
                 Group {
-                    if style == .normal {
-                        Spacer()
+                    if isOutgoing {
+                        EmptyView()
                     } else {
-                        ProfileAvatarView(profile: profile)
+                        if style == .normal {
+                            Spacer()
+                        } else {
+                            ProfileAvatarView(profile: profile)
+                        }
                     }
                 }
             }
