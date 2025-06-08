@@ -1,6 +1,11 @@
 import Foundation
 
 class MockAPIClient: ConvosAPIClientProtocol {
+    var xmtpClientProvider: (any XMTPClientProvider)?
+
+    func setXMTPClientProvider(_ provider: (any XMTPClientProvider)?) {
+    }
+
     func authenticate(xmtpInstallationId: String, xmtpId: String, xmtpSignature: String) async throws -> String {
         return "mock-jwt-token"
     }

@@ -206,6 +206,18 @@ extension MockMessagingService: ConversationSender {
 }
 
 extension MockMessagingService: XMTPClientProvider {
+    var installationId: String {
+        ""
+    }
+
+    var inboxId: String {
+        ""
+    }
+
+    func signWithInstallationKey(message: String) throws -> Data {
+        Data()
+    }
+
     func canMessage(identity: String) async throws -> Bool {
         true
     }

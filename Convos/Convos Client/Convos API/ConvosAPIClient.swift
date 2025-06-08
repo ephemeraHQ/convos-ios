@@ -33,6 +33,8 @@ struct Passkey: Codable {
 }
 
 protocol ConvosAPIClientProtocol {
+    var xmtpClientProvider: (any XMTPClientProvider)? { get }
+    func setXMTPClientProvider(_ provider: (any XMTPClientProvider)?)
     func authenticate(xmtpInstallationId: String,
                       xmtpId: String,
                       xmtpSignature: String) async throws -> String
@@ -50,6 +52,9 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
     internal let baseURL: URL
     private let keychainService: KeychainService<ConvosKeychainItem> = .init()
     internal let session: URLSession
+    private(set) var xmtpClientProvider: (any XMTPClientProvider)?
+
+    private let maxRetryCount: Int = 3
 
     static var shared: ConvosAPIClient = {
         guard let apiBaseURL = URL(string: Secrets.CONVOS_API_BASE_URL) else {
@@ -58,9 +63,31 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
         return ConvosAPIClient(baseURL: apiBaseURL)
     }()
 
+    func setXMTPClientProvider(_ provider: (any XMTPClientProvider)?) {
+        xmtpClientProvider = provider
+    }
+
     private init(baseURL: URL) {
         self.baseURL = baseURL
         self.session = URLSession(configuration: .default)
+    }
+
+    private func reAuthenticate() async throws -> String {
+        guard let client = xmtpClientProvider else {
+            throw APIError.notAuthenticated
+        }
+
+        let installationId = client.installationId
+        let xmtpId = client.inboxId
+        let firebaseAppCheckToken = Secrets.FIREBASE_APP_CHECK_TOKEN
+        let signatureData = try client.signWithInstallationKey(message: firebaseAppCheckToken)
+        let signature = signatureData.hexEncodedString()
+
+        return try await authenticate(
+            xmtpInstallationId: installationId,
+            xmtpId: xmtpId,
+            xmtpSignature: signature
+        )
     }
 
     // MARK: - Authentication
@@ -167,7 +194,7 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
         return request
     }
 
-    private func performRequest<T: Decodable>(_ request: URLRequest) async throws -> T {
+    private func performRequest<T: Decodable>(_ request: URLRequest, retryCount: Int = 0) async throws -> T {
         let (data, response) = try await session.data(for: request)
 
         Logger.info("Received response: \(data.prettyPrintedJSONString ?? "nil data")")
@@ -180,7 +207,27 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
         case 200...299:
             return try JSONDecoder().decode(T.self, from: data)
         case 401:
-            throw APIError.notAuthenticated
+            // Check if we've exceeded max retries
+            guard retryCount < maxRetryCount else {
+                Logger.error("Max retry count (\(maxRetryCount)) exceeded for request")
+                throw APIError.notAuthenticated
+            }
+
+            // Try to re-authenticate and retry the request
+            do {
+                Logger.info("Attempting re-authentication (attempt \(retryCount + 1) of \(maxRetryCount))")
+                _ = try await reAuthenticate()
+                // Create a new request with the fresh token
+                var newRequest = request
+                if let jwt = try keychainService.retrieveString(.convosJwt) {
+                    newRequest.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
+                }
+                // Retry the request with incremented retry count
+                return try await performRequest(newRequest, retryCount: retryCount + 1)
+            } catch {
+                Logger.error("Re-authentication failed: \(error.localizedDescription)")
+                throw APIError.notAuthenticated
+            }
         case 403:
             throw APIError.forbidden
         case 404:

@@ -14,6 +14,9 @@ protocol ConversationSender {
 }
 
 protocol XMTPClientProvider: AnyObject {
+    var installationId: String { get }
+    var inboxId: String { get }
+    func signWithInstallationKey(message: String) throws -> Data
     func messageSender(for conversationId: String) async throws -> (any MessageSender)?
     func canMessage(identity: String) async throws -> Bool
     func canMessage(identities: [String]) async throws -> [String: Bool]
@@ -51,6 +54,14 @@ extension XMTPiOS.Group: ConversationSender {
 }
 
 extension XMTPiOS.Client: XMTPClientProvider {
+    var installationId: String {
+        installationID
+    }
+
+    var inboxId: String {
+        inboxID
+    }
+
     func canMessage(identity: String) async throws -> Bool {
         return try await canMessage(
             identity: PublicIdentity(kind: .ethereum, identifier: identity)
