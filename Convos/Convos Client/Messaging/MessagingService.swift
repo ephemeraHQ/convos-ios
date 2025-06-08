@@ -72,7 +72,8 @@ final class MessagingService: MessagingServiceProtocol {
                 apiClient: apiClient,
                 clientPublisher: stateMachine.clientPublisher
             ),
-            conversationConsentWriter: conversationConsentWriter()
+            conversationConsentWriter: conversationConsentWriter(),
+            conversationLocalStateWriter: conversationLocalStateWriter()
         )
     }
 
@@ -91,6 +92,10 @@ final class MessagingService: MessagingServiceProtocol {
 
     func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
         ConversationConsentWriter(databaseWriter: databaseWriter, clientPublisher: clientPublisher)
+    }
+
+    func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol {
+        ConversationLocalStateWriter(databaseWriter: databaseWriter)
     }
 
     // MARK: Getting/Sending Messages

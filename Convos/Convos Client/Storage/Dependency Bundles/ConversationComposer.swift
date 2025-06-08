@@ -5,6 +5,7 @@ protocol DraftConversationComposerProtocol {
     var draftConversationRepository: any DraftConversationRepositoryProtocol { get }
     var profileSearchRepository: any ProfileSearchRepositoryProtocol { get }
     var conversationConsentWriter: any ConversationConsentWriterProtocol { get }
+    var conversationLocalStateWriter: any ConversationLocalStateWriterProtocol { get }
 }
 
 struct DraftConversationComposer: DraftConversationComposerProtocol {
@@ -12,6 +13,7 @@ struct DraftConversationComposer: DraftConversationComposerProtocol {
     let draftConversationRepository: any DraftConversationRepositoryProtocol
     let profileSearchRepository: any ProfileSearchRepositoryProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
+    let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
 }
 
 struct MockDraftConversationComposer: DraftConversationComposerProtocol {
@@ -19,4 +21,5 @@ struct MockDraftConversationComposer: DraftConversationComposerProtocol {
     let draftConversationRepository: any DraftConversationRepositoryProtocol = MockDraftConversationRepository()
     let profileSearchRepository: any ProfileSearchRepositoryProtocol = MockProfileSearchRepository()
     let conversationConsentWriter: any ConversationConsentWriterProtocol = MockConversationConsentWriter()
+    let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol = MockConversationLocalStateWriter()
 }

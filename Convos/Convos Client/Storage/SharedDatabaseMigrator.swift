@@ -1,6 +1,8 @@
 import Foundation
 import GRDB
 
+// swiftlint:disable function_body_length
+
 class SharedDatabaseMigrator {
     static let shared: SharedDatabaseMigrator = SharedDatabaseMigrator()
     private var defaultMigrator: DatabaseMigrator
@@ -105,6 +107,9 @@ class SharedDatabaseMigrator {
                     .references("conversation", onDelete: .cascade)
                 t.column("isPinned", .boolean).notNull().defaults(to: false)
                 t.column("isUnread", .boolean).notNull().defaults(to: false)
+                t.column("isUnreadUpdatedAt", .datetime)
+                    .notNull()
+                    .defaults(to: Date.distantPast)
                 t.column("isMuted", .boolean).notNull().defaults(to: false)
             }
 
@@ -146,3 +151,5 @@ class SharedDatabaseMigrator {
         try defaultMigrator.migrate(database)
     }
 }
+
+// swiftlint:enable function_body_length

@@ -6,6 +6,10 @@ class MockConversationRepository: ConversationRepositoryProtocol {
         Just(conversation).eraseToAnyPublisher()
     }
 
+    var conversationId: String {
+        conversation.id
+    }
+
     private let conversation: Conversation = .mock()
 
     func fetchConversation() throws -> Conversation? {
@@ -14,6 +18,10 @@ class MockConversationRepository: ConversationRepositoryProtocol {
 }
 
 class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
+    var conversationId: String {
+        conversation.id
+    }
+
     var membersPublisher: AnyPublisher<[Profile], Never> {
         Just([]).eraseToAnyPublisher()
     }

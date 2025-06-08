@@ -66,15 +66,18 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
     }
     private(set) var outgoingMessageWriter: any OutgoingMessageWriterProtocol
     private let conversationConsentWriter: any ConversationConsentWriterProtocol
+    private let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
 
     // MARK: - Init
 
     init(conversationRepository: any ConversationRepositoryProtocol,
          outgoingMessageWriter: any OutgoingMessageWriterProtocol,
-         conversationConsentWriter: any ConversationConsentWriterProtocol) {
+         conversationConsentWriter: any ConversationConsentWriterProtocol,
+         conversationLocalStateWriter: any ConversationLocalStateWriterProtocol) {
         self.conversationRepository = conversationRepository
         self.outgoingMessageWriter = outgoingMessageWriter
         self.conversationConsentWriter = conversationConsentWriter
+        self.conversationLocalStateWriter = conversationLocalStateWriter
         super.init(nibName: nil, bundle: nil)
         self.joinConversationInputView = .init(viewModel: self)
     }
@@ -86,6 +89,21 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
     deinit {
         conversationRepositoryCancellable?.cancel()
         KeyboardListener.shared.remove(delegate: self)
+    }
+
+    // MARK: - Actions
+
+    private func markConversationAsRead() {
+        Task {
+            do {
+                try await conversationLocalStateWriter.setUnread(
+                    false,
+                    for: conversationRepository.conversationId
+                )
+            } catch {
+                Logger.error("Failed marking conversation as read: \(error)")
+            }
+        }
     }
 
     // MARK: - Lifecycle
@@ -103,9 +121,18 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
             shouldBecomeFirstResponder = false
             becomeFirstResponderAfterTransitionCompletes()
         }
+
+        markConversationAsRead()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+
+        markConversationAsRead()
     }
 
     // MARK: - UI Setup
+
     private func setupUI() {
         setupInputBar()
         view.addSubview(navigationBar)

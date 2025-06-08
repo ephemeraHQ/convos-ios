@@ -17,6 +17,7 @@ struct ConversationComposerView: UIViewControllerRepresentable {
                 draftConversationRepo: draftConversationComposer.draftConversationRepository,
                 draftConversationWriter: draftConversationComposer.draftConversationWriter,
                 conversationConsentWriter: draftConversationComposer.conversationConsentWriter,
+                conversationLocalStateWriter: draftConversationComposer.conversationLocalStateWriter,
                 messagesRepository: draftConversationComposer.draftConversationRepository.messagesRepository
             )
         )

@@ -104,6 +104,10 @@ class MockMessagingService: MessagingServiceProtocol {
     var messagingStatePublisher: AnyPublisher<MessagingServiceState, Never> {
         messagingStateSubject.eraseToAnyPublisher()
     }
+
+    func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol {
+        MockConversationLocalStateWriter()
+    }
 }
 
 extension MockMessagingService: UserRepositoryProtocol {
@@ -156,6 +160,10 @@ extension MockMessagingService: ConversationConsentWriterProtocol {
 }
 
 extension MockMessagingService: ConversationRepositoryProtocol {
+    var conversationId: String {
+        conversation?.id ?? ""
+    }
+
     var conversation: Conversation? {
         conversations.randomElement()
     }
@@ -384,6 +392,13 @@ extension MockMessagingService {
             return AnyMessage.message(message)
         }
     }
+}
+
+// Add a mock implementation for ConversationLocalStateWriterProtocol
+class MockConversationLocalStateWriter: ConversationLocalStateWriterProtocol {
+    func setUnread(_ isUnread: Bool, for conversationId: String) async throws {}
+    func setPinned(_ isPinned: Bool, for conversationId: String) async throws {}
+    func setMuted(_ isMuted: Bool, for conversationId: String) async throws {}
 }
 
 // swiftlint: enable force_unwrapping

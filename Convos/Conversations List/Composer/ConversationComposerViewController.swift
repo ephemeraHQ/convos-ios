@@ -31,7 +31,8 @@ class ConversationComposerViewController: UIViewController {
         self.messagesContainerViewController = MessagesContainerViewController(
             conversationRepository: composerState.draftConversationRepo,
             outgoingMessageWriter: composerState.draftConversationWriter,
-            conversationConsentWriter: composerState.conversationConsentWriter
+            conversationConsentWriter: composerState.conversationConsentWriter,
+            conversationLocalStateWriter: composerState.conversationLocalStateWriter
         )
         messagesContainerViewController.delegate = composerState
         self.profileSearchRepository = profileSearchRepository
