@@ -23,11 +23,11 @@ struct ListItemView<LeadingContent: View, SubtitleContent: View, AccessoryConten
     @ViewBuilder let accessoryContent: () -> AccessoryContent
 
     var body: some View {
-        HStack(spacing: 12.0) {
+        HStack(spacing: DesignConstants.Spacing.step3x) {
             leadingContent()
                 .frame(width: 56.0, height: 56.0)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: DesignConstants.Spacing.stepX) {
                 Text(title)
                     .font(.system(size: 17.0, weight: isUnread ? .semibold : .regular))
                     .foregroundColor(.primary)
@@ -42,7 +42,7 @@ struct ListItemView<LeadingContent: View, SubtitleContent: View, AccessoryConten
 
                     Spacer()
 
-                    HStack(spacing: 4) {
+                    HStack(spacing: DesignConstants.Spacing.stepX) {
                         if isMuted {
                             Image(systemName: "bell.slash.fill")
                                 .font(.system(size: 13))
@@ -60,10 +60,10 @@ struct ListItemView<LeadingContent: View, SubtitleContent: View, AccessoryConten
 
             accessoryContent()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, DesignConstants.Spacing.step4x)
+        .padding(.vertical, DesignConstants.Spacing.step3x)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.systemBackground))
+        .background(.colorBackgroundPrimary)
         .contentShape(Rectangle())
     }
 }
@@ -81,7 +81,7 @@ struct ConversationsListItem: View {
             },
             subtitle: {
                 if let message = conversation.lastMessage {
-                    HStack(spacing: 4) {
+                    HStack(spacing: DesignConstants.Spacing.stepX) {
                         RelativeDateLabel(date: message.createdAt)
                         Text("•")
                         Text(message.text)

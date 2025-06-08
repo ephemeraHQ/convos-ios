@@ -100,6 +100,7 @@ struct ConversationsListView: View {
                         }
                     }
                 }
+                .background(.colorBackgroundPrimary)
             }
         }
     }
