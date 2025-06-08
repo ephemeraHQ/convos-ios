@@ -87,11 +87,13 @@ struct ConversationsListView: View {
                                 for: conversation.id
                             )
                             let consentWriter = convos.messaging.conversationConsentWriter()
+                            let localStateWriter = convos.messaging.conversationLocalStateWriter()
                             ConversationView(
                                 conversationRepository: conversationRepository,
                                 messagesRepository: messagesRepository,
                                 outgoingMessageWriter: messageWriter,
-                                conversationConsentWriter: consentWriter
+                                conversationConsentWriter: consentWriter,
+                                conversationLocalStateWriter: localStateWriter
                             )
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)

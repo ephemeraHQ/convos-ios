@@ -5,12 +5,14 @@ struct ConversationView: UIViewControllerRepresentable {
     let messagesRepository: any MessagesRepositoryProtocol
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
+    let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
 
     func makeUIViewController(context: Context) -> MessagesContainerViewController {
         let messageContainerViewController = MessagesContainerViewController(
             conversationRepository: conversationRepository,
             outgoingMessageWriter: outgoingMessageWriter,
-            conversationConsentWriter: conversationConsentWriter
+            conversationConsentWriter: conversationConsentWriter,
+            conversationLocalStateWriter: conversationLocalStateWriter
         )
         let messagesViewController = MessagesViewController(
             messagesRepository: messagesRepository
@@ -32,7 +34,8 @@ struct ConversationView: UIViewControllerRepresentable {
         conversationRepository: convos.messaging.conversationRepository(for: conversationId),
         messagesRepository: convos.messaging.messagesRepository(for: conversationId),
         outgoingMessageWriter: convos.messaging.messageWriter(for: conversationId),
-        conversationConsentWriter: convos.messaging.conversationConsentWriter()
+        conversationConsentWriter: convos.messaging.conversationConsentWriter(),
+        conversationLocalStateWriter: convos.messaging.conversationLocalStateWriter()
     )
     .ignoresSafeArea()
 }

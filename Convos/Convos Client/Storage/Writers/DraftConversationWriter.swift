@@ -166,6 +166,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                 conversationId: updatedConversation.id,
                 isPinned: false,
                 isUnread: false,
+                isUnreadUpdatedAt: Date(),
                 isMuted: false
             )
             try localState.save(db)

@@ -12,6 +12,10 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
     private let writer: any DraftConversationWriterProtocol
     let messagesRepository: any MessagesRepositoryProtocol
 
+    var conversationId: String {
+        writer.conversationId
+    }
+
     init(dbReader: any DatabaseReader, writer: any DraftConversationWriterProtocol) {
         self.dbReader = dbReader
         self.writer = writer

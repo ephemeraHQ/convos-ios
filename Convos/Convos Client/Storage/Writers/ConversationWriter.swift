@@ -51,7 +51,8 @@ class ConversationWriter: ConversationWriterProtocol {
         let localState = ConversationLocalState(
             conversationId: conversation.id,
             isPinned: false,
-            isUnread: false,
+            isUnread: true,
+            isUnreadUpdatedAt: Date.distantPast,
             isMuted: false
         )
 
@@ -105,7 +106,7 @@ class ConversationWriter: ConversationWriterProtocol {
                 }
             }
 
-            try localState.save(db)
+            try localState.insert(db, onConflict: .ignore)
 
             for member in dbMembers {
                 try Member(inboxId: member.memberId).save(db)
