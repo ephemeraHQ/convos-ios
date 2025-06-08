@@ -8,6 +8,7 @@ final class MessagingService: MessagingServiceProtocol {
     private let databaseWriter: any DatabaseWriter
     private let stateMachine: MessagingServiceStateMachine
     private let apiClient: any ConvosAPIClientProtocol
+    private var cancellables: Set<AnyCancellable> = []
 
     var state: MessagingServiceState {
         stateMachine.state
@@ -35,6 +36,13 @@ final class MessagingService: MessagingServiceProtocol {
         self.apiClient = apiClient
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
+
+        // Subscribe to XMTP client changes
+        stateMachine.clientPublisher
+            .sink { [weak self] client in
+                self?.apiClient.setXMTPClientProvider(client)
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: User
