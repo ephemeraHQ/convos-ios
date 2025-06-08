@@ -108,6 +108,7 @@ extension Array where Element == MessageWithDetails {
                       source: source,
                       status: $0.status,
                       content: .emoji($0.emoji ?? ""),
+                      date: Date(),
                       emoji: $0.emoji ?? "")
             }
             switch dbMessage.messageType {
@@ -148,6 +149,7 @@ extension Array where Element == MessageWithDetails {
                                       source: source,
                                       status: dbMessage.status,
                                       content: messageContent,
+                                      date: dbMessage.date,
                                       reactions: reactions)
                 return .message(message)
             case .reply:

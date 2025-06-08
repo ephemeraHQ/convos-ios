@@ -22,7 +22,9 @@ struct MessagesToolbarView: View {
     }
 
     var avatarVerticalPadding: CGFloat {
-        DesignConstants.Spacing.step3x
+        verticalSizeClass == .compact ?
+        DesignConstants.Spacing.step2x :
+        DesignConstants.Spacing.step4x
     }
 
     var body: some View {
@@ -83,10 +85,14 @@ struct MessagesToolbarView: View {
             }
         }
         .frame(height: barHeight)
-        .padding(.vertical, DesignConstants.Spacing.step4x)
         .padding(.leading, DesignConstants.Spacing.step2x)
         .padding(.trailing, DesignConstants.Spacing.step4x)
-        .background(.clear)
+        .background(.colorBackgroundPrimary)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(.colorBorderSubtle2)
+                .frame(height: 1.0)
+        }
     }
 }
 

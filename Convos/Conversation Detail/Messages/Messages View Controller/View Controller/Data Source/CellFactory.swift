@@ -10,7 +10,7 @@ final class CellFactory {
         case let .message(message, bubbleType: bubbleType):
             return createMessageCell(in: collectionView, for: indexPath, message: message, bubbleType: bubbleType)
         case let .messageGroup(group):
-            return createGroupTitle(in: collectionView, for: indexPath, title: group.title)
+            return createGroupTitle(in: collectionView, for: indexPath, title: group.title, source: group.source)
         case let .date(group):
             return createDateTitle(in: collectionView, for: indexPath, title: group.value)
         case .typingIndicator:
@@ -33,7 +33,8 @@ final class CellFactory {
                     for: indexPath,
                     text: string,
                     bubbleType: bubbleType,
-                    messageType: message.source
+                    messageType: message.source,
+                    profile: message.sender
                 )
             case .attachment(let attachmentURL):
                 return createImageCell(
@@ -55,7 +56,8 @@ final class CellFactory {
                     for: indexPath,
                     text: string,
                     bubbleType: bubbleType,
-                    messageType: reply.source
+                    messageType: reply.source,
+                    profile: reply.sender
                 )
             case .attachment(let attachmentURL):
                 return createImageCell(
@@ -77,11 +79,12 @@ final class CellFactory {
         for indexPath: IndexPath,
         text: String,
         bubbleType: MessagesCollectionCell.BubbleType,
-        messageType: MessageSource
+        messageType: MessageSource,
+        profile: Profile
     ) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TextMessageCollectionCell.reuseIdentifier,
                                                       for: indexPath) as! TextMessageCollectionCell
-        cell.setup(message: text, messageType: messageType, style: bubbleType)
+        cell.setup(message: text, messageType: messageType, style: bubbleType, profile: profile)
         return cell
     }
 
@@ -114,12 +117,13 @@ final class CellFactory {
 
     private static func createGroupTitle(in collectionView: UICollectionView,
                                          for indexPath: IndexPath,
-                                         title: String) -> UserTitleCollectionCell {
+                                         title: String,
+                                         source: MessageSource) -> UserTitleCollectionCell {
         let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: UserTitleCollectionCell.reuseIdentifier,
             for: indexPath
         ) as! UserTitleCollectionCell
-        cell.setup(name: title)
+        cell.setup(name: title, source: source)
         return cell
     }
 

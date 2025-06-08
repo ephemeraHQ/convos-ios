@@ -255,6 +255,7 @@ extension MockMessagingService: MessageSender {
                   source: .outgoing,
                   status: .published,
                   content: .text(text),
+                  date: Date(),
                   reactions: []
                  )
         )
@@ -370,6 +371,7 @@ extension MockMessagingService {
             source: .incoming,
             status: .published,
             content: .text(TextGenerator.getString(of: Int.random(in: 1...20))),
+            date: Date(),
             reactions: []
         )
         let anyMessage = AnyMessage.message(message)
@@ -387,6 +389,7 @@ extension MockMessagingService {
                 source: .incoming,
                 status: .published,
                 content: .text(TextGenerator.getString(of: Int.random(in: 1...20))),
+                date: Date(),
                 reactions: []
             )
             return AnyMessage.message(message)

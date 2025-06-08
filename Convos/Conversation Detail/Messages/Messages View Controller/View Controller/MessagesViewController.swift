@@ -127,8 +127,6 @@ final class MessagesViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        navigationController?.setNavigationBarHidden(true, animated: false)
-
         setupCollectionView()
         setupUI()
         reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
@@ -297,9 +295,42 @@ extension MessagesViewController {
                                 animated: Bool = true,
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
-        let cells: [MessagesCollectionCell] = messages.map { message in
-            MessagesCollectionCell.message(message,
-                                           bubbleType: .normal)
+        let cells: [MessagesCollectionCell] = messages.enumerated().flatMap { index, message in
+            var cells: [MessagesCollectionCell] = []
+
+            let senderTitleCell = MessagesCollectionCell.messageGroup(
+                .init(
+                    id: message.base.sender.id,
+                    title: message.base.sender.displayName,
+                    source: message.base.source
+                )
+            )
+
+            if index > 0 {
+                let previousMessage = messages[index - 1]
+                let timeDifference = message.base.date.timeIntervalSince(previousMessage.base.date)
+                if timeDifference > 3600 { // 1 hour in seconds
+                    cells.append(MessagesCollectionCell.date(.init(date: message.base.date)))
+                }
+                if previousMessage.base.sender.id != message.base.sender.id, message.base.source.isIncoming {
+                    cells.append(senderTitleCell)
+                }
+            } else {
+                cells.append(MessagesCollectionCell.date(.init(date: message.base.date)))
+                if message.base.source.isIncoming {
+                    cells.append(senderTitleCell)
+                }
+            }
+
+            let bubbleType: MessagesCollectionCell.BubbleType
+            if index < messages.count - 1 {
+                let nextMessage = messages[index + 1]
+                bubbleType = message.base.sender.id == nextMessage.base.sender.id ? .normal : .tailed
+            } else {
+                bubbleType = .tailed
+            }
+            cells.append(MessagesCollectionCell.message(message, bubbleType: bubbleType))
+            return cells
         }
         let sections: [MessagesCollectionSection] = [
             .init(id: 0, title: "", cells: cells)

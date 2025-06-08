@@ -2,9 +2,7 @@ import SwiftUI
 import UIKit
 
 class TextMessageCollectionCell: UICollectionViewCell {
-    private var message: String = ""
     private var messageType: MessageSource = .incoming
-    private var bubbleStyle: MessagesCollectionCell.BubbleType = .normal
     private var longPressGestureRecognizer: UILongPressGestureRecognizer?
     private var panGestureRecognizer: UIPanGestureRecognizer?
     private var doubleTapGestureRecognizer: UITapGestureRecognizer?
@@ -22,21 +20,23 @@ class TextMessageCollectionCell: UICollectionViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
         self.contentConfiguration = nil
-        message = ""
         messageType = .incoming
-        bubbleStyle = .normal
     }
 
-    func setup(message: String, messageType: MessageSource, style: MessagesCollectionCell.BubbleType) {
-        self.message = message
+    func setup(
+        message: String,
+        messageType: MessageSource,
+        style: MessagesCollectionCell.BubbleType,
+        profile: Profile
+    ) {
         self.messageType = messageType
-        self.bubbleStyle = style
         contentConfiguration = UIHostingConfiguration {
             VStack(alignment: .leading) {
                 MessageBubble(
                     style: style,
                     message: message,
-                    isOutgoing: messageType == .outgoing
+                    isOutgoing: messageType == .outgoing,
+                    profile: profile
                 )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -61,13 +61,26 @@ struct MessageBubble: View {
     let style: MessagesCollectionCell.BubbleType
     let message: String
     let isOutgoing: Bool
+    let profile: Profile
     var body: some View {
         HStack {
             MessageContainer(style: style, isOutgoing: isOutgoing) {
                 Text(message)
                     .foregroundColor(isOutgoing ? .white : .primary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, DesignConstants.Spacing.step3x)
+                    .padding(.vertical, DesignConstants.Spacing.step2x)
+            } avatarView: {
+                Group {
+                    if isOutgoing {
+                        EmptyView()
+                    } else {
+                        if style == .normal {
+                            Spacer()
+                        } else {
+                            ProfileAvatarView(profile: profile)
+                        }
+                    }
+                }
             }
         }
     }
@@ -76,8 +89,19 @@ struct MessageBubble: View {
 #Preview {
     VStack {
         ForEach([MessageSource.outgoing, MessageSource.incoming], id: \.self) { type in
-            MessageBubble(style: .normal,
-                          message: "Hello world!", isOutgoing: type == .outgoing)
+            MessageBubble(
+                style: .normal,
+                message: "Hello world!",
+                isOutgoing: type == .outgoing,
+                profile: .mock()
+            )
+            MessageBubble(
+                style: .tailed,
+                message: "Hello world!",
+                isOutgoing: type == .outgoing,
+                profile: .mock()
+            )
         }
     }
+    .padding(.horizontal, 12.0)
 }

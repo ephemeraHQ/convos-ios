@@ -1,10 +1,11 @@
 import SwiftUI
 
-struct MessageContainer<Content: View>: View {
+struct MessageContainer<Content: View, AvatarView: View>: View {
     let style: MessagesCollectionCell.BubbleType
     let isOutgoing: Bool
     let cornerRadius: CGFloat = Constant.bubbleCornerRadius
     let content: () -> Content
+    let avatarView: () -> AvatarView
 
     var spacer: some View {
         Group {
@@ -28,13 +29,13 @@ struct MessageContainer<Content: View>: View {
                 return .rect(
                     topLeadingRadius: cornerRadius,
                     bottomLeadingRadius: cornerRadius,
-                    bottomTrailingRadius: 0.0,
+                    bottomTrailingRadius: 2.0,
                     topTrailingRadius: cornerRadius
                 )
             } else {
                 return .rect(
                     topLeadingRadius: cornerRadius,
-                    bottomLeadingRadius: 0,
+                    bottomLeadingRadius: 2.0,
                     bottomTrailingRadius: cornerRadius,
                     topTrailingRadius: cornerRadius
                 )
@@ -42,10 +43,19 @@ struct MessageContainer<Content: View>: View {
         }
     }
 
+    var avatar: some View {
+        avatarView()
+            .frame(width: DesignConstants.ImageSizes.smallAvatar,
+                   height: DesignConstants.ImageSizes.smallAvatar)
+    }
+
     var body: some View {
-        HStack(spacing: 0.0) {
+        HStack(alignment: .bottom, spacing: 0.0) {
             if isOutgoing {
                 spacer
+            } else {
+                avatar
+                    .padding(.trailing, DesignConstants.Spacing.step2x)
             }
 
             content()
@@ -55,6 +65,9 @@ struct MessageContainer<Content: View>: View {
 
             if !isOutgoing {
                 spacer
+            } else {
+                avatar
+                    .padding(.leading, DesignConstants.Spacing.step2x)
             }
         }
     }
