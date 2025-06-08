@@ -297,9 +297,15 @@ extension MessagesViewController {
                                 animated: Bool = true,
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
-        let cells: [MessagesCollectionCell] = messages.map { message in
-            MessagesCollectionCell.message(message,
-                                           bubbleType: .normal)
+        let cells: [MessagesCollectionCell] = messages.enumerated().map { index, message in
+            let bubbleType: MessagesCollectionCell.BubbleType
+            if index < messages.count - 1 {
+                let nextMessage = messages[index + 1]
+                bubbleType = message.base.sender.id == nextMessage.base.sender.id ? .normal : .tailed
+            } else {
+                bubbleType = .tailed
+            }
+            return MessagesCollectionCell.message(message, bubbleType: bubbleType)
         }
         let sections: [MessagesCollectionSection] = [
             .init(id: 0, title: "", cells: cells)
