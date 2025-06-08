@@ -127,8 +127,6 @@ final class MessagesViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        navigationController?.setNavigationBarHidden(true, animated: false)
-
         setupCollectionView()
         setupUI()
         reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)

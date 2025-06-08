@@ -100,7 +100,6 @@ struct ConversationsListView: View {
                         }
                     }
                 }
-                .navigationBarHidden(true)
             }
         }
     }

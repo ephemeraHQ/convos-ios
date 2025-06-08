@@ -51,8 +51,6 @@ class ConversationComposerViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        navigationController?.setNavigationBarHidden(true, animated: false)
-
         messagesContainerViewController.shouldBecomeFirstResponder = false
         addChild(messagesContainerViewController)
         view.addSubview(messagesContainerViewController.view)
@@ -60,7 +58,6 @@ class ConversationComposerViewController: UIViewController {
         messagesContainerViewController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         messagesContainerViewController.didMove(toParent: self)
 
-        composerHostingController.navigationController?.setNavigationBarHidden(true, animated: false)
         messagesContainerViewController.embedContentController(composerHostingController)
     }
 }
