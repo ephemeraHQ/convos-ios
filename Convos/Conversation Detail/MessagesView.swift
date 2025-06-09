@@ -20,5 +20,4 @@ struct MessagesView: UIViewControllerRepresentable {
     MessagesView(
         messagesRepository: convos.messaging.messagesRepository(for: conversationId)
     )
-    .ignoresSafeArea()
 }
