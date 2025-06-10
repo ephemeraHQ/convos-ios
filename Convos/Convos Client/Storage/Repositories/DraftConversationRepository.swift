@@ -27,14 +27,15 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
     }
 
     lazy var membersPublisher: AnyPublisher<[Profile], Never> = {
-        ValueObservation
+        let draftConversationId = writer.draftConversationId
+        return ValueObservation
             .tracking { [weak self] db in
                 guard let self else { return [] }
                 guard let currentUser = try db.currentUser() else {
                     return []
                 }
                 guard let dbConversation = try DBConversation
-                    .filter(Column("clientConversationId") == writer.draftConversationId)
+                    .filter(Column("clientConversationId") == draftConversationId)
                     .including(required: DBConversation.creatorProfile)
                     .including(required: DBConversation.localState)
                     .including(all: DBConversation.memberProfiles)
