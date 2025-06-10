@@ -1,11 +1,11 @@
 import SwiftUI
 import UIKit
 
-final class JoinConversationInputHostingController: UIView {
-    private let hostingController: UIHostingController<JoinConversationInputView>
+final class InputHostingController<Content: View>: UIView {
+    private let hostingController: UIHostingController<Content>
 
-    init(viewModel: JoinConversationInputViewModelType) {
-        self.hostingController = UIHostingController<JoinConversationInputView>(rootView: .init(viewModel: viewModel))
+    init(rootView: Content) {
+        self.hostingController = UIHostingController<Content>(rootView: rootView)
         super.init(frame: .zero)
         addSubview(hostingController.view)
         hostingController.view.translatesAutoresizingMaskIntoConstraints = false
@@ -36,16 +36,24 @@ final class JoinConversationInputHostingController: UIView {
     }
 }
 
-extension JoinConversationInputHostingController: KeyboardListenerDelegate {
+extension InputHostingController: KeyboardListenerDelegate {
     func keyboardWillShow(info: KeyboardInfo) {
         invalidateIntrinsicContentSize()
+        setNeedsLayout()
     }
 
     func keyboardWillHide(info: KeyboardInfo) {
         invalidateIntrinsicContentSize()
+        setNeedsLayout()
     }
 
     func keyboardWillChangeFrame(info: KeyboardInfo) {
         invalidateIntrinsicContentSize()
+        setNeedsLayout()
+    }
+
+    func keyboardDidChangeFrame(info: KeyboardInfo) {
+        invalidateIntrinsicContentSize()
+        setNeedsLayout()
     }
 }

@@ -5,7 +5,7 @@ struct MessagesContainerView<Content: View>: View {
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
-    @ViewBuilder let content: () -> Content
+    @ViewBuilder let content: (Binding<String>, Binding<Bool>) -> Content
     @State var text: String = ""
     @State var sendButtonEnabled: Bool = false
 
@@ -38,22 +38,8 @@ struct MessagesContainerView<Content: View>: View {
         VStack(spacing: 0) {
             MessagesToolbarView(conversationState: conversationState)
 
-            content()
-
-            if showJoinConversation {
-                JoinConversationInputView {
-                    joinConversation()
-                } onDeleteConversation: {
-                    deleteConversation()
-                }
-            } else if showInputBar {
-                MessagesInputBarView(
-                    text: $text,
-                    sendButtonEnabled: $sendButtonEnabled
-                ) {
-                    sendMessage()
-                }
-            }
+            content($text, $sendButtonEnabled)
+                .ignoresSafeArea(edges: .bottom)
         }
         .onChange(of: text) {
             updateSendButtonEnabled()
@@ -139,11 +125,13 @@ struct MessagesContainerView<Content: View>: View {
             outgoingMessageWriter: convos.messaging.messageWriter(for: conversationId),
             conversationConsentWriter: convos.messaging.conversationConsentWriter(),
             conversationLocalStateWriter: convos.messaging.conversationLocalStateWriter()
-        ) {
+        ) { textBinding, sendButtonEnabled in
             MessagesView(
                 messagesRepository: convos.messaging.messagesRepository(
                     for: conversationId
-                )
+                ),
+                textBinding: textBinding,
+                sendButtonEnabled: sendButtonEnabled
             )
         }
     }

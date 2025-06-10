@@ -187,7 +187,6 @@
 			membershipExceptions = (
 				"Conversation Detail/Messages/Messages View Controller/View Controller/MessagesContainerViewController.swift",
 				"Conversations List/Composer/ConversationComposerViewController.swift",
-				"Conversations List/Security Line/JoinConversationInputHostingController.swift",
 				"Convos Client/Auth/Turnkey/ConvosAPIClient+Turnkey.swift",
 				"Convos Client/Auth/Turnkey/TurnkeyAuthService.swift",
 				"Convos Client/Auth/Turnkey/TurnkeyOutput+Errors.swift",

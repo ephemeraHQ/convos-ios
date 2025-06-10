@@ -4,6 +4,8 @@ struct ConversationComposerContentView: View {
     let composerState: ConversationComposerState
     @Binding var profileSearchText: String
     @Binding var selectedProfile: ProfileSearchResult?
+    @Binding var messageText: String
+    @Binding var sendButtonEnabled: Bool
 
     @FocusState private var isTextFieldFocused: Bool
 
@@ -119,8 +121,11 @@ struct ConversationComposerContentView: View {
                        .background(.colorBackgroundPrimary)
             }
 
-            MessagesView(messagesRepository: composerState.messagesRepository)
-                .ignoresSafeArea()
+            MessagesView(
+                messagesRepository: composerState.messagesRepository,
+                textBinding: $messageText,
+                sendButtonEnabled: $sendButtonEnabled
+            )
                 .overlay {
                     if composerState.showResultsList {
                         resultsList
@@ -136,6 +141,8 @@ struct ConversationComposerContentView: View {
 }
 
 #Preview {
+    @Previewable @State var messageText: String = ""
+    @Previewable @State var sendButtonEnabled: Bool = false
     @Previewable @State var composerState = ConversationComposerState(
         profileSearchRepository: MockProfileSearchRepository(),
         draftConversationRepo: MockDraftConversationRepository(),
@@ -147,6 +154,8 @@ struct ConversationComposerContentView: View {
     ConversationComposerContentView(
         composerState: composerState,
         profileSearchText: $composerState.searchText,
-        selectedProfile: $composerState.selectedProfile
+        selectedProfile: $composerState.selectedProfile,
+        messageText: $messageText,
+        sendButtonEnabled: $sendButtonEnabled
     )
 }

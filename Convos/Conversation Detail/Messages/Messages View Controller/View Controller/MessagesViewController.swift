@@ -1,7 +1,24 @@
 import Combine
 import DifferenceKit
 import Foundation
+import SwiftUI
 import UIKit
+
+extension UIViewController {
+    func becomeFirstResponderAfterTransitionCompletes() {
+        if let coordinator = transitionCoordinator {
+            coordinator.animate(alongsideTransition: nil) { _ in
+                DispatchQueue.main.async { [weak self] in
+                    self?.becomeFirstResponder()
+                }
+            }
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.becomeFirstResponder()
+            }
+        }
+    }
+}
 
 final class MessagesViewController: UIViewController {
     private enum ReactionTypes {
@@ -47,15 +64,37 @@ final class MessagesViewController: UIViewController {
 
     private var reactionMenuCoordinator: MessageReactionMenuCoordinator?
 
+    // MARK: - Input
+
+    private var messagesInputView: MessagesInputView = .init(frame: .zero)
+//    private var joinConversationInputHost: InputHostingController<JoinConversationInputView>
+
+    override var inputAccessoryView: UIView? {
+        messagesInputView
+    }
+
+    override var canBecomeFirstResponder: Bool {
+        true
+    }
+
+    var shouldBecomeFirstResponder: Bool = true
+
     // MARK: - Initialization
 
-    init(messagesRepository: any MessagesRepositoryProtocol) {
+    init(messagesRepository: any MessagesRepositoryProtocol,
+         textBinding: Binding<String>,
+         sendButtonEnabled: Binding<Bool>) {
         self.dataSource = MessagesCollectionViewDataSource()
         self.collectionView = UICollectionView(
             frame: .zero,
             collectionViewLayout: messagesLayout
         )
         self.messagesRepository = messagesRepository
+        let messagesInputBar = MessagesInputBarView(
+            text: textBinding,
+            sendButtonEnabled: sendButtonEnabled) {
+                // send
+            }
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -120,6 +159,11 @@ final class MessagesViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
+        if shouldBecomeFirstResponder {
+            shouldBecomeFirstResponder = false
+            becomeFirstResponderAfterTransitionCompletes()
+        }
+
         collectionView.collectionViewLayout.invalidateLayout()
     }
 
@@ -144,6 +188,7 @@ final class MessagesViewController: UIViewController {
     private func setupUI() {
         view.backgroundColor = .colorBackgroundPrimary
         KeyboardListener.shared.add(delegate: self)
+        messagesInputView.translatesAutoresizingMaskIntoConstraints = false
     }
 
     private func setupCollectionView() {
@@ -185,8 +230,8 @@ final class MessagesViewController: UIViewController {
         messagesLayout.delegate = dataSource
         collectionView.keyboardDismissMode = .interactive
 
-        collectionView.contentInsetAdjustmentBehavior = .never
-        collectionView.automaticallyAdjustsScrollIndicatorInsets = false
+        collectionView.contentInsetAdjustmentBehavior = .always
+        collectionView.automaticallyAdjustsScrollIndicatorInsets = true
         collectionView.selfSizingInvalidation = .enabled
         messagesLayout.supportSelfSizingInvalidation = true
 
@@ -487,6 +532,10 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
 // MARK: - KeyboardListenerDelegate
 
 extension MessagesViewController: KeyboardListenerDelegate {
+    func keyboardWillHide(info: KeyboardInfo) {
+        becomeFirstResponder()
+    }
+
     func keyboardWillChangeFrame(info: KeyboardInfo) {
         handleKeyboardFrameChange(info: info)
     }

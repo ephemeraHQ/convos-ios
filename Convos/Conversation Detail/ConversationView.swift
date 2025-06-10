@@ -29,9 +29,11 @@ struct ConversationView: View {
             outgoingMessageWriter: outgoingMessageWriter,
             conversationConsentWriter: conversationConsentWriter,
             conversationLocalStateWriter: conversationLocalStateWriter
-        ) {
+        ) { textBinding, sendButtonEnabled in
             MessagesView(
-                messagesRepository: messagesRepository
+                messagesRepository: messagesRepository,
+                textBinding: textBinding,
+                sendButtonEnabled: sendButtonEnabled
             )
         }
     }

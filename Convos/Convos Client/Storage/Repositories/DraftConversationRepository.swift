@@ -27,7 +27,6 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
     }
 
     lazy var membersPublisher: AnyPublisher<[Profile], Never> = {
-        
         let draftConversationId = writer.draftConversationId
         return ValueObservation
             .tracking { [weak self] db in
