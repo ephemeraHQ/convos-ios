@@ -4,6 +4,8 @@ import GRDB
 import XMTPiOS
 
 protocol OutgoingMessageWriterProtocol {
+    var isSendingPublisher: AnyPublisher<Bool, Never> { get }
+    var sentMessage: AnyPublisher<String, Never> { get }
     func send(text: String) async throws
 }
 
@@ -16,6 +18,16 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
     private var cancellable: AnyCancellable?
     private let databaseWriter: any DatabaseWriter
     private let conversationId: String
+    private let isSendingValue: CurrentValueSubject<Bool, Never> = .init(false)
+    private let sentMessageSubject: PassthroughSubject<String, Never> = .init()
+
+    var isSendingPublisher: AnyPublisher<Bool, Never> {
+        isSendingValue.eraseToAnyPublisher()
+    }
+
+    var sentMessage: AnyPublisher<String, Never> {
+        sentMessageSubject.eraseToAnyPublisher()
+    }
 
     init(clientProvider: XMTPClientProvider,
          databaseWriter: any DatabaseWriter,
@@ -41,6 +53,12 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
     }
 
     func send(text: String) async throws {
+        isSendingValue.send(true)
+
+        defer {
+            isSendingValue.send(false)
+        }
+
         guard let sender = try await clientProvider?.messageSender(
             for: conversationId
         ) else {
@@ -79,6 +97,7 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
         Task {
             Logger.info("Sending local message with local id: \(clientMessageId)")
             try await sender.publish()
+            sentMessageSubject.send(text)
             Logger.info("Sent local message with local id: \(clientMessageId)")
         }
     }

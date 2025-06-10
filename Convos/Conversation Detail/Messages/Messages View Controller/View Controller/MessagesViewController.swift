@@ -12,7 +12,6 @@ final class MessagesViewController: UIViewController {
         case changingKeyboardFrame
         case changingContentInsets
         case changingFrameSize
-        case sendingMessage
         case scrollingToTop
         case scrollingToBottom
         case updatingCollectionInIsolation
@@ -186,8 +185,8 @@ final class MessagesViewController: UIViewController {
         messagesLayout.delegate = dataSource
         collectionView.keyboardDismissMode = .interactive
 
-        collectionView.contentInsetAdjustmentBehavior = .always
-        collectionView.automaticallyAdjustsScrollIndicatorInsets = true
+        collectionView.contentInsetAdjustmentBehavior = .never
+        collectionView.automaticallyAdjustsScrollIndicatorInsets = false
         collectionView.selfSizingInvalidation = .enabled
         messagesLayout.supportSelfSizingInvalidation = true
 

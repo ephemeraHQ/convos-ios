@@ -8,6 +8,14 @@ class MockDraftConversationWriter: DraftConversationWriterProtocol {
         UUID().uuidString
     }
 
+    var sentMessage: AnyPublisher<String, Never> {
+        Just("").eraseToAnyPublisher()
+    }
+
+    var isSendingPublisher: AnyPublisher<Bool, Never> {
+        Just(false).eraseToAnyPublisher()
+    }
+
     var conversationIdPublisher: AnyPublisher<String, Never> { Just(conversationId).eraseToAnyPublisher() }
 
     func add(profile: MemberProfile) async throws {

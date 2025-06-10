@@ -185,6 +185,9 @@
 		D8A2B6A32DA4BA4C00EF8577 /* Exceptions for "Convos" folder in "Convos" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Conversation Detail/Messages/Messages View Controller/View Controller/MessagesContainerViewController.swift",
+				"Conversations List/Composer/ConversationComposerViewController.swift",
+				"Conversations List/Security Line/JoinConversationInputHostingController.swift",
 				"Convos Client/Auth/Turnkey/ConvosAPIClient+Turnkey.swift",
 				"Convos Client/Auth/Turnkey/TurnkeyAuthService.swift",
 				"Convos Client/Auth/Turnkey/TurnkeyOutput+Errors.swift",

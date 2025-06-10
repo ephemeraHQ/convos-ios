@@ -63,12 +63,10 @@ struct ConversationsListView: View {
                         switch route {
                         case .composer:
                             ConversationComposerView(
-                                messagingService: messagingService.messagingService,
                                 draftConversationComposer: messagingService
                                     .messagingService
                                     .draftConversationComposer()
                             )
-                            .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)
                         case .securityLine:
                             SecurityLineView(
@@ -95,7 +93,6 @@ struct ConversationsListView: View {
                                 conversationConsentWriter: consentWriter,
                                 conversationLocalStateWriter: localStateWriter
                             )
-                            .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)
                         }
                     }

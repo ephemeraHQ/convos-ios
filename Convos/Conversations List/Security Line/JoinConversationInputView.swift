@@ -1,23 +1,19 @@
 import SwiftUI
 
-protocol JoinConversationInputViewModelType: AnyObject {
-    func joinConversation()
-    func deleteConversation()
-}
-
 struct JoinConversationInputView: View {
-    var viewModel: JoinConversationInputViewModelType
+    let onJoinConversation: () -> Void
+    let onDeleteConversation: () -> Void
 
     var body: some View {
         VStack(spacing: 0.0) {
             VStack(spacing: DesignConstants.Spacing.step2x) {
                 Button("Join the conversation") {
-                    viewModel.joinConversation()
+                    onJoinConversation()
                 }
                 .convosButtonStyle(.rounded(fullWidth: true))
 
                 Button("Delete") {
-                    viewModel.deleteConversation()
+                    onDeleteConversation()
                 }
                 .convosButtonStyle(.text)
 
@@ -38,15 +34,8 @@ struct JoinConversationInputView: View {
     }
 }
 
-private class MockViewModel: JoinConversationInputViewModelType {
-    func joinConversation() {
-    }
-
-    func deleteConversation() {
-    }
-}
-
 #Preview {
-    @Previewable var viewModel: JoinConversationInputViewModelType = MockViewModel()
-    JoinConversationInputView(viewModel: viewModel)
+    JoinConversationInputView {
+    } onDeleteConversation: {
+    }
 }

@@ -1,9 +1,10 @@
 import SwiftUI
 
 struct MessagesInputBarView: View {
-    @State var text: String = ""
+    @Binding var text: String
+    @Binding var sendButtonEnabled: Bool
+    let onSend: () -> Void
     @State private var textEditorHeight: CGFloat = 0
-    @State var sendButtonEnabled: Bool = false
     private let maxCapsuleHeight: CGFloat = 38.0
 
     var textClipShape: some Shape {
@@ -63,6 +64,7 @@ struct MessagesInputBarView: View {
                             }
                         )
                     Button {
+                        onSend()
                     } label: {
                         Image(systemName: "arrow.up")
                             .foregroundStyle(sendButtonEnabled ? .colorTextPrimaryInverted : .colorTextSecondary)
@@ -94,10 +96,13 @@ struct MessagesInputBarView: View {
 }
 
 #Preview {
+    @Previewable @State var text: String = ""
+    @Previewable @State var sendButtonEnabled: Bool = false
     VStack {
         Text("Hello!")
         Spacer()
     }.safeAreaInset(edge: .bottom) {
-        MessagesInputBarView()
+        MessagesInputBarView(text: $text, sendButtonEnabled: $sendButtonEnabled) {
+        }
     }
 }

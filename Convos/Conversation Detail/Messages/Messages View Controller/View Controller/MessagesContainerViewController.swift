@@ -64,7 +64,7 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
             observeConversationRepository()
         }
     }
-    private(set) var outgoingMessageWriter: any OutgoingMessageWriterProtocol
+    private let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     private let conversationConsentWriter: any ConversationConsentWriterProtocol
     private let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
 
@@ -93,7 +93,7 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
 
     // MARK: - Actions
 
-    private func markConversationAsRead() {
+ r   private func markConversationAsRead() {
         Task {
             do {
                 try await conversationLocalStateWriter.setUnread(
