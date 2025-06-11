@@ -6,6 +6,7 @@ struct ConversationsListView: View {
         case composer, securityLine, conversation(Conversation)
     }
 
+    @Environment(\.dismiss) private var dismissAction: DismissAction
     @Environment(MessagingServiceObservable.self)
     private var messagingService: MessagingServiceObservable
 
@@ -62,11 +63,11 @@ struct ConversationsListView: View {
                     .navigationDestination(for: Route.self) { route in
                         switch route {
                         case .composer:
+                            let draftConversationComposer = messagingService
+                                .messagingService
+                                .draftConversationComposer()
                             ConversationComposerView(
-                                messagingService: messagingService.messagingService,
-                                draftConversationComposer: messagingService
-                                    .messagingService
-                                    .draftConversationComposer()
+                                draftConversationComposer: draftConversationComposer
                             )
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)

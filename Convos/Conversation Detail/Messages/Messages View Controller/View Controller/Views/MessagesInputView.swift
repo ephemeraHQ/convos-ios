@@ -1,3 +1,4 @@
+import SwiftUI
 import UIKit
 
 // MARK: - MessagesInputViewDelegate
@@ -50,8 +51,14 @@ final class MessagesInputView: UIView {
 
     // MARK: - Initialization
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    let textBinding: Binding<String>
+    let sendButtonEnabled: Binding<Bool>
+
+    init(textBinding: Binding<String>,
+         sendButtonEnabled: Binding<Bool>) {
+        self.textBinding = textBinding
+        self.sendButtonEnabled = sendButtonEnabled
+        super.init(frame: .zero)
         setupView()
         setupNotifications()
         setupKeyboardListener()

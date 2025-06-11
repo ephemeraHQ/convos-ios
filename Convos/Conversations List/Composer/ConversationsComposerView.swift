@@ -1,43 +1,49 @@
 import SwiftUI
 
-struct ConversationComposerView: UIViewControllerRepresentable {
+struct ConversationComposerView: View {
     @State private var draftConversationComposer: any DraftConversationComposerProtocol
+    @State private var conversationState: ConversationState
     @State private var conversationComposerState: ConversationComposerState
-    @Environment(\.dismiss) var dismissAction: DismissAction
 
     init(
-        messagingService: any MessagingServiceProtocol,
         draftConversationComposer: any DraftConversationComposerProtocol
     ) {
-        self.draftConversationComposer = draftConversationComposer
-        _conversationComposerState = State(
-            initialValue: .init(
-                profileSearchRepository: draftConversationComposer.profileSearchRepository,
-                draftConversationRepo: draftConversationComposer.draftConversationRepository,
-                draftConversationWriter: draftConversationComposer.draftConversationWriter,
-                conversationConsentWriter: draftConversationComposer.conversationConsentWriter,
-                conversationLocalStateWriter: draftConversationComposer.conversationLocalStateWriter,
-                messagesRepository: draftConversationComposer.draftConversationRepository.messagesRepository
-            )
-        )
-    }
-
-    func makeUIViewController(context: Context) -> ConversationComposerViewController {
-        let composerViewController = ConversationComposerViewController(
-            composerState: conversationComposerState,
+        _draftConversationComposer = State(initialValue: draftConversationComposer)
+        let draftConversationRepo = draftConversationComposer.draftConversationRepository
+        let composerState = ConversationComposerState(
             profileSearchRepository: draftConversationComposer.profileSearchRepository,
-            dismissAction: dismissAction
+            draftConversationRepo: draftConversationRepo,
+            draftConversationWriter: draftConversationComposer.draftConversationWriter,
+            conversationConsentWriter: draftConversationComposer.conversationConsentWriter,
+            conversationLocalStateWriter: draftConversationComposer.conversationLocalStateWriter,
+            messagesRepository: draftConversationRepo.messagesRepository
         )
-        return composerViewController
+        _conversationComposerState = State(initialValue: composerState)
+        _conversationState = State(initialValue: ConversationState(
+            conversationRepository: draftConversationRepo
+        ))
     }
 
-    func updateUIViewController(_ composerViewController: ConversationComposerViewController, context: Context) {
+    var body: some View {
+        MessagesContainerView(
+            conversationState: conversationState,
+            outgoingMessageWriter: draftConversationComposer.draftConversationWriter,
+            conversationConsentWriter: draftConversationComposer.conversationConsentWriter,
+            conversationLocalStateWriter: draftConversationComposer.conversationLocalStateWriter
+        ) { textBinding, sendButtonEnabled in
+            ConversationComposerContentView(
+                composerState: conversationComposerState,
+                profileSearchText: $conversationComposerState.searchText,
+                selectedProfile: $conversationComposerState.selectedProfile,
+                messageText: textBinding,
+                sendButtonEnabled: sendButtonEnabled
+            )
+        }
     }
 }
 
 #Preview {
     ConversationComposerView(
-        messagingService: MockMessagingService(),
         draftConversationComposer: MockDraftConversationComposer()
     )
     .ignoresSafeArea()

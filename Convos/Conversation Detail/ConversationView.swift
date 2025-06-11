@@ -1,31 +1,41 @@
 import SwiftUI
 
-struct ConversationView: UIViewControllerRepresentable {
+struct ConversationView: View {
     let conversationRepository: any ConversationRepositoryProtocol
     let messagesRepository: any MessagesRepositoryProtocol
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
-    @Environment(\.dismiss) private var dismissAction: DismissAction
+    let conversationState: ConversationState
 
-    func makeUIViewController(context: Context) -> MessagesContainerViewController {
-        let messageContainerViewController = MessagesContainerViewController(
-            conversationRepository: conversationRepository,
-            outgoingMessageWriter: outgoingMessageWriter,
-            conversationConsentWriter: conversationConsentWriter,
-            conversationLocalStateWriter: conversationLocalStateWriter,
-            dismissAction: dismissAction
-        )
-        let messagesViewController = MessagesViewController(
-            messagesRepository: messagesRepository
-        )
-        messageContainerViewController.embedContentController(messagesViewController)
-        return messageContainerViewController
+    init(
+        conversationRepository: any ConversationRepositoryProtocol,
+        messagesRepository: any MessagesRepositoryProtocol,
+        outgoingMessageWriter: any OutgoingMessageWriterProtocol,
+        conversationConsentWriter: any ConversationConsentWriterProtocol,
+        conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
+    ) {
+        self.conversationRepository = conversationRepository
+        self.messagesRepository = messagesRepository
+        self.outgoingMessageWriter = outgoingMessageWriter
+        self.conversationConsentWriter = conversationConsentWriter
+        self.conversationLocalStateWriter = conversationLocalStateWriter
+        self.conversationState = ConversationState(conversationRepository: conversationRepository)
     }
 
-    func updateUIViewController(
-        _ messagesContainerViewController: MessagesContainerViewController,
-        context: Context) {
+    var body: some View {
+        MessagesContainerView(
+            conversationState: conversationState,
+            outgoingMessageWriter: outgoingMessageWriter,
+            conversationConsentWriter: conversationConsentWriter,
+            conversationLocalStateWriter: conversationLocalStateWriter
+        ) { textBinding, sendButtonEnabled in
+            MessagesView(
+                messagesRepository: messagesRepository,
+                textBinding: textBinding,
+                sendButtonEnabled: sendButtonEnabled
+            )
+        }
     }
 }
 

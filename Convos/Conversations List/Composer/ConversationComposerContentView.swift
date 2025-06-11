@@ -1,25 +1,13 @@
 import SwiftUI
 
 struct ConversationComposerContentView: View {
-    @State private var composerState: ConversationComposerState
+    let composerState: ConversationComposerState
+    @Binding var profileSearchText: String
+    @Binding var selectedProfile: ProfileSearchResult?
+    @Binding var messageText: String
+    @Binding var sendButtonEnabled: Bool
+
     @FocusState private var isTextFieldFocused: Bool
-
-    init(composerState: ConversationComposerState) {
-        self.composerState = composerState
-    }
-
-    init(composer: any DraftConversationComposerProtocol) {
-        _composerState = State(
-            initialValue: .init(
-                profileSearchRepository: composer.profileSearchRepository,
-                draftConversationRepo: composer.draftConversationRepository,
-                draftConversationWriter: composer.draftConversationWriter,
-                conversationConsentWriter: composer.conversationConsentWriter,
-                conversationLocalStateWriter: composer.conversationLocalStateWriter,
-                messagesRepository: composer.draftConversationRepository.messagesRepository
-            )
-        )
-    }
 
     private let headerHeight: CGFloat = 72.0
 
@@ -98,7 +86,7 @@ struct ConversationComposerContentView: View {
 
     var body: some View {
         VStack(spacing: 0.0) {
-            if !composerState.hasSentMessage {
+            if composerState.showProfileSearchHeader {
                 // profile search header
                 HStack(alignment: .top,
                        spacing: DesignConstants.Spacing.step2x) {
@@ -109,9 +97,9 @@ struct ConversationComposerContentView: View {
 
                     ConversationComposerProfilesField(
                         composerState: composerState,
-                        searchText: $composerState.searchText,
+                        searchText: $profileSearchText,
                         isTextFieldFocused: $isTextFieldFocused,
-                        selectedProfile: $composerState.selectedProfile
+                        selectedProfile: $selectedProfile
                     )
 
                     Button {
@@ -133,13 +121,16 @@ struct ConversationComposerContentView: View {
                        .background(.colorBackgroundPrimary)
             }
 
-            MessagesView(messagesRepository: composerState.messagesRepository)
-                .ignoresSafeArea()
-                .overlay {
-                    if composerState.showResultsList {
-                        resultsList
-                    }
+            MessagesView(
+                messagesRepository: composerState.messagesRepository,
+                textBinding: $messageText,
+                sendButtonEnabled: $sendButtonEnabled
+            )
+            .overlay {
+                if composerState.showResultsList {
+                    resultsList
                 }
+            }
             Spacer().frame(height: 0.0)
         }
         .onAppear {
@@ -150,6 +141,8 @@ struct ConversationComposerContentView: View {
 }
 
 #Preview {
+    @Previewable @State var messageText: String = ""
+    @Previewable @State var sendButtonEnabled: Bool = false
     @Previewable @State var composerState = ConversationComposerState(
         profileSearchRepository: MockProfileSearchRepository(),
         draftConversationRepo: MockDraftConversationRepository(),
@@ -159,6 +152,10 @@ struct ConversationComposerContentView: View {
         messagesRepository: MockMessagesRepository(conversation: .mock())
     )
     ConversationComposerContentView(
-        composerState: composerState
+        composerState: composerState,
+        profileSearchText: $composerState.searchText,
+        selectedProfile: $composerState.selectedProfile,
+        messageText: $messageText,
+        sendButtonEnabled: $sendButtonEnabled
     )
 }

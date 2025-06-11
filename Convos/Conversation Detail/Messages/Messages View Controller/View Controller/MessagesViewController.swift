@@ -1,6 +1,7 @@
 import Combine
 import DifferenceKit
 import Foundation
+import SwiftUI
 import UIKit
 
 final class MessagesViewController: UIViewController {
@@ -50,7 +51,9 @@ final class MessagesViewController: UIViewController {
 
     // MARK: - Initialization
 
-    init(messagesRepository: any MessagesRepositoryProtocol) {
+    init(messagesRepository: any MessagesRepositoryProtocol,
+         textBinding: Binding<String>,
+         sendButtonEnabled: Binding<Bool>) {
         self.dataSource = MessagesCollectionViewDataSource()
         self.collectionView = UICollectionView(
             frame: .zero,

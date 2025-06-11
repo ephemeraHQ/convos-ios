@@ -191,6 +191,14 @@ extension MockMessagingService: MessagesRepositoryProtocol {
 }
 
 extension MockMessagingService: OutgoingMessageWriterProtocol {
+    var isSendingPublisher: AnyPublisher<Bool, Never> {
+        Just(false).eraseToAnyPublisher()
+    }
+
+    var sentMessage: AnyPublisher<String, Never> {
+        Just("").eraseToAnyPublisher()
+    }
+
     func send(text: String) async throws {
         _ = try await prepare(text: text)
         try await publish()

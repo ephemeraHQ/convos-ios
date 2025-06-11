@@ -47,6 +47,16 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     private let databaseWriter: any DatabaseWriter
     private weak var clientProvider: XMTPClientProvider?
     private var cancellable: AnyCancellable?
+    private let isSendingValue: CurrentValueSubject<Bool, Never> = .init(false)
+    private let sentMessageSubject: PassthroughSubject<String, Never> = .init()
+
+    var isSendingPublisher: AnyPublisher<Bool, Never> {
+        isSendingValue.eraseToAnyPublisher()
+    }
+
+    var sentMessage: AnyPublisher<String, Never> {
+        sentMessageSubject.eraseToAnyPublisher()
+    }
 
     private var state: DraftConversationWriterState {
         didSet {
@@ -67,6 +77,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
          databaseReader: any DatabaseReader,
          databaseWriter: any DatabaseWriter,
          draftConversationId: String) {
+        Logger.info("Initializing DraftConversationWriter")
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
         self.state = .draft(id: draftConversationId)
@@ -230,6 +241,12 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     }
 
     func send(text: String) async throws {
+        isSendingValue.send(true)
+
+        defer {
+            isSendingValue.send(false)
+        }
+
         guard let clientProvider else {
             throw DraftConversationWriterError.missingClientProvider
         }
@@ -350,6 +367,8 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                                                    clientConversationId: conversationId)
             _ = try await createdConversation.prepare(text: text)
             try await createdConversation.publish()
+
+            sentMessageSubject.send(text)
         }
     }
 }

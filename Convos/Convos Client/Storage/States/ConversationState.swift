@@ -4,8 +4,11 @@ import Observation
 
 @Observable
 final class ConversationState {
-    private(set) var conversation: Conversation?
+    var conversationId: String {
+        conversationRepository.conversationId
+    }
 
+    private(set) var conversation: Conversation?
     private let conversationRepository: ConversationRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = .init()
 

@@ -2,6 +2,14 @@ import Combine
 import Foundation
 
 class MockDraftConversationWriter: DraftConversationWriterProtocol {
+    var isSendingPublisher: AnyPublisher<Bool, Never> {
+        Just(false).eraseToAnyPublisher()
+    }
+
+    var sentMessage: AnyPublisher<String, Never> {
+        Just("").eraseToAnyPublisher()
+    }
+
     var draftConversationId: String = ""
 
     var conversationId: String {
