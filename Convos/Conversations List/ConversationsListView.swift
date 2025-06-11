@@ -3,7 +3,9 @@ import SwiftUI
 
 struct ConversationsListView: View {
     enum Route: Hashable {
-        case composer, securityLine, conversation(Conversation)
+        case composer(AnyDraftConversationComposer),
+             securityLine,
+             conversation(Conversation)
     }
 
     @Environment(\.dismiss) private var dismissAction: DismissAction
@@ -34,7 +36,9 @@ struct ConversationsListView: View {
                     userState: userState,
                     isComposeEnabled: messagingService.canStartConversation,
                     onCompose: {
-                        path.append(.composer)
+                        path.append(.composer(AnyDraftConversationComposer(messagingService
+                            .messagingService
+                            .draftConversationComposer())))
                     },
                     onSignOut: {
                         Task {
@@ -62,10 +66,7 @@ struct ConversationsListView: View {
                     }
                     .navigationDestination(for: Route.self) { route in
                         switch route {
-                        case .composer:
-                            let draftConversationComposer = messagingService
-                                .messagingService
-                                .draftConversationComposer()
+                        case .composer(let draftConversationComposer):
                             ConversationComposerView(
                                 draftConversationComposer: draftConversationComposer
                             )
