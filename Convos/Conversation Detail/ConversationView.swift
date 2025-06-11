@@ -6,13 +6,15 @@ struct ConversationView: UIViewControllerRepresentable {
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
+    @Environment(\.dismiss) private var dismissAction: DismissAction
 
     func makeUIViewController(context: Context) -> MessagesContainerViewController {
         let messageContainerViewController = MessagesContainerViewController(
             conversationRepository: conversationRepository,
             outgoingMessageWriter: outgoingMessageWriter,
             conversationConsentWriter: conversationConsentWriter,
-            conversationLocalStateWriter: conversationLocalStateWriter
+            conversationLocalStateWriter: conversationLocalStateWriter,
+            dismissAction: dismissAction
         )
         let messagesViewController = MessagesViewController(
             messagesRepository: messagesRepository

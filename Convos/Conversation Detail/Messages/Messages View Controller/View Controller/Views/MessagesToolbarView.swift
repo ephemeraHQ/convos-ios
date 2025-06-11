@@ -1,15 +1,18 @@
 import SwiftUI
 
-@Observable
-class MessagesToolbarViewModel {
-    var conversation: Conversation?
-    var placeholderTitle: String = ""
-    var subtitle: String?
-    var onBack: (() -> Void)?
-}
-
 struct MessagesToolbarView: View {
-    let viewModel: MessagesToolbarViewModel
+    let conversationState: ConversationState
+    let emptyConversationTitle: String
+    let dismissAction: DismissAction
+
+    init(conversationState: ConversationState,
+         emptyConversationTitle: String = "New chat",
+         dismissAction: DismissAction) {
+        self.conversationState = conversationState
+        self.emptyConversationTitle = emptyConversationTitle
+        self.dismissAction = dismissAction
+    }
+
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
 
     enum Constant {
@@ -27,10 +30,19 @@ struct MessagesToolbarView: View {
         DesignConstants.Spacing.step4x
     }
 
+    var title: String {
+        if let conversation = conversationState.conversation,
+           !conversation.isDraft {
+            conversation.title
+        } else {
+            emptyConversationTitle
+        }
+    }
+
     var body: some View {
         HStack(spacing: 0.0) {
             Button {
-                viewModel.onBack?()
+                dismissAction()
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 24.0))
@@ -40,17 +52,17 @@ struct MessagesToolbarView: View {
             }
             .padding(.trailing, 2.0)
 
-            if let conversation = viewModel.conversation {
+            if let conversation = conversationState.conversation, !conversation.isDraft {
                 ConversationAvatarView(conversation: conversation)
                     .padding(.vertical, avatarVerticalPadding)
             }
 
             VStack(alignment: .leading, spacing: 2.0) {
-                Text(viewModel.conversation?.title ?? viewModel.placeholderTitle)
+                Text(title)
                     .font(.system(size: 16.0))
                     .foregroundStyle(.colorTextPrimary)
                     .lineLimit(1)
-                if let conversation = viewModel.conversation, conversation.kind == .group {
+                if let conversation = conversationState.conversation, conversation.kind == .group {
                     Text(conversation.membersCountString)
                         .font(.system(size: 12.0))
                         .foregroundStyle(.colorTextSecondary)
@@ -61,7 +73,7 @@ struct MessagesToolbarView: View {
 
             Spacer()
 
-            if let conversation = viewModel.conversation {
+            if let conversation = conversationState.conversation {
                 switch conversation.kind {
                 case .group:
                     Button {
@@ -97,14 +109,15 @@ struct MessagesToolbarView: View {
 }
 
 #Preview {
-    let viewModel = MessagesToolbarViewModel()
-    viewModel.conversation = .mock(
-        kind: .group,
-        members: [
-            .mock(name: "John"),
-            .mock(name: "Jane"),
-            .mock(name: "Tom")
-        ]
+    @Previewable @Environment(\.dismiss) var dismiss: DismissAction
+    let convos = ConvosClient.mock()
+    let conversationId: String = "1"
+    let conversationState = ConversationState(
+        conversationRepository: convos.messaging.conversationRepository(
+            for: conversationId
+        )
     )
-    return MessagesToolbarView(viewModel: viewModel)
+    MessagesToolbarView(
+        conversationState: conversationState, dismissAction: dismiss
+    )
 }

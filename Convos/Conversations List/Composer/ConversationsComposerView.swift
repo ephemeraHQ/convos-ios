@@ -1,15 +1,14 @@
 import SwiftUI
 
 struct ConversationComposerView: UIViewControllerRepresentable {
-    let messagingService: any MessagingServiceProtocol
-    let draftConversationComposer: any DraftConversationComposerProtocol
+    @State private var draftConversationComposer: any DraftConversationComposerProtocol
     @State private var conversationComposerState: ConversationComposerState
+    @Environment(\.dismiss) var dismissAction: DismissAction
 
     init(
         messagingService: any MessagingServiceProtocol,
         draftConversationComposer: any DraftConversationComposerProtocol
     ) {
-        self.messagingService = messagingService
         self.draftConversationComposer = draftConversationComposer
         _conversationComposerState = State(
             initialValue: .init(
@@ -26,7 +25,8 @@ struct ConversationComposerView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> ConversationComposerViewController {
         let composerViewController = ConversationComposerViewController(
             composerState: conversationComposerState,
-            profileSearchRepository: draftConversationComposer.profileSearchRepository
+            profileSearchRepository: draftConversationComposer.profileSearchRepository,
+            dismissAction: dismissAction
         )
         return composerViewController
     }

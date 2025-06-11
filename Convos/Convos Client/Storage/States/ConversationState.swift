@@ -4,7 +4,7 @@ import Observation
 
 @Observable
 final class ConversationState {
-    private(set) var conversation: Conversation
+    private(set) var conversation: Conversation?
 
     private let conversationRepository: ConversationRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = .init()
@@ -12,10 +12,10 @@ final class ConversationState {
     init(conversationRepository: ConversationRepositoryProtocol) {
         self.conversationRepository = conversationRepository
         do {
-            self.conversation = try conversationRepository.fetchConversation() ?? .mock()
+            self.conversation = try conversationRepository.fetchConversation()
         } catch {
             Logger.error("Error fetching conversation: \(error)")
-            self.conversation = .mock()
+            self.conversation = nil
         }
         observe()
     }

@@ -23,7 +23,7 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
 
     // MARK: - UI Components
 
-    let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
+    let navigationBar: MessagesToolbarViewHost
     let contentView: UIView = UIView()
     private let messagesInputView: MessagesInputView = MessagesInputView()
     private var joinConversationInputView: JoinConversationInputHostingController?
@@ -64,7 +64,7 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
             observeConversationRepository()
         }
     }
-    private(set) var outgoingMessageWriter: any OutgoingMessageWriterProtocol
+    private let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     private let conversationConsentWriter: any ConversationConsentWriterProtocol
     private let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
 
@@ -73,11 +73,16 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
     init(conversationRepository: any ConversationRepositoryProtocol,
          outgoingMessageWriter: any OutgoingMessageWriterProtocol,
          conversationConsentWriter: any ConversationConsentWriterProtocol,
-         conversationLocalStateWriter: any ConversationLocalStateWriterProtocol) {
+         conversationLocalStateWriter: any ConversationLocalStateWriterProtocol,
+         dismissAction: DismissAction) {
         self.conversationRepository = conversationRepository
         self.outgoingMessageWriter = outgoingMessageWriter
         self.conversationConsentWriter = conversationConsentWriter
         self.conversationLocalStateWriter = conversationLocalStateWriter
+        self.navigationBar = MessagesToolbarViewHost(
+            conversationState: .init(conversationRepository: conversationRepository),
+            dismissAction: dismissAction
+        )
         super.init(nibName: nil, bundle: nil)
         self.joinConversationInputView = .init(viewModel: self)
     }
@@ -136,10 +141,6 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
     private func setupUI() {
         setupInputBar()
         view.addSubview(navigationBar)
-        navigationBar.viewModel.onBack = { [weak self] in
-            guard let self else { return }
-            navigationController?.popViewController(animated: true)
-        }
         navigationBar.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .colorBackgroundPrimary
         contentView.translatesAutoresizingMaskIntoConstraints = false
@@ -249,14 +250,14 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
 
     private func configure(with conversation: Conversation?) {
         updateSendButtonEnabled(for: conversation)
-        if let conversation, !conversation.isDraft || conversation.lastMessage != nil {
-            navigationBar.configure(conversation: conversation)
-        } else {
-            navigationBar.configure(
-                conversation: nil,
-                placeholderTitle: "New chat"
-            )
-        }
+//        if let conversation, !conversation.isDraft || conversation.lastMessage != nil {
+//            navigationBar.configure(conversation: conversation)
+//        } else {
+//            navigationBar.configure(
+//                conversation: nil,
+//                placeholderTitle: "New chat"
+//            )
+//        }
         reloadInputViews()
     }
 }
