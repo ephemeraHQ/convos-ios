@@ -5,12 +5,11 @@ import SwiftUI
 @Observable
 class ConversationComposerState {
     private let profileSearchRepo: any ProfileSearchRepositoryProtocol
-    private(set) var draftConversationRepo: any DraftConversationRepositoryProtocol
+    let draftConversationRepo: any DraftConversationRepositoryProtocol
     let draftConversationWriter: any DraftConversationWriterProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
     private var cancellables: Set<AnyCancellable> = []
-    private(set) var hasSentMessage: Bool = false
     private(set) var messagesRepository: any MessagesRepositoryProtocol
 
     private var searchTask: Task<Void, Never>?
@@ -27,8 +26,10 @@ class ConversationComposerState {
     private(set) var profilesAdded: OrderedSet<ProfileSearchResult> = []
     var profileResults: [ProfileSearchResult] = []
 
+    private(set) var showProfileSearchHeader: Bool = true
+
     var showResultsList: Bool {
-        return (!profileResults.isEmpty || !conversationResults.isEmpty) && !hasSentMessage
+        return (!profileResults.isEmpty || !conversationResults.isEmpty) && showProfileSearchHeader
     }
 
     init(
@@ -50,11 +51,20 @@ class ConversationComposerState {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] members in
                 guard let self else { return }
+                Logger.info("Publishing members with count: \(members.count)")
                 profilesAdded = OrderedSet<ProfileSearchResult>(members.map {
                     .init(profile: $0, inboxId: $0.id)
                 })
             }
             .store(in: &cancellables)
+        self.draftConversationWriter
+            .sentMessage
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+            guard let self else { return }
+            showProfileSearchHeader = false
+        }
+        .store(in: &cancellables)
     }
 
     func add(profile: ProfileSearchResult) {
@@ -88,10 +98,6 @@ class ConversationComposerState {
                 Logger.error("Error removing profile: \(error)")
             }
         }
-    }
-
-    func didSendMessage() {
-        hasSentMessage = true
     }
 
     private func performSearch() {

@@ -40,9 +40,9 @@ final class DatabaseManager: DatabaseManagerProtocol {
         config.label = "ConvosDB"
         config.foreignKeysEnabled = true
 #if DEBUG
-        config.prepareDatabase { db in
-            db.trace { print($0) }
-        }
+//        config.prepareDatabase { db in
+//            db.trace { print($0) }
+//        }
 #endif
 
         let dbPool = try DatabasePool(path: dbURL.path, configuration: config)

@@ -2,31 +2,11 @@ import Combine
 import SwiftUI
 import UIKit
 
-protocol MessagesContainerViewControllerDelegate: AnyObject {
-    func messagesContainerViewControllerDidSendMessage(_ viewController: MessagesContainerViewController)
-}
-
-class MessagesContainerViewController: UIViewController, JoinConversationInputViewModelType {
-    weak var delegate: MessagesContainerViewControllerDelegate?
-
-    // MARK: - Interface Actions
-
-    private enum ReactionTypes {
-        case delayedUpdate
-    }
-
-    private enum InterfaceActions {
-        case sendingMessage
-    }
-
-    private var currentInterfaceActions: SetActor<Set<InterfaceActions>, ReactionTypes> = SetActor()
-
-    // MARK: - UI Components
-
-    let navigationBar: MessagesNavigationBar = MessagesNavigationBar(frame: .zero)
+class MessagesContainerViewController: UIViewController {
+    let navigationBar: MessagesToolbarViewHost
     let contentView: UIView = UIView()
-    private let messagesInputView: MessagesInputView = MessagesInputView()
-    private var joinConversationInputView: JoinConversationInputHostingController?
+    let messagesInputView: MessagesInputView
+    private var joinConversationInputView: InputHostingController<JoinConversationInputView>
     private var navigationBarHeightConstraint: NSLayoutConstraint?
 
     // MARK: - First Responder Management
@@ -34,7 +14,8 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
     var shouldBecomeFirstResponder: Bool = true
 
     override var inputAccessoryView: UIView? {
-        guard let conversation, !conversation.isDraft else {
+        guard let conversation = conversationState.conversation,
+              !conversation.isDraft else {
             return messagesInputView
         }
         switch conversation.consent {
@@ -54,32 +35,38 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
     // MARK: - Conversation
 
     private var conversationRepositoryCancellable: AnyCancellable?
-    private var conversation: Conversation? {
-        didSet {
-            configure(with: conversation)
-        }
-    }
-    private(set) var conversationRepository: any ConversationRepositoryProtocol {
-        didSet {
-            observeConversationRepository()
-        }
-    }
-    private(set) var outgoingMessageWriter: any OutgoingMessageWriterProtocol
+    private let conversationState: ConversationState
+    private let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     private let conversationConsentWriter: any ConversationConsentWriterProtocol
     private let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
 
     // MARK: - Init
 
-    init(conversationRepository: any ConversationRepositoryProtocol,
+    init(conversationState: ConversationState,
          outgoingMessageWriter: any OutgoingMessageWriterProtocol,
          conversationConsentWriter: any ConversationConsentWriterProtocol,
-         conversationLocalStateWriter: any ConversationLocalStateWriterProtocol) {
-        self.conversationRepository = conversationRepository
+         conversationLocalStateWriter: any ConversationLocalStateWriterProtocol,
+         dismissAction: DismissAction,
+         sendMessage: @escaping () -> Void,
+         textBinding: Binding<String>,
+         joinConversation: @escaping () -> Void,
+         deleteConversation: @escaping () -> Void) {
+        self.conversationState = conversationState
         self.outgoingMessageWriter = outgoingMessageWriter
         self.conversationConsentWriter = conversationConsentWriter
         self.conversationLocalStateWriter = conversationLocalStateWriter
+        self.navigationBar = MessagesToolbarViewHost(
+            conversationState: conversationState,
+            dismissAction: dismissAction
+        )
+        self.messagesInputView = MessagesInputView(sendMessage: sendMessage)
+        self.joinConversationInputView = .init(
+            rootView: JoinConversationInputView(
+                onJoinConversation: joinConversation,
+                onDeleteConversation: deleteConversation
+            )
+        )
         super.init(nibName: nil, bundle: nil)
-        self.joinConversationInputView = .init(viewModel: self)
     }
 
     required init?(coder: NSCoder) {
@@ -98,7 +85,7 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
             do {
                 try await conversationLocalStateWriter.setUnread(
                     false,
-                    for: conversationRepository.conversationId
+                    for: conversationState.conversationId
                 )
             } catch {
                 Logger.error("Failed marking conversation as read: \(error)")
@@ -112,7 +99,6 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
         super.viewDidLoad()
         setupUI()
         KeyboardListener.shared.add(delegate: self)
-        observeConversationRepository()
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -136,10 +122,6 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
     private func setupUI() {
         setupInputBar()
         view.addSubview(navigationBar)
-        navigationBar.viewModel.onBack = { [weak self] in
-            guard let self else { return }
-            navigationController?.popViewController(animated: true)
-        }
         navigationBar.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .colorBackgroundPrimary
         contentView.translatesAutoresizingMaskIntoConstraints = false
@@ -168,9 +150,8 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
     }
 
     private func setupInputBar() {
-        messagesInputView.delegate = self
         messagesInputView.translatesAutoresizingMaskIntoConstraints = false
-        joinConversationInputView?.translatesAutoresizingMaskIntoConstraints = false
+        joinConversationInputView.translatesAutoresizingMaskIntoConstraints = false
     }
 
     override func viewSafeAreaInsetsDidChange() {
@@ -190,7 +171,7 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
     // MARK: - JoinConversationInputViewDelegate
 
     func joinConversation() {
-        guard let conversation else { return }
+        guard let conversation = conversationState.conversation else { return }
         Task {
             do {
                 try await conversationConsentWriter.join(conversation: conversation)
@@ -201,7 +182,7 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
     }
 
     func deleteConversation() {
-        guard let conversation else { return }
+        guard let conversation = conversationState.conversation else { return }
         navigationController?.popViewController(animated: true)
         Task {
             do {
@@ -221,44 +202,6 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
         child.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         child.didMove(toParent: self)
     }
-
-    // MARK: - Private
-
-    private func observeConversationRepository() {
-        conversationRepositoryCancellable?.cancel()
-        conversationRepositoryCancellable = nil
-        do {
-            conversation = try conversationRepository.fetchConversation()
-        } catch {
-            Logger.error("Error fetching conversation: \(error)")
-        }
-        conversationRepositoryCancellable = conversationRepository.conversationPublisher
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] conversation in
-                guard let self else { return }
-                self.conversation = conversation
-            }
-    }
-
-    private func updateSendButtonEnabled(for conversation: Conversation?) {
-        let conversationHasMembers: Bool = !(conversation?.members.isEmpty ?? true)
-        let enabled = conversationHasMembers && !messagesInputView.textView.text.isEmpty
-        messagesInputView.sendButton.isEnabled = enabled
-        messagesInputView.sendButton.alpha = enabled ? 1 : 0.2
-    }
-
-    private func configure(with conversation: Conversation?) {
-        updateSendButtonEnabled(for: conversation)
-        if let conversation, !conversation.isDraft || conversation.lastMessage != nil {
-            navigationBar.configure(conversation: conversation)
-        } else {
-            navigationBar.configure(
-                conversation: nil,
-                placeholderTitle: "New chat"
-            )
-        }
-        reloadInputViews()
-    }
 }
 
 // MARK: - Keyboard
@@ -266,34 +209,5 @@ class MessagesContainerViewController: UIViewController, JoinConversationInputVi
 extension MessagesContainerViewController: KeyboardListenerDelegate {
     func keyboardWillHide(info: KeyboardInfo) {
         becomeFirstResponder()
-    }
-}
-
-// MARK: - MessagesInputViewDelegate
-
-extension MessagesContainerViewController: MessagesInputViewDelegate {
-    func messagesInputView(_ view: MessagesInputView, didChangeIntrinsicContentSize size: CGSize) {
-        guard !currentInterfaceActions.options.contains(.sendingMessage) else { return }
-        //        scrollToBottom()
-    }
-
-    func messagesInputView(_ view: MessagesInputView, didTapSend text: String) {
-        currentInterfaceActions.options.insert(.sendingMessage)
-        delegate?.messagesContainerViewControllerDidSendMessage(self)
-        if let messagesVC = children.first(where: { $0 is MessagesViewController }) as? MessagesViewController {
-            messagesVC.scrollToBottom()
-        }
-        Task {
-            do {
-                try await outgoingMessageWriter.send(text: text)
-            } catch {
-                Logger.error("Error sending message: \(error)")
-            }
-            currentInterfaceActions.options.remove(.sendingMessage)
-        }
-    }
-
-    func messagesInputView(_ view: MessagesInputView, didChangeText text: String) {
-        updateSendButtonEnabled(for: conversation)
     }
 }

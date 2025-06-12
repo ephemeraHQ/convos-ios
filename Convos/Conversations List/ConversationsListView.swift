@@ -3,9 +3,12 @@ import SwiftUI
 
 struct ConversationsListView: View {
     enum Route: Hashable {
-        case composer, securityLine, conversation(Conversation)
+        case composer(AnyDraftConversationComposer),
+             securityLine,
+             conversation(Conversation)
     }
 
+    @Environment(\.dismiss) private var dismissAction: DismissAction
     @Environment(MessagingServiceObservable.self)
     private var messagingService: MessagingServiceObservable
 
@@ -33,7 +36,9 @@ struct ConversationsListView: View {
                     userState: userState,
                     isComposeEnabled: messagingService.canStartConversation,
                     onCompose: {
-                        path.append(.composer)
+                        path.append(.composer(AnyDraftConversationComposer(messagingService
+                            .messagingService
+                            .draftConversationComposer())))
                     },
                     onSignOut: {
                         Task {
@@ -61,12 +66,9 @@ struct ConversationsListView: View {
                     }
                     .navigationDestination(for: Route.self) { route in
                         switch route {
-                        case .composer:
+                        case .composer(let draftConversationComposer):
                             ConversationComposerView(
-                                messagingService: messagingService.messagingService,
-                                draftConversationComposer: messagingService
-                                    .messagingService
-                                    .draftConversationComposer()
+                                draftConversationComposer: draftConversationComposer
                             )
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)

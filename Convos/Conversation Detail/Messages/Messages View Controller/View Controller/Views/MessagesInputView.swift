@@ -1,11 +1,10 @@
+import SwiftUI
 import UIKit
 
 // MARK: - MessagesInputViewDelegate
 
 protocol MessagesInputViewDelegate: AnyObject {
     func messagesInputView(_ view: MessagesInputView, didChangeText text: String)
-    func messagesInputView(_ view: MessagesInputView, didTapSend text: String)
-    func messagesInputView(_ view: MessagesInputView, didChangeIntrinsicContentSize size: CGSize)
 }
 
 // MARK: - MessagesInputView
@@ -14,6 +13,7 @@ final class MessagesInputView: UIView {
     weak var delegate: MessagesInputViewDelegate?
     private var keyboardIsShowing: Bool = false
     private var textViewHeightConstraint: NSLayoutConstraint?
+    private let sendMessage: () -> Void
 
     // MARK: - UI Components
 
@@ -50,8 +50,29 @@ final class MessagesInputView: UIView {
 
     // MARK: - Initialization
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
+    var text: String {
+        get {
+            textView.text
+        }
+        set {
+            textView.text = newValue
+        }
+    }
+
+    var sendButtonEnabled: Bool {
+        get {
+            sendButton.isEnabled
+        }
+        set {
+            sendButton.isEnabled = newValue
+        }
+    }
+
+    init(
+        sendMessage: @escaping () -> Void
+    ) {
+        self.sendMessage = sendMessage
+        super.init(frame: .zero)
         setupView()
         setupNotifications()
         setupKeyboardListener()
@@ -144,11 +165,6 @@ final class MessagesInputView: UIView {
         return CGSize(width: UIView.noIntrinsicMetric, height: textHeight + safeAreaInsets.bottom)
     }
 
-    override func invalidateIntrinsicContentSize() {
-        super.invalidateIntrinsicContentSize()
-        delegate?.messagesInputView(self, didChangeIntrinsicContentSize: intrinsicContentSize)
-    }
-
     // MARK: - First Responder
 
     override var canBecomeFirstResponder: Bool {
@@ -175,7 +191,8 @@ final class MessagesInputView: UIView {
 
     @objc private func handleSendButtonTap() {
         guard let text = textView.text, !text.isEmpty else { return }
-        delegate?.messagesInputView(self, didTapSend: text)
+
+        sendMessage()
         clearTextView()
     }
 
