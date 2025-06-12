@@ -96,7 +96,6 @@
 		D80850342DC94F4C00E708B0 /* NotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D8477AD42DCBA52F00E31E54 /* .env */ = {isa = PBXFileReference; lastKnownFileType = text; path = .env; sourceTree = "<group>"; };
 		D8477AD52DCBA52F00E31E54 /* .env.example */ = {isa = PBXFileReference; lastKnownFileType = text; path = .env.example; sourceTree = "<group>"; };
-		D8477AD62DCBA52F00E31E54 /* .env.local */ = {isa = PBXFileReference; lastKnownFileType = text; path = .env.local; sourceTree = "<group>"; };
 		D8A2B6912DA4BA4B00EF8577 /* Convos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Convos.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -291,7 +290,6 @@
 			children = (
 				D8477AD42DCBA52F00E31E54 /* .env */,
 				D8477AD52DCBA52F00E31E54 /* .env.example */,
-				D8477AD62DCBA52F00E31E54 /* .env.local */,
 				D83A7ABA2DA5C98400879441 /* Config */,
 				D8A2B6932DA4BA4B00EF8577 /* Convos */,
 				D80850352DC94F4C00E708B0 /* NotificationService */,
