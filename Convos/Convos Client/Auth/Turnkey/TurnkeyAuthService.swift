@@ -78,14 +78,16 @@ struct TurnkeySigningKey: SigningKey {
             return .init(rawData: Data())
         }
 
-        let digest = Data(message.utf8)
-        let digestHex = digest.toHexString()
+        let prefix = "\u{19}Ethereum Signed Message:\n\(message.utf8.count)"
+        let fullMessage = prefix + message
+        let digest = Data(fullMessage.utf8).sha3(.keccak256)
+        let digestString = digest.hexEncodedString()
         do {
             let result = try await turnkey.signRawPayload(
                 signWith: walletAddress,
-                payload: digestHex,
+                payload: digestString,
                 encoding: .PAYLOAD_ENCODING_HEXADECIMAL,
-                hashFunction: .HASH_FUNCTION_SHA256
+                hashFunction: .HASH_FUNCTION_NO_OP
             )
             return result.signedData
         } catch {
