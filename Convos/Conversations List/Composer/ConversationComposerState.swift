@@ -57,7 +57,10 @@ class ConversationComposerState {
                 })
             }
             .store(in: &cancellables)
-        self.draftConversationWriter.sentMessage.sink { [weak self] _ in
+        self.draftConversationWriter
+            .sentMessage
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
             guard let self else { return }
             showProfileSearchHeader = false
         }
