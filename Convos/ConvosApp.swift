@@ -12,8 +12,10 @@ struct ConvosApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(convos: convos,
-                    analyticsService: analyticsService)
+            RootView(
+                convos: convos,
+                analyticsService: analyticsService
+            )
         }
     }
 }
