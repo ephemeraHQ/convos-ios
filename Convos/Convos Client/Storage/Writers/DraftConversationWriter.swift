@@ -270,7 +270,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                                                       conversationId: id)
 
             try await messageWriter.send(text: text)
-
+            sentMessageSubject.send(text)
         case .draft:
             // save a temporary message to the draft conversation
             try await databaseWriter.write { [weak self] db in
