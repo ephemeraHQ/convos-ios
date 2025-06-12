@@ -5,8 +5,6 @@ import UIKit
 
 protocol MessagesInputViewDelegate: AnyObject {
     func messagesInputView(_ view: MessagesInputView, didChangeText text: String)
-    func messagesInputView(_ view: MessagesInputView, didTapSend text: String)
-    func messagesInputView(_ view: MessagesInputView, didChangeIntrinsicContentSize size: CGSize)
 }
 
 // MARK: - MessagesInputView
@@ -51,13 +49,25 @@ final class MessagesInputView: UIView {
 
     // MARK: - Initialization
 
-    let textBinding: Binding<String>
-    let sendButtonEnabled: Binding<Bool>
+    var text: String {
+        get {
+            textView.text
+        }
+        set {
+            textView.text = newValue
+        }
+    }
 
-    init(textBinding: Binding<String>,
-         sendButtonEnabled: Binding<Bool>) {
-        self.textBinding = textBinding
-        self.sendButtonEnabled = sendButtonEnabled
+    var sendButtonEnabled: Bool {
+        get {
+            sendButton.isEnabled
+        }
+        set {
+            sendButton.isEnabled = newValue
+        }
+    }
+
+    init() {
         super.init(frame: .zero)
         setupView()
         setupNotifications()
@@ -151,11 +161,6 @@ final class MessagesInputView: UIView {
         return CGSize(width: UIView.noIntrinsicMetric, height: textHeight + safeAreaInsets.bottom)
     }
 
-    override func invalidateIntrinsicContentSize() {
-        super.invalidateIntrinsicContentSize()
-        delegate?.messagesInputView(self, didChangeIntrinsicContentSize: intrinsicContentSize)
-    }
-
     // MARK: - First Responder
 
     override var canBecomeFirstResponder: Bool {
@@ -182,7 +187,7 @@ final class MessagesInputView: UIView {
 
     @objc private func handleSendButtonTap() {
         guard let text = textView.text, !text.isEmpty else { return }
-        delegate?.messagesInputView(self, didTapSend: text)
+
         clearTextView()
     }
 
