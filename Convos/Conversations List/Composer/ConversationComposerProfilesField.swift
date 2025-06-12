@@ -19,11 +19,7 @@ struct ConversationComposerProfilesField: View {
     @State private var profileChipsHeight: CGFloat = 0.0
     @Binding var searchText: String
     var isTextFieldFocused: FocusState<Bool>.Binding
-    @Binding var selectedProfile: ProfileSearchResult? {
-        didSet {
-            searchTextEditingEnabled = selectedProfile == nil
-        }
-    }
+    @Binding var selectedProfile: ProfileSearchResult?
     @State var searchTextEditingEnabled: Bool = true
 
     private let profileChipsMaxHeight: CGFloat = 150.0
@@ -66,6 +62,7 @@ struct ConversationComposerProfilesField: View {
                     }
                     .padding(.top, 4.0)
                     .onChange(of: selectedProfile) {
+                        searchTextEditingEnabled = selectedProfile == nil
                         guard selectedProfile != nil else { return }
                         isTextFieldFocused.wrappedValue = true
                         withAnimation {
