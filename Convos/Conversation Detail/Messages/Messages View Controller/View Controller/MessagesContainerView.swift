@@ -101,17 +101,4 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
             }
         }
     }
-
-    private func markConversationAsRead() {
-        Task {
-            do {
-                try await conversationLocalStateWriter.setUnread(
-                    false,
-                    for: conversationState.conversationId
-                )
-            } catch {
-                Logger.error("Failed marking conversation as read: \(error)")
-            }
-        }
-    }
 }
