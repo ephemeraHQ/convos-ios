@@ -59,7 +59,7 @@ class MessagesContainerViewController: UIViewController {
             conversationState: conversationState,
             dismissAction: dismissAction
         )
-        self.messagesInputView = MessagesInputView()
+        self.messagesInputView = MessagesInputView(sendMessage: sendMessage)
         self.joinConversationInputView = .init(
             rootView: JoinConversationInputView(
                 onJoinConversation: joinConversation,

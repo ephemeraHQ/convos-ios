@@ -13,6 +13,7 @@ final class MessagesInputView: UIView {
     weak var delegate: MessagesInputViewDelegate?
     private var keyboardIsShowing: Bool = false
     private var textViewHeightConstraint: NSLayoutConstraint?
+    private let sendMessage: () -> Void
 
     // MARK: - UI Components
 
@@ -67,7 +68,10 @@ final class MessagesInputView: UIView {
         }
     }
 
-    init() {
+    init(
+        sendMessage: @escaping () -> Void
+    ) {
+        self.sendMessage = sendMessage
         super.init(frame: .zero)
         setupView()
         setupNotifications()
@@ -188,6 +192,7 @@ final class MessagesInputView: UIView {
     @objc private func handleSendButtonTap() {
         guard let text = textView.text, !text.isEmpty else { return }
 
+        sendMessage()
         clearTextView()
     }
 

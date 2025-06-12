@@ -34,6 +34,7 @@ struct ConversationView: View {
                 messagesRepository: messagesRepository,
                 textBinding: textBinding
             )
+            .ignoresSafeArea()
         }
     }
 }
