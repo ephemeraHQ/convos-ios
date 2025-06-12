@@ -6,7 +6,7 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
-    @ViewBuilder let content: (Binding<String>) -> Content
+    @ViewBuilder let content: () -> Content
 
     @State private var text: String = ""
 
@@ -27,7 +27,7 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
         viewController.messagesInputView.delegate = context.coordinator
 
         let hostingController = UIHostingController(
-            rootView: content($text)
+            rootView: content()
         )
 
         viewController.embedContentController(hostingController)

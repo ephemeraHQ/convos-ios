@@ -29,10 +29,9 @@ struct ConversationView: View {
             outgoingMessageWriter: outgoingMessageWriter,
             conversationConsentWriter: conversationConsentWriter,
             conversationLocalStateWriter: conversationLocalStateWriter
-        ) { textBinding in
+        ) {
             MessagesView(
-                messagesRepository: messagesRepository,
-                textBinding: textBinding
+                messagesRepository: messagesRepository
             )
             .ignoresSafeArea()
         }

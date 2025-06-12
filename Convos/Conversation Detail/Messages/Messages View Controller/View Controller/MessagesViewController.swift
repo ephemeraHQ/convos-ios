@@ -51,8 +51,7 @@ final class MessagesViewController: UIViewController {
 
     // MARK: - Initialization
 
-    init(messagesRepository: any MessagesRepositoryProtocol,
-         textBinding: Binding<String>) {
+    init(messagesRepository: any MessagesRepositoryProtocol) {
         self.dataSource = MessagesCollectionViewDataSource()
         self.collectionView = UICollectionView(
             frame: .zero,

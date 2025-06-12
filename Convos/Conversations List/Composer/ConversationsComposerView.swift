@@ -30,12 +30,11 @@ struct ConversationComposerView: View {
             outgoingMessageWriter: draftConversationComposer.draftConversationWriter,
             conversationConsentWriter: draftConversationComposer.conversationConsentWriter,
             conversationLocalStateWriter: draftConversationComposer.conversationLocalStateWriter
-        ) { textBinding in
+        ) {
             ConversationComposerContentView(
                 composerState: conversationComposerState,
                 profileSearchText: $conversationComposerState.searchText,
-                selectedProfile: $conversationComposerState.selectedProfile,
-                messageText: textBinding
+                selectedProfile: $conversationComposerState.selectedProfile
             )
         }
     }
