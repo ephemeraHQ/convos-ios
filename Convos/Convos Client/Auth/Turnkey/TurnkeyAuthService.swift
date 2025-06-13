@@ -132,16 +132,12 @@ final class TurnkeyAuthService: AuthServiceProtocol {
         return authState.value
     }
 
-    var currentUser: User? {
-        return nil
-    }
-
     init() {
         let authStatePublisher: AnyPublisher<AuthServiceState, Never> = turnkey
             .$user
-            .removeDuplicates(by: { lhs, rhs in
-                lhs?.id == rhs?.id
-            })
+//            .removeDuplicates(by: { lhs, rhs in
+//                lhs?.id == rhs?.id
+//            })
             .map { [weak self] user in
                 guard let self else { return .unknown }
 
@@ -291,116 +287,6 @@ final class TurnkeyAuthService: AuthServiceProtocol {
 
         return window
     }
-
-    // MARK: - Passkey Notifications
-
-//    @objc private func handlePasskeyRegistrationCompleted(_ notification: Notification) {
-//        guard let result = notification.userInfo?["result"] as? PasskeyRegistrationResult else {
-//            return
-//        }
-//
-//        guard let displayName = displayName else {
-//            return
-//        }
-//
-//        let ephemeralPrivateKey = P256.KeyAgreement.PrivateKey()
-//        let publicKey = ephemeralPrivateKey.publicKey
-//
-//        guard let apiPublicKey = try? publicKey.toString(
-//            representation: PublicKeyRepresentation.x963),
-//              let apiPublicKeyCompressed = try? publicKey.toString(
-//                representation: PublicKeyRepresentation.compressed
-//              ),
-//        let apiPrivateKey = try? ephemeralPrivateKey.toString(
-//            representation: PrivateKeyRepresentation.raw) else {
-//            Logger.error("Missing api keys")
-//            return
-//        }
-//
-//        let authClient = TurnkeyClient(
-//            apiPrivateKey: apiPrivateKey,
-//            apiPublicKey: apiPublicKeyCompressed
-//        )
-//
-//        passkeyRegistrationTask = Task {
-//            do {
-//                let expirationSeconds: Int = 3600
-//                let result = try await sendCreateSubOrgRequest(
-//                    ephemeralPublicKey: apiPublicKeyCompressed,
-//                    passkeyRegistrationResult: result,
-//                    displayName: displayName
-//                )
-//
-//                Logger.info("Private key: \(apiPrivateKey) Public key: \(apiPublicKey)")
-//
-//                guard let result else {
-//                    throw TurnkeyAuthServiceError.failedCreatingSubOrganization
-//                }
-//
-//                Logger.info("Create sub organization result from Convos backend: \(result)")
-//
-//                let sessionResponse = try await authClient.createReadWriteSession(
-//                    organizationId: result.subOrgId,
-//                    targetPublicKey: apiPublicKey,
-//                    userId: nil,
-//                    apiKeyName: "session-key",
-//                    expirationSeconds: String(expirationSeconds)
-//                )
-//
-//                switch sessionResponse {
-//                case let .undocumented(status, payload):
-//                    if let body = payload.body {
-//                        // Convert the HTTPBody to a string
-//                        let bodyString = try await String(collecting: body, upTo: .max)
-//                        print("bodyString: \(bodyString)")
-//                    }
-//                    print("status: \(status) payload: \(payload)")
-//                case .ok(let output):
-//                    print("output: \(output)")
-//                }
-//                Logger.info("Session response: \(sessionResponse)")
-//
-//                let responseBody = try sessionResponse.ok.body.json
-//                guard let result = responseBody.activity.result.createReadWriteSessionResultV2 else {
-//                    throw NSError(
-//                        domain: "TurnkeyClient",
-//                        code: 1,
-//                        userInfo: [NSLocalizedDescriptionKey: "Missing createReadWriteSessionResultV2"]
-//                    )
-//                }
-//                let organizationId = result.organizationId
-//                let userId = result.userId
-//
-//                guard try await TurnkeySessionManager.shared.saveSession(
-//                    userId: userId,
-//                    organizationId: organizationId,
-//                    encryptedBundle: result.credentialBundle,
-//                    ephemeralPrivateKey: ephemeralPrivateKey
-//                ) != nil else {
-//                    Logger.error("Failed saving session")
-//                    return
-//                }
-//
-//                Logger.info("Finished registering with Turnkey")
-//            } catch {
-//                Logger.error("Error registering with Turnkey: \(error)")
-//            }
-//        }
-//    }
-//
-//    @objc private func handlePasskeyRegistrationFailed(_ notification: Notification) {
-//        guard let error = notification.userInfo?["error"] as? PasskeyRegistrationError else {
-//            return
-//        }
-//
-//        // Handle passkey registration failure
-//        Logger.error("Error handling passkey registration: \(error)")
-//    }
-//
-//    @objc private func handlePasskeyRegistrationCanceled(_ notification: Notification) {
-//        // Handle passkey registration cancellation
-//        Logger.info("Passkey Registration canceled")
-//    }
 
     // MARK: - Convos Backend
 
