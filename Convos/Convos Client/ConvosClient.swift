@@ -40,7 +40,7 @@ final class ConvosClient {
                      databaseManager: databaseManager)
     }
 
-    static func client(authService: AuthServiceProtocol = SecureEnclaveAuthService(),
+    static func client(authService: AuthServiceProtocol = TurnkeyAuthService(),
                        databaseManager: any DatabaseManagerProtocol = DatabaseManager.shared,
                        environment: MessagingServiceEnvironment) -> ConvosClient {
         let databaseWriter = databaseManager.dbWriter
@@ -64,7 +64,7 @@ final class ConvosClient {
     }
 
     var authState: AnyPublisher<AuthServiceState, Never> {
-        authService.authStatePublisher().eraseToAnyPublisher()
+        authService.authStatePublisher.eraseToAnyPublisher()
     }
 
     var supportsMultipleAccounts: Bool {
@@ -85,6 +85,7 @@ final class ConvosClient {
 
     func signOut() async throws {
         try await authService.signOut()
+        await messagingService.stop()
     }
 
     var messaging: any MessagingServiceProtocol {

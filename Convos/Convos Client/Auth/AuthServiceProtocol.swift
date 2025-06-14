@@ -40,6 +40,7 @@ enum AuthServiceState {
 
 protocol AuthServiceProtocol {
     var state: AuthServiceState { get }
+    var authStatePublisher: AnyPublisher<AuthServiceState, Never> { get }
     var supportsMultipleAccounts: Bool { get }
 
     func prepare() async throws
@@ -47,8 +48,6 @@ protocol AuthServiceProtocol {
     func signIn() async throws
     func register(displayName: String) async throws
     func signOut() async throws
-
-    func authStatePublisher() -> AnyPublisher<AuthServiceState, Never>
 }
 
 extension AuthServiceProtocol {

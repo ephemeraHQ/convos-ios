@@ -178,8 +178,14 @@ final actor MessagingServiceStateMachine {
             client = try await createXmtpClient(signingKey: authorizedResult.signingKey,
                                                 options: clientOptions)
         } else {
-            client = try await buildXmtpClient(identity: authorizedResult.signingKey.identity,
-                                               options: clientOptions)
+            do {
+                client = try await buildXmtpClient(identity: authorizedResult.signingKey.identity,
+                                                   options: clientOptions)
+            } catch {
+                Logger.error("Error building client, trying create: \(error)")
+                client = try await createXmtpClient(signingKey: authorizedResult.signingKey,
+                                                    options: clientOptions)
+            }
         }
         Client.register(codec: TextCodec())
         Client.register(codec: ReplyCodec())
@@ -341,7 +347,8 @@ final actor MessagingServiceStateMachine {
     }
 
     private func observeAuthState() async {
-        authService.authStatePublisher()
+        authService
+            .authStatePublisher
             .sink(receiveValue: { [weak self] authState in
                 Logger.info("Auth state changed from messaging service observer: \(authState)")
                 Task {

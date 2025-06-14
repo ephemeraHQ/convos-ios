@@ -93,6 +93,10 @@ class MockAuthService: AuthServiceProtocol {
         authStateSubject.value
     }
 
+    var authStatePublisher: AnyPublisher<AuthServiceState, Never> {
+        return authStateSubject.eraseToAnyPublisher()
+    }
+
     private var authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
     init(persist: Bool = false) {
@@ -128,10 +132,6 @@ class MockAuthService: AuthServiceProtocol {
         }
         _currentUser = nil
         authStateSubject.send(.unauthorized)
-    }
-
-    func authStatePublisher() -> AnyPublisher<AuthServiceState, Never> {
-        return authStateSubject.eraseToAnyPublisher()
     }
 
     private func getCurrentUser() throws -> MockUser? {

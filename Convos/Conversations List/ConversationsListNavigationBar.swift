@@ -3,6 +3,7 @@ import SwiftUI
 struct ConversationsListNavigationBar: View {
     @State var userState: UserState
     let isComposeEnabled: Bool
+    let isSignOutEnabled: Bool
 
     let onCompose: () -> Void
     let onSignOut: () -> Void
@@ -10,16 +11,25 @@ struct ConversationsListNavigationBar: View {
     var body: some View {
         HStack(spacing: 0.0) {
             HStack(spacing: DesignConstants.Spacing.step4x) {
-                HStack(spacing: 0.0) {
+                HStack(spacing: DesignConstants.Spacing.step2x) {
                     if let user = userState.currentUser {
                         ProfileAvatarView(profile: user.profile)
                             .frame(maxHeight: 24.0)
-                            .padding(DesignConstants.Spacing.step2x)
                     }
                     Text(userState.currentUser?.profile.name ?? "")
                         .font(.system(size: 16.0, weight: .regular))
                         .foregroundColor(.colorTextPrimary)
                         .padding(.vertical, 10.0)
+                }
+                .padding(.horizontal, DesignConstants.Spacing.step2x)
+                .applyIf(isSignOutEnabled) { view in
+                    view.contextMenu {
+                        Button(role: .destructive) {
+                            onSignOut()
+                        } label: {
+                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                        }
+                    }
                 }
 
                 Spacer()
@@ -51,6 +61,7 @@ struct ConversationsListNavigationBar: View {
     ConversationsListNavigationBar(
         userState: userState,
         isComposeEnabled: true,
+        isSignOutEnabled: true,
         onCompose: {},
         onSignOut: {}
     )

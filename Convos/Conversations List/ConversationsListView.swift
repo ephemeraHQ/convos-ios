@@ -35,6 +35,7 @@ struct ConversationsListView: View {
                 ConversationsListNavigationBar(
                     userState: userState,
                     isComposeEnabled: messagingService.canStartConversation,
+                    isSignOutEnabled: convos.supportsMultipleAccounts,
                     onCompose: {
                         path.append(.composer(AnyDraftConversationComposer(messagingService
                             .messagingService

@@ -1,5 +1,5 @@
 {
-  "originHash" : "534b4ae1143dd50d86a764b64f11ce0fe381c3aa90476d4e1025ffc3db90bad3",
+  "originHash" : "0b3abcc2ac1843e3a8d1e70249d0e453dd99aa87070d2647fad8647459b26efb",
   "pins" : [
     {
       "identity" : "anchorkit",
@@ -8,6 +8,33 @@
       "state" : {
         "revision" : "d8ac708856ee1975c705ebd44b0fa2b68e393e58",
         "version" : "3.0.3"
+      }
+    },
+    {
+      "identity" : "base58",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/anquii/Base58.git",
+      "state" : {
+        "revision" : "7e4a1e4e6813c750ed2f9e80a0494c608eebb2ca",
+        "version" : "1.0.1"
+      }
+    },
+    {
+      "identity" : "base58check",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/anquii/Base58Check.git",
+      "state" : {
+        "revision" : "f35a770ff7f3fd553cc44057f492c0107cc7b481",
+        "version" : "1.0.1"
+      }
+    },
+    {
+      "identity" : "bigint",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/attaswift/BigInt.git",
+      "state" : {
+        "revision" : "0ed110f7555c34ff468e72e1686e59721f2b0da6",
+        "version" : "5.3.0"
       }
     },
     {
@@ -119,6 +146,15 @@
       }
     },
     {
+      "identity" : "swift-http-types",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-http-types",
+      "state" : {
+        "revision" : "a0a57e949a8903563aba4615869310c0ebf14c03",
+        "version" : "1.4.0"
+      }
+    },
+    {
       "identity" : "swift-nio",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio.git",
@@ -146,12 +182,39 @@
       }
     },
     {
+      "identity" : "swift-openapi-runtime",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-openapi-runtime",
+      "state" : {
+        "revision" : "8f33cc5dfe81169fb167da73584b9c72c3e8bc23",
+        "version" : "1.8.2"
+      }
+    },
+    {
+      "identity" : "swift-openapi-urlsession",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-openapi-urlsession",
+      "state" : {
+        "revision" : "6fac6f7c428d5feea2639b5f5c8b06ddfb79434b",
+        "version" : "1.1.0"
+      }
+    },
+    {
       "identity" : "swift-protobuf",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-protobuf.git",
       "state" : {
         "revision" : "d72aed98f8253ec1aa9ea1141e28150f408cf17f",
         "version" : "1.29.0"
+      }
+    },
+    {
+      "identity" : "swift-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tkhq/swift-sdk.git",
+      "state" : {
+        "revision" : "26a96fc9823eae97d697e5f87e064b37bd9b3a09",
+        "version" : "2.0.0"
       }
     },
     {

@@ -37,6 +37,7 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: MessagesContainerViewController, context: Context) {
         uiViewController.messagesInputView.sendButtonEnabled = sendButtonEnabled(for: conversationState.conversation)
         uiViewController.messagesInputView.text = text
+        uiViewController.reloadInputViews()
     }
 
     // MARK: - Coordinator
