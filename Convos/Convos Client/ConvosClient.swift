@@ -85,6 +85,7 @@ final class ConvosClient {
 
     func signOut() async throws {
         try await authService.signOut()
+        await messagingService.stop()
     }
 
     var messaging: any MessagingServiceProtocol {

@@ -132,6 +132,55 @@ final class TurnkeyAuthService: AuthServiceProtocol {
         return authState.value
     }
 
+    init() {
+        let authStatePublisher: AnyPublisher<AuthServiceState, Never> = turnkey
+            .$user
+            .removeDuplicates(by: { lhs, rhs in
+                lhs?.id == rhs?.id
+            })
+            .map { [weak self] user in
+                guard let self else { return .unknown }
+
+                defer {
+                    authFlowType = .passive
+                }
+
+                guard let user else {
+                    return .unauthorized
+                }
+
+                let signingKey = TurnkeySigningKey(user: user)
+                do {
+                    let databaseKey = try user.databaseKey
+                    switch authFlowType {
+                    case .passive, .login:
+                        let result = TurnkeyAuthResult(
+                            signingKey: signingKey,
+                            databaseKey: databaseKey
+                        )
+                        return .authorized(result)
+                    case .register(let displayName):
+                        let result = TurnkeyRegisteredResult(
+                            displayName: displayName,
+                            signingKey: signingKey,
+                            databaseKey: databaseKey
+                        )
+                        return .registered(result)
+                    }
+                } catch {
+                    Logger.error("Error retrieving database key: \(error)")
+                    return .unauthorized
+                }
+            }
+            .eraseToAnyPublisher()
+        authStatePublisher
+            .sink { [weak self] state in
+                guard let self else { return }
+                authState.send(state)
+            }
+            .store(in: &cancellables)
+    }
+
     // MARK: Public
 
     func prepare() async throws {
@@ -188,46 +237,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
     }
 
     var authStatePublisher: AnyPublisher<AuthServiceState, Never> {
-        turnkey
-            .$user
-            .removeDuplicates(by: { lhs, rhs in
-                lhs?.id == rhs?.id
-            })
-            .map { [weak self] user in
-                guard let self else { return .unknown }
-
-                defer {
-                    authFlowType = .passive
-                }
-
-                guard let user else {
-                    return .unauthorized
-                }
-
-                let signingKey = TurnkeySigningKey(user: user)
-                do {
-                    let databaseKey = try user.databaseKey
-                    switch authFlowType {
-                    case .passive, .login:
-                        let result = TurnkeyAuthResult(
-                            signingKey: signingKey,
-                            databaseKey: databaseKey
-                        )
-                        return .authorized(result)
-                    case .register(let displayName):
-                        let result = TurnkeyRegisteredResult(
-                            displayName: displayName,
-                            signingKey: signingKey,
-                            databaseKey: databaseKey
-                        )
-                        return .registered(result)
-                    }
-                } catch {
-                    Logger.error("Error retrieving database key: \(error)")
-                    return .unauthorized
-                }
-            }
-            .eraseToAnyPublisher()
+        authState.eraseToAnyPublisher()
     }
 
     // MARK: - Private
