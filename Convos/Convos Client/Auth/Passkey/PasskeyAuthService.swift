@@ -19,6 +19,10 @@ class PasskeyAuthService: AuthServiceProtocol {
         authStateSubject.value
     }
 
+    var authStatePublisher: AnyPublisher<AuthServiceState, Never> {
+        return authStateSubject.eraseToAnyPublisher()
+    }
+
     private var authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
     private let passkeyAuth: PasskeyAuth
     private let passkeyIdentityStore: PasskeyIdentityStore = .init()
@@ -85,10 +89,6 @@ class PasskeyAuthService: AuthServiceProtocol {
     func signOut() async throws {
         try passkeyIdentityStore.delete()
         authStateSubject.send(.unauthorized)
-    }
-
-    func authStatePublisher() -> AnyPublisher<AuthServiceState, Never> {
-        return authStateSubject.eraseToAnyPublisher()
     }
 
     // MARK: - Private

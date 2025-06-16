@@ -11,6 +11,11 @@
 		7A349B6E2DD6FF5400E526A3 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */; };
 		7A349CA62DD7017B00E526A3 /* GRDB-dynamic in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		7A349D042DD96EA400E526A3 /* PasskeyAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7A349D032DD96EA400E526A3 /* PasskeyAuth */; };
+		7A5200F82DF0EF0800D2C55D /* TurnkeyPasskeys in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5200F72DF0EF0800D2C55D /* TurnkeyPasskeys */; };
+		7A5200FA2DF0EF0800D2C55D /* TurnkeyStamper in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5200F92DF0EF0800D2C55D /* TurnkeyStamper */; };
+		7A5200FC2DF0EF0800D2C55D /* TurnkeySwift in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5200FB2DF0EF0800D2C55D /* TurnkeySwift */; };
+		7A5201372DF0EFBC00D2C55D /* TurnkeyCrypto in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5201362DF0EFBC00D2C55D /* TurnkeyCrypto */; };
+		7A5201392DF0F1E600D2C55D /* TurnkeyHttp in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5201382DF0F1E600D2C55D /* TurnkeyHttp */; };
 		7ACA83952DDC395600848799 /* SwiftCBOR in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA83942DDC395600848799 /* SwiftCBOR */; };
 		7ACA83B22DDD19B200848799 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA83B12DDD19B200848799 /* OrderedCollections */; };
 		7ACA8BC82DE17FF800848799 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA8BC72DE17FF800848799 /* GRDB-dynamic */; };
@@ -184,10 +189,6 @@
 		D8A2B6A32DA4BA4C00EF8577 /* Exceptions for "Convos" folder in "Convos" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"Convos Client/Auth/Turnkey/ConvosAPIClient+Turnkey.swift",
-				"Convos Client/Auth/Turnkey/TurnkeyAuthService.swift",
-				"Convos Client/Auth/Turnkey/TurnkeyOutput+Errors.swift",
-				"Convos Client/Auth/Turnkey/TurnkeySessionManager.swift",
 				Info.plist,
 			);
 			target = D8A2B6902DA4BA4B00EF8577 /* Convos */;
@@ -248,13 +249,18 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7A5200FA2DF0EF0800D2C55D /* TurnkeyStamper in Frameworks */,
+				7A5201392DF0F1E600D2C55D /* TurnkeyHttp in Frameworks */,
 				7ACA83B22DDD19B200848799 /* OrderedCollections in Frameworks */,
 				D834386F2DB19D8C00A50F45 /* Factory in Frameworks */,
 				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
+				7A5200F82DF0EF0800D2C55D /* TurnkeyPasskeys in Frameworks */,
 				D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */,
 				D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */,
 				7A349B6E2DD6FF5400E526A3 /* GRDB-dynamic in Frameworks */,
 				7A349D042DD96EA400E526A3 /* PasskeyAuth in Frameworks */,
+				7A5200FC2DF0EF0800D2C55D /* TurnkeySwift in Frameworks */,
+				7A5201372DF0EFBC00D2C55D /* TurnkeyCrypto in Frameworks */,
 				7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */,
 				D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */,
 				7ACA83952DDC395600848799 /* SwiftCBOR in Frameworks */,
@@ -392,6 +398,11 @@
 				7A349D032DD96EA400E526A3 /* PasskeyAuth */,
 				7ACA83942DDC395600848799 /* SwiftCBOR */,
 				7ACA83B12DDD19B200848799 /* OrderedCollections */,
+				7A5200F72DF0EF0800D2C55D /* TurnkeyPasskeys */,
+				7A5200F92DF0EF0800D2C55D /* TurnkeyStamper */,
+				7A5200FB2DF0EF0800D2C55D /* TurnkeySwift */,
+				7A5201362DF0EFBC00D2C55D /* TurnkeyCrypto */,
+				7A5201382DF0F1E600D2C55D /* TurnkeyHttp */,
 			);
 			productName = Convos;
 			productReference = D8A2B6912DA4BA4B00EF8577 /* Convos.app */;
@@ -439,6 +450,7 @@
 				7A349D022DD96EA400E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */,
 				7ACA83932DDC395600848799 /* XCRemoteSwiftPackageReference "SwiftCBOR" */,
 				7ACA83B02DDD19B200848799 /* XCRemoteSwiftPackageReference "swift-collections" */,
+				7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
@@ -631,6 +643,7 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -659,6 +672,7 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -859,6 +873,14 @@
 				kind = branch;
 			};
 		};
+		7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tkhq/swift-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 		7ACA83932DDC395600848799 /* XCRemoteSwiftPackageReference "SwiftCBOR" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/valpackett/SwiftCBOR";
@@ -940,6 +962,31 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7A349D022DD96EA400E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */;
 			productName = PasskeyAuth;
+		};
+		7A5200F72DF0EF0800D2C55D /* TurnkeyPasskeys */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = TurnkeyPasskeys;
+		};
+		7A5200F92DF0EF0800D2C55D /* TurnkeyStamper */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = TurnkeyStamper;
+		};
+		7A5200FB2DF0EF0800D2C55D /* TurnkeySwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = TurnkeySwift;
+		};
+		7A5201362DF0EFBC00D2C55D /* TurnkeyCrypto */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = TurnkeyCrypto;
+		};
+		7A5201382DF0F1E600D2C55D /* TurnkeyHttp */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = TurnkeyHttp;
 		};
 		7ACA83942DDC395600848799 /* SwiftCBOR */ = {
 			isa = XCSwiftPackageProductDependency;
