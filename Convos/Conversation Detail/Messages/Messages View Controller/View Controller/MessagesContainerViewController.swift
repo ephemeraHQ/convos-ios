@@ -8,6 +8,7 @@ class MessagesContainerViewController: UIViewController {
     let messagesInputView: MessagesInputView
     private var joinConversationInputView: InputHostingController<JoinConversationInputView>
     private var navigationBarHeightConstraint: NSLayoutConstraint?
+    private var conversationCancellable: AnyCancellable?
 
     // MARK: - First Responder Management
 
@@ -67,6 +68,15 @@ class MessagesContainerViewController: UIViewController {
             )
         )
         super.init(nibName: nil, bundle: nil)
+        conversationCancellable = conversationState
+            .conversationPublisher
+            .receive(on: DispatchQueue.main)
+            .withPrevious()
+            .sink { [weak self] previous, current in
+                guard let self else { return }
+                guard previous?.consent != current?.consent else { return }
+                reloadInputViews()
+            }
     }
 
     required init?(coder: NSCoder) {

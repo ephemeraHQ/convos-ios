@@ -12,6 +12,10 @@ final class ConversationState {
     private let conversationRepository: ConversationRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = .init()
 
+    var conversationPublisher: AnyPublisher<Conversation?, Never> {
+        conversationRepository.conversationPublisher
+    }
+
     init(conversationRepository: ConversationRepositoryProtocol) {
         self.conversationRepository = conversationRepository
         do {
