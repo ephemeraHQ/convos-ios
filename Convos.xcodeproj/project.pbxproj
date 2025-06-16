@@ -189,7 +189,6 @@
 		D8A2B6A32DA4BA4C00EF8577 /* Exceptions for "Convos" folder in "Convos" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"Convos Client/Auth/Turnkey/TurnkeySessionManager.swift",
 				Info.plist,
 			);
 			target = D8A2B6902DA4BA4B00EF8577 /* Convos */;
