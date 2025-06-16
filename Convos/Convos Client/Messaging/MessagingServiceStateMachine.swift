@@ -172,7 +172,15 @@ final actor MessagingServiceStateMachine {
                 env: environment.xmtpEnv,
                 isSecure: environment.isSecure
             ),
-            dbEncryptionKey: authorizedResult.databaseKey,
+            codecs: [
+                TextCodec(),
+                ReplyCodec(),
+                ReactionCodec(),
+                AttachmentCodec(),
+                RemoteAttachmentCodec(),
+                GroupUpdatedCodec()
+            ],
+            dbEncryptionKey: authorizedResult.databaseKey
         )
         if authorizedResult is AuthServiceRegisteredResultType {
             client = try await createXmtpClient(signingKey: authorizedResult.signingKey,
@@ -187,12 +195,6 @@ final actor MessagingServiceStateMachine {
                                                     options: clientOptions)
             }
         }
-        Client.register(codec: TextCodec())
-        Client.register(codec: ReplyCodec())
-        Client.register(codec: ReactionCodec())
-        Client.register(codec: AttachmentCodec())
-        Client.register(codec: RemoteAttachmentCodec())
-        Client.register(codec: GroupUpdatedCodec())
         await processAction(.xmtpInitialized(client, authorizedResult))
     }
 

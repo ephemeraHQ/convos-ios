@@ -8,9 +8,62 @@ struct SecureEnclaveIdentity {
     let databaseKey: Data
 }
 
-final class SecureEnclaveIdentityStore {
+protocol SecureEnclaveKeyStore {
+    func generateAndSaveDatabaseKey(for identifier: String) throws -> Data
+    func loadDatabaseKey(for identifier: String) throws -> Data?
+
+    var keychainService: String { get }
+}
+
+enum SecureEnclaveKeyStoreError: Error {
+    case failedRetrievingDatabaseKey,
+         failedDeletingDatabaseKey,
+         failedSavingDatabaseKey,
+         failedGeneratingDatabaseKey
+}
+
+extension SecureEnclaveKeyStore {
+    func generateAndSaveDatabaseKey(for identifier: String) throws -> Data {
+        let databaseKey = Data((0..<32).map { _ in UInt8.random(in: UInt8.min...UInt8.max) })
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: identifier,
+            kSecAttrService as String: keychainService,
+            kSecValueData as String: databaseKey,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
+        ]
+        let status = SecItemAdd(query as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw SecureEnclaveKeyStoreError.failedSavingDatabaseKey
+        }
+        return databaseKey
+    }
+
+    func loadDatabaseKey(for identifier: String) throws -> Data? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: identifier,
+            kSecAttrService as String: keychainService,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
+        ]
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        guard status != errSecItemNotFound else { return nil }
+        guard status == errSecSuccess, let data = item as? Data else {
+            throw SecureEnclaveKeyStoreError.failedRetrievingDatabaseKey
+        }
+
+        return data
+    }
+}
+
+final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     private let keychainAccount: String = "com.convos.ios.SecureEnclaveIdentityStore.databaseKey"
-    private let keychainService: String = "com.convos.ios.SecureEnclaveIdentityStore"
+    internal let keychainService: String = "com.convos.ios.SecureEnclaveIdentityStore"
     private let keyTagString: String = "com.convos.ios.SecureEnclaveIdentityStore.secp256k1"
 
     enum SecureEnclaveUserStoreError: Error {
@@ -26,12 +79,12 @@ final class SecureEnclaveIdentityStore {
 
     func save() throws -> SecureEnclaveIdentity {
         let privateKey = try generatePrivateKeyWithBiometry()
-        let databaseKey = try generateAndSaveDatabaseKey()
+        let databaseKey = try generateAndSaveDatabaseKey(for: keychainAccount)
         return SecureEnclaveIdentity(privateKey: privateKey, databaseKey: databaseKey)
     }
 
     func load() throws -> SecureEnclaveIdentity? {
-        guard let databaseKey = try loadDatabaseKey() else {
+        guard let databaseKey = try loadDatabaseKey(for: keychainAccount) else {
             return nil
         }
 
@@ -53,42 +106,6 @@ final class SecureEnclaveIdentityStore {
     }
 
     // MARK: - Private Helpers
-
-    private func generateAndSaveDatabaseKey() throws -> Data {
-        let databaseKey = Data((0..<32).map { _ in UInt8.random(in: UInt8.min...UInt8.max) })
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: keychainAccount,
-            kSecAttrService as String: keychainService,
-            kSecValueData as String: databaseKey,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
-        ]
-        let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw SecureEnclaveUserStoreError.failedSavingDatabaseKey
-        }
-        return databaseKey
-    }
-
-    private func loadDatabaseKey() throws -> Data? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: keychainAccount,
-            kSecAttrService as String: keychainService,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-
-        guard status != errSecItemNotFound else { return nil }
-        guard status == errSecSuccess, let data = item as? Data else {
-            throw SecureEnclaveUserStoreError.failedRetrievingDatabaseKey
-        }
-
-        return data
-    }
 
     private func generatePrivateKeyWithBiometry() throws -> PrivateKey {
         guard let keyTag = keyTagString.data(using: .utf8) else {
