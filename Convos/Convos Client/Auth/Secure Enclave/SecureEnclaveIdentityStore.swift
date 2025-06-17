@@ -43,7 +43,9 @@ extension SecureEnclaveKeyStore {
             let attributesToUpdate: [String: Any] = [
                 kSecValueData as String: databaseKey
             ]
-            let updateStatus = SecItemUpdate(query as CFDictionary, attributesToUpdate as CFDictionary)
+            var updateQuery = query
+            updateQuery.removeValue(forKey: kSecValueData as String)
+            let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributesToUpdate as CFDictionary)
             guard updateStatus == errSecSuccess else {
                 throw SecureEnclaveKeyStoreError.failedSavingDatabaseKey
             }
