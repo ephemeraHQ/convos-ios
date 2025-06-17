@@ -22,7 +22,7 @@ final class MessagingService: MessagingServiceProtocol {
          databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader,
          apiClient: any ConvosAPIClientProtocol,
-         environment: MessagingServiceEnvironment) {
+         environment: AppEnvironment) {
         let userWriter = UserWriter(databaseWriter: databaseWriter)
         let syncingManager = SyncingManager(databaseWriter: databaseWriter,
                                             apiClient: apiClient)

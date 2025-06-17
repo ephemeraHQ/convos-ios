@@ -5,7 +5,7 @@ import SwiftUI
 @Observable
 final class AppViewModel {
     enum AppState {
-        case signedIn, signedOut, loading
+        case signedIn, signedOut, migrating, loading
     }
 
     let convos: ConvosClient
@@ -36,6 +36,8 @@ final class AppViewModel {
                     self.appState = .signedIn
                 case .unauthorized:
                     self.appState = .signedOut
+                case .migrating:
+                    self.appState = .migrating
                 default:
                     break
                 }

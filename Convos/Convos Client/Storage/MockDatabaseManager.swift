@@ -3,6 +3,7 @@ import GRDB
 
 class MockDatabaseManager: DatabaseManagerProtocol {
     static let shared: MockDatabaseManager = MockDatabaseManager()
+    static let previews: MockDatabaseManager = MockDatabaseManager(migrate: false)
 
     let dbPool: DatabaseQueue
 
@@ -14,10 +15,12 @@ class MockDatabaseManager: DatabaseManagerProtocol {
         dbPool as DatabaseReader
     }
 
-    private init() {
+    private init(migrate: Bool = true) {
         do {
             dbPool = try DatabaseQueue(named: "MockDatabase")
-            try SharedDatabaseMigrator.shared.migrate(database: dbPool)
+            if migrate {
+                try SharedDatabaseMigrator.shared.migrate(database: dbPool)
+            }
         } catch {
             fatalError("Failed to initialize database: \(error)")
         }

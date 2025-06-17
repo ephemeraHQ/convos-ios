@@ -25,10 +25,6 @@ protocol MessagingServiceProtocol {
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol
 }
 
-enum MessagingServiceEnvironment {
-    case local, dev, production
-}
-
 enum MessagingServiceState: Equatable {
     case uninitialized
     case initializing

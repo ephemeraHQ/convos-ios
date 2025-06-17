@@ -33,31 +33,16 @@ final class ConvosClient {
 
     static func mock() -> ConvosClient {
         let authService = MockAuthService()
-        let databaseManager = MockDatabaseManager.shared
+        let databaseManager = MockDatabaseManager.previews
         let messagingService = MockMessagingService()
         return .init(authService: authService,
                      messagingService: messagingService,
                      databaseManager: databaseManager)
     }
 
-    static func client(authService: AuthServiceProtocol = TurnkeyAuthService(),
-                       databaseManager: any DatabaseManagerProtocol = DatabaseManager.shared,
-                       environment: MessagingServiceEnvironment) -> ConvosClient {
-        let databaseWriter = databaseManager.dbWriter
-        let databaseReader = databaseManager.dbReader
-        let messagingService = MessagingService(authService: authService,
-                                                databaseWriter: databaseWriter,
-                                                databaseReader: databaseReader,
-                                                apiClient: ConvosAPIClient.shared,
-                                                environment: environment)
-        return .init(authService: authService,
-                     messagingService: messagingService,
-                     databaseManager: databaseManager)
-    }
-
-    private init(authService: any AuthServiceProtocol,
-                 messagingService: any MessagingServiceProtocol,
-                 databaseManager: any DatabaseManagerProtocol) {
+    internal init(authService: any AuthServiceProtocol,
+                  messagingService: any MessagingServiceProtocol,
+                  databaseManager: any DatabaseManagerProtocol) {
         self.authService = authService
         self.messagingService = messagingService
         self.databaseManager = databaseManager

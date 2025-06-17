@@ -6,14 +6,17 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
     struct EnclaveAuthResult: AuthServiceResultType {
         let signingKey: SigningKey
         let databaseKey: Data
+        let databaseDirectory: String
     }
 
     struct EnclaveRegisteredResult: AuthServiceRegisteredResultType {
         let displayName: String
         let signingKey: SigningKey
         let databaseKey: Data
+        let databaseDirectory: String
     }
 
+    private let environment: AppEnvironment
     private let identityStore: SecureEnclaveIdentityStore = .init()
     private let authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
@@ -27,6 +30,10 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
 
     var supportsMultipleAccounts: Bool {
         false
+    }
+
+    init(environment: AppEnvironment) {
+        self.environment = environment
     }
 
     func prepare() async throws {
@@ -43,7 +50,8 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
             EnclaveRegisteredResult(
                 displayName: displayName,
                 signingKey: identity.privateKey,
-                databaseKey: identity.databaseKey
+                databaseKey: identity.databaseKey,
+                databaseDirectory: environment.defaultDatabasesDirectory
             )
         ))
     }
@@ -61,7 +69,8 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
                 authStateSubject.send(.authorized(
                     EnclaveAuthResult(
                         signingKey: identity.privateKey,
-                        databaseKey: identity.databaseKey
+                        databaseKey: identity.databaseKey,
+                        databaseDirectory: environment.defaultDatabasesDirectory
                     )
                 ))
             } else {

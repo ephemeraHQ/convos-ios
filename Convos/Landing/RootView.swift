@@ -36,6 +36,8 @@ struct RootView: View {
             .environment(messagingService)
         case .signedOut:
             OnboardingView(convos: convos)
+        case .migrating:
+            OnboardingMigratingView(convos: convos)
         }
     }
 }

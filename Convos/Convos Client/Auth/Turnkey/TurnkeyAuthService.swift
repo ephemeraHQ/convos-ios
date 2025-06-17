@@ -34,14 +34,6 @@ fileprivate extension SignRawPayloadResult {
     }
 }
 
-extension SessionUser {
-    var databaseKey: Data {
-        get throws {
-            try TurnkeyDatabaseKeyStore.shared.databaseKey(for: id)
-        }
-    }
-}
-
 struct TurnkeySigningKey: SigningKey {
     var identity: XMTPiOS.PublicIdentity {
         guard let walletAddress = primaryWalletAddress else {
@@ -52,24 +44,28 @@ struct TurnkeySigningKey: SigningKey {
     }
 
     private let turnkey: TurnkeyContext = .shared
-    private let user: SessionUser
+    private let wallet: SessionUser.UserWallet
 
-    init(user: SessionUser) {
-        self.user = user
+    init(wallet: SessionUser.UserWallet) {
+        self.wallet = wallet
     }
 
     private var primaryWalletAddress: String? {
-        guard let wallet = user.wallets.first else {
-            Logger.error("Failed returning wallet address: No wallet found")
-            return nil
-        }
-
         guard let account = wallet.accounts.first else {
             Logger.error("Failed returning wallet address: No account found")
             return nil
         }
 
         return account.address
+    }
+
+    var databaseKey: Data {
+        get throws {
+            guard let walletAddress = primaryWalletAddress else {
+                throw TurnkeyAuthServiceError.walletAddressNotFound
+            }
+            return try TurnkeyDatabaseKeyStore.shared.databaseKey(for: walletAddress)
+        }
     }
 
     func sign(_ message: String) async throws -> SignedData {
@@ -100,7 +96,8 @@ struct TurnkeySigningKey: SigningKey {
 enum TurnkeyAuthServiceError: Error {
     case failedFindingPasskeyPresentationAnchor,
          failedCreatingSubOrganization,
-         failedStampingLogin
+         failedStampingLogin,
+         walletAddressNotFound
 }
 
 final class TurnkeyAuthService: AuthServiceProtocol {
@@ -115,6 +112,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
         let databaseKey: Data
     }
 
+    private let environment: AppEnvironment
     private var authState: CurrentValueSubject<AuthServiceState, Never> = .init(.notReady)
     private let apiClient: ConvosAPIClient = .shared
     private let turnkey: TurnkeyContext = .shared
@@ -132,7 +130,8 @@ final class TurnkeyAuthService: AuthServiceProtocol {
         return authState.value
     }
 
-    init() {
+    init(environment: AppEnvironment) {
+        self.environment = environment
         let authStatePublisher: AnyPublisher<AuthServiceState, Never> = turnkey
             .$user
             .removeDuplicates(by: { lhs, rhs in
@@ -146,24 +145,40 @@ final class TurnkeyAuthService: AuthServiceProtocol {
                 }
 
                 guard let user else {
+                    let migration = ReactNativeMigration(environment: environment)
+                    return migration.needsMigration ? .migrating(migration) : .unauthorized
+                }
+
+                guard let wallet = user.wallets.first else {
+                    Logger.error("Wallet not found for Turnkey user, unauthorized")
                     return .unauthorized
                 }
 
-                let signingKey = TurnkeySigningKey(user: user)
+                let signingKey = TurnkeySigningKey(wallet: wallet)
+                let userIdentifier = signingKey.identity.identifier
+                if case let .migrating(migration) = state {
+                    do {
+                        try migration.performMigration(for: userIdentifier)
+                    } catch {
+                        Logger.error("Failed performing migration for user \(userIdentifier): \(error)")
+                        return .migrating(migration)
+                    }
+                }
+
                 do {
-                    let databaseKey = try user.databaseKey
+                    let databaseKey = try signingKey.databaseKey
                     switch authFlowType {
                     case .passive, .login:
                         let result = TurnkeyAuthResult(
                             signingKey: signingKey,
-                            databaseKey: databaseKey
+                            databaseKey: databaseKey,
                         )
                         return .authorized(result)
                     case .register(let displayName):
                         let result = TurnkeyRegisteredResult(
                             displayName: displayName,
                             signingKey: signingKey,
-                            databaseKey: databaseKey
+                            databaseKey: databaseKey,
                         )
                         return .registered(result)
                     }
@@ -184,6 +199,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
     // MARK: Public
 
     func prepare() async throws {
+        // check for migration
     }
 
     func signIn() async throws {
@@ -205,7 +221,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
                 name: displayName,
                 displayName: displayName
             ),
-            rp: RelyingParty(id: Secrets.API_RP_ID, name: "Convos"),
+            rp: RelyingParty(id: environment.relyingPartyIdentifier, name: "Convos"),
             presentationAnchor: anchor
         )
 
@@ -249,7 +265,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
         client: TurnkeyClient? = nil
     ) async throws {
         let client = client ?? TurnkeyClient(
-            rpId: Secrets.API_RP_ID,
+            rpId: environment.relyingPartyIdentifier,
             presentationAnchor: anchor
         )
 

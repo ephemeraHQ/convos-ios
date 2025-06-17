@@ -108,11 +108,14 @@
 		7ACA8BD52DE180B800848799 /* Exceptions for "Convos" folder in "ConvosTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Convos Client/AppEnvironment.swift",
 				"Convos Client/Auth/AuthServiceProtocol.swift",
 				"Convos Client/Auth/KeychainService.swift",
+				"Convos Client/Auth/Migrations/ReactNativeMigration.swift",
 				"Convos Client/Auth/MockAuthService.swift",
 				"Convos Client/Auth/Secure Enclave/SecureEnclaveAuthService.swift",
 				"Convos Client/Auth/Secure Enclave/SecureEnclaveIdentityStore.swift",
+				"Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
 				"Convos Client/Convos API/ConvosAPIClient.swift",
 				"Convos Client/Convos API/ConvosAPIClient+Models.swift",
 				"Convos Client/Convos API/MockAPIClient.swift",
@@ -158,6 +161,7 @@
 				"Convos Client/Storage/SharedDatabaseMigrator.swift",
 				"Convos Client/Storage/States/DraftConversationState.swift",
 				"Convos Client/Storage/Writers/ConversationConsentWriter.swift",
+				"Convos Client/Storage/Writers/ConversationLocalStateWriter.swift",
 				"Convos Client/Storage/Writers/ConversationWriter.swift",
 				"Convos Client/Storage/Writers/DraftConversationWriter.swift",
 				"Convos Client/Storage/Writers/IncomingMessageWriter.swift",
@@ -551,7 +555,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.xmtp.ConvosTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -568,7 +572,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.xmtp.ConvosTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -581,6 +585,7 @@
 		D808503E2DC94F4C00E708B0 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = NotificationService/NotificationService.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 12;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -594,7 +599,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.convos.ios.NotificationService;
+				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview.ConvosNSE;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -606,6 +611,7 @@
 		D808503F2DC94F4C00E708B0 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = NotificationService/NotificationService.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 12;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -619,7 +625,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.convos.ios.NotificationService;
+				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview.ConvosNSE;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -649,7 +655,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.convos.ios;
+				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -678,7 +684,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = org.convos.ios;
+				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
