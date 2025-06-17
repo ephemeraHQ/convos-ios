@@ -117,7 +117,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
     private let apiClient: ConvosAPIClient = .shared
     private let turnkey: TurnkeyContext = .shared
     private var passkeyRegistrationTask: Task<Void, Never>?
-    private let defaultSessionExpiration: String = "900" // seconds
+    private let defaultSessionExpiration: String = "\(60 * 24 * 60 * 60)"  // 60 days
     private var cancellables: Set<AnyCancellable> = []
 
     enum AuthFlowType {
@@ -199,7 +199,6 @@ final class TurnkeyAuthService: AuthServiceProtocol {
     // MARK: Public
 
     func prepare() async throws {
-        // check for migration
     }
 
     func signIn() async throws {
