@@ -111,9 +111,11 @@
 				"Convos Client/AppEnvironment.swift",
 				"Convos Client/Auth/AuthServiceProtocol.swift",
 				"Convos Client/Auth/KeychainService.swift",
+				"Convos Client/Auth/Migrations/ReactNativeMigration.swift",
 				"Convos Client/Auth/MockAuthService.swift",
 				"Convos Client/Auth/Secure Enclave/SecureEnclaveAuthService.swift",
 				"Convos Client/Auth/Secure Enclave/SecureEnclaveIdentityStore.swift",
+				"Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
 				"Convos Client/Convos API/ConvosAPIClient.swift",
 				"Convos Client/Convos API/ConvosAPIClient+Models.swift",
 				"Convos Client/Convos API/MockAPIClient.swift",
@@ -159,6 +161,7 @@
 				"Convos Client/Storage/SharedDatabaseMigrator.swift",
 				"Convos Client/Storage/States/DraftConversationState.swift",
 				"Convos Client/Storage/Writers/ConversationConsentWriter.swift",
+				"Convos Client/Storage/Writers/ConversationLocalStateWriter.swift",
 				"Convos Client/Storage/Writers/ConversationWriter.swift",
 				"Convos Client/Storage/Writers/DraftConversationWriter.swift",
 				"Convos Client/Storage/Writers/IncomingMessageWriter.swift",
@@ -552,7 +555,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.xmtp.ConvosTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -569,7 +572,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.xmtp.ConvosTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
