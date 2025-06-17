@@ -9,12 +9,13 @@ class ReactNativeMigration: ConvosMigration {
     private let environment: AppEnvironment
     private var performed: Bool = false
     private let reactNativeSharedDatabaseKeyPrefix: String = "SHARED_DEFAULTS_XMTP_KEY_"
+    private let defaults: UserDefaults = .standard
 
     var needsMigration: Bool {
         guard !performed else {
             return false
         }
-        return UserDefaults.standard
+        return defaults
             .dictionaryRepresentation()
             .keys
             .contains(
@@ -32,19 +33,19 @@ class ReactNativeMigration: ConvosMigration {
         }
 
         let reactNativeSharedDefaultsDatabaseKey = "\(reactNativeSharedDatabaseKeyPrefix)\(userIdentifier)"
-        guard let retrievedDatabaseKeyString = UserDefaults.standard.string(
+        guard let retrievedDatabaseKeyString = defaults.string(
             forKey: reactNativeSharedDefaultsDatabaseKey
         ) else {
             Logger.error("Attempted to perform migration, database key not found")
             return
         }
         guard let retrievedDatabaseKey = Data(base64Encoded: retrievedDatabaseKeyString) else {
-            Logger.error("Failed encoding database key to base64")
+            Logger.error("Failed decoding database key to base64")
             return
         }
         _ = try TurnkeyDatabaseKeyStore.shared.saveDatabaseKey(retrievedDatabaseKey, for: userIdentifier)
 
-        UserDefaults.standard.removeObject(forKey: reactNativeSharedDefaultsDatabaseKey)
+        defaults.removeObject(forKey: reactNativeSharedDefaultsDatabaseKey)
 
         performed = true
     }
