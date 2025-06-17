@@ -17,7 +17,6 @@ class MockDatabaseManager: DatabaseManagerProtocol {
     private init() {
         do {
             dbPool = try DatabaseQueue(named: "MockDatabase")
-            try SharedDatabaseMigrator.shared.migrate(database: dbPool)
         } catch {
             fatalError("Failed to initialize database: \(error)")
         }

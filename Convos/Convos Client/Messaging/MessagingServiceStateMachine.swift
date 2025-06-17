@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import XMTPiOS
 
-private extension MessagingServiceEnvironment {
+private extension AppEnvironment {
     var xmtpEnv: XMTPEnvironment {
         switch self {
         case .local: return .local
@@ -40,7 +40,7 @@ final actor MessagingServiceStateMachine {
     private let apiClient: any ConvosAPIClientProtocol
     private let userWriter: any UserWriterProtocol
     private let syncingManager: any SyncingManagerProtocol
-    private let environment: MessagingServiceEnvironment
+    private let environment: AppEnvironment
 
     private var cancellables: Set<AnyCancellable> = []
 
@@ -99,7 +99,7 @@ final actor MessagingServiceStateMachine {
         apiClient: any ConvosAPIClientProtocol,
         userWriter: any UserWriterProtocol,
         syncingManager: any SyncingManagerProtocol,
-        environment: MessagingServiceEnvironment
+        environment: AppEnvironment
     ) {
         self.authService = authService
         self.apiClient = apiClient
@@ -180,7 +180,8 @@ final actor MessagingServiceStateMachine {
                 RemoteAttachmentCodec(),
                 GroupUpdatedCodec()
             ],
-            dbEncryptionKey: authorizedResult.databaseKey
+            dbEncryptionKey: authorizedResult.databaseKey,
+            dbDirectory: environment.defaultDatabasesDirectory
         )
         if authorizedResult is AuthServiceRegisteredResultType {
             client = try await createXmtpClient(signingKey: authorizedResult.signingKey,
@@ -281,7 +282,7 @@ final actor MessagingServiceStateMachine {
 
     private func createXmtpClient(signingKey: SigningKey,
                                   options: ClientOptions) async throws -> Client {
-        Logger.info("Atteming to create XMTP client, checking for existing...")
+        Logger.info("Attempting to create XMTP client, checking for existing...")
         guard xmtpClient == nil else {
             throw MessagingServiceError.xmtpClientAlreadyInitialized
         }

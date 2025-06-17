@@ -14,6 +14,7 @@ protocol AuthServiceResultType {
 enum AuthServiceState {
     case unknown,
          notReady,
+         migrating(ConvosMigration),
          registered(AuthServiceRegisteredResultType),
          authorized(AuthServiceResultType),
          unauthorized

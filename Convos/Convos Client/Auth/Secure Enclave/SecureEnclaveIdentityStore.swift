@@ -25,6 +25,11 @@ enum SecureEnclaveKeyStoreError: Error {
 extension SecureEnclaveKeyStore {
     func generateAndSaveDatabaseKey(for identifier: String) throws -> Data {
         let databaseKey = Data((0..<32).map { _ in UInt8.random(in: UInt8.min...UInt8.max) })
+        return try saveDatabaseKey(databaseKey, for: identifier)
+    }
+
+    func saveDatabaseKey(_ databaseKey: Data, for identifier: String) throws -> Data {
+        let identifier = identifier.lowercased()
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: identifier,
@@ -33,13 +38,21 @@ extension SecureEnclaveKeyStore {
             kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
         ]
         let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw SecureEnclaveKeyStoreError.failedSavingDatabaseKey
+        if status == errSecDuplicateItem {
+            Logger.info("Database key found for identifier: \(identifier), overwriting...")
+            let attributesToUpdate: [String: Any] = [
+                kSecValueData as String: databaseKey
+            ]
+            let updateStatus = SecItemUpdate(query as CFDictionary, attributesToUpdate as CFDictionary)
+            guard updateStatus == errSecSuccess else {
+                throw SecureEnclaveKeyStoreError.failedSavingDatabaseKey
+            }
         }
         return databaseKey
     }
 
     func loadDatabaseKey(for identifier: String) throws -> Data? {
+        let identifier = identifier.lowercased()
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: identifier,

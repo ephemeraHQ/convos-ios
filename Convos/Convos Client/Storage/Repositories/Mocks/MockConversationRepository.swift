@@ -33,7 +33,7 @@ class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
         Just(conversation).eraseToAnyPublisher()
     }
 
-    private let conversation: Conversation = .mock()
+    private let conversation: Conversation = .mock(id: "draft-123")
 
     func fetchConversation() throws -> Conversation? {
         conversation

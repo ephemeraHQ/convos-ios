@@ -93,9 +93,6 @@ private struct LegalView: View {
 
 #Preview {
     OnboardingView(
-        convos: .client(
-            authService: MockAuthService(),
-            environment: .dev
-        )
+        convos: .mock()
     )
 }

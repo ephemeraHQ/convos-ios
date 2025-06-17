@@ -40,9 +40,9 @@ final class ConvosClient {
                      databaseManager: databaseManager)
     }
 
-    static func client(authService: AuthServiceProtocol = TurnkeyAuthService(),
-                       databaseManager: any DatabaseManagerProtocol = DatabaseManager.shared,
-                       environment: MessagingServiceEnvironment) -> ConvosClient {
+    static func client(databaseManager: any DatabaseManagerProtocol = DatabaseManager.shared,
+                       environment: AppEnvironment) -> ConvosClient {
+        let authService = TurnkeyAuthService(environment: environment)
         let databaseWriter = databaseManager.dbWriter
         let databaseReader = databaseManager.dbReader
         let messagingService = MessagingService(authService: authService,

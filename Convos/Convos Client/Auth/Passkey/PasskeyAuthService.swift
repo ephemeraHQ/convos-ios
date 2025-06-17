@@ -23,19 +23,22 @@ class PasskeyAuthService: AuthServiceProtocol {
         return authStateSubject.eraseToAnyPublisher()
     }
 
+    private let environment: AppEnvironment
     private var authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
     private let passkeyAuth: PasskeyAuth
     private let passkeyIdentityStore: PasskeyIdentityStore = .init()
 
-    init() {
+    init(environment: AppEnvironment) {
         guard let passkeyBaseURL = URL(string: Secrets.PASSKEY_API_BASE_URL) else {
             fatalError("Failed constructing base URL")
         }
 
+        self.environment = environment
+
         do {
             let config = try PasskeyConfiguration(
                 baseURL: passkeyBaseURL,
-                rpID: Secrets.API_RP_ID
+                rpID: environment.relyingPartyIdentifier
             )
             passkeyAuth = PasskeyAuth(configuration: config)
         } catch {
