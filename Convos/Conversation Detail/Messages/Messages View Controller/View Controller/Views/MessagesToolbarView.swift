@@ -43,75 +43,64 @@ struct MessagesToolbarView: View {
     }
 
     var body: some View {
-        HStack(spacing: 0.0) {
-            Button {
-                dismissAction()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 24.0))
-                    .foregroundStyle(.colorTextPrimary)
-                    .padding(.vertical, 10.0)
-                    .padding(.horizontal, DesignConstants.Spacing.step2x)
-            }
-            .padding(.trailing, 2.0)
-
-            Button(action: onInfoTap) {
+        CustomToolbarView(
+            onBack: { dismissAction() },
+            showBackText: false,
+            rightContent: {
                 HStack(spacing: 0) {
-                    if let conversation = conversationState.conversation, !conversation.isDraft {
-                        ConversationAvatarView(conversation: conversation)
-                            .padding(.vertical, avatarVerticalPadding)
-                    }
-                    VStack(alignment: .leading, spacing: 2.0) {
-                        Text(title)
-                            .font(.system(size: 16.0))
-                            .foregroundStyle(.colorTextPrimary)
-                            .lineLimit(1)
-                        if let conversation = conversationState.conversation, conversation.kind == .group {
-                            Text(conversation.membersCountString)
-                                .font(.system(size: 12.0))
-                                .foregroundStyle(.colorTextSecondary)
-                                .lineLimit(1)
+                    // Middle content (avatar and title)
+                    Button(action: onInfoTap) {
+                        HStack(spacing: 0) {
+                            if let conversation = conversationState.conversation, !conversation.isDraft {
+                                ConversationAvatarView(conversation: conversation)
+                                    .padding(.vertical, avatarVerticalPadding)
+                            }
+                            VStack(alignment: .leading, spacing: 2.0) {
+                                Text(title)
+                                    .font(.system(size: 16.0))
+                                    .foregroundStyle(.colorTextPrimary)
+                                    .lineLimit(1)
+                                if let conversation = conversationState.conversation, conversation.kind == .group {
+                                    Text(conversation.membersCountString)
+                                        .font(.system(size: 12.0))
+                                        .foregroundStyle(.colorTextSecondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                            .padding(.leading, DesignConstants.Spacing.step2x)
                         }
                     }
-                    .padding(.leading, DesignConstants.Spacing.step2x)
+                    .buttonStyle(PlainButtonStyle())
+
+                    Spacer()
+
+                    // Right side buttons
+                    if let conversation = conversationState.conversation {
+                        switch conversation.kind {
+                        case .group:
+                            Button {
+                            } label: {
+                                Image(systemName: "qrcode")
+                                    .font(.system(size: 24.0))
+                                    .foregroundStyle(.colorTextPrimary)
+                                    .padding(.vertical, 10.0)
+                                    .padding(.horizontal, DesignConstants.Spacing.step2x)
+                            }
+                        case .dm:
+                            Button {
+                            } label: {
+                                Image(systemName: "timer")
+                                    .font(.system(size: 24.0))
+                                    .foregroundStyle(.colorTextPrimary)
+                                    .padding(.vertical, 10.0)
+                                    .padding(.horizontal, DesignConstants.Spacing.step2x)
+                            }
+                        }
+                    }
                 }
             }
-            .buttonStyle(PlainButtonStyle())
-
-            Spacer()
-
-            if let conversation = conversationState.conversation {
-                switch conversation.kind {
-                case .group:
-                    Button {
-                    } label: {
-                        Image(systemName: "qrcode")
-                            .font(.system(size: 24.0))
-                            .foregroundStyle(.colorTextPrimary)
-                            .padding(.vertical, 10.0)
-                            .padding(.horizontal, DesignConstants.Spacing.step2x)
-                    }
-                case .dm:
-                    Button {
-                    } label: {
-                        Image(systemName: "timer")
-                            .font(.system(size: 24.0))
-                            .foregroundStyle(.colorTextPrimary)
-                            .padding(.vertical, 10.0)
-                            .padding(.horizontal, DesignConstants.Spacing.step2x)
-                    }
-                }
-            }
-        }
+        )
         .frame(height: barHeight)
-        .padding(.leading, DesignConstants.Spacing.step2x)
-        .padding(.trailing, DesignConstants.Spacing.step4x)
-        .background(.colorBackgroundPrimary)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(.colorBorderSubtle2)
-                .frame(height: 1.0)
-        }
     }
 }
 

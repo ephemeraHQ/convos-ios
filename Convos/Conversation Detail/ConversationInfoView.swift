@@ -1,14 +1,23 @@
 import SwiftUI
 
 struct ConversationInfoView: View {
+    @Environment(\.dismiss) private var dismiss: DismissAction
+
     var body: some View {
-        VStack {
-            Text("Conversation Info")
-                .font(.largeTitle)
-                .padding()
-            Spacer()
+        VStack(spacing: 0) {
+            CustomToolbarView(onBack: { dismiss() }, rightContent: {
+                // Add right-side buttons here if needed
+                // Empty for now
+            })
+
+            // Content
+            VStack {
+                Text("Conversation Info")
+                    .font(.largeTitle)
+                    .padding()
+                Spacer()
+            }
         }
-        .navigationTitle("Info")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarHidden(true)
     }
 }
