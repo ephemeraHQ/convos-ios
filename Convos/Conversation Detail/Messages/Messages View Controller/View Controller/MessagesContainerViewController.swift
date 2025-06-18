@@ -175,8 +175,8 @@ class MessagesContainerViewController: UIViewController {
 
     private func updateNavigationBarHeight(_ constraint: NSLayoutConstraint) {
         let baseHeight = traitCollection.verticalSizeClass == .compact ?
-        MessagesToolbarView.Constant.compactHeight :
-        MessagesToolbarView.Constant.regularHeight
+        CustomToolbarConstants.compactHeight :
+        CustomToolbarConstants.regularHeight
         constraint.constant = baseHeight + view.safeAreaInsets.top
     }
 

@@ -6,8 +6,7 @@ struct ConversationInfoView: View {
     var body: some View {
         VStack(spacing: 0) {
             CustomToolbarView(onBack: { dismiss() }, rightContent: {
-                // Add right-side buttons here if needed
-                // Empty for now
+                // Add right-side buttons here
             })
 
             // Content

@@ -1,5 +1,10 @@
 import SwiftUI
 
+enum CustomToolbarConstants {
+    static let regularHeight: CGFloat = 72.0
+    static let compactHeight: CGFloat = 52.0
+}
+
 struct CustomToolbarView<Content: View>: View {
     let onBack: () -> Void
     let rightContent: Content
@@ -20,6 +25,16 @@ struct CustomToolbarView<Content: View>: View {
         self.rightContent = rightContent()
     }
 
+    var barHeight: CGFloat {
+        verticalSizeClass == .compact ? CustomToolbarConstants.compactHeight : CustomToolbarConstants.regularHeight
+    }
+
+    var backButtonVerticalPadding: CGFloat {
+        verticalSizeClass == .compact ?
+        DesignConstants.Spacing.step2x :
+        DesignConstants.Spacing.step4x
+    }
+
     var body: some View {
         HStack(spacing: 0.0) {
             Button(action: onBack) {
@@ -34,9 +49,8 @@ struct CustomToolbarView<Content: View>: View {
                     }
                 }
                 .foregroundStyle(.colorTextPrimary)
-                .padding(.vertical, DesignConstants.Spacing.step2x)
-                .padding(.leading, DesignConstants.Spacing.step4x)
-                .padding(.trailing, DesignConstants.Spacing.step2x)
+                .padding(.vertical, backButtonVerticalPadding)
+                .padding(.horizontal, DesignConstants.Spacing.step2x)
             }
             .padding(.trailing, 2.0)
 
@@ -44,8 +58,8 @@ struct CustomToolbarView<Content: View>: View {
 
             rightContent
         }
-        .frame(height: 72.0)
-        .padding(.leading, DesignConstants.Spacing.step2x)
+        .frame(height: barHeight)
+        .padding(.leading, DesignConstants.Spacing.step4x)
         .padding(.trailing, DesignConstants.Spacing.step2x)
         .background(.colorBackgroundPrimary)
         .overlay(alignment: .bottom) {
@@ -111,7 +125,7 @@ struct CustomToolbarView<Content: View>: View {
                         .font(.system(size: 24.0))
                         .foregroundStyle(.colorTextPrimary)
                         .padding(.vertical, 10.0)
-                        .padding(.horizontal, DesignConstants.Spacing.step2x)
+                        .padding(.horizontal, DesignConstants.Spacing.step4x)
                 })
             }
         })

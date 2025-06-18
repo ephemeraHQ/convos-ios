@@ -18,13 +18,8 @@ struct MessagesToolbarView: View {
 
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
 
-    enum Constant {
-        static let regularHeight: CGFloat = 72.0
-        static let compactHeight: CGFloat = 52.0
-    }
-
     var barHeight: CGFloat {
-        verticalSizeClass == .compact ? Constant.compactHeight : Constant.regularHeight
+        verticalSizeClass == .compact ? CustomToolbarConstants.compactHeight : CustomToolbarConstants.regularHeight
     }
 
     var avatarVerticalPadding: CGFloat {
@@ -55,29 +50,34 @@ struct MessagesToolbarView: View {
             rightContent: {
                 HStack(spacing: 0) {
                     // Middle content (avatar and title)
-                    Button(action: onInfoTap) {
-                        HStack(spacing: 0) {
-                            if let conversation = conversationState.conversation, !conversation.isDraft {
-                                ConversationAvatarView(conversation: conversation)
-                                    .padding(.vertical, avatarVerticalPadding)
-                            }
-                            VStack(alignment: .leading, spacing: 2.0) {
-                                Text(title)
-                                    .font(.system(size: 16.0))
-                                    .foregroundStyle(.colorTextPrimary)
-                                    .lineLimit(1)
-                                if let conversation = conversationState.conversation, conversation.kind == .group {
-                                    Text(conversation.membersCountString)
-                                        .font(.system(size: 12.0))
-                                        .foregroundStyle(.colorTextSecondary)
-                                        .lineLimit(1)
-                                }
-                            }
-                            .padding(.leading, needsAvatarSpacing ? DesignConstants.Spacing.step2x : 0)
+                    let contentView = HStack(spacing: 0) {
+                        if let conversation = conversationState.conversation, !conversation.isDraft {
+                            ConversationAvatarView(conversation: conversation)
+                                .padding(.vertical, avatarVerticalPadding)
                         }
+                        VStack(alignment: .leading, spacing: 2.0) {
+                            Text(title)
+                                .font(.system(size: 16.0))
+                                .foregroundStyle(.colorTextPrimary)
+                                .lineLimit(1)
+                            if let conversation = conversationState.conversation, conversation.kind == .group {
+                                Text(conversation.membersCountString)
+                                    .font(.system(size: 12.0))
+                                    .foregroundStyle(.colorTextSecondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .padding(.leading, needsAvatarSpacing ? DesignConstants.Spacing.step2x : 0)
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .disabled(conversationState.conversation?.isDraft ?? true)
+
+                    if conversationState.conversation?.isDraft == false {
+                        Button(action: onInfoTap) {
+                            contentView
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    } else {
+                        contentView
+                    }
 
                     Spacer()
 
