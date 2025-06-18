@@ -77,6 +77,7 @@ struct MessagesToolbarView: View {
                         }
                     }
                     .buttonStyle(PlainButtonStyle())
+                    .disabled(conversationState.conversation?.isDraft ?? true)
 
                     Spacer()
 
