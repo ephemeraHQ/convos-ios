@@ -7,6 +7,7 @@ struct ConversationView: View {
     let conversationConsentWriter: any ConversationConsentWriterProtocol
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
     let conversationState: ConversationState
+    @State private var showInfo: Bool = false
 
     init(
         conversationRepository: any ConversationRepositoryProtocol,
@@ -28,12 +29,17 @@ struct ConversationView: View {
             conversationState: conversationState,
             outgoingMessageWriter: outgoingMessageWriter,
             conversationConsentWriter: conversationConsentWriter,
-            conversationLocalStateWriter: conversationLocalStateWriter
-        ) {
-            MessagesView(
-                messagesRepository: messagesRepository
-            )
-            .ignoresSafeArea()
+            conversationLocalStateWriter: conversationLocalStateWriter,
+            content: {
+                MessagesView(
+                    messagesRepository: messagesRepository
+                )
+                .ignoresSafeArea()
+            },
+            onInfoTap: { showInfo = true }
+        )
+        .navigationDestination(isPresented: $showInfo) {
+            ConversationInfoView()
         }
     }
 }

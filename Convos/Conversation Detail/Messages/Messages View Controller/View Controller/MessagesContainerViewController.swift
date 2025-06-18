@@ -51,14 +51,16 @@ class MessagesContainerViewController: UIViewController {
          sendMessage: @escaping () -> Void,
          textBinding: Binding<String>,
          joinConversation: @escaping () -> Void,
-         deleteConversation: @escaping () -> Void) {
+         deleteConversation: @escaping () -> Void,
+         onInfoTap: @escaping () -> Void) {
         self.conversationState = conversationState
         self.outgoingMessageWriter = outgoingMessageWriter
         self.conversationConsentWriter = conversationConsentWriter
         self.conversationLocalStateWriter = conversationLocalStateWriter
         self.navigationBar = MessagesToolbarViewHost(
             conversationState: conversationState,
-            dismissAction: dismissAction
+            dismissAction: dismissAction,
+            onInfoTap: onInfoTap
         )
         self.messagesInputView = MessagesInputView(sendMessage: sendMessage)
         self.joinConversationInputView = .init(

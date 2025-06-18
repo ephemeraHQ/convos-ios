@@ -29,14 +29,16 @@ struct ConversationComposerView: View {
             conversationState: conversationState,
             outgoingMessageWriter: draftConversationComposer.draftConversationWriter,
             conversationConsentWriter: draftConversationComposer.conversationConsentWriter,
-            conversationLocalStateWriter: draftConversationComposer.conversationLocalStateWriter
-        ) {
-            ConversationComposerContentView(
-                composerState: conversationComposerState,
-                profileSearchText: $conversationComposerState.searchText,
-                selectedProfile: $conversationComposerState.selectedProfile
-            )
-        }
+            conversationLocalStateWriter: draftConversationComposer.conversationLocalStateWriter,
+            content: {
+                ConversationComposerContentView(
+                    composerState: conversationComposerState,
+                    profileSearchText: $conversationComposerState.searchText,
+                    selectedProfile: $conversationComposerState.selectedProfile
+                )
+            },
+            onInfoTap: {}
+        )
     }
 }
 

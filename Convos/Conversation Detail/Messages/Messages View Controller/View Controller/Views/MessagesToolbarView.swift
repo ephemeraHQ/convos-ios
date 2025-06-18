@@ -4,13 +4,16 @@ struct MessagesToolbarView: View {
     let conversationState: ConversationState
     let emptyConversationTitle: String
     let dismissAction: DismissAction
+    let onInfoTap: () -> Void
 
     init(conversationState: ConversationState,
          emptyConversationTitle: String = "New chat",
-         dismissAction: DismissAction) {
+         dismissAction: DismissAction,
+         onInfoTap: @escaping () -> Void) {
         self.conversationState = conversationState
         self.emptyConversationTitle = emptyConversationTitle
         self.dismissAction = dismissAction
+        self.onInfoTap = onInfoTap
     }
 
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
@@ -52,24 +55,28 @@ struct MessagesToolbarView: View {
             }
             .padding(.trailing, 2.0)
 
-            if let conversation = conversationState.conversation, !conversation.isDraft {
-                ConversationAvatarView(conversation: conversation)
-                    .padding(.vertical, avatarVerticalPadding)
-            }
-
-            VStack(alignment: .leading, spacing: 2.0) {
-                Text(title)
-                    .font(.system(size: 16.0))
-                    .foregroundStyle(.colorTextPrimary)
-                    .lineLimit(1)
-                if let conversation = conversationState.conversation, conversation.kind == .group {
-                    Text(conversation.membersCountString)
-                        .font(.system(size: 12.0))
-                        .foregroundStyle(.colorTextSecondary)
-                        .lineLimit(1)
+            Button(action: onInfoTap) {
+                HStack(spacing: 0) {
+                    if let conversation = conversationState.conversation, !conversation.isDraft {
+                        ConversationAvatarView(conversation: conversation)
+                            .padding(.vertical, avatarVerticalPadding)
+                    }
+                    VStack(alignment: .leading, spacing: 2.0) {
+                        Text(title)
+                            .font(.system(size: 16.0))
+                            .foregroundStyle(.colorTextPrimary)
+                            .lineLimit(1)
+                        if let conversation = conversationState.conversation, conversation.kind == .group {
+                            Text(conversation.membersCountString)
+                                .font(.system(size: 12.0))
+                                .foregroundStyle(.colorTextSecondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .padding(.leading, DesignConstants.Spacing.step2x)
                 }
             }
-            .padding(.leading, DesignConstants.Spacing.step2x)
+            .buttonStyle(PlainButtonStyle())
 
             Spacer()
 
@@ -119,5 +126,7 @@ struct MessagesToolbarView: View {
     )
     MessagesToolbarView(
         conversationState: conversationState, dismissAction: dismiss
-    )
+    ) {
+        // Placeholder for onInfoTap
+    }
 }
