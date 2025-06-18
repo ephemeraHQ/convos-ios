@@ -4,27 +4,20 @@ struct CustomToolbarView<Content: View>: View {
     let onBack: () -> Void
     let rightContent: Content
     let showBackText: Bool
+    let showBottomBorder: Bool
 
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
 
     init(
         onBack: @escaping () -> Void,
         showBackText: Bool = true,
+        showBottomBorder: Bool = false,
         @ViewBuilder rightContent: () -> Content
     ) {
         self.onBack = onBack
         self.showBackText = showBackText
+        self.showBottomBorder = showBottomBorder
         self.rightContent = rightContent()
-    }
-
-    var backButtonVerticalPadding: CGFloat {
-        verticalSizeClass == .compact ?
-        DesignConstants.Spacing.step2x :
-        DesignConstants.Spacing.step4x
-    }
-
-    var backButtonHorizontalPadding: CGFloat {
-        showBackText ? DesignConstants.Spacing.step4x : DesignConstants.Spacing.step2x
     }
 
     var body: some View {
@@ -41,8 +34,9 @@ struct CustomToolbarView<Content: View>: View {
                     }
                 }
                 .foregroundStyle(.colorTextPrimary)
-                .padding(.vertical, backButtonVerticalPadding)
-                .padding(.horizontal, backButtonHorizontalPadding)
+                .padding(.vertical, DesignConstants.Spacing.step2x)
+                .padding(.leading, DesignConstants.Spacing.step4x)
+                .padding(.trailing, DesignConstants.Spacing.step2x)
             }
             .padding(.trailing, 2.0)
 
@@ -54,50 +48,71 @@ struct CustomToolbarView<Content: View>: View {
         .padding(.leading, DesignConstants.Spacing.step2x)
         .padding(.trailing, DesignConstants.Spacing.step2x)
         .background(.colorBackgroundPrimary)
+        .overlay(alignment: .bottom) {
+            if showBottomBorder {
+                Rectangle()
+                    .fill(.colorBorderSubtle2)
+                    .frame(height: 1.0)
+            }
+        }
     }
 }
 
-#Preview("With Back Text") {
-    VStack(spacing: 20) {
+#Preview() {
+    VStack(spacing: 0) {
+        // With Back Text
         CustomToolbarView(onBack: {}, rightContent: {
-            // Empty right content
+            EmptyView()
         })
 
-        Spacer()
-    }
-}
-
-#Preview("Without Back Text") {
-    VStack(spacing: 20) {
+        // Without Back Text (chevron only)
         CustomToolbarView(onBack: {}, showBackText: false, rightContent: {
-            // Empty right content
+            EmptyView()
         })
 
-        Spacer()
-    }
-}
+        // New Chat state (no back text, with title and border)
+        CustomToolbarView(onBack: {}, showBackText: false, showBottomBorder: true, rightContent: {
+            HStack(spacing: 0) {
+                Text("New chat")
+                    .font(.system(size: 16.0))
+                    .foregroundStyle(.colorTextPrimary)
+                    .lineLimit(1)
 
-#Preview("With Right Buttons") {
-    VStack(spacing: 20) {
-        CustomToolbarView(onBack: {}, rightContent: {
-            HStack {
-                Button {
-                } label: {
-                    Image(systemName: "ellipsis")
+                Spacer()
+            }
+        })
+
+        // With conversation title and avatar simulation (no border)
+        CustomToolbarView(onBack: {}, showBackText: false, rightContent: {
+            HStack(spacing: 0) {
+                Button(action: {}, label: {
+                    HStack(spacing: 0) {
+                        Circle()
+                            .fill(.blue)
+                            .frame(width: 32, height: 32)
+                            .padding(.vertical, DesignConstants.Spacing.step4x)
+
+                        VStack(alignment: .leading, spacing: 2.0) {
+                            Text("John Doe")
+                                .font(.system(size: 16.0))
+                                .foregroundStyle(.colorTextPrimary)
+                                .lineLimit(1)
+                        }
+                        .padding(.leading, DesignConstants.Spacing.step2x)
+                    }
+                })
+                .buttonStyle(PlainButtonStyle())
+
+                Spacer()
+
+                // Right side button
+                Button(action: {}, label: {
+                    Image(systemName: "timer")
                         .font(.system(size: 24.0))
                         .foregroundStyle(.colorTextPrimary)
                         .padding(.vertical, 10.0)
                         .padding(.horizontal, DesignConstants.Spacing.step2x)
-                }
-
-                Button {
-                } label: {
-                    Image(systemName: "gear")
-                        .font(.system(size: 24.0))
-                        .foregroundStyle(.colorTextPrimary)
-                        .padding(.vertical, 10.0)
-                        .padding(.horizontal, DesignConstants.Spacing.step2x)
-                }
+                })
             }
         })
 

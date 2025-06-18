@@ -42,10 +42,16 @@ struct MessagesToolbarView: View {
         }
     }
 
+    var needsAvatarSpacing: Bool {
+        // Only add spacing when we have a real conversation with an avatar
+        conversationState.conversation?.isDraft == false
+    }
+
     var body: some View {
         CustomToolbarView(
             onBack: { dismissAction() },
             showBackText: false,
+            showBottomBorder: conversationState.conversation?.isDraft ?? true,
             rightContent: {
                 HStack(spacing: 0) {
                     // Middle content (avatar and title)
@@ -67,7 +73,7 @@ struct MessagesToolbarView: View {
                                         .lineLimit(1)
                                 }
                             }
-                            .padding(.leading, DesignConstants.Spacing.step2x)
+                            .padding(.leading, needsAvatarSpacing ? DesignConstants.Spacing.step2x : 0)
                         }
                     }
                     .buttonStyle(PlainButtonStyle())
