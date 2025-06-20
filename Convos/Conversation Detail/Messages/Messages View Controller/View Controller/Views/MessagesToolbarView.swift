@@ -120,9 +120,10 @@ struct MessagesToolbarView: View {
             for: conversationId
         )
     )
+
     MessagesToolbarView(
-        conversationState: conversationState, dismissAction: dismiss
-    ) {
-        // Placeholder for onInfoTap
-    }
+        conversationState: conversationState,
+        dismissAction: dismiss,
+        onInfoTap: {}
+    )
 }

@@ -6,8 +6,8 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
-    @ViewBuilder let content: () -> Content
     let onInfoTap: () -> Void
+    @ViewBuilder let content: () -> Content
 
     @State private var text: String = ""
 
