@@ -6,6 +6,7 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
+    let onInfoTap: () -> Void
     @ViewBuilder let content: () -> Content
 
     @State private var text: String = ""
@@ -22,7 +23,8 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
             sendMessage: sendMessage,
             textBinding: $text,
             joinConversation: joinConversation,
-            deleteConversation: deleteConversation
+            deleteConversation: deleteConversation,
+            onInfoTap: onInfoTap
         )
         viewController.messagesInputView.delegate = context.coordinator
 

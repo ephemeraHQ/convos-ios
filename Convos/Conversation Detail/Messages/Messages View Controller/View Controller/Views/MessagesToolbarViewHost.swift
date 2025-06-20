@@ -10,13 +10,15 @@ class MessagesToolbarViewHost: UIView {
 
     init(conversationState: ConversationState,
          emptyConversationTitle: String = "New chat",
-         dismissAction: DismissAction) {
+         dismissAction: DismissAction,
+         onInfoTap: @escaping () -> Void) {
         self.conversationState = conversationState
         self.emptyConversationTitle = emptyConversationTitle
         let swiftUIView = MessagesToolbarView(
             conversationState: conversationState,
             emptyConversationTitle: emptyConversationTitle,
-            dismissAction: dismissAction
+            dismissAction: dismissAction,
+            onInfoTap: onInfoTap
         )
 
         let hostingController = UIHostingController(rootView: swiftUIView)

@@ -25,11 +25,14 @@ struct ConversationComposerView: View {
     }
 
     var body: some View {
+        let infoTapAction = {}
+
         MessagesContainerView(
             conversationState: conversationState,
             outgoingMessageWriter: draftConversationComposer.draftConversationWriter,
             conversationConsentWriter: draftConversationComposer.conversationConsentWriter,
-            conversationLocalStateWriter: draftConversationComposer.conversationLocalStateWriter
+            conversationLocalStateWriter: draftConversationComposer.conversationLocalStateWriter,
+            onInfoTap: infoTapAction
         ) {
             ConversationComposerContentView(
                 composerState: conversationComposerState,
