@@ -32,12 +32,41 @@ struct Passkey: Codable {
     let attestation: PasskeyAttestation
 }
 
-protocol ConvosAPIClientProtocol {
-    var xmtpClientProvider: (any XMTPClientProvider)? { get }
-    func setXMTPClientProvider(_ provider: (any XMTPClientProvider)?)
-    func authenticate(xmtpInstallationId: String,
-                      xmtpId: String,
-                      xmtpSignature: String) async throws -> String
+protocol ConvosAPIBaseProtocol {
+    // turnkey specific
+    func createSubOrganization(
+        ephemeralPublicKey: String,
+        passkey: Passkey
+    ) async throws -> CreateSubOrganizationResponse
+}
+
+protocol ConvosAPIClientFactoryType {
+    static func client(environment: AppEnvironment) -> any ConvosAPIBaseProtocol
+    static func authenticatedClient(
+        client: any XMTPClientProvider,
+        environment: AppEnvironment
+    ) -> any ConvosAPIClientProtocol
+}
+
+enum ConvosAPIClientFactory: ConvosAPIClientFactoryType {
+    static func client(environment: AppEnvironment) -> any ConvosAPIBaseProtocol {
+        BaseConvosAPIClient(environment: environment)
+    }
+
+    static func authenticatedClient(
+        client: any XMTPClientProvider,
+        environment: AppEnvironment
+    ) -> any ConvosAPIClientProtocol {
+        ConvosAPIClient(client: client, environment: environment)
+    }
+}
+
+protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
+    var identifier: String { get }
+
+    func authenticate(inboxId: String,
+                      installationId: String,
+                      signature: String) async throws -> String
 
     func getUser() async throws -> ConvosAPI.UserResponse
     func createUser(_ requestBody: ConvosAPI.CreateUserRequest) async throws -> ConvosAPI.CreatedUserResponse
@@ -60,60 +89,102 @@ protocol ConvosAPIClientProtocol {
     ) async throws -> String
 }
 
-final class ConvosAPIClient: ConvosAPIClientProtocol {
+internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
     internal let baseURL: URL
-    private let keychainService: KeychainService<ConvosKeychainItem> = .init()
     internal let session: URLSession
-    private(set) var xmtpClientProvider: (any XMTPClientProvider)?
 
-    private let maxRetryCount: Int = 3
-
-    static var shared: ConvosAPIClient = {
-        guard let apiBaseURL = URL(string: Secrets.CONVOS_API_BASE_URL) else {
+    fileprivate init(environment: AppEnvironment) {
+        guard let apiBaseURL = URL(string: environment.apiBaseURL) else {
             fatalError("Failed constructing API base URL")
         }
-        return ConvosAPIClient(baseURL: apiBaseURL)
-    }()
-
-    func setXMTPClientProvider(_ provider: (any XMTPClientProvider)?) {
-        xmtpClientProvider = provider
-    }
-
-    private init(baseURL: URL) {
-        self.baseURL = baseURL
+        self.baseURL = apiBaseURL
         self.session = URLSession(configuration: .default)
     }
 
-    private func reAuthenticate() async throws -> String {
-        guard let client = xmtpClientProvider else {
-            throw APIError.notAuthenticated
-        }
+    func createSubOrganization(
+        ephemeralPublicKey: String,
+        passkey: Passkey
+    ) async throws -> CreateSubOrganizationResponse {
+        let url = baseURL.appendingPathComponent("v1/wallets")
 
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(Secrets.FIREBASE_APP_CHECK_TOKEN, forHTTPHeaderField: "X-Firebase-AppCheck")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let requestBody: [String: Any] = [
+            "ephemeralPublicKey": ephemeralPublicKey,
+            "challenge": passkey.challenge,
+            "attestation": [
+                "credentialId": passkey.attestation.credentialId,
+                "clientDataJson": passkey.attestation.clientDataJson,
+                "attestationObject": passkey.attestation.attestationObject,
+                "transports": passkey.attestation.transports.map { $0.rawValue }
+            ]
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+
+        do {
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
+                throw APIError.authenticationFailed
+            }
+
+            let result = try JSONDecoder().decode(CreateSubOrganizationResponse.self, from: data)
+            return result
+        } catch {
+            throw APIError.serverError(error)
+        }
+    }
+}
+
+final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
+    private let client: any XMTPClientProvider
+    private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
+
+    private let maxRetryCount: Int = 3
+
+    var identifier: String {
+        "\(client.inboxId)-\(client.installationId)"
+    }
+
+    fileprivate init(
+        client: any XMTPClientProvider,
+        environment: AppEnvironment
+    ) {
+        self.client = client
+        super.init(environment: environment)
+    }
+
+    private func reAuthenticate() async throws -> String {
         let installationId = client.installationId
-        let xmtpId = client.inboxId
+        let inboxId = client.inboxId
         let firebaseAppCheckToken = Secrets.FIREBASE_APP_CHECK_TOKEN
         let signatureData = try client.signWithInstallationKey(message: firebaseAppCheckToken)
         let signature = signatureData.hexEncodedString()
 
         return try await authenticate(
-            xmtpInstallationId: installationId,
-            xmtpId: xmtpId,
-            xmtpSignature: signature
+            inboxId: inboxId,
+            installationId: installationId,
+            signature: signature
         )
     }
 
     // MARK: - Authentication
 
-    func authenticate(xmtpInstallationId: String,
-                      xmtpId: String,
-                      xmtpSignature: String) async throws -> String {
+    func authenticate(inboxId: String,
+                      installationId: String,
+                      signature: String) async throws -> String {
         let url = baseURL.appendingPathComponent("v1/authenticate")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
 
-        request.setValue(xmtpInstallationId, forHTTPHeaderField: "X-XMTP-InstallationId")
-        request.setValue(xmtpId, forHTTPHeaderField: "X-XMTP-InboxId")
-        request.setValue("0x\(xmtpSignature)", forHTTPHeaderField: "X-XMTP-Signature")
+        request.setValue(installationId, forHTTPHeaderField: "X-XMTP-InstallationId")
+        request.setValue(inboxId, forHTTPHeaderField: "X-XMTP-InboxId")
+        request.setValue("0x\(signature)", forHTTPHeaderField: "X-XMTP-Signature")
         request.setValue(Secrets.FIREBASE_APP_CHECK_TOKEN, forHTTPHeaderField: "X-Firebase-AppCheck")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -129,7 +200,7 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
         }
 
         let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
-        try keychainService.saveString(authResponse.token, for: .convosJwt)
+        try keychainService.saveString(authResponse.token, for: .init(inboxId: inboxId))
         return authResponse.token
     }
 
@@ -187,7 +258,7 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
         method: String = "GET",
         queryParameters: [String: String]? = nil
     ) throws -> URLRequest {
-        guard let jwt = try keychainService.retrieveString(.convosJwt) else {
+        guard let jwt = try keychainService.retrieveString(.init(inboxId: client.inboxId)) else {
             throw APIError.notAuthenticated
         }
 
@@ -231,7 +302,7 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
                 _ = try await reAuthenticate()
                 // Create a new request with the fresh token
                 var newRequest = request
-                if let jwt = try keychainService.retrieveString(.convosJwt) {
+                if let jwt = try keychainService.retrieveString(.init(inboxId: client.inboxId)) {
                     newRequest.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
                 }
                 // Retry the request with incremented retry count

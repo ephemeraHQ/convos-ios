@@ -4,59 +4,28 @@ import GRDB
 import XMTPiOS
 
 final class MessagingService: MessagingServiceProtocol {
+    private let client: any XMTPClientProvider
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
-    private let stateMachine: MessagingServiceStateMachine
     private let apiClient: any ConvosAPIClientProtocol
     private var cancellables: Set<AnyCancellable> = []
 
-    var state: MessagingServiceState {
-        stateMachine.state
-    }
-
-    var messagingStatePublisher: AnyPublisher<MessagingServiceState, Never> {
-        stateMachine.statePublisher
-    }
-
-    init(authService: any AuthServiceProtocol,
-         databaseWriter: any DatabaseWriter,
-         databaseReader: any DatabaseReader,
+    init(client: any XMTPClientProvider,
          apiClient: any ConvosAPIClientProtocol,
-         environment: AppEnvironment) {
-        let userWriter = UserWriter(databaseWriter: databaseWriter)
-        let syncingManager = SyncingManager(databaseWriter: databaseWriter,
-                                            apiClient: apiClient)
-        self.stateMachine = MessagingServiceStateMachine(
-            authService: authService,
-            apiClient: apiClient,
-            userWriter: userWriter,
-            syncingManager: syncingManager,
-            environment: environment
-        )
+         databaseWriter: any DatabaseWriter,
+         databaseReader: any DatabaseReader) {
+        self.client = client
         self.apiClient = apiClient
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
-
-        // Subscribe to XMTP client changes
-        stateMachine.clientPublisher
-            .sink { [weak self] client in
-                self?.apiClient.setXMTPClientProvider(client)
-            }
-            .store(in: &cancellables)
-    }
-
-    // MARK: User
-
-    func userRepository() -> any UserRepositoryProtocol {
-        UserRepository(dbReader: databaseReader)
     }
 
     // MARK: Profile Search
 
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
         ProfileSearchRepository(
-            apiClient: apiClient,
-            clientPublisher: stateMachine.clientPublisher
+            client: client,
+            apiClient: apiClient
         )
     }
 
@@ -65,7 +34,7 @@ final class MessagingService: MessagingServiceProtocol {
     func draftConversationComposer() -> any DraftConversationComposerProtocol {
         let clientConversationId: String = DBConversation.generateDraftConversationId()
         let draftConversationWriter = DraftConversationWriter(
-            clientPublisher: stateMachine.clientPublisher,
+            client: client,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             draftConversationId: clientConversationId
@@ -77,8 +46,8 @@ final class MessagingService: MessagingServiceProtocol {
                 writer: draftConversationWriter
             ),
             profileSearchRepository: ProfileSearchRepository(
-                apiClient: apiClient,
-                clientPublisher: stateMachine.clientPublisher
+                client: client,
+                apiClient: apiClient
             ),
             conversationConsentWriter: conversationConsentWriter(),
             conversationLocalStateWriter: conversationLocalStateWriter()
@@ -99,7 +68,7 @@ final class MessagingService: MessagingServiceProtocol {
     }
 
     func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
-        ConversationConsentWriter(databaseWriter: databaseWriter, clientPublisher: clientPublisher)
+        ConversationConsentWriter(databaseWriter: databaseWriter, client: client)
     }
 
     func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol {
@@ -114,7 +83,7 @@ final class MessagingService: MessagingServiceProtocol {
     }
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
-        OutgoingMessageWriter(clientPublisher: stateMachine.clientPublisher,
+        OutgoingMessageWriter(client: client,
                               databaseWriter: databaseWriter,
                               conversationId: conversationId)
     }
@@ -122,14 +91,13 @@ final class MessagingService: MessagingServiceProtocol {
     // MARK: - Group Management
 
     func groupMetadataWriter() -> any GroupMetadataWriterProtocol {
-        GroupMetadataWriter(databaseWriter: databaseWriter,
-                            clientPublisher: stateMachine.clientPublisher)
+        GroupMetadataWriter(client: client,
+                            databaseWriter: databaseWriter)
     }
 
     func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
-        GroupPermissionsRepository(databaseReader: databaseReader,
-                                   clientPublisher: stateMachine.clientPublisher,
-                                   userRepository: userRepository())
+        GroupPermissionsRepository(client: client,
+                                   databaseReader: databaseReader)
     }
 
     func uploadImage(data: Data, filename: String) async throws -> String {
@@ -151,19 +119,5 @@ final class MessagingService: MessagingServiceProtocol {
             filename: filename,
             afterUpload: afterUpload
         )
-    }
-
-    // MARK: State Machine
-
-    var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
-        stateMachine.clientPublisher
-    }
-
-    func start() async throws {
-        try await stateMachine.start()
-    }
-
-    func stop() async {
-        await stateMachine.stop()
     }
 }

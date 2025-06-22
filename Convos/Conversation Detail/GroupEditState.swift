@@ -4,7 +4,7 @@ import SwiftUI
 @Observable
 class GroupEditState {
     private let conversation: Conversation
-    private let messagingService: any MessagingServiceProtocol
+    private let groupMetadataWriter: any GroupMetadataWriterProtocol
 
     // Form state
     private var _groupName: String
@@ -59,9 +59,9 @@ class GroupEditState {
                hasImageChange
     }
 
-    init(conversation: Conversation, messagingService: any MessagingServiceProtocol) {
+    init(conversation: Conversation, groupMetadataWriter: any GroupMetadataWriterProtocol) {
         self.conversation = conversation
-        self.messagingService = messagingService
+        self.groupMetadataWriter = groupMetadataWriter
         self._groupName = conversation.name ?? ""
         self._groupDescription = conversation.description ?? ""
     }
@@ -150,18 +150,15 @@ class GroupEditState {
     }
 
     private func updateGroupName() async throws {
-        let metadataWriter = messagingService.groupMetadataWriter()
-        try await metadataWriter.updateGroupName(groupId: conversation.id, name: groupName)
+        try await groupMetadataWriter.updateGroupName(groupId: conversation.id, name: groupName)
     }
 
     private func updateGroupDescription() async throws {
-        let metadataWriter = messagingService.groupMetadataWriter()
-        try await metadataWriter.updateGroupDescription(groupId: conversation.id, description: groupDescription)
+        try await groupMetadataWriter.updateGroupDescription(groupId: conversation.id, description: groupDescription)
     }
 
     private func updateGroupImage(imageURL: String) async throws {
-        let metadataWriter = messagingService.groupMetadataWriter()
-        try await metadataWriter.updateGroupImageUrl(groupId: conversation.id, imageUrl: imageURL)
+        try await groupMetadataWriter.updateGroupImageUrl(groupId: conversation.id, imageUrl: imageURL)
     }
 
     @MainActor
@@ -195,12 +192,13 @@ class GroupEditState {
             throw GroupImageError.importFailed
         }
 
-        _ = try await messagingService.uploadImageAndExecute(
-            data: compressedImageData,
-            filename: filename) { uploadedURL in
-            try await self.updateGroupImage(imageURL: uploadedURL)
-            ImageCache.shared.setImageForConversation(uploadedImage, conversationId: self.conversation.id)
-        }
+        // @jarodl fix this
+//        _ = try await messagingService.uploadImageAndExecute(
+//            data: compressedImageData,
+//            filename: filename) { uploadedURL in
+//            try await self.updateGroupImage(imageURL: uploadedURL)
+//            ImageCache.shared.setImageForConversation(uploadedImage, conversationId: self.conversation.id)
+//        }
     }
 
     @MainActor

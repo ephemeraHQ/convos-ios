@@ -20,22 +20,18 @@ protocol GroupMetadataWriterProtocol {
 // MARK: - Group Metadata Writer Implementation
 
 final class GroupMetadataWriter: GroupMetadataWriterProtocol {
+    private let client: any XMTPClientProvider
     private let databaseWriter: any DatabaseWriter
-    private let clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never>
 
-    init(databaseWriter: any DatabaseWriter,
-         clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never>) {
+    init(client: any XMTPClientProvider,
+         databaseWriter: any DatabaseWriter) {
+        self.client = client
         self.databaseWriter = databaseWriter
-        self.clientPublisher = clientPublisher
     }
 
     // MARK: - Group Metadata Updates
 
     func updateGroupName(groupId: String, name: String) async throws {
-        guard let client = await getCurrentClient() else {
-            throw GroupMetadataError.clientNotAvailable
-        }
-
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
@@ -57,10 +53,6 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     }
 
     func updateGroupDescription(groupId: String, description: String) async throws {
-        guard let client = await getCurrentClient() else {
-            throw GroupMetadataError.clientNotAvailable
-        }
-
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
@@ -82,10 +74,6 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     }
 
     func updateGroupImageUrl(groupId: String, imageUrl: String) async throws {
-        guard let client = await getCurrentClient() else {
-            throw GroupMetadataError.clientNotAvailable
-        }
-
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
@@ -109,10 +97,6 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     // MARK: - Member Management
 
     func addGroupMembers(groupId: String, memberInboxIds: [String]) async throws {
-        guard let client = await getCurrentClient() else {
-            throw GroupMetadataError.clientNotAvailable
-        }
-
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
@@ -138,10 +122,6 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     }
 
     func removeGroupMembers(groupId: String, memberInboxIds: [String]) async throws {
-        guard let client = await getCurrentClient() else {
-            throw GroupMetadataError.clientNotAvailable
-        }
-
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
@@ -165,10 +145,6 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     // MARK: - Admin Management
 
     func promoteToAdmin(groupId: String, memberInboxId: String) async throws {
-        guard let client = await getCurrentClient() else {
-            throw GroupMetadataError.clientNotAvailable
-        }
-
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
@@ -191,10 +167,6 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     }
 
     func demoteFromAdmin(groupId: String, memberInboxId: String) async throws {
-        guard let client = await getCurrentClient() else {
-            throw GroupMetadataError.clientNotAvailable
-        }
-
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
@@ -216,10 +188,6 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     }
 
     func promoteToSuperAdmin(groupId: String, memberInboxId: String) async throws {
-        guard let client = await getCurrentClient() else {
-            throw GroupMetadataError.clientNotAvailable
-        }
-
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
@@ -241,10 +209,6 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     }
 
     func demoteFromSuperAdmin(groupId: String, memberInboxId: String) async throws {
-        guard let client = await getCurrentClient() else {
-            throw GroupMetadataError.clientNotAvailable
-        }
-
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
@@ -263,21 +227,6 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
         }
 
         Logger.info("Demoted \(memberInboxId) from super admin in group \(groupId)")
-    }
-
-    // MARK: - Private Helper Methods
-
-    private func getCurrentClient() async -> (any XMTPClientProvider)? {
-        return await withCheckedContinuation { continuation in
-            let cancellable = clientPublisher
-                .first()
-                .sink { client in
-                    continuation.resume(returning: client)
-                }
-
-            // Keep the cancellable alive until the continuation resumes
-            _ = cancellable
-        }
     }
 }
 

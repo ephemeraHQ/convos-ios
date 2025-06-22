@@ -120,9 +120,11 @@
 				"Convos Client/Convos API/ConvosAPIClient+Models.swift",
 				"Convos Client/Convos API/MockAPIClient.swift",
 				"Convos Client/ConvosClient.swift",
+				"Convos Client/Inboxes/InboxStateMachine.swift",
+				"Convos Client/Inboxes/MockInboxesService.swift",
+				"Convos Client/Inboxes/SessionManagerProtocol.swift",
 				"Convos Client/Messaging/MessagingService.swift",
 				"Convos Client/Messaging/MessagingServiceProtocol.swift",
-				"Convos Client/Messaging/MessagingServiceStateMachine.swift",
 				"Convos Client/Messaging/MockMessagingService.swift",
 				"Convos Client/Messaging/SyncingManager.swift",
 				"Convos Client/Messaging/XMTPClientProvider.swift",
@@ -133,11 +135,12 @@
 				"Convos Client/Storage/DatabaseManager.swift",
 				"Convos Client/Storage/Dependency Bundles/ConversationComposer.swift",
 				"Convos Client/Storage/Hydration/DBConversationDetails+Conversation.swift",
+				"Convos Client/Storage/Hydration/DBInboxDetails+Inbox.swift",
 				"Convos Client/Storage/Hydration/DBMessage+MessagePreview.swift",
 				"Convos Client/Storage/Hydration/DBProfile+Profile.swift",
 				"Convos Client/Storage/MockDatabaseManager.swift",
 				"Convos Client/Storage/Models/Conversation.swift",
-				"Convos Client/Storage/Models/Database+CurrentUser.swift",
+				"Convos Client/Storage/Models/Database+CurrentSession.swift",
 				"Convos Client/Storage/Models/Member.swift",
 				"Convos Client/Storage/Models/Message.swift",
 				"Convos Client/Storage/Models/Profile.swift",
@@ -145,29 +148,31 @@
 				"Convos Client/Storage/Repositories/ConversationRepository.swift",
 				"Convos Client/Storage/Repositories/ConversationsCountRepository.swift",
 				"Convos Client/Storage/Repositories/ConversationsRepository.swift",
+				"Convos Client/Storage/Repositories/CurrentSessionRepository.swift",
 				"Convos Client/Storage/Repositories/DB XMTP Representations/Consent+ConsentState.swift",
 				"Convos Client/Storage/Repositories/DraftConversationRepository.swift",
+				"Convos Client/Storage/Repositories/InboxesRepository.swift",
+				"Convos Client/Storage/Repositories/InboxRepository.swift",
 				"Convos Client/Storage/Repositories/MessagesRepository.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockConversationConsentWriter.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockConversationRepository.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockConversationsRepository.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockDraftConversationWriter.swift",
+				"Convos Client/Storage/Repositories/Mocks/MockInboxesRepository.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockMessagesRepository.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockOutgoingMessageWriter.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockProfileSearchRepository.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockUserRepository.swift",
 				"Convos Client/Storage/Repositories/ProfileSearchRepository.swift",
-				"Convos Client/Storage/Repositories/UserRepository.swift",
 				"Convos Client/Storage/SharedDatabaseMigrator.swift",
 				"Convos Client/Storage/States/DraftConversationState.swift",
 				"Convos Client/Storage/Writers/ConversationConsentWriter.swift",
 				"Convos Client/Storage/Writers/ConversationLocalStateWriter.swift",
 				"Convos Client/Storage/Writers/ConversationWriter.swift",
 				"Convos Client/Storage/Writers/DraftConversationWriter.swift",
+				"Convos Client/Storage/Writers/InboxWriter.swift",
 				"Convos Client/Storage/Writers/IncomingMessageWriter.swift",
 				"Convos Client/Storage/Writers/MemberProfileWriter.swift",
 				"Convos Client/Storage/Writers/OutgoingMessageWriter.swift",
-				"Convos Client/Storage/Writers/UserWriter.swift",
 				"Convos Client/Storage/XMTP DB Representations/DecodedMessage+DBRepresentation.swift",
 				"Convos Client/Storage/XMTP DB Representations/MessageDeliveryStatus+DBRepresentation.swift",
 				"Convos Client/Storage/XMTP DB Representations/Reaction+DBRepresentation.swift",
@@ -430,6 +435,7 @@
 				TargetAttributes = {
 					7ACA8BA22DE16DE200848799 = {
 						CreatedOnToolsVersion = 16.3;
+						TestTargetID = D8A2B6902DA4BA4B00EF8577;
 					};
 					D80850332DC94F4C00E708B0 = {
 						CreatedOnToolsVersion = 16.3;
@@ -561,13 +567,14 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.xmtp.ConvosTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.convos.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Convos.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Convos";
 			};
 			name = Debug;
 		};
@@ -578,13 +585,14 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.xmtp.ConvosTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.convos.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Convos.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Convos";
 			};
 			name = Release;
 		};
@@ -655,7 +663,7 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -684,7 +692,7 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

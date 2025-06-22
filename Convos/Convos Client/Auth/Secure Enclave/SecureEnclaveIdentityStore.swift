@@ -4,6 +4,7 @@ import Security
 import XMTPiOS
 
 struct SecureEnclaveIdentity {
+    let id: String
     let privateKey: PrivateKey
     let databaseKey: Data
 }
@@ -95,7 +96,11 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     func save() throws -> SecureEnclaveIdentity {
         let privateKey = try generatePrivateKeyWithBiometry()
         let databaseKey = try generateAndSaveDatabaseKey(for: keychainAccount)
-        return SecureEnclaveIdentity(privateKey: privateKey, databaseKey: databaseKey)
+        return SecureEnclaveIdentity(
+            id: keychainAccount,
+            privateKey: privateKey,
+            databaseKey: databaseKey
+        )
     }
 
     func load() throws -> SecureEnclaveIdentity? {
@@ -104,7 +109,11 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         }
 
         let privateKey = try loadPrivateKeyWithBiometry()
-        return SecureEnclaveIdentity(privateKey: privateKey, databaseKey: databaseKey)
+        return SecureEnclaveIdentity(
+            id: keychainAccount,
+            privateKey: privateKey,
+            databaseKey: databaseKey
+        )
     }
 
     func delete() throws {

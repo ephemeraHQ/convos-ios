@@ -31,9 +31,6 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
         return ValueObservation
             .tracking { [weak self] db in
                 guard let self else { return [] }
-                guard let currentUser = try db.currentUser() else {
-                    return []
-                }
                 guard let dbConversation = try DBConversation
                     .filter(Column("clientConversationId") == draftConversationId)
                     .detailedConversationQuery()
@@ -41,7 +38,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
                     return []
                 }
                 return dbConversation
-                    .hydrateConversation(currentUser: currentUser)
+                    .hydrateConversation()
                     .members
             }
             .publisher(in: dbReader)
@@ -80,10 +77,6 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
 
 fileprivate extension Database {
     func composeConversation(for conversationId: String) throws -> Conversation? {
-        guard let currentUser = try currentUser() else {
-            throw CurrentSessionError.missingCurrentUser
-        }
-
         guard let dbConversation = try DBConversation
             .filter(Column("clientConversationId") == conversationId)
             .detailedConversationQuery()
@@ -91,8 +84,6 @@ fileprivate extension Database {
             return nil
         }
 
-        return dbConversation.hydrateConversation(
-            currentUser: currentUser
-        )
+        return dbConversation.hydrateConversation()
     }
 }

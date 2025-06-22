@@ -16,10 +16,22 @@ extension PrivateKey {
     }
 }
 
-struct MockUser: AuthServiceResultType, AuthServiceRegisteredResultType, Codable {
+struct MockAuthResult: AuthServiceResultType, AuthServiceRegisteredResultType, Codable {
+    var inbox: any AuthServiceInboxType {
+        AuthServiceInbox(
+            providerId: id,
+            signingKey: privateKey,
+            databaseKey: databaseKey
+        )
+    }
+
     var profile: Profile
     var id: String
     let privateKey: PrivateKey!
+
+    var inboxes: [any AuthServiceInboxType] {
+        [inbox]
+    }
 
     var displayName: String {
         profile.name
@@ -83,9 +95,9 @@ class MockAuthService: AuthServiceProtocol {
 
     private let persist: Bool
     private let keychain: KeychainService<MockKeychainItem> = .init()
-    private var _currentUser: MockUser?
+    private var _currentUser: MockAuthResult?
 
-    var currentUser: MockUser? {
+    var currentUser: MockAuthResult? {
         _currentUser
     }
 
@@ -116,14 +128,14 @@ class MockAuthService: AuthServiceProtocol {
     }
 
     func register(displayName: String) async throws {
-        let mockUser = MockUser(name: displayName)
+        let mockAuthResult = MockAuthResult(name: displayName)
         if persist {
             let encoder = JSONEncoder()
-            let data = try encoder.encode(mockUser)
+            let data = try encoder.encode(mockAuthResult)
             try keychain.saveData(data, for: .mockUser)
         }
-        _currentUser = mockUser
-        authStateSubject.send(.registered(mockUser))
+        _currentUser = mockAuthResult
+        authStateSubject.send(.registered(mockAuthResult))
     }
 
     func signOut() async throws {
@@ -134,16 +146,16 @@ class MockAuthService: AuthServiceProtocol {
         authStateSubject.send(.unauthorized)
     }
 
-    private func getCurrentUser() throws -> MockUser? {
+    private func getCurrentUser() throws -> MockAuthResult? {
         guard persist else { return nil }
         guard let mockUserData = try keychain.retrieveData(.mockUser) else {
             authStateSubject.send(.unauthorized)
             return nil
         }
         let jsonDecoder = JSONDecoder()
-        let mockUser = try jsonDecoder.decode(MockUser.self,
-                                              from: mockUserData)
-        return mockUser
+        let mockAuthResult = try jsonDecoder.decode(MockAuthResult.self,
+                                                    from: mockUserData)
+        return mockAuthResult
     }
 }
 

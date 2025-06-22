@@ -8,118 +8,89 @@ struct ConversationsListView: View {
              conversation(Conversation)
     }
 
-    @Environment(\.dismiss) private var dismissAction: DismissAction
-    @Environment(MessagingServiceObservable.self)
-    private var messagingService: MessagingServiceObservable
+    private let session: any SessionManagerProtocol
+    @State var viewModel: ConversationsListViewModel
+    let onSignOut: () -> Void
 
-    let convos: ConvosClient
-    var userState: UserState
-    var conversationsState: ConversationsListState
+    @Environment(\.dismiss) private var dismissAction: DismissAction
     @State private var path: [Route] = []
 
-    init(convos: ConvosClient,
-         userRepository: any UserRepositoryProtocol,
-         conversationsRepository: any ConversationsRepositoryProtocol) {
-        self.convos = convos
-        self.userState = .init(userRepository: userRepository)
-        let securityLineConversationsCountRepo = convos.messaging.conversationsCountRepo(for: .securityLine)
-        self.conversationsState = .init(
+    init(session: any SessionManagerProtocol,
+         onSignOut: @escaping () -> Void) {
+        self.session = session
+        let conversationsRepository = session.conversationsRepository(for: .all)
+        let securityLineConversationsCountRepo = session.conversationsCountRepo(for: .securityLine)
+        self.viewModel = .init(
             conversationsRepository: conversationsRepository,
             securityLineConversationsCountRepo: securityLineConversationsCountRepo
         )
+        self.onSignOut = onSignOut
     }
 
     var body: some View {
         NavigationStack(path: $path) {
-            VStack(spacing: 0) {
-                ConversationsListNavigationBar(
-                    userState: userState,
-                    isComposeEnabled: messagingService.canStartConversation,
-                    isSignOutEnabled: convos.supportsMultipleAccounts,
-                    onCompose: {
-                        path.append(.composer(AnyDraftConversationComposer(messagingService
-                            .messagingService
-                            .draftConversationComposer())))
-                    },
-                    onSignOut: {
-                        Task {
-                            do {
-                                try await convos.signOut()
-                            } catch {
-                                Logger.error("Error signing out: \(error)")
-                            }
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    if viewModel.securityLineConversationsCount != 0 {
+                        NavigationLink(value: Route.securityLine) {
+                            SecurityLineListItem(count: viewModel.securityLineConversationsCount)
                         }
                     }
-                )
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        if conversationsState.securityLineConversationsCount != 0 {
-                            NavigationLink(value: Route.securityLine) {
-                                SecurityLineListItem(count: conversationsState.securityLineConversationsCount)
-                            }
-                        }
 
-                        ForEach(conversationsState.unpinnedConversations) { conversation in
-                            NavigationLink(value: Route.conversation(conversation)) {
-                                ConversationsListItem(conversation: conversation)
-                            }
-                        }
-                    }
-                    .navigationDestination(for: Route.self) { route in
-                        switch route {
-                        case .composer(let draftConversationComposer):
-                            ConversationComposerView(
-                                draftConversationComposer: draftConversationComposer
-                            )
-                            .ignoresSafeArea()
-                            .toolbarVisibility(.hidden, for: .navigationBar)
-                        case .securityLine:
-                            SecurityLineView(
-                                messagingService: convos.messaging,
-                                path: $path
-                            )
-                            .toolbarVisibility(.hidden, for: .navigationBar)
-                        case .conversation(let conversation):
-                            let conversationRepository = convos.messaging.conversationRepository(
-                                for: conversation.id
-                            )
-                            let messagesRepository = convos.messaging.messagesRepository(
-                                for: conversation.id
-                            )
-                            let messageWriter = convos.messaging.messageWriter(
-                                for: conversation.id
-                            )
-                            let consentWriter = convos.messaging.conversationConsentWriter()
-                            let localStateWriter = convos.messaging.conversationLocalStateWriter()
-                            ConversationView(
-                                conversationRepository: conversationRepository,
-                                messagesRepository: messagesRepository,
-                                outgoingMessageWriter: messageWriter,
-                                conversationConsentWriter: consentWriter,
-                                conversationLocalStateWriter: localStateWriter,
-                                messagingService: convos.messaging
-                            )
-                            .ignoresSafeArea()
-                            .toolbarVisibility(.hidden, for: .navigationBar)
+                    ForEach(viewModel.unpinnedConversations) { conversation in
+                        NavigationLink(value: Route.conversation(conversation)) {
+                            ConversationsListItem(conversation: conversation)
                         }
                     }
                 }
-                .background(.colorBackgroundPrimary)
+                .navigationDestination(for: Route.self) { route in
+                    switch route {
+                    case .composer(let draftConversationComposer):
+                        ConversationComposerView(
+                            draftConversationComposer: draftConversationComposer
+                        )
+                        .ignoresSafeArea()
+                    case .securityLine:
+                        SecurityLineView(
+                            session: session,
+                            path: $path
+                        )
+                    case .conversation(let conversation):
+                        EmptyView()
+                        //                            let messagingService = try! inboxesService.messagingService(for: conversation.inboxId)
+                        //                            let conversationRepository = messagingService.conversationRepository(
+                        //                                for: conversation.id
+                        //                            )
+                        //                            let messagesRepository = messagingService.messagesRepository(
+                        //                                for: conversation.id
+                        //                            )
+                        //                            let messageWriter = messagingService.messageWriter(
+                        //                                for: conversation.id
+                        //                            )
+                        //                            let consentWriter = messagingService.conversationConsentWriter()
+                        //                            let localStateWriter = messagingService.conversationLocalStateWriter()
+                        //                            ConversationView(
+                        //                                conversationRepository: conversationRepository,
+                        //                                messagesRepository: messagesRepository,
+                        //                                outgoingMessageWriter: messageWriter,
+                        //                                conversationConsentWriter: consentWriter,
+                        //                                conversationLocalStateWriter: localStateWriter
+                        //                            )
+                        //                            .ignoresSafeArea()
+                    }
+                }
             }
+            .navigationTitle("Convos")
+            .toolbarTitleDisplayMode(.inlineLarge)
         }
     }
 }
 
 #Preview {
     let convos = ConvosClient.mock()
-    let messagingService = MessagingServiceObservable(messagingService: convos.messaging)
-    let userRepository = convos.messaging.userRepository()
-    let conversationsRepository = convos.messaging.conversationsRepository(for: .allowed)
 
     ConversationsListView(
-        convos: convos,
-        userRepository: userRepository,
-        conversationsRepository: conversationsRepository
+        session: convos.session,
+        onSignOut: {}
     )
-    .environment(messagingService)
 }

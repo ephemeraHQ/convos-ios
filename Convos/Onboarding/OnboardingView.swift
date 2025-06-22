@@ -22,12 +22,10 @@ struct OnboardingView: View {
 
                 Spacer()
 
-                if viewModel.authAllowsSignIn {
-                    Button("Sign in") {
-                        viewModel.signIn()
-                    }
-                    .convosButtonStyle(.text)
+                Button("Sign in") {
+                    viewModel.signIn()
                 }
+                .convosButtonStyle(.text)
             }
             .padding(.leading, DesignConstants.Spacing.step3x)
             .padding(.top, 10.0)

@@ -113,12 +113,8 @@ struct MessagesToolbarView: View {
 
 #Preview {
     @Previewable @Environment(\.dismiss) var dismiss: DismissAction
-    let convos = ConvosClient.mock()
-    let conversationId: String = "1"
     let conversationState = ConversationState(
-        conversationRepository: convos.messaging.conversationRepository(
-            for: conversationId
-        )
+        conversationRepository: MockConversationRepository()
     )
 
     MessagesToolbarView(

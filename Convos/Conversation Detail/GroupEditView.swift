@@ -37,18 +37,18 @@ extension PhotosPickerItem {
 
 struct GroupEditView: View {
     let conversation: Conversation
-    let messagingService: any MessagingServiceProtocol
+    let groupMetadataWriter: any GroupMetadataWriterProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     @State private var editState: GroupEditState
     @FocusState private var isDescriptionFocused: Bool
 
-    init(conversation: Conversation, messagingService: any MessagingServiceProtocol) {
+    init(conversation: Conversation, groupMetadataWriter: any GroupMetadataWriterProtocol) {
         self.conversation = conversation
-        self.messagingService = messagingService
+        self.groupMetadataWriter = groupMetadataWriter
         self._editState = State(initialValue: GroupEditState(
             conversation: conversation,
-            messagingService: messagingService
+            groupMetadataWriter: groupMetadataWriter
         ))
     }
 
@@ -256,6 +256,7 @@ struct GroupEditView: View {
 
     let groupConversation = Conversation(
         id: "group1",
+        inboxId: UUID().uuidString,
         creator: members[0],
         createdAt: Date(),
         consent: .allowed,
@@ -276,6 +277,6 @@ struct GroupEditView: View {
 
     GroupEditView(
         conversation: groupConversation,
-        messagingService: MockMessagingService()
+        groupMetadataWriter: MockGroupMetadataWriter()
     )
 }
