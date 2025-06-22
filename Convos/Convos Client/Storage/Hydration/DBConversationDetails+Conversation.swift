@@ -1,7 +1,7 @@
 import Foundation
 
 extension DBConversationDetails {
-    func hydrateConversation(currentUser: User) -> Conversation {
+    func hydrateConversation() -> Conversation {
         let lastMessage: MessagePreview? = conversationLastMessage?.hydrateMessagePreview(
             conversationKind: conversation.kind
         )
@@ -10,7 +10,7 @@ extension DBConversationDetails {
         let otherMemberProfile: Profile?
         if conversation.kind == .dm,
             let otherProfile = conversationMemberProfiles.first(
-                where: { $0.inboxId != currentUser.inboxId }) {
+                where: { $0.inboxId != conversation.inboxId }) {
             otherMemberProfile = otherProfile.hydrateProfile()
         } else {
             otherMemberProfile = nil
@@ -27,11 +27,12 @@ extension DBConversationDetails {
         }
 
         let members = conversationMemberProfiles
-            .filter { $0.inboxId != currentUser.inboxId }
+            .filter { $0.inboxId != conversation.inboxId }
             .map { $0.hydrateProfile() }
 
         return Conversation(
             id: conversation.id,
+            inboxId: conversation.inboxId,
             creator: creatorProfile,
             createdAt: conversation.createdAt,
             consent: conversation.consent,

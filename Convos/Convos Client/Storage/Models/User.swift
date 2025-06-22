@@ -1,90 +1,81 @@
 import Foundation
 import GRDB
 
-struct DBUser: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
-    let id: String
-    let inboxId: String
-
-    static let databaseTableName: String = "user"
-
-    static let profile: HasOneAssociation<DBUser, UserProfile> = hasOne(
-        UserProfile.self,
-        key: "userProfile"
-    )
-
-    private static let _member: HasOneAssociation<DBUser, Member> = hasOne(
-        Member.self,
-        key: "userMember"
-    )
-
-    static let memberProfile: HasOneThroughAssociation<DBUser, MemberProfile> = hasOne(
-        MemberProfile.self,
-        through: _member.forKey("userMember"),
-        using: Member.profile,
-        key: "userMemberProfile"
-    )
-
-    static let identities: HasManyAssociation<DBUser, Identity> = hasMany(
-        Identity.self,
-        key: "userIdentities",
-        using: ForeignKey(["userId"], to: ["id"])
-    )
-}
-
-struct User: Codable, Identifiable, Hashable {
-    let id: String
+struct Inbox: Codable, Identifiable, Hashable {
+    var id: String { inboxId }
     let inboxId: String
     let identities: [Identity]
     let profile: Profile
 }
 
+struct DBInbox: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
+    static let databaseTableName: String = "inbox"
+
+    var id: String { inboxId }
+    let inboxId: String
+    let providerId: String
+
+    static let identities: HasManyAssociation<DBInbox, Identity> = hasMany(
+        Identity.self,
+        key: "inboxIdentities",
+        using: ForeignKey(["inboxId"], to: ["inboxId"])
+    )
+
+    private static let _member: HasOneAssociation<DBInbox, Member> = hasOne(
+        Member.self,
+        key: "inboxMember"
+    )
+
+    static let memberProfile: HasOneThroughAssociation<DBInbox, MemberProfile> = hasOne(
+        MemberProfile.self,
+        through: _member.forKey("inboxMember"),
+        using: Member.profile,
+        key: "inboxMemberProfile"
+    )
+}
+
+struct DBInboxDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
+    let inbox: DBInbox
+    let inboxIdentities: [Identity]
+    let inboxMemberProfile: MemberProfile
+}
+
 struct Identity: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
     let id: String
-    let userId: String
+    let inboxId: String
     let walletAddress: String
-    let xmtpId: String?
 
-    static let userForeignKey: ForeignKey = ForeignKey(["userId"])
+    static let inboxForeignKey: ForeignKey = ForeignKey(["inboxId"])
 
-    static let user: BelongsToAssociation<Identity, DBUser> = belongsTo(
-        DBUser.self,
-        key: "identityUser",
-        using: userForeignKey
+    static let inbox: BelongsToAssociation<Identity, DBInbox> = belongsTo(
+        DBInbox.self,
+        key: "identityInbox",
+        using: inboxForeignKey
     )
 }
 
 struct Session: Codable, FetchableRecord, PersistableRecord, TableRecord, Identifiable {
     static let databaseTableName: String = "session"
     var id: Int64 = 1
-    var userId: String
 
-    static let user: BelongsToAssociation<Session, DBUser> = belongsTo(
-        DBUser.self,
-        key: "sessionUser",
-        using: ForeignKey(["userId"], to: ["id"])
+    static let inboxes: HasManyAssociation<Session, DBInbox> = hasMany(
+        DBInbox.self,
+        key: "sessionInboxes",
+        using: ForeignKey(["inboxId"], to: ["inboxId"])
     )
 
-    static let identities: HasManyThroughAssociation<Session, Identity> = hasMany(
-        Identity.self,
-        through: user.forKey("identitiesUser"),
-        using: DBUser.identities,
-        key: "sessionIdentities"
-    )
-
-    static let profile: HasOneThroughAssociation<Session, UserProfile> = hasOne(
-        UserProfile.self,
-        through: user.forKey("profileUser"),
-        using: DBUser.profile,
-        key: "sessionProfile"
+    static let profiles: HasManyThroughAssociation<Session, MemberProfile> = hasMany(
+        MemberProfile.self,
+        through: inboxes.forKey("profilesInboxes"),
+        using: DBInbox.memberProfile,
+        key: "sessionMemberProfiles"
     )
 }
 
 struct CurrentSessionDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
-    let sessionUser: DBUser
-    let sessionIdentities: [Identity]
-    let sessionProfile: UserProfile
+    let sessionInboxes: [DBInbox]
 }
 
-enum CurrentSessionError: Error {
-    case missingCurrentUser
+struct CurrentSession: Codable, Hashable {
+    let inboxes: [Inbox]
 }

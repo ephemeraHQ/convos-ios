@@ -46,14 +46,14 @@ struct ConversationView: View {
 }
 
 #Preview {
-    let convos = ConvosClient.mock()
+    let messaging = MockMessagingService()
     let conversationId: String = "1"
     ConversationView(
-        conversationRepository: convos.messaging.conversationRepository(for: conversationId),
-        messagesRepository: convos.messaging.messagesRepository(for: conversationId),
-        outgoingMessageWriter: convos.messaging.messageWriter(for: conversationId),
-        conversationConsentWriter: convos.messaging.conversationConsentWriter(),
-        conversationLocalStateWriter: convos.messaging.conversationLocalStateWriter()
+        conversationRepository: messaging.conversationRepository(for: conversationId),
+        messagesRepository: messaging.messagesRepository(for: conversationId),
+        outgoingMessageWriter: messaging.messageWriter(for: conversationId),
+        conversationConsentWriter: messaging.conversationConsentWriter(),
+        conversationLocalStateWriter: messaging.conversationLocalStateWriter()
     )
     .ignoresSafeArea()
 }

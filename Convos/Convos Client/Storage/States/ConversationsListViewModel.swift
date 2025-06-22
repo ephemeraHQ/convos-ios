@@ -3,9 +3,11 @@ import Foundation
 import Observation
 
 @Observable
-final class ConversationsListState {
+final class ConversationsListViewModel {
     private(set) var conversations: [Conversation]
     private(set) var securityLineConversationsCount: Int
+
+    var selectedInbox: Inbox?
 
     var pinnedConversations: [Conversation] {
         conversations.filter { $0.isPinned }

@@ -1,9 +1,8 @@
 import SwiftUI
 
 struct ConversationsListNavigationBar: View {
-    @State var userState: UserState
-    let isComposeEnabled: Bool
-    let isSignOutEnabled: Bool
+    @Binding var selectedInbox: Inbox?
+    let inboxes: [Inbox]
 
     let onCompose: () -> Void
     let onSignOut: () -> Void
@@ -12,23 +11,30 @@ struct ConversationsListNavigationBar: View {
         HStack(spacing: 0.0) {
             HStack(spacing: DesignConstants.Spacing.step4x) {
                 HStack(spacing: DesignConstants.Spacing.step2x) {
-                    if let user = userState.currentUser {
-                        ProfileAvatarView(profile: user.profile)
+                    if let selectedInbox {
+                        ProfileAvatarView(profile: selectedInbox.profile)
                             .frame(maxHeight: 24.0)
+
+                        Text(selectedInbox.profile.name)
+                            .font(.system(size: 16.0, weight: .regular))
+                            .foregroundColor(.colorTextPrimary)
+                            .padding(.vertical, 10.0)
+                    } else {
+                        MonogramView()
+                            .frame(maxHeight: 24.0)
+
+                        Text("Convos")
+                            .font(.system(size: 16.0, weight: .regular))
+                            .foregroundColor(.colorTextPrimary)
+                            .padding(.vertical, 10.0)
                     }
-                    Text(userState.currentUser?.profile.name ?? "")
-                        .font(.system(size: 16.0, weight: .regular))
-                        .foregroundColor(.colorTextPrimary)
-                        .padding(.vertical, 10.0)
                 }
                 .padding(.horizontal, DesignConstants.Spacing.step2x)
-                .applyIf(isSignOutEnabled) { view in
-                    view.contextMenu {
-                        Button(role: .destructive) {
-                            onSignOut()
-                        } label: {
-                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                        }
+                .contextMenu {
+                    Button(role: .destructive) {
+                        onSignOut()
+                    } label: {
+                        Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
 
@@ -42,7 +48,6 @@ struct ConversationsListNavigationBar: View {
                             .font(.system(size: 24.0))
                             .padding(.bottom, 4.0) // vertical align based on square
                     }
-                    .disabled(isComposeEnabled)
                 }
                 .foregroundColor(.colorTextPrimary)
                 .padding(.horizontal, DesignConstants.Spacing.step2x)
@@ -54,14 +59,12 @@ struct ConversationsListNavigationBar: View {
 }
 
 #Preview {
-    @Previewable @State var userState: UserState = .init(
-        userRepository: MockUserRepository()
-    )
+    @Previewable @State var selectedInbox: Inbox? = nil
+    @Previewable @State var inboxes: [Inbox] = []
 
     ConversationsListNavigationBar(
-        userState: userState,
-        isComposeEnabled: true,
-        isSignOutEnabled: true,
+        selectedInbox: $selectedInbox,
+        inboxes: inboxes,
         onCompose: {},
         onSignOut: {}
     )

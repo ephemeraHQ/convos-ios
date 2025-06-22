@@ -3,19 +3,6 @@ import Foundation
 import XMTPiOS
 
 class SecureEnclaveAuthService: AuthServiceProtocol {
-    struct EnclaveAuthResult: AuthServiceResultType {
-        let signingKey: SigningKey
-        let databaseKey: Data
-        let databaseDirectory: String
-    }
-
-    struct EnclaveRegisteredResult: AuthServiceRegisteredResultType {
-        let displayName: String
-        let signingKey: SigningKey
-        let databaseKey: Data
-        let databaseDirectory: String
-    }
-
     private let environment: AppEnvironment
     private let identityStore: SecureEnclaveIdentityStore = .init()
     private let authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
@@ -26,10 +13,6 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
 
     var authStatePublisher: AnyPublisher<AuthServiceState, Never> {
         authStateSubject.eraseToAnyPublisher()
-    }
-
-    var supportsMultipleAccounts: Bool {
-        false
     }
 
     init(environment: AppEnvironment) {
@@ -47,11 +30,13 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
     func register(displayName: String) async throws {
         let identity = try identityStore.save()
         authStateSubject.send(.registered(
-            EnclaveRegisteredResult(
+            AuthServiceRegisteredResult(
                 displayName: displayName,
-                signingKey: identity.privateKey,
-                databaseKey: identity.databaseKey,
-                databaseDirectory: environment.defaultDatabasesDirectory
+                inbox: AuthServiceInbox(
+                    providerId: identity.id,
+                    signingKey: identity.privateKey,
+                    databaseKey: identity.databaseKey
+                )
             )
         ))
     }
@@ -67,10 +52,14 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
         do {
             if let identity = try identityStore.load() {
                 authStateSubject.send(.authorized(
-                    EnclaveAuthResult(
-                        signingKey: identity.privateKey,
-                        databaseKey: identity.databaseKey,
-                        databaseDirectory: environment.defaultDatabasesDirectory
+                    AuthServiceResult(
+                        inboxes: [
+                            AuthServiceInbox(
+                                providerId: identity.id,
+                                signingKey: identity.privateKey,
+                                databaseKey: identity.databaseKey
+                            )
+                        ]
                     )
                 ))
             } else {

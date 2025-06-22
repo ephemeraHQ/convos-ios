@@ -15,6 +15,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
 
     enum Columns {
         static let id: Column = Column(CodingKeys.id)
+        static let inboxId: Column = Column(CodingKeys.inboxId)
         static let clientConversationId: Column = Column(CodingKeys.clientConversationId)
         static let creatorId: Column = Column(CodingKeys.creatorId)
         static let kind: Column = Column(CodingKeys.kind)
@@ -26,6 +27,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     }
 
     let id: String
+    let inboxId: String
     let clientConversationId: String // always the same, used for conversation drafts
     let creatorId: String
     let kind: ConversationKind
@@ -107,6 +109,7 @@ extension DBConversation {
     func with(id: String) -> Self {
         .init(
             id: id,
+            inboxId: inboxId,
             clientConversationId: clientConversationId,
             creatorId: creatorId,
             kind: kind,
@@ -121,6 +124,7 @@ extension DBConversation {
     func with(clientConversationId: String) -> Self {
         .init(
             id: id,
+            inboxId: inboxId,
             clientConversationId: clientConversationId,
             creatorId: creatorId,
             kind: kind,
@@ -135,6 +139,7 @@ extension DBConversation {
     func with(kind: ConversationKind) -> Self {
         .init(
             id: id,
+            inboxId: inboxId,
             clientConversationId: clientConversationId,
             creatorId: creatorId,
             kind: kind,
@@ -149,6 +154,7 @@ extension DBConversation {
     func with(consent: Consent) -> Self {
         .init(
             id: id,
+            inboxId: inboxId,
             clientConversationId: clientConversationId,
             creatorId: creatorId,
             kind: kind,
@@ -266,6 +272,7 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
 
 struct Conversation: Codable, Hashable, Identifiable {
     let id: String
+    let inboxId: String
     let creator: Profile
     let createdAt: Date
     let consent: Consent

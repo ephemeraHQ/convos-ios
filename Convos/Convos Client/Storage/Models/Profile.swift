@@ -1,18 +1,6 @@
 import Foundation
 import GRDB
 
-struct UserProfile: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
-    var id: String { userId }
-    let userId: String // DBUser.id
-    let name: String
-    let username: String
-    let avatar: String?
-
-    static let user: BelongsToAssociation<UserProfile, DBUser> = belongsTo(
-        DBUser.self
-    )
-}
-
 struct MemberProfile: Codable, FetchableRecord, PersistableRecord, Hashable {
     let inboxId: String
     let name: String
