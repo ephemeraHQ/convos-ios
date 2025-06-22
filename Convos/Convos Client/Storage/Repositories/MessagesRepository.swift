@@ -90,16 +90,12 @@ extension Array where Element == MessageWithDetails {
                          in conversation: Conversation) throws -> [AnyMessage] {
         let dbMessagesWithDetails = self
 
-        guard let currentUser = try database.currentUser() else {
-            return []
-        }
-
         return try dbMessagesWithDetails.compactMap { dbMessageWithDetails -> AnyMessage? in
             let dbMessage = dbMessageWithDetails.message
             let dbReactions = dbMessageWithDetails.messageReactions
             let dbSender = dbMessageWithDetails.messageSenderProfile
             let sender: Profile = dbSender.hydrateProfile()
-            let isCurrentUser: Bool = dbSender.inboxId == currentUser.inboxId
+            let isCurrentUser: Bool = dbSender.inboxId == conversation.inboxId
             let source: MessageSource = isCurrentUser ? .outgoing : .incoming
             let reactions: [MessageReaction] = dbReactions.map {
                 .init(id: $0.clientMessageId,
@@ -181,10 +177,6 @@ extension Array where Element == MessageWithDetails {
 
 fileprivate extension Database {
     func composeMessages(for conversationId: String) throws -> [AnyMessage] {
-        guard let currentUser = try currentUser() else {
-            return []
-        }
-
         guard let dbConversationDetails = try DBConversation
             .filter(Column("id") == conversationId)
             .including(required: DBConversation.creatorProfile)
@@ -195,9 +187,7 @@ fileprivate extension Database {
             return []
         }
 
-        let conversation = dbConversationDetails.hydrateConversation(
-            currentUser: currentUser
-        )
+        let conversation = dbConversationDetails.hydrateConversation()
         let dbMessages = try DBMessage
             .filter(Column("conversationId") == conversationId)
             .including(required: DBMessage.senderProfile)

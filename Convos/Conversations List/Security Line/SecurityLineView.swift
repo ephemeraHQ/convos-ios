@@ -9,21 +9,21 @@ struct SecurityLineView: View {
     @Binding var path: [ConversationsListView.Route]
     private let conversationsState: ConversationsState
     private let deniedConversationsCount: ConversationsCountState
-    private let consentStateWriter: any ConversationConsentWriterProtocol
+//    private let consentStateWriter: any ConversationConsentWriterProtocol
     let title: String = "Security line"
     let subtitle: String? = nil
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
     @Environment(\.dismiss) private var dismiss: DismissAction
 
-    init(messagingService: any MessagingServiceProtocol, path: Binding<[ConversationsListView.Route]>) {
+    init(session: any SessionManagerProtocol, path: Binding<[ConversationsListView.Route]>) {
         conversationsState = .init(
-            conversationsRepository: messagingService.conversationsRepository(for: .securityLine)
+            conversationsRepository: session.conversationsRepository(for: .securityLine)
         )
         deniedConversationsCount = .init(
-            conversationsCountRepository: messagingService.conversationsCountRepo(for: .denied)
+            conversationsCountRepository: session.conversationsCountRepo(for: .denied)
         )
         _path = path
-        self.consentStateWriter = messagingService.conversationConsentWriter()
+//        self.consentStateWriter = inboxesService.conversationConsentWriter()
     }
 
     var barHeight: CGFloat {
@@ -50,66 +50,25 @@ struct SecurityLineView: View {
                 }
             }
         }
-        .safeAreaInset(edge: .bottom) {
-            if !deniedConversationsCount.isEmpty {
-                DeniedConversationsListItem(count: deniedConversationsCount.count)
-            }
-        }
-        .safeAreaInset(edge: .top) {
-            HStack(spacing: 0.0) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 24.0))
-                        .foregroundStyle(.colorTextPrimary)
-                        .padding(.vertical, 10.0)
-                        .padding(.horizontal, DesignConstants.Spacing.step2x)
-                }
-                .padding(.trailing, 2.0)
-
-                VStack(alignment: .leading, spacing: 2.0) {
-                    Text(title)
-                        .font(.system(size: 16.0))
-                        .foregroundStyle(.colorTextPrimary)
-                        .lineLimit(1)
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(.system(size: 12.0))
-                            .foregroundStyle(.colorTextSecondary)
-                            .lineLimit(1)
-                    }
-                }
-                .padding(.leading, DesignConstants.Spacing.step2x)
-
-                Spacer()
-
-                Button {
+        .navigationTitle("Security")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(id: "delete", placement: .topBarTrailing) {
+                Button("Delete All", systemImage: "trash") {
                     Task {
                         do {
-                            try await consentStateWriter.deleteAll()
+                            //                            try await consentStateWriter.deleteAll()
                         } catch {
                             Logger.error("Error deleting all conversations: \(error)")
                         }
                     }
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 24.0))
-                        .foregroundStyle(.colorTextPrimary)
-                        .padding(.vertical, 10.0)
-                        .padding(.horizontal, DesignConstants.Spacing.step2x)
                 }
                 .disabled(conversationsState.conversations.isEmpty)
             }
-            .padding(.leading, DesignConstants.Spacing.step2x)
-            .padding(.trailing, DesignConstants.Spacing.step4x)
-            .padding(.vertical, DesignConstants.Spacing.step4x)
-            .frame(height: barHeight)
-            .background(.colorBackgroundPrimary)
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(.colorBorderSubtle2)
-                    .frame(height: 1.0)
+        }
+        .safeAreaInset(edge: .bottom) {
+            if !deniedConversationsCount.isEmpty {
+                DeniedConversationsListItem(count: deniedConversationsCount.count)
             }
         }
     }
@@ -121,9 +80,8 @@ struct SecurityLineView: View {
 
     NavigationStack {
         SecurityLineView(
-            messagingService: convos.messaging,
+            session: convos.session,
             path: $path
         )
-        .toolbarVisibility(.hidden, for: .navigationBar)
     }
 }

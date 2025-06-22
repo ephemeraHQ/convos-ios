@@ -45,8 +45,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
-    private weak var clientProvider: XMTPClientProvider?
-    private var cancellable: AnyCancellable?
+    private let client: any XMTPClientProvider
     private let isSendingValue: CurrentValueSubject<Bool, Never> = .init(false)
     private let sentMessageSubject: PassthroughSubject<String, Never> = .init()
 
@@ -73,25 +72,17 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         conversationIdSubject.eraseToAnyPublisher()
     }
 
-    init(clientPublisher: AnyPublisher<XMTPClientProvider?, Never>,
+    init(client: any XMTPClientProvider,
          databaseReader: any DatabaseReader,
          databaseWriter: any DatabaseWriter,
          draftConversationId: String) {
-        Logger.info("Initializing DraftConversationWriter")
+        self.client = client
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
         self.state = .draft(id: draftConversationId)
         self.conversationIdSubject = .init(draftConversationId)
         self.draftConversationId = draftConversationId
-        cancellable = clientPublisher.sink { [weak self] clientProvider in
-            guard let self else { return }
-            self.clientProvider = clientProvider
-        }
         removeOldDraftConversations()
-    }
-
-    deinit {
-        cancellable?.cancel()
     }
 
     private func removeOldDraftConversations() {
@@ -113,14 +104,10 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                 .filter(Column("clientConversationId") == draftConversationId)
                 .fetchOne(db)
 
-            guard let currentUser = try db.currentUser() else {
-                return nil
-            }
-
             var memberInboxIds = try conversation?.request(for: DBConversation.memberProfiles)
                 .fetchAll(db)
                 .map { $0.inboxId } ?? []
-            memberInboxIds.append(currentUser.inboxId)
+            memberInboxIds.append(client.inboxId)
             guard let conversation = try DBConversation.findConversationWith(
                 members: memberInboxIds, db: db
             ) else {
@@ -135,20 +122,18 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             throw DraftConversationWriterError.modifyingMembersOnExistingConversation
         }
 
-        let conversation: DBConversation? = try await databaseReader.read { [weak self] db in
-            guard let self else { return nil }
+        let inboxId = client.inboxId
+        let conversation: DBConversation? = try await databaseReader.read { [draftConversationId, inboxId] db in
             if let existingDraft = try DBConversation
                 .filter(Column("clientConversationId") == draftConversationId)
                 .fetchOne(db) {
                 return existingDraft
             } else {
-                guard let currentUser = try db.currentUser() else {
-                    throw DraftConversationWriterError.missingCurrentUser
-                }
                 return DBConversation(
                     id: draftConversationId,
+                    inboxId: inboxId,
                     clientConversationId: draftConversationId,
-                    creatorId: currentUser.inboxId,
+                    creatorId: inboxId,
                     kind: .dm,
                     consent: .allowed,
                     createdAt: Date(),
@@ -247,10 +232,6 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             isSendingValue.send(false)
         }
 
-        guard let clientProvider else {
-            throw DraftConversationWriterError.missingClientProvider
-        }
-
         let conversation: DBConversation? = try await databaseReader.read { [weak self] db in
             guard let self else { return nil }
             return try DBConversation
@@ -265,7 +246,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         switch state {
         case .existing(let id), .created(let id):
             // send the message
-            let messageWriter = OutgoingMessageWriter(clientProvider: clientProvider,
+            let messageWriter = OutgoingMessageWriter(client: client,
                                                       databaseWriter: databaseWriter,
                                                       conversationId: id)
 
@@ -276,12 +257,8 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             try await databaseWriter.write { [weak self] db in
                 guard let self else { return }
 
-                guard let currentUser = try db.currentUser() else {
-                    throw CurrentSessionError.missingCurrentUser
-                }
-
                 let creatorProfile = MemberProfile(
-                    inboxId: currentUser.inboxId,
+                    inboxId: client.inboxId,
                     name: "",
                     username: "",
                     avatar: nil,
@@ -291,7 +268,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                 // add the current user as a member
                 let conversationMember = DBConversationMember(
                     conversationId: conversationId,
-                    memberId: currentUser.inboxId,
+                    memberId: client.inboxId,
                     role: .superAdmin,
                     consent: .allowed,
                     createdAt: Date()
@@ -303,7 +280,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                     id: clientMessageId,
                     clientMessageId: clientMessageId,
                     conversationId: conversationId,
-                    senderId: currentUser.inboxId,
+                    senderId: client.inboxId,
                     date: Date(),
                     status: .unpublished,
                     messageType: .original,
@@ -319,25 +296,22 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                 Logger.info("Saved local message with local id: \(localMessage.clientMessageId)")
             }
 
-            let memberProfiles: [MemberProfile] = try await databaseReader.read { db in
-                guard let currentUser = try db.currentUser() else {
-                    throw CurrentSessionError.missingCurrentUser
-                }
-
-                return try conversation
+            let inboxId = client.inboxId
+            let memberProfiles: [MemberProfile] = try await databaseReader.read { [inboxId] db in
+                try conversation
                     .request(for: DBConversation.memberProfiles)
-                    .filter(Column("inboxId") != currentUser.inboxId)
+                    .filter(Column("inboxId") != inboxId)
                     .fetchAll(db)
             }
 
             let externalConversationId: String
             if memberProfiles.count == 1,
                let inboxId = memberProfiles.first?.inboxId {
-                externalConversationId = try await clientProvider.newConversation(
+                externalConversationId = try await client.newConversation(
                     with: inboxId
                 )
             } else {
-                externalConversationId = try await clientProvider.newConversation(
+                externalConversationId = try await client.newConversation(
                     with: memberProfiles.map { $0.inboxId },
                     name: "",
                     description: "",
@@ -346,7 +320,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             }
             state = .created(id: externalConversationId)
 
-            guard let createdConversation = try await clientProvider.conversation(
+            guard let createdConversation = try await client.conversation(
                 with: externalConversationId
             ) else {
                 throw DraftConversationWriterError.failedFindingConversation

@@ -1,12 +1,40 @@
 import Foundation
 
-class MockAPIClient: ConvosAPIClientProtocol {
-    var xmtpClientProvider: (any XMTPClientProvider)?
-
-    func setXMTPClientProvider(_ provider: (any XMTPClientProvider)?) {
+class MockAPIClientFactory: ConvosAPIClientFactoryType {
+    static func client(environment: AppEnvironment) -> any ConvosAPIBaseProtocol {
+        MockBaseAPIClient()
     }
 
-    func authenticate(xmtpInstallationId: String, xmtpId: String, xmtpSignature: String) async throws -> String {
+    static func authenticatedClient(
+        client: any XMTPClientProvider,
+        environment: AppEnvironment
+    ) -> any ConvosAPIClientProtocol {
+        MockAPIClient(client: client)
+    }
+}
+
+class MockBaseAPIClient: ConvosAPIBaseProtocol {
+    func createSubOrganization(
+        ephemeralPublicKey: String,
+        passkey: Passkey
+    ) async throws -> CreateSubOrganizationResponse {
+        .init(subOrgId: UUID().uuidString, walletAddress: UUID().uuidString)
+    }
+}
+
+class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
+    var identifier: String {
+        "\(client.inboxId)\(client.installationId)"
+    }
+
+    let client: any XMTPClientProvider
+
+    init(client: any XMTPClientProvider) {
+        self.client = client
+        super.init()
+    }
+
+    func authenticate(inboxId: String, installationId: String, signature: String) async throws -> String {
         return "mock-jwt-token"
     }
 

@@ -6,10 +6,10 @@ extension KeychainItemProtocol {
     }
 }
 
-enum ConvosKeychainItem: String, KeychainItemProtocol {
-    case convosJwt // convos backend
+struct ConvosJWTKeychainItem: KeychainItemProtocol {
+    let inboxId: String
 
     var account: String {
-        return rawValue
+        return inboxId
     }
 }

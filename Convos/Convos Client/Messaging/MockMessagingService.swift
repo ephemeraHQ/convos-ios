@@ -5,7 +5,7 @@ import XMTPiOS
 // swiftlint: disable force_unwrapping
 
 class MockMessagingService: MessagingServiceProtocol {
-    let currentUser: User = .mock()
+    let currentUserProfile: Profile = .mock()
     let allUsers: [Profile]
     let conversations: [Conversation]
     private var unpublishedMessages: [AnyMessage] = []
@@ -14,8 +14,6 @@ class MockMessagingService: MessagingServiceProtocol {
     private var messages: [AnyMessage]
     private var messagesSubject: CurrentValueSubject<[AnyMessage], Never>
     private var messageTimer: Timer?
-    private var messagingStateSubject: CurrentValueSubject<MessagingServiceState, Never> =
-        .init(.uninitialized)
 
     init() {
         let users = Self.randomUsers()
@@ -29,38 +27,12 @@ class MockMessagingService: MessagingServiceProtocol {
         )
         self.messages = initialMessages
         self.messagesSubject = CurrentValueSubject(initialMessages)
-
-        Task {
-            try await start()
-        }
     }
 
     // MARK: - Protocol Conformance
 
     var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
         Just(self).eraseToAnyPublisher()
-    }
-
-    var state: MessagingServiceState {
-        messagingStateSubject.value
-    }
-
-    func start() async throws {
-        messagingStateSubject.send(.initializing)
-        messagingStateSubject.send(.authorizing)
-        messagingStateSubject.send(.ready)
-        startMessageTimer()
-    }
-
-    func stop() {
-        messageTimer?.invalidate()
-        messageTimer = nil
-        messagingStateSubject.send(.stopping)
-        messagingStateSubject.send(.uninitialized)
-    }
-
-    func userRepository() -> any UserRepositoryProtocol {
-        self
     }
 
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
@@ -101,22 +73,8 @@ class MockMessagingService: MessagingServiceProtocol {
         self
     }
 
-    var messagingStatePublisher: AnyPublisher<MessagingServiceState, Never> {
-        messagingStateSubject.eraseToAnyPublisher()
-    }
-
     func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol {
         MockConversationLocalStateWriter()
-    }
-}
-
-extension MockMessagingService: UserRepositoryProtocol {
-    var userPublisher: AnyPublisher<User?, Never> {
-        Just(currentUser).eraseToAnyPublisher()
-    }
-
-    func getCurrentUser() async throws -> User? {
-        return currentUser
     }
 }
 
@@ -271,7 +229,7 @@ extension MockMessagingService: MessageSender {
         let message: AnyMessage = .message(
             .init(id: UUID().uuidString,
                   conversation: conversation,
-                  sender: currentUser.profile,
+                  sender: currentUserProfile,
                   source: .outgoing,
                   status: .published,
                   content: .text(text),
@@ -383,7 +341,7 @@ extension MockMessagingService {
 
     private func generateRandomMessageAndAppend() {
         guard let conversation = currentConversation ?? conversations.first else { return }
-        let sender = conversation.members.randomElement() ?? allUsers.randomElement() ?? currentUser.profile
+        let sender = conversation.members.randomElement() ?? allUsers.randomElement() ?? currentUserProfile
         let message = Message(
             id: UUID().uuidString,
             conversation: conversation,

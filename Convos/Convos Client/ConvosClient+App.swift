@@ -7,13 +7,14 @@ extension ConvosClient {
         let authService = TurnkeyAuthService(environment: environment)
         let databaseWriter = databaseManager.dbWriter
         let databaseReader = databaseManager.dbReader
-        let messagingService = MessagingService(authService: authService,
-                                                databaseWriter: databaseWriter,
-                                                databaseReader: databaseReader,
-                                                apiClient: ConvosAPIClient.shared,
-                                                environment: environment)
+        let sessionManager = SessionManager(
+            authService: authService,
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            environment: environment
+        )
         return .init(authService: authService,
-                     messagingService: messagingService,
+                     sessionManager: sessionManager,
                      databaseManager: databaseManager)
     }
 }

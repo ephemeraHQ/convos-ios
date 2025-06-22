@@ -34,53 +34,27 @@ fileprivate extension SignRawPayloadResult {
     }
 }
 
-struct TurnkeySigningKey: SigningKey {
-    var identity: XMTPiOS.PublicIdentity {
-        guard let walletAddress = primaryWalletAddress else {
-            Logger.error("Error returning identity, no wallet address found")
-            return .init(kind: .ethereum, identifier: "")
-        }
-        return .init(kind: .ethereum, identifier: walletAddress)
-    }
+extension SessionUser.UserWallet.WalletAccount: @retroactive SigningKey {
+    private var turnkey: TurnkeyContext { .shared }
 
-    private let turnkey: TurnkeyContext = .shared
-    private let wallet: SessionUser.UserWallet
-
-    init(wallet: SessionUser.UserWallet) {
-        self.wallet = wallet
-    }
-
-    private var primaryWalletAddress: String? {
-        guard let account = wallet.accounts.first else {
-            Logger.error("Failed returning wallet address: No account found")
-            return nil
-        }
-
-        return account.address
+    public var identity: XMTPiOS.PublicIdentity {
+        return .init(kind: .ethereum, identifier: address)
     }
 
     var databaseKey: Data {
         get throws {
-            guard let walletAddress = primaryWalletAddress else {
-                throw TurnkeyAuthServiceError.walletAddressNotFound
-            }
-            return try TurnkeyDatabaseKeyStore.shared.databaseKey(for: walletAddress)
+            return try TurnkeyDatabaseKeyStore.shared.databaseKey(for: address)
         }
     }
 
-    func sign(_ message: String) async throws -> SignedData {
-        guard let walletAddress = primaryWalletAddress else {
-            Logger.error("Failed signing message: No wallet address")
-            return .init(rawData: Data())
-        }
-
+    public func sign(_ message: String) async throws -> SignedData {
         let prefix = "\u{19}Ethereum Signed Message:\n\(message.utf8.count)"
         let fullMessage = prefix + message
         let digest = Data(fullMessage.utf8).sha3(.keccak256)
         let digestString = digest.hexEncodedString()
         do {
             let result = try await turnkey.signRawPayload(
-                signWith: walletAddress,
+                signWith: address,
                 payload: digestString,
                 encoding: .PAYLOAD_ENCODING_HEXADECIMAL,
                 hashFunction: .HASH_FUNCTION_NO_OP
@@ -97,24 +71,14 @@ enum TurnkeyAuthServiceError: Error {
     case failedFindingPasskeyPresentationAnchor,
          failedCreatingSubOrganization,
          failedStampingLogin,
-         walletAddressNotFound
+         walletAddressNotFound,
+         walletAccountMissing
 }
 
 final class TurnkeyAuthService: AuthServiceProtocol {
-    struct TurnkeyRegisteredResult: AuthServiceRegisteredResultType {
-        let displayName: String
-        let signingKey: SigningKey
-        let databaseKey: Data
-    }
-
-    struct TurnkeyAuthResult: AuthServiceResultType {
-        let signingKey: SigningKey
-        let databaseKey: Data
-    }
-
     private let environment: AppEnvironment
     private var authState: CurrentValueSubject<AuthServiceState, Never> = .init(.notReady)
-    private let apiClient: ConvosAPIClient = .shared
+    private let apiClient: any ConvosAPIBaseProtocol
     private let turnkey: TurnkeyContext = .shared
     private var passkeyRegistrationTask: Task<Void, Never>?
     private let defaultSessionExpiration: String = "\(60 * 24 * 60 * 60)"  // 60 days
@@ -132,6 +96,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
 
     init(environment: AppEnvironment) {
         self.environment = environment
+        self.apiClient = ConvosAPIClientFactory.client(environment: environment)
         let authStatePublisher: AnyPublisher<AuthServiceState, Never> = turnkey
             .$user
             .removeDuplicates(by: { lhs, rhs in
@@ -154,31 +119,46 @@ final class TurnkeyAuthService: AuthServiceProtocol {
                     return .unauthorized
                 }
 
-                let signingKey = TurnkeySigningKey(wallet: wallet)
-                let userIdentifier = signingKey.identity.identifier
-                if case let .migrating(migration) = state {
-                    do {
-                        try migration.performMigration(for: userIdentifier)
-                    } catch {
-                        Logger.error("Failed performing migration for user \(userIdentifier): \(error)")
-                        return .migrating(migration)
+                // if we're coming from the RN app, only one account exists
+                if wallet.accounts.count == 1, let account = wallet.accounts.first {
+                    let userIdentifier = account.identity.identifier
+                    if case let .migrating(migration) = state {
+                        do {
+                            try migration.performMigration(for: userIdentifier)
+                        } catch {
+                            Logger.error("Failed performing migration for user \(userIdentifier): \(error)")
+                            return .migrating(migration)
+                        }
                     }
                 }
 
                 do {
-                    let databaseKey = try signingKey.databaseKey
                     switch authFlowType {
                     case .passive, .login:
-                        let result = TurnkeyAuthResult(
-                            signingKey: signingKey,
-                            databaseKey: databaseKey,
-                        )
+                        let inboxes = try wallet.accounts.map { account in
+                            AuthServiceInbox(
+                                providerId: account.id,
+                                signingKey: account,
+                                databaseKey: try account.databaseKey
+                            )
+                        }
+                        let result = AuthServiceResult(inboxes: inboxes)
                         return .authorized(result)
                     case .register(let displayName):
-                        let result = TurnkeyRegisteredResult(
+                        guard let account = wallet.accounts.first else {
+                            throw TurnkeyAuthServiceError.walletAccountMissing
+                        }
+                        if wallet.accounts.count > 1 {
+                            Logger.warning("Multiple accounts found for Turnkey user, using the first one")
+                        }
+                        let databaseKey = try account.databaseKey
+                        let result = AuthServiceRegisteredResult(
                             displayName: displayName,
-                            signingKey: signingKey,
-                            databaseKey: databaseKey,
+                            inbox: AuthServiceInbox(
+                                providerId: account.id,
+                                signingKey: account,
+                                databaseKey: databaseKey
+                            )
                         )
                         return .registered(result)
                     }

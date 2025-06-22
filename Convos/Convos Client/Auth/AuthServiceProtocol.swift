@@ -4,11 +4,33 @@ import XMTPiOS
 
 protocol AuthServiceRegisteredResultType: AuthServiceResultType {
     var displayName: String { get }
+    var inbox: any AuthServiceInboxType { get }
 }
 
 protocol AuthServiceResultType {
+    var inboxes: [any AuthServiceInboxType] { get }
+}
+
+protocol AuthServiceInboxType {
+    var providerId: String { get }
     var signingKey: any XMTPiOS.SigningKey { get }
     var databaseKey: Data { get }
+}
+
+struct AuthServiceRegisteredResult: AuthServiceRegisteredResultType {
+    let displayName: String
+    let inbox: any AuthServiceInboxType
+    var inboxes: [any AuthServiceInboxType] { [inbox] }
+}
+
+struct AuthServiceResult: AuthServiceResultType {
+    var inboxes: [any AuthServiceInboxType]
+}
+
+struct AuthServiceInbox: AuthServiceInboxType {
+    let providerId: String
+    let signingKey: any XMTPiOS.SigningKey
+    let databaseKey: Data
 }
 
 enum AuthServiceState {
@@ -42,15 +64,10 @@ enum AuthServiceState {
 protocol AuthServiceProtocol {
     var state: AuthServiceState { get }
     var authStatePublisher: AnyPublisher<AuthServiceState, Never> { get }
-    var supportsMultipleAccounts: Bool { get }
 
     func prepare() async throws
 
     func signIn() async throws
     func register(displayName: String) async throws
     func signOut() async throws
-}
-
-extension AuthServiceProtocol {
-    var supportsMultipleAccounts: Bool { true }
 }
