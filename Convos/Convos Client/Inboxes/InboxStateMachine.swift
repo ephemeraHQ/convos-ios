@@ -228,7 +228,13 @@ actor InboxStateMachine {
             client: client,
             apiClient: apiClient
         )
-        try await inboxWriter.storeInbox(inboxId: client.inboxId, user: user)
+        try await inboxWriter.storeInbox(
+            inboxId: client.inboxId,
+            user: user,
+            type: inbox.type,
+            provider: inbox.provider,
+            providerId: inbox.providerId
+        )
         processAction(.authorized(client, apiClient))
     }
 
@@ -293,6 +299,9 @@ actor InboxStateMachine {
         async let profile = try apiClient.getProfile(inboxId: client.inboxId)
         try await inboxWriter.storeInbox(
             inboxId: client.inboxId,
+            type: inbox.type,
+            provider: inbox.provider,
+            providerId: inbox.providerId,
             user: await user,
             profile: await profile
         )

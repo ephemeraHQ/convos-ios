@@ -8,6 +8,8 @@ enum SessionManagerError: Error {
 
 class SessionManager: SessionManagerProtocol {
     let inboxesRepository: any InboxesRepositoryProtocol
+    private let inboxOperationsPublisher: CurrentValueSubject<[any AuthorizeInboxOperationProtocol], Never> = .init([])
+    private var inboxOperationsCancellable: AnyCancellable
 
     private let databaseWriter: any DatabaseWriter
     private let databaseReader: any DatabaseReader
@@ -24,28 +26,62 @@ class SessionManager: SessionManagerProtocol {
         self.inboxesRepository = InboxesRepository(databaseReader: databaseReader)
         self.authService = authService
         self.environment = environment
-
-        authService.authStatePublisher.sink { [weak self] authState in
-            Logger.info("Auth state changed: \(authState)")
-            guard let self = self else { return }
-            switch authState {
-            case .authorized(let authResult):
-                break
-            case .registered(let registeredResult):
-                break
-            case .unauthorized:
-                Logger.info("Stopping from auth state changing to unauthorized")
-            default:
-                break
+        inboxOperationsCancellable = authService
+            .authStatePublisher
+            .sink { [inboxOperationsPublisher] authState in
+                Logger.info("Auth state changed: \(authState)")
+                switch authState {
+                case .authorized(let authResult):
+                    let operations = authResult.inboxes.map { inbox in
+                        let operation = AuthorizeInboxOperation(
+                            inbox: inbox,
+                            databaseReader: databaseReader,
+                            databaseWriter: databaseWriter,
+                            environment: environment
+                        )
+                        operation.authorize()
+                        return operation
+                    }
+                    inboxOperationsPublisher.send(operations)
+                case .registered(let registeredResult):
+                    let operations = registeredResult.inboxes.map { inbox in
+                        let operation = AuthorizeInboxOperation(
+                            inbox: inbox,
+                            databaseReader: databaseReader,
+                            databaseWriter: databaseWriter,
+                            environment: environment
+                        )
+                        operation.register(displayName: registeredResult.displayName)
+                        return operation
+                    }
+                    inboxOperationsPublisher.send(operations)
+                case .unauthorized, .migrating, .notReady, .unknown:
+                    inboxOperationsPublisher.send([])
+                }
             }
-        }
-        .store(in: &cancellables)
     }
 
     // MARK: Messaging
 
-    func messagingService(for inboxId: String) throws -> any MessagingServiceProtocol {
-        MockMessagingService()
+    func messagingServicePublisher(for inboxId: String) -> AnyPublisher<any MessagingServiceProtocol, Never> {
+        return inboxOperationsPublisher
+            .flatMap { operations -> AnyPublisher<any MessagingServiceProtocol, Never> in
+                let operation = operations.first(where: { operation in
+                    switch operation.state {
+                    case .ready(let client, _):
+                        return client.inboxId == inboxId
+                    default:
+                        return false
+                    }
+                })
+
+                guard let operation else {
+                    return Empty().eraseToAnyPublisher()
+                }
+
+                return operation.messagingPublisher
+            }
+            .eraseToAnyPublisher()
     }
 
     // MARK: Displaying All Conversations

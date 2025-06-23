@@ -3,7 +3,6 @@ import Foundation
 import XMTPiOS
 
 class SecureEnclaveAuthService: AuthServiceProtocol {
-    private let environment: AppEnvironment
     private let identityStore: SecureEnclaveIdentityStore = .init()
     private let authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
@@ -13,10 +12,6 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
 
     var authStatePublisher: AnyPublisher<AuthServiceState, Never> {
         authStateSubject.eraseToAnyPublisher()
-    }
-
-    init(environment: AppEnvironment) {
-        self.environment = environment
     }
 
     func prepare() async throws {
@@ -33,6 +28,8 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
             AuthServiceRegisteredResult(
                 displayName: displayName,
                 inbox: AuthServiceInbox(
+                    type: .ephemeral,
+                    provider: .local,
                     providerId: identity.id,
                     signingKey: identity.privateKey,
                     databaseKey: identity.databaseKey
@@ -55,6 +52,8 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
                     AuthServiceResult(
                         inboxes: [
                             AuthServiceInbox(
+                                type: .ephemeral,
+                                provider: .local,
                                 providerId: identity.id,
                                 signingKey: identity.privateKey,
                                 databaseKey: identity.databaseKey

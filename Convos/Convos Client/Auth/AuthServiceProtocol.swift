@@ -12,6 +12,8 @@ protocol AuthServiceResultType {
 }
 
 protocol AuthServiceInboxType {
+    var type: InboxType { get }
+    var provider: InboxProvider { get }
     var providerId: String { get }
     var signingKey: any XMTPiOS.SigningKey { get }
     var databaseKey: Data { get }
@@ -28,6 +30,8 @@ struct AuthServiceResult: AuthServiceResultType {
 }
 
 struct AuthServiceInbox: AuthServiceInboxType {
+    let type: InboxType
+    let provider: InboxProvider
     let providerId: String
     let signingKey: any XMTPiOS.SigningKey
     let databaseKey: Data

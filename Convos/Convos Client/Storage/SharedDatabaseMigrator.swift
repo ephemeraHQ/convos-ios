@@ -17,12 +17,22 @@ class SharedDatabaseMigrator {
 #endif
 
         defaultMigrator.registerMigration("createSchema") { db in
+            try db.create(table: "session") { t in
+                t.column("id", .integer)
+                    .unique()
+                    .primaryKey()
+            }
+
             try db.create(table: "inbox") { t in
                 t.column("inboxId", .text)
                     .unique()
                     .primaryKey()
                 t.column("providerId", .text)
                     .notNull()
+                t.column("sessionId", .integer)
+                    .references("session", onDelete: .cascade)
+                t.column("type", .text).notNull()
+                t.column("provider", .text).notNull()
             }
 
             try db.create(table: "member") { t in
@@ -124,12 +134,6 @@ class SharedDatabaseMigrator {
                 t.column("sourceMessageId", .text)
                 t.column("attachmentUrls", .text)
                 t.column("update", .jsonText)
-            }
-
-            try db.create(table: "session") { t in
-                t.column("id", .integer)
-                    .unique()
-                    .primaryKey()
             }
         }
 
