@@ -136,7 +136,10 @@ final class TurnkeyAuthService: AuthServiceProtocol {
                     switch authFlowType {
                     case .passive, .login:
                         let inboxes = try wallet.accounts.map { account in
+                            // TODO: 'ephemeral' inbox type will be used depending on account type
                             AuthServiceInbox(
+                                type: .standard,
+                                provider: .external,
                                 providerId: account.id,
                                 signingKey: account,
                                 databaseKey: try account.databaseKey
@@ -155,6 +158,8 @@ final class TurnkeyAuthService: AuthServiceProtocol {
                         let result = AuthServiceRegisteredResult(
                             displayName: displayName,
                             inbox: AuthServiceInbox(
+                                type: .standard,
+                                provider: .external,
                                 providerId: account.id,
                                 signingKey: account,
                                 databaseKey: databaseKey

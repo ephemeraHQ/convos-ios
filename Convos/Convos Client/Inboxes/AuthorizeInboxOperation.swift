@@ -2,18 +2,10 @@ import Combine
 import Foundation
 import GRDB
 
-enum AuthorizeInboxOperationStatus {
-    case idle,
-         starting,
-         authorizing,
-         registering,
-         ready(any MessagingServiceProtocol),
-         error(Error),
-         stopping
-}
-
 protocol AuthorizeInboxOperationProtocol {
-    var statusPublisher: AnyPublisher<AuthorizeInboxOperationStatus, Never> { get }
+    var state: InboxStateMachine.State { get }
+    var statePublisher: AnyPublisher<InboxStateMachine.State, Never> { get }
+    var messagingPublisher: AnyPublisher<any MessagingServiceProtocol, Never> { get }
 
     func authorize()
     func register(displayName: String)
@@ -21,7 +13,15 @@ protocol AuthorizeInboxOperationProtocol {
 }
 
 class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
-    let statusPublisher: AnyPublisher<AuthorizeInboxOperationStatus, Never>
+    var state: InboxStateMachine.State {
+        stateMachine.state
+    }
+
+    var statePublisher: AnyPublisher<InboxStateMachine.State, Never> {
+        stateMachine.statePublisher
+    }
+
+    let messagingPublisher: AnyPublisher<any MessagingServiceProtocol, Never>
 
     private let stateMachine: InboxStateMachine
     private var cancellables: Set<AnyCancellable> = []
@@ -39,16 +39,8 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             inboxWriter: inboxWriter,
             environment: environment
         )
-        statusPublisher = stateMachine.statePublisher.map { state in
+        messagingPublisher = stateMachine.statePublisher.compactMap { state in
             switch state {
-            case .uninitialized:
-                return .idle
-            case .initializing:
-                return .starting
-            case .authorizing:
-                return .authorizing
-            case .registering:
-                return .registering
             case let .ready(client, apiClient):
                 let messagingService = MessagingService(
                     client: client,
@@ -56,11 +48,9 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
                     databaseWriter: databaseWriter,
                     databaseReader: databaseReader
                 )
-                return .ready(messagingService)
-            case let .error(error):
-                return .error(error)
-            case .stopping:
-                return .stopping
+                return messagingService
+            default:
+                return nil
             }
         }.eraseToAnyPublisher()
     }

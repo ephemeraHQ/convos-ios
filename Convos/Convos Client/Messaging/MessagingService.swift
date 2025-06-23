@@ -4,6 +4,10 @@ import GRDB
 import XMTPiOS
 
 final class MessagingService: MessagingServiceProtocol {
+    var inboxId: String {
+        client.inboxId
+    }
+
     private let client: any XMTPClientProvider
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter

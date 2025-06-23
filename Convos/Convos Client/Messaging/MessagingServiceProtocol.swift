@@ -2,6 +2,7 @@ import Combine
 import Foundation
 
 protocol MessagingServiceProtocol {
+    var inboxId: String { get }
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol
 
     func draftConversationComposer() -> any DraftConversationComposerProtocol

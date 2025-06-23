@@ -11,7 +11,10 @@ class MockInboxesRepository: InboxesRepositoryProtocol {
             .init(
                 inboxId: UUID().uuidString,
                 identities: [],
-                profile: .mock()
+                profile: .mock(),
+                type: .ephemeral,
+                provider: .local,
+                providerId: UUID().uuidString
             )
         ]
     }

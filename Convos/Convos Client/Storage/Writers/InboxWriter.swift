@@ -3,10 +3,16 @@ import GRDB
 
 protocol InboxWriterProtocol {
     func storeInbox(inboxId: String,
+                    type: InboxType,
+                    provider: InboxProvider,
+                    providerId: String,
                     user: ConvosAPI.UserResponse,
                     profile: ConvosAPI.ProfileResponse) async throws
     func storeInbox(inboxId: String,
-                    user: ConvosAPI.CreatedUserResponse) async throws
+                    user: ConvosAPI.CreatedUserResponse,
+                    type: InboxType,
+                    provider: InboxProvider,
+                    providerId: String) async throws
 }
 
 final class InboxWriter: InboxWriterProtocol {
@@ -17,6 +23,9 @@ final class InboxWriter: InboxWriterProtocol {
     }
 
     func storeInbox(inboxId: String,
+                    type: InboxType,
+                    provider: InboxProvider,
+                    providerId: String,
                     user: ConvosAPI.UserResponse,
                     profile: ConvosAPI.ProfileResponse) async throws {
         let identities: [Identity] = user.identities.map {
@@ -27,7 +36,15 @@ final class InboxWriter: InboxWriterProtocol {
             )
         }
         try await databaseWriter.write { db in
-            let dbInbox = DBInbox(inboxId: inboxId, providerId: user.id)
+            let session = Session()
+            try? session.save(db)
+
+            let dbInbox = DBInbox(
+                inboxId: inboxId,
+                type: type,
+                provider: provider,
+                providerId: providerId
+            )
             try dbInbox.save(db)
 
             let memberProfile: MemberProfile = .init(inboxId: inboxId,
@@ -38,10 +55,6 @@ final class InboxWriter: InboxWriterProtocol {
             try member.save(db)
             try memberProfile.save(db)
 
-            let session = Session()
-            try Session.deleteAll(db) // ensure only one row
-            try session.save(db)
-
             for identity in identities {
                 try identity.save(db)
             }
@@ -49,7 +62,10 @@ final class InboxWriter: InboxWriterProtocol {
     }
 
     func storeInbox(inboxId: String,
-                    user: ConvosAPI.CreatedUserResponse) async throws {
+                    user: ConvosAPI.CreatedUserResponse,
+                    type: InboxType,
+                    provider: InboxProvider,
+                    providerId: String) async throws {
         let identities: [Identity] = [
             .init(
                 id: user.identity.id,
@@ -62,15 +78,19 @@ final class InboxWriter: InboxWriterProtocol {
                                                  name: user.profile.name,
                                                  username: user.profile.username,
                                                  avatar: user.profile.avatar)
-        let dbInbox = DBInbox(inboxId: inboxId, providerId: user.turnkeyUserId)
+        let dbInbox = DBInbox(
+            inboxId: inboxId,
+            type: type,
+            provider: provider,
+            providerId: providerId
+        )
         try await databaseWriter.write { db in
+            let session = Session()
+            try? session.save(db)
+
             try dbInbox.save(db)
             try member.save(db)
             try memberProfile.save(db)
-
-            let session = Session()
-            try Session.deleteAll(db) // ensure only one row
-            try session.save(db)
 
             for identity in identities {
                 try identity.save(db)

@@ -63,6 +63,8 @@ class PasskeyAuthService: AuthServiceProtocol {
                 AuthServiceResult(
                     inboxes: [
                         AuthServiceInbox(
+                            type: .standard,
+                            provider: .external,
                             providerId: response.userID,
                             signingKey: signingKey,
                             databaseKey: identity.databaseKey
@@ -88,6 +90,8 @@ class PasskeyAuthService: AuthServiceProtocol {
                 AuthServiceRegisteredResult(
                     displayName: displayName,
                     inbox: AuthServiceInbox(
+                        type: .standard,
+                        provider: .external,
                         providerId: response.userID,
                         signingKey: signingKey,
                         databaseKey: identity.databaseKey
@@ -111,6 +115,8 @@ class PasskeyAuthService: AuthServiceProtocol {
                                                passkeyAuth: passkeyAuth)
             let result = AuthServiceResult(inboxes: [
                 AuthServiceInbox(
+                    type: .standard,
+                    provider: .external,
                     providerId: identity.userID,
                     signingKey: signingKey,
                     databaseKey: identity.databaseKey
