@@ -31,7 +31,7 @@ struct ContactCardsView: View {
                 )
             }
         }
-        .sheet(isPresented: $isPresentingConversationsSheet) {
+        .fullScreenCover(isPresented: $isPresentingConversationsSheet) {
             ConversationsView(session: session)
                 .navigationTransition(
                     .zoom(
@@ -43,6 +43,7 @@ struct ContactCardsView: View {
     }
 }
 
-//#Preview {
-//    ContactCardsView()
-//}
+#Preview {
+    let convos = ConvosClient.mock()
+    ContactCardsView(session: convos.session)
+}

@@ -5,9 +5,11 @@ struct ConversationsView: View {
 
     var body: some View {
         ConversationsListView(session: session, onSignOut: {})
+            .background(.colorBackgroundPrimary)
     }
 }
 
-//#Preview {
-//    ConversationsView(session: )
-//}
+#Preview {
+    let convos = ConvosClient.mock()
+    ConversationsView(session: convos.session)
+}

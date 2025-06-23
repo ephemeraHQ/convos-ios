@@ -133,29 +133,29 @@ class MessagesContainerViewController: UIViewController {
 
     private func setupUI() {
         setupInputBar()
-        view.addSubview(navigationBar)
-        navigationBar.translatesAutoresizingMaskIntoConstraints = false
+//        view.addSubview(navigationBar)
+//        navigationBar.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .colorBackgroundPrimary
         contentView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(contentView)
 
         let heightConstraint = navigationBar.heightAnchor.constraint(equalToConstant: 0)
         NSLayoutConstraint.activate([
-            navigationBar.topAnchor.constraint(equalTo: view.topAnchor),
-            navigationBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            navigationBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            heightConstraint,
-            contentView.topAnchor.constraint(equalTo: navigationBar.bottomAnchor),
+//            navigationBar.topAnchor.constraint(equalTo: view.topAnchor),
+//            navigationBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+//            navigationBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+//            heightConstraint,
+            contentView.topAnchor.constraint(equalTo: view.topAnchor),
             contentView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        registerForTraitChanges(
-            [UITraitVerticalSizeClass.self]
-        ) { (self: Self, _: UITraitCollection) in
-            self.updateNavigationBarHeight(heightConstraint)
-        }
+//        registerForTraitChanges(
+//            [UITraitVerticalSizeClass.self]
+//        ) { (self: Self, _: UITraitCollection) in
+//            self.updateNavigationBarHeight(heightConstraint)
+//        }
 
         updateNavigationBarHeight(heightConstraint)
         navigationBarHeightConstraint = heightConstraint
