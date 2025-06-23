@@ -6,8 +6,8 @@ class MockInboxesService: SessionManagerProtocol {
         self
     }
 
-    func messagingService(for inboxId: String) throws -> any MessagingServiceProtocol {
-        MockMessagingService()
+    func messagingServicePublisher(for inboxId: String) -> AnyPublisher<any MessagingServiceProtocol, Never> {
+        Just(MockMessagingService()).eraseToAnyPublisher()
     }
 
     func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
@@ -36,6 +36,15 @@ extension MockInboxesService: InboxesRepositoryProtocol {
     }
 
     func allInboxes() throws -> [Inbox] {
-        [Inbox(inboxId: "1", identities: [], profile: .mock())]
+        [
+            Inbox(
+                inboxId: "1",
+                identities: [],
+                profile: .mock(),
+                type: .ephemeral,
+                provider: .local,
+                providerId: UUID().uuidString
+            )
+        ]
     }
 }
