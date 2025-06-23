@@ -4,22 +4,25 @@ import GRDB
 import XMTPiOS
 
 final class MessagingService: MessagingServiceProtocol {
-    var inboxId: String {
-        client.inboxId
+    let inboxReadyPublisher: InboxReadyResultPublisher
+    private let inboxReadyValue: PublisherValue<InboxReadyResult>
+    private var clientPublisher: AnyClientProviderPublisher {
+        inboxReadyPublisher.map(\.client).eraseToAnyPublisher()
     }
-
-    private let client: any XMTPClientProvider
+    private let clientValue: PublisherValue<AnyClientProvider>
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
-    private let apiClient: any ConvosAPIClientProtocol
     private var cancellables: Set<AnyCancellable> = []
 
-    init(client: any XMTPClientProvider,
-         apiClient: any ConvosAPIClientProtocol,
+    init(inboxReadyPublisher: InboxReadyResultPublisher,
          databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader) {
-        self.client = client
-        self.apiClient = apiClient
+        self.clientValue = .init(
+            initial: nil,
+            upstream: inboxReadyPublisher.map(\.client).eraseToAnyPublisher()
+        )
+        self.inboxReadyValue = .init(initial: nil, upstream: inboxReadyPublisher)
+        self.inboxReadyPublisher = inboxReadyPublisher
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
     }
@@ -28,8 +31,8 @@ final class MessagingService: MessagingServiceProtocol {
 
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
         ProfileSearchRepository(
-            client: client,
-            apiClient: apiClient
+            inboxReady: inboxReadyValue.value,
+            inboxReadyPublisher: inboxReadyPublisher
         )
     }
 
@@ -38,7 +41,8 @@ final class MessagingService: MessagingServiceProtocol {
     func draftConversationComposer() -> any DraftConversationComposerProtocol {
         let clientConversationId: String = DBConversation.generateDraftConversationId()
         let draftConversationWriter = DraftConversationWriter(
-            client: client,
+            client: clientValue.value,
+            clientPublisher: clientPublisher,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             draftConversationId: clientConversationId
@@ -50,8 +54,8 @@ final class MessagingService: MessagingServiceProtocol {
                 writer: draftConversationWriter
             ),
             profileSearchRepository: ProfileSearchRepository(
-                client: client,
-                apiClient: apiClient
+                inboxReady: inboxReadyValue.value,
+                inboxReadyPublisher: inboxReadyPublisher
             ),
             conversationConsentWriter: conversationConsentWriter(),
             conversationLocalStateWriter: conversationLocalStateWriter()
@@ -72,7 +76,11 @@ final class MessagingService: MessagingServiceProtocol {
     }
 
     func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
-        ConversationConsentWriter(databaseWriter: databaseWriter, client: client)
+        ConversationConsentWriter(
+            client: clientValue.value,
+            clientPublisher: clientPublisher,
+            databaseWriter: databaseWriter
+        )
     }
 
     func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol {
@@ -87,7 +95,8 @@ final class MessagingService: MessagingServiceProtocol {
     }
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
-        OutgoingMessageWriter(client: client,
+        OutgoingMessageWriter(client: clientValue.value,
+                              clientPublisher: clientPublisher,
                               databaseWriter: databaseWriter,
                               conversationId: conversationId)
     }

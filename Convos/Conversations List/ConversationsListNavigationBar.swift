@@ -59,7 +59,7 @@ struct ConversationsListNavigationBar: View {
 }
 
 #Preview {
-    @Previewable @State var selectedInbox: Inbox? = nil
+    @Previewable @State var selectedInbox: Inbox?
     @Previewable @State var inboxes: [Inbox] = []
 
     ConversationsListNavigationBar(

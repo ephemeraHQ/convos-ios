@@ -20,15 +20,22 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
     }
 
     private let databaseWriter: any DatabaseWriter
-    private var client: any XMTPClientProvider
+    private let clientPublisher: AnyClientProviderPublisher
+    private let clientValue: PublisherValue<AnyClientProvider>
 
-    init(databaseWriter: any DatabaseWriter,
-         client: any XMTPClientProvider) {
+    init(client: AnyClientProvider?,
+         clientPublisher: AnyClientProviderPublisher,
+         databaseWriter: any DatabaseWriter) {
+        self.clientValue = .init(initial: client, upstream: clientPublisher)
+        self.clientPublisher = clientPublisher
         self.databaseWriter = databaseWriter
-        self.client = client
     }
 
     func join(conversation: Conversation) async throws {
+        guard let client = clientValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
         try await client.update(consent: .allowed, for: conversation.id)
         try await databaseWriter.write { db in
             if let localConversation = try DBConversation
@@ -44,6 +51,10 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
     }
 
     func delete(conversation: Conversation) async throws {
+        guard let client = clientValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
         try await client.update(consent: .denied, for: conversation.id)
         try await databaseWriter.write { db in
             if let localConversation = try DBConversation
@@ -59,6 +70,10 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
     }
 
     func deleteAll() async throws {
+        guard let client = clientValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
         let conversationsToDeny: [DBConversation] = try await databaseWriter.read { db in
             try DBConversation
                 .filter(DBConversation.Columns.consent == Consent.unknown)
