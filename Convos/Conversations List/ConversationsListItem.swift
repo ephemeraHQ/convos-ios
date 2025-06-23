@@ -98,7 +98,7 @@ struct ConversationsListItemButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .background(configuration.isPressed ? Color(.systemGray6) : Color(.systemBackground))
+            .background(configuration.isPressed ? Color(.systemGray6) : Color(.clear))
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
