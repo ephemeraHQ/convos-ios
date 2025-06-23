@@ -5,7 +5,11 @@ import XMTPiOS
 class MockMessagingService: MessagingServiceProtocol {
     let currentUser: ConversationMember = .mock()
     let allUsers: [ConversationMember]
-    let conversations: [Conversation]
+    let _conversations: [Conversation]
+    var inboxReadyPublisher: InboxReadyResultPublisher {
+        Empty().eraseToAnyPublisher()
+    }
+
     private var unpublishedMessages: [AnyMessage] = []
 
     private var currentConversation: Conversation?
@@ -16,11 +20,11 @@ class MockMessagingService: MessagingServiceProtocol {
     init() {
         let users = Self.randomUsers()
         allUsers = users
-        conversations = Self.randomConversations(with: users)
-        currentConversation = conversations.randomElement()
+        _conversations = Self.randomConversations(with: users)
+        currentConversation = _conversations.randomElement()
         let initialMessages = Self.generateRandomMessages(
             count: Int.random(in: 5...50),
-            conversation: currentConversation ?? conversations[0],
+            conversation: currentConversation ?? _conversations[0],
             users: allUsers
         )
         self.messages = initialMessages
@@ -50,7 +54,7 @@ class MockMessagingService: MessagingServiceProtocol {
     }
 
     func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
-        if let found = conversations.first(where: { $0.id == conversationId }) {
+        if let found = _conversations.first(where: { $0.id == conversationId }) {
             currentConversation = found
         }
         return self
@@ -61,7 +65,7 @@ class MockMessagingService: MessagingServiceProtocol {
     }
 
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
-        if let found = conversations.first(where: { $0.id == conversationId }) {
+        if let found = _conversations.first(where: { $0.id == conversationId }) {
             currentConversation = found
         }
         return self
@@ -109,11 +113,11 @@ extension MockMessagingService: ProfileSearchRepositoryProtocol {
 
 extension MockMessagingService: ConversationsRepositoryProtocol {
     var conversationsPublisher: AnyPublisher<[Conversation], Never> {
-        Just(conversations).eraseToAnyPublisher()
+        Just(_conversations).eraseToAnyPublisher()
     }
 
     func fetchAll() throws -> [Conversation] {
-        conversations
+        _conversations
     }
 }
 
@@ -144,7 +148,7 @@ extension MockMessagingService: ConversationRepositoryProtocol {
     }
 
     var conversation: Conversation? {
-        conversations.randomElement()
+        _conversations.randomElement()
     }
 
     var conversationPublisher: AnyPublisher<Conversation?, Never> {
@@ -192,6 +196,38 @@ extension MockMessagingService: ConversationSender {
     }
 }
 
+actor MockConversations: ConversationsProvider {
+    func list(
+        createdAfter: Date?,
+        createdBefore: Date?,
+        limit: Int?,
+        consentStates: [XMTPiOS.ConsentState]?
+    ) async throws -> [XMTPiOS.Conversation] {
+        []
+    }
+
+    func stream(type: XMTPiOS.ConversationFilterType) -> AsyncThrowingStream<XMTPiOS.Conversation, any Error> {
+        AsyncThrowingStream { _ in
+        }
+    }
+
+    func syncAllConversations(consentStates: [XMTPiOS.ConsentState]?) async throws -> UInt32 {
+        0
+    }
+
+    func findConversation(conversationId: String) async throws -> XMTPiOS.Conversation? {
+        nil
+    }
+
+    func streamAllMessages(
+        type: XMTPiOS.ConversationFilterType,
+        consentStates: [XMTPiOS.ConsentState]?
+    ) -> AsyncThrowingStream<XMTPiOS.DecodedMessage, any Error> {
+        AsyncThrowingStream { _ in
+        }
+    }
+}
+
 extension MockMessagingService: XMTPClientProvider {
     var installationId: String {
         ""
@@ -230,6 +266,10 @@ extension MockMessagingService: XMTPClientProvider {
 
     func conversation(with id: String) async throws -> XMTPiOS.Conversation? {
         nil
+    }
+
+    var conversationsProvider: ConversationsProvider {
+        MockConversations()
     }
 
     func messageSender(for conversationId: String) async throws -> (any MessageSender)? {
@@ -366,12 +406,8 @@ extension MockMessagingService {
     }
 
     private func generateRandomMessageAndAppend() {
-        guard let conversation = currentConversation ?? conversations.first else { return }
-        let sender = conversation.members.randomElement() ?? allUsers.randomElement() ?? ConversationMember(
-            profile: currentUser.profile,
-            role: .member,
-            isCurrentUser: true
-        )
+        guard let conversation = currentConversation ?? _conversations.first else { return }
+        let sender = conversation.members.randomElement() ?? allUsers.randomElement() ?? currentUser
         let message = Message(
             id: UUID().uuidString,
             conversation: conversation,

@@ -3,14 +3,14 @@ import GRDB
 import XMTPiOS
 
 protocol SyncingManagerProtocol {
-    func start(with client: Client)
+    func start(with client: AnyClientProvider,
+               apiClient: any ConvosAPIClientProtocol)
     func stop()
 }
 
 final class SyncingManager: SyncingManagerProtocol {
     private let conversationWriter: any ConversationWriterProtocol
     private let messageWriter: any IncomingMessageWriterProtocol
-    private let apiClient: any ConvosAPIClientProtocol
     private let profileWriter: any MemberProfileWriterProtocol
 
     private var listConversationsTask: Task<Void, Never>?
@@ -19,9 +19,7 @@ final class SyncingManager: SyncingManagerProtocol {
     private var syncMemberProfilesTasks: [Task<Void, Error>] = []
     private let consentStates: [ConsentState] = [.allowed, .unknown]
 
-    init(databaseWriter: any DatabaseWriter,
-         apiClient: any ConvosAPIClientProtocol) {
-        self.apiClient = apiClient
+    init(databaseWriter: any DatabaseWriter) {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
                                                      messageWriter: messageWriter)
@@ -29,17 +27,22 @@ final class SyncingManager: SyncingManagerProtocol {
         self.profileWriter = MemberProfileWriter(databaseWriter: databaseWriter)
     }
 
-    func start(with client: Client) {
+    func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
         listConversationsTask = Task {
             do {
                 do {
-                    _ = try await client.conversations.syncAllConversations(consentStates: consentStates)
+                    _ = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
                 } catch {
                     Logger.error("Error syncing all conversations: \(error)")
                 }
                 let maxConcurrentTasks = 5
-                let conversations = try await client.conversations.list(consentStates: consentStates)
-                syncMemberProfiles(for: conversations)
+                let conversations = try await client.conversationsProvider.list(
+                    createdAfter: nil,
+                    createdBefore: nil,
+                    limit: nil,
+                    consentStates: consentStates
+                )
+                syncMemberProfiles(apiClient: apiClient, for: conversations)
                 for chunk in conversations.chunked(into: maxConcurrentTasks) {
                     try await withThrowingTaskGroup(of: Void.self) { group in
                         for conversation in chunk {
@@ -56,9 +59,13 @@ final class SyncingManager: SyncingManagerProtocol {
         }
         streamMessagesTask = Task {
             do {
-                for try await message in await client.conversations.streamAllMessages(consentStates: consentStates) {
-                    guard let conversation = try await client.conversations.findConversation(
-                        conversationId: message.conversationId) else {
+                for try await message in await client.conversationsProvider
+                    .streamAllMessages(
+                        type: .all, consentStates: consentStates
+                    ) {
+                    guard let conversation = try await client.conversationsProvider.findConversation(
+                        conversationId: message.conversationId
+                    ) else {
                         Logger.error("Failed finding conversation for message in `streamAllMessages()`")
                         continue
                     }
@@ -74,8 +81,8 @@ final class SyncingManager: SyncingManagerProtocol {
         }
         streamConversationsTask = Task {
             do {
-                for try await conversation in await client.conversations.stream() {
-                    syncMemberProfiles(for: [conversation])
+                for try await conversation in await client.conversationsProvider.stream(type: .all) {
+                    syncMemberProfiles(apiClient: apiClient, for: [conversation])
                     try await conversationWriter.store(conversation: conversation)
                 }
             } catch {
@@ -97,7 +104,10 @@ final class SyncingManager: SyncingManagerProtocol {
 
     // MARK: - Private
 
-    private func syncMemberProfiles(for conversations: [XMTPiOS.Conversation]) {
+    private func syncMemberProfiles(
+        apiClient: any ConvosAPIClientProtocol,
+        for conversations: [XMTPiOS.Conversation]
+    ) {
         let syncProfilesTask = Task {
             do {
                 let allMemberIds = try await withThrowingTaskGroup(
