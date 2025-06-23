@@ -181,6 +181,7 @@
 				"Convos Client/Storage/XMTP DB Representations/MessageDeliveryStatus+DBRepresentation.swift",
 				"Convos Client/Storage/XMTP DB Representations/Reaction+DBRepresentation.swift",
 				Logging/Logger.swift,
+				"Utilities/Combine+Extensions.swift",
 				"Utilities/EthereumAddress+Validation.swift",
 			);
 			target = 7ACA8BA22DE16DE200848799 /* ConvosTests */;

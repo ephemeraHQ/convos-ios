@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ContactCardsView: View {
+    let session: any SessionManagerProtocol
     @Namespace private var namespace: Namespace.ID
     @State private var isPresentingConversationsSheet: Bool = false
 
@@ -31,7 +32,7 @@ struct ContactCardsView: View {
             }
         }
         .sheet(isPresented: $isPresentingConversationsSheet) {
-            ConversationsView()
+            ConversationsView(session: session)
                 .navigationTransition(
                     .zoom(
                         sourceID: "conversations-transition-source",
@@ -42,6 +43,6 @@ struct ContactCardsView: View {
     }
 }
 
-#Preview {
-    ContactCardsView()
-}
+//#Preview {
+//    ContactCardsView()
+//}

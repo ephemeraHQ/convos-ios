@@ -34,16 +34,16 @@ struct SessionManagerTests {
         let inboxId = inbox.inboxId
         Logger.info("🔍 Found inbox with ID: \(inboxId)")
 
-        let messagingServicePublisher = sessionManager.messagingServicePublisher(for: inboxId)
-        var messagingIterator = messagingServicePublisher.values.makeAsyncIterator()
+        let messagingService = sessionManager.messagingService(for: inboxId)
+        var inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
 
         Logger.info("🔍 Waiting for messaging service...")
-        guard let messagingService = await messagingIterator.next() else {
+        guard let inboxReady = await inboxReadyIterator.next() else {
             Issue.record("Messaging service not published")
             return
         }
 
-        Logger.info("🔍 Got messaging service with inboxId: \(messagingService.inboxId)")
-        #expect(messagingService.inboxId == inboxId)
+        Logger.info("🔍 Got messaging service with inboxId: \(inboxReady.client.inboxId)")
+        #expect(inboxReady.client.inboxId == inboxId)
     }
 }

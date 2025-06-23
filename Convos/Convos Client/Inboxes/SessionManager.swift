@@ -2,9 +2,10 @@ import Combine
 import Foundation
 import GRDB
 
-enum SessionManagerError: Error {
-    case noSuchMessagingService(String)
-}
+typealias AnyMessagingService = any MessagingServiceProtocol
+typealias AnyMessagingServicePublisher = AnyPublisher<AnyMessagingService, Never>
+typealias AnyClientProvider = any XMTPClientProvider
+typealias AnyClientProviderPublisher = AnyPublisher<AnyClientProvider, Never>
 
 class SessionManager: SessionManagerProtocol {
     let inboxesRepository: any InboxesRepositoryProtocol
@@ -63,25 +64,22 @@ class SessionManager: SessionManagerProtocol {
 
     // MARK: Messaging
 
-    func messagingServicePublisher(for inboxId: String) -> AnyPublisher<any MessagingServiceProtocol, Never> {
-        return inboxOperationsPublisher
-            .flatMap { operations -> AnyPublisher<any MessagingServiceProtocol, Never> in
-                let operation = operations.first(where: { operation in
-                    switch operation.state {
-                    case .ready(let client, _):
-                        return client.inboxId == inboxId
-                    default:
-                        return false
-                    }
-                })
-
-                guard let operation else {
-                    return Empty().eraseToAnyPublisher()
-                }
-
-                return operation.messagingPublisher
+    func messagingService(for inboxId: String) -> AnyMessagingService {
+        let matchingInboxReadyPublisher = inboxOperationsPublisher
+            .flatMap { operations in
+                Publishers.MergeMany(
+                    operations.map { $0.inboxReadyPublisher }
+                )
+            }
+            .first { result in
+                result.client.inboxId == inboxId
             }
             .eraseToAnyPublisher()
+        return MessagingService(
+            inboxReadyPublisher: matchingInboxReadyPublisher,
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader
+        )
     }
 
     // MARK: Displaying All Conversations

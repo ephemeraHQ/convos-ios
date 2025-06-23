@@ -31,23 +31,27 @@ extension ConvosAPI.ProfileResponse {
 }
 
 class ProfileSearchRepository: ProfileSearchRepositoryProtocol {
-    private var client: any XMTPClientProvider
-    private let apiClient: any ConvosAPIClientProtocol
+    private let inboxReadyPublisher: InboxReadyResultPublisher
+    private let inboxReadyValue: PublisherValue<InboxReadyResult>
 
     init(
-        client: any XMTPClientProvider,
-        apiClient: any ConvosAPIClientProtocol
+        inboxReady: InboxReadyResult?,
+        inboxReadyPublisher: InboxReadyResultPublisher
     ) {
-        self.client = client
-        self.apiClient = apiClient
+        self.inboxReadyPublisher = inboxReadyPublisher
+        self.inboxReadyValue = .init(initial: inboxReady, upstream: inboxReadyPublisher)
     }
 
     func search(using query: String) async throws -> [ProfileSearchResult] {
+        guard let result = inboxReadyValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
         if query.isValidEthereumAddressFormat {
-            guard let inboxId = try await client.inboxId(for: query) else {
+            guard let inboxId = try await result.client.inboxId(for: query) else {
                 return []
             }
-            guard let profile = try? await apiClient.getProfile(inboxId: inboxId) else {
+            guard let profile = try? await result.apiClient.getProfile(inboxId: inboxId) else {
                 return [
                     .init(
                         profile: .init(
@@ -61,7 +65,7 @@ class ProfileSearchRepository: ProfileSearchRepositoryProtocol {
             }
             return [profile.profileSearchResult]
         } else {
-            let profiles = try await apiClient.getProfiles(matching: query)
+            let profiles = try await result.apiClient.getProfiles(matching: query)
             return profiles.map { $0.profileSearchResult }
         }
     }

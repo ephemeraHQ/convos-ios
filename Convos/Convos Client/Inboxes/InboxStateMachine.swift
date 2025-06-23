@@ -40,16 +40,27 @@ extension InboxStateMachine.State: Equatable {
             (.stopping, .stopping),
             (.error, .error):
             return true
-        case let (.ready(lhsClient, lhsConvosAPI),
-                  .ready(rhsClient, rhsConvosAPI)):
-            return (lhsClient.inboxId == rhsClient.inboxId &&
-                    lhsClient.installationId == rhsClient.installationId &&
-                    lhsConvosAPI.identifier == rhsConvosAPI.identifier)
+        case let (.ready(lhsResult),
+                  .ready(rhsResult)):
+            return (lhsResult.client.inboxId == rhsResult.client.inboxId &&
+                    lhsResult.client.installationId == rhsResult.client.installationId &&
+                    lhsResult.apiClient.identifier == rhsResult.apiClient.identifier)
         default:
             return false
         }
     }
 }
+
+enum InboxStateError: Error {
+    case inboxNotReady
+}
+
+typealias InboxReadyResultPublisher = AnyPublisher<InboxReadyResult, Never>
+
+typealias InboxReadyResult = (
+    client: any XMTPClientProvider,
+    apiClient: any ConvosAPIClientProtocol
+)
 
 actor InboxStateMachine {
     enum Action {
@@ -57,7 +68,7 @@ actor InboxStateMachine {
              register(String),
              clientInitialized(any XMTPClientProvider),
              clientRegistered(any XMTPClientProvider, String),
-             authorized(any XMTPClientProvider, any ConvosAPIClientProtocol),
+             authorized(InboxReadyResult),
              stop
     }
 
@@ -66,7 +77,7 @@ actor InboxStateMachine {
              initializing,
              authorizing,
              registering,
-             ready(any XMTPClientProvider, any ConvosAPIClientProtocol),
+             ready(InboxReadyResult),
              stopping,
              error(Error)
     }
@@ -77,6 +88,7 @@ actor InboxStateMachine {
     private let inboxWriter: any InboxWriterProtocol
     private let environment: AppEnvironment
     private let clientOptions: ClientOptions
+    private let syncingManager: any SyncingManagerProtocol
 
     private var _state: State = .uninitialized {
         didSet {
@@ -109,10 +121,12 @@ actor InboxStateMachine {
     init(
         inbox: any AuthServiceInboxType,
         inboxWriter: any InboxWriterProtocol,
+        syncingManager: any SyncingManagerProtocol,
         environment: AppEnvironment
     ) {
         self.inbox = inbox
         self.inboxWriter = inboxWriter
+        self.syncingManager = syncingManager
         self.environment = environment
         self.clientOptions = ClientOptions(
             api: .init(
@@ -163,8 +177,8 @@ actor InboxStateMachine {
                     try await handleClientInitialized(client)
                 case (.initializing, let .clientRegistered(client, displayName)):
                     try await handleClientRegistered(client, displayName: displayName)
-                case (.authorizing, let .authorized(client, apiClient)),
-                    (.registering, let .authorized(client, apiClient)):
+                case (.authorizing, let .authorized((client, apiClient))),
+                    (.registering, let .authorized((client, apiClient))):
                     try handleAuthorized(client: client, apiClient: apiClient)
                 case (.ready, .stop), (.error, .stop):
                     try handleStop()
@@ -214,7 +228,7 @@ actor InboxStateMachine {
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
         try await refreshUserAndProfile(client: client, apiClient: apiClient)
-        processAction(.authorized(client, apiClient))
+        processAction(.authorized((client, apiClient)))
     }
 
     private func handleClientRegistered(_ client: any XMTPClientProvider, displayName: String) async throws {
@@ -235,11 +249,12 @@ actor InboxStateMachine {
             provider: inbox.provider,
             providerId: inbox.providerId
         )
-        processAction(.authorized(client, apiClient))
+        processAction(.authorized((client, apiClient)))
     }
 
     private func handleAuthorized(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) throws {
-        _state = .ready(client, apiClient)
+        _state = .ready((client, apiClient))
+        syncingManager.start(with: client, apiClient: apiClient)
     }
 
     private func handleStop() throws {

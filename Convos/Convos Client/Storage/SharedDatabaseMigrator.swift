@@ -40,7 +40,6 @@ class SharedDatabaseMigrator {
                     .unique()
                     .notNull()
                     .primaryKey()
-                    .references("inbox", onDelete: .cascade)
             }
 
             try db.create(table: "identity") { t in
@@ -59,6 +58,9 @@ class SharedDatabaseMigrator {
                     .notNull()
                     .primaryKey()
                     .unique(onConflict: .replace)
+                t.column("inboxId", .text)
+                    .notNull()
+                    .references("inbox", onDelete: .cascade)
                 t.column("clientConversationId", .text)
                     .notNull()
                     .unique(onConflict: .replace)
@@ -78,7 +80,7 @@ class SharedDatabaseMigrator {
                     .notNull()
                     .unique()
                     .primaryKey()
-                    .references("inbox", onDelete: .cascade)
+                    .references("member", onDelete: .cascade)
                 t.column("name", .text).notNull()
                 t.column("username", .text).notNull()
                 t.column("avatar", .text)

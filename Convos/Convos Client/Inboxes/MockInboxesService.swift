@@ -6,8 +6,8 @@ class MockInboxesService: SessionManagerProtocol {
         self
     }
 
-    func messagingServicePublisher(for inboxId: String) -> AnyPublisher<any MessagingServiceProtocol, Never> {
-        Just(MockMessagingService()).eraseToAnyPublisher()
+    func messagingService(for inboxId: String) -> AnyMessagingService {
+        MockMessagingService()
     }
 
     func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {

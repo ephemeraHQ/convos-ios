@@ -5,7 +5,7 @@ import GRDB
 protocol AuthorizeInboxOperationProtocol {
     var state: InboxStateMachine.State { get }
     var statePublisher: AnyPublisher<InboxStateMachine.State, Never> { get }
-    var messagingPublisher: AnyPublisher<any MessagingServiceProtocol, Never> { get }
+    var inboxReadyPublisher: InboxReadyResultPublisher { get }
 
     func authorize()
     func register(displayName: String)
@@ -21,7 +21,7 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         stateMachine.statePublisher
     }
 
-    let messagingPublisher: AnyPublisher<any MessagingServiceProtocol, Never>
+    let inboxReadyPublisher: InboxReadyResultPublisher
 
     private let stateMachine: InboxStateMachine
     private var cancellables: Set<AnyCancellable> = []
@@ -37,22 +37,20 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         stateMachine = InboxStateMachine(
             inbox: inbox,
             inboxWriter: inboxWriter,
+            syncingManager: SyncingManager(databaseWriter: databaseWriter),
             environment: environment
         )
-        messagingPublisher = stateMachine.statePublisher.compactMap { state in
-            switch state {
-            case let .ready(client, apiClient):
-                let messagingService = MessagingService(
-                    client: client,
-                    apiClient: apiClient,
-                    databaseWriter: databaseWriter,
-                    databaseReader: databaseReader
-                )
-                return messagingService
-            default:
-                return nil
+        inboxReadyPublisher = stateMachine
+            .statePublisher
+            .compactMap { state in
+                switch state {
+                case let .ready(result):
+                    return result
+                default:
+                    return nil
+                }
             }
-        }.eraseToAnyPublisher()
+            .eraseToAnyPublisher()
     }
 
     deinit {

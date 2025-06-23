@@ -18,7 +18,7 @@ struct ConversationsListView: View {
     init(session: any SessionManagerProtocol,
          onSignOut: @escaping () -> Void) {
         self.session = session
-        let conversationsRepository = session.conversationsRepository(for: .all)
+        let conversationsRepository = session.conversationsRepository(for: .allowed)
         let securityLineConversationsCountRepo = session.conversationsCountRepo(for: .securityLine)
         self.viewModel = .init(
             conversationsRepository: conversationsRepository,
@@ -56,27 +56,26 @@ struct ConversationsListView: View {
                             path: $path
                         )
                     case .conversation(let conversation):
-                        EmptyView()
-                        //                            let messagingService = try! inboxesService.messagingService(for: conversation.inboxId)
-                        //                            let conversationRepository = messagingService.conversationRepository(
-                        //                                for: conversation.id
-                        //                            )
-                        //                            let messagesRepository = messagingService.messagesRepository(
-                        //                                for: conversation.id
-                        //                            )
-                        //                            let messageWriter = messagingService.messageWriter(
-                        //                                for: conversation.id
-                        //                            )
-                        //                            let consentWriter = messagingService.conversationConsentWriter()
-                        //                            let localStateWriter = messagingService.conversationLocalStateWriter()
-                        //                            ConversationView(
-                        //                                conversationRepository: conversationRepository,
-                        //                                messagesRepository: messagesRepository,
-                        //                                outgoingMessageWriter: messageWriter,
-                        //                                conversationConsentWriter: consentWriter,
-                        //                                conversationLocalStateWriter: localStateWriter
-                        //                            )
-                        //                            .ignoresSafeArea()
+                        let messagingService = session.messagingService(for: conversation.inboxId)
+                        let conversationRepository = messagingService.conversationRepository(
+                            for: conversation.id
+                        )
+                        let messagesRepository = messagingService.messagesRepository(
+                            for: conversation.id
+                        )
+                        let messageWriter = messagingService.messageWriter(
+                            for: conversation.id
+                        )
+                        let consentWriter = messagingService.conversationConsentWriter()
+                        let localStateWriter = messagingService.conversationLocalStateWriter()
+                        ConversationView(
+                            conversationRepository: conversationRepository,
+                            messagesRepository: messagesRepository,
+                            outgoingMessageWriter: messageWriter,
+                            conversationConsentWriter: consentWriter,
+                            conversationLocalStateWriter: localStateWriter
+                        )
+                        .ignoresSafeArea()
                     }
                 }
             }

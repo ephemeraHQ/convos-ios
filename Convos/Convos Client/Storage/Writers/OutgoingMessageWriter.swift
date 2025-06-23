@@ -14,7 +14,8 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
         case missingClientProvider
     }
 
-    private let client: any XMTPClientProvider
+    private let clientPublisher: AnyClientProviderPublisher
+    private let clientValue: PublisherValue<AnyClientProvider>
     private let databaseWriter: any DatabaseWriter
     private let conversationId: String
     private let isSendingValue: CurrentValueSubject<Bool, Never> = .init(false)
@@ -28,15 +29,24 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
         sentMessageSubject.eraseToAnyPublisher()
     }
 
-    init(client: any XMTPClientProvider,
+    init(client: AnyClientProvider?,
+         clientPublisher: AnyClientProviderPublisher,
          databaseWriter: any DatabaseWriter,
          conversationId: String) {
-        self.client = client
+        self.clientPublisher = clientPublisher
+        self.clientValue = .init(
+            initial: client,
+            upstream: clientPublisher
+        )
         self.databaseWriter = databaseWriter
         self.conversationId = conversationId
     }
 
     func send(text: String) async throws {
+        guard let client = clientValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
         isSendingValue.send(true)
 
         defer {

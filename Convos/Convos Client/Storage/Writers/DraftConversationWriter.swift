@@ -45,7 +45,8 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
-    private let client: any XMTPClientProvider
+    private let clientPublisher: AnyClientProviderPublisher
+    private let clientValue: PublisherValue<AnyClientProvider>
     private let isSendingValue: CurrentValueSubject<Bool, Never> = .init(false)
     private let sentMessageSubject: PassthroughSubject<String, Never> = .init()
 
@@ -72,11 +73,13 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         conversationIdSubject.eraseToAnyPublisher()
     }
 
-    init(client: any XMTPClientProvider,
+    init(client: AnyClientProvider?,
+         clientPublisher: AnyClientProviderPublisher,
          databaseReader: any DatabaseReader,
          databaseWriter: any DatabaseWriter,
          draftConversationId: String) {
-        self.client = client
+        self.clientPublisher = clientPublisher
+        self.clientValue = .init(initial: client, upstream: clientPublisher)
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
         self.state = .draft(id: draftConversationId)
@@ -98,6 +101,10 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     }
 
     private func findMatchingConversation() async throws -> DBConversation? {
+        guard let client = clientValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
         return try await databaseReader.read { [weak self] db -> DBConversation? in
             guard let self else { return nil }
             let conversation = try DBConversation
@@ -118,6 +125,10 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     }
 
     func add(profile: MemberProfile) async throws {
+        guard let client = clientValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
         guard state.canEditMembers else {
             throw DraftConversationWriterError.modifyingMembersOnExistingConversation
         }
@@ -226,6 +237,10 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     }
 
     func send(text: String) async throws {
+        guard let client = clientValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
         isSendingValue.send(true)
 
         defer {
@@ -246,9 +261,12 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         switch state {
         case .existing(let id), .created(let id):
             // send the message
-            let messageWriter = OutgoingMessageWriter(client: client,
-                                                      databaseWriter: databaseWriter,
-                                                      conversationId: id)
+            let messageWriter = OutgoingMessageWriter(
+                client: client,
+                clientPublisher: clientPublisher,
+                databaseWriter: databaseWriter,
+                conversationId: id
+            )
 
             try await messageWriter.send(text: text)
             sentMessageSubject.send(text)

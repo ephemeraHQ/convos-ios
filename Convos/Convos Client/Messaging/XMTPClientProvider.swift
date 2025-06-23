@@ -13,9 +13,30 @@ protocol ConversationSender {
     func publish() async throws
 }
 
+protocol ConversationsProvider: Actor {
+    func list(
+        createdAfter: Date?,
+        createdBefore: Date?,
+        limit: Int?,
+        consentStates: [ConsentState]?
+    ) async throws -> [XMTPiOS.Conversation]
+
+    func stream(type: ConversationFilterType) -> AsyncThrowingStream<
+        XMTPiOS.Conversation, Error
+    >
+
+    func findConversation(conversationId: String) async throws
+    -> XMTPiOS.Conversation?
+
+    func syncAllConversations(consentStates: [XMTPiOS.ConsentState]?) async throws -> UInt32
+    func streamAllMessages(type: ConversationFilterType, consentStates: [ConsentState]?)
+    -> AsyncThrowingStream<DecodedMessage, Error>
+}
+
 protocol XMTPClientProvider: AnyObject {
     var installationId: String { get }
     var inboxId: String { get }
+    var conversationsProvider: ConversationsProvider { get }
     func signWithInstallationKey(message: String) throws -> Data
     func messageSender(for conversationId: String) async throws -> (any MessageSender)?
     func canMessage(identity: String) async throws -> Bool
@@ -53,7 +74,14 @@ extension XMTPiOS.Group: ConversationSender {
     }
 }
 
+extension XMTPiOS.Conversations: ConversationsProvider {
+}
+
 extension XMTPiOS.Client: XMTPClientProvider {
+    var conversationsProvider: any ConversationsProvider {
+        conversations
+    }
+
     var installationId: String {
         installationID
     }
