@@ -3,11 +3,14 @@ import SwiftUI
 struct ConversationInfoView: View {
     let conversation: Conversation
     @Environment(\.dismiss) private var dismiss: DismissAction
+    @State private var showAllMembers: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
             CustomToolbarView(onBack: { dismiss() }, rightContent: {
-                // Add right-side buttons here
+                if conversation.kind == .group {
+                    EditGroupButton(action: {})
+                }
             })
 
             // Content
@@ -15,10 +18,13 @@ struct ConversationInfoView: View {
             case .dm:
                 DMInfoView(conversation: conversation)
             case .group:
-                GroupInfoView(conversation: conversation)
+                GroupInfoView(conversation: conversation, showAllMembers: $showAllMembers)
             }
         }
         .navigationBarHidden(true)
+        .navigationDestination(isPresented: $showAllMembers) {
+            AllMembersView(conversation: conversation)
+        }
     }
 }
 
@@ -33,6 +39,7 @@ struct DMInfoView: View {
                 if let otherMember = conversation.otherMember {
                     VStack(spacing: 16) {
                         ProfileAvatarView(profile: otherMember)
+                            .frame(width: 80, height: 80)
 
                         VStack(spacing: 4) {
                             Text(otherMember.displayName)
@@ -91,6 +98,11 @@ struct DMInfoView: View {
 // MARK: - Group Info View
 struct GroupInfoView: View {
     let conversation: Conversation
+    @Binding var showAllMembers: Bool
+
+    private var displayedMembers: [Profile] {
+        Array(conversation.members.prefix(6))
+    }
 
     var body: some View {
         ScrollView {
@@ -98,6 +110,7 @@ struct GroupInfoView: View {
                 // Group Header
                 VStack(spacing: 16) {
                     ConversationAvatarView(conversation: conversation)
+                        .frame(width: 80, height: 80)
 
                     VStack(spacing: 4) {
                         Text(conversation.name ?? "Group Chat")
@@ -122,25 +135,28 @@ struct GroupInfoView: View {
                 // Members Section
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Text("Members")
+                        Text("\(conversation.members.count) Members")
                             .font(.headline)
                         Spacer()
-                        Button("Add") {
-                            // Handle add member
-                        }
-                        .font(.subheadline)
-                        .foregroundColor(.blue)
+                        AddMemberButton(action: {})
                     }
                     .padding(.horizontal)
 
                     LazyVStack(spacing: 0) {
-                        ForEach(conversation.members, id: \.id) { member in
+                        ForEach(displayedMembers, id: \.id) { member in
                             MemberRow(member: member)
 
-                            if member.id != conversation.members.last?.id {
+                            if member.id != displayedMembers.last?.id {
                                 Divider()
                                     .padding(.leading, 60)
                             }
+                        }
+
+                        if conversation.members.count > 6 {
+                            SeeAllMembersButton(
+                                memberCount: conversation.members.count,
+                                action: { showAllMembers = true }
+                            )
                         }
                     }
                     .background(Color(.systemGray6))
@@ -150,10 +166,6 @@ struct GroupInfoView: View {
 
                 // Actions Section
                 VStack(spacing: 12) {
-                    GroupActionButton(title: "Edit Group", systemImage: "pencil") {
-                        // Handle edit group
-                    }
-
                     GroupActionButton(title: "Clear Chat History", systemImage: "trash", isDestructive: true) {
                         // Handle clear chat
                     }
@@ -191,7 +203,7 @@ struct DMActionButton: View {
         Button(action: action) {
             HStack {
                 Image(systemName: systemImage)
-                    .foregroundColor(isDestructive ? .red : .blue)
+                    .foregroundColor(isDestructive ? .red : .primary)
                 Text(title)
                     .foregroundColor(isDestructive ? .red : .primary)
                 Spacer()
@@ -241,7 +253,7 @@ struct SettingsRow: View {
         Button(action: action) {
             HStack {
                 Image(systemName: systemImage)
-                    .foregroundColor(.blue)
+                    .foregroundColor(.primary)
                     .frame(width: 20)
                 Text(title)
                     .foregroundColor(.primary)
@@ -261,6 +273,7 @@ struct MemberRow: View {
     var body: some View {
         HStack {
             ProfileAvatarView(profile: member)
+                .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(member.displayName)
@@ -276,4 +289,152 @@ struct MemberRow: View {
         }
         .padding()
     }
+}
+
+struct SeeAllMembersButton: View {
+    let memberCount: Int
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Text("See all \(memberCount)")
+                    .foregroundColor(.blue)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+            }
+            .padding()
+        }
+    }
+}
+
+struct EditGroupButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "pencil")
+                .foregroundColor(.primary)
+        }
+    }
+}
+
+struct AddMemberButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+                .foregroundColor(.primary)
+        }
+    }
+}
+
+// MARK: - All Members View
+struct AllMembersView: View {
+    let conversation: Conversation
+    @Environment(\.dismiss) private var dismiss: DismissAction
+
+    var body: some View {
+        VStack(spacing: 0) {
+            CustomToolbarView(onBack: { dismiss() }, rightContent: {
+                AddMemberButton(action: {})
+            })
+
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(conversation.members, id: \.id) { member in
+                        MemberRow(member: member)
+
+                        if member.id != conversation.members.last?.id {
+                            Divider()
+                                .padding(.leading, 60)
+                        }
+                    }
+                }
+                .background(Color(.systemGray6))
+                .cornerRadius(10)
+                .padding()
+            }
+        }
+        .navigationBarHidden(true)
+    }
+}
+
+#Preview("DM Conversation") {
+    let dmProfile = Profile(
+        id: "user1",
+        name: "John Doe",
+        username: "johndoe",
+        avatar: nil
+    )
+
+    let currentUser = Profile(
+        id: "current",
+        name: "Me",
+        username: "me",
+        avatar: nil
+    )
+
+    let dmConversation = Conversation(
+        id: "dm1",
+        creator: currentUser,
+        createdAt: Date(),
+        consent: .allowed,
+        kind: .dm,
+        name: nil,
+        description: nil,
+        members: [currentUser, dmProfile],
+        otherMember: dmProfile,
+        messages: [],
+        isPinned: false,
+        isUnread: false,
+        isMuted: false,
+        lastMessage: nil,
+        imageURL: nil,
+        isDraft: false
+    )
+
+    ConversationInfoView(conversation: dmConversation)
+}
+
+#Preview("Group Conversation") {
+    let members = [
+        Profile(id: "user1", name: "Alice Johnson", username: "alice", avatar: nil),
+        Profile(id: "user2", name: "Bob Smith", username: "bob", avatar: nil),
+        Profile(id: "user3", name: "Charlie Brown", username: "charlie", avatar: nil),
+        Profile(id: "user4", name: "Diana Prince", username: "diana", avatar: nil),
+        Profile(id: "user5", name: "Eve Wilson", username: "eve", avatar: nil),
+        Profile(id: "user6", name: "Frank Miller", username: "frank", avatar: nil),
+        Profile(id: "user7", name: "Grace Lee", username: "grace", avatar: nil),
+        Profile(id: "user8", name: "Henry Ford", username: "henry", avatar: nil),
+        Profile(id: "user9", name: "Ivy Chen", username: "ivy", avatar: nil),
+        Profile(id: "user10", name: "Jack Ryan", username: "jack", avatar: nil),
+        Profile(id: "user11", name: "Kate Morgan", username: "kate", avatar: nil),
+        Profile(id: "user12", name: "Liam O'Connor", username: "liam", avatar: nil),
+        Profile(id: "current", name: "Me", username: "me", avatar: nil)
+    ]
+
+    let groupConversation = Conversation(
+        id: "group1",
+        creator: members[0],
+        createdAt: Date(),
+        consent: .allowed,
+        kind: .group,
+        name: "The Conversation",
+        description: "The official Ephemera hangout in Convos",
+        members: members,
+        otherMember: nil,
+        messages: [],
+        isPinned: false,
+        isUnread: false,
+        isMuted: false,
+        lastMessage: nil,
+        imageURL: nil,
+        isDraft: false
+    )
+
+    ConversationInfoView(conversation: groupConversation)
 }
