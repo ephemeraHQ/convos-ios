@@ -17,10 +17,11 @@ struct ContactCard: Identifiable, Hashable {
     var id: String {
         switch type {
         case .standard(let inbox):
-            return inbox.id
-        case let .ephemeral(inboxes),
-            let .cash(inboxes):
-            return "\(inboxes.hashValue)"
+            return "standard_\(inbox.id)"
+        case .ephemeral(let inboxes):
+            return "ephemeral_\(inboxes.map(\.id).joined(separator: "-"))"
+        case .cash(let inboxes):
+            return "cash_\(inboxes.map(\.id).joined(separator: "-"))"
         }
     }
 
