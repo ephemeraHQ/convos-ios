@@ -5,6 +5,7 @@ struct ContactCardsView: View {
     @Namespace private var namespace: Namespace.ID
     @State private var state: ContactCardsState
     @State private var isPresentingConversationsSheet: Bool = false
+    @State private var selectedContactCard: ContactCard?
 
     init(
         session: any SessionManagerProtocol
@@ -22,6 +23,9 @@ struct ContactCardsView: View {
                     LazyVStack(spacing: -(reader.size.width - DesignConstants.Spacing.step8x)) {
                         ForEach(state.contactCards, id: \.self) { contactCard in
                             ContactCardView(contactCard: contactCard)
+                                .onTapGesture {
+                                    selectedContactCard = contactCard
+                                }
                         }
                     }
                     .padding(.vertical, DesignConstants.Spacing.step4x)
@@ -50,6 +54,9 @@ struct ContactCardsView: View {
                 )
             }
             .background(.colorFillMinimal)
+        }
+        .sheet(item: $selectedContactCard) { contactCard in
+            ContactCardDetailView(contactCard: contactCard)
         }
         .fullScreenCover(isPresented: $isPresentingConversationsSheet) {
             ConversationsView(session: session)
