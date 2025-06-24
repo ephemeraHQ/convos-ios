@@ -3,14 +3,11 @@ import SwiftUI
 struct MessagesToolbarView: View {
     let conversationState: ConversationState
     let emptyConversationTitle: String
-    let dismissAction: DismissAction
 
     init(conversationState: ConversationState,
-         emptyConversationTitle: String = "New chat",
-         dismissAction: DismissAction) {
+         emptyConversationTitle: String = "New chat") {
         self.conversationState = conversationState
         self.emptyConversationTitle = emptyConversationTitle
-        self.dismissAction = dismissAction
     }
 
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
@@ -41,17 +38,6 @@ struct MessagesToolbarView: View {
 
     var body: some View {
         HStack(spacing: 0.0) {
-            Button {
-                dismissAction()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 24.0))
-                    .foregroundStyle(.colorTextPrimary)
-                    .padding(.vertical, 10.0)
-                    .padding(.horizontal, DesignConstants.Spacing.step2x)
-            }
-            .padding(.trailing, 2.0)
-
             if let conversation = conversationState.conversation, !conversation.isDraft {
                 ConversationAvatarView(conversation: conversation)
                     .padding(.vertical, avatarVerticalPadding)
@@ -73,38 +59,32 @@ struct MessagesToolbarView: View {
 
             Spacer()
 
-            if let conversation = conversationState.conversation {
-                switch conversation.kind {
-                case .group:
-                    Button {
-                    } label: {
-                        Image(systemName: "qrcode")
-                            .font(.system(size: 24.0))
-                            .foregroundStyle(.colorTextPrimary)
-                            .padding(.vertical, 10.0)
-                            .padding(.horizontal, DesignConstants.Spacing.step2x)
-                    }
-                case .dm:
-                    Button {
-                    } label: {
-                        Image(systemName: "timer")
-                            .font(.system(size: 24.0))
-                            .foregroundStyle(.colorTextPrimary)
-                            .padding(.vertical, 10.0)
-                            .padding(.horizontal, DesignConstants.Spacing.step2x)
-                    }
-                }
-            }
+//            if let conversation = conversationState.conversation {
+//                switch conversation.kind {
+//                case .group:
+//                    Button {
+//                    } label: {
+//                        Image(systemName: "qrcode")
+//                            .font(.system(size: 24.0))
+//                            .foregroundStyle(.colorTextPrimary)
+//                            .padding(.vertical, 10.0)
+//                            .padding(.horizontal, DesignConstants.Spacing.step2x)
+//                    }
+//                case .dm:
+//                    Button {
+//                    } label: {
+//                        Image(systemName: "timer")
+//                            .font(.system(size: 24.0))
+//                            .foregroundStyle(.colorTextPrimary)
+//                            .padding(.vertical, 10.0)
+//                            .padding(.horizontal, DesignConstants.Spacing.step2x)
+//                    }
+//                }
+//            }
         }
         .frame(height: barHeight)
         .padding(.leading, DesignConstants.Spacing.step2x)
         .padding(.trailing, DesignConstants.Spacing.step4x)
-        .background(.colorBackgroundPrimary)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(.colorBorderSubtle2)
-                .frame(height: 1.0)
-        }
     }
 }
 
@@ -114,6 +94,6 @@ struct MessagesToolbarView: View {
         conversationRepository: MockConversationRepository()
     )
     MessagesToolbarView(
-        conversationState: conversationState, dismissAction: dismiss
+        conversationState: conversationState
     )
 }

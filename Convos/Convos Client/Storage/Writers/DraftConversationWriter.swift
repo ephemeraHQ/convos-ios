@@ -116,7 +116,9 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                 .map { $0.inboxId } ?? []
             memberInboxIds.append(client.inboxId)
             guard let conversation = try DBConversation.findConversationWith(
-                members: memberInboxIds, db: db
+                members: memberInboxIds,
+                inboxId: client.inboxId,
+                db: db
             ) else {
                 return nil
             }

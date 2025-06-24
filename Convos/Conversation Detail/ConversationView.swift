@@ -35,6 +35,14 @@ struct ConversationView: View {
             )
             .ignoresSafeArea()
         }
+        .toolbarTitleDisplayMode(.inlineLarge)
+        .toolbar {
+            ToolbarItemGroup(placement: .title) {
+                MessagesToolbarView(
+                    conversationState: conversationState,
+                )
+            }
+        }
     }
 }
 

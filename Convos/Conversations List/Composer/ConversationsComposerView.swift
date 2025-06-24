@@ -37,6 +37,15 @@ struct ConversationComposerView: View {
                 selectedProfile: $conversationComposerState.selectedProfile
             )
         }
+        .toolbarTitleDisplayMode(.inlineLarge)
+        .toolbar {
+            ToolbarItemGroup(placement: .title) {
+                MessagesToolbarView(
+                    conversationState: conversationState,
+                )
+            }
+        }
+
     }
 }
 

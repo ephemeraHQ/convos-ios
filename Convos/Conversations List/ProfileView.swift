@@ -16,14 +16,13 @@ struct ProfileView: View {
             Spacer()
                 .frame(height: DesignConstants.Spacing.step12x)
             DraggableSpringyView {
-                ContactCardView(name: $name,
-                                imageState: $imageState,
-                                nameIsValid: $nameIsValid,
-                                nameError: $nameError,
-                                isEditing: $isEditing,
-                                isNameFocused: $isNameFocused,
-                                importAction: {
-                    //                importCardAction()
+                ContactCardEditView(name: $name,
+                                    imageState: $imageState,
+                                    nameIsValid: $nameIsValid,
+                                    nameError: $nameError,
+                                    isEditing: $isEditing,
+                                    isNameFocused: $isNameFocused,
+                                    importAction: {
                 })
             }
             .zIndex(1)

@@ -3,11 +3,30 @@ import SwiftUI
 struct ContactCardsView: View {
     let session: any SessionManagerProtocol
     @Namespace private var namespace: Namespace.ID
+    @State private var state: ContactCardsState
     @State private var isPresentingConversationsSheet: Bool = false
+
+    init(
+        session: any SessionManagerProtocol
+    ) {
+        self.session = session
+        _state = State(initialValue: .init(inboxesRepository: session.inboxesRepository))
+    }
+
+    // MARK: -
 
     var body: some View {
         NavigationStack {
-            VStack {
+            GeometryReader { reader in
+                ScrollView {
+                    LazyVStack(spacing: -(reader.size.width - DesignConstants.Spacing.step8x)) {
+                        ForEach(state.contactCards, id: \.self) { contactCard in
+                            ContactCardView(contactCard: contactCard)
+                        }
+                    }
+                    .padding(.vertical, DesignConstants.Spacing.step4x)
+                    .padding(.horizontal, DesignConstants.Spacing.step4x)
+                }
             }
             .navigationTitle("Cards")
             .toolbarTitleDisplayMode(.inlineLarge)
@@ -30,6 +49,7 @@ struct ContactCardsView: View {
                     in: namespace
                 )
             }
+            .background(.colorFillMinimal)
         }
         .fullScreenCover(isPresented: $isPresentingConversationsSheet) {
             ConversationsView(session: session)
@@ -40,6 +60,7 @@ struct ContactCardsView: View {
                     )
                 )
         }
+        .background(.colorFillMinimal)
     }
 }
 
