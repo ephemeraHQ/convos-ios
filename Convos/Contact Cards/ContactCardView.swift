@@ -55,9 +55,9 @@ struct ContactCardView: View {
 
             RoundedRectangle(cornerRadius: 16.0)
                 .fill(.white.opacity(0.1))
+                .aspectRatio(1.0, contentMode: .fit)
                 .padding(.horizontal, DesignConstants.Spacing.step8x)
                 .padding(.bottom, DesignConstants.Spacing.step8x)
-                .aspectRatio(1.0, contentMode: .fit)
         }
         .background(contactCard.color)
         .clipShape(RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.large))

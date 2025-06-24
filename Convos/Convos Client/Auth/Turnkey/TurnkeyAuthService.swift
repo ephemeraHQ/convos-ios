@@ -80,7 +80,6 @@ final class TurnkeyAuthService: AuthServiceProtocol {
     private var authState: CurrentValueSubject<AuthServiceState, Never> = .init(.notReady)
     private let apiClient: any ConvosAPIBaseProtocol
     private let turnkey: TurnkeyContext = .shared
-    private var passkeyRegistrationTask: Task<Void, Never>?
     private let defaultSessionExpiration: String = "\(60 * 24 * 60 * 60)"  // 60 days
     private var cancellables: Set<AnyCancellable> = []
 
@@ -117,6 +116,10 @@ final class TurnkeyAuthService: AuthServiceProtocol {
                 guard let wallet = user.wallets.first else {
                     Logger.error("Wallet not found for Turnkey user, unauthorized")
                     return .unauthorized
+                }
+
+                if user.wallets.count > 1 {
+                    Logger.warning("Multiple wallets found for Turnkey user, using first")
                 }
 
                 // if we're coming from the RN app, only one account exists
@@ -289,7 +292,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
 
     // MARK: - Convos Backend
 
-    func sendCreateSubOrgRequest(
+    private func sendCreateSubOrgRequest(
         ephemeralPublicKey: String,
         passkeyRegistrationResult: PasskeyRegistrationResult,
         displayName: String

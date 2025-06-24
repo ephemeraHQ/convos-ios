@@ -13,7 +13,17 @@ enum ContactCardType: Hashable {
          cash([Inbox])
 }
 
-struct ContactCard: Hashable {
+struct ContactCard: Identifiable, Hashable {
+    var id: String {
+        switch type {
+        case .standard(let inbox):
+            return inbox.id
+        case let .ephemeral(inboxes),
+            let .cash(inboxes):
+            return "\(inboxes.hashValue)"
+        }
+    }
+
     let type: ContactCardType
 }
 
