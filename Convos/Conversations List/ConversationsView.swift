@@ -9,6 +9,11 @@ struct ConversationsView: View {
         ConversationsListView(session: session, onSignOut: {})
             .toolbar {
                 ToolbarItem(placement: .bottomBar) {
+                    Button("Filter", systemImage: "line.3.horizontal.decrease") {
+                        //
+                    }
+                }
+                ToolbarItem(placement: .bottomBar) {
                     Spacer()
                 }
                 ToolbarItem(placement: .bottomBar) {

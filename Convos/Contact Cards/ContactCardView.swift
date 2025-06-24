@@ -3,6 +3,7 @@ import SwiftUI
 struct ContactCardView: View {
     let contactCard: ContactCard
     let avatarSize: CGFloat = 40.0
+    @State var identifier: String = "testing-string"
 
     private func text(title: String, description: String) -> some View {
         VStack(alignment: .leading, spacing: 2.0) {
@@ -12,6 +13,10 @@ struct ContactCardView: View {
                 .font(.caption)
         }
         .foregroundStyle(.white)
+    }
+
+    static var maxWidth: CGFloat {
+        380.0
     }
 
     var body: some View {
@@ -53,12 +58,14 @@ struct ContactCardView: View {
             }
             .padding(DesignConstants.Spacing.step8x)
 
-            RoundedRectangle(cornerRadius: 16.0)
-                .fill(.white.opacity(0.1))
-                .aspectRatio(1.0, contentMode: .fit)
-                .padding(.horizontal, DesignConstants.Spacing.step8x)
-                .padding(.bottom, DesignConstants.Spacing.step8x)
+            VStack(spacing: 20.0) {
+                QRCodeView(identifier: $identifier, backgroundColor: contactCard.color, foregroundColor: .white)
+            }
+            .aspectRatio(1.0, contentMode: .fit)
+            .padding(.horizontal, DesignConstants.Spacing.step8x)
+            .padding(.bottom, DesignConstants.Spacing.step8x)
         }
+        .frame(maxWidth: Self.maxWidth)
         .background(contactCard.color)
         .clipShape(RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.large))
         .shadow(color: .colorDarkAlpha15, radius: 20, x: 0, y: -16)

@@ -20,7 +20,11 @@ struct ContactCardsView: View {
         NavigationStack {
             GeometryReader { reader in
                 ScrollView {
-                    LazyVStack(spacing: -(reader.size.width - DesignConstants.Spacing.step8x)) {
+                    LazyVStack(spacing: -(
+                        min(reader.size.width, ContactCardView.maxWidth) - (
+                            DesignConstants.Spacing.step16x + DesignConstants
+                                .Spacing.step8x))
+                    ) {
                         ForEach(state.contactCards, id: \.self) { contactCard in
                             ContactCardView(contactCard: contactCard)
                                 .onTapGesture {
