@@ -24,6 +24,7 @@ enum DesignConstants {
     }
 
     enum CornerRadius {
+        static let large: CGFloat = 40.0
         static let medium: CGFloat = 16.0
         static let regular: CGFloat = 12.0
         static let small: CGFloat = 8.0

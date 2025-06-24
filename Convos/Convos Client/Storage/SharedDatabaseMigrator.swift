@@ -31,7 +31,7 @@ class SharedDatabaseMigrator {
                     .notNull()
                 t.column("sessionId", .integer)
                     .references("session", onDelete: .cascade)
-                t.column("type", .text).notNull()
+                t.column("type", .jsonText).notNull()
                 t.column("provider", .text).notNull()
             }
 

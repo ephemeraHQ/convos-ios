@@ -39,8 +39,13 @@ struct ConversationView: View {
             )
             .ignoresSafeArea()
         }
-        .navigationDestination(isPresented: $showInfo) {
-            ConversationInfoView()
+        .toolbarTitleDisplayMode(.inlineLarge)
+        .toolbar {
+            ToolbarItemGroup(placement: .title) {
+                MessagesToolbarView(
+                    conversationState: conversationState,
+                )
+            }
         }
     }
 }

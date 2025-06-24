@@ -3,11 +3,9 @@ import SwiftUI
 import UIKit
 
 class MessagesContainerViewController: UIViewController {
-    let navigationBar: MessagesToolbarViewHost
     let contentView: UIView = UIView()
     let messagesInputView: MessagesInputView
     private var joinConversationInputView: InputHostingController<JoinConversationInputView>
-    private var navigationBarHeightConstraint: NSLayoutConstraint?
     private var conversationCancellable: AnyCancellable?
 
     // MARK: - First Responder Management
@@ -57,11 +55,6 @@ class MessagesContainerViewController: UIViewController {
         self.outgoingMessageWriter = outgoingMessageWriter
         self.conversationConsentWriter = conversationConsentWriter
         self.conversationLocalStateWriter = conversationLocalStateWriter
-        self.navigationBar = MessagesToolbarViewHost(
-            conversationState: conversationState,
-            dismissAction: dismissAction,
-            onInfoTap: onInfoTap
-        )
         self.messagesInputView = MessagesInputView(sendMessage: sendMessage)
         self.joinConversationInputView = .init(
             rootView: JoinConversationInputView(
@@ -133,51 +126,21 @@ class MessagesContainerViewController: UIViewController {
 
     private func setupUI() {
         setupInputBar()
-//        view.addSubview(navigationBar)
-//        navigationBar.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .colorBackgroundPrimary
         contentView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(contentView)
 
-        let heightConstraint = navigationBar.heightAnchor.constraint(equalToConstant: 0)
         NSLayoutConstraint.activate([
-//            navigationBar.topAnchor.constraint(equalTo: view.topAnchor),
-//            navigationBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-//            navigationBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-//            heightConstraint,
             contentView.topAnchor.constraint(equalTo: view.topAnchor),
             contentView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
-
-//        registerForTraitChanges(
-//            [UITraitVerticalSizeClass.self]
-//        ) { (self: Self, _: UITraitCollection) in
-//            self.updateNavigationBarHeight(heightConstraint)
-//        }
-
-        updateNavigationBarHeight(heightConstraint)
-        navigationBarHeightConstraint = heightConstraint
     }
 
     private func setupInputBar() {
         messagesInputView.translatesAutoresizingMaskIntoConstraints = false
         joinConversationInputView.translatesAutoresizingMaskIntoConstraints = false
-    }
-
-    override func viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-        if let constraint = navigationBarHeightConstraint {
-            updateNavigationBarHeight(constraint)
-        }
-    }
-
-    private func updateNavigationBarHeight(_ constraint: NSLayoutConstraint) {
-        let baseHeight = traitCollection.verticalSizeClass == .compact ?
-        CustomToolbarConstants.compactHeight :
-        CustomToolbarConstants.regularHeight
-        constraint.constant = baseHeight + view.safeAreaInsets.top
     }
 
     // MARK: - JoinConversationInputViewDelegate
