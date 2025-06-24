@@ -139,7 +139,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
                             // TODO: 'ephemeral' inbox type will be used depending on account type
                             AuthServiceInbox(
                                 type: .standard,
-                                provider: .external,
+                                provider: .external(.turnkey),
                                 providerId: account.id,
                                 signingKey: account,
                                 databaseKey: try account.databaseKey
@@ -159,7 +159,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
                             displayName: displayName,
                             inbox: AuthServiceInbox(
                                 type: .standard,
-                                provider: .external,
+                                provider: .external(.turnkey),
                                 providerId: account.id,
                                 signingKey: account,
                                 databaseKey: databaseKey

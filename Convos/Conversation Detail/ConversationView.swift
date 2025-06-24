@@ -48,6 +48,14 @@ struct ConversationView: View {
                 groupMetadataWriter: groupMetadataWriter
             )
         }
+        .toolbarTitleDisplayMode(.inlineLarge)
+        .toolbar {
+            ToolbarItemGroup(placement: .title) {
+                MessagesToolbarView(
+                    conversationState: conversationState,
+                )
+            }
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ContactCardView: View {
+struct ContactCardEditView: View {
     @Binding var name: String
     @Binding var imageState: ContactCardImage.State
     @Binding var nameIsValid: Bool
@@ -73,7 +73,7 @@ struct ContactCardView: View {
     @Previewable @FocusState var isNameFocused: Bool
 
     VStack {
-        ContactCardView(name: $name,
+        ContactCardEditView(name: $name,
                         imageState: $imageState,
                         nameIsValid: $nameIsValid,
                         nameError: $nameError,

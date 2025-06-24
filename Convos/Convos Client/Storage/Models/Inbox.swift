@@ -1,6 +1,19 @@
 import Foundation
 import GRDB
 
+extension Inbox {
+    static func mock(type: InboxType = .standard) -> Self {
+        .init(
+            inboxId: UUID().uuidString,
+            identities: [],
+            profile: .mock(),
+            type: type,
+            provider: .external(.turnkey),
+            providerId: UUID().uuidString
+        )
+    }
+}
+
 struct Inbox: Codable, Identifiable, Hashable {
     var id: String { inboxId }
     let inboxId: String
@@ -15,8 +28,12 @@ enum InboxType: String, Codable {
     case standard, ephemeral
 }
 
-enum InboxProvider: String, Codable {
-    case local, external
+enum InboxProvider: Codable, Hashable {
+    case local, external(InboxExternalProvider)
+}
+
+enum InboxExternalProvider: String, Codable {
+    case turnkey, passkey
 }
 
 struct DBInbox: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
@@ -37,7 +54,8 @@ struct DBInbox: Codable, FetchableRecord, PersistableRecord, Identifiable, Hasha
 
     private static let _member: HasOneAssociation<DBInbox, Member> = hasOne(
         Member.self,
-        key: "inboxMember"
+        key: "inboxMember",
+        using: ForeignKey(["inboxId"], to: ["inboxId"])
     )
 
     static let memberProfile: HasOneThroughAssociation<DBInbox, MemberProfile> = hasOne(

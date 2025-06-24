@@ -218,7 +218,7 @@ extension DBConversation {
 }
 
 extension DBConversation {
-    static func findConversationWith(members ids: [String], db: Database) throws -> DBConversation? {
+    static func findConversationWith(members ids: [String], inboxId: String, db: Database) throws -> DBConversation? {
         let ids = Array(Set<String>(ids))
         guard !ids.isEmpty else { return nil }
         let count = ids.count
@@ -248,9 +248,11 @@ extension DBConversation {
                 sql: "SELECT memberId FROM \(DBConversationMember.databaseTableName) WHERE conversationId = ?",
                 arguments: [conversationId]
             )
-            if Set(memberIds) == Set(ids) {
-                // Found exact match
-                return try DBConversation.fetchOne(db, key: conversationId)
+            if Set(memberIds) == Set(ids),
+               let conversation = try DBConversation
+                .fetchOne(db, key: conversationId),
+               conversation.inboxId == inboxId {
+                return conversation
             }
         }
         return nil
