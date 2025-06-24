@@ -40,7 +40,9 @@ struct ConversationView: View {
             .ignoresSafeArea()
         }
         .navigationDestination(isPresented: $showInfo) {
-            ConversationInfoView()
+            if let conversation = conversationState.conversation {
+                ConversationInfoView(conversation: conversation)
+            }
         }
     }
 }
