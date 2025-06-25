@@ -127,6 +127,7 @@ struct ConversationComposerContentView: View {
                     resultsList
                 }
             }
+
             Spacer().frame(height: 0.0)
         }
         .onAppear {

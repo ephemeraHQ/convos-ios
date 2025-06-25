@@ -21,12 +21,12 @@ class ContactCardsState {
 fileprivate extension Array where Element == Inbox {
     func contactCards() -> [ContactCard] {
         let standardInboxes = filter { $0.type == .standard }
-        let ephemeralInboxes = filter {$0.type == .ephemeral }
+        let ephemeralInboxes = filter { $0.type == .ephemeral }
         var contactCards: [ContactCard] = [
             .init(type: .cash([])),
             .init(type: .ephemeral(ephemeralInboxes))
         ]
-        contactCards.append(contentsOf: standardInboxes.map { .init(type: .standard($0))})
+        contactCards.append(contentsOf: standardInboxes.map { .init(type: .standard($0)) })
         return contactCards
     }
 }

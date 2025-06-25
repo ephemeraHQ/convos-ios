@@ -149,7 +149,7 @@ class MessageReactionMenuCoordinator: UIPercentDrivenInteractiveTransition {
             interactivePreviewView = menuController.previewView
         }
 
-        window.rootViewController?.present(menuController, animated: true)
+        window.rootViewController?.topMostViewController().present(menuController, animated: true)
     }
 
     @objc private func handleDisplayLinkTick() {
