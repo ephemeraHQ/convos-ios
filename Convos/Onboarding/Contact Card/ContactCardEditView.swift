@@ -19,17 +19,17 @@ struct ContactCardEditView: View {
 
                 Spacer()
 
-//                if isEditing {
-//                    Button {
-//                        importAction()
-//                    } label: {
-//                        Text("Import")
-//                            .font(DesignConstants.Fonts.buttonText)
-//                            .foregroundStyle(Color.colorFillSecondary)
-//                            .padding(.horizontal, DesignConstants.Spacing.step3x)
-//                            .padding(.vertical, DesignConstants.Spacing.step2x)
-//                    }
-//                }
+                //                if isEditing {
+                //                    Button {
+                //                        importAction()
+                //                    } label: {
+                //                        Text("Import")
+                //                            .font(DesignConstants.Fonts.buttonText)
+                //                            .foregroundStyle(Color.colorFillSecondary)
+                //                            .padding(.horizontal, DesignConstants.Spacing.step3x)
+                //                            .padding(.vertical, DesignConstants.Spacing.step2x)
+                //                    }
+                //                }
             }
 
             ZStack {
@@ -38,10 +38,10 @@ struct ContactCardEditView: View {
                                  textFieldBorderColor: nameError == nil ? .colorBorderSubtle : .colorCaution,
                                  text: $name,
                                  isFocused: $isNameFocused)
-                    .textInputAutocapitalization(.words)
-                    .submitLabel(.done)
-                    .opacity(isEditing ? 1.0 : 0.0)
-                    .transition(.scale)
+                .textInputAutocapitalization(.words)
+                .submitLabel(.done)
+                .opacity(isEditing ? 1.0 : 0.0)
+                .transition(.scale)
 
                 if !isEditing {
                     HStack {
@@ -72,13 +72,15 @@ struct ContactCardEditView: View {
     @Previewable @FocusState var isNameFocused: Bool
 
     VStack {
-        ContactCardEditView(name: $name,
-                        imageState: $imageState,
-                        nameIsValid: $nameIsValid,
-                        nameError: $nameError,
-                        isEditing: $isEditing,
-                        isNameFocused: $isNameFocused,
-                        importAction: {})
+        ContactCardEditView(
+            name: $name,
+            imageState: $imageState,
+            nameIsValid: $nameIsValid,
+            nameError: $nameError,
+            isEditing: $isEditing,
+            isNameFocused: $isNameFocused,
+            importAction: {}
+        )
 
         Button(isEditing ? "Done" : "Edit") {
             isEditing.toggle()

@@ -29,7 +29,7 @@ class SessionManager: SessionManagerProtocol {
         self.environment = environment
         inboxOperationsCancellable = authService
             .authStatePublisher
-            .sink { [inboxOperationsPublisher] authState in
+            .sink { [inboxOperationsPublisher, inboxesRepository] authState in
                 Logger.info("Auth state changed: \(authState)")
                 switch authState {
                 case .authorized(let authResult):
@@ -56,7 +56,14 @@ class SessionManager: SessionManagerProtocol {
                         return operation
                     }
                     inboxOperationsPublisher.send(operations)
-                case .unauthorized, .migrating, .notReady, .unknown:
+                case .unauthorized:
+                    do {
+                        let inboxes = try inboxesRepository.allInboxes()
+                    } catch {
+                        Logger.error("Error fetching inboxes from auth state change: \(error)")
+                    }
+                    break
+                case .migrating, .notReady, .unknown:
                     inboxOperationsPublisher.send([])
                 }
             }
