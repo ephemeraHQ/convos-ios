@@ -6,7 +6,7 @@ struct SecurityLineView: View {
         static let compactHeight: CGFloat = 52.0
     }
 
-    @Binding var path: [ConversationsListView.Route]
+    @Binding var path: [ConversationsRoute]
     private let conversationsState: ConversationsState
     private let deniedConversationsCount: ConversationsCountState
 //    private let consentStateWriter: any ConversationConsentWriterProtocol
@@ -15,7 +15,7 @@ struct SecurityLineView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
     @Environment(\.dismiss) private var dismiss: DismissAction
 
-    init(session: any SessionManagerProtocol, path: Binding<[ConversationsListView.Route]>) {
+    init(session: any SessionManagerProtocol, path: Binding<[ConversationsRoute]>) {
         conversationsState = .init(
             conversationsRepository: session.conversationsRepository(for: .securityLine)
         )
@@ -43,7 +43,7 @@ struct SecurityLineView: View {
                     Spacer()
                 } else {
                     ForEach(conversationsState.conversations) { conversation in
-                        NavigationLink(value: ConversationsListView.Route.conversation(conversation)) {
+                        NavigationLink(value: ConversationsRoute.conversation(conversation)) {
                             ConversationsListItem(conversation: conversation)
                         }
                     }
@@ -75,7 +75,7 @@ struct SecurityLineView: View {
 }
 
 #Preview {
-    @Previewable @State var path: [ConversationsListView.Route] = []
+    @Previewable @State var path: [ConversationsRoute] = []
     let convos = ConvosClient.mock()
 
     NavigationStack {
