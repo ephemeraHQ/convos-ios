@@ -113,15 +113,17 @@ class PasskeyAuthService: AuthServiceProtocol {
             let signingKey = PasskeySigningKey(credentialID: identity.credentialID,
                                                publicKey: identity.publicKey,
                                                passkeyAuth: passkeyAuth)
-            let result = AuthServiceResult(inboxes: [
-                AuthServiceInbox(
-                    type: .standard,
-                    provider: .external(.passkey),
-                    providerId: identity.userID,
-                    signingKey: signingKey,
-                    databaseKey: identity.databaseKey
-                )
-            ])
+            let result = AuthServiceResult(
+                inboxes: [
+                    AuthServiceInbox(
+                        type: .standard,
+                        provider: .external(.passkey),
+                        providerId: identity.userID,
+                        signingKey: signingKey,
+                        databaseKey: identity.databaseKey
+                    )
+                ]
+            )
             authStateSubject.send(.authorized(result))
         } else {
             authStateSubject.send(.unauthorized)

@@ -6,11 +6,14 @@ struct InboxStateMachineTests {
     func testRegisteringUser() async throws {
         let mockAuthResult = MockAuthResult(name: "Name")
         let inbox = mockAuthResult.inbox
+        let syncingManager = MockSyncingManager()
         let databaseWriter = MockDatabaseManager.shared.dbWriter
         let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
         let inboxStateMachine = InboxStateMachine(
             inbox: inbox,
             inboxWriter: inboxWriter,
+            syncingManager: syncingManager,
+            sessionType: .external,
             environment: .tests
         )
         var stateIterator = inboxStateMachine.statePublisher.values.makeAsyncIterator()
@@ -27,12 +30,12 @@ struct InboxStateMachineTests {
             fatalError()
         }
         #expect(fifth.isReady)
-        if case let .ready(client, _) = fifth {
+        if case let .ready(result) = fifth {
             let inboxesRepository = InboxesRepository(
                 databaseReader: MockDatabaseManager.shared.dbReader
             )
             let inboxes = try inboxesRepository.allInboxes()
-            let foundInbox = inboxes.first(where: { $0.inboxId == client.inboxId })
+            let foundInbox = inboxes.first(where: { $0.inboxId == result.client.inboxId })
             #expect(foundInbox != nil)
         } else {
             fatalError()
@@ -43,11 +46,14 @@ struct InboxStateMachineTests {
     func testSigningIn() async throws {
         let mockAuthResult = MockAuthResult(name: "Name")
         let inbox = mockAuthResult.inbox
+        let syncingManager = MockSyncingManager()
         let databaseWriter = MockDatabaseManager.shared.dbWriter
         let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
         let inboxStateMachine = InboxStateMachine(
             inbox: inbox,
             inboxWriter: inboxWriter,
+            syncingManager: syncingManager,
+            sessionType: .external,
             environment: .tests
         )
         var stateIterator = inboxStateMachine.statePublisher.values.makeAsyncIterator()
@@ -68,6 +74,8 @@ struct InboxStateMachineTests {
         let signInStateMachine = InboxStateMachine(
             inbox: inbox,
             inboxWriter: inboxWriter,
+            syncingManager: syncingManager,
+            sessionType: .external,
             environment: .tests
         )
         var signInStateIterator = signInStateMachine.statePublisher.values.makeAsyncIterator()

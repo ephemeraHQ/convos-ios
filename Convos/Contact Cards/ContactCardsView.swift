@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ContactCardsView: View {
+    let convos: ConvosClient
     let session: any SessionManagerProtocol
     @Namespace private var namespace: Namespace.ID
     @State private var state: ContactCardsState
@@ -8,9 +9,10 @@ struct ContactCardsView: View {
     @State private var selectedContactCard: ContactCard?
 
     init(
-        session: any SessionManagerProtocol
+        convos: ConvosClient
     ) {
-        self.session = session
+        self.convos = convos
+        self.session = convos.session
         _state = State(initialValue: .init(inboxesRepository: session.inboxesRepository))
     }
 
@@ -41,6 +43,7 @@ struct ContactCardsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Add Card", systemImage: "plus") {
+                        try? convos.getStarted()
                     }
                 }
 
@@ -77,5 +80,7 @@ struct ContactCardsView: View {
 
 #Preview {
     let convos = ConvosClient.mock()
-    ContactCardsView(session: convos.session)
+    ContactCardsView(
+        convos: convos
+    )
 }
