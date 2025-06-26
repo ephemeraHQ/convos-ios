@@ -166,6 +166,7 @@
 				"Convos Client/Storage/Repositories/Mocks/MockMessagesRepository.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockOutgoingMessageWriter.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockProfileSearchRepository.swift",
+				"Convos Client/Storage/Repositories/Mocks/MockSyncingManager.swift",
 				"Convos Client/Storage/Repositories/ProfileSearchRepository.swift",
 				"Convos Client/Storage/SharedDatabaseMigrator.swift",
 				"Convos Client/Storage/States/DraftConversationState.swift",

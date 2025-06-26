@@ -8,17 +8,20 @@ typealias AnyClientProvider = any XMTPClientProvider
 typealias AnyClientProviderPublisher = AnyPublisher<AnyClientProvider, Never>
 
 class SessionManager: SessionManagerProtocol {
+    let authState: AnyPublisher<AuthServiceState, Never>
     let inboxesRepository: any InboxesRepositoryProtocol
+    private let currentSessionRepository: any CurrentSessionRepositoryProtocol
     private let inboxOperationsPublisher: CurrentValueSubject<[any AuthorizeInboxOperationProtocol], Never> = .init([])
-    private var inboxOperationsCancellable: AnyCancellable
+    private var cancellables: Set<AnyCancellable> = []
 
     private let databaseWriter: any DatabaseWriter
     private let databaseReader: any DatabaseReader
-    private var cancellables: Set<AnyCancellable> = []
     private let authService: any AuthServiceProtocol
+    private let localAuthService: any LocalAuthServiceProtocol
     private let environment: AppEnvironment
 
     init(authService: any AuthServiceProtocol,
+         localAuthService: any LocalAuthServiceProtocol,
          databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader,
          environment: AppEnvironment) {
@@ -26,10 +29,15 @@ class SessionManager: SessionManagerProtocol {
         self.databaseReader = databaseReader
         self.inboxesRepository = InboxesRepository(databaseReader: databaseReader)
         self.authService = authService
+        self.localAuthService = localAuthService
         self.environment = environment
-        inboxOperationsCancellable = authService
-            .authStatePublisher
-            .sink { [inboxOperationsPublisher, inboxesRepository] authState in
+        let currentSessionRepository = CurrentSessionRepository(dbReader: databaseReader)
+        self.currentSessionRepository = currentSessionRepository
+        self.authState = authService.authStatePublisher
+            .merge(with: localAuthService.authStatePublisher)
+            .eraseToAnyPublisher()
+        authState
+            .sink { [inboxOperationsPublisher] authState in
                 Logger.info("Auth state changed: \(authState)")
                 switch authState {
                 case .authorized(let authResult):
@@ -43,7 +51,9 @@ class SessionManager: SessionManagerProtocol {
                         operation.authorize()
                         return operation
                     }
-                    inboxOperationsPublisher.send(operations)
+                    var allOperations = inboxOperationsPublisher.value
+                    allOperations.append(contentsOf: operations)
+                    inboxOperationsPublisher.send(allOperations)
                 case .registered(let registeredResult):
                     let operations = registeredResult.inboxes.map { inbox in
                         let operation = AuthorizeInboxOperation(
@@ -55,18 +65,19 @@ class SessionManager: SessionManagerProtocol {
                         operation.register(displayName: registeredResult.displayName)
                         return operation
                     }
-                    inboxOperationsPublisher.send(operations)
-                case .unauthorized:
-                    do {
-                        let inboxes = try inboxesRepository.allInboxes()
-                    } catch {
-                        Logger.error("Error fetching inboxes from auth state change: \(error)")
-                    }
-                    break
-                case .migrating, .notReady, .unknown:
+                    var allOperations = inboxOperationsPublisher.value
+                    allOperations.append(contentsOf: operations)
+                    inboxOperationsPublisher.send(allOperations)
+                case .unauthorized, .migrating, .notReady, .unknown:
                     inboxOperationsPublisher.send([])
                 }
             }
+            .store(in: &cancellables)
+    }
+
+    func prepare() async throws {
+        try await localAuthService.prepare()
+        try await authService.prepare()
     }
 
     // MARK: Messaging

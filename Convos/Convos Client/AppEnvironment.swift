@@ -47,7 +47,7 @@ enum AppEnvironment {
         guard self != .tests else {
             return FileManager.default.temporaryDirectory
         }
-        
+
         guard let groupUrl = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: appGroupIdentifier
         ) else {
