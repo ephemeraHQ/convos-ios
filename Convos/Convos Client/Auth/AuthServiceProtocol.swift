@@ -65,13 +65,20 @@ enum AuthServiceState {
     }
 }
 
-protocol AuthServiceProtocol {
+protocol BaseAuthServiceProtocol {
     var state: AuthServiceState { get }
     var authStatePublisher: AnyPublisher<AuthServiceState, Never> { get }
 
     func prepare() async throws
+}
 
+protocol AuthServiceProtocol: BaseAuthServiceProtocol {
     func signIn() async throws
     func register(displayName: String) async throws
     func signOut() async throws
+}
+
+protocol LocalAuthServiceProtocol: BaseAuthServiceProtocol {
+    func register(displayName: String, inboxType: InboxType) throws -> any AuthServiceRegisteredResultType
+    func deleteAll() throws
 }

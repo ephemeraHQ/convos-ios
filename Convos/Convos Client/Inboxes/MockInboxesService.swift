@@ -2,6 +2,13 @@ import Combine
 import Foundation
 
 class MockInboxesService: SessionManagerProtocol {
+    var authState: AnyPublisher<AuthServiceState, Never> {
+        Just(AuthServiceState.unknown).eraseToAnyPublisher()
+    }
+
+    func prepare() async throws {
+    }
+
     var inboxesRepository: any InboxesRepositoryProtocol {
         self
     }

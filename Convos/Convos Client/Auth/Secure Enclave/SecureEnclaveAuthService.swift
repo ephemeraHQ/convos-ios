@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import XMTPiOS
 
-class SecureEnclaveAuthService: AuthServiceProtocol {
+class SecureEnclaveAuthService: LocalAuthServiceProtocol {
     private let identityStore: SecureEnclaveIdentityStore = .init()
     private let authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
@@ -18,47 +18,45 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
         try refreshAuthState()
     }
 
-    func signIn() async throws {}
-
-    func signOut() async throws {}
-
-    func register(displayName: String) async throws {
-        let identity = try identityStore.save()
-        authStateSubject.send(.registered(
-            AuthServiceRegisteredResult(
-                displayName: displayName,
-                inbox: AuthServiceInbox(
-                    type: .ephemeral,
-                    provider: .local,
-                    providerId: identity.id,
-                    signingKey: identity.privateKey,
-                    databaseKey: identity.databaseKey
-                )
+    func register(displayName: String, inboxType: InboxType) throws -> any AuthServiceRegisteredResultType {
+        let identity = try identityStore.save(type: inboxType)
+        let result = AuthServiceRegisteredResult(
+            displayName: displayName,
+            inbox: AuthServiceInbox(
+                type: inboxType,
+                provider: .local,
+                providerId: identity.id,
+                signingKey: identity.privateKey,
+                databaseKey: identity.databaseKey
             )
-        ))
+        )
+        authStateSubject.send(.registered(result))
+        return result
     }
 
-    func deleteAccount() async throws {
-        try identityStore.delete()
-        authStateSubject.send(.unauthorized)
+    func deleteAll() throws {
+        let identities = try identityStore.loadAll()
+        try identities.forEach { try identityStore.delete(for: $0.id) }
     }
 
     // MARK: - Private Helpers
 
     private func refreshAuthState() throws {
         do {
-            if let identity = try identityStore.load() {
+            let identities = try identityStore.loadAll()
+            if !identities.isEmpty {
+                let inboxes: [AuthServiceInbox] = identities.map { identity in
+                    AuthServiceInbox(
+                        type: identity.type,
+                        provider: .local,
+                        providerId: identity.id,
+                        signingKey: identity.privateKey,
+                        databaseKey: identity.databaseKey
+                    )
+                }
                 authStateSubject.send(.authorized(
                     AuthServiceResult(
-                        inboxes: [
-                            AuthServiceInbox(
-                                type: .ephemeral,
-                                provider: .local,
-                                providerId: identity.id,
-                                signingKey: identity.privateKey,
-                                databaseKey: identity.databaseKey
-                            )
-                        ]
+                        inboxes: inboxes
                     )
                 ))
             } else {
