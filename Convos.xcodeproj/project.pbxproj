@@ -157,7 +157,6 @@
 				"Convos Client/Storage/Repositories/DB XMTP Representations/Consent+ConsentState.swift",
 				"Convos Client/Storage/Repositories/DraftConversationRepository.swift",
 				"Convos Client/Storage/Repositories/InboxesRepository.swift",
-				"Convos Client/Storage/Repositories/InboxRepository.swift",
 				"Convos Client/Storage/Repositories/MessagesRepository.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockConversationConsentWriter.swift",
 				"Convos Client/Storage/Repositories/Mocks/MockConversationRepository.swift",
