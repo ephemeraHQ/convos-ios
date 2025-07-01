@@ -119,6 +119,19 @@ final class MessagingService: MessagingServiceProtocol {
                               conversationId: conversationId)
     }
 
+    // MARK: - Group Management
+
+    func groupMetadataWriter() -> any GroupMetadataWriterProtocol {
+        GroupMetadataWriter(databaseWriter: databaseWriter,
+                            clientPublisher: stateMachine.clientPublisher)
+    }
+
+    func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
+        GroupPermissionsRepository(databaseReader: databaseReader,
+                                   clientPublisher: stateMachine.clientPublisher,
+                                   userRepository: userRepository())
+    }
+
     // MARK: State Machine
 
     var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {

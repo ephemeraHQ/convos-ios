@@ -129,10 +129,10 @@ final class LayoutModel<Layout: MessagesLayoutProtocol> {
         if index < sections.count &- 1 {
             let nextIndex = index &+ 1
             sections.withUnsafeMutableBufferPointer { directlyMutableSections in
-                nonisolated(unsafe) let directlyMutableSections = directlyMutableSections
                 DispatchQueue
                     .concurrentPerform(iterations: directlyMutableSections.count &- nextIndex) { internalIndex in
-                        directlyMutableSections[internalIndex &+ nextIndex].offsetY += heightDiff
+                        nonisolated(unsafe) let sections = directlyMutableSections
+                        sections[internalIndex &+ nextIndex].offsetY += heightDiff
                     }
             }
         }

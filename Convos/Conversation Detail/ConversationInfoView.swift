@@ -2,14 +2,25 @@ import SwiftUI
 
 struct ConversationInfoView: View {
     let conversation: Conversation
+    let messagingService: any MessagingServiceProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showAllMembers: Bool = false
+    @State private var showGroupEdit: Bool = false
+    @State private var showAddMember: Bool = false
+
+    private var conversationWithAllMembers: Conversation {
+        // For group conversations, ensure current user is included in member list for proper display
+        if conversation.kind == .group {
+            return conversation.withCurrentUserIncluded()
+        }
+        return conversation
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             CustomToolbarView(onBack: { dismiss() }, rightContent: {
                 if conversation.kind == .group {
-                    EditGroupButton(action: {})
+                    EditGroupButton(action: { showGroupEdit = true })
                 }
             })
 
@@ -18,12 +29,23 @@ struct ConversationInfoView: View {
             case .dm:
                 DMInfoView(conversation: conversation)
             case .group:
-                GroupInfoView(conversation: conversation, showAllMembers: $showAllMembers)
+                GroupInfoView(
+                    conversation: conversationWithAllMembers,
+                    messagingService: messagingService,
+                    showAllMembers: $showAllMembers,
+                    showAddMember: $showAddMember
+                )
             }
         }
         .navigationBarHidden(true)
         .navigationDestination(isPresented: $showAllMembers) {
-            AllMembersView(conversation: conversation)
+            AllMembersView(conversation: conversationWithAllMembers, messagingService: messagingService)
+        }
+        .navigationDestination(isPresented: $showGroupEdit) {
+            GroupEditView(conversation: conversation, messagingService: messagingService)
+        }
+        .navigationDestination(isPresented: $showAddMember) {
+            AddMemberView(conversation: conversation, messagingService: messagingService)
         }
     }
 }
@@ -98,7 +120,9 @@ struct DMInfoView: View {
 // MARK: - Group Info View
 struct GroupInfoView: View {
     let conversation: Conversation
+    let messagingService: any MessagingServiceProtocol
     @Binding var showAllMembers: Bool
+    @Binding var showAddMember: Bool
 
     private var displayedMembers: [Profile] {
         Array(conversation.members.prefix(6))
@@ -138,13 +162,21 @@ struct GroupInfoView: View {
                         Text("\(conversation.members.count) Members")
                             .font(.headline)
                         Spacer()
-                        AddMemberButton(action: {})
+                        AddMemberButton(action: { showAddMember = true })
                     }
                     .padding(.horizontal)
 
                     LazyVStack(spacing: 0) {
                         ForEach(displayedMembers, id: \.id) { member in
-                            MemberRow(member: member)
+                            MemberRow(
+                                member: member,
+                                conversationID: conversation.id,
+                                messagingService: messagingService,
+                                canDeleteMembers: true,
+                                onMemberRemoved: { _ in
+                                    // @lourou: Refresh conversation data
+                                }
+                            )
 
                             if member.id != displayedMembers.last?.id {
                                 Divider()
@@ -269,6 +301,27 @@ struct SettingsRow: View {
 
 struct MemberRow: View {
     let member: Profile
+    let conversationID: String
+    let messagingService: (any MessagingServiceProtocol)?
+    let canDeleteMembers: Bool
+    let onMemberRemoved: ((String) -> Void)?
+
+    @State private var showingDeleteAlert: Bool = false
+    @State private var isDeleting: Bool = false
+    @State private var memberRole: MemberRole = .member
+
+    init(
+        member: Profile,
+        conversationID: String,
+        messagingService: (any MessagingServiceProtocol)? = nil,
+        canDeleteMembers: Bool = false,
+        onMemberRemoved: ((String) -> Void)? = nil) {
+        self.member = member
+        self.conversationID = conversationID
+        self.messagingService = messagingService
+        self.canDeleteMembers = canDeleteMembers
+        self.onMemberRemoved = onMemberRemoved
+    }
 
     var body: some View {
         HStack {
@@ -286,8 +339,90 @@ struct MemberRow: View {
             }
 
             Spacer()
+
+            if !memberRole.displayName.isEmpty {
+                Text(memberRole.displayName)
+                    .font(.caption)
+                    .foregroundColor(.blue)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(8)
+            }
+
+            if canDeleteMembers && !isCurrentUser {
+                let action = { showingDeleteAlert = true }
+                Button(action: action) {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundColor(.red)
+                        .font(.title3)
+                }
+                .disabled(isDeleting)
+                .opacity(isDeleting ? 0.5 : 1.0)
+            }
         }
         .padding()
+        .task {
+            await loadMemberRole()
+        }
+        .alert("Remove Member", isPresented: $showingDeleteAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Remove", role: .destructive) {
+                Task {
+                    await removeMember()
+                }
+            }
+        } message: {
+            Text("Are you sure you want to remove \(member.displayName) from this group?")
+        }
+    }
+
+    private var isCurrentUser: Bool {
+        // @lourou: Get actual current user ID from messaging service
+        member.id == "current"
+    }
+
+    private func loadMemberRole() async {
+        guard let messagingService = messagingService else { return }
+
+        do {
+            let permissionsRepo = messagingService.groupPermissionsRepository()
+            let role = try await permissionsRepo.getMemberRole(
+                memberInboxId: member.id,
+                in: conversationID
+            )
+
+            await MainActor.run {
+                memberRole = role
+            }
+        } catch {
+            Logger.error("Failed to load member role for \(member.id): \(error)")
+            // Keep default .member role
+        }
+    }
+
+    private func removeMember() async {
+        guard let messagingService = messagingService else { return }
+
+        isDeleting = true
+
+        do {
+            let metadataWriter = messagingService.groupMetadataWriter()
+            try await metadataWriter.removeGroupMembers(
+                groupId: conversationID,
+                memberInboxIds: [member.id]
+            )
+            await MainActor.run {
+                onMemberRemoved?(member.id)
+                isDeleting = false
+            }
+        } catch {
+            await MainActor.run {
+                // @lourou: Show error alert
+                Logger.error("Failed to remove member \(member.id): \(error)")
+                isDeleting = false
+            }
+        }
     }
 }
 
@@ -335,18 +470,28 @@ struct AddMemberButton: View {
 // MARK: - All Members View
 struct AllMembersView: View {
     let conversation: Conversation
+    let messagingService: any MessagingServiceProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
+    @State private var showAddMember: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
             CustomToolbarView(onBack: { dismiss() }, rightContent: {
-                AddMemberButton(action: {})
+                AddMemberButton(action: { showAddMember = true })
             })
 
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(conversation.members, id: \.id) { member in
-                        MemberRow(member: member)
+                        MemberRow(
+                            member: member,
+                            conversationID: conversation.id,
+                            messagingService: messagingService,
+                            canDeleteMembers: true,
+                            onMemberRemoved: { _ in
+                                // @lourou: Refresh conversation data
+                            }
+                        )
 
                         if member.id != conversation.members.last?.id {
                             Divider()
@@ -360,6 +505,9 @@ struct AllMembersView: View {
             }
         }
         .navigationBarHidden(true)
+        .navigationDestination(isPresented: $showAddMember) {
+            AddMemberView(conversation: conversation, messagingService: messagingService)
+        }
     }
 }
 
@@ -397,7 +545,7 @@ struct AllMembersView: View {
         isDraft: false
     )
 
-    ConversationInfoView(conversation: dmConversation)
+    ConversationInfoView(conversation: dmConversation, messagingService: MockMessagingService())
 }
 
 #Preview("Group Conversation") {
@@ -413,7 +561,6 @@ struct AllMembersView: View {
         Profile(id: "user9", name: "Ivy Chen", username: "ivy", avatar: nil),
         Profile(id: "user10", name: "Jack Ryan", username: "jack", avatar: nil),
         Profile(id: "user11", name: "Kate Morgan", username: "kate", avatar: nil),
-        Profile(id: "user12", name: "Liam O'Connor", username: "liam", avatar: nil),
         Profile(id: "current", name: "Me", username: "me", avatar: nil)
     ]
 
@@ -436,5 +583,5 @@ struct AllMembersView: View {
         isDraft: false
     )
 
-    ConversationInfoView(conversation: groupConversation)
+    ConversationInfoView(conversation: groupConversation, messagingService: MockMessagingService())
 }

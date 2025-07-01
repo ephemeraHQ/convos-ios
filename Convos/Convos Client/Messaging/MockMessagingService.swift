@@ -2,8 +2,6 @@ import Combine
 import Foundation
 import XMTPiOS
 
-// swiftlint: disable force_unwrapping
-
 class MockMessagingService: MessagingServiceProtocol {
     let currentUser: User = .mock()
     let allUsers: [Profile]
@@ -107,6 +105,14 @@ class MockMessagingService: MessagingServiceProtocol {
 
     func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol {
         MockConversationLocalStateWriter()
+    }
+
+    func groupMetadataWriter() -> any GroupMetadataWriterProtocol {
+        MockGroupMetadataWriter()
+    }
+
+    func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
+        MockGroupPermissionsRepository()
     }
 }
 
@@ -316,6 +322,7 @@ extension MockMessagingService {
 
     static func generateRandomConversation(id: String, from users: [Profile]) -> Conversation {
         var availableUsers = users
+        // swiftlint:disable:next force_unwrapping
         let randomCreator = availableUsers.randomElement()!
         availableUsers.removeAll { $0 == randomCreator }
 
@@ -323,11 +330,14 @@ extension MockMessagingService {
         let kind: ConversationKind = isDirectMessage ? .dm : .group
 
         let memberCount = isDirectMessage ? 1 : Int.random(in: 1..<availableUsers.count)
+        // swiftlint:disable:next force_unwrapping
         let otherMember = isDirectMessage ? availableUsers.randomElement()! : nil
+        // swiftlint:disable:next force_unwrapping
         let randomMembers = isDirectMessage ? [otherMember!, randomCreator] : Array(
             availableUsers.shuffled().prefix(memberCount)
         )
 
+        // swiftlint:disable:next force_unwrapping
         let randomName = isDirectMessage ? otherMember!.name : [
             "Team Discussion",
             "Project Planning",
@@ -336,6 +346,7 @@ extension MockMessagingService {
             "Book Club",
             "Gaming Group",
             "Study Group"
+        // swiftlint:disable:next force_unwrapping
         ].randomElement()!
 
         return .mock(
@@ -424,4 +435,60 @@ class MockConversationLocalStateWriter: ConversationLocalStateWriterProtocol {
     func setMuted(_ isMuted: Bool, for conversationId: String) async throws {}
 }
 
-// swiftlint: enable force_unwrapping
+// Add mock implementations for group functionality
+class MockGroupMetadataWriter: GroupMetadataWriterProtocol {
+    func updateGroupName(groupId: String, name: String) async throws {}
+    func updateGroupDescription(groupId: String, description: String) async throws {}
+    func updateGroupImageUrl(groupId: String, imageUrl: String) async throws {}
+    func addGroupMembers(groupId: String, memberInboxIds: [String]) async throws {}
+    func removeGroupMembers(groupId: String, memberInboxIds: [String]) async throws {}
+    func promoteToAdmin(groupId: String, memberInboxId: String) async throws {}
+    func demoteFromAdmin(groupId: String, memberInboxId: String) async throws {}
+    func promoteToSuperAdmin(groupId: String, memberInboxId: String) async throws {}
+    func demoteFromSuperAdmin(groupId: String, memberInboxId: String) async throws {}
+}
+
+class MockGroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
+    func addAdmin(memberInboxId: String, to groupId: String) async throws {
+        // @lourou
+    }
+
+    func removeAdmin(memberInboxId: String, from groupId: String) async throws {
+        // @lourou
+    }
+
+    func addSuperAdmin(memberInboxId: String, to groupId: String) async throws {
+        // @lourou
+    }
+
+    func removeSuperAdmin(memberInboxId: String, from groupId: String) async throws {
+        // @lourou
+    }
+
+    func addMembers(inboxIds: [String], to groupId: String) async throws {
+        // @lourou
+    }
+
+    func removeMembers(inboxIds: [String], from groupId: String) async throws {
+        // @lourou
+    }
+
+    func getGroupPermissions(for groupId: String) async throws -> GroupPermissionPolicySet {
+        return GroupPermissionPolicySet.defaultPolicy
+    }
+
+    func getMemberRole(memberInboxId: String, in groupId: String) async throws -> MemberRole {
+        return .member
+    }
+
+    func canPerformAction(
+        memberInboxId: String,
+        action: GroupPermissionAction,
+        in groupId: String) async throws -> Bool {
+        return true
+    }
+
+    func getGroupMembers(for groupId: String) async throws -> [GroupMemberInfo] {
+        return []
+    }
+}

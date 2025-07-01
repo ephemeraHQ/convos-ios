@@ -96,7 +96,8 @@ struct ConversationsListView: View {
                                 messagesRepository: messagesRepository,
                                 outgoingMessageWriter: messageWriter,
                                 conversationConsentWriter: consentWriter,
-                                conversationLocalStateWriter: localStateWriter
+                                conversationLocalStateWriter: localStateWriter,
+                                messagingService: convos.messaging
                             )
                             .ignoresSafeArea()
                             .toolbarVisibility(.hidden, for: .navigationBar)

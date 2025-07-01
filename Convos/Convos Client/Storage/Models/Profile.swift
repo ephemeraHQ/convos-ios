@@ -27,6 +27,21 @@ struct MemberProfile: Codable, FetchableRecord, PersistableRecord, Hashable {
     )
 }
 
+enum MemberRole: String, Codable, Hashable {
+    case member, admin, superAdmin = "super_admin"
+
+    var displayName: String {
+        switch self {
+        case .member:
+            return ""
+        case .admin:
+            return "Admin"
+        case .superAdmin:
+            return "Super Admin"
+        }
+    }
+}
+
 struct Profile: Codable, Identifiable, Hashable {
     let id: String
     let name: String
