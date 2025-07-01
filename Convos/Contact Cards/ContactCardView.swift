@@ -59,7 +59,10 @@ struct ContactCardView: View {
             .padding(DesignConstants.Spacing.step8x)
 
             VStack(spacing: 20.0) {
-                QRCodeView(identifier: $identifier, backgroundColor: contactCard.color, foregroundColor: .white)
+//                QRCodeView(identifier: $identifier, backgroundColor: contactCard.color, foregroundColor: .white)
+                Rectangle()
+                    .fill(.white.opacity(0.2))
+                    .mask(RoundedRectangle(cornerRadius: 18.0))
             }
             .aspectRatio(1.0, contentMode: .fit)
             .padding(.horizontal, DesignConstants.Spacing.step8x)
