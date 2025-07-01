@@ -25,7 +25,13 @@ final class ConvosClient {
         localAuthService: LocalAuthServiceProtocol = SecureEnclaveAuthService()
     ) -> ConvosClient {
         let databaseManager = MockDatabaseManager.shared
-        let sessionManager = MockInboxesService()
+        let sessionManager = SessionManager(
+            authService: authService,
+            localAuthService: localAuthService,
+            databaseWriter: databaseManager.dbWriter,
+            databaseReader: databaseManager.dbReader,
+            environment: .tests
+        )
         return .init(authService: authService,
                      localAuthService: localAuthService,
                      sessionManager: sessionManager,
@@ -74,7 +80,7 @@ final class ConvosClient {
     }
 
     func getStarted() throws {
-        let _ = try localAuthService.register(displayName: "User", inboxType: .standard)
+        _ = try localAuthService.register(displayName: "User", inboxType: .standard)
     }
 
     func register(displayName: String) async throws {

@@ -13,7 +13,6 @@ struct InboxStateMachineTests {
             inbox: inbox,
             inboxWriter: inboxWriter,
             syncingManager: syncingManager,
-            sessionType: .external,
             environment: .tests
         )
         var stateIterator = inboxStateMachine.statePublisher.values.makeAsyncIterator()
@@ -53,7 +52,6 @@ struct InboxStateMachineTests {
             inbox: inbox,
             inboxWriter: inboxWriter,
             syncingManager: syncingManager,
-            sessionType: .external,
             environment: .tests
         )
         var stateIterator = inboxStateMachine.statePublisher.values.makeAsyncIterator()
@@ -75,7 +73,6 @@ struct InboxStateMachineTests {
             inbox: inbox,
             inboxWriter: inboxWriter,
             syncingManager: syncingManager,
-            sessionType: .external,
             environment: .tests
         )
         var signInStateIterator = signInStateMachine.statePublisher.values.makeAsyncIterator()
