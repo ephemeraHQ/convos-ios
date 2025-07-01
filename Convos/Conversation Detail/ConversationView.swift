@@ -8,7 +8,7 @@ struct ConversationView: View {
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
     let groupMetadataWriter: any GroupMetadataWriterProtocol
     let conversationState: ConversationState
-    @State private var showInfo: Bool = false
+    @State private var showInfoForConversation: Conversation?
 
     init(
         conversationRepository: any ConversationRepositoryProtocol,
@@ -28,32 +28,33 @@ struct ConversationView: View {
     }
 
     var body: some View {
-        let infoTapAction = { showInfo = true }
-
         MessagesContainerView(
             conversationState: conversationState,
             outgoingMessageWriter: outgoingMessageWriter,
             conversationConsentWriter: conversationConsentWriter,
-            conversationLocalStateWriter: conversationLocalStateWriter,
-            onInfoTap: infoTapAction
+            conversationLocalStateWriter: conversationLocalStateWriter
         ) {
             MessagesView(
                 messagesRepository: messagesRepository
             )
             .ignoresSafeArea()
         }
-        .navigationDestination(isPresented: $showInfo) {
+        .navigationDestination(item: $showInfoForConversation) { conversation in
             ConversationInfoView(
-                conversationState: conversationState,
+                conversation: conversation,
                 groupMetadataWriter: groupMetadataWriter
             )
         }
         .toolbarTitleDisplayMode(.inlineLarge)
         .toolbar {
             ToolbarItemGroup(placement: .title) {
-                MessagesToolbarView(
-                    conversationState: conversationState,
-                )
+                Button {
+                    showInfoForConversation = conversationState.conversation
+                } label: {
+                    MessagesToolbarView(
+                        conversationState: conversationState,
+                    )
+                }
             }
         }
     }

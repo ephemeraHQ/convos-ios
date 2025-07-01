@@ -2,55 +2,30 @@ import Combine
 import SwiftUI
 
 struct ConversationInfoView: View {
-    let conversationState: ConversationState
+    let conversation: Conversation
     let groupMetadataWriter: any GroupMetadataWriterProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showAllMembersForConversation: Conversation?
     @State private var showGroupEditForConversation: Conversation?
     @State private var showAddMember: Bool = false
 
-    private var conversation: Conversation? {
-        conversationState.conversation
-    }
-
     var body: some View {
         VStack(spacing: 0) {
-            CustomToolbarView(onBack: { dismiss() }, rightContent: {
-                if conversation?.kind == .group {
-                    EditGroupButton(action: {
-                        showGroupEditForConversation = conversation
-                    })
-                }
-            })
-
-            // Content
-            if let conversation = conversation {
-                switch conversation.kind {
-                case .dm:
-                    DMInfoView(conversation: conversation)
-                case .group:
-                    GroupInfoView(
-                        conversation: conversation,
-                        conversationState: conversationState,
-                        groupMetadataWriter: groupMetadataWriter,
-                        showAllMembersForConversation: $showAllMembersForConversation,
-                        showAddMember: $showAddMember
-                    )
-                }
-            } else {
-                // Loading state
-                VStack {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
-                }
+            switch conversation.kind {
+            case .dm:
+                DMInfoView(conversation: conversation)
+            case .group:
+                GroupInfoView(
+                    conversation: conversation,
+                    groupMetadataWriter: groupMetadataWriter,
+                    showAllMembersForConversation: $showAllMembersForConversation,
+                    showAddMember: $showAddMember
+                )
             }
         }
-        .navigationBarHidden(true)
         .navigationDestination(item: $showAllMembersForConversation) { conversation in
             AllMembersView(
                 conversation: conversation,
-                conversationState: conversationState,
                 groupMetadataWriter: groupMetadataWriter
             )
         }
@@ -59,6 +34,20 @@ struct ConversationInfoView: View {
                 conversation: conversation,
                 groupMetadataWriter: groupMetadataWriter
             )
+        }
+        .toolbarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if conversation.kind == .group {
+                    EditGroupButton {
+                        showGroupEditForConversation = conversation
+                    }
+                }
+
+                Button(role: .close) {
+                    dismiss()
+                }
+            }
         }
     }
 }
@@ -135,7 +124,6 @@ struct DMInfoView: View {
 // MARK: - Group Info View
 struct GroupInfoView: View {
     let conversation: Conversation
-    let conversationState: ConversationState
     let groupMetadataWriter: any GroupMetadataWriterProtocol
     @Binding var showAllMembersForConversation: Conversation?
     @Binding var showAddMember: Bool
@@ -422,7 +410,6 @@ struct AddMemberButton: View {
 // MARK: - All Members View
 struct AllMembersView: View {
     let conversation: Conversation
-    let conversationState: ConversationState
     let groupMetadataWriter: any GroupMetadataWriterProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showAddMember: Bool = false
@@ -479,23 +466,15 @@ struct AllMembersView: View {
 }
 
 #Preview("DM Conversation") {
-    @Previewable @State var conversationState: ConversationState = .init(
-        conversationRepository: MockMessagingService().conversationRepository(for: "dm1")
-    )
-
     ConversationInfoView(
-        conversationState: conversationState,
+        conversation: .mock(),
         groupMetadataWriter: MockGroupMetadataWriter()
     )
 }
 
 #Preview("Group Conversation") {
-    @Previewable @State var conversationState: ConversationState = .init(
-        conversationRepository: MockMessagingService().conversationRepository(for: "group1")
-    )
-
     ConversationInfoView(
-        conversationState: conversationState,
+        conversation: .mock(),
         groupMetadataWriter: MockGroupMetadataWriter()
     )
 }
