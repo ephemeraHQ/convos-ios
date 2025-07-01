@@ -22,7 +22,7 @@ struct RootView: View {
                 Spacer()
             }
         case .signedIn:
-            ContactCardsView(convos: convos)
+            ContactCardsView(session: convos.session)
         case .signedOut:
             OnboardingView(convos: convos)
         case .migrating:

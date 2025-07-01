@@ -9,6 +9,9 @@ class MockInboxesService: SessionManagerProtocol {
     func prepare() async throws {
     }
 
+    func addAccount() async throws {
+    }
+
     var inboxesRepository: any InboxesRepositoryProtocol {
         self
     }

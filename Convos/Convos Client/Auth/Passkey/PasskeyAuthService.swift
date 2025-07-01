@@ -12,6 +12,10 @@ class PasskeyAuthService: AuthServiceProtocol {
         return authStateSubject.eraseToAnyPublisher()
     }
 
+    var accountsService: (any AuthAccountsServiceProtocol)? {
+        nil
+    }
+
     private let environment: AppEnvironment
     private var authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
     private let passkeyAuth: PasskeyAuth
