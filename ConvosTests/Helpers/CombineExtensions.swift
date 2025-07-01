@@ -9,11 +9,9 @@ extension Publisher where Output: Sendable {
         where predicate: @escaping (Output) -> Bool,
         timeout: Duration = .seconds(2)
     ) async throws -> Output {
-        let values = self.values
-
-        return try await withThrowingTaskGroup(of: Output.self) { [values] group in
+        return try await withThrowingTaskGroup(of: Output.self) { group in
             group.addTask {
-                for try await value in values {
+                for try await value in self.values {
                     if predicate(value) {
                         return value
                     }
