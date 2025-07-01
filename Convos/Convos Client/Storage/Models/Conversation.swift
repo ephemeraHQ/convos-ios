@@ -236,6 +236,14 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
         case member, admin, superAdmin = "super_admin"
     }
 
+    enum Columns {
+        static let conversationId: Column = Column(CodingKeys.conversationId)
+        static let memberId: Column = Column(CodingKeys.memberId)
+        static let role: Column = Column(CodingKeys.role)
+        static let consent: Column = Column(CodingKeys.consent)
+        static let createdAt: Column = Column(CodingKeys.createdAt)
+    }
+
     let conversationId: String
     let memberId: String
     let role: Role
@@ -334,6 +342,43 @@ extension ConversationLocalState {
             isUnread: isUnread,
             isUnreadUpdatedAt: isUnreadUpdatedAt,
             isMuted: isMuted
+        )
+    }
+}
+
+extension Conversation {
+    func withCurrentUserIncluded() -> Conversation {
+        // @lourou: Get actual current user from session/messaging service
+        let currentUser = Profile(id: "current", name: "You", username: "you", avatar: nil)
+
+        // Check if current user is already in the members list
+        let hasCurrentUser = members.contains { $0.id == currentUser.id }
+
+        if hasCurrentUser {
+            return self
+        }
+
+        // Create new conversation with current user added to members
+        var updatedMembers = members
+        updatedMembers.append(currentUser)
+
+        return Conversation(
+            id: id,
+            creator: creator,
+            createdAt: createdAt,
+            consent: consent,
+            kind: kind,
+            name: name,
+            description: description,
+            members: updatedMembers,
+            otherMember: otherMember,
+            messages: messages,
+            isPinned: isPinned,
+            isUnread: isUnread,
+            isMuted: isMuted,
+            lastMessage: lastMessage,
+            imageURL: imageURL,
+            isDraft: isDraft
         )
     }
 }

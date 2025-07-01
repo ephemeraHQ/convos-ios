@@ -23,6 +23,9 @@ protocol MessagingServiceProtocol {
 
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol
+
+    func groupMetadataWriter() -> any GroupMetadataWriterProtocol
+    func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol
 }
 
 enum MessagingServiceState: Equatable {
