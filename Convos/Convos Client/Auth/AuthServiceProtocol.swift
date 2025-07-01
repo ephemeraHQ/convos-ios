@@ -73,6 +73,8 @@ protocol BaseAuthServiceProtocol {
 }
 
 protocol AuthServiceProtocol: BaseAuthServiceProtocol {
+    var accountsService: (any AuthAccountsServiceProtocol)? { get }
+
     func signIn() async throws
     func register(displayName: String) async throws
     func signOut() async throws

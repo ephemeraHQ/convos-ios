@@ -80,6 +80,16 @@ class SessionManager: SessionManagerProtocol {
         try await authService.prepare()
     }
 
+    func addAccount() async throws {
+        guard let accountsService = authService.accountsService else {
+            Logger.info("Accounts service not available.")
+            return
+        }
+
+        let result = try await accountsService.addAccount(displayName: "User")
+        Logger.info("Added account: \(result)")
+    }
+
     // MARK: Messaging
 
     func messagingService(for inboxId: String) -> AnyMessagingService {

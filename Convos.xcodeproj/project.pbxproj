@@ -109,6 +109,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				"Convos Client/AppEnvironment.swift",
+				"Convos Client/Auth/AuthAccountServiceProtocol.swift",
 				"Convos Client/Auth/AuthServiceProtocol.swift",
 				"Convos Client/Auth/KeychainService.swift",
 				"Convos Client/Auth/Migrations/ReactNativeMigration.swift",

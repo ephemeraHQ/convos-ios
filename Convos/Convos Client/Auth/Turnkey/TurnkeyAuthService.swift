@@ -71,11 +71,28 @@ enum TurnkeyAuthServiceError: Error {
     case failedFindingPasskeyPresentationAnchor,
          failedCreatingSubOrganization,
          failedStampingLogin,
+         walletMissing,
          walletAddressNotFound,
-         walletAccountMissing
+         walletAccountMissing,
+         unauthorizedAccess
+}
+
+extension SessionUser {
+    var defaultWallet: SessionUser.UserWallet? {
+        wallets.first(
+            where: { $0.name == TurnkeyAuthService.Constant.defaultWalletName }
+        )
+    }
+
+    var otrWallet: SessionUser.UserWallet? {
+        wallets.first(
+            where: { $0.name == TurnkeyAuthService.Constant.otrWalletName }
+        )
+    }
 }
 
 final class TurnkeyAuthService: AuthServiceProtocol {
+    let accountsService: (any AuthAccountsServiceProtocol)?
     private let environment: AppEnvironment
     private var authState: CurrentValueSubject<AuthServiceState, Never> = .init(.notReady)
     private let apiClient: any ConvosAPIBaseProtocol
@@ -94,13 +111,17 @@ final class TurnkeyAuthService: AuthServiceProtocol {
     }
 
     init(environment: AppEnvironment) {
+        self.accountsService = TurnkeyAccountsService(
+            turnkey: turnkey,
+            environment: environment
+        )
         self.environment = environment
         self.apiClient = ConvosAPIClientFactory.client(environment: environment)
         let authStatePublisher: AnyPublisher<AuthServiceState, Never> = turnkey
             .$user
-            .removeDuplicates(by: { lhs, rhs in
-                lhs?.id == rhs?.id
-            })
+//            .removeDuplicates(by: { lhs, rhs in
+//                lhs?.id == rhs?.id
+//            })
             .map { [weak self] user in
                 guard let self else { return .unknown }
 
@@ -113,13 +134,13 @@ final class TurnkeyAuthService: AuthServiceProtocol {
                     return migration.needsMigration ? .migrating(migration) : .unauthorized
                 }
 
-                guard let wallet = user.wallets.first else {
-                    Logger.error("Wallet not found for Turnkey user, unauthorized")
+                guard let wallet = user.defaultWallet else {
+                    Logger.error("Default Wallet not found for Turnkey user, unauthorized")
                     return .unauthorized
                 }
 
                 if user.wallets.count > 1 {
-                    Logger.warning("Multiple wallets found for Turnkey user, using first")
+                    Logger.warning("Multiple wallets found for Turnkey user, using default")
                 }
 
                 // if we're coming from the RN app, only one account exists
@@ -316,5 +337,10 @@ final class TurnkeyAuthService: AuthServiceProtocol {
         )
 
         return response
+    }
+
+    internal enum Constant {
+        static var defaultWalletName: String = "Default Wallet"
+        static var otrWalletName: String = "OTR Wallet"
     }
 }

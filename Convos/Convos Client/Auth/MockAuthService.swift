@@ -95,6 +95,10 @@ class MockAuthService: AuthServiceProtocol {
         }
     }
 
+    var accountsService: (any AuthAccountsServiceProtocol)? {
+        nil
+    }
+
     private let persist: Bool
     private let keychain: KeychainService<MockKeychainItem> = .init()
     private var _currentUser: MockAuthResult?
