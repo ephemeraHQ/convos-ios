@@ -98,7 +98,7 @@ struct ContactCardCameraButton: View {
     }
 }
 
-struct ContactCardAvatarView<Content: View>: View {
+struct ContactCardAvatarView<Content: View & Sendable>: View {
     @Binding var isEditing: Bool
     @Binding var imageState: ContactCardImage.State {
         didSet {
