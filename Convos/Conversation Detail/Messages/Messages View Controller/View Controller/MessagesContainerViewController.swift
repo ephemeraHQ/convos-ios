@@ -49,8 +49,7 @@ class MessagesContainerViewController: UIViewController {
          sendMessage: @escaping () -> Void,
          textBinding: Binding<String>,
          joinConversation: @escaping () -> Void,
-         deleteConversation: @escaping () -> Void,
-         onInfoTap: @escaping () -> Void) {
+         deleteConversation: @escaping () -> Void) {
         self.conversationState = conversationState
         self.outgoingMessageWriter = outgoingMessageWriter
         self.conversationConsentWriter = conversationConsentWriter

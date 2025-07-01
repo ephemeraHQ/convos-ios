@@ -25,14 +25,11 @@ struct ConversationView: View {
     }
 
     var body: some View {
-        let infoTapAction = { showInfo = true }
-
         MessagesContainerView(
             conversationState: conversationState,
             outgoingMessageWriter: outgoingMessageWriter,
             conversationConsentWriter: conversationConsentWriter,
-            conversationLocalStateWriter: conversationLocalStateWriter,
-            onInfoTap: infoTapAction
+            conversationLocalStateWriter: conversationLocalStateWriter
         ) {
             MessagesView(
                 messagesRepository: messagesRepository
@@ -42,10 +39,17 @@ struct ConversationView: View {
         .toolbarTitleDisplayMode(.inlineLarge)
         .toolbar {
             ToolbarItemGroup(placement: .title) {
-                MessagesToolbarView(
-                    conversationState: conversationState,
-                )
+                Button {
+                    showInfo = true
+                } label: {
+                    MessagesToolbarView(
+                        conversationState: conversationState,
+                    )
+                }
             }
+        }
+        .sheet(isPresented: $showInfo) {
+            ConversationInfoView()
         }
     }
 }

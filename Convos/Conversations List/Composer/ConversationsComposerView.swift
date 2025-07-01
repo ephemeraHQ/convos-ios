@@ -36,8 +36,7 @@ struct ConversationComposerView: View {
                 conversationState: conversationState,
                 outgoingMessageWriter: draftConversationComposer.draftConversationWriter,
                 conversationConsentWriter: draftConversationComposer.conversationConsentWriter,
-                conversationLocalStateWriter: draftConversationComposer.conversationLocalStateWriter,
-                onInfoTap: {},
+                conversationLocalStateWriter: draftConversationComposer.conversationLocalStateWriter
             ) {
                 ConversationComposerContentView(
                     composerState: conversationComposerState,
