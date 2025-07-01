@@ -55,13 +55,13 @@ struct SecurityLineView: View {
         .toolbar {
             ToolbarItem(id: "delete", placement: .topBarTrailing) {
                 Button("Delete All", systemImage: "trash") {
-                    Task {
-                        do {
-                            //                            try await consentStateWriter.deleteAll()
-                        } catch {
-                            Logger.error("Error deleting all conversations: \(error)")
-                        }
-                    }
+//                    Task {
+//                        do {
+//                            try await consentStateWriter.deleteAll()
+//                        } catch {
+//                            Logger.error("Error deleting all conversations: \(error)")
+//                        }
+//                    }
                 }
                 .disabled(conversationsState.conversations.isEmpty)
             }
