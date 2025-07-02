@@ -7,15 +7,16 @@ struct SecurityLineView: View {
     }
 
     @Binding var path: [ConversationsRoute]
+    private let session: any SessionManagerProtocol
     private let conversationsState: ConversationsState
     private let deniedConversationsCount: ConversationsCountState
-//    private let consentStateWriter: any ConversationConsentWriterProtocol
     let title: String = "Security line"
     let subtitle: String? = nil
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     init(session: any SessionManagerProtocol, path: Binding<[ConversationsRoute]>) {
+        self.session = session
         conversationsState = .init(
             conversationsRepository: session.conversationsRepository(for: .securityLine)
         )
@@ -23,7 +24,6 @@ struct SecurityLineView: View {
             conversationsCountRepository: session.conversationsCountRepo(for: .denied)
         )
         _path = path
-//        self.consentStateWriter = inboxesService.conversationConsentWriter()
     }
 
     var barHeight: CGFloat {
@@ -55,13 +55,7 @@ struct SecurityLineView: View {
         .toolbar {
             ToolbarItem(id: "delete", placement: .topBarTrailing) {
                 Button("Delete All", systemImage: "trash") {
-//                    Task {
-//                        do {
-//                            try await consentStateWriter.deleteAll()
-//                        } catch {
-//                            Logger.error("Error deleting all conversations: \(error)")
-//                        }
-//                    }
+                    deleteAll()
                 }
                 .disabled(conversationsState.conversations.isEmpty)
             }
@@ -69,6 +63,25 @@ struct SecurityLineView: View {
         .safeAreaInset(edge: .bottom) {
             if !deniedConversationsCount.isEmpty {
                 DeniedConversationsListItem(count: deniedConversationsCount.count)
+            }
+        }
+    }
+
+    private func deleteAll() {
+        let inboxIds = Set<String>(conversationsState.conversations.map { $0.inboxId })
+        let messagingServices = inboxIds.map { session.messagingService(for: $0) }
+        let consentStateWriters = messagingServices.map { $0.conversationConsentWriter() }
+        Task {
+            await withTaskGroup(of: Void.self) { group in
+                for writer in consentStateWriters {
+                    group.addTask {
+                        do {
+                            try await writer.deleteAll()
+                        } catch {
+                            Logger.error("Error deleting all conversations: \(error)")
+                        }
+                    }
+                }
             }
         }
     }
