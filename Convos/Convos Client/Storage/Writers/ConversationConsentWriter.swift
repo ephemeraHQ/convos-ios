@@ -76,6 +76,7 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
 
         let conversationsToDeny: [DBConversation] = try await databaseWriter.read { db in
             try DBConversation
+                .filter(DBConversation.Columns.inboxId == client.inboxId)
                 .filter(DBConversation.Columns.consent == Consent.unknown)
                 .fetchAll(db)
         }
