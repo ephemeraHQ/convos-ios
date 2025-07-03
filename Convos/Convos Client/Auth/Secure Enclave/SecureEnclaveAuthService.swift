@@ -14,7 +14,7 @@ class SecureEnclaveAuthService: LocalAuthServiceProtocol {
         authStateSubject.eraseToAnyPublisher()
     }
 
-    func prepare() async throws {
+    func prepare() throws {
         try refreshAuthState()
     }
 

@@ -69,7 +69,7 @@ protocol BaseAuthServiceProtocol {
     var state: AuthServiceState { get }
     var authStatePublisher: AnyPublisher<AuthServiceState, Never> { get }
 
-    func prepare() async throws
+    func prepare() throws
 }
 
 protocol AuthServiceProtocol: BaseAuthServiceProtocol {

@@ -34,7 +34,7 @@ class SessionManager: SessionManagerProtocol {
         let currentSessionRepository = CurrentSessionRepository(dbReader: databaseReader)
         self.currentSessionRepository = currentSessionRepository
         self.authState = authService.authStatePublisher
-            .merge(with: localAuthService.authStatePublisher)
+//            .merge(with: localAuthService.authStatePublisher)
             .eraseToAnyPublisher()
         authState
             .sink { [inboxOperationsPublisher] authState in
@@ -75,9 +75,9 @@ class SessionManager: SessionManagerProtocol {
             .store(in: &cancellables)
     }
 
-    func prepare() async throws {
-        try await localAuthService.prepare()
-        try await authService.prepare()
+    func prepare() throws {
+        try localAuthService.prepare()
+        try authService.prepare()
     }
 
     func addAccount() async throws {

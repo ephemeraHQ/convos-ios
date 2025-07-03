@@ -122,7 +122,7 @@ class MockAuthService: AuthServiceProtocol {
         authStateSubject.send(.unauthorized)
     }
 
-    func prepare() async throws {
+    func prepare() throws {
     }
 
     func signIn() async throws {

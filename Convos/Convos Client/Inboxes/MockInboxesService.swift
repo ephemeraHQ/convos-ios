@@ -6,7 +6,7 @@ class MockInboxesService: SessionManagerProtocol {
         Just(AuthServiceState.unknown).eraseToAnyPublisher()
     }
 
-    func prepare() async throws {
+    func prepare() throws {
     }
 
     func addAccount() async throws {

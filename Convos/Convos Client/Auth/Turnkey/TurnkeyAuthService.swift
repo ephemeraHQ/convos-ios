@@ -91,6 +91,17 @@ extension SessionUser {
     }
 }
 
+fileprivate extension AuthState {
+    var authServiceState: AuthServiceState {
+        switch self {
+        case .loading, .authenticated:
+            return .notReady
+        case .unAuthenticated:
+            return .unauthorized
+        }
+    }
+}
+
 final class TurnkeyAuthService: AuthServiceProtocol {
     let accountsService: (any AuthAccountsServiceProtocol)?
     private let environment: AppEnvironment
@@ -125,75 +136,11 @@ final class TurnkeyAuthService: AuthServiceProtocol {
             .map { [weak self] user in
                 guard let self else { return .unknown }
 
-                defer {
-                    authFlowType = .passive
+                guard turnkey.authState != .loading else {
+                    return .notReady
                 }
 
-                guard let user else {
-                    let migration = ReactNativeMigration(environment: environment)
-                    return migration.needsMigration ? .migrating(migration) : .unauthorized
-                }
-
-                guard let wallet = user.defaultWallet else {
-                    Logger.error("Default Wallet not found for Turnkey user, unauthorized")
-                    return .unauthorized
-                }
-
-                if user.wallets.count > 1 {
-                    Logger.warning("Multiple wallets found for Turnkey user, using default")
-                }
-
-                // if we're coming from the RN app, only one account exists
-                if wallet.accounts.count == 1, let account = wallet.accounts.first {
-                    let userIdentifier = account.identity.identifier
-                    if case let .migrating(migration) = state {
-                        do {
-                            try migration.performMigration(for: userIdentifier)
-                        } catch {
-                            Logger.error("Failed performing migration for user \(userIdentifier): \(error)")
-                            return .migrating(migration)
-                        }
-                    }
-                }
-
-                do {
-                    switch authFlowType {
-                    case .passive, .login:
-                        let inboxes = try wallet.accounts.map { account in
-                            AuthServiceInbox(
-                                type: .standard,
-                                provider: .external(.turnkey),
-                                providerId: account.id,
-                                signingKey: account,
-                                databaseKey: try account.databaseKey
-                            )
-                        }
-                        let result = AuthServiceResult(inboxes: inboxes)
-                        return .authorized(result)
-                    case .register(let displayName):
-                        guard let account = wallet.accounts.first else {
-                            throw TurnkeyAuthServiceError.walletAccountMissing
-                        }
-                        if wallet.accounts.count > 1 {
-                            Logger.warning("Multiple accounts found for Turnkey user, using the first one")
-                        }
-                        let databaseKey = try account.databaseKey
-                        let result = AuthServiceRegisteredResult(
-                            displayName: displayName,
-                            inbox: AuthServiceInbox(
-                                type: .standard,
-                                provider: .external(.turnkey),
-                                providerId: account.id,
-                                signingKey: account,
-                                databaseKey: databaseKey
-                            )
-                        )
-                        return .registered(result)
-                    }
-                } catch {
-                    Logger.error("Error retrieving database key: \(error)")
-                    return .unauthorized
-                }
+                return authState(for: user)
             }
             .eraseToAnyPublisher()
         authStatePublisher
@@ -206,7 +153,11 @@ final class TurnkeyAuthService: AuthServiceProtocol {
 
     // MARK: Public
 
-    func prepare() async throws {
+    func prepare() throws {
+        authState.send(turnkey.authState.authServiceState)
+        Task {
+            try await turnkey.refreshSession()
+        }
     }
 
     func signIn() async throws {
@@ -264,6 +215,78 @@ final class TurnkeyAuthService: AuthServiceProtocol {
     }
 
     // MARK: - Private
+
+    private func authState(for user: SessionUser?) -> AuthServiceState {
+        defer {
+            authFlowType = .passive
+        }
+
+        guard let user else {
+            let migration = ReactNativeMigration(environment: environment)
+            return migration.needsMigration ? .migrating(migration) : .unauthorized
+        }
+
+        guard let wallet = user.defaultWallet else {
+            Logger.error("Default Wallet not found for Turnkey user, unauthorized")
+            return .unauthorized
+        }
+
+        if user.wallets.count > 1 {
+            Logger.warning("Multiple wallets found for Turnkey user, using default")
+        }
+
+        // if we're coming from the RN app, only one account exists
+        if wallet.accounts.count == 1, let account = wallet.accounts.first {
+            let userIdentifier = account.identity.identifier
+            if case let .migrating(migration) = state {
+                do {
+                    try migration.performMigration(for: userIdentifier)
+                } catch {
+                    Logger.error("Failed performing migration for user \(userIdentifier): \(error)")
+                    return .migrating(migration)
+                }
+            }
+        }
+
+        do {
+            switch authFlowType {
+            case .passive, .login:
+                let inboxes = try wallet.accounts.map { account in
+                    AuthServiceInbox(
+                        type: .standard,
+                        provider: .external(.turnkey),
+                        providerId: account.id,
+                        signingKey: account,
+                        databaseKey: try account.databaseKey
+                    )
+                }
+                let result = AuthServiceResult(inboxes: inboxes)
+                return .authorized(result)
+            case .register(let displayName):
+                guard let account = wallet.accounts.first else {
+                    throw TurnkeyAuthServiceError.walletAccountMissing
+                }
+                if wallet.accounts.count > 1 {
+                    Logger.warning("Multiple accounts found for Turnkey user, using the first one")
+                }
+                let databaseKey = try account.databaseKey
+                let result = AuthServiceRegisteredResult(
+                    displayName: displayName,
+                    inbox: AuthServiceInbox(
+                        type: .standard,
+                        provider: .external(.turnkey),
+                        providerId: account.id,
+                        signingKey: account,
+                        databaseKey: databaseKey
+                    )
+                )
+                return .registered(result)
+            }
+        } catch {
+            Logger.error("Error retrieving database key: \(error)")
+            return .unauthorized
+        }
+    }
 
     private func stampLoginAndCreateSession(
         anchor: ASPresentationAnchor,
