@@ -906,7 +906,7 @@
 			repositoryURL = "https://github.com/tkhq/swift-sdk.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 2.0.0;
+				minimumVersion = 2.2.0;
 			};
 		};
 		7ACA83932DDC395600848799 /* XCRemoteSwiftPackageReference "SwiftCBOR" */ = {

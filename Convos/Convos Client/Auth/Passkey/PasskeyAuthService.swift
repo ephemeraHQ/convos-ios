@@ -45,7 +45,7 @@ class PasskeyAuthService: AuthServiceProtocol {
         }
     }
 
-    func prepare() async throws {
+    func prepare() throws {
         Task { @MainActor in
             let presentationProvider = PasskeyPresentationProvider()
             await passkeyAuth.setPresentationContextProvider(presentationProvider)

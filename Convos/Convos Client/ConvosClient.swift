@@ -71,8 +71,8 @@ final class ConvosClient {
         localAuthService.authStatePublisher.eraseToAnyPublisher()
     }
 
-    func prepare() async throws {
-        try await sessionManager.prepare()
+    func prepare() throws {
+        try sessionManager.prepare()
     }
 
     func signIn() async throws {

@@ -41,13 +41,13 @@ struct ContactCardsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Add Card", systemImage: "plus") {
-                        Task {
-                            do {
-                                try await session.addAccount()
-                            } catch {
-                                Logger.error("Error adding account: \(error)")
-                            }
-                        }
+//                        Task {
+//                            do {
+//                                try await session.addAccount()
+//                            } catch {
+//                                Logger.error("Error adding account: \(error)")
+//                            }
+//                        }
                     }
                 }
 
