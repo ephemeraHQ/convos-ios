@@ -45,7 +45,7 @@ struct ConversationView: View {
                 groupMetadataWriter: groupMetadataWriter
             )
         }
-        .toolbarTitleDisplayMode(.inlineLarge)
+        .toolbarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .title) {
                 Button {

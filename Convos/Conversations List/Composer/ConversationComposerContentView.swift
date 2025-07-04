@@ -69,11 +69,12 @@ struct ConversationComposerContentView: View {
                     }
                 }
                 .listRowSeparator(.hidden)
-                .listRowBackground(Color.colorBackgroundPrimary)
+                .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
                 .listRowSpacing(0.0)
             }
         }
+        .background(.clear)
         .listStyle(.plain)
         .listRowSpacing(0.0)
         .opacity(
@@ -116,7 +117,7 @@ struct ConversationComposerContentView: View {
                            isTextFieldFocused = true
                        }
                        .padding(.horizontal, DesignConstants.Spacing.step4x)
-                       .background(.colorBackgroundPrimary)
+                       .background(.clear)
             }
 
             MessagesView(
