@@ -125,7 +125,8 @@ class MessagesContainerViewController: UIViewController {
 
     private func setupUI() {
         setupInputBar()
-        view.backgroundColor = .colorBackgroundPrimary
+        view.backgroundColor = .clear
+        contentView.backgroundColor = .clear
         contentView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(contentView)
 
@@ -171,6 +172,7 @@ class MessagesContainerViewController: UIViewController {
 
     func embedContentController(_ child: UIViewController) {
         addChild(child)
+        child.view.backgroundColor = .clear
         contentView.addSubview(child.view)
         child.view.frame = contentView.bounds
         child.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]

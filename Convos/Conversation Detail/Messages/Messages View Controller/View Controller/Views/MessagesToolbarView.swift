@@ -55,36 +55,10 @@ struct MessagesToolbarView: View {
                         .lineLimit(1)
                 }
             }
-            .padding(.leading, DesignConstants.Spacing.step2x)
-
-            Spacer()
-
-//            if let conversation = conversationState.conversation {
-//                switch conversation.kind {
-//                case .group:
-//                    Button {
-//                    } label: {
-//                        Image(systemName: "qrcode")
-//                            .font(.system(size: 24.0))
-//                            .foregroundStyle(.colorTextPrimary)
-//                            .padding(.vertical, 10.0)
-//                            .padding(.horizontal, DesignConstants.Spacing.step2x)
-//                    }
-//                case .dm:
-//                    Button {
-//                    } label: {
-//                        Image(systemName: "timer")
-//                            .font(.system(size: 24.0))
-//                            .foregroundStyle(.colorTextPrimary)
-//                            .padding(.vertical, 10.0)
-//                            .padding(.horizontal, DesignConstants.Spacing.step2x)
-//                    }
-//                }
-//            }
+            .background(.clear)
         }
         .frame(height: barHeight)
-        .padding(.leading, DesignConstants.Spacing.step2x)
-        .padding(.trailing, DesignConstants.Spacing.step4x)
+        .background(.clear)
     }
 }
 

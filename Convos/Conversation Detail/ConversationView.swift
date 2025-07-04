@@ -36,7 +36,7 @@ struct ConversationView: View {
             )
             .ignoresSafeArea()
         }
-        .toolbarTitleDisplayMode(.inlineLarge)
+        .toolbarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .title) {
                 Button {

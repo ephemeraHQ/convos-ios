@@ -43,11 +43,12 @@ struct ConversationComposerView: View {
                     profileSearchText: $conversationComposerState.searchText,
                     selectedProfile: $conversationComposerState.selectedProfile
                 )
+                .background(.clear)
                 .ignoresSafeArea()
             }
-            .toolbarTitleDisplayMode(.inlineLarge)
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItemGroup(placement: .title) {
+                ToolbarItem(placement: .title) {
                     MessagesToolbarView(
                         conversationState: conversationState,
                     )
