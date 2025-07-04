@@ -144,7 +144,7 @@ final class MessagesViewController: UIViewController {
     // MARK: - Private Setup Methods
 
     private func setupUI() {
-        view.backgroundColor = .colorBackgroundPrimary
+        view.backgroundColor = .clear
         KeyboardListener.shared.add(delegate: self)
     }
 

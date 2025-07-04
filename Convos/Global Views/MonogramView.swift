@@ -14,6 +14,11 @@ struct MonogramView: View {
         self.backgroundColor = Self.colorForName(name)
     }
 
+    init() {
+        self.initials = ""
+        self.backgroundColor = .colorOrange
+    }
+
     var body: some View {
         GeometryReader { geometry in
             let side = min(geometry.size.width, geometry.size.height)

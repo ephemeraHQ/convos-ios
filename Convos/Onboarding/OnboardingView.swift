@@ -22,12 +22,10 @@ struct OnboardingView: View {
 
                 Spacer()
 
-                if viewModel.authAllowsSignIn {
-                    Button("Sign in") {
-                        viewModel.signIn()
-                    }
-                    .convosButtonStyle(.text)
+                Button("Sign in") {
+                    viewModel.signIn()
                 }
+                .convosButtonStyle(.text)
             }
             .padding(.leading, DesignConstants.Spacing.step3x)
             .padding(.top, 10.0)
@@ -68,8 +66,8 @@ struct OnboardingView: View {
                                   nameError: $viewModel.nameError,
                                   isEditing: $viewModel.isEditingContactCard,
                                   importCardAction: {
-                                      presentingImportContactCard = true
-                                  }, submitAction: viewModel.createContactCard)
+                presentingImportContactCard = true
+            }, submitAction: viewModel.createContactCard)
         }
     }
 }
@@ -77,12 +75,11 @@ struct OnboardingView: View {
 private struct LegalView: View {
     var body: some View {
         Group {
-            Text("When you create a contact card, you agree to the Convos ")
-                + Text("[Terms](https://xmtp.org/terms)")
-                .underline()
-                + Text(" and ")
-                + Text("[Privacy Policy](https://xmtp.org/privacy)")
-                .underline()
+            Text("""
+When you create a contact card, \
+you agree to the Convos [Terms](https://xmtp.org/terms) \
+and [Privacy Policy](https://xmtp.org/privacy)
+""")
         }
         .font(.subheadline)
         .multilineTextAlignment(.center)

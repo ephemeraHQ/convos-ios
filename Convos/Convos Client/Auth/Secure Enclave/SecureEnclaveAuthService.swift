@@ -2,21 +2,7 @@ import Combine
 import Foundation
 import XMTPiOS
 
-class SecureEnclaveAuthService: AuthServiceProtocol {
-    struct EnclaveAuthResult: AuthServiceResultType {
-        let signingKey: SigningKey
-        let databaseKey: Data
-        let databaseDirectory: String
-    }
-
-    struct EnclaveRegisteredResult: AuthServiceRegisteredResultType {
-        let displayName: String
-        let signingKey: SigningKey
-        let databaseKey: Data
-        let databaseDirectory: String
-    }
-
-    private let environment: AppEnvironment
+class SecureEnclaveAuthService: LocalAuthServiceProtocol {
     private let identityStore: SecureEnclaveIdentityStore = .init()
     private let authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
@@ -28,49 +14,49 @@ class SecureEnclaveAuthService: AuthServiceProtocol {
         authStateSubject.eraseToAnyPublisher()
     }
 
-    var supportsMultipleAccounts: Bool {
-        false
-    }
-
-    init(environment: AppEnvironment) {
-        self.environment = environment
-    }
-
-    func prepare() async throws {
+    func prepare() throws {
         try refreshAuthState()
     }
 
-    func signIn() async throws {}
-
-    func signOut() async throws {}
-
-    func register(displayName: String) async throws {
-        let identity = try identityStore.save()
-        authStateSubject.send(.registered(
-            EnclaveRegisteredResult(
-                displayName: displayName,
+    func register(displayName: String, inboxType: InboxType) throws -> any AuthServiceRegisteredResultType {
+        let identity = try identityStore.save(type: inboxType)
+        let result = AuthServiceRegisteredResult(
+            displayName: displayName,
+            inbox: AuthServiceInbox(
+                type: inboxType,
+                provider: .local,
+                providerId: identity.id,
                 signingKey: identity.privateKey,
-                databaseKey: identity.databaseKey,
-                databaseDirectory: environment.defaultDatabasesDirectory
+                databaseKey: identity.databaseKey
             )
-        ))
+        )
+        authStateSubject.send(.registered(result))
+        return result
     }
 
-    func deleteAccount() async throws {
-        try identityStore.delete()
-        authStateSubject.send(.unauthorized)
+    func deleteAll() throws {
+        let identities = try identityStore.loadAll()
+        try identities.forEach { try identityStore.delete(for: $0.id) }
     }
 
     // MARK: - Private Helpers
 
     private func refreshAuthState() throws {
         do {
-            if let identity = try identityStore.load() {
-                authStateSubject.send(.authorized(
-                    EnclaveAuthResult(
+            let identities = try identityStore.loadAll()
+            if !identities.isEmpty {
+                let inboxes: [AuthServiceInbox] = identities.map { identity in
+                    AuthServiceInbox(
+                        type: identity.type,
+                        provider: .local,
+                        providerId: identity.id,
                         signingKey: identity.privateKey,
-                        databaseKey: identity.databaseKey,
-                        databaseDirectory: environment.defaultDatabasesDirectory
+                        databaseKey: identity.databaseKey
+                    )
+                }
+                authStateSubject.send(.authorized(
+                    AuthServiceResult(
+                        inboxes: inboxes
                     )
                 ))
             } else {

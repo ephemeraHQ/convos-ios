@@ -59,6 +59,7 @@ class ConversationWriter: ConversationWriterProtocol {
         let lastMessage = try await conversation.lastMessage()
         let dbConversation = DBConversation(
             id: conversation.id,
+            inboxId: conversation.client.inboxID,
             clientConversationId: clientConversationId ?? conversation.id,
             creatorId: try await conversation.creatorInboxId,
             kind: kind,

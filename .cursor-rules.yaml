@@ -1,6 +1,51 @@
 # .cursor-rules.yaml
 
 rules:
+  clarify-scope-before-coding:
+    description: >
+      Before writing any code, map out how the task will be approached.
+      Confirm your understanding of the objective and describe the functions, modules, or components that will be affected and why.
+      Implementation should not begin until this is clearly reasoned and articulated.
+    severity: error
+    applies_to: [tasks]
+
+  locate-precise-insertion-point:
+    description: >
+      Identify the exact file(s) and line(s) for the code change.
+      Avoid broad or sweeping changes across unrelated files.
+      Justify each touched file, and do not introduce abstractions or refactors unless explicitly stated in the task.
+    severity: error
+    applies_to: [tasks]
+
+  apply-minimal-contained-changes:
+    description: >
+      Only modify code directly necessary to fulfill the task.
+      Do not include logging, comments, tests, TODOs, or cleanup unless strictly required.
+      Avoid speculative or opportunistic edits.
+    severity: error
+    applies_to: [tasks]
+
+  verify-scope-correctness-side-effects:
+    description: >
+      Review all changes for correctness and adherence to the defined scope.
+      Ensure alignment with existing code patterns and check for unintended downstream impacts.
+    severity: error
+    applies_to: [tasks]
+
+  deliver-change-summary-clearly:
+    description: >
+      Summarize what was changed and why, list every modified file with the specific actions taken,
+      and surface any assumptions or risks for review.
+    severity: warning
+    applies_to: [tasks]
+
+  prohibit-role-deviation:
+    description: >
+      Maintain your role as a senior engineer responsible for production-safe, high-leverage contributions.
+      Do not act as an assistant, co-pilot, or brainstorm partner. Avoid improvisation or over-engineering.
+    severity: error
+    applies_to: [tasks]
+
   no-superfluous-comments-in-generated-code:
     description: >
       Do not add comments to generated code unless they are strictly necessary for understanding complex logic.

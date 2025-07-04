@@ -25,26 +25,52 @@ struct DraftConversationWriterTests {
     private func registerTemporaryInboxId() async throws -> String {
         let authService = MockAuthService()
         let client = ConvosClient.testClient(authService: authService)
-        let userRepo = client.messaging.userRepository()
-        try await client.register(displayName: "Test")
-        _ = try await client.messaging
-            .messagingStatePublisher
-            .waitForFirstMatch { $0 == .ready }
-        guard let user = try await userRepo.getCurrentUser() else {
-            fatalError("Error creating temp inbox id")
+
+        Logger.info("🔍 Registering user...")
+        try await authService.register(displayName: "Test")
+        Logger.info("🔍 Registration completed")
+
+        let sessionManager = client.session
+        let inboxesPublisher = sessionManager.inboxesRepository.inboxesPublisher
+        var inboxesIterator = inboxesPublisher
+            .filter { !$0.isEmpty }
+            .values
+            .makeAsyncIterator()
+
+        guard let firstInboxes = await inboxesIterator.next(),
+              let inbox = firstInboxes.first else {
+            Issue.record("Inbox not found")
+            return ""
         }
-        return user.inboxId
+
+        let inboxId = inbox.inboxId
+        Logger.info("🔍 Found inbox with ID: \(inboxId)")
+
+        return inboxId
     }
 
     @Test("Adding a member creates a draft conversation")
     func testAddingMemberCreatesDraftConversation() async throws {
         let client = try await clientHolder.get()
-        let messaging = client.messaging
-        let state = try await messaging
-            .messagingStatePublisher
-            .waitForFirstMatch { $0 == .ready }
-        #expect(state == .ready)
-        let composer = messaging.draftConversationComposer()
+        let inboxesPublisher = client.session.inboxesRepository.inboxesPublisher
+        var inboxesIterator = inboxesPublisher
+            .filter { !$0.isEmpty }
+            .values
+            .makeAsyncIterator()
+        guard let firstInboxes = await inboxesIterator.next(),
+              let inbox = firstInboxes.first else {
+            Issue.record("Inbox not found")
+            return
+        }
+        let inboxId = inbox.inboxId
+        let messagingService = client.session.messagingService(for: inboxId)
+        var inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
+        guard let _ = await inboxReadyIterator.next() else {
+            Issue.record("Messaging service not published")
+            return
+        }
+
+        let composer = messagingService.draftConversationComposer()
         let writer = composer.draftConversationWriter
         let repository = composer.draftConversationRepository
         let firstProfile = MemberProfile(inboxId: UUID().uuidString, name: "A", username: "a", avatar: nil)
@@ -63,12 +89,24 @@ struct DraftConversationWriterTests {
     @Test("Removing a member changes conversation kind (dm or group)")
     func testRemovingMemberChangesConversationKind() async throws {
         let client = try await clientHolder.get()
-        let messaging = client.messaging
-        let state = try await messaging
-            .messagingStatePublisher
-            .waitForFirstMatch { $0 == .ready }
-        #expect(state == .ready)
-        let composer = messaging.draftConversationComposer()
+        let inboxesPublisher = client.session.inboxesRepository.inboxesPublisher
+        var inboxesIterator = inboxesPublisher
+            .filter { !$0.isEmpty }
+            .values
+            .makeAsyncIterator()
+        guard let firstInboxes = await inboxesIterator.next(),
+              let inbox = firstInboxes.first else {
+            Issue.record("Inbox not found")
+            return
+        }
+        let inboxId = inbox.inboxId
+        let messagingService = client.session.messagingService(for: inboxId)
+        var inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
+        guard let _ = await inboxReadyIterator.next() else {
+            Issue.record("Messaging service not published")
+            return
+        }
+        let composer = messagingService.draftConversationComposer()
         let writer = composer.draftConversationWriter
         let repository = composer.draftConversationRepository
         let firstProfile = MemberProfile(inboxId: UUID().uuidString, name: "A", username: "a", avatar: nil)
@@ -87,17 +125,30 @@ struct DraftConversationWriterTests {
 
     @Test("Sending a message creates the conversation on XMTP")
     func testSendingMessageCreatesConversation() async throws {
-        let inboxId = try await registerTemporaryInboxId()
         let client = try await clientHolder.get()
-        let messaging = client.messaging
-        let state = try await messaging
-            .messagingStatePublisher
-            .waitForFirstMatch { $0 == .ready }
-        #expect(state == .ready)
-        let composer = messaging.draftConversationComposer()
+        let inboxesPublisher = client.session.inboxesRepository.inboxesPublisher
+        var inboxesIterator = inboxesPublisher
+            .filter { !$0.isEmpty }
+            .values
+            .makeAsyncIterator()
+        guard let firstInboxes = await inboxesIterator.next(),
+              let inbox = firstInboxes.first else {
+            Issue.record("Inbox not found")
+            return
+        }
+        let inboxId = inbox.inboxId
+        let messagingService = client.session.messagingService(for: inboxId)
+        var inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
+        guard let _ = await inboxReadyIterator.next() else {
+            Issue.record("Messaging service not published")
+            return
+        }
+        let composer = messagingService.draftConversationComposer()
         let writer = composer.draftConversationWriter
         let repository = composer.draftConversationRepository
-        let firstProfile = MemberProfile(inboxId: inboxId, name: "A", username: "a", avatar: nil)
+
+        let otherInboxId = try await registerTemporaryInboxId()
+        let firstProfile = MemberProfile(inboxId: otherInboxId, name: "A", username: "a", avatar: nil)
         Task {
             try await writer.add(profile: firstProfile)
         }
@@ -121,19 +172,32 @@ struct DraftConversationWriterTests {
 
     @Test("Adding members that have an existing conversation")
     func testAddingMembersWithExistingConversation() async throws {
-        let inboxId = try await registerTemporaryInboxId()
         let client = try await clientHolder.get()
-        let messaging = client.messaging
-        let state = try await messaging
-            .messagingStatePublisher
-            .waitForFirstMatch { $0 == .ready }
-        #expect(state == .ready)
-        let composer = messaging.draftConversationComposer()
+        let inboxesPublisher = client.session.inboxesRepository.inboxesPublisher
+        var inboxesIterator = inboxesPublisher
+            .filter { !$0.isEmpty }
+            .values
+            .makeAsyncIterator()
+        guard let firstInboxes = await inboxesIterator.next(),
+              let inbox = firstInboxes.first else {
+            Issue.record("Inbox not found")
+            return
+        }
+        let inboxId = inbox.inboxId
+        let messagingService = client.session.messagingService(for: inboxId)
+        var inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
+        guard let _ = await inboxReadyIterator.next() else {
+            Issue.record("Messaging service not published")
+            return
+        }
+        let composer = messagingService.draftConversationComposer()
         let writer = composer.draftConversationWriter
         let repository = composer.draftConversationRepository
         var conversationIterator = repository.conversationPublisher.values.makeAsyncIterator()
         var messagesIterator = repository.messagesRepository.messagesPublisher.values.makeAsyncIterator()
-        let firstProfile = MemberProfile(inboxId: inboxId, name: "A", username: "a", avatar: nil)
+        
+        let otherInboxId = try await registerTemporaryInboxId()
+        let firstProfile = MemberProfile(inboxId: otherInboxId, name: "A", username: "a", avatar: nil)
         try await writer.add(profile: firstProfile)
         let conversation1 = await conversationIterator.next()
         #expect(conversation1??.kind == .dm)
@@ -144,7 +208,7 @@ struct DraftConversationWriterTests {
         let messages1 = await messagesIterator.next()
         #expect(messages1?.count == 2)
 
-        guard let existingConversation = try await messaging
+        guard let existingConversation = try await messagingService
             .conversationsRepository(for: .allowed)
             .conversationsPublisher
             .waitForFirstMatch(where: { $0.first?.members == [firstProfile.hydrateProfile()] })
@@ -152,7 +216,7 @@ struct DraftConversationWriterTests {
             fatalError("Failed to find existing conversation")
         }
 
-        let composer2 = messaging.draftConversationComposer()
+        let composer2 = messagingService.draftConversationComposer()
         let writer2 = composer2.draftConversationWriter
         let repository2 = composer2.draftConversationRepository
         var conversationIterator2 = repository2.conversationPublisher.values.makeAsyncIterator()

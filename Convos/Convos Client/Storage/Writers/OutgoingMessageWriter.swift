@@ -14,8 +14,8 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
         case missingClientProvider
     }
 
-    private weak var clientProvider: XMTPClientProvider?
-    private var cancellable: AnyCancellable?
+    private let clientPublisher: AnyClientProviderPublisher
+    private let clientValue: PublisherValue<AnyClientProvider>
     private let databaseWriter: any DatabaseWriter
     private let conversationId: String
     private let isSendingValue: CurrentValueSubject<Bool, Never> = .init(false)
@@ -29,37 +29,31 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
         sentMessageSubject.eraseToAnyPublisher()
     }
 
-    init(clientProvider: XMTPClientProvider,
+    init(client: AnyClientProvider?,
+         clientPublisher: AnyClientProviderPublisher,
          databaseWriter: any DatabaseWriter,
          conversationId: String) {
-        self.clientProvider = clientProvider
+        self.clientPublisher = clientPublisher
+        self.clientValue = .init(
+            initial: client,
+            upstream: clientPublisher
+        )
         self.databaseWriter = databaseWriter
         self.conversationId = conversationId
-    }
-
-    init(clientPublisher: AnyPublisher<XMTPClientProvider?, Never>,
-         databaseWriter: any DatabaseWriter,
-         conversationId: String) {
-        self.databaseWriter = databaseWriter
-        self.conversationId = conversationId
-        cancellable = clientPublisher.sink { [weak self] clientProvider in
-            guard let self else { return }
-            self.clientProvider = clientProvider
-        }
-    }
-
-    deinit {
-        cancellable?.cancel()
     }
 
     func send(text: String) async throws {
+        guard let client = clientValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
         isSendingValue.send(true)
 
         defer {
             isSendingValue.send(false)
         }
 
-        guard let sender = try await clientProvider?.messageSender(
+        guard let sender = try await client.messageSender(
             for: conversationId
         ) else {
             throw OutgoingMessageWriterError.missingClientProvider
@@ -70,15 +64,11 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
         try await databaseWriter.write { [weak self] db in
             guard let self else { return }
 
-            guard let currentUser = try db.currentUser() else {
-                throw CurrentSessionError.missingCurrentUser
-            }
-
             let localMessage = DBMessage(
                 id: clientMessageId,
                 clientMessageId: clientMessageId,
                 conversationId: conversationId,
-                senderId: currentUser.inboxId,
+                senderId: client.inboxId,
                 date: Date(),
                 status: .unpublished,
                 messageType: .original,

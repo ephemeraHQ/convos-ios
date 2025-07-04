@@ -6,24 +6,24 @@ struct SecurityLineView: View {
         static let compactHeight: CGFloat = 52.0
     }
 
-    @Binding var path: [ConversationsListView.Route]
+    @Binding var path: [ConversationsRoute]
+    private let session: any SessionManagerProtocol
     private let conversationsState: ConversationsState
     private let deniedConversationsCount: ConversationsCountState
-    private let consentStateWriter: any ConversationConsentWriterProtocol
     let title: String = "Security line"
     let subtitle: String? = nil
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
     @Environment(\.dismiss) private var dismiss: DismissAction
 
-    init(messagingService: any MessagingServiceProtocol, path: Binding<[ConversationsListView.Route]>) {
+    init(session: any SessionManagerProtocol, path: Binding<[ConversationsRoute]>) {
+        self.session = session
         conversationsState = .init(
-            conversationsRepository: messagingService.conversationsRepository(for: .securityLine)
+            conversationsRepository: session.conversationsRepository(for: .securityLine)
         )
         deniedConversationsCount = .init(
-            conversationsCountRepository: messagingService.conversationsCountRepo(for: .denied)
+            conversationsCountRepository: session.conversationsCountRepo(for: .denied)
         )
         _path = path
-        self.consentStateWriter = messagingService.conversationConsentWriter()
     }
 
     var barHeight: CGFloat {
@@ -43,11 +43,21 @@ struct SecurityLineView: View {
                     Spacer()
                 } else {
                     ForEach(conversationsState.conversations) { conversation in
-                        NavigationLink(value: ConversationsListView.Route.conversation(conversation)) {
+                        NavigationLink(value: ConversationsRoute.conversation(conversation)) {
                             ConversationsListItem(conversation: conversation)
                         }
                     }
                 }
+            }
+        }
+        .navigationTitle("Security")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(id: "delete", placement: .topBarTrailing) {
+                Button("Delete All", systemImage: "trash") {
+                    deleteAll()
+                }
+                .disabled(conversationsState.conversations.isEmpty)
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -55,75 +65,36 @@ struct SecurityLineView: View {
                 DeniedConversationsListItem(count: deniedConversationsCount.count)
             }
         }
-        .safeAreaInset(edge: .top) {
-            HStack(spacing: 0.0) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 24.0))
-                        .foregroundStyle(.colorTextPrimary)
-                        .padding(.vertical, 10.0)
-                        .padding(.horizontal, DesignConstants.Spacing.step2x)
-                }
-                .padding(.trailing, 2.0)
+    }
 
-                VStack(alignment: .leading, spacing: 2.0) {
-                    Text(title)
-                        .font(.system(size: 16.0))
-                        .foregroundStyle(.colorTextPrimary)
-                        .lineLimit(1)
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(.system(size: 12.0))
-                            .foregroundStyle(.colorTextSecondary)
-                            .lineLimit(1)
-                    }
-                }
-                .padding(.leading, DesignConstants.Spacing.step2x)
-
-                Spacer()
-
-                Button {
-                    Task {
+    private func deleteAll() {
+        let inboxIds = Set<String>(conversationsState.conversations.map { $0.inboxId })
+        let messagingServices = inboxIds.map { session.messagingService(for: $0) }
+        let consentStateWriters = messagingServices.map { $0.conversationConsentWriter() }
+        Task {
+            await withTaskGroup(of: Void.self) { group in
+                for writer in consentStateWriters {
+                    group.addTask {
                         do {
-                            try await consentStateWriter.deleteAll()
+                            try await writer.deleteAll()
                         } catch {
                             Logger.error("Error deleting all conversations: \(error)")
                         }
                     }
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 24.0))
-                        .foregroundStyle(.colorTextPrimary)
-                        .padding(.vertical, 10.0)
-                        .padding(.horizontal, DesignConstants.Spacing.step2x)
                 }
-                .disabled(conversationsState.conversations.isEmpty)
-            }
-            .padding(.leading, DesignConstants.Spacing.step2x)
-            .padding(.trailing, DesignConstants.Spacing.step4x)
-            .padding(.vertical, DesignConstants.Spacing.step4x)
-            .frame(height: barHeight)
-            .background(.colorBackgroundPrimary)
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(.colorBorderSubtle2)
-                    .frame(height: 1.0)
             }
         }
     }
 }
 
 #Preview {
-    @Previewable @State var path: [ConversationsListView.Route] = []
+    @Previewable @State var path: [ConversationsRoute] = []
     let convos = ConvosClient.mock()
 
     NavigationStack {
         SecurityLineView(
-            messagingService: convos.messaging,
+            session: convos.session,
             path: $path
         )
-        .toolbarVisibility(.hidden, for: .navigationBar)
     }
 }

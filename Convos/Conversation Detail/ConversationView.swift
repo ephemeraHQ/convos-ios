@@ -25,35 +25,44 @@ struct ConversationView: View {
     }
 
     var body: some View {
-        let infoTapAction = { showInfo = true }
-
         MessagesContainerView(
             conversationState: conversationState,
             outgoingMessageWriter: outgoingMessageWriter,
             conversationConsentWriter: conversationConsentWriter,
-            conversationLocalStateWriter: conversationLocalStateWriter,
-            onInfoTap: infoTapAction
+            conversationLocalStateWriter: conversationLocalStateWriter
         ) {
             MessagesView(
                 messagesRepository: messagesRepository
             )
             .ignoresSafeArea()
         }
-        .navigationDestination(isPresented: $showInfo) {
+        .toolbarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .title) {
+                Button {
+                    showInfo = true
+                } label: {
+                    MessagesToolbarView(
+                        conversationState: conversationState,
+                    )
+                }
+            }
+        }
+        .sheet(isPresented: $showInfo) {
             ConversationInfoView()
         }
     }
 }
 
 #Preview {
-    let convos = ConvosClient.mock()
+    let messaging = MockMessagingService()
     let conversationId: String = "1"
     ConversationView(
-        conversationRepository: convos.messaging.conversationRepository(for: conversationId),
-        messagesRepository: convos.messaging.messagesRepository(for: conversationId),
-        outgoingMessageWriter: convos.messaging.messageWriter(for: conversationId),
-        conversationConsentWriter: convos.messaging.conversationConsentWriter(),
-        conversationLocalStateWriter: convos.messaging.conversationLocalStateWriter()
+        conversationRepository: messaging.conversationRepository(for: conversationId),
+        messagesRepository: messaging.messagesRepository(for: conversationId),
+        outgoingMessageWriter: messaging.messageWriter(for: conversationId),
+        conversationConsentWriter: messaging.conversationConsentWriter(),
+        conversationLocalStateWriter: messaging.conversationLocalStateWriter()
     )
     .ignoresSafeArea()
 }

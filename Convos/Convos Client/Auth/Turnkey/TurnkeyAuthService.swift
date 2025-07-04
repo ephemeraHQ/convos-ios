@@ -34,53 +34,27 @@ fileprivate extension SignRawPayloadResult {
     }
 }
 
-struct TurnkeySigningKey: SigningKey {
-    var identity: XMTPiOS.PublicIdentity {
-        guard let walletAddress = primaryWalletAddress else {
-            Logger.error("Error returning identity, no wallet address found")
-            return .init(kind: .ethereum, identifier: "")
-        }
-        return .init(kind: .ethereum, identifier: walletAddress)
-    }
+extension SessionUser.UserWallet.WalletAccount: @retroactive SigningKey {
+    private var turnkey: TurnkeyContext { .shared }
 
-    private let turnkey: TurnkeyContext = .shared
-    private let wallet: SessionUser.UserWallet
-
-    init(wallet: SessionUser.UserWallet) {
-        self.wallet = wallet
-    }
-
-    private var primaryWalletAddress: String? {
-        guard let account = wallet.accounts.first else {
-            Logger.error("Failed returning wallet address: No account found")
-            return nil
-        }
-
-        return account.address
+    public var identity: XMTPiOS.PublicIdentity {
+        return .init(kind: .ethereum, identifier: address)
     }
 
     var databaseKey: Data {
         get throws {
-            guard let walletAddress = primaryWalletAddress else {
-                throw TurnkeyAuthServiceError.walletAddressNotFound
-            }
-            return try TurnkeyDatabaseKeyStore.shared.databaseKey(for: walletAddress)
+            return try TurnkeyDatabaseKeyStore.shared.databaseKey(for: address)
         }
     }
 
-    func sign(_ message: String) async throws -> SignedData {
-        guard let walletAddress = primaryWalletAddress else {
-            Logger.error("Failed signing message: No wallet address")
-            return .init(rawData: Data())
-        }
-
+    public func sign(_ message: String) async throws -> SignedData {
         let prefix = "\u{19}Ethereum Signed Message:\n\(message.utf8.count)"
         let fullMessage = prefix + message
         let digest = Data(fullMessage.utf8).sha3(.keccak256)
         let digestString = digest.hexEncodedString()
         do {
             let result = try await turnkey.signRawPayload(
-                signWith: walletAddress,
+                signWith: address,
                 payload: digestString,
                 encoding: .PAYLOAD_ENCODING_HEXADECIMAL,
                 hashFunction: .HASH_FUNCTION_NO_OP
@@ -97,26 +71,43 @@ enum TurnkeyAuthServiceError: Error {
     case failedFindingPasskeyPresentationAnchor,
          failedCreatingSubOrganization,
          failedStampingLogin,
-         walletAddressNotFound
+         walletMissing,
+         walletAddressNotFound,
+         walletAccountMissing,
+         unauthorizedAccess
+}
+
+extension SessionUser {
+    var defaultWallet: SessionUser.UserWallet? {
+        wallets.first(
+            where: { $0.name == TurnkeyAuthService.Constant.defaultWalletName }
+        )
+    }
+
+    var otrWallet: SessionUser.UserWallet? {
+        wallets.first(
+            where: { $0.name == TurnkeyAuthService.Constant.otrWalletName }
+        )
+    }
+}
+
+fileprivate extension AuthState {
+    var authServiceState: AuthServiceState {
+        switch self {
+        case .loading, .authenticated:
+            return .notReady
+        case .unAuthenticated:
+            return .unauthorized
+        }
+    }
 }
 
 final class TurnkeyAuthService: AuthServiceProtocol {
-    struct TurnkeyRegisteredResult: AuthServiceRegisteredResultType {
-        let displayName: String
-        let signingKey: SigningKey
-        let databaseKey: Data
-    }
-
-    struct TurnkeyAuthResult: AuthServiceResultType {
-        let signingKey: SigningKey
-        let databaseKey: Data
-    }
-
+    let accountsService: (any AuthAccountsServiceProtocol)?
     private let environment: AppEnvironment
     private var authState: CurrentValueSubject<AuthServiceState, Never> = .init(.notReady)
-    private let apiClient: ConvosAPIClient = .shared
+    private let apiClient: any ConvosAPIBaseProtocol
     private let turnkey: TurnkeyContext = .shared
-    private var passkeyRegistrationTask: Task<Void, Never>?
     private let defaultSessionExpiration: String = "\(60 * 24 * 60 * 60)"  // 60 days
     private var cancellables: Set<AnyCancellable> = []
 
@@ -131,61 +122,25 @@ final class TurnkeyAuthService: AuthServiceProtocol {
     }
 
     init(environment: AppEnvironment) {
+        self.accountsService = TurnkeyAccountsService(
+            turnkey: turnkey,
+            environment: environment
+        )
         self.environment = environment
+        self.apiClient = ConvosAPIClientFactory.client(environment: environment)
         let authStatePublisher: AnyPublisher<AuthServiceState, Never> = turnkey
             .$user
-            .removeDuplicates(by: { lhs, rhs in
-                lhs?.id == rhs?.id
-            })
+//            .removeDuplicates(by: { lhs, rhs in
+//                lhs?.id == rhs?.id
+//            })
             .map { [weak self] user in
                 guard let self else { return .unknown }
 
-                defer {
-                    authFlowType = .passive
+                guard turnkey.authState != .loading else {
+                    return .notReady
                 }
 
-                guard let user else {
-                    let migration = ReactNativeMigration(environment: environment)
-                    return migration.needsMigration ? .migrating(migration) : .unauthorized
-                }
-
-                guard let wallet = user.wallets.first else {
-                    Logger.error("Wallet not found for Turnkey user, unauthorized")
-                    return .unauthorized
-                }
-
-                let signingKey = TurnkeySigningKey(wallet: wallet)
-                let userIdentifier = signingKey.identity.identifier
-                if case let .migrating(migration) = state {
-                    do {
-                        try migration.performMigration(for: userIdentifier)
-                    } catch {
-                        Logger.error("Failed performing migration for user \(userIdentifier): \(error)")
-                        return .migrating(migration)
-                    }
-                }
-
-                do {
-                    let databaseKey = try signingKey.databaseKey
-                    switch authFlowType {
-                    case .passive, .login:
-                        let result = TurnkeyAuthResult(
-                            signingKey: signingKey,
-                            databaseKey: databaseKey,
-                        )
-                        return .authorized(result)
-                    case .register(let displayName):
-                        let result = TurnkeyRegisteredResult(
-                            displayName: displayName,
-                            signingKey: signingKey,
-                            databaseKey: databaseKey,
-                        )
-                        return .registered(result)
-                    }
-                } catch {
-                    Logger.error("Error retrieving database key: \(error)")
-                    return .unauthorized
-                }
+                return authState(for: user)
             }
             .eraseToAnyPublisher()
         authStatePublisher
@@ -198,7 +153,11 @@ final class TurnkeyAuthService: AuthServiceProtocol {
 
     // MARK: Public
 
-    func prepare() async throws {
+    func prepare() throws {
+        authState.send(turnkey.authState.authServiceState)
+        Task {
+            try await turnkey.refreshSession()
+        }
     }
 
     func signIn() async throws {
@@ -257,6 +216,78 @@ final class TurnkeyAuthService: AuthServiceProtocol {
 
     // MARK: - Private
 
+    private func authState(for user: SessionUser?) -> AuthServiceState {
+        defer {
+            authFlowType = .passive
+        }
+
+        guard let user else {
+            let migration = ReactNativeMigration(environment: environment)
+            return migration.needsMigration ? .migrating(migration) : .unauthorized
+        }
+
+        guard let wallet = user.defaultWallet else {
+            Logger.error("Default Wallet not found for Turnkey user, unauthorized")
+            return .unauthorized
+        }
+
+        if user.wallets.count > 1 {
+            Logger.warning("Multiple wallets found for Turnkey user, using default")
+        }
+
+        // if we're coming from the RN app, only one account exists
+        if wallet.accounts.count == 1, let account = wallet.accounts.first {
+            let userIdentifier = account.identity.identifier
+            if case let .migrating(migration) = state {
+                do {
+                    try migration.performMigration(for: userIdentifier)
+                } catch {
+                    Logger.error("Failed performing migration for user \(userIdentifier): \(error)")
+                    return .migrating(migration)
+                }
+            }
+        }
+
+        do {
+            switch authFlowType {
+            case .passive, .login:
+                let inboxes = try wallet.accounts.map { account in
+                    AuthServiceInbox(
+                        type: .standard,
+                        provider: .external(.turnkey),
+                        providerId: account.id,
+                        signingKey: account,
+                        databaseKey: try account.databaseKey
+                    )
+                }
+                let result = AuthServiceResult(inboxes: inboxes)
+                return .authorized(result)
+            case .register(let displayName):
+                guard let account = wallet.accounts.first else {
+                    throw TurnkeyAuthServiceError.walletAccountMissing
+                }
+                if wallet.accounts.count > 1 {
+                    Logger.warning("Multiple accounts found for Turnkey user, using the first one")
+                }
+                let databaseKey = try account.databaseKey
+                let result = AuthServiceRegisteredResult(
+                    displayName: displayName,
+                    inbox: AuthServiceInbox(
+                        type: .standard,
+                        provider: .external(.turnkey),
+                        providerId: account.id,
+                        signingKey: account,
+                        databaseKey: databaseKey
+                    )
+                )
+                return .registered(result)
+            }
+        } catch {
+            Logger.error("Error retrieving database key: \(error)")
+            return .unauthorized
+        }
+    }
+
     private func stampLoginAndCreateSession(
         anchor: ASPresentationAnchor,
         organizationId: String,
@@ -304,7 +335,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
 
     // MARK: - Convos Backend
 
-    func sendCreateSubOrgRequest(
+    private func sendCreateSubOrgRequest(
         ephemeralPublicKey: String,
         passkeyRegistrationResult: PasskeyRegistrationResult,
         displayName: String
@@ -328,5 +359,10 @@ final class TurnkeyAuthService: AuthServiceProtocol {
         )
 
         return response
+    }
+
+    internal enum Constant {
+        static var defaultWalletName: String = "Default Wallet"
+        static var otrWalletName: String = "OTR Wallet"
     }
 }

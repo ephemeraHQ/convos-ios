@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import GRDB
 
@@ -10,7 +9,6 @@ protocol ConversationConsentWriterProtocol {
 
 class ConversationConsentWriter: ConversationConsentWriterProtocol {
     enum ConversationConsentWriterError: Error {
-        case missingXMTPClient
         case deleteAllFailedWithErrors([Error])
     }
 
@@ -22,23 +20,23 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
     }
 
     private let databaseWriter: any DatabaseWriter
-    private var clientProvider: (any XMTPClientProvider)?
-    private var cancellable: AnyCancellable?
+    private let clientPublisher: AnyClientProviderPublisher
+    private let clientValue: PublisherValue<AnyClientProvider>
 
-    init(databaseWriter: any DatabaseWriter,
-         clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never>) {
+    init(client: AnyClientProvider?,
+         clientPublisher: AnyClientProviderPublisher,
+         databaseWriter: any DatabaseWriter) {
+        self.clientValue = .init(initial: client, upstream: clientPublisher)
+        self.clientPublisher = clientPublisher
         self.databaseWriter = databaseWriter
-        cancellable = clientPublisher.sink { [weak self] clientProvider in
-            guard let self else { return }
-            self.clientProvider = clientProvider
-        }
     }
 
     func join(conversation: Conversation) async throws {
-        guard let clientProvider else {
-            throw ConversationConsentWriterError.missingXMTPClient
+        guard let client = clientValue.value else {
+            throw InboxStateError.inboxNotReady
         }
-        try await clientProvider.update(consent: .allowed, for: conversation.id)
+
+        try await client.update(consent: .allowed, for: conversation.id)
         try await databaseWriter.write { db in
             if let localConversation = try DBConversation
                 .filter(DBConversation.Columns.id == conversation.id)
@@ -53,10 +51,11 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
     }
 
     func delete(conversation: Conversation) async throws {
-        guard let clientProvider else {
-            throw ConversationConsentWriterError.missingXMTPClient
+        guard let client = clientValue.value else {
+            throw InboxStateError.inboxNotReady
         }
-        try await clientProvider.update(consent: .denied, for: conversation.id)
+
+        try await client.update(consent: .denied, for: conversation.id)
         try await databaseWriter.write { db in
             if let localConversation = try DBConversation
                 .filter(DBConversation.Columns.id == conversation.id)
@@ -71,22 +70,24 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
     }
 
     func deleteAll() async throws {
-        guard let clientProvider else {
-            throw ConversationConsentWriterError.missingXMTPClient
+        guard let client = clientValue.value else {
+            throw InboxStateError.inboxNotReady
         }
+
         let conversationsToDeny: [DBConversation] = try await databaseWriter.read { db in
             try DBConversation
+                .filter(DBConversation.Columns.inboxId == client.inboxId)
                 .filter(DBConversation.Columns.consent == Consent.unknown)
                 .fetchAll(db)
         }
 
         let errorCollector = ErrorCollector()
 
-        await withTaskGroup(of: Void.self) { group in
+        await withTaskGroup(of: Void.self) { [client] group in
             for dbConversation in conversationsToDeny {
                 group.addTask {
                     do {
-                        try await clientProvider.update(consent: .denied, for: dbConversation.id)
+                        try await client.update(consent: .denied, for: dbConversation.id)
                         try await self.databaseWriter.write { db in
                             let updatedConversation = dbConversation.with(consent: .denied)
                             try updatedConversation.save(db)

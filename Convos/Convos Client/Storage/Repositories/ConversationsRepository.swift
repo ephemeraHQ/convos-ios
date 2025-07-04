@@ -39,15 +39,9 @@ extension Array where Element == DBConversationDetails {
     func composeConversations(from database: Database) throws -> [Conversation] {
         let dbConversations: [DBConversationDetails] = self
 
-        guard let currentUser = try database.currentUser() else {
-            return []
-        }
-
         let conversations: [Conversation] = dbConversations
             .compactMap { dbConversationDetails in
-            dbConversationDetails.hydrateConversation(
-                currentUser: currentUser
-            )
+            dbConversationDetails.hydrateConversation()
         }
 
         return conversations

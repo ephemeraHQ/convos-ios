@@ -4,59 +4,35 @@ import GRDB
 import XMTPiOS
 
 final class MessagingService: MessagingServiceProtocol {
+    let inboxReadyPublisher: InboxReadyResultPublisher
+    private let inboxReadyValue: PublisherValue<InboxReadyResult>
+    private var clientPublisher: AnyClientProviderPublisher {
+        inboxReadyPublisher.map(\.client).eraseToAnyPublisher()
+    }
+    private let clientValue: PublisherValue<AnyClientProvider>
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
-    private let stateMachine: MessagingServiceStateMachine
-    private let apiClient: any ConvosAPIClientProtocol
     private var cancellables: Set<AnyCancellable> = []
 
-    var state: MessagingServiceState {
-        stateMachine.state
-    }
-
-    var messagingStatePublisher: AnyPublisher<MessagingServiceState, Never> {
-        stateMachine.statePublisher
-    }
-
-    init(authService: any AuthServiceProtocol,
+    init(inboxReadyPublisher: InboxReadyResultPublisher,
          databaseWriter: any DatabaseWriter,
-         databaseReader: any DatabaseReader,
-         apiClient: any ConvosAPIClientProtocol,
-         environment: AppEnvironment) {
-        let userWriter = UserWriter(databaseWriter: databaseWriter)
-        let syncingManager = SyncingManager(databaseWriter: databaseWriter,
-                                            apiClient: apiClient)
-        self.stateMachine = MessagingServiceStateMachine(
-            authService: authService,
-            apiClient: apiClient,
-            userWriter: userWriter,
-            syncingManager: syncingManager,
-            environment: environment
+         databaseReader: any DatabaseReader) {
+        self.clientValue = .init(
+            initial: nil,
+            upstream: inboxReadyPublisher.map(\.client).eraseToAnyPublisher()
         )
-        self.apiClient = apiClient
+        self.inboxReadyValue = .init(initial: nil, upstream: inboxReadyPublisher)
+        self.inboxReadyPublisher = inboxReadyPublisher
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
-
-        // Subscribe to XMTP client changes
-        stateMachine.clientPublisher
-            .sink { [weak self] client in
-                self?.apiClient.setXMTPClientProvider(client)
-            }
-            .store(in: &cancellables)
-    }
-
-    // MARK: User
-
-    func userRepository() -> any UserRepositoryProtocol {
-        UserRepository(dbReader: databaseReader)
     }
 
     // MARK: Profile Search
 
     func profileSearchRepository() -> any ProfileSearchRepositoryProtocol {
         ProfileSearchRepository(
-            apiClient: apiClient,
-            clientPublisher: stateMachine.clientPublisher
+            inboxReady: inboxReadyValue.value,
+            inboxReadyPublisher: inboxReadyPublisher
         )
     }
 
@@ -65,7 +41,8 @@ final class MessagingService: MessagingServiceProtocol {
     func draftConversationComposer() -> any DraftConversationComposerProtocol {
         let clientConversationId: String = DBConversation.generateDraftConversationId()
         let draftConversationWriter = DraftConversationWriter(
-            clientPublisher: stateMachine.clientPublisher,
+            client: clientValue.value,
+            clientPublisher: clientPublisher,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             draftConversationId: clientConversationId
@@ -77,8 +54,8 @@ final class MessagingService: MessagingServiceProtocol {
                 writer: draftConversationWriter
             ),
             profileSearchRepository: ProfileSearchRepository(
-                apiClient: apiClient,
-                clientPublisher: stateMachine.clientPublisher
+                inboxReady: inboxReadyValue.value,
+                inboxReadyPublisher: inboxReadyPublisher
             ),
             conversationConsentWriter: conversationConsentWriter(),
             conversationLocalStateWriter: conversationLocalStateWriter()
@@ -99,7 +76,11 @@ final class MessagingService: MessagingServiceProtocol {
     }
 
     func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
-        ConversationConsentWriter(databaseWriter: databaseWriter, clientPublisher: clientPublisher)
+        ConversationConsentWriter(
+            client: clientValue.value,
+            clientPublisher: clientPublisher,
+            databaseWriter: databaseWriter
+        )
     }
 
     func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol {
@@ -114,22 +95,9 @@ final class MessagingService: MessagingServiceProtocol {
     }
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
-        OutgoingMessageWriter(clientPublisher: stateMachine.clientPublisher,
+        OutgoingMessageWriter(client: clientValue.value,
+                              clientPublisher: clientPublisher,
                               databaseWriter: databaseWriter,
                               conversationId: conversationId)
-    }
-
-    // MARK: State Machine
-
-    var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
-        stateMachine.clientPublisher
-    }
-
-    func start() async throws {
-        try await stateMachine.start()
-    }
-
-    func stop() async {
-        await stateMachine.stop()
     }
 }

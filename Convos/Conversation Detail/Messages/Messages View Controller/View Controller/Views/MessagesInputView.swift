@@ -17,9 +17,9 @@ final class MessagesInputView: UIView {
 
     // MARK: - UI Components
 
-    private lazy var blurView: UIVisualEffectView = {
-        let blurEffect = UIBlurEffect(style: .regular)
-        let view = UIVisualEffectView(effect: blurEffect)
+    private lazy var glassView: UIVisualEffectView = {
+        let glassEffect = UIGlassEffect()
+        let view = UIVisualEffectView(effect: glassEffect)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -28,10 +28,7 @@ final class MessagesInputView: UIView {
         let tv = UITextView()
         tv.font = .systemFont(ofSize: Constant.textViewFontSize)
         tv.textColor = UIColor.colorTextPrimary
-        tv.backgroundColor = .colorBackgroundPrimary
-        tv.layer.masksToBounds = true
-        tv.layer.borderWidth = 1
-        tv.layer.borderColor = UIColor.colorBorderSubtle2.cgColor
+        tv.backgroundColor = .clear
         tv.textContainerInset = Constant.textViewInset
         tv.translatesAutoresizingMaskIntoConstraints = false
         tv.isScrollEnabled = false
@@ -91,11 +88,11 @@ final class MessagesInputView: UIView {
     }
 
     private func configureBackground() {
-        backgroundColor = .colorBackgroundPrimary.withAlphaComponent(0.8)
+        backgroundColor = .clear
     }
 
     private func addSubviews() {
-        [blurView, textView, sendButton].forEach { addSubview($0) }
+        [glassView, textView, sendButton].forEach { addSubview($0) }
     }
 
     private func setupConstraints() {
@@ -110,11 +107,11 @@ final class MessagesInputView: UIView {
 
     private func setupLayoutConstraints() {
         NSLayoutConstraint.activate([
-            // Blur View Constraints
-            blurView.topAnchor.constraint(equalTo: topAnchor),
-            blurView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            blurView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            blurView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            // Glass View Constraints
+            glassView.topAnchor.constraint(equalTo: textView.topAnchor),
+            glassView.leadingAnchor.constraint(equalTo: textView.leadingAnchor),
+            glassView.trailingAnchor.constraint(equalTo: textView.trailingAnchor),
+            glassView.bottomAnchor.constraint(equalTo: textView.bottomAnchor),
 
             // Text View Constraints
             textView.topAnchor.constraint(equalTo: topAnchor, constant: Constant.margin),
@@ -155,8 +152,8 @@ final class MessagesInputView: UIView {
 
     private func updateTextViewCornerRadius() {
         let shouldUseRoundedCorners = textViewHeightConstraint?.constant == Constant.baseHeight || textView.text.isEmpty
-        textView.layer.cornerRadius = shouldUseRoundedCorners
-            ? textView.frame.height / 2.0
+        glassView.layer.cornerRadius = shouldUseRoundedCorners
+            ? glassView.frame.height / 2.0
             : Constant.textViewCornerRadius
     }
 

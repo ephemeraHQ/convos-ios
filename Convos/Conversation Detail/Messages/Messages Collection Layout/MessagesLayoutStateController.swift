@@ -3,7 +3,7 @@ import UIKit
 
 // swiftlint:disable cyclomatic_complexity function_body_length type_body_length no_assertions large_tuple
 
-protocol MessagesLayoutProtocol: AnyObject {
+protocol MessagesLayoutProtocol: AnyObject, Sendable {
     var settings: MessagesLayoutSettings { get }
     var viewSize: CGSize { get }
     var visibleBounds: CGRect { get }
@@ -528,8 +528,10 @@ final class MessagesLayoutStateController<Layout: MessagesLayoutProtocol> {
         batchUpdateCompensatingOffset = 0
         proposedCompensatingOffset = 0
 
-        var afterUpdateModel = LayoutModel(sections: layoutBeforeUpdate.sections,
-                                           collectionLayout: layoutRepresentation)
+        var afterUpdateModel = layoutAfterUpdate ?? LayoutModel(
+            sections: layoutBeforeUpdate.sections,
+            collectionLayout: layoutRepresentation
+        )
         resetCachedAttributeObjects()
 
         var reloadedSectionsIndexesArray = [Int]()

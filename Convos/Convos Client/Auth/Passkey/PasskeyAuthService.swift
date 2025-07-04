@@ -4,23 +4,16 @@ import PasskeyAuth
 import XMTPiOS
 
 class PasskeyAuthService: AuthServiceProtocol {
-    struct PasskeyAuthResult: AuthServiceResultType {
-        let signingKey: any SigningKey
-        let databaseKey: Data
-    }
-
-    struct PasskeyRegisteredResult: AuthServiceRegisteredResultType {
-        let displayName: String
-        let signingKey: any SigningKey
-        let databaseKey: Data
-    }
-
     var state: AuthServiceState {
         authStateSubject.value
     }
 
     var authStatePublisher: AnyPublisher<AuthServiceState, Never> {
         return authStateSubject.eraseToAnyPublisher()
+    }
+
+    var accountsService: (any AuthAccountsServiceProtocol)? {
+        nil
     }
 
     private let environment: AppEnvironment
@@ -52,7 +45,7 @@ class PasskeyAuthService: AuthServiceProtocol {
         }
     }
 
-    func prepare() async throws {
+    func prepare() throws {
         Task { @MainActor in
             let presentationProvider = PasskeyPresentationProvider()
             await passkeyAuth.setPresentationContextProvider(presentationProvider)
@@ -69,8 +62,21 @@ class PasskeyAuthService: AuthServiceProtocol {
         let signingKey = PasskeySigningKey(credentialID: identity.credentialID,
                                            publicKey: identity.publicKey,
                                            passkeyAuth: passkeyAuth)
-        authStateSubject.send(.authorized(PasskeyAuthResult(signingKey: signingKey,
-                                                            databaseKey: identity.databaseKey)))
+        authStateSubject.send(
+            .authorized(
+                AuthServiceResult(
+                    inboxes: [
+                        AuthServiceInbox(
+                            type: .standard,
+                            provider: .external(.passkey),
+                            providerId: response.userID,
+                            signingKey: signingKey,
+                            databaseKey: identity.databaseKey
+                        )
+                    ]
+                )
+            )
+        )
     }
 
     func register(displayName: String) async throws {
@@ -83,10 +89,20 @@ class PasskeyAuthService: AuthServiceProtocol {
         let signingKey = PasskeySigningKey(credentialID: identity.credentialID,
                                            publicKey: identity.publicKey,
                                            passkeyAuth: passkeyAuth)
-        let result = PasskeyRegisteredResult(displayName: displayName,
-                                             signingKey: signingKey,
-                                             databaseKey: identity.databaseKey)
-        authStateSubject.send(.registered(result))
+        authStateSubject.send(
+            .registered(
+                AuthServiceRegisteredResult(
+                    displayName: displayName,
+                    inbox: AuthServiceInbox(
+                        type: .standard,
+                        provider: .external(.passkey),
+                        providerId: response.userID,
+                        signingKey: signingKey,
+                        databaseKey: identity.databaseKey
+                    )
+                )
+            )
+        )
     }
 
     func signOut() async throws {
@@ -101,8 +117,17 @@ class PasskeyAuthService: AuthServiceProtocol {
             let signingKey = PasskeySigningKey(credentialID: identity.credentialID,
                                                publicKey: identity.publicKey,
                                                passkeyAuth: passkeyAuth)
-            let result = PasskeyAuthResult(signingKey: signingKey,
-                                           databaseKey: identity.databaseKey)
+            let result = AuthServiceResult(
+                inboxes: [
+                    AuthServiceInbox(
+                        type: .standard,
+                        provider: .external(.passkey),
+                        providerId: identity.userID,
+                        signingKey: signingKey,
+                        databaseKey: identity.databaseKey
+                    )
+                ]
+            )
             authStateSubject.send(.authorized(result))
         } else {
             authStateSubject.send(.unauthorized)
