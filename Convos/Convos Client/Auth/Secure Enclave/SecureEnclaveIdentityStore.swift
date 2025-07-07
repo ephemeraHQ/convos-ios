@@ -19,6 +19,7 @@ protocol SecureEnclaveKeyStore {
 
 enum SecureEnclaveKeyStoreError: Error {
     case failedRetrievingDatabaseKey,
+         failedRetreivingInboxType,
          failedDeletingDatabaseKey,
          failedSavingDatabaseKey,
          failedGeneratingDatabaseKey
@@ -85,8 +86,10 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
 
     enum SecureEnclaveUserStoreError: Error {
         case failedRetrievingDatabaseKey,
+             failedRetrievingInboxType,
              failedDeletingDatabaseKey,
              failedSavingDatabaseKey,
+             failedSavingInboxType,
              failedGeneratingDatabaseKey,
              keyTagMismatch,
              biometryAuthFailed,
@@ -314,10 +317,10 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             updateQuery.removeValue(forKey: kSecValueData as String)
             let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributesToUpdate as CFDictionary)
             guard updateStatus == errSecSuccess else {
-                throw SecureEnclaveUserStoreError.failedSavingDatabaseKey
+                throw SecureEnclaveUserStoreError.failedSavingInboxType
             }
         } else if status != errSecSuccess {
-            throw SecureEnclaveUserStoreError.failedSavingDatabaseKey
+            throw SecureEnclaveUserStoreError.failedSavingInboxType
         }
     }
 
@@ -336,7 +339,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         let status = SecItemCopyMatching(query as CFDictionary, &item)
 
         guard status == errSecSuccess, let data = item as? Data else {
-            throw SecureEnclaveUserStoreError.failedRetrievingDatabaseKey
+            throw SecureEnclaveUserStoreError.failedRetrievingInboxType
         }
 
         return try JSONDecoder().decode(InboxType.self, from: data)
