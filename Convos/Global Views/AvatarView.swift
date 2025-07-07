@@ -42,9 +42,12 @@ struct ProfileAvatarView: View {
 }
 
 struct ConversationAvatarView: View {
+    private let conversation: Conversation
     private let avatars: [AvatarData]
 
     init(conversation: Conversation) {
+        self.conversation = conversation
+
         let membersToShow: [Profile]
 
         if conversation.kind == .group {
@@ -67,7 +70,13 @@ struct ConversationAvatarView: View {
     }
 
     var body: some View {
-        AvatarCloudView(avatars: avatars)
+        if conversation.kind == .group && conversation.imageURL != nil {
+            // Show the group's custom image when available
+            AvatarView(imageURL: conversation.imageURL, fallbackName: conversation.name ?? "Group")
+        } else {
+            // Show member avatars when no group image is set (for groups) or for DMs
+            AvatarCloudView(avatars: avatars)
+        }
     }
 }
 

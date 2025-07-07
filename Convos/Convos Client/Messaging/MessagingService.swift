@@ -132,6 +132,10 @@ final class MessagingService: MessagingServiceProtocol {
                                    userRepository: userRepository())
     }
 
+    func uploadImage(data: Data, filename: String) async throws -> String {
+        return try await apiClient.uploadAttachment(data: data, filename: filename)
+    }
+
     // MARK: State Machine
 
     var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {

@@ -114,6 +114,11 @@ class MockMessagingService: MessagingServiceProtocol {
     func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
         MockGroupPermissionsRepository()
     }
+
+    func uploadImage(data: Data, filename: String) async throws -> String {
+        // Return a mock URL for testing
+        return "https://example.com/uploads/\(filename)"
+    }
 }
 
 extension MockMessagingService: UserRepositoryProtocol {

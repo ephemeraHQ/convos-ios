@@ -161,10 +161,6 @@ struct GroupEditView: View {
             }
         }
         .navigationBarHidden(true)
-        .onTapGesture {
-            // Dismiss keyboard when tapping outside text fields
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        }
         .alert("Group Update", isPresented: $showingAlert) {
             Button("OK") { }
         } message: {
@@ -184,7 +180,8 @@ struct GroupEditView: View {
                                     let url = try await uploadImage()
                                     uploadedImageURL = url
                                 } catch {
-                                    alertMessage = "Failed to upload image"
+                                    Logger.error("Group image upload failed: \(error)")
+                                    alertMessage = "Group update failed to upload image: \(error.localizedDescription)"
                                     showingAlert = true
                                 }
                             }
@@ -373,7 +370,10 @@ struct GroupEditView: View {
                 }
             } catch {
                 Logger.error("Failed to update group: \(error)")
-                // Note: In a real app, you might want to show a toast or retry mechanism
+                await MainActor.run {
+                    alertMessage = "Group update failed: \(error.localizedDescription)"
+                    showingAlert = true
+                }
             }
         } else {
             // No changes, just dismiss
@@ -414,61 +414,28 @@ struct GroupEditView: View {
 
         Logger.info("Uploading group image...")
 
-        // Convert SwiftUI Image to UIImage data
-        guard let uiImage = image.asUIImage(),
-              let imageData = uiImage.jpegData(compressionQuality: 0.8) else {
+        // Convert SwiftUI Image to UIImage
+        guard let uiImage = image.asUIImage() else {
+            Logger.error("Failed to convert SwiftUI Image to UIImage")
             throw GroupImage.GroupImageError.importFailed
         }
 
-        // Create multipart upload request to Convos API
-        let baseURL = Secrets.CONVOS_API_BASE_URL
-        guard let uploadURL = URL(string: "\(baseURL)v1/attachments/upload") else {
+        let estimatedBytes = Int(uiImage.size.width * uiImage.size.height * 4)
+        Logger.info("Original image size: \(uiImage.size), estimated bytes: \(estimatedBytes)")
+
+        // Compress and resize image to max 1024x1024 while maintaining aspect ratio
+        guard let compressedImageData = ImageCompression.compressImage(uiImage, maxDimension: 1024, quality: 0.8) else {
+            Logger.error("Failed to compress image")
             throw GroupImage.GroupImageError.importFailed
         }
 
-        var request = URLRequest(url: uploadURL)
-        request.httpMethod = "POST"
+        Logger.info("Compressed image data size: \(ImageCompression.formatFileSize(compressedImageData.count))")
 
-        let boundary = UUID().uuidString
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        // Use the messaging service's authenticated upload method
+        let imageURL = try await messagingService.uploadImage(data: compressedImageData, filename: "group-image.jpg")
 
-        let body = Data()
-
-//        @lourou
-//        Add file data
-//        guard let boundaryData = "--\(boundary)\r\n".data(using: .utf8),
-//              let dispositionData = "Content-Disposition: form-data; name=\"file\";
-//        filename=\"group-image.jpg\"\r\n".data(using: .utf8),
-//              let contentTypeData = "Content-Type: image/jpeg\r\n\r\n".data(using: .utf8),
-//              let endingData = "\r\n--\(boundary)--\r\n".data(using: .utf8) else {
-//            throw GroupImage.GroupImageError.importFailed
-//        }
-//
-//        body.append(boundaryData)
-//        body.append(dispositionData)
-//        body.append(contentTypeData)
-//        body.append(imageData)
-//        body.append(endingData)
-
-        request.httpBody = body
-
-        // Perform upload
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw GroupImage.GroupImageError.importFailed
-        }
-
-        // Parse response to get uploaded URL
-        struct UploadResponse: Codable {
-            let url: String
-        }
-
-        let uploadResponse = try JSONDecoder().decode(UploadResponse.self, from: data)
-
-        Logger.info("Successfully uploaded image to: \(uploadResponse.url)")
-        return uploadResponse.url
+        Logger.info("Successfully uploaded image to: \(imageURL)")
+        return imageURL
     }
 }
 
@@ -476,10 +443,17 @@ struct GroupEditView: View {
 
 extension Image {
     func asUIImage() -> UIImage? {
-        let controller = UIHostingController(rootView: self)
+        // Use a flexible container that maintains aspect ratio
+        let imageView = self
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(maxWidth: 1024, maxHeight: 1024)
+
+        let controller = UIHostingController(rootView: imageView)
         let view = controller.view
 
-        let targetSize = CGSize(width: 300, height: 300)
+        // Let SwiftUI determine the natural size to preserve aspect ratio
+        let targetSize = controller.sizeThatFits(in: CGSize(width: 1024, height: 1024))
         view?.bounds = CGRect(origin: .zero, size: targetSize)
         view?.backgroundColor = .clear
 

@@ -17,37 +17,32 @@ struct PinnedConversationsGrid: View {
                     onTapChat(conversation)
                 } label: {
                     VStack(spacing: 8) {
-                        AsyncImage(url: conversation.otherMember?.avatarURL) { image in
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            Color(.systemGray5)
-                        }
-                        .frame(width: 72, height: 72)
-                        .clipShape(Circle())
-                        .overlay(
-                            Circle()
-                                .stroke(Color(.systemGray6), lineWidth: 1)
-                        )
-                        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
-                        .overlay(
-                            // Unread indicator
-                            conversation.isUnread ? AnyView(
+                        ConversationAvatarView(conversation: conversation)
+                            .frame(width: 72, height: 72)
+                            .overlay(
                                 Circle()
-                                    .fill(Color.black)
-                                    .frame(width: 12, height: 12)
-                                    .offset(x: 26, y: -26)
-                            ) : AnyView(EmptyView())
-                        )
+                                    .stroke(Color(.systemGray6), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+                            .overlay(
+                                // Unread indicator
+                                conversation.isUnread ? AnyView(
+                                    Circle()
+                                        .fill(Color.black)
+                                        .frame(width: 12, height: 12)
+                                        .offset(x: 26, y: -26)
+                                ) : AnyView(EmptyView())
+                            )
 
-                        if let username = conversation.otherMember?.username {
-                            Text(username)
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.primary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
+                        let displayName = conversation.kind == .group
+                            ? conversation.name ?? "Group"
+                            : conversation.otherMember?.username ?? "Unknown"
+
+                        Text(displayName)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())

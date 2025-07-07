@@ -46,6 +46,8 @@ protocol ConvosAPIClientProtocol {
     func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse
     func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse
     func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse]
+
+    func uploadAttachment(data: Data, filename: String) async throws -> String
 }
 
 final class ConvosAPIClient: ConvosAPIClientProtocol {
@@ -236,6 +238,70 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
             throw APIError.serverError(nil)
         }
     }
+
+    func uploadAttachment(data: Data, filename: String) async throws -> String {
+        Logger.info("Starting attachment upload process for file: \(filename)")
+        Logger.info("File data size: \(data.count) bytes")
+
+        // Step 1: Get presigned URL from Convos API
+        let presignedRequest = try authenticatedRequest(
+            for: "v1/attachments/presigned",
+            method: "GET",
+            queryParameters: ["contentType": "image/jpeg"]
+        )
+
+        Logger.info("Getting presigned URL from: \(presignedRequest.url?.absoluteString ?? "nil")")
+
+        struct PresignedResponse: Codable {
+            let url: String
+        }
+
+        let presignedResponse: PresignedResponse = try await performRequest(presignedRequest)
+        Logger.info("Received presigned URL: \(presignedResponse.url)")
+
+        // Step 2: Upload directly to S3 using presigned URL
+        guard let s3URL = URL(string: presignedResponse.url) else {
+            Logger.error("Invalid presigned URL: \(presignedResponse.url)")
+            throw APIError.invalidURL
+        }
+
+        var s3Request = URLRequest(url: s3URL)
+        s3Request.httpMethod = "PUT"
+        s3Request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+        s3Request.setValue("public-read", forHTTPHeaderField: "x-amz-acl")
+        s3Request.httpBody = data
+
+        Logger.info("Uploading to S3: \(s3URL.absoluteString)")
+        Logger.info("S3 upload data size: \(data.count) bytes")
+        Logger.info("S3 request headers: \(s3Request.allHTTPHeaderFields ?? [:])")
+
+        let (s3Data, s3Response) = try await URLSession.shared.data(for: s3Request)
+
+        guard let s3HttpResponse = s3Response as? HTTPURLResponse else {
+            Logger.error("Invalid S3 response type")
+            throw APIError.invalidResponse
+        }
+
+        Logger.info("S3 response status: \(s3HttpResponse.statusCode)")
+        Logger.info("S3 response headers: \(s3HttpResponse.allHeaderFields)")
+
+        guard s3HttpResponse.statusCode == 200 else {
+            Logger.error("S3 upload failed with status: \(s3HttpResponse.statusCode)")
+            Logger.error("S3 error response: \(String(data: s3Data, encoding: .utf8) ?? "nil")")
+            throw APIError.serverError(nil)
+        }
+
+        // Step 3: Extract public URL (remove query parameters from presigned URL)
+        guard let urlComponents = URLComponents(string: presignedResponse.url) else {
+            Logger.error("Failed to parse presigned URL components")
+            throw APIError.invalidURL
+        }
+
+        let publicURL = "\(urlComponents.scheme!)://\(urlComponents.host!)\(urlComponents.path)"
+        Logger.info("Successfully uploaded to S3, public URL: \(publicURL)")
+
+        return publicURL
+    }
 }
 
 // MARK: - Error Handling
@@ -247,5 +313,6 @@ enum APIError: Error {
     case forbidden
     case notFound
     case invalidResponse
+    case invalidRequest
     case serverError(Error?)
 }

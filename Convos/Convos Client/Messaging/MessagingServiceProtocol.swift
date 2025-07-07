@@ -26,6 +26,8 @@ protocol MessagingServiceProtocol {
 
     func groupMetadataWriter() -> any GroupMetadataWriterProtocol
     func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol
+
+    func uploadImage(data: Data, filename: String) async throws -> String
 }
 
 enum MessagingServiceState: Equatable {
