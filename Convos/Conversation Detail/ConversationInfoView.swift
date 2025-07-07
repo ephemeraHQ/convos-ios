@@ -451,7 +451,10 @@ struct EditGroupButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "pencil")
+                .font(.system(size: 24.0))
                 .foregroundColor(.primary)
+                .padding(.vertical, 10.0)
+                .padding(.horizontal, DesignConstants.Spacing.step2x)
         }
     }
 }

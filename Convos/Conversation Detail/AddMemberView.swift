@@ -24,13 +24,19 @@ struct AddMemberView: View {
     var body: some View {
         VStack(spacing: 0) {
             CustomToolbarView(onBack: { dismiss() }, rightContent: {
-                Button("Add") {
+                let action = {
                     Task {
                         await addSelectedMembers()
                     }
+                    return ()
                 }
-                .foregroundColor(canAddMembers ? .blue : .gray)
-                .font(.system(size: 16, weight: .medium))
+                Button(action: action) {
+                    Text("Add")
+                        .foregroundColor(canAddMembers ? .blue : .gray)
+                        .font(.system(size: 16, weight: .medium))
+                }
+                .padding(.vertical, 10.0)
+                .padding(.horizontal, DesignConstants.Spacing.step2x)
                 .disabled(!canAddMembers)
             })
 

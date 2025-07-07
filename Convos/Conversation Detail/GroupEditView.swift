@@ -62,13 +62,13 @@ struct GroupEditView: View {
     @State private var groupName: String
     @State private var groupDescription: String
     @State private var uniqueLink: String
-    @State private var requireAdminApproval: Bool = false
     @State private var imageState: GroupImage.State = .empty
     @State private var imageSelection: PhotosPickerItem?
     @State private var isSaving: Bool = false
     @State private var showingAlert: Bool = false
     @State private var alertMessage: String = ""
     @State private var uploadedImageURL: String?
+    @FocusState private var isDescriptionFocused: Bool
 
     private let nameCharacterLimit: Int = 100
     private let descriptionCharacterLimit: Int = 300
@@ -109,29 +109,56 @@ struct GroupEditView: View {
     var body: some View {
         VStack(spacing: 0) {
             CustomToolbarView(onBack: { dismiss() }, rightContent: {
-                Button("Done") {
+                let action = {
                     Task {
                         await saveGroupChanges()
                     }
+                    return ()
                 }
-                .foregroundColor(isSaving ? .gray : .blue)
-                .font(.system(size: 16, weight: .medium))
+                Button(action: action) {
+                    Text("Done")
+                        .foregroundColor(isSaving ? .gray : .blue)
+                        .font(.system(size: 16, weight: .medium))
+                }
+                .padding(.vertical, 10.0)
+                .padding(.horizontal, DesignConstants.Spacing.step2x)
                 .disabled(isSaving || !canEditGroup)
             })
 
-            ScrollView {
-                VStack(spacing: 24) {
-                    groupImageSection
-
-                    VStack(spacing: 16) {
-                        groupNameSection
-                        groupDescriptionSection
-                        uniqueLinkSection
-                        adminApprovalSection
+            ScrollViewReader { scrollProxy in
+                Form {
+                    Section {
+                        groupImageSection
                     }
-                    .padding(.horizontal)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+
+                    Section("Group Info") {
+                        groupNameField
+                        groupDescriptionField
+                            .id("descriptionField")
+                            .onTapGesture {
+                                // Keep focus when tapping description field
+                            }
+                    }
                 }
-                .padding(.top, 20)
+                .scrollDismissesKeyboard(.never)
+                .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            scrollProxy.scrollTo("descriptionField", anchor: .center)
+                        }
+                    }
+                }
+                .onChange(of: isDescriptionFocused) { _, focused in
+                    if focused {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                scrollProxy.scrollTo("descriptionField", anchor: .center)
+                            }
+                        }
+                    }
+                }
             }
             .disabled(isSaving)
             .overlay(
@@ -146,6 +173,10 @@ struct GroupEditView: View {
             )
         }
         .navigationBarHidden(true)
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside text fields
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
         .alert("Group Update", isPresented: $showingAlert) {
             Button("OK") { }
         } message: {
@@ -177,7 +208,8 @@ struct GroupEditView: View {
     }
 
     private var groupImageSection: some View {
-        VStack(spacing: 16) {
+        HStack {
+            Spacer()
             PhotosPicker(selection: $imageSelection,
                          matching: .images,
                          photoLibrary: .shared()) {
@@ -185,7 +217,7 @@ struct GroupEditView: View {
                     switch imageState {
                     case .loading:
                         ProgressView()
-                            .frame(width: 100, height: 100)
+                            .frame(width: 120, height: 120)
                     case .failure:
                         VStack {
                             Image(systemName: "exclamationmark.triangle")
@@ -194,15 +226,15 @@ struct GroupEditView: View {
                                 .font(.caption)
                                 .foregroundColor(.red)
                         }
-                        .frame(width: 100, height: 100)
+                        .frame(width: 120, height: 120)
                     case .empty:
                         MonogramView(name: conversation.name ?? "Group")
-                            .frame(width: 100, height: 100)
+                            .frame(width: 120, height: 120)
                     case let .success(image):
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: 100, height: 100)
+                            .frame(width: 120, height: 120)
                             .clipShape(Circle())
                     }
 
@@ -220,63 +252,67 @@ struct GroupEditView: View {
                             }
                         }
                     }
-                    .frame(width: 100, height: 100)
+                    .frame(width: 120, height: 120)
                 }
             }
             .buttonStyle(.borderless)
+            Spacer()
         }
+        .padding(.vertical, 8)
     }
 
-    private var groupNameSection: some View {
+    private var groupNameField: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Name")
-                .font(.headline)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
 
-            VStack(spacing: 4) {
-                TextField("Group name", text: $groupName)
-                    .textFieldStyle(.roundedBorder)
-                    .onChange(of: groupName) { _, newValue in
-                        if newValue.count > nameCharacterLimit {
-                            groupName = String(newValue.prefix(nameCharacterLimit))
-                        }
+            TextField("Group name", text: $groupName)
+                .textFieldStyle(.plain)
+                .font(.body)
+                .autocorrectionDisabled()
+                .onChange(of: groupName) { _, newValue in
+                    if newValue.count > nameCharacterLimit {
+                        groupName = String(newValue.prefix(nameCharacterLimit))
                     }
-
-                HStack {
-                    Spacer()
-                    Text("\(groupName.count)/\(nameCharacterLimit)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
+
+            HStack {
+                Spacer()
+                Text("\(groupName.count)/\(nameCharacterLimit)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
         }
     }
 
-    private var groupDescriptionSection: some View {
+    private var groupDescriptionField: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Description")
-                .font(.headline)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
 
-            VStack(spacing: 4) {
-                TextField(
-                    "Working towards the Bedrock milestone: world-class messaging on tomorrow's foundations " +
-                    "(well underway)",
-                    text: $groupDescription,
-                    axis: .vertical
-                )
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(3...6)
-                    .onChange(of: groupDescription) { _, newValue in
-                        if newValue.count > descriptionCharacterLimit {
-                            groupDescription = String(newValue.prefix(descriptionCharacterLimit))
-                        }
+            TextField(
+                "Add a description for your group",
+                text: $groupDescription,
+                axis: .vertical
+            )
+                .textFieldStyle(.plain)
+                .font(.body)
+                .lineLimit(1...10)
+                .autocorrectionDisabled()
+                .focused($isDescriptionFocused)
+                .onChange(of: groupDescription) { _, newValue in
+                    if newValue.count > descriptionCharacterLimit {
+                        groupDescription = String(newValue.prefix(descriptionCharacterLimit))
                     }
-
-                HStack {
-                    Spacer()
-                    Text("\(groupDescription.count)/\(descriptionCharacterLimit)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
+
+            HStack {
+                Spacer()
+                Text("\(groupDescription.count)/\(descriptionCharacterLimit)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
         }
     }
@@ -302,16 +338,6 @@ struct GroupEditView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-    }
-
-    private var adminApprovalSection: some View {
-        VStack(spacing: 16) {
-            Toggle("Require Admin Approval", isOn: $requireAdminApproval)
-                .font(.body)
-        }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
     }
 
     private func saveGroupChanges() async {
@@ -425,7 +451,7 @@ struct GroupEditView: View {
 //              let endingData = "\r\n--\(boundary)--\r\n".data(using: .utf8) else {
 //            throw GroupImage.GroupImageError.importFailed
 //        }
-//        
+//
 //        body.append(boundaryData)
 //        body.append(dispositionData)
 //        body.append(contentTypeData)
