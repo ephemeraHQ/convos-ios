@@ -277,11 +277,14 @@ struct GroupEditView: View {
                     }
                 }
 
-            HStack {
-                Spacer()
-                Text("\(groupName.count)/\(nameCharacterLimit)")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+            if groupName.count > nameCharacterLimit - 20 {
+                HStack {
+                    Spacer()
+                    Text("\(groupName.count)/\(nameCharacterLimit)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .fixedSize()
+                }
             }
         }
     }
@@ -308,11 +311,14 @@ struct GroupEditView: View {
                     }
                 }
 
-            HStack {
-                Spacer()
-                Text("\(groupDescription.count)/\(descriptionCharacterLimit)")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+            if groupDescription.count > descriptionCharacterLimit - 50 {
+                HStack {
+                    Spacer()
+                    Text("\(groupDescription.count)/\(descriptionCharacterLimit)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .fixedSize()
+                }
             }
         }
     }
