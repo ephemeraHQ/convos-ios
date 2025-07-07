@@ -19,9 +19,9 @@ struct ContactCard: Identifiable, Hashable {
         case .standard(let inbox):
             return "standard_\(inbox.id)"
         case .ephemeral(let inboxes):
-            return "ephemeral_\(inboxes.map(\.id).joined(separator: "-"))"
+            return "ephemeral_\(inboxes.map(\.id).sorted().joined(separator: "-"))"
         case .cash(let inboxes):
-            return "cash_\(inboxes.map(\.id).joined(separator: "-"))"
+            return "cash_\(inboxes.map(\.id).sorted().joined(separator: "-"))"
         }
     }
 
