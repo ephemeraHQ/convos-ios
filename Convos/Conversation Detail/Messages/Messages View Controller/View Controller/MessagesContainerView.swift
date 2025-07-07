@@ -1,7 +1,7 @@
 import Observation
 import SwiftUI
 
-struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
+struct MessagesContainerView<Content: View>: UIViewControllerRepresentable, @unchecked Sendable {
     let conversationState: ConversationState
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
@@ -72,22 +72,28 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
     func sendMessage() {
         let messageText = text
         text = ""
+        let writer = outgoingMessageWriter
         Task {
             do {
-                try await outgoingMessageWriter.send(text: messageText)
+                try await writer.send(text: messageText)
             } catch {
-                Logger.error("Error sending message: \(error)")
+                await MainActor.run {
+                    Logger.error("Error sending message: \(error)")
+                }
             }
         }
     }
 
     func joinConversation() {
         guard let conversation = conversationState.conversation else { return }
+        let writer = conversationConsentWriter
         Task {
             do {
-                try await conversationConsentWriter.join(conversation: conversation)
+                try await writer.join(conversation: conversation)
             } catch {
-                Logger.error("Error joining conversation: \(error)")
+                await MainActor.run {
+                    Logger.error("Error joining conversation: \(error)")
+                }
             }
         }
     }
@@ -95,11 +101,14 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
     func deleteConversation() {
         guard let conversation = conversationState.conversation else { return }
         dismiss()
+        let writer = conversationConsentWriter
         Task {
             do {
-                try await conversationConsentWriter.delete(conversation: conversation)
+                try await writer.delete(conversation: conversation)
             } catch {
-                Logger.error("Error deleting conversation: \(error)")
+                await MainActor.run {
+                    Logger.error("Error deleting conversation: \(error)")
+                }
             }
         }
     }

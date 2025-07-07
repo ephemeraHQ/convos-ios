@@ -297,7 +297,8 @@ extension Conversation {
     }
 
     var membersCountString: String {
-        "\(members.count) \(members.count == 1 ? "person" : "people")"
+        let totalCount = withCurrentUserIncluded().members.count
+        return "\(totalCount) \(totalCount == 1 ? "person" : "people")"
     }
 }
 

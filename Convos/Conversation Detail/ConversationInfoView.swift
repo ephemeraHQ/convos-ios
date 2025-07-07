@@ -123,9 +123,42 @@ struct GroupInfoView: View {
     let messagingService: any MessagingServiceProtocol
     @Binding var showAllMembers: Bool
     @Binding var showAddMember: Bool
+    @State private var memberRoles: [String: MemberRole] = [:]
 
     private var displayedMembers: [Profile] {
-        Array(conversation.members.prefix(6))
+        let allMembers = conversation.withCurrentUserIncluded().members
+        let sortedMembers = allMembers.sorted { member1, member2 in
+            sortMembersByRole(member1, member2)
+        }
+        return Array(sortedMembers.prefix(6))
+    }
+
+    private func sortMembersByRole(_ member1: Profile, _ member2: Profile) -> Bool {
+        // Show "You" (current user) first
+        if member1.id == "current" { return true }
+        if member2.id == "current" { return false }
+
+        let role1 = memberRoles[member1.id] ?? .member
+        let role2 = memberRoles[member2.id] ?? .member
+
+        // Sort by role hierarchy: superAdmin > admin > member
+        let priority1 = rolePriority(role1)
+        let priority2 = rolePriority(role2)
+
+        if priority1 != priority2 {
+            return priority1 > priority2
+        }
+
+        // Same role, sort alphabetically by name
+        return member1.displayName < member2.displayName
+    }
+
+    private func rolePriority(_ role: MemberRole) -> Int {
+        switch role {
+        case .superAdmin: return 3
+        case .admin: return 2
+        case .member: return 1
+        }
     }
 
     var body: some View {
@@ -159,7 +192,7 @@ struct GroupInfoView: View {
                 // Members Section
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Text("\(conversation.members.count) Members")
+                        Text("\(conversation.withCurrentUserIncluded().members.count) Members")
                             .font(.headline)
                         Spacer()
                         AddMemberButton(action: { showAddMember = true })
@@ -184,9 +217,9 @@ struct GroupInfoView: View {
                             }
                         }
 
-                        if conversation.members.count > 6 {
+                        if conversation.withCurrentUserIncluded().members.count > 6 {
                             SeeAllMembersButton(
-                                memberCount: conversation.members.count,
+                                memberCount: conversation.withCurrentUserIncluded().members.count,
                                 action: { showAllMembers = true }
                             )
                         }
@@ -213,6 +246,35 @@ struct GroupInfoView: View {
 
                 Spacer()
             }
+        }
+        .onAppear {
+            Task {
+                await loadMemberRoles()
+            }
+        }
+    }
+
+    private func loadMemberRoles() async {
+        do {
+            let groupMembers = try await messagingService.groupPermissionsRepository()
+                .getGroupMembers(for: conversation.id)
+
+            await MainActor.run {
+                var roles: [String: MemberRole] = [:]
+
+                // Map inbox IDs to member IDs and store roles
+                for groupMember in groupMembers {
+                    // Find corresponding profile by inbox ID
+                    if let profile = conversation.withCurrentUserIncluded().members
+                        .first(where: { $0.id == groupMember.inboxId }) {
+                        roles[profile.id] = groupMember.role
+                    }
+                }
+
+                self.memberRoles = roles
+            }
+        } catch {
+            Logger.error("Failed to load member roles: \(error)")
         }
     }
 }
@@ -476,6 +538,42 @@ struct AllMembersView: View {
     let messagingService: any MessagingServiceProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showAddMember: Bool = false
+    @State private var memberRoles: [String: MemberRole] = [:]
+
+    private var sortedMembers: [Profile] {
+        let allMembers = conversation.withCurrentUserIncluded().members
+        return allMembers.sorted { member1, member2 in
+            sortMembersByRole(member1, member2)
+        }
+    }
+
+    private func sortMembersByRole(_ member1: Profile, _ member2: Profile) -> Bool {
+        // Show "You" (current user) first
+        if member1.id == "current" { return true }
+        if member2.id == "current" { return false }
+
+        let role1 = memberRoles[member1.id] ?? .member
+        let role2 = memberRoles[member2.id] ?? .member
+
+        // Sort by role hierarchy: superAdmin > admin > member
+        let priority1 = rolePriority(role1)
+        let priority2 = rolePriority(role2)
+
+        if priority1 != priority2 {
+            return priority1 > priority2
+        }
+
+        // Same role, sort alphabetically by name
+        return member1.displayName < member2.displayName
+    }
+
+    private func rolePriority(_ role: MemberRole) -> Int {
+        switch role {
+        case .superAdmin: return 3
+        case .admin: return 2
+        case .member: return 1
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -485,7 +583,7 @@ struct AllMembersView: View {
 
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(conversation.members, id: \.id) { member in
+                    ForEach(sortedMembers, id: \.id) { member in
                         MemberRow(
                             member: member,
                             conversationID: conversation.id,
@@ -496,7 +594,7 @@ struct AllMembersView: View {
                             }
                         )
 
-                        if member.id != conversation.members.last?.id {
+                        if member.id != sortedMembers.last?.id {
                             Divider()
                                 .padding(.leading, 60)
                         }
@@ -510,6 +608,35 @@ struct AllMembersView: View {
         .navigationBarHidden(true)
         .navigationDestination(isPresented: $showAddMember) {
             AddMemberView(conversation: conversation, messagingService: messagingService)
+        }
+        .onAppear {
+            Task {
+                await loadMemberRoles()
+            }
+        }
+    }
+
+    private func loadMemberRoles() async {
+        do {
+            let groupMembers = try await messagingService.groupPermissionsRepository()
+                .getGroupMembers(for: conversation.id)
+
+            await MainActor.run {
+                var roles: [String: MemberRole] = [:]
+
+                // Map inbox IDs to member IDs and store roles
+                for groupMember in groupMembers {
+                    // Find corresponding profile by inbox ID
+                    if let profile = conversation.withCurrentUserIncluded().members
+                        .first(where: { $0.id == groupMember.inboxId }) {
+                        roles[profile.id] = groupMember.role
+                    }
+                }
+
+                self.memberRoles = roles
+            }
+        } catch {
+            Logger.error("Failed to load member roles: \(error)")
         }
     }
 }

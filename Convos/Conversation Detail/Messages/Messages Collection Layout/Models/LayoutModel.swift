@@ -3,7 +3,7 @@ import UIKit
 
 // swiftlint:disable no_assertions
 
-final class LayoutModel<Layout: MessagesLayoutProtocol> {
+final class LayoutModel<Layout: MessagesLayoutProtocol>: @unchecked Sendable {
     private struct ItemUUIDKey: Hashable {
         let kind: ItemKind
         let id: UUID
@@ -128,12 +128,11 @@ final class LayoutModel<Layout: MessagesLayoutProtocol> {
         }
         if index < sections.count &- 1 {
             let nextIndex = index &+ 1
-            sections.withUnsafeMutableBufferPointer { directlyMutableSections in
-                DispatchQueue
-                    .concurrentPerform(iterations: directlyMutableSections.count &- nextIndex) { internalIndex in
-                        nonisolated(unsafe) let sections = directlyMutableSections
-                        sections[internalIndex &+ nextIndex].offsetY += heightDiff
-                    }
+            let localHeightDiff = heightDiff
+
+            // Process sections sequentially to avoid sendable issues
+            for i in nextIndex..<sections.count {
+                sections[i].offsetY += localHeightDiff
             }
         }
     }
