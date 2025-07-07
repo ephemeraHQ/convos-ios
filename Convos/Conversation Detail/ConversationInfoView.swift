@@ -81,10 +81,6 @@ struct DMInfoView: View {
                     DMActionButton(title: "Message", systemImage: "message.fill") {
                         // Handle message action
                     }
-
-                    DMActionButton(title: "Clear Chat History", systemImage: "trash", isDestructive: true) {
-                        // Handle clear chat
-                    }
                 }
                 .padding(.horizontal)
 
@@ -97,13 +93,6 @@ struct DMInfoView: View {
                     VStack(spacing: 0) {
                         SettingsRow(title: "Notifications", systemImage: "bell") {
                             // Handle notifications
-                        }
-
-                        Divider()
-                            .padding(.leading, 40)
-
-                        SettingsRow(title: "Media Auto-Download", systemImage: "square.and.arrow.down") {
-                            // Handle media settings
                         }
                     }
                     .background(Color(.systemGray6))
@@ -124,6 +113,8 @@ struct GroupInfoView: View {
     @Binding var showAllMembers: Bool
     @Binding var showAddMember: Bool
     @State private var memberRoles: [String: MemberRole] = [:]
+    @State private var showingAvailableSoonAlert: Bool = false
+    @State private var currentUser: Profile?
 
     private var displayedMembers: [Profile] {
         let allMembers = conversation.withCurrentUserIncluded().members
@@ -134,7 +125,12 @@ struct GroupInfoView: View {
     }
 
     private func sortMembersByRole(_ member1: Profile, _ member2: Profile) -> Bool {
-        // Show "You" (current user) first
+        // Show current user first
+        if let currentUser = currentUser {
+            if member1.id == currentUser.id { return true }
+            if member2.id == currentUser.id { return false }
+        }
+        // Fallback to hardcoded "current" for backwards compatibility
         if member1.id == "current" { return true }
         if member2.id == "current" { return false }
 
@@ -208,7 +204,8 @@ struct GroupInfoView: View {
                                 canDeleteMembers: true,
                                 onMemberRemoved: { _ in
                                     // @lourou: Refresh conversation data
-                                }
+                                },
+                                currentUser: currentUser
                             )
 
                             if member.id != displayedMembers.last?.id {
@@ -231,15 +228,11 @@ struct GroupInfoView: View {
 
                 // Actions Section
                 VStack(spacing: 12) {
-                    GroupActionButton(title: "Clear Chat History", systemImage: "trash", isDestructive: true) {
-                        // Handle clear chat
-                    }
-
                     GroupActionButton(
                         title: "Leave Group",
                         systemImage: "rectangle.portrait.and.arrow.right",
                         isDestructive: true) {
-                        // Handle leave group
+                        showingAvailableSoonAlert = true
                     }
                 }
                 .padding(.horizontal)
@@ -249,8 +242,27 @@ struct GroupInfoView: View {
         }
         .onAppear {
             Task {
+                await loadCurrentUser()
                 await loadMemberRoles()
             }
+        }
+        .alert("Leave Group", isPresented: $showingAvailableSoonAlert) {
+            Button("OK") { }
+        } message: {
+            Text("Available soon")
+        }
+    }
+
+    private func loadCurrentUser() async {
+        do {
+            let userRepo = messagingService.userRepository()
+            if let user = try await userRepo.getCurrentUser() {
+                await MainActor.run {
+                    currentUser = user.profile
+                }
+            }
+        } catch {
+            Logger.error("Failed to load current user: \(error)")
         }
     }
 
@@ -367,6 +379,7 @@ struct MemberRow: View {
     let messagingService: (any MessagingServiceProtocol)?
     let canDeleteMembers: Bool
     let onMemberRemoved: ((String) -> Void)?
+    let currentUser: Profile?
 
     @State private var showingDeleteAlert: Bool = false
     @State private var isDeleting: Bool = false
@@ -377,12 +390,40 @@ struct MemberRow: View {
         conversationID: String,
         messagingService: (any MessagingServiceProtocol)? = nil,
         canDeleteMembers: Bool = false,
-        onMemberRemoved: ((String) -> Void)? = nil) {
+        onMemberRemoved: ((String) -> Void)? = nil,
+        currentUser: Profile? = nil) {
         self.member = member
         self.conversationID = conversationID
         self.messagingService = messagingService
         self.canDeleteMembers = canDeleteMembers
         self.onMemberRemoved = onMemberRemoved
+        self.currentUser = currentUser
+    }
+
+    private var displayName: String {
+        // If this is the current user (id="current") and we have real current user data, use it
+        if member.id == "current", let currentUser = currentUser {
+            return currentUser.displayName
+        }
+        // If this member matches the current user by ID, use their real name
+        if let currentUser = currentUser, member.id == currentUser.id {
+            return currentUser.displayName
+        }
+        // Otherwise use the member's name
+        return member.displayName
+    }
+
+    private var displayUsername: String {
+        // If this is the current user (id="current") and we have real current user data, use it
+        if member.id == "current", let currentUser = currentUser {
+            return currentUser.username
+        }
+        // If this member matches the current user by ID, use their real username
+        if let currentUser = currentUser, member.id == currentUser.id {
+            return currentUser.username
+        }
+        // Otherwise use the member's username
+        return member.username
     }
 
     var body: some View {
@@ -391,11 +432,11 @@ struct MemberRow: View {
                 .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(member.displayName)
+                Text(displayName)
                     .font(.body)
                     .fontWeight(.medium)
 
-                Text("@\(member.username)")
+                Text("@\(displayUsername)")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -539,6 +580,7 @@ struct AllMembersView: View {
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showAddMember: Bool = false
     @State private var memberRoles: [String: MemberRole] = [:]
+    @State private var currentUser: Profile?
 
     private var sortedMembers: [Profile] {
         let allMembers = conversation.withCurrentUserIncluded().members
@@ -548,7 +590,12 @@ struct AllMembersView: View {
     }
 
     private func sortMembersByRole(_ member1: Profile, _ member2: Profile) -> Bool {
-        // Show "You" (current user) first
+        // Show current user first
+        if let currentUser = currentUser {
+            if member1.id == currentUser.id { return true }
+            if member2.id == currentUser.id { return false }
+        }
+        // Fallback to hardcoded "current" for backwards compatibility
         if member1.id == "current" { return true }
         if member2.id == "current" { return false }
 
@@ -591,7 +638,8 @@ struct AllMembersView: View {
                             canDeleteMembers: true,
                             onMemberRemoved: { _ in
                                 // @lourou: Refresh conversation data
-                            }
+                            },
+                            currentUser: currentUser
                         )
 
                         if member.id != sortedMembers.last?.id {
@@ -611,8 +659,22 @@ struct AllMembersView: View {
         }
         .onAppear {
             Task {
+                await loadCurrentUser()
                 await loadMemberRoles()
             }
+        }
+    }
+
+    private func loadCurrentUser() async {
+        do {
+            let userRepo = messagingService.userRepository()
+            if let user = try await userRepo.getCurrentUser() {
+                await MainActor.run {
+                    currentUser = user.profile
+                }
+            }
+        } catch {
+            Logger.error("Failed to load current user: \(error)")
         }
     }
 

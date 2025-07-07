@@ -64,7 +64,6 @@ struct GroupEditView: View {
     @State private var uniqueLink: String
     @State private var imageState: GroupImage.State = .empty
     @State private var imageSelection: PhotosPickerItem?
-    @State private var isSaving: Bool = false
     @State private var showingAlert: Bool = false
     @State private var alertMessage: String = ""
     @State private var uploadedImageURL: String?
@@ -117,12 +116,12 @@ struct GroupEditView: View {
                 }
                 Button(action: action) {
                     Text("Done")
-                        .foregroundColor(isSaving ? .gray : .blue)
+                        .foregroundColor(.blue)
                         .font(.system(size: 16, weight: .medium))
                 }
                 .padding(.vertical, 10.0)
                 .padding(.horizontal, DesignConstants.Spacing.step2x)
-                .disabled(isSaving || !canEditGroup)
+                .disabled(!canEditGroup)
             })
 
             ScrollViewReader { scrollProxy in
@@ -160,17 +159,6 @@ struct GroupEditView: View {
                     }
                 }
             }
-            .disabled(isSaving)
-            .overlay(
-                isSaving ? Color.black.opacity(0.3) : Color.clear
-            )
-            .overlay(
-                isSaving ? ProgressView("Saving...")
-                    .padding()
-                    .background(Color(.systemBackground))
-                    .cornerRadius(10)
-                    .shadow(radius: 10) : nil
-            )
         }
         .navigationBarHidden(true)
         .onTapGesture {
@@ -347,52 +335,50 @@ struct GroupEditView: View {
     }
 
     private func saveGroupChanges() async {
-        isSaving = true
+        var hasChanges = false
 
-        do {
-            var hasChanges = false
+        // Check if name changed
+        if groupName != conversation.name {
+            hasChanges = true
+        }
 
-            // Check if name changed
-            if groupName != conversation.name {
-                hasChanges = true
-                try await updateGroupName()
-            }
+        // Check if description changed
+        if groupDescription != conversation.description {
+            hasChanges = true
+        }
 
-            // Check if description changed
-            if groupDescription != conversation.description {
-                hasChanges = true
-                try await updateGroupDescription()
-            }
+        // Check if image changed
+        if uploadedImageURL != nil {
+            hasChanges = true
+        }
 
-            // Check if image changed
-            if let uploadedImageURL = uploadedImageURL {
-                hasChanges = true
-                try await updateGroupImage(imageURL: uploadedImageURL)
-            }
-
-            if hasChanges {
-                // Show success message
-                await MainActor.run {
-                    alertMessage = "Group updated successfully"
-                    showingAlert = true
-                }
-
-                // Dismiss after a short delay
-                try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-                await MainActor.run {
-                    dismiss()
-                }
-            } else {
-                // No changes, just dismiss
-                await MainActor.run {
-                    dismiss()
-                }
-            }
-        } catch {
+        if hasChanges {
+            // Dismiss immediately (optimistic)
             await MainActor.run {
-                alertMessage = "Failed to update group: \(error.localizedDescription)"
-                showingAlert = true
-                isSaving = false
+                dismiss()
+            }
+
+            // Update in background
+            do {
+                if groupName != conversation.name {
+                    try await updateGroupName()
+                }
+
+                if groupDescription != conversation.description {
+                    try await updateGroupDescription()
+                }
+
+                if let uploadedImageURL = uploadedImageURL {
+                    try await updateGroupImage(imageURL: uploadedImageURL)
+                }
+            } catch {
+                Logger.error("Failed to update group: \(error)")
+                // Note: In a real app, you might want to show a toast or retry mechanism
+            }
+        } else {
+            // No changes, just dismiss
+            await MainActor.run {
+                dismiss()
             }
         }
     }
