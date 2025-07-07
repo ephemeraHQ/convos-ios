@@ -44,9 +44,10 @@ struct ConversationInfoView: View {
         .navigationDestination(isPresented: $showGroupEdit) {
             GroupEditView(conversation: conversation, messagingService: messagingService)
         }
-        .navigationDestination(isPresented: $showAddMember) {
-            AddMemberView(conversation: conversation, messagingService: messagingService)
-        }
+        // @lourou add member to group
+        // .navigationDestination(isPresented: $showAddMember) {
+        //     AddMemberView(conversation: conversation, messagingService: messagingService)
+        // }
     }
 }
 
@@ -114,6 +115,7 @@ struct GroupInfoView: View {
     @Binding var showAddMember: Bool
     @State private var memberRoles: [String: MemberRole] = [:]
     @State private var showingAvailableSoonAlert: Bool = false
+    @State private var showingAddMemberAlert: Bool = false
     @State private var currentUser: Profile?
 
     private var displayedMembers: [Profile] {
@@ -191,7 +193,10 @@ struct GroupInfoView: View {
                         Text("\(conversation.withCurrentUserIncluded().members.count) Members")
                             .font(.headline)
                         Spacer()
-                        AddMemberButton(action: { showAddMember = true })
+                        AddMemberButton(action: {
+                            // @lourou add member to group
+                            showingAddMemberAlert = true
+                        })
                     }
                     .padding(.horizontal)
 
@@ -247,6 +252,11 @@ struct GroupInfoView: View {
             }
         }
         .alert("Leave Group", isPresented: $showingAvailableSoonAlert) {
+            Button("OK") { }
+        } message: {
+            Text("Available soon")
+        }
+        .alert("Add Member", isPresented: $showingAddMemberAlert) {
             Button("OK") { }
         } message: {
             Text("Available soon")
@@ -580,6 +590,7 @@ struct AllMembersView: View {
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showAddMember: Bool = false
     @State private var memberRoles: [String: MemberRole] = [:]
+    @State private var showingAddMemberAlert: Bool = false
     @State private var currentUser: Profile?
 
     private var sortedMembers: [Profile] {
@@ -625,7 +636,10 @@ struct AllMembersView: View {
     var body: some View {
         VStack(spacing: 0) {
             CustomToolbarView(onBack: { dismiss() }, rightContent: {
-                AddMemberButton(action: { showAddMember = true })
+                AddMemberButton(action: {
+                    // @lourou add member to group
+                    showingAddMemberAlert = true
+                })
             })
 
             ScrollView {
@@ -654,8 +668,14 @@ struct AllMembersView: View {
             }
         }
         .navigationBarHidden(true)
-        .navigationDestination(isPresented: $showAddMember) {
-            AddMemberView(conversation: conversation, messagingService: messagingService)
+        // @lourou add member to group
+        // .navigationDestination(isPresented: $showAddMember) {
+        //     AddMemberView(conversation: conversation, messagingService: messagingService)
+        // }
+        .alert("Add Member", isPresented: $showingAddMemberAlert) {
+            Button("OK") { }
+        } message: {
+            Text("Available soon")
         }
         .onAppear {
             Task {
