@@ -11,6 +11,10 @@ enum AppEnvironment {
         }
     }
 
+    var passkeyApiBaseURL: String {
+        "https://passkey-auth-backend.vercel.app/api"
+    }
+
     var appGroupIdentifier: String {
         switch self {
         case .local, .tests: "group.com.convos.dev"
