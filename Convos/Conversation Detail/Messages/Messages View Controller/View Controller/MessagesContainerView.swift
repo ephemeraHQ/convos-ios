@@ -72,10 +72,9 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable, @unc
     func sendMessage() {
         let messageText = text
         text = ""
-        let writer = outgoingMessageWriter
-        Task {
+        Task { [outgoingMessageWriter] in
             do {
-                try await writer.send(text: messageText)
+                try await outgoingMessageWriter.send(text: messageText)
             } catch {
                 await MainActor.run {
                     Logger.error("Error sending message: \(error)")
