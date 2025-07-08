@@ -325,12 +325,11 @@ final class TurnkeyAuthService: AuthServiceProtocol {
 
     @MainActor
     func presentationAnchor() throws -> ASPresentationAnchor {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first else {
+        do {
+            return try TurnkeyPresentationAnchorProvider.presentationAnchor()
+        } catch TurnkeyPresentationAnchorError.failedFindingPasskeyPresentationAnchor {
             throw TurnkeyAuthServiceError.failedFindingPasskeyPresentationAnchor
         }
-
-        return window
     }
 
     // MARK: - Convos Backend
