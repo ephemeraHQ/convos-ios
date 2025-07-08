@@ -297,7 +297,11 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
             throw APIError.invalidURL
         }
 
-        let publicURL = "\(urlComponents.scheme!)://\(urlComponents.host!)\(urlComponents.path)"
+        guard let scheme = urlComponents.scheme, let host = urlComponents.host else {
+            Logger.error("Failed to extract scheme or host from presigned URL")
+            throw APIError.invalidURL
+        }
+        let publicURL = "\(scheme)://\(host)\(urlComponents.path)"
         Logger.info("Successfully uploaded to S3, public URL: \(publicURL)")
 
         return publicURL

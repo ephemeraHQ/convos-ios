@@ -1,5 +1,5 @@
-import UIKit
 import SwiftUI
+import UIKit
 
 struct ImageCompression {
     static let maxDimension: CGFloat = 1024
