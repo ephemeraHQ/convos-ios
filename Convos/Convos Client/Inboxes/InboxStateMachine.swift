@@ -97,6 +97,8 @@ actor InboxStateMachine {
     }
 
     private var currentTask: Task<Void, Never>?
+    private var actionQueue: [Action] = []
+    private var isProcessing: Bool = false
 
     // MARK: - Nonisolated
 
@@ -149,50 +151,65 @@ actor InboxStateMachine {
     // MARK: - Public
 
     func authorize() {
-        processAction(.authorize)
+        enqueueAction(.authorize)
     }
 
     func register(displayName: String) {
-        processAction(.register(displayName))
+        enqueueAction(.register(displayName))
     }
 
     func stop() {
-        processAction(.stop)
+        enqueueAction(.stop)
     }
 
     // MARK: - Private
 
-    private func processAction(_ action: Action) {
-        currentTask?.cancel()
+    private func enqueueAction(_ action: Action) {
+        actionQueue.append(action)
+        processNextAction()
+    }
+
+    private func processNextAction() {
+        guard !isProcessing, !actionQueue.isEmpty else { return }
+
+        isProcessing = true
+        let action = actionQueue.removeFirst()
+
         currentTask = Task {
-            do {
-                switch (_state, action) {
-                case (.uninitialized, .authorize),
-                    (.error, .authorize):
-                    try await handleAuthorize()
-                case (.uninitialized, let .register(displayName)),
-                    (.error, let .register(displayName)):
-                    try await handleRegister(displayName: displayName)
-                case (.initializing, let .clientInitialized(client)):
-                    try await handleClientInitialized(client)
-                case (.initializing, let .clientRegistered(client, displayName)):
-                    try await handleClientRegistered(client, displayName: displayName)
-                case (.authorizing, let .authorized((client, apiClient))),
-                    (.registering, let .authorized((client, apiClient))):
-                    try handleAuthorized(client: client, apiClient: apiClient)
-                case (.ready, .stop), (.error, .stop):
-                    try handleStop()
-                case (.uninitialized, .stop):
-                    break
-                default:
-                    Logger.warning("Invalid state transition: \(_state) -> \(action)")
-                }
-            } catch {
-                Logger.error(
-                    "Failed state transition \(_state) -> \(action): \(error.localizedDescription)"
-                )
-                _state = .error(error)
+            await processAction(action)
+            isProcessing = false
+            processNextAction()
+        }
+    }
+
+    private func processAction(_ action: Action) async {
+        do {
+            switch (_state, action) {
+            case (.uninitialized, .authorize),
+                (.error, .authorize):
+                try await handleAuthorize()
+            case (.uninitialized, let .register(displayName)),
+                (.error, let .register(displayName)):
+                try await handleRegister(displayName: displayName)
+            case (.initializing, let .clientInitialized(client)):
+                try await handleClientInitialized(client)
+            case (.initializing, let .clientRegistered(client, displayName)):
+                try await handleClientRegistered(client, displayName: displayName)
+            case (.authorizing, let .authorized((client, apiClient))),
+                (.registering, let .authorized((client, apiClient))):
+                try handleAuthorized(client: client, apiClient: apiClient)
+            case (.ready, .stop), (.error, .stop):
+                try handleStop()
+            case (.uninitialized, .stop):
+                break
+            default:
+                Logger.warning("Invalid state transition: \(_state) -> \(action)")
             }
+        } catch {
+            Logger.error(
+                "Failed state transition \(_state) -> \(action): \(error.localizedDescription)"
+            )
+            _state = .error(error)
         }
     }
 
@@ -211,7 +228,7 @@ actor InboxStateMachine {
                 options: clientOptions
             )
         }
-        processAction(.clientInitialized(client))
+        enqueueAction(.clientInitialized(client))
     }
 
     private func handleRegister(displayName: String) async throws {
@@ -220,7 +237,7 @@ actor InboxStateMachine {
             signingKey: inbox.signingKey,
             options: clientOptions
         )
-        processAction(.clientRegistered(client, displayName))
+        enqueueAction(.clientRegistered(client, displayName))
     }
 
     private func handleClientInitialized(_ client: any XMTPClientProvider) async throws {
@@ -228,7 +245,7 @@ actor InboxStateMachine {
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
         try await refreshUserAndProfile(client: client, apiClient: apiClient)
-        processAction(.authorized((client, apiClient)))
+        enqueueAction(.authorized((client, apiClient)))
     }
 
     private func handleClientRegistered(_ client: any XMTPClientProvider, displayName: String) async throws {
@@ -249,7 +266,7 @@ actor InboxStateMachine {
             provider: inbox.provider,
             providerId: inbox.providerId
         )
-        processAction(.authorized((client, apiClient)))
+        enqueueAction(.authorized((client, apiClient)))
     }
 
     private func handleAuthorized(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) throws {
