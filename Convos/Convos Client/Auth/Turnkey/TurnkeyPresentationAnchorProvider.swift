@@ -4,7 +4,6 @@ import UIKit
 /// Shared utility for providing presentation anchors in Turnkey services
 @MainActor
 final class TurnkeyPresentationAnchorProvider {
-
     /// Gets the current window for presentation anchor
     /// - Throws: TurnkeyPresentationAnchorError.failedFindingPasskeyPresentationAnchor if no window is found
     static func presentationAnchor() throws -> ASPresentationAnchor {
