@@ -12,7 +12,8 @@ enum TurnkeyAccountsServiceError: Error {
          failedCreatingSubOrg,
          failedCreatingWallet,
          failedCreatingAccount,
-         failedGettingAccounts
+         failedGettingAccounts,
+         failedFindingPasskeyPresentationAnchor
 }
 
 class TurnkeyAccountsService: AuthAccountsServiceProtocol {
@@ -26,12 +27,11 @@ class TurnkeyAccountsService: AuthAccountsServiceProtocol {
 
     @MainActor
     func presentationAnchor() throws -> ASPresentationAnchor {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first else {
-            throw TurnkeyAuthServiceError.failedFindingPasskeyPresentationAnchor
+        do {
+            return try TurnkeyPresentationAnchorProvider.presentationAnchor()
+        } catch TurnkeyPresentationAnchorError.failedFindingPasskeyPresentationAnchor {
+            throw TurnkeyAccountsServiceError.failedFindingPasskeyPresentationAnchor
         }
-
-        return window
     }
 
     func addAccount(displayName: String) async throws -> any AuthServiceRegisteredResultType {
