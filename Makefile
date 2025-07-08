@@ -13,7 +13,11 @@ secrets: ## Generate Secrets.swift from .env
 
 .PHONY: entitlements
 entitlements: ## Generate entitlements file from .env
-	./Scripts/generate_entitlements.sh	
+	./Scripts/generate_entitlements.sh
+
+.PHONY: mock-env
+mock-env: ## Generate a mock .env file for PR builds using Scripts/generate-mock-env.sh
+	./Scripts/generate-mock-env.sh
 
 .PHONY: upload_symbols
 upload_symbols: ## Upload symbols to Sentry
