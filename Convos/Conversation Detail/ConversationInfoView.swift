@@ -113,50 +113,14 @@ struct GroupInfoView: View {
     let messagingService: any MessagingServiceProtocol
     @Binding var showAllMembers: Bool
     @Binding var showAddMember: Bool
-    @State private var memberRoles: [String: MemberRole] = [:]
+    @State private var membersWithRoles: [ProfileWithRole] = []
     @State private var showingAvailableSoonAlert: Bool = false
     @State private var showingAddMemberAlert: Bool = false
     @State private var currentUser: Profile?
 
-    private var displayedMembers: [Profile] {
-        let allMembers = conversation.withCurrentUserIncluded().members
-        let sortedMembers = allMembers.sorted { member1, member2 in
-            sortMembersByRole(member1, member2)
-        }
+    private var displayedMembers: [ProfileWithRole] {
+        let sortedMembers = membersWithRoles.sortedByRole(currentUser: currentUser)
         return Array(sortedMembers.prefix(6))
-    }
-
-    private func sortMembersByRole(_ member1: Profile, _ member2: Profile) -> Bool {
-        // Show current user first
-        if let currentUser = currentUser {
-            if member1.id == currentUser.id { return true }
-            if member2.id == currentUser.id { return false }
-        }
-        // Fallback to hardcoded "current" for backwards compatibility
-        if member1.id == "current" { return true }
-        if member2.id == "current" { return false }
-
-        let role1 = memberRoles[member1.id] ?? .member
-        let role2 = memberRoles[member2.id] ?? .member
-
-        // Sort by role hierarchy: superAdmin > admin > member
-        let priority1 = rolePriority(role1)
-        let priority2 = rolePriority(role2)
-
-        if priority1 != priority2 {
-            return priority1 > priority2
-        }
-
-        // Same role, sort alphabetically by name
-        return member1.displayName < member2.displayName
-    }
-
-    private func rolePriority(_ role: MemberRole) -> Int {
-        switch role {
-        case .superAdmin: return 3
-        case .admin: return 2
-        case .member: return 1
-        }
     }
 
     var body: some View {
@@ -201,9 +165,9 @@ struct GroupInfoView: View {
                     .padding(.horizontal)
 
                     LazyVStack(spacing: 0) {
-                        ForEach(displayedMembers, id: \.id) { member in
-                            MemberRow(
-                                member: member,
+                        ForEach(displayedMembers, id: \.id) { memberWithRole in
+                            MemberRowWithRole(
+                                memberWithRole: memberWithRole,
                                 conversationID: conversation.id,
                                 messagingService: messagingService,
                                 canDeleteMembers: true,
@@ -213,7 +177,7 @@ struct GroupInfoView: View {
                                 currentUser: currentUser
                             )
 
-                            if member.id != displayedMembers.last?.id {
+                            if memberWithRole.id != displayedMembers.last?.id {
                                 Divider()
                                     .padding(.leading, 60)
                             }
@@ -248,7 +212,7 @@ struct GroupInfoView: View {
         .onAppear {
             Task {
                 await loadCurrentUser()
-                await loadMemberRoles()
+                await loadMembersWithRoles()
             }
         }
         .alert("Leave Group", isPresented: $showingAvailableSoonAlert) {
@@ -276,27 +240,19 @@ struct GroupInfoView: View {
         }
     }
 
-    private func loadMemberRoles() async {
+    private func loadMembersWithRoles() async {
         do {
-            let groupMembers = try await messagingService.groupPermissionsRepository()
-                .getGroupMembers(for: conversation.id)
+            let groupPermissionsRepo = messagingService.groupPermissionsRepository()
+            let members = try await groupPermissionsRepo.getGroupMembersWithProfiles(
+                for: conversation.id,
+                from: conversation
+            )
 
             await MainActor.run {
-                var roles: [String: MemberRole] = [:]
-
-                // Map inbox IDs to member IDs and store roles
-                for groupMember in groupMembers {
-                    // Find corresponding profile by inbox ID
-                    if let profile = conversation.withCurrentUserIncluded().members
-                        .first(where: { $0.id == groupMember.inboxId }) {
-                        roles[profile.id] = groupMember.role
-                    }
-                }
-
-                self.memberRoles = roles
+                self.membersWithRoles = members
             }
         } catch {
-            Logger.error("Failed to load member roles: \(error)")
+            Logger.error("Failed to load members with roles: \(error)")
         }
     }
 }
@@ -383,8 +339,8 @@ struct SettingsRow: View {
     }
 }
 
-struct MemberRow: View {
-    let member: Profile
+struct MemberRowWithRole: View {
+    let memberWithRole: ProfileWithRole
     let conversationID: String
     let messagingService: (any MessagingServiceProtocol)?
     let canDeleteMembers: Bool
@@ -393,16 +349,15 @@ struct MemberRow: View {
 
     @State private var showingDeleteAlert: Bool = false
     @State private var isDeleting: Bool = false
-    @State private var memberRole: MemberRole = .member
 
     init(
-        member: Profile,
+        memberWithRole: ProfileWithRole,
         conversationID: String,
         messagingService: (any MessagingServiceProtocol)? = nil,
         canDeleteMembers: Bool = false,
         onMemberRemoved: ((String) -> Void)? = nil,
         currentUser: Profile? = nil) {
-        self.member = member
+        self.memberWithRole = memberWithRole
         self.conversationID = conversationID
         self.messagingService = messagingService
         self.canDeleteMembers = canDeleteMembers
@@ -412,33 +367,33 @@ struct MemberRow: View {
 
     private var displayName: String {
         // If this is the current user (id="current") and we have real current user data, use it
-        if member.id == "current", let currentUser = currentUser {
+        if memberWithRole.id == "current", let currentUser = currentUser {
             return currentUser.displayName
         }
         // If this member matches the current user by ID, use their real name
-        if let currentUser = currentUser, member.id == currentUser.id {
+        if let currentUser = currentUser, memberWithRole.id == currentUser.id {
             return currentUser.displayName
         }
         // Otherwise use the member's name
-        return member.displayName
+        return memberWithRole.displayName
     }
 
     private var displayUsername: String {
         // If this is the current user (id="current") and we have real current user data, use it
-        if member.id == "current", let currentUser = currentUser {
+        if memberWithRole.id == "current", let currentUser = currentUser {
             return currentUser.username
         }
         // If this member matches the current user by ID, use their real username
-        if let currentUser = currentUser, member.id == currentUser.id {
+        if let currentUser = currentUser, memberWithRole.id == currentUser.id {
             return currentUser.username
         }
         // Otherwise use the member's username
-        return member.username
+        return memberWithRole.username
     }
 
     var body: some View {
         HStack {
-            ProfileAvatarView(profile: member)
+            ProfileAvatarView(profile: memberWithRole.profile)
                 .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -453,8 +408,8 @@ struct MemberRow: View {
 
             Spacer()
 
-            if !memberRole.displayName.isEmpty {
-                Text(memberRole.displayName)
+            if !memberWithRole.role.displayName.isEmpty {
+                Text(memberWithRole.role.displayName)
                     .font(.caption)
                     .foregroundColor(.blue)
                     .padding(.horizontal, 8)
@@ -475,9 +430,6 @@ struct MemberRow: View {
             }
         }
         .padding()
-        .task {
-            await loadMemberRole()
-        }
         .alert("Remove Member", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Remove", role: .destructive) {
@@ -486,32 +438,13 @@ struct MemberRow: View {
                 }
             }
         } message: {
-            Text("Are you sure you want to remove \(member.displayName) from this group?")
+            Text("Are you sure you want to remove \(memberWithRole.displayName) from this group?")
         }
     }
 
     private var isCurrentUser: Bool {
         // @lourou: Get actual current user ID from messaging service
-        member.id == "current"
-    }
-
-    private func loadMemberRole() async {
-        guard let messagingService = messagingService else { return }
-
-        do {
-            let permissionsRepo = messagingService.groupPermissionsRepository()
-            let role = try await permissionsRepo.getMemberRole(
-                memberInboxId: member.id,
-                in: conversationID
-            )
-
-            await MainActor.run {
-                memberRole = role
-            }
-        } catch {
-            Logger.error("Failed to load member role for \(member.id): \(error)")
-            // Keep default .member role
-        }
+        memberWithRole.id == "current"
     }
 
     private func removeMember() async {
@@ -523,16 +456,16 @@ struct MemberRow: View {
             let metadataWriter = messagingService.groupMetadataWriter()
             try await metadataWriter.removeGroupMembers(
                 groupId: conversationID,
-                memberInboxIds: [member.id]
+                memberInboxIds: [memberWithRole.id]
             )
             await MainActor.run {
-                onMemberRemoved?(member.id)
+                onMemberRemoved?(memberWithRole.id)
                 isDeleting = false
             }
         } catch {
             await MainActor.run {
                 // @lourou: Show error alert
-                Logger.error("Failed to remove member \(member.id): \(error)")
+                Logger.error("Failed to remove member \(memberWithRole.id): \(error)")
                 isDeleting = false
             }
         }
@@ -589,48 +522,12 @@ struct AllMembersView: View {
     let messagingService: any MessagingServiceProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showAddMember: Bool = false
-    @State private var memberRoles: [String: MemberRole] = [:]
+    @State private var membersWithRoles: [ProfileWithRole] = []
     @State private var showingAddMemberAlert: Bool = false
     @State private var currentUser: Profile?
 
-    private var sortedMembers: [Profile] {
-        let allMembers = conversation.withCurrentUserIncluded().members
-        return allMembers.sorted { member1, member2 in
-            sortMembersByRole(member1, member2)
-        }
-    }
-
-    private func sortMembersByRole(_ member1: Profile, _ member2: Profile) -> Bool {
-        // Show current user first
-        if let currentUser = currentUser {
-            if member1.id == currentUser.id { return true }
-            if member2.id == currentUser.id { return false }
-        }
-        // Fallback to hardcoded "current" for backwards compatibility
-        if member1.id == "current" { return true }
-        if member2.id == "current" { return false }
-
-        let role1 = memberRoles[member1.id] ?? .member
-        let role2 = memberRoles[member2.id] ?? .member
-
-        // Sort by role hierarchy: superAdmin > admin > member
-        let priority1 = rolePriority(role1)
-        let priority2 = rolePriority(role2)
-
-        if priority1 != priority2 {
-            return priority1 > priority2
-        }
-
-        // Same role, sort alphabetically by name
-        return member1.displayName < member2.displayName
-    }
-
-    private func rolePriority(_ role: MemberRole) -> Int {
-        switch role {
-        case .superAdmin: return 3
-        case .admin: return 2
-        case .member: return 1
-        }
+    private var sortedMembers: [ProfileWithRole] {
+        return membersWithRoles.sortedByRole(currentUser: currentUser)
     }
 
     var body: some View {
@@ -644,9 +541,9 @@ struct AllMembersView: View {
 
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(sortedMembers, id: \.id) { member in
-                        MemberRow(
-                            member: member,
+                    ForEach(sortedMembers, id: \.id) { memberWithRole in
+                        MemberRowWithRole(
+                            memberWithRole: memberWithRole,
                             conversationID: conversation.id,
                             messagingService: messagingService,
                             canDeleteMembers: true,
@@ -656,7 +553,7 @@ struct AllMembersView: View {
                             currentUser: currentUser
                         )
 
-                        if member.id != sortedMembers.last?.id {
+                        if memberWithRole.id != sortedMembers.last?.id {
                             Divider()
                                 .padding(.leading, 60)
                         }
@@ -680,7 +577,7 @@ struct AllMembersView: View {
         .onAppear {
             Task {
                 await loadCurrentUser()
-                await loadMemberRoles()
+                await loadMembersWithRoles()
             }
         }
     }
@@ -698,27 +595,19 @@ struct AllMembersView: View {
         }
     }
 
-    private func loadMemberRoles() async {
+    private func loadMembersWithRoles() async {
         do {
-            let groupMembers = try await messagingService.groupPermissionsRepository()
-                .getGroupMembers(for: conversation.id)
+            let groupPermissionsRepo = messagingService.groupPermissionsRepository()
+            let members = try await groupPermissionsRepo.getGroupMembersWithProfiles(
+                for: conversation.id,
+                from: conversation
+            )
 
             await MainActor.run {
-                var roles: [String: MemberRole] = [:]
-
-                // Map inbox IDs to member IDs and store roles
-                for groupMember in groupMembers {
-                    // Find corresponding profile by inbox ID
-                    if let profile = conversation.withCurrentUserIncluded().members
-                        .first(where: { $0.id == groupMember.inboxId }) {
-                        roles[profile.id] = groupMember.role
-                    }
-                }
-
-                self.memberRoles = roles
+                self.membersWithRoles = members
             }
         } catch {
-            Logger.error("Failed to load member roles: \(error)")
+            Logger.error("Failed to load members with roles: \(error)")
         }
     }
 }

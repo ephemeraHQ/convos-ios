@@ -496,4 +496,13 @@ class MockGroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
     func getGroupMembers(for groupId: String) async throws -> [GroupMemberInfo] {
         return []
     }
+
+    func getGroupMembersWithProfiles(
+        for groupId: String,
+        from conversation: Conversation
+    ) async throws -> [ProfileWithRole] {
+        return conversation.withCurrentUserIncluded().members.map { profile in
+            ProfileWithRole(profile: profile, role: .member)
+        }
+    }
 }
