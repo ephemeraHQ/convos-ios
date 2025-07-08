@@ -159,6 +159,50 @@ extension DBConversation {
             imageURLString: imageURLString
         )
     }
+
+    // MARK: - Group Conversation Properties
+
+    func with(name: String?) -> Self {
+        .init(
+            id: id,
+            clientConversationId: clientConversationId,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
+
+    func with(description: String?) -> Self {
+        .init(
+            id: id,
+            clientConversationId: clientConversationId,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
+
+    func with(imageURLString: String?) -> Self {
+        .init(
+            id: id,
+            clientConversationId: clientConversationId,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
 }
 
 extension DBConversation {

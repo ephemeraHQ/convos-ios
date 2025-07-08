@@ -47,17 +47,7 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
             if let localConversation = try DBConversation
                 .filter(DBConversation.Columns.id == groupId)
                 .fetchOne(db) {
-                let updatedConversation = DBConversation(
-                    id: localConversation.id,
-                    clientConversationId: localConversation.clientConversationId,
-                    creatorId: localConversation.creatorId,
-                    kind: localConversation.kind,
-                    consent: localConversation.consent,
-                    createdAt: localConversation.createdAt,
-                    name: name,
-                    description: localConversation.description,
-                    imageURLString: localConversation.imageURLString
-                )
+                let updatedConversation = localConversation.with(name: name)
                 try updatedConversation.save(db)
                 Logger.info("Updated local group name for \(groupId): \(name)")
             }
@@ -82,17 +72,7 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
             if let localConversation = try DBConversation
                 .filter(DBConversation.Columns.id == groupId)
                 .fetchOne(db) {
-                let updatedConversation = DBConversation(
-                    id: localConversation.id,
-                    clientConversationId: localConversation.clientConversationId,
-                    creatorId: localConversation.creatorId,
-                    kind: localConversation.kind,
-                    consent: localConversation.consent,
-                    createdAt: localConversation.createdAt,
-                    name: localConversation.name,
-                    description: description,
-                    imageURLString: localConversation.imageURLString
-                )
+                let updatedConversation = localConversation.with(description: description)
                 try updatedConversation.save(db)
                 Logger.info("Updated local group description for \(groupId): \(description)")
             }
@@ -117,17 +97,7 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
             if let localConversation = try DBConversation
                 .filter(DBConversation.Columns.id == groupId)
                 .fetchOne(db) {
-                let updatedConversation = DBConversation(
-                    id: localConversation.id,
-                    clientConversationId: localConversation.clientConversationId,
-                    creatorId: localConversation.creatorId,
-                    kind: localConversation.kind,
-                    consent: localConversation.consent,
-                    createdAt: localConversation.createdAt,
-                    name: localConversation.name,
-                    description: localConversation.description,
-                    imageURLString: imageUrl
-                )
+                let updatedConversation = localConversation.with(imageURLString: imageUrl)
                 try updatedConversation.save(db)
                 Logger.info("Updated local group image for \(groupId): \(imageUrl)")
             }
