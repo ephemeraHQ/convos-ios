@@ -88,6 +88,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         case failedRetrievingDatabaseKey,
              failedRetrievingInboxType,
              failedDeletingDatabaseKey,
+             failedDeletingPrivateKey,
              failedSavingDatabaseKey,
              failedSavingInboxType,
              failedGeneratingDatabaseKey,
@@ -164,7 +165,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
 
         let privateKeyStatus = SecItemDelete(privateKeyQuery as CFDictionary)
         guard privateKeyStatus == errSecSuccess || privateKeyStatus == errSecItemNotFound else {
-            throw SecureEnclaveUserStoreError.failedDeletingDatabaseKey
+            throw SecureEnclaveUserStoreError.failedDeletingPrivateKey
         }
 
         try removeIdentityIdFromList(identityId)
