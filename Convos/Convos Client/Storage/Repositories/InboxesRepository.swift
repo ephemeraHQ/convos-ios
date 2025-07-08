@@ -34,14 +34,9 @@ final class InboxesRepository: InboxesRepositoryProtocol {
 
 extension Array where Element == DBInboxDetails {
     func composeInboxes(from database: Database) throws -> [Inbox] {
-        let dbInboxes: [DBInboxDetails] = self
-
-        let inboxes: [Inbox] = dbInboxes
-            .compactMap { dbInbox in
-                dbInbox.hydrateInbox()
-            }
-
-        return inboxes
+        map { dbInbox in
+            dbInbox.hydrateInbox()
+        }
     }
 }
 
