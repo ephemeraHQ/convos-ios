@@ -59,6 +59,11 @@ if [ ! "${CI}" = true ]; then
   # Skip fingerprint validation for plugins and macros in Xcode (like SwiftLintBuildToolPlugin)
   defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidatation -bool YES
   defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES
+else
+  info "CI environment detected - setting Xcode defaults for CI..."
+  # In CI, also skip plugin validation to avoid build failures
+  defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidatation -bool YES
+  defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES
 fi
 
 ################################################################################
