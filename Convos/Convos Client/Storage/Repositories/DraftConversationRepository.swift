@@ -79,6 +79,17 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
             return try db.composeConversation(for: writer.conversationId)
         }
     }
+
+    func fetchConversationWithRoles() throws -> (Conversation, [ProfileWithRole])? {
+        guard let conversation = try fetchConversation() else { return nil }
+
+        // For draft conversations, all members have .member role since no roles are established yet
+        let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
+            ProfileWithRole(profile: profile, role: .member)
+        }
+
+        return (conversation, membersWithRoles)
+    }
 }
 
 fileprivate extension Database {

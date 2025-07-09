@@ -186,6 +186,18 @@ extension MockMessagingService: ConversationRepositoryProtocol {
     func fetchConversation() throws -> Conversation? {
         conversation
     }
+
+    func fetchConversationWithRoles() throws -> (Conversation, [ProfileWithRole])? {
+        guard let conversation = conversation else { return nil }
+
+        // Mock implementation: assign random roles to members
+        let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
+            let role: MemberRole = [.member, .admin, .superAdmin].randomElement() ?? .member
+            return ProfileWithRole(profile: profile, role: role)
+        }
+
+        return (conversation, membersWithRoles)
+    }
 }
 
 extension MockMessagingService: MessagesRepositoryProtocol {

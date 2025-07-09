@@ -212,7 +212,7 @@ struct GroupInfoView: View {
         .onAppear {
             Task {
                 await loadCurrentUser()
-                await loadMembersWithRoles()
+                await loadConversationWithRoles()
             }
         }
         .alert("Leave Group", isPresented: $showingAvailableSoonAlert) {
@@ -240,19 +240,17 @@ struct GroupInfoView: View {
         }
     }
 
-    private func loadMembersWithRoles() async {
+    private func loadConversationWithRoles() async {
         do {
-            let groupPermissionsRepo = messagingService.groupPermissionsRepository()
-            let members = try await groupPermissionsRepo.getGroupMembersWithProfiles(
-                for: conversation.id,
-                from: conversation
-            )
-
-            await MainActor.run {
-                self.membersWithRoles = members
+            let conversationRepo = messagingService.conversationRepository(for: conversation.id)
+            if let (_, members) = try conversationRepo.fetchConversationWithRoles() {
+                await MainActor.run {
+                    self.membersWithRoles = members
+                    // Update conversation if needed
+                }
             }
         } catch {
-            Logger.error("Failed to load members with roles: \(error)")
+            Logger.error("Failed to load conversation with roles: \(error)")
         }
     }
 }
@@ -597,14 +595,12 @@ struct AllMembersView: View {
 
     private func loadMembersWithRoles() async {
         do {
-            let groupPermissionsRepo = messagingService.groupPermissionsRepository()
-            let members = try await groupPermissionsRepo.getGroupMembersWithProfiles(
-                for: conversation.id,
-                from: conversation
-            )
-
-            await MainActor.run {
-                self.membersWithRoles = members
+            let conversationRepo = messagingService.conversationRepository(for: conversation.id)
+            if let (_, members) = try conversationRepo.fetchConversationWithRoles() {
+                await MainActor.run {
+                    self.membersWithRoles = members
+                    // Update conversation if needed
+                }
             }
         } catch {
             Logger.error("Failed to load members with roles: \(error)")

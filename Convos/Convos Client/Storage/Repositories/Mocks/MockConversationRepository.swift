@@ -15,6 +15,16 @@ class MockConversationRepository: ConversationRepositoryProtocol {
     func fetchConversation() throws -> Conversation? {
         conversation
     }
+
+    func fetchConversationWithRoles() throws -> (Conversation, [ProfileWithRole])? {
+        // Mock implementation: assign random roles to members
+        let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
+            let role: MemberRole = [.member, .admin, .superAdmin].randomElement() ?? .member
+            return ProfileWithRole(profile: profile, role: role)
+        }
+
+        return (conversation, membersWithRoles)
+    }
 }
 
 class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
@@ -37,5 +47,14 @@ class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
 
     func fetchConversation() throws -> Conversation? {
         conversation
+    }
+
+    func fetchConversationWithRoles() throws -> (Conversation, [ProfileWithRole])? {
+        // For draft conversations, all members have .member role
+        let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
+            ProfileWithRole(profile: profile, role: .member)
+        }
+
+        return (conversation, membersWithRoles)
     }
 }
