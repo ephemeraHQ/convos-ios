@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 struct ConversationInfoView: View {
@@ -8,10 +9,13 @@ struct ConversationInfoView: View {
     @State private var showAllMembers: Bool = false
     @State private var showGroupEdit: Bool = false
     @State private var showAddMember: Bool = false
-    @State private var membersWithRoles: [ProfileWithRole] = []
 
     private var conversation: Conversation? {
         conversationState.conversation
+    }
+
+    private var membersWithRoles: [ProfileWithRole] {
+        conversationState.membersWithRoles
     }
 
     private var conversationWithAllMembers: Conversation? {
@@ -45,7 +49,7 @@ struct ConversationInfoView: View {
                             messagingService: messagingService,
                             showAllMembers: $showAllMembers,
                             showAddMember: $showAddMember,
-                            membersWithRoles: $membersWithRoles
+                            membersWithRoles: membersWithRoles
                         )
                     }
                 }
@@ -66,40 +70,13 @@ struct ConversationInfoView: View {
                     userState: userState,
                     conversationState: conversationState,
                     messagingService: messagingService,
-                    membersWithRoles: $membersWithRoles
+                    membersWithRoles: membersWithRoles
                 )
             }
         }
         .navigationDestination(isPresented: $showGroupEdit) {
             if let conversation = conversation {
                 GroupEditView(conversation: conversation, messagingService: messagingService)
-            }
-        }
-        // Load member roles when conversation changes
-        .onChange(of: conversationState.conversation) { _, newConversation in
-            if let conversation = newConversation {
-                loadMembersWithRoles(for: conversation)
-            }
-        }
-        // Initial load
-        .onAppear {
-            if let conversation = conversationState.conversation {
-                loadMembersWithRoles(for: conversation)
-            }
-        }
-    }
-
-    private func loadMembersWithRoles(for conversation: Conversation) {
-        Task {
-            do {
-                let conversationRepo = messagingService.conversationRepository(for: conversation.id)
-                if let (_, members) = try conversationRepo.fetchConversationWithRoles() {
-                    await MainActor.run {
-                        self.membersWithRoles = members
-                    }
-                }
-            } catch {
-                Logger.error("Failed to load conversation with roles: \(error)")
             }
         }
     }
@@ -179,7 +156,7 @@ struct GroupInfoView: View {
     let messagingService: any MessagingServiceProtocol
     @Binding var showAllMembers: Bool
     @Binding var showAddMember: Bool
-    @Binding var membersWithRoles: [ProfileWithRole]
+    let membersWithRoles: [ProfileWithRole]
     @State private var showingAvailableSoonAlert: Bool = false
     @State private var showingAddMemberAlert: Bool = false
 
@@ -482,7 +459,7 @@ struct AllMembersView: View {
     let messagingService: any MessagingServiceProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showAddMember: Bool = false
-    @Binding var membersWithRoles: [ProfileWithRole]
+    let membersWithRoles: [ProfileWithRole]
     @State private var showingAddMemberAlert: Bool = false
 
     private var currentUser: Profile? {

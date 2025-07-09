@@ -6,6 +6,15 @@ class MockConversationRepository: ConversationRepositoryProtocol {
         Just(conversation).eraseToAnyPublisher()
     }
 
+    var conversationWithRolesPublisher: AnyPublisher<(Conversation, [ProfileWithRole])?, Never> {
+        // Mock implementation: assign random roles to members
+        let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
+            let role: MemberRole = [.member, .admin, .superAdmin].randomElement() ?? .member
+            return ProfileWithRole(profile: profile, role: role)
+        }
+        return Just((conversation, membersWithRoles)).eraseToAnyPublisher()
+    }
+
     var conversationId: String {
         conversation.id
     }
@@ -41,6 +50,14 @@ class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
 
     var conversationPublisher: AnyPublisher<Conversation?, Never> {
         Just(conversation).eraseToAnyPublisher()
+    }
+
+    var conversationWithRolesPublisher: AnyPublisher<(Conversation, [ProfileWithRole])?, Never> {
+        // For draft conversations, all members have .member role
+        let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
+            ProfileWithRole(profile: profile, role: .member)
+        }
+        return Just((conversation, membersWithRoles)).eraseToAnyPublisher()
     }
 
     private let conversation: Conversation = .mock(id: "draft-123")

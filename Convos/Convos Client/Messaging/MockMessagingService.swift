@@ -183,6 +183,18 @@ extension MockMessagingService: ConversationRepositoryProtocol {
         Just(conversation).eraseToAnyPublisher()
     }
 
+    var conversationWithRolesPublisher: AnyPublisher<(Conversation, [ProfileWithRole])?, Never> {
+        guard let conversation = conversation else { return Just(nil).eraseToAnyPublisher() }
+
+        // Mock implementation: assign random roles to members
+        let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
+            let role: MemberRole = [.member, .admin, .superAdmin].randomElement() ?? .member
+            return ProfileWithRole(profile: profile, role: role)
+        }
+
+        return Just((conversation, membersWithRoles)).eraseToAnyPublisher()
+    }
+
     func fetchConversation() throws -> Conversation? {
         conversation
     }

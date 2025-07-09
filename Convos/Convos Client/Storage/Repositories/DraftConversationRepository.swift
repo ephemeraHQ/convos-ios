@@ -73,6 +73,35 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
             .eraseToAnyPublisher()
     }()
 
+    lazy var conversationWithRolesPublisher: AnyPublisher<(Conversation, [ProfileWithRole])?, Never> = {
+        writer.conversationIdPublisher
+            .removeDuplicates()
+            .map { [weak self] conversationId -> AnyPublisher<(Conversation, [ProfileWithRole])?, Never> in
+                guard let self else {
+                    return Just(nil as (Conversation, [ProfileWithRole])?).eraseToAnyPublisher()
+                }
+
+                return ValueObservation
+                    .tracking { [weak self] db in
+                        guard let self else { return nil }
+                        return try db.composeConversation(for: conversationId)
+                    }
+                    .publisher(in: dbReader)
+                    .replaceError(with: nil)
+                    .map { (conversation: Conversation?) -> (Conversation, [ProfileWithRole])? in
+                        guard let conversation = conversation else { return nil }
+                        // For draft conversations, all members have .member role
+                        let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
+                            ProfileWithRole(profile: profile, role: .member)
+                        }
+                        return (conversation, membersWithRoles)
+                    }
+                    .eraseToAnyPublisher()
+            }
+            .switchToLatest()
+            .eraseToAnyPublisher()
+    }()
+
     func fetchConversation() throws -> Conversation? {
         try dbReader.read { [weak self] db in
             guard let self else { return nil }
