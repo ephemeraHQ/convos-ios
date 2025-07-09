@@ -66,7 +66,7 @@ struct GroupEditView: View {
     @State private var imageSelection: PhotosPickerItem?
     @State private var showingAlert: Bool = false
     @State private var alertMessage: String = ""
-    @State private var uploadedImageURL: String?
+
     @FocusState private var isDescriptionFocused: Bool
 
     private let nameCharacterLimit: Int = 100
@@ -173,18 +173,9 @@ struct GroupEditView: View {
                     let imageState = await imageSelection.loadGroupImage()
                     withAnimation {
                         self.imageState = imageState
-                        // Upload image when selected
+                        // Image loaded successfully - actual upload will happen when user saves
                         if case .success = imageState {
-                            Task {
-                                do {
-                                    let url = try await uploadImage()
-                                    uploadedImageURL = url
-                                } catch {
-                                    Logger.error("Group image upload failed: \(error)")
-                                    alertMessage = "Group update failed to upload image: \(error.localizedDescription)"
-                                    showingAlert = true
-                                }
-                            }
+                            Logger.info("Group image loaded successfully and ready for upload")
                         }
                     }
                 }
@@ -344,8 +335,8 @@ struct GroupEditView: View {
             hasChanges = true
         }
 
-        // Check if image changed
-        if uploadedImageURL != nil {
+        // Check if image changed (new image selected)
+        if case .success = imageState {
             hasChanges = true
         }
 
@@ -365,8 +356,9 @@ struct GroupEditView: View {
                     try await updateGroupDescription()
                 }
 
-                if let uploadedImageURL = uploadedImageURL {
-                    try await updateGroupImage(imageURL: uploadedImageURL)
+                // Handle image upload and update chained together
+                if case .success = imageState {
+                    try await uploadImageAndUpdateProfile()
                 }
             } catch {
                 Logger.error("Failed to update group: \(error)")
@@ -436,6 +428,43 @@ struct GroupEditView: View {
 
         Logger.info("Successfully uploaded image to: \(imageURL)")
         return imageURL
+    }
+
+    private func uploadImageAndUpdateProfile() async throws {
+        guard case .success(let image) = imageState else {
+            throw GroupImage.GroupImageError.importFailed
+        }
+
+        Logger.info("Starting chained image upload and profile update...")
+
+        // Convert SwiftUI Image to UIImage
+        guard let uiImage = image.asUIImage() else {
+            Logger.error("Failed to convert SwiftUI Image to UIImage")
+            throw GroupImage.GroupImageError.importFailed
+        }
+
+        let estimatedBytes = Int(uiImage.size.width * uiImage.size.height * 4)
+        Logger.info("Original image size: \(uiImage.size), estimated bytes: \(estimatedBytes)")
+
+        // Compress and resize image to max 1024x1024 while maintaining aspect ratio
+        guard let compressedImageData = ImageCompression.compressImage(uiImage, maxDimension: 1024, quality: 0.8) else {
+            Logger.error("Failed to compress image")
+            throw GroupImage.GroupImageError.importFailed
+        }
+
+        Logger.info("Compressed image data size: \(ImageCompression.formatFileSize(compressedImageData.count))")
+
+        // Use the chained upload method that ensures profile update happens after upload
+        let imageURL = try await messagingService.uploadImageAndExecute(
+            data: compressedImageData,
+            filename: "group-image.jpg"
+        ) { uploadedURL in
+            // This closure runs AFTER the upload is complete
+            Logger.info("Upload completed successfully, updating group image with URL: \(uploadedURL)")
+            try await self.updateGroupImage(imageURL: uploadedURL)
+        }
+
+        Logger.info("Successfully completed chained upload and profile update: \(imageURL)")
     }
 }
 

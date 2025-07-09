@@ -48,6 +48,11 @@ protocol ConvosAPIClientProtocol {
     func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse]
 
     func uploadAttachment(data: Data, filename: String) async throws -> String
+    func uploadAttachmentAndExecute(
+        data: Data,
+        filename: String,
+        afterUpload: @escaping (String) async throws -> Void
+    ) async throws -> String
 }
 
 final class ConvosAPIClient: ConvosAPIClientProtocol {
@@ -305,6 +310,25 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
         Logger.info("Successfully uploaded to S3, public URL: \(publicURL)")
 
         return publicURL
+    }
+
+    func uploadAttachmentAndExecute(
+        data: Data,
+        filename: String,
+        afterUpload: @escaping (String) async throws -> Void
+    ) async throws -> String {
+        Logger.info("Starting chained upload and execute process for file: \(filename)")
+
+        // Step 1: Upload the attachment and get the URL
+        let uploadedURL = try await uploadAttachment(data: data, filename: filename)
+        Logger.info("Upload completed successfully, URL: \(uploadedURL)")
+
+        // Step 2: Execute the provided closure with the uploaded URL
+        Logger.info("Executing post-upload action with URL: \(uploadedURL)")
+        try await afterUpload(uploadedURL)
+        Logger.info("Post-upload action completed successfully")
+
+        return uploadedURL
     }
 }
 

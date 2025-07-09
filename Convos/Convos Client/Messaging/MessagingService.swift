@@ -136,6 +136,18 @@ final class MessagingService: MessagingServiceProtocol {
         return try await apiClient.uploadAttachment(data: data, filename: filename)
     }
 
+    func uploadImageAndExecute(
+        data: Data,
+        filename: String,
+        afterUpload: @escaping (String) async throws -> Void
+    ) async throws -> String {
+        return try await apiClient.uploadAttachmentAndExecute(
+            data: data,
+            filename: filename,
+            afterUpload: afterUpload
+        )
+    }
+
     // MARK: State Machine
 
     var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {

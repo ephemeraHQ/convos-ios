@@ -28,6 +28,11 @@ protocol MessagingServiceProtocol {
     func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol
 
     func uploadImage(data: Data, filename: String) async throws -> String
+    func uploadImageAndExecute(
+        data: Data,
+        filename: String,
+        afterUpload: @escaping (String) async throws -> Void
+    ) async throws -> String
 }
 
 enum MessagingServiceState: Equatable {

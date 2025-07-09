@@ -119,6 +119,16 @@ class MockMessagingService: MessagingServiceProtocol {
         // Return a mock URL for testing
         return "https://example.com/uploads/\(filename)"
     }
+
+    func uploadImageAndExecute(
+        data: Data,
+        filename: String,
+        afterUpload: @escaping (String) async throws -> Void
+    ) async throws -> String {
+        let uploadedURL = "https://example.com/uploads/\(filename)"
+        try await afterUpload(uploadedURL)
+        return uploadedURL
+    }
 }
 
 extension MockMessagingService: UserRepositoryProtocol {
