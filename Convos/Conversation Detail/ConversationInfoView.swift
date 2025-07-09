@@ -1,14 +1,21 @@
 import SwiftUI
 
 struct ConversationInfoView: View {
-    let conversation: Conversation
+    let userState: UserState
+    let conversationState: ConversationState
     let messagingService: any MessagingServiceProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showAllMembers: Bool = false
     @State private var showGroupEdit: Bool = false
     @State private var showAddMember: Bool = false
+    @State private var membersWithRoles: [ProfileWithRole] = []
 
-    private var conversationWithAllMembers: Conversation {
+    private var conversation: Conversation? {
+        conversationState.conversation
+    }
+
+    private var conversationWithAllMembers: Conversation? {
+        guard let conversation = conversation else { return nil }
         // For group conversations, ensure current user is included in member list for proper display
         if conversation.kind == .group {
             return conversation.withCurrentUserIncluded()
@@ -19,35 +26,82 @@ struct ConversationInfoView: View {
     var body: some View {
         VStack(spacing: 0) {
             CustomToolbarView(onBack: { dismiss() }, rightContent: {
-                if conversation.kind == .group {
+                if conversation?.kind == .group {
                     EditGroupButton(action: { showGroupEdit = true })
                 }
             })
 
             // Content
-            switch conversation.kind {
-            case .dm:
-                DMInfoView(conversation: conversation)
-            case .group:
-                GroupInfoView(
-                    conversation: conversationWithAllMembers,
-                    messagingService: messagingService,
-                    showAllMembers: $showAllMembers,
-                    showAddMember: $showAddMember
-                )
+            if let conversation = conversation {
+                switch conversation.kind {
+                case .dm:
+                    DMInfoView(conversation: conversation)
+                case .group:
+                    if let conversationWithAllMembers = conversationWithAllMembers {
+                        GroupInfoView(
+                            conversation: conversationWithAllMembers,
+                            userState: userState,
+                            conversationState: conversationState,
+                            messagingService: messagingService,
+                            showAllMembers: $showAllMembers,
+                            showAddMember: $showAddMember,
+                            membersWithRoles: $membersWithRoles
+                        )
+                    }
+                }
+            } else {
+                // Loading state
+                VStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                }
             }
         }
         .navigationBarHidden(true)
         .navigationDestination(isPresented: $showAllMembers) {
-            AllMembersView(conversation: conversationWithAllMembers, messagingService: messagingService)
+            if let conversationWithAllMembers = conversationWithAllMembers {
+                AllMembersView(
+                    conversation: conversationWithAllMembers,
+                    userState: userState,
+                    conversationState: conversationState,
+                    messagingService: messagingService,
+                    membersWithRoles: $membersWithRoles
+                )
+            }
         }
         .navigationDestination(isPresented: $showGroupEdit) {
-            GroupEditView(conversation: conversation, messagingService: messagingService)
+            if let conversation = conversation {
+                GroupEditView(conversation: conversation, messagingService: messagingService)
+            }
         }
-        // @lourou add member to group
-        // .navigationDestination(isPresented: $showAddMember) {
-        //     AddMemberView(conversation: conversation, messagingService: messagingService)
-        // }
+        // Load member roles when conversation changes
+        .onChange(of: conversationState.conversation) { _, newConversation in
+            if let conversation = newConversation {
+                loadMembersWithRoles(for: conversation)
+            }
+        }
+        // Initial load
+        .onAppear {
+            if let conversation = conversationState.conversation {
+                loadMembersWithRoles(for: conversation)
+            }
+        }
+    }
+
+    private func loadMembersWithRoles(for conversation: Conversation) {
+        Task {
+            do {
+                let conversationRepo = messagingService.conversationRepository(for: conversation.id)
+                if let (_, members) = try conversationRepo.fetchConversationWithRoles() {
+                    await MainActor.run {
+                        self.membersWithRoles = members
+                    }
+                }
+            } catch {
+                Logger.error("Failed to load conversation with roles: \(error)")
+            }
+        }
     }
 }
 
@@ -110,13 +164,18 @@ struct DMInfoView: View {
 // MARK: - Group Info View
 struct GroupInfoView: View {
     let conversation: Conversation
+    let userState: UserState
+    let conversationState: ConversationState
     let messagingService: any MessagingServiceProtocol
     @Binding var showAllMembers: Bool
     @Binding var showAddMember: Bool
-    @State private var membersWithRoles: [ProfileWithRole] = []
+    @Binding var membersWithRoles: [ProfileWithRole]
     @State private var showingAvailableSoonAlert: Bool = false
     @State private var showingAddMemberAlert: Bool = false
-    @State private var currentUser: Profile?
+
+    private var currentUser: Profile? {
+        userState.currentUser?.profile
+    }
 
     private var displayedMembers: [ProfileWithRole] {
         let sortedMembers = membersWithRoles.sortedByRole(currentUser: currentUser)
@@ -209,12 +268,6 @@ struct GroupInfoView: View {
                 Spacer()
             }
         }
-        .onAppear {
-            Task {
-                await loadCurrentUser()
-                await loadConversationWithRoles()
-            }
-        }
         .alert("Leave Group", isPresented: $showingAvailableSoonAlert) {
             Button("OK") { }
         } message: {
@@ -224,33 +277,6 @@ struct GroupInfoView: View {
             Button("OK") { }
         } message: {
             Text("Available soon")
-        }
-    }
-
-    private func loadCurrentUser() async {
-        do {
-            let userRepo = messagingService.userRepository()
-            if let user = try await userRepo.getCurrentUser() {
-                await MainActor.run {
-                    currentUser = user.profile
-                }
-            }
-        } catch {
-            Logger.error("Failed to load current user: \(error)")
-        }
-    }
-
-    private func loadConversationWithRoles() async {
-        do {
-            let conversationRepo = messagingService.conversationRepository(for: conversation.id)
-            if let (_, members) = try conversationRepo.fetchConversationWithRoles() {
-                await MainActor.run {
-                    self.membersWithRoles = members
-                    // Update conversation if needed
-                }
-            }
-        } catch {
-            Logger.error("Failed to load conversation with roles: \(error)")
         }
     }
 }
@@ -517,12 +543,17 @@ struct AddMemberButton: View {
 // MARK: - All Members View
 struct AllMembersView: View {
     let conversation: Conversation
+    let userState: UserState
+    let conversationState: ConversationState
     let messagingService: any MessagingServiceProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showAddMember: Bool = false
-    @State private var membersWithRoles: [ProfileWithRole] = []
+    @Binding var membersWithRoles: [ProfileWithRole]
     @State private var showingAddMemberAlert: Bool = false
-    @State private var currentUser: Profile?
+
+    private var currentUser: Profile? {
+        userState.currentUser?.profile
+    }
 
     private var sortedMembers: [ProfileWithRole] {
         return membersWithRoles.sortedByRole(currentUser: currentUser)
@@ -572,43 +603,15 @@ struct AllMembersView: View {
         } message: {
             Text("Available soon")
         }
-        .onAppear {
-            Task {
-                await loadCurrentUser()
-                await loadMembersWithRoles()
-            }
-        }
-    }
-
-    private func loadCurrentUser() async {
-        do {
-            let userRepo = messagingService.userRepository()
-            if let user = try await userRepo.getCurrentUser() {
-                await MainActor.run {
-                    currentUser = user.profile
-                }
-            }
-        } catch {
-            Logger.error("Failed to load current user: \(error)")
-        }
-    }
-
-    private func loadMembersWithRoles() async {
-        do {
-            let conversationRepo = messagingService.conversationRepository(for: conversation.id)
-            if let (_, members) = try conversationRepo.fetchConversationWithRoles() {
-                await MainActor.run {
-                    self.membersWithRoles = members
-                    // Update conversation if needed
-                }
-            }
-        } catch {
-            Logger.error("Failed to load members with roles: \(error)")
-        }
     }
 }
 
 #Preview("DM Conversation") {
+    @Previewable @State var userState: UserState = .init(userRepository: MockUserRepository())
+    @Previewable @State var conversationState: ConversationState = .init(
+        conversationRepository: MockMessagingService().conversationRepository(for: "dm1")
+    )
+
     let dmProfile = Profile(
         id: "user1",
         name: "John Doe",
@@ -642,10 +645,21 @@ struct AllMembersView: View {
         isDraft: false
     )
 
-    ConversationInfoView(conversation: dmConversation, messagingService: MockMessagingService())
+    let mockMessagingService = MockMessagingService()
+
+    ConversationInfoView(
+        userState: userState,
+        conversationState: conversationState,
+        messagingService: mockMessagingService
+    )
 }
 
 #Preview("Group Conversation") {
+    @Previewable @State var userState: UserState = .init(userRepository: MockUserRepository())
+    @Previewable @State var conversationState: ConversationState = .init(
+        conversationRepository: MockMessagingService().conversationRepository(for: "group1")
+    )
+
     let members = [
         Profile(id: "user1", name: "Alice Johnson", username: "alice", avatar: nil),
         Profile(id: "user2", name: "Bob Smith", username: "bob", avatar: nil),
@@ -680,5 +694,11 @@ struct AllMembersView: View {
         isDraft: false
     )
 
-    ConversationInfoView(conversation: groupConversation, messagingService: MockMessagingService())
+    let mockMessagingService = MockMessagingService()
+
+    ConversationInfoView(
+        userState: userState,
+        conversationState: conversationState,
+        messagingService: mockMessagingService
+    )
 }

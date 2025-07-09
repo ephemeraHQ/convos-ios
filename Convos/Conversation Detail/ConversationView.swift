@@ -8,6 +8,7 @@ struct ConversationView: View {
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
     let messagingService: any MessagingServiceProtocol
     let conversationState: ConversationState
+    let userState: UserState
     @State private var showInfo: Bool = false
 
     init(
@@ -25,6 +26,7 @@ struct ConversationView: View {
         self.conversationLocalStateWriter = conversationLocalStateWriter
         self.messagingService = messagingService
         self.conversationState = ConversationState(conversationRepository: conversationRepository)
+        self.userState = UserState(userRepository: messagingService.userRepository())
     }
 
     var body: some View {
@@ -43,9 +45,11 @@ struct ConversationView: View {
             .ignoresSafeArea()
         }
         .navigationDestination(isPresented: $showInfo) {
-            if let conversation = conversationState.conversation {
-                ConversationInfoView(conversation: conversation, messagingService: messagingService)
-            }
+            ConversationInfoView(
+                userState: userState,
+                conversationState: conversationState,
+                messagingService: messagingService
+            )
         }
     }
 }
