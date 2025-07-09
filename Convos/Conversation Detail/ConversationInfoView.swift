@@ -91,11 +91,14 @@ struct DMInfoView: View {
             VStack(spacing: 24) {
                 // Profile Header
                 if let otherMember = conversation.otherMember {
-                    VStack(spacing: 16) {
+                    VStack(spacing: DesignConstants.Spacing.step4x) {
                         ProfileAvatarView(profile: otherMember)
-                            .frame(width: 80, height: 80)
+                            .frame(
+                                width: DesignConstants.ImageSizes.largeAvatar,
+                                height: DesignConstants.ImageSizes.largeAvatar
+                            )
 
-                        VStack(spacing: 4) {
+                        VStack(spacing: DesignConstants.Spacing.stepX) {
                             Text(otherMember.displayName)
                                 .font(.title2)
                                 .fontWeight(.semibold)
@@ -105,11 +108,11 @@ struct DMInfoView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    .padding(.top, 20)
+                    .padding(.top, DesignConstants.Spacing.step5x)
                 }
 
                 // Actions Section
-                VStack(spacing: 12) {
+                VStack(spacing: DesignConstants.Spacing.step3x) {
                     let action = {
                         // Handle message action
                     }
@@ -127,7 +130,7 @@ struct DMInfoView: View {
                 .padding(.horizontal)
 
                 // Settings Section
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: DesignConstants.Spacing.step4x) {
                     Text("Settings")
                         .font(.headline)
                         .padding(.horizontal)
@@ -138,7 +141,7 @@ struct DMInfoView: View {
                         }
                     }
                     .background(Color(.systemGray6))
-                    .cornerRadius(10)
+                    .cornerRadius(DesignConstants.CornerRadius.small)
                     .padding(.horizontal)
                 }
 
@@ -171,13 +174,16 @@ struct GroupInfoView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(spacing: DesignConstants.Spacing.step6x) {
                 // Group Header
-                VStack(spacing: 16) {
+                VStack(spacing: DesignConstants.Spacing.step4x) {
                     ConversationAvatarView(conversation: conversation)
-                        .frame(width: 80, height: 80)
+                        .frame(
+                            width: DesignConstants.ImageSizes.largeAvatar,
+                            height: DesignConstants.ImageSizes.largeAvatar
+                        )
 
-                    VStack(spacing: 4) {
+                    VStack(spacing: DesignConstants.Spacing.stepX) {
                         Text(conversation.name ?? "Group Chat")
                             .font(.title2)
                             .fontWeight(.semibold)
@@ -195,10 +201,10 @@ struct GroupInfoView: View {
                             .padding(.horizontal)
                     }
                 }
-                .padding(.top, 20)
+                .padding(.top, DesignConstants.Spacing.step5x)
 
                 // Members Section
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: DesignConstants.Spacing.step4x) {
                     HStack {
                         Text("\(conversation.withCurrentUserIncluded().members.count) Members")
                             .font(.headline)
@@ -225,7 +231,7 @@ struct GroupInfoView: View {
 
                             if memberWithRole.id != displayedMembers.last?.id {
                                 Divider()
-                                    .padding(.leading, 60)
+                                    .padding(.leading, DesignConstants.Spacing.step12x + DesignConstants.Spacing.step5x)
                             }
                         }
 
@@ -237,12 +243,12 @@ struct GroupInfoView: View {
                         }
                     }
                     .background(Color(.systemGray6))
-                    .cornerRadius(10)
+                    .cornerRadius(DesignConstants.CornerRadius.small)
                     .padding(.horizontal)
                 }
 
                 // Actions Section
-                VStack(spacing: 12) {
+                VStack(spacing: DesignConstants.Spacing.step3x) {
                     let action = {
                         showingAvailableSoonAlert = true
                     }
@@ -286,7 +292,7 @@ struct SettingsRow: View {
             HStack {
                 Image(systemName: systemImage)
                     .foregroundColor(.primary)
-                    .frame(width: 20)
+                    .frame(width: DesignConstants.Spacing.step5x)
                 Text(title)
                     .foregroundColor(.primary)
                 Spacer()
@@ -328,9 +334,9 @@ struct MemberRowWithRole: View {
     var body: some View {
         HStack {
             ProfileAvatarView(profile: memberWithRole.profile)
-                .frame(width: 40, height: 40)
+                .frame(width: DesignConstants.ImageSizes.mediumAvatar, height: DesignConstants.ImageSizes.mediumAvatar)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: DesignConstants.Spacing.stepHalf) {
                 Text(memberWithRole.displayName)
                     .font(.body)
                     .fontWeight(.medium)
@@ -346,10 +352,10 @@ struct MemberRowWithRole: View {
                 Text(memberWithRole.role.displayName)
                     .font(.caption)
                     .foregroundColor(.blue)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, DesignConstants.Spacing.step2x)
+                    .padding(.vertical, DesignConstants.Spacing.stepX)
                     .background(Color.blue.opacity(0.1))
-                    .cornerRadius(8)
+                    .cornerRadius(DesignConstants.CornerRadius.small)
             }
 
             if canDeleteMembers && !isCurrentUser {
@@ -432,9 +438,9 @@ struct EditGroupButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "pencil")
-                .font(.system(size: 24.0))
+                .font(DesignConstants.Fonts.standard)
                 .foregroundColor(.primary)
-                .padding(.vertical, 10.0)
+                .padding(.vertical, DesignConstants.Spacing.step2x)
                 .padding(.horizontal, DesignConstants.Spacing.step2x)
         }
     }
@@ -495,12 +501,12 @@ struct AllMembersView: View {
 
                         if memberWithRole.id != sortedMembers.last?.id {
                             Divider()
-                                .padding(.leading, 60)
+                                .padding(.leading, DesignConstants.Spacing.step12x + DesignConstants.Spacing.step5x)
                         }
                     }
                 }
                 .background(Color(.systemGray6))
-                .cornerRadius(10)
+                .cornerRadius(DesignConstants.CornerRadius.small)
                 .padding()
             }
         }
