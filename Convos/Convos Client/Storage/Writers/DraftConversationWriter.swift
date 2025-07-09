@@ -234,7 +234,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             try conversation.request(for: DBConversation.memberProfiles).fetchCount(db)
         }
         let updatedConversation = conversation.with(kind: membersCount - 1 <= 1 ? .dm : .group)
-        Logger.info("Updated conversation kind to: \(updatedConversation.kind) (remaining members: \(membersCount - 1))")
+        Logger.info("Updated kind to: \(updatedConversation.kind) (remaining members: \(membersCount - 1))")
 
         _ = try await databaseWriter.write { db in
             try conversationMember.delete(db)

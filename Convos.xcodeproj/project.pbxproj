@@ -441,7 +441,6 @@
 				TargetAttributes = {
 					7ACA8BA22DE16DE200848799 = {
 						CreatedOnToolsVersion = 16.3;
-						TestTargetID = D8A2B6902DA4BA4B00EF8577;
 					};
 					D80850332DC94F4C00E708B0 = {
 						CreatedOnToolsVersion = 16.3;
@@ -580,7 +579,6 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Convos.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Convos";
 			};
 			name = Debug;
 		};
@@ -598,7 +596,6 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Convos.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Convos";
 			};
 			name = Release;
 		};

@@ -29,7 +29,8 @@ class ConversationWriter: ConversationWriterProtocol {
 
     private func _store(conversation: XMTPiOS.Conversation,
                         clientConversationId: String? = nil) async throws -> DBConversation {
-        let dbMembers: [DBConversationMember] = try await conversation.members()
+        let members = try await conversation.members()
+        let dbMembers: [DBConversationMember] = members
             .map { $0.dbRepresentation(conversationId: conversation.id) }
         let kind: ConversationKind
         let imageURLString: String?

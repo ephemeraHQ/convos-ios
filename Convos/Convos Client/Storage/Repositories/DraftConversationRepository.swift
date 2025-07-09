@@ -51,7 +51,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
         Logger.info("Creating conversationPublisher for conversationId: \(writer.conversationId)")
         return writer.conversationIdPublisher
             .removeDuplicates()
-            .map { [weak self] conversationId -> AnyPublisher<Conversation?, Never> in
+            .flatMap { [weak self] conversationId -> AnyPublisher<Conversation?, Never> in
                 guard let self else {
                     Logger.warning("DraftConversationRepository deallocated during conversationPublisher mapping")
                     return Just(nil).eraseToAnyPublisher()
@@ -70,7 +70,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
                             let conversation = try db.composeConversation(for: conversationId)
                             if conversation != nil {
                                 Logger.info(
-                                    "Successfully composed conversation: \(conversationId) with kind: \(conversation?.kind ?? .dm)"
+                                    "Composed conversation: \(conversationId) with kind: \(conversation?.kind ?? .dm)"
                                 )
                             } else {
                                 Logger.warning("No conversation found for ID: \(conversationId)")
@@ -85,7 +85,6 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
                     .replaceError(with: nil)
                     .eraseToAnyPublisher()
             }
-            .switchToLatest()
             .eraseToAnyPublisher()
     }()
 

@@ -11,20 +11,18 @@ final class ConversationsRepository: ConversationsRepositoryProtocol {
     private let dbReader: any DatabaseReader
     private let consent: [Consent]
 
-    lazy var conversationsPublisher: AnyPublisher<[Conversation], Never> = {
-        ValueObservation
-            .tracking { [weak self] db in
-                guard let self else { return [] }
-                return try db.composeAllConversations(consent: consent)
-            }
-            .publisher(in: dbReader)
-            .replaceError(with: [])
-            .eraseToAnyPublisher()
-    }()
+    let conversationsPublisher: AnyPublisher<[Conversation], Never>
 
     init(dbReader: any DatabaseReader, consent: [Consent]) {
         self.dbReader = dbReader
         self.consent = consent
+        self.conversationsPublisher = ValueObservation
+            .tracking { db in
+                try db.composeAllConversations(consent: consent)
+            }
+            .publisher(in: dbReader)
+            .replaceError(with: [])
+            .eraseToAnyPublisher()
     }
 
     func fetchAll() throws -> [Conversation] {
