@@ -37,7 +37,7 @@ class SessionManager: SessionManagerProtocol {
         let currentSessionRepository = CurrentSessionRepository(dbReader: databaseReader)
         self.currentSessionRepository = currentSessionRepository
         self.authState = authService.authStatePublisher
-//            .merge(with: localAuthService.authStatePublisher)
+            .merge(with: localAuthService.authStatePublisher)
             .eraseToAnyPublisher()
         authState
             .sink { [weak self] authState in

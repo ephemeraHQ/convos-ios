@@ -19,6 +19,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
     init(dbReader: any DatabaseReader, writer: any DraftConversationWriterProtocol) {
         self.dbReader = dbReader
         self.writer = writer
+        Logger.info("Initializing DraftConversationRepository with conversationId: \(writer.conversationId)")
         messagesRepository = MessagesRepository(
             dbReader: dbReader,
             conversationId: writer.conversationId,
@@ -28,6 +29,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
 
     lazy var membersPublisher: AnyPublisher<[ConversationMember], Never> = {
         let draftConversationId = writer.draftConversationId
+        Logger.info("Creating membersPublisher for draft conversation: \(draftConversationId)")
         return ValueObservation
             .tracking { [weak self] db in
                 guard let self else { return [] }
@@ -35,11 +37,10 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
                     .filter(Column("clientConversationId") == draftConversationId)
                     .detailedConversationQuery()
                     .fetchOne(db) else {
+                    Logger.debug("No conversation found for draft conversation ID: \(draftConversationId)")
                     return []
                 }
-                return dbConversation
-                    .hydrateConversation()
-                    .members
+                return dbConversation.hydrateConversation().membersWithoutCurrent
             }
             .publisher(in: dbReader)
             .replaceError(with: [])
@@ -47,17 +48,38 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
     }()
 
     lazy var conversationPublisher: AnyPublisher<Conversation?, Never> = {
-        writer.conversationIdPublisher
+        Logger.info("Creating conversationPublisher for conversationId: \(writer.conversationId)")
+        return writer.conversationIdPublisher
             .removeDuplicates()
             .map { [weak self] conversationId -> AnyPublisher<Conversation?, Never> in
                 guard let self else {
+                    Logger.warning("DraftConversationRepository deallocated during conversationPublisher mapping")
                     return Just(nil).eraseToAnyPublisher()
                 }
 
+                Logger.info("Conversation ID changed to: \(conversationId)")
                 return ValueObservation
                     .tracking { [weak self] db in
-                        guard let self else { return nil }
-                        return try db.composeConversation(for: conversationId)
+                        guard let self else {
+                            Logger.warning("DraftConversationRepository deallocated during conversation tracking")
+                            return nil
+                        }
+                        do {
+                            Logger.debug("Tracking conversation \(conversationId)")
+
+                            let conversation = try db.composeConversation(for: conversationId)
+                            if conversation != nil {
+                                Logger.info(
+                                    "Successfully composed conversation: \(conversationId) with kind: \(conversation?.kind ?? .dm)"
+                                )
+                            } else {
+                                Logger.warning("No conversation found for ID: \(conversationId)")
+                            }
+                            return conversation
+                        } catch {
+                            Logger.error("Error composing conversation for ID \(conversationId): \(error)")
+                            return nil
+                        }
                     }
                     .publisher(in: dbReader)
                     .replaceError(with: nil)
@@ -68,22 +90,44 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
     }()
 
     func fetchConversation() throws -> Conversation? {
-        try dbReader.read { [weak self] db in
-            guard let self else { return nil }
-            return try db.composeConversation(for: writer.conversationId)
+        Logger.info("Fetching conversation for ID: \(writer.conversationId)")
+        do {
+            let conversation: Conversation? = try dbReader.read { [weak self] db in
+                guard let self else {
+                    Logger.warning("DraftConversationRepository deallocated during fetchConversation")
+                    return nil
+                }
+                return try db.composeConversation(for: writer.conversationId)
+            }
+            if conversation != nil {
+                Logger.info("Successfully fetched conversation: \(writer.conversationId)")
+            } else {
+                Logger.debug("No conversation found for ID: \(writer.conversationId)")
+            }
+            return conversation
+        } catch {
+            Logger.error("Error fetching conversation for ID \(writer.conversationId): \(error)")
+            throw error
         }
     }
 }
 
 fileprivate extension Database {
     func composeConversation(for conversationId: String) throws -> Conversation? {
-        guard let dbConversation = try DBConversation
-            .filter(Column("clientConversationId") == conversationId)
-            .detailedConversationQuery()
-            .fetchOne(self) else {
-            return nil
-        }
+        do {
+            guard let dbConversation = try DBConversation
+                .filter(Column("clientConversationId") == conversationId)
+                .detailedConversationQuery()
+                .fetchOne(self) else {
+                return nil
+            }
 
-        return dbConversation.hydrateConversation()
+            let conversation = dbConversation.hydrateConversation()
+            Logger.debug("Successfully hydrated conversation: \(conversationId)")
+            return conversation
+        } catch {
+            Logger.error("Error composing conversation for ID \(conversationId): \(error)")
+            throw error
+        }
     }
 }

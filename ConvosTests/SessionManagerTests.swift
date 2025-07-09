@@ -27,12 +27,12 @@ struct SessionManagerTests {
         try await authService.register(displayName: "Name")
         Logger.info("🔍 Registration completed")
 
-        guard let firstInboxes = await inboxesIterator.next(),
-              let inbox = firstInboxes.first else {
-            Issue.record("Inbox not found")
-            return
+        let firstInboxes = await withTimeout(seconds: 10) {
+            await inboxesIterator.next()
         }
+        #expect(firstInboxes != nil, "Inbox not found")
 
+        let inbox = firstInboxes!.first!
         let inboxId = inbox.inboxId
         Logger.info("🔍 Found inbox with ID: \(inboxId)")
 
@@ -40,13 +40,13 @@ struct SessionManagerTests {
         var inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
 
         Logger.info("🔍 Waiting for messaging service...")
-        guard let inboxReady = await inboxReadyIterator.next() else {
-            Issue.record("Messaging service not published")
-            return
+        let inboxReady = await withTimeout(seconds: 10) {
+            await inboxReadyIterator.next()
         }
+        #expect(inboxReady != nil, "Messaging service not published")
 
-        Logger.info("🔍 Got messaging service with inboxId: \(inboxReady.client.inboxId)")
-        #expect(inboxReady.client.inboxId == inboxId)
+        Logger.info("🔍 Got messaging service with inboxId: \(inboxReady!.client.inboxId)")
+        #expect(inboxReady!.client.inboxId == inboxId)
     }
 
     @Test("Test local auth starts messaging service")
@@ -73,12 +73,13 @@ struct SessionManagerTests {
         _ = try localAuthService.register(displayName: "User", inboxType: .standard)
         Logger.info("🔍 Registration completed")
 
-        guard let firstInboxes = await inboxesIterator.next(),
-              let inbox = firstInboxes.first else {
-            Issue.record("Inbox not found")
-            return
+        let firstInboxes = await withTimeout(seconds: 10) {
+            await inboxesIterator.next()
         }
+        #expect(firstInboxes != nil, "Inbox not found")
+        #expect(!firstInboxes!.isEmpty, "No inboxes found")
 
+        let inbox = firstInboxes!.first!
         let inboxId = inbox.inboxId
         Logger.info("🔍 Found inbox with ID: \(inboxId)")
 
@@ -86,13 +87,13 @@ struct SessionManagerTests {
         var inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
 
         Logger.info("🔍 Waiting for messaging service...")
-        guard let inboxReady = await inboxReadyIterator.next() else {
-            Issue.record("Messaging service not published")
-            return
+        let inboxReady = await withTimeout(seconds: 10) {
+            await inboxReadyIterator.next()
         }
+        #expect(inboxReady != nil, "Messaging service not published")
 
-        Logger.info("🔍 Got messaging service with inboxId: \(inboxReady.client.inboxId)")
-        #expect(inboxReady.client.inboxId == inboxId)
+        Logger.info("🔍 Got messaging service with inboxId: \(inboxReady!.client.inboxId)")
+        #expect(inboxReady!.client.inboxId == inboxId)
     }
 
 }

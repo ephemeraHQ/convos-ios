@@ -37,13 +37,13 @@ struct MessagesToolbarView: View {
     }
 
     var body: some View {
-        HStack(spacing: 0.0) {
+        HStack(spacing: DesignConstants.Spacing.step2x) {
             if let conversation = conversationState.conversation, !conversation.isDraft {
                 ConversationAvatarView(conversation: conversation)
                     .padding(.vertical, avatarVerticalPadding)
             }
 
-            VStack(alignment: .leading, spacing: 2.0) {
+            VStack(alignment: .leading) {
                 Text(title)
                     .font(.system(size: 16.0))
                     .foregroundStyle(.colorTextPrimary)

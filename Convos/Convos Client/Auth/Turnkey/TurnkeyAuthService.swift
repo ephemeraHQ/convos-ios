@@ -128,21 +128,33 @@ final class TurnkeyAuthService: AuthServiceProtocol {
         )
         self.environment = environment
         self.apiClient = ConvosAPIClientFactory.client(environment: environment)
-        let authStatePublisher: AnyPublisher<AuthServiceState, Never> = turnkey
-            .$user
-//            .removeDuplicates(by: { lhs, rhs in
-//                lhs?.id == rhs?.id
-//            })
-            .map { [weak self] user in
-                guard let self else { return .unknown }
 
-                guard turnkey.authState != .loading else {
-                    return .notReady
+        // Filter user publisher to only emit when authState is not loading
+        let authStatePublisher: AnyPublisher<AuthServiceState, Never> = turnkey.$authState
+            .flatMap { [weak self] state -> AnyPublisher<AuthServiceState, Never> in
+                guard let self else { return Just(.unknown).eraseToAnyPublisher() }
+
+                // Only proceed with user when authState is not loading
+                guard state != .loading else {
+                    return Just(.notReady).eraseToAnyPublisher()
                 }
 
-                return authState(for: user)
+                // Now that authState is ready, listen to user changes
+                return turnkey.$user
+                    .map { [weak self] user in
+                        guard let self else { return .unknown }
+
+                        // wait until turnkey loads the user before publishing the auth state
+                        if state == .authenticated && user == nil {
+                            return .notReady
+                        }
+
+                        return authState(for: user)
+                    }
+                    .eraseToAnyPublisher()
             }
             .eraseToAnyPublisher()
+
         authStatePublisher
             .sink { [weak self] state in
                 guard let self else { return }

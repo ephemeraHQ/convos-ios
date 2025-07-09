@@ -60,6 +60,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
     private var state: DraftConversationWriterState {
         didSet {
+            Logger.info("DraftConversationWriter state changed from \(oldValue) to \(state)")
             conversationIdSubject.send(state.id)
         }
     }
@@ -127,6 +128,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     }
 
     func add(profile: MemberProfile) async throws {
+        Logger.info("Adding profile \(profile.inboxId) to draft conversation")
         guard let client = clientValue.value else {
             throw InboxStateError.inboxNotReady
         }
@@ -140,8 +142,10 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             if let existingDraft = try DBConversation
                 .filter(Column("clientConversationId") == draftConversationId)
                 .fetchOne(db) {
+                Logger.info("Found existing draft conversation: \(existingDraft.id)")
                 return existingDraft
             } else {
+                Logger.info("Creating new draft conversation: \(draftConversationId)")
                 return DBConversation(
                     id: draftConversationId,
                     inboxId: inboxId,
@@ -165,6 +169,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             try conversation.request(for: DBConversation.memberProfiles).fetchCount(db)
         }
         let updatedConversation = conversation.with(kind: (membersCount + 1) == 1 ? .dm : .group)
+        Logger.info("Updated conversation kind to: \(updatedConversation.kind) (members: \(membersCount + 1))")
 
         try await databaseWriter.write { db in
             let member = Member(inboxId: profile.inboxId)
@@ -187,16 +192,20 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                 createdAt: Date()
             )
             try conversationMember.save(db)
+            Logger.info("Saved conversation member and updated conversation to database")
         }
 
         if let existingConversation = try await findMatchingConversation() {
+            Logger.info("Found existing conversation, changing state to existing: \(existingConversation.id)")
             state = .existing(id: existingConversation.id)
         } else {
+            Logger.info("No existing conversation found, staying in draft state")
             state = .draft(id: draftConversationId)
         }
     }
 
     func remove(profile: MemberProfile) async throws {
+        Logger.info("Removing profile \(profile.inboxId) from draft conversation")
         guard state.canEditMembers else {
             throw DraftConversationWriterError.modifyingMembersOnExistingConversation
         }
@@ -225,15 +234,19 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             try conversation.request(for: DBConversation.memberProfiles).fetchCount(db)
         }
         let updatedConversation = conversation.with(kind: membersCount - 1 <= 1 ? .dm : .group)
+        Logger.info("Updated conversation kind to: \(updatedConversation.kind) (remaining members: \(membersCount - 1))")
 
         _ = try await databaseWriter.write { db in
             try conversationMember.delete(db)
             try updatedConversation.save(db)
+            Logger.info("Deleted conversation member and updated conversation in database")
         }
 
         if let existingConversation = try await findMatchingConversation() {
+            Logger.info("Found existing conversation, changing state to existing: \(existingConversation.id)")
             state = .existing(id: existingConversation.id)
         } else {
+            Logger.info("No existing conversation found, staying in draft state")
             state = .draft(id: draftConversationId)
         }
     }
