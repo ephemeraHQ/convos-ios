@@ -72,6 +72,11 @@ fileprivate extension Database {
     }
 
         func composeConversationWithRoles(for conversationId: String) throws -> (Conversation, [ProfileWithRole])? {
+        // Get current user for proper profile hydration
+        guard let currentUser = try currentUser() else {
+            throw CurrentSessionError.missingCurrentUser
+        }
+
         // First get the conversation normally
         guard let conversation = try composeConversation(for: conversationId) else {
             return nil
@@ -82,29 +87,40 @@ fileprivate extension Database {
             .filter(DBConversationMember.Columns.conversationId == conversationId)
             .fetchAll(self)
 
-        // Combine profiles with roles
+        // Combine profiles with roles, ensuring current user gets their proper profile
         let allMembers = conversation.withCurrentUserIncluded().members
         let membersWithRoles: [ProfileWithRole] = allMembers.map { profile in
-            // Find the corresponding DBConversationMember to get the role
-            guard let conversationMember = conversationMembers.first(where: { member in
-                member.memberId == profile.id
-            }) else {
-                // Fallback to member role if not found
-                return ProfileWithRole(profile: profile, role: .member)
+            // Use current user's actual profile if this is the current user
+            let actualProfile: Profile
+            if profile.id == currentUser.inboxId || profile.id == "current" {
+                actualProfile = currentUser.profile
+            } else {
+                actualProfile = profile
             }
+
+            // Find the corresponding DBConversationMember to get the role
+            let conversationMember = conversationMembers.first(where: { member in
+                member.memberId == actualProfile.id ||
+                (actualProfile.id == currentUser.inboxId && member.memberId == currentUser.inboxId)
+            })
 
             // Convert DBConversationMember.Role to MemberRole
             let memberRole: MemberRole
-            switch conversationMember.role {
-            case .member:
+            if let conversationMember = conversationMember {
+                switch conversationMember.role {
+                case .member:
+                    memberRole = .member
+                case .admin:
+                    memberRole = .admin
+                case .superAdmin:
+                    memberRole = .superAdmin
+                }
+            } else {
+                // Fallback to member role if not found
                 memberRole = .member
-            case .admin:
-                memberRole = .admin
-            case .superAdmin:
-                memberRole = .superAdmin
             }
 
-            return ProfileWithRole(profile: profile, role: memberRole)
+            return ProfileWithRole(profile: actualProfile, role: memberRole)
         }
 
         return (conversation, membersWithRoles)

@@ -389,43 +389,17 @@ struct MemberRowWithRole: View {
         self.currentUser = currentUser
     }
 
-    private var displayName: String {
-        // If this is the current user (id="current") and we have real current user data, use it
-        if memberWithRole.id == "current", let currentUser = currentUser {
-            return currentUser.displayName
-        }
-        // If this member matches the current user by ID, use their real name
-        if let currentUser = currentUser, memberWithRole.id == currentUser.id {
-            return currentUser.displayName
-        }
-        // Otherwise use the member's name
-        return memberWithRole.displayName
-    }
-
-    private var displayUsername: String {
-        // If this is the current user (id="current") and we have real current user data, use it
-        if memberWithRole.id == "current", let currentUser = currentUser {
-            return currentUser.username
-        }
-        // If this member matches the current user by ID, use their real username
-        if let currentUser = currentUser, memberWithRole.id == currentUser.id {
-            return currentUser.username
-        }
-        // Otherwise use the member's username
-        return memberWithRole.username
-    }
-
     var body: some View {
         HStack {
             ProfileAvatarView(profile: memberWithRole.profile)
                 .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(displayName)
+                Text(memberWithRole.displayName)
                     .font(.body)
                     .fontWeight(.medium)
 
-                Text("@\(displayUsername)")
+                Text("@\(memberWithRole.username)")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -467,8 +441,9 @@ struct MemberRowWithRole: View {
     }
 
     private var isCurrentUser: Bool {
-        // @lourou: Get actual current user ID from messaging service
-        memberWithRole.id == "current"
+        // Check if this member is the current user by comparing IDs
+        guard let currentUser = currentUser else { return false }
+        return memberWithRole.id == currentUser.id
     }
 
     private func removeMember() async {
