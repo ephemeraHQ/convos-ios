@@ -133,9 +133,19 @@ struct DMInfoView: View {
 
                 // Actions Section
                 VStack(spacing: 12) {
-                    DMActionButton(title: "Message", systemImage: "message.fill") {
+                    let action = {
                         // Handle message action
                     }
+                    Button(action: action) {
+                        HStack {
+                            Image(systemName: "message.fill")
+                                .foregroundColor(.primary)
+                            Text("Message")
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+                    }
+                    .convosButtonStyle(.action())
                 }
                 .padding(.horizontal)
 
@@ -256,90 +266,39 @@ struct GroupInfoView: View {
 
                 // Actions Section
                 VStack(spacing: 12) {
-                    GroupActionButton(
-                        title: "Leave Group",
-                        systemImage: "rectangle.portrait.and.arrow.right",
-                        isDestructive: true) {
+                    let action = {
                         showingAvailableSoonAlert = true
                     }
+                    Button(action: action) {
+                        HStack {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                                .foregroundColor(.red)
+                            Text("Leave Group")
+                                .foregroundColor(.red)
+                            Spacer()
+                        }
+                    }
+                    .convosButtonStyle(.action(isDestructive: true))
                 }
                 .padding(.horizontal)
 
                 Spacer()
             }
         }
-        .alert("Leave Group", isPresented: $showingAvailableSoonAlert) {
+        .alert("Leave Group", isPresented: $showingAvailableSoonAlert, actions: {
             Button("OK") { }
-        } message: {
+        }, message: {
             Text("Available soon")
-        }
-        .alert("Add Member", isPresented: $showingAddMemberAlert) {
+        })
+        .alert("Add Member", isPresented: $showingAddMemberAlert, actions: {
             Button("OK") { }
-        } message: {
+        }, message: {
             Text("Available soon")
-        }
+        })
     }
 }
 
 // MARK: - Supporting Views
-struct DMActionButton: View {
-    let title: String
-    let systemImage: String
-    let isDestructive: Bool
-    let action: () -> Void
-
-    init(title: String, systemImage: String, isDestructive: Bool = false, action: @escaping () -> Void) {
-        self.title = title
-        self.systemImage = systemImage
-        self.isDestructive = isDestructive
-        self.action = action
-    }
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: systemImage)
-                    .foregroundColor(isDestructive ? .red : .primary)
-                Text(title)
-                    .foregroundColor(isDestructive ? .red : .primary)
-                Spacer()
-            }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
-        }
-    }
-}
-
-struct GroupActionButton: View {
-    let title: String
-    let systemImage: String
-    let isDestructive: Bool
-    let action: () -> Void
-
-    init(title: String, systemImage: String, isDestructive: Bool = false, action: @escaping () -> Void) {
-        self.title = title
-        self.systemImage = systemImage
-        self.isDestructive = isDestructive
-        self.action = action
-    }
-
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: systemImage)
-                    .foregroundColor(isDestructive ? .red : .blue)
-                Text(title)
-                    .foregroundColor(isDestructive ? .red : .primary)
-                Spacer()
-            }
-            .padding()
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
-        }
-    }
-}
-
 struct SettingsRow: View {
     let title: String
     let systemImage: String
@@ -428,16 +387,16 @@ struct MemberRowWithRole: View {
             }
         }
         .padding()
-        .alert("Remove Member", isPresented: $showingDeleteAlert) {
+        .alert("Remove Member", isPresented: $showingDeleteAlert, actions: {
             Button("Cancel", role: .cancel) { }
             Button("Remove", role: .destructive) {
                 Task {
                     await removeMember()
                 }
             }
-        } message: {
+        }, message: {
             Text("Are you sure you want to remove \(memberWithRole.displayName) from this group?")
-        }
+        })
     }
 
     private var isCurrentUser: Bool {
@@ -573,11 +532,11 @@ struct AllMembersView: View {
         // .navigationDestination(isPresented: $showAddMember) {
         //     AddMemberView(conversation: conversation, messagingService: messagingService)
         // }
-        .alert("Add Member", isPresented: $showingAddMemberAlert) {
+        .alert("Add Member", isPresented: $showingAddMemberAlert, actions: {
             Button("OK") { }
-        } message: {
+        }, message: {
             Text("Available soon")
-        }
+        })
     }
 }
 
