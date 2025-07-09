@@ -61,22 +61,22 @@ import Foundation
 /// Secrets are generated from environment variables by ./Scripts/generate-secrets-secure.sh
 enum Secrets {
     // API Keys and Tokens
-    static let POSTHOG_API_KEY = "${POSTHOG_API_KEY}"
-    static let FIREBASE_APP_CHECK_TOKEN = "${FIREBASE_APP_CHECK_TOKEN}"
-    static let SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN = "${SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN}"
-    static let SLACK_URL_WITH_KEY = "${SLACK_URL_WITH_KEY}"
-    static let SENTRY_DSN = "${SENTRY_DSN}"
-    static let TURNKEY_PUBLIC_ORGANIZATION_ID = "${TURNKEY_PUBLIC_ORGANIZATION_ID}"
-    static let TURNKEY_API_PUBLIC_KEY = "${TURNKEY_API_PUBLIC_KEY}"
-    static let TURNKEY_API_PRIVATE_KEY = "${TURNKEY_API_PRIVATE_KEY}"
+    static let POSTHOG_API_KEY = #"${POSTHOG_API_KEY}"#
+    static let FIREBASE_APP_CHECK_TOKEN = #"${FIREBASE_APP_CHECK_TOKEN}"#
+    static let SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN = #"${SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN}"#
+    static let SLACK_URL_WITH_KEY = #"${SLACK_URL_WITH_KEY}"#
+    static let SENTRY_DSN = #"${SENTRY_DSN}"#
+    static let TURNKEY_PUBLIC_ORGANIZATION_ID = #"${TURNKEY_PUBLIC_ORGANIZATION_ID}"#
+    static let TURNKEY_API_PUBLIC_KEY = #"${TURNKEY_API_PUBLIC_KEY}"#
+    static let TURNKEY_API_PRIVATE_KEY = #"${TURNKEY_API_PRIVATE_KEY}"#
 
     // Configuration URLs and IDs
-    static let CONVOS_API_BASE_URL = "${CONVOS_API_BASE_URL}"
-    static let PASSKEY_API_BASE_URL = "${PASSKEY_API_BASE_URL}"
-    static let POSTHOG_HOST = "${POSTHOG_HOST}"
-    static let API_RP_ID = "${API_RP_ID}"
-    static let SENTRY_ORG = "${SENTRY_ORG}"
-    static let SENTRY_PROJECT = "${SENTRY_PROJECT}"
+    static let CONVOS_API_BASE_URL = #"${CONVOS_API_BASE_URL}"#
+    static let PASSKEY_API_BASE_URL = #"${PASSKEY_API_BASE_URL}"#
+    static let POSTHOG_HOST = #"${POSTHOG_HOST}"#
+    static let API_RP_ID = #"${API_RP_ID}"#
+    static let SENTRY_ORG = #"${SENTRY_ORG}"#
+    static let SENTRY_PROJECT = #"${SENTRY_PROJECT}"#
 }
 
 // swiftlint:enable all
