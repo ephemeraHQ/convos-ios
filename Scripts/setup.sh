@@ -134,6 +134,17 @@ fi
 
 # Install dependencies from Gemfile
 echo "Installing dependencies from Gemfile..."
+
+# In CI, allow flexible Ruby version by regenerating Gemfile.lock if needed
+if [ "${CI}" = true ]; then
+    echo "CI environment detected - ensuring compatible Gemfile.lock"
+    # Remove lockfile if Ruby version mismatch in CI
+    if bundle check 2>/dev/null | grep -q "Your Ruby version is"; then
+        echo "Ruby version mismatch in CI - regenerating Gemfile.lock"
+        rm -f Gemfile.lock
+    fi
+fi
+
 if ! bundle install; then
     echo "❌ Failed to install dependencies. Please check the Gemfile and try again."
     exit 1
