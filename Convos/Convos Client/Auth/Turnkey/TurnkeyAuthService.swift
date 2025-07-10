@@ -234,70 +234,108 @@ final class TurnkeyAuthService: AuthServiceProtocol {
         }
 
         guard let user else {
-            let migration = ReactNativeMigration(environment: environment)
-            return migration.needsMigration ? .migrating(migration) : .unauthorized
+            return handleMigrationForUnauthenticatedUser()
         }
 
+        guard let wallet = validateWallet(for: user) else {
+            return .unauthorized
+        }
+
+        if let migrationState = handleMigrationIfNeeded(for: wallet) {
+            return migrationState
+        }
+
+        do {
+            return try processAuthFlow(for: wallet)
+        } catch {
+            Logger.error("Error processing auth state: \(error)")
+            return .unauthorized
+        }
+    }
+
+    private func handleMigrationForUnauthenticatedUser() -> AuthServiceState {
+        let migration = ReactNativeMigration(environment: environment)
+        return migration.needsMigration ? .migrating(migration) : .unauthorized
+    }
+
+    private func validateWallet(for user: SessionUser) -> SessionUser.UserWallet? {
         guard let wallet = user.defaultWallet else {
             Logger.error("Default Wallet not found for Turnkey user, unauthorized")
-            return .unauthorized
+            return nil
         }
 
         if user.wallets.count > 1 {
             Logger.warning("Multiple wallets found for Turnkey user, using default")
         }
 
-        // if we're coming from the RN app, only one account exists
-        if wallet.accounts.count == 1, let account = wallet.accounts.first {
-            let userIdentifier = account.identity.identifier
-            if case let .migrating(migration) = state {
-                do {
-                    try migration.performMigration(for: userIdentifier)
-                } catch {
-                    Logger.error("Failed performing migration for user \(userIdentifier): \(error)")
-                    return .migrating(migration)
-                }
+        return wallet
+    }
+
+    private func handleMigrationIfNeeded(for wallet: SessionUser.UserWallet) -> AuthServiceState? {
+        guard wallet.accounts.count == 1, let account = wallet.accounts.first else {
+            return nil
+        }
+
+        let userIdentifier = account.identity.identifier
+        if case let .migrating(migration) = state {
+            do {
+                try migration.performMigration(for: userIdentifier)
+            } catch {
+                Logger.error("Failed performing migration for user \(userIdentifier): \(error)")
+                return .migrating(migration)
             }
         }
 
-        do {
-            switch authFlowType {
-            case .passive, .login:
-                let inboxes = try wallet.accounts.map { account in
-                    AuthServiceInbox(
-                        type: .standard,
-                        provider: .external(.turnkey),
-                        providerId: account.id,
-                        signingKey: account,
-                        databaseKey: try account.databaseKey
-                    )
-                }
-                let result = AuthServiceResult(inboxes: inboxes)
-                return .authorized(result)
-            case .register(let displayName):
-                guard let account = wallet.accounts.first else {
-                    throw TurnkeyAuthServiceError.walletAccountMissing
-                }
-                if wallet.accounts.count > 1 {
-                    Logger.warning("Multiple accounts found for Turnkey user, using the first one")
-                }
-                let databaseKey = try account.databaseKey
-                let result = AuthServiceRegisteredResult(
-                    displayName: displayName,
-                    inbox: AuthServiceInbox(
-                        type: .standard,
-                        provider: .external(.turnkey),
-                        providerId: account.id,
-                        signingKey: account,
-                        databaseKey: databaseKey
-                    )
-                )
-                return .registered(result)
-            }
-        } catch {
-            Logger.error("Error retrieving database key: \(error)")
-            return .unauthorized
+        return nil
+    }
+
+    private func processAuthFlow(for wallet: SessionUser.UserWallet) throws -> AuthServiceState {
+        switch authFlowType {
+        case .passive, .login:
+            return try handlePassiveOrLoginFlow(for: wallet)
+        case .register(let displayName):
+            return try handleRegisterFlow(for: wallet, displayName: displayName)
         }
+    }
+
+    private func handlePassiveOrLoginFlow(for wallet: SessionUser.UserWallet) throws -> AuthServiceState {
+        let inboxes = try wallet.accounts.map { account in
+            AuthServiceInbox(
+                type: .standard,
+                provider: .external(.turnkey),
+                providerId: account.id,
+                signingKey: account,
+                databaseKey: try account.databaseKey
+            )
+        }
+        let result = AuthServiceResult(inboxes: inboxes)
+        return .authorized(result)
+    }
+
+    private func handleRegisterFlow(
+        for wallet: SessionUser.UserWallet,
+        displayName: String
+    ) throws -> AuthServiceState {
+        guard let account = wallet.accounts.first else {
+            throw TurnkeyAuthServiceError.walletAccountMissing
+        }
+
+        if wallet.accounts.count > 1 {
+            Logger.warning("Multiple wallet accounts found for Turnkey user, using the first one")
+        }
+
+        let databaseKey = try account.databaseKey
+        let result = AuthServiceRegisteredResult(
+            displayName: displayName,
+            inbox: AuthServiceInbox(
+                type: .standard,
+                provider: .external(.turnkey),
+                providerId: account.id,
+                signingKey: account,
+                databaseKey: databaseKey
+            )
+        )
+        return .registered(result)
     }
 
     private func stampLoginAndCreateSession(
