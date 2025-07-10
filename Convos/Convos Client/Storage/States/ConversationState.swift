@@ -40,7 +40,7 @@ final class ConversationState {
     }
 
     private func observe() {
-        // Observe conversation changes
+                // Observe conversation changes
         conversationRepository.conversationPublisher
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }

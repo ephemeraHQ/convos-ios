@@ -44,10 +44,16 @@ struct GroupEditView: View {
     @State private var groupDescription: String
     @State private var uniqueLink: String
     @State private var imageState: GroupImageState = .empty
+    @State private var currentConversationImage: UIImage?
+    @State private var isUploading: Bool = false
 
     @State private var imageSelection: PhotosPickerItem?
     @State private var showingAlert: Bool = false
     @State private var alertMessage: String = ""
+
+    // Track original state for reverting changes
+    @State private var originalCachedImage: UIImage?
+    @State private var changesSaved: Bool = false
 
     @FocusState private var isDescriptionFocused: Bool
 
@@ -143,6 +149,20 @@ struct GroupEditView: View {
             }
         }
         .navigationBarHidden(true)
+        .onAppear {
+            loadCurrentConversationImage()
+            // Store original cached image for potential revert
+            originalCachedImage = ImageCache.shared.imageForConversation(conversation.id)
+        }
+        .onDisappear {
+            // If user didn't save changes, revert the cached image
+            if !changesSaved {
+                revertImageChanges()
+            }
+        }
+        .onChange(of: ImageCache.shared.lastUpdateTime) { _, _ in
+            loadCurrentConversationImage()
+        }
         .alert("Group Update", isPresented: $showingAlert) {
             Button("OK") { }
         } message: {
@@ -155,9 +175,9 @@ struct GroupEditView: View {
                     let imageState = await imageSelection.loadImage()
                     withAnimation {
                         self.imageState = imageState
-                        // Image loaded successfully - actual upload will happen when user saves
-                        if case .success = imageState {
-                            Logger.info("Group image loaded successfully and ready for upload")
+                        // Image loaded successfully - cache it immediately for instant preview
+                        if case .success(let image) = imageState {
+                            ImageCache.shared.setImageForConversation(image, conversationId: conversation.id)
                         }
                     }
                 }
@@ -186,16 +206,34 @@ struct GroupEditView: View {
                         }
                         .frame(width: 120, height: 120)
                     case .empty:
-                        // Use AvatarView directly - it handles caching and eliminates flicker
-                        AvatarView(imageURL: conversation.imageURL,
-                                  fallbackName: conversation.name ?? "Group")
-                            .frame(width: 120, height: 120)
+                        // Show conversation-cached image if available, otherwise use AvatarView
+                        if let currentConversationImage {
+                            Image(uiImage: currentConversationImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 120, height: 120)
+                                .clipShape(Circle())
+                        } else {
+                            AvatarView(imageURL: conversation.imageURL,
+                                       fallbackName: conversation.name ?? "Group",
+                                       conversationId: conversation.id)
+                                .frame(width: 120, height: 120)
+                        }
                     case let .success(image):
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 120, height: 120)
-                            .clipShape(Circle())
+                        ZStack {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 120, height: 120)
+                                .clipShape(Circle())
+                                .opacity(isUploading ? 0.4 : 1.0)
+
+                            if isUploading {
+                                ProgressView()
+                                    .scaleEffect(1.2)
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            }
+                        }
                     }
 
                     VStack {
@@ -325,6 +363,9 @@ struct GroupEditView: View {
         }
 
         if hasChanges {
+            // Mark that changes are being saved
+            changesSaved = true
+
             // Dismiss immediately (optimistic)
             await MainActor.run {
                 dismiss()
@@ -342,16 +383,24 @@ struct GroupEditView: View {
 
                 // Handle image upload and update chained together
                 if case .success = imageState {
+                    isUploading = true
                     try await uploadImageAndUpdateProfile()
+                    isUploading = false
                 }
             } catch {
                 Logger.error("Failed to update group: \(error)")
                 await MainActor.run {
+                    isUploading = false
                     alertMessage = "Group update failed: \(error.localizedDescription)"
                     showingAlert = true
+                    // Reset saved flag since save failed
+                    changesSaved = false
                 }
             }
         } else {
+            // No changes, mark as saved (no need to revert)
+            changesSaved = true
+
             // No changes, just dismiss
             await MainActor.run {
                 dismiss()
@@ -362,53 +411,53 @@ struct GroupEditView: View {
     private func updateGroupName() async throws {
         let metadataWriter = messagingService.groupMetadataWriter()
         try await metadataWriter.updateGroupName(groupId: conversation.id, name: groupName)
-
-        Logger.info("Successfully updated group name to: \(groupName)")
     }
 
     private func updateGroupDescription() async throws {
         let metadataWriter = messagingService.groupMetadataWriter()
         try await metadataWriter.updateGroupDescription(groupId: conversation.id, description: groupDescription)
-
-        Logger.info("Successfully updated group description to: \(groupDescription)")
     }
 
     private func updateGroupImage(imageURL: String) async throws {
         let metadataWriter = messagingService.groupMetadataWriter()
         try await metadataWriter.updateGroupImageUrl(groupId: conversation.id, imageUrl: imageURL)
-
-        Logger.info("Successfully updated group image to: \(imageURL)")
     }
 
-
+    private func loadCurrentConversationImage() {
+        // Check conversation-based cache for latest image
+        if let cachedImage = ImageCache.shared.imageForConversation(conversation.id) {
+            currentConversationImage = cachedImage
+        } else {
+            currentConversationImage = nil
+        }
+    }
 
     private func prepareImageForUpload() async throws -> Data {
         guard case .success(let image) = imageState else {
             throw GroupImageError.importFailed
         }
 
-        Logger.info("Preparing group image for upload...")
+        // Resize image to match cache size (500x500) for consistent sizing across S3 and local cache
+        let resizedImage = ImageCompression.resizeForCache(image)
 
-        let estimatedBytes = Int(image.size.width * image.size.height * 4)
-        Logger.info("Original image size: \(image.size), estimated bytes: \(estimatedBytes)")
-
-        // Compress and resize image to max 1024x1024 while maintaining aspect ratio
-        guard let compressedImageData = ImageCompression.compressImage(image, maxDimension: 1024, quality: 0.8) else {
-            Logger.error("Failed to compress image")
+        // Convert to JPEG data with good quality
+        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
             throw GroupImageError.importFailed
         }
 
-        Logger.info("Compressed image data size: \(ImageCompression.formatFileSize(compressedImageData.count))")
         return compressedImageData
     }
 
-        private func uploadImageAndUpdateProfile() async throws {
-        Logger.info("Starting chained image upload and profile update...")
-
+    private func uploadImageAndUpdateProfile() async throws {
         let compressedImageData = try await prepareImageForUpload()
 
         // Generate unique filename to avoid collisions
         let filename = "group-image-\(UUID().uuidString).jpg"
+
+        // Get the uploaded image for immediate caching
+        guard case .success(let uploadedImage) = imageState else {
+            throw GroupImageError.importFailed
+        }
 
         // Use the chained upload method that ensures profile update happens after upload
         let imageURL = try await messagingService.uploadImageAndExecute(
@@ -416,11 +465,25 @@ struct GroupEditView: View {
             filename: filename
         ) { uploadedURL in
             // This closure runs after the upload is complete
-            Logger.info("Upload completed successfully, updating group image with URL: \(uploadedURL)")
             try await self.updateGroupImage(imageURL: uploadedURL)
-        }
 
-        Logger.info("Successfully completed chained upload and profile update: \(imageURL)")
+            // Optimistic UI: Cache image by conversation ID for instant updates across all views
+            ImageCache.shared.setImageForConversation(uploadedImage, conversationId: self.conversation.id)
+        }
+    }
+
+    private func revertImageChanges() {
+        // Only revert if there was a new image selected
+        if case .success = imageState {
+            if let originalImage = originalCachedImage {
+                // Restore original cached image
+                ImageCache.shared.setImageForConversation(originalImage, conversationId: conversation.id)
+            } else {
+                // No original image, clear the cache
+                // Note: NSCache doesn't have a direct remove method, but we can set lastUpdateTime to trigger refresh
+                ImageCache.shared.lastUpdateTime = Date()
+            }
+        }
     }
 }
 
@@ -451,5 +514,8 @@ struct GroupEditView: View {
         isDraft: false
     )
 
-    GroupEditView(conversation: groupConversation, messagingService: MockMessagingService())
+    GroupEditView(
+        conversation: groupConversation,
+        messagingService: MockMessagingService()
+    )
 }

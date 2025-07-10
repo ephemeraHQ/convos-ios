@@ -76,7 +76,10 @@ struct ConversationInfoView: View {
         }
         .navigationDestination(isPresented: $showGroupEdit) {
             if let conversation = conversation {
-                GroupEditView(conversation: conversation, messagingService: messagingService)
+                GroupEditView(
+                    conversation: conversation,
+                    messagingService: messagingService
+                )
             }
         }
     }
