@@ -131,27 +131,44 @@ final class ImageCache {
     func setImage(_ image: UIImage, for url: String) {
         // Resize image for optimal cache storage
         let resizedImage = ImageCompression.resizeForCache(image)
+
+        // Validate that resize was successful
+        guard resizedImage.size.width > 0 && resizedImage.size.height > 0 else {
+            Logger.error("Failed to resize image for URL cache: \(url) - invalid dimensions")
+            return
+        }
+
         let cost = Int(resizedImage.size.width * resizedImage.size.height * 4) // Estimate memory cost
         urlCache.setObject(resizedImage, forKey: url as NSString, cost: cost)
 
         lastUpdateTime = Date()
+        Logger.info("Successfully cached resized image for URL: \(url)")
     }
 
-    /// Get the latest image for a conversation, regardless of URL
+    // Get the latest image for a conversation, regardless of URL
     func imageForConversation(_ conversationId: String) -> UIImage? {
         return conversationCache.object(forKey: conversationId as NSString)
     }
 
-    /// Set the image for a conversation - this triggers instant updates in all views showing this conversation
+    /// Set the image for a conversation
+    /// This triggers instant updates in all views showing this conversation
     func setImageForConversation(_ image: UIImage, conversationId: String) {
         // Resize image for optimal cache storage
         let resizedImage = ImageCompression.resizeForCache(image)
+
+        // Validate that resize was successful
+        guard resizedImage.size.width > 0 && resizedImage.size.height > 0 else {
+            Logger.error("Failed to resize image for conversation cache: \(conversationId) - invalid dimensions")
+            return
+        }
+
         let cost = Int(resizedImage.size.width * resizedImage.size.height * 4) // Estimate memory cost
         conversationCache.setObject(resizedImage, forKey: conversationId as NSString, cost: cost)
 
         // Notify all views that this conversation's image was updated
         cacheUpdateSubject.send(conversationId)
         lastUpdateTime = Date()
+        Logger.info("Successfully cached resized image for conversation: \(conversationId)")
     }
 
     /// Remove the cached image for a conversation
