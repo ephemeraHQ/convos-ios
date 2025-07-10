@@ -73,32 +73,19 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
             .eraseToAnyPublisher()
     }()
 
-    lazy var conversationWithRolesPublisher: AnyPublisher<(Conversation, [ProfileWithRole])?, Never> = {
-        writer.conversationIdPublisher
-            .removeDuplicates()
-            .map { [weak self] conversationId -> AnyPublisher<(Conversation, [ProfileWithRole])?, Never> in
-                guard let self else {
-                    return Just(nil as (Conversation, [ProfileWithRole])?).eraseToAnyPublisher()
-                }
+    // MARK: - Role-related methods (simplified for draft conversations)
 
-                return ValueObservation
-                    .tracking { [weak self] db in
-                        guard let self else { return nil }
-                        return try db.composeConversation(for: conversationId)
-                    }
-                    .publisher(in: dbReader)
-                    .replaceError(with: nil)
-                    .map { (conversation: Conversation?) -> (Conversation, [ProfileWithRole])? in
-                        guard let conversation = conversation else { return nil }
-                        // For draft conversations, all members have .member role
-                        let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
-                            ProfileWithRole(profile: profile, role: .member)
-                        }
-                        return (conversation, membersWithRoles)
-                    }
-                    .eraseToAnyPublisher()
+    lazy var conversationWithRolesPublisher: AnyPublisher<(Conversation, [ProfileWithRole])?, Never> = {
+        // For draft conversations, just map the regular conversation publisher
+        // and assign .member role to everyone since roles aren't established yet
+        conversationPublisher
+            .map { conversation -> (Conversation, [ProfileWithRole])? in
+                guard let conversation = conversation else { return nil }
+                let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
+                    ProfileWithRole(profile: profile, role: .member)
+                }
+                return (conversation, membersWithRoles)
             }
-            .switchToLatest()
             .eraseToAnyPublisher()
     }()
 
@@ -112,7 +99,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
     func fetchConversationWithRoles() throws -> (Conversation, [ProfileWithRole])? {
         guard let conversation = try fetchConversation() else { return nil }
 
-        // For draft conversations, all members have .member role since no roles are established yet
+        // For draft conversations, all members are just .member since roles aren't established yet
         let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
             ProfileWithRole(profile: profile, role: .member)
         }
