@@ -56,11 +56,14 @@ struct GroupEditView: View {
         VStack(spacing: 0) {
             CustomToolbarView(onBack: { dismiss() }, rightContent: {
                 let action = {
+                    // Mark changes as saved to prevent revert on dismiss
+                    editState.markChangesSaved()
+
                     // Dismiss immediately for instant UI (optimistic)
                     dismiss()
 
                     // Save in background
-                    _ = Task {
+                    Task {
                         await editState.saveGroupChanges()
                     }
                 }

@@ -26,7 +26,6 @@ class GroupEditState {
     var imageSelection: PhotosPickerItem? {
         didSet {
             if let imageSelection {
-                self.imageState = .loading
                 Task {
                     await loadSelectedImage(imageSelection)
                 }
@@ -99,6 +98,10 @@ class GroupEditState {
 
     var shouldShowDescriptionCharacterCount: Bool {
         groupDescription.count > descriptionCharacterLimit - 50
+    }
+
+    func markChangesSaved() {
+        changesSaved = true
     }
 
     func saveGroupChanges() async -> Bool {
