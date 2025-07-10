@@ -151,6 +151,16 @@ final class ImageCache {
 
         // Notify all views that this conversation's image was updated
         cacheUpdateSubject.send(conversationId)
+        lastUpdateTime = Date()
+    }
+
+    /// Remove the cached image for a conversation
+    /// This triggers instant updates in all views showing this conversation
+    func removeImageForConversation(_ conversationId: String) {
+        conversationCache.removeObject(forKey: conversationId as NSString)
+        // Notify all views that this conversation's image was removed
+        cacheUpdateSubject.send(conversationId)
+        lastUpdateTime = Date()
     }
 }
 
