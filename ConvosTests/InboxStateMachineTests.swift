@@ -72,7 +72,7 @@ struct InboxStateMachineTests {
             #expect(foundInbox != nil)
             Logger.info("🔍 Test completed successfully")
         } else {
-            fatalError("Expected ready state but got \(String(describing: fifth))")
+            #expect(false, "Expected ready state but got \(String(describing: fifth))")
         }
     }
 
