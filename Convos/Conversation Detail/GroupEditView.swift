@@ -45,7 +45,6 @@ struct GroupEditView: View {
     @State private var uniqueLink: String
     @State private var imageState: GroupImageState = .empty
     @State private var currentConversationImage: UIImage?
-    @State private var isUploading: Bool = false
 
     @State private var imageSelection: PhotosPickerItem?
     @State private var showingAlert: Bool = false
@@ -220,20 +219,12 @@ struct GroupEditView: View {
                                 .frame(width: 120, height: 120)
                         }
                     case let .success(image):
-                        ZStack {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 120, height: 120)
-                                .clipShape(Circle())
-                                .opacity(isUploading ? 0.4 : 1.0)
-
-                            if isUploading {
-                                ProgressView()
-                                    .scaleEffect(1.2)
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            }
-                        }
+                        // Optimistic UI: Show image immediately without loading state
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 120, height: 120)
+                            .clipShape(Circle())
                     }
 
                     VStack {
@@ -383,14 +374,11 @@ struct GroupEditView: View {
 
                 // Handle image upload and update chained together
                 if case .success = imageState {
-                    isUploading = true
                     try await uploadImageAndUpdateProfile()
-                    isUploading = false
                 }
             } catch {
                 Logger.error("Failed to update group: \(error)")
                 await MainActor.run {
-                    isUploading = false
                     alertMessage = "Group update failed: \(error.localizedDescription)"
                     showingAlert = true
                     // Reset saved flag since save failed
