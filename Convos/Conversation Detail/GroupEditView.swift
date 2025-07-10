@@ -1,53 +1,34 @@
 import PhotosUI
 import SwiftUI
 
-struct GroupImage: Transferable {
-    enum State {
-        case loading, empty, success(Image), failure(Error)
-        var isEmpty: Bool {
-            if case .empty = self {
-                return true
-            }
-            return false
+enum GroupImageState {
+    case loading, empty, success(UIImage), failure(Error)
+
+    var isEmpty: Bool {
+        if case .empty = self {
+            return true
         }
+        return false
     }
+}
 
-    enum GroupImageError: Error {
-        case importFailed
-    }
-
-    let image: Image
-
-    static var transferRepresentation: some TransferRepresentation {
-        DataRepresentation(importedContentType: .image) { data in
-            #if canImport(AppKit)
-                guard let nsImage = NSImage(data: data) else {
-                    throw GroupImageError.importFailed
-                }
-                let image = Image(nsImage: nsImage)
-                return GroupImage(image: image)
-            #elseif canImport(UIKit)
-                guard let uiImage = UIImage(data: data) else {
-                    throw GroupImageError.importFailed
-                }
-                let image = Image(uiImage: uiImage)
-                return GroupImage(image: image)
-            #else
-                throw GroupImageError.importFailed
-            #endif
-        }
-    }
+enum GroupImageError: Error {
+    case importFailed
 }
 
 extension PhotosPickerItem {
     @MainActor
-    func loadGroupImage() async -> GroupImage.State {
+    func loadImage() async -> GroupImageState {
         do {
-            if let groupImage = try await loadTransferable(type: GroupImage.self) {
-                return .success(groupImage.image)
-            } else {
+            guard let data = try await loadTransferable(type: Data.self) else {
                 return .empty
             }
+
+            guard let image = UIImage(data: data) else {
+                return .failure(GroupImageError.importFailed)
+            }
+
+            return .success(image)
         } catch {
             return .failure(error)
         }
@@ -62,7 +43,7 @@ struct GroupEditView: View {
     @State private var groupName: String
     @State private var groupDescription: String
     @State private var uniqueLink: String
-    @State private var imageState: GroupImage.State = .empty
+    @State private var imageState: GroupImageState = .empty
     @State private var imageSelection: PhotosPickerItem?
     @State private var showingAlert: Bool = false
     @State private var alertMessage: String = ""
@@ -170,7 +151,7 @@ struct GroupEditView: View {
             if let imageSelection {
                 self.imageState = .loading
                 Task {
-                    let imageState = await imageSelection.loadGroupImage()
+                    let imageState = await imageSelection.loadImage()
                     withAnimation {
                         self.imageState = imageState
                         // Image loaded successfully - actual upload will happen when user saves
@@ -207,7 +188,7 @@ struct GroupEditView: View {
                         MonogramView(name: conversation.name ?? "Group")
                             .frame(width: 120, height: 120)
                     case let .success(image):
-                        image
+                        Image(uiImage: image)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(width: 120, height: 120)
@@ -399,65 +380,38 @@ struct GroupEditView: View {
         Logger.info("Successfully updated group image to: \(imageURL)")
     }
 
-    private func uploadImage() async throws -> String {
+    private func prepareImageForUpload() async throws -> Data {
         guard case .success(let image) = imageState else {
-            throw GroupImage.GroupImageError.importFailed
+            throw GroupImageError.importFailed
         }
 
-        Logger.info("Uploading group image...")
+        Logger.info("Preparing group image for upload...")
 
-        // Convert SwiftUI Image to UIImage
-        guard let uiImage = image.asUIImage() else {
-            Logger.error("Failed to convert SwiftUI Image to UIImage")
-            throw GroupImage.GroupImageError.importFailed
-        }
-
-        let estimatedBytes = Int(uiImage.size.width * uiImage.size.height * 4)
-        Logger.info("Original image size: \(uiImage.size), estimated bytes: \(estimatedBytes)")
+        let estimatedBytes = Int(image.size.width * image.size.height * 4)
+        Logger.info("Original image size: \(image.size), estimated bytes: \(estimatedBytes)")
 
         // Compress and resize image to max 1024x1024 while maintaining aspect ratio
-        guard let compressedImageData = ImageCompression.compressImage(uiImage, maxDimension: 1024, quality: 0.8) else {
+        guard let compressedImageData = ImageCompression.compressImage(image, maxDimension: 1024, quality: 0.8) else {
             Logger.error("Failed to compress image")
-            throw GroupImage.GroupImageError.importFailed
+            throw GroupImageError.importFailed
         }
 
         Logger.info("Compressed image data size: \(ImageCompression.formatFileSize(compressedImageData.count))")
-
-        // Use the messaging service's authenticated upload method
-        let imageURL = try await messagingService.uploadImage(data: compressedImageData, filename: "group-image.jpg")
-
-        Logger.info("Successfully uploaded image to: \(imageURL)")
-        return imageURL
+        return compressedImageData
     }
 
     private func uploadImageAndUpdateProfile() async throws {
-        guard case .success(let image) = imageState else {
-            throw GroupImage.GroupImageError.importFailed
-        }
-
         Logger.info("Starting chained image upload and profile update...")
 
-        // Convert SwiftUI Image to UIImage
-        guard let uiImage = image.asUIImage() else {
-            Logger.error("Failed to convert SwiftUI Image to UIImage")
-            throw GroupImage.GroupImageError.importFailed
-        }
+        let compressedImageData = try await prepareImageForUpload()
 
-        let estimatedBytes = Int(uiImage.size.width * uiImage.size.height * 4)
-        Logger.info("Original image size: \(uiImage.size), estimated bytes: \(estimatedBytes)")
-
-        // Compress and resize image to max 1024x1024 while maintaining aspect ratio
-        guard let compressedImageData = ImageCompression.compressImage(uiImage, maxDimension: 1024, quality: 0.8) else {
-            Logger.error("Failed to compress image")
-            throw GroupImage.GroupImageError.importFailed
-        }
-
-        Logger.info("Compressed image data size: \(ImageCompression.formatFileSize(compressedImageData.count))")
+        // Generate unique filename to avoid collisions
+        let filename = "group-image-\(UUID().uuidString).jpg"
 
         // Use the chained upload method that ensures profile update happens after upload
         let imageURL = try await messagingService.uploadImageAndExecute(
             data: compressedImageData,
-            filename: "group-image.jpg"
+            filename: filename
         ) { uploadedURL in
             // This closure runs AFTER the upload is complete
             Logger.info("Upload completed successfully, updating group image with URL: \(uploadedURL)")
@@ -465,31 +419,6 @@ struct GroupEditView: View {
         }
 
         Logger.info("Successfully completed chained upload and profile update: \(imageURL)")
-    }
-}
-
-// MARK: - Helper Extensions
-
-extension Image {
-    func asUIImage() -> UIImage? {
-        // Use a flexible container that maintains aspect ratio
-        let imageView = self
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-            .frame(maxWidth: 1024, maxHeight: 1024)
-
-        let controller = UIHostingController(rootView: imageView)
-        let view = controller.view
-
-        // Let SwiftUI determine the natural size to preserve aspect ratio
-        let targetSize = controller.sizeThatFits(in: CGSize(width: 1024, height: 1024))
-        view?.bounds = CGRect(origin: .zero, size: targetSize)
-        view?.backgroundColor = .clear
-
-        let renderer = UIGraphicsImageRenderer(size: targetSize)
-        return renderer.image { _ in
-            view?.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
-        }
     }
 }
 

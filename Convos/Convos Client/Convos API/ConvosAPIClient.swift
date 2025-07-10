@@ -262,7 +262,7 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
         let presignedRequest = try authenticatedRequest(
             for: "v1/attachments/presigned",
             method: "GET",
-            queryParameters: ["contentType": contentType]
+            queryParameters: ["contentType": contentType, "filename": filename]
         )
 
         Logger.info("Getting presigned URL from: \(presignedRequest.url?.absoluteString ?? "nil")")
@@ -274,7 +274,20 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
         let presignedResponse: PresignedResponse = try await performRequest(presignedRequest)
         Logger.info("Received presigned URL: \(presignedResponse.url)")
 
-        // Step 2: Upload directly to S3 using presigned URL
+        // Step 2: Extract public URL BEFORE uploading (we already know what it will be!)
+        guard let urlComponents = URLComponents(string: presignedResponse.url) else {
+            Logger.error("Failed to parse presigned URL components")
+            throw APIError.invalidURL
+        }
+
+        guard let scheme = urlComponents.scheme, let host = urlComponents.host else {
+            Logger.error("Failed to extract scheme or host from presigned URL")
+            throw APIError.invalidURL
+        }
+        let publicURL = "\(scheme)://\(host)\(urlComponents.path)"
+        Logger.info("Final public URL will be: \(publicURL)")
+
+        // Step 3: Upload directly to S3 using presigned URL
         guard let s3URL = URL(string: presignedResponse.url) else {
             Logger.error("Invalid presigned URL: \(presignedResponse.url)")
             throw APIError.invalidURL
@@ -306,19 +319,7 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
             throw APIError.serverError(nil)
         }
 
-        // Step 3: Extract public URL (remove query parameters from presigned URL)
-        guard let urlComponents = URLComponents(string: presignedResponse.url) else {
-            Logger.error("Failed to parse presigned URL components")
-            throw APIError.invalidURL
-        }
-
-        guard let scheme = urlComponents.scheme, let host = urlComponents.host else {
-            Logger.error("Failed to extract scheme or host from presigned URL")
-            throw APIError.invalidURL
-        }
-        let publicURL = "\(scheme)://\(host)\(urlComponents.path)"
         Logger.info("Successfully uploaded to S3, public URL: \(publicURL)")
-
         return publicURL
     }
 
