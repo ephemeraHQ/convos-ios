@@ -107,8 +107,6 @@ class GroupEditState {
             return true
         }
 
-        changesSaved = true
-
         do {
             if groupName != conversation.name {
                 try await updateGroupName()
@@ -122,13 +120,13 @@ class GroupEditState {
                 try await uploadImageAndUpdateProfile()
             }
 
+            changesSaved = true
             return true
         } catch {
             Logger.error("Failed to update group: \(error)")
             await MainActor.run {
                 alertMessage = "Group update failed: \(error.localizedDescription)"
                 showingAlert = true
-                changesSaved = false
             }
             return false
         }

@@ -128,21 +128,22 @@ final class ImageCache {
         return urlCache.object(forKey: url.absoluteString as NSString)
     }
 
-    func setImage(_ image: UIImage, for url: String) {
-        // Resize image for optimal cache storage
+    private func cacheImage(_ image: UIImage, key: String, cache: NSCache<NSString, UIImage>, logContext: String) {
         let resizedImage = ImageCompression.resizeForCache(image)
 
-        // Validate that resize was successful
         guard resizedImage.size.width > 0 && resizedImage.size.height > 0 else {
-            Logger.error("Failed to resize image for URL cache: \(url) - invalid dimensions")
+            Logger.error("Failed to resize image for \(logContext): \(key) - invalid dimensions")
             return
         }
 
-        let cost = Int(resizedImage.size.width * resizedImage.size.height * 4) // Estimate memory cost
-        urlCache.setObject(resizedImage, forKey: url as NSString, cost: cost)
+        let cost = Int(resizedImage.size.width * resizedImage.size.height * 4)
+        cache.setObject(resizedImage, forKey: key as NSString, cost: cost)
+        Logger.info("Successfully cached resized image for \(logContext): \(key)")
+    }
 
+    func setImage(_ image: UIImage, for url: String) {
+        cacheImage(image, key: url, cache: urlCache, logContext: "URL cache")
         lastUpdateTime = Date()
-        Logger.info("Successfully cached resized image for URL: \(url)")
     }
 
     // Get the latest image for a conversation, regardless of URL
@@ -153,22 +154,9 @@ final class ImageCache {
     /// Set the image for a conversation
     /// This triggers instant updates in all views showing this conversation
     func setImageForConversation(_ image: UIImage, conversationId: String) {
-        // Resize image for optimal cache storage
-        let resizedImage = ImageCompression.resizeForCache(image)
-
-        // Validate that resize was successful
-        guard resizedImage.size.width > 0 && resizedImage.size.height > 0 else {
-            Logger.error("Failed to resize image for conversation cache: \(conversationId) - invalid dimensions")
-            return
-        }
-
-        let cost = Int(resizedImage.size.width * resizedImage.size.height * 4) // Estimate memory cost
-        conversationCache.setObject(resizedImage, forKey: conversationId as NSString, cost: cost)
-
-        // Notify all views that this conversation's image was updated
+        cacheImage(image, key: conversationId, cache: conversationCache, logContext: "conversation cache")
         cacheUpdateSubject.send(conversationId)
         lastUpdateTime = Date()
-        Logger.info("Successfully cached resized image for conversation: \(conversationId)")
     }
 
     /// Remove the cached image for a conversation
