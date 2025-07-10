@@ -181,13 +181,7 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
                 .filter(DBConversationMember.Columns.conversationId == groupId)
                 .filter(DBConversationMember.Columns.memberId == memberInboxId)
                 .fetchOne(db) {
-                let updatedMember = DBConversationMember(
-                    conversationId: member.conversationId,
-                    memberId: member.memberId,
-                    role: .admin,
-                    consent: member.consent,
-                    createdAt: member.createdAt
-                )
+                let updatedMember = member.with(role: .admin)
                 try updatedMember.save(db)
                 Logger.info("Updated local member \(memberInboxId) role to admin in \(groupId)")
             }
@@ -212,13 +206,7 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
                 .filter(DBConversationMember.Columns.conversationId == groupId)
                 .filter(DBConversationMember.Columns.memberId == memberInboxId)
                 .fetchOne(db) {
-                let updatedMember = DBConversationMember(
-                    conversationId: member.conversationId,
-                    memberId: member.memberId,
-                    role: .member,
-                    consent: member.consent,
-                    createdAt: member.createdAt
-                )
+                let updatedMember = member.with(role: .member)
                 try updatedMember.save(db)
                 Logger.info("Updated local member \(memberInboxId) role to member in \(groupId)")
             }
@@ -243,13 +231,7 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
                 .filter(DBConversationMember.Columns.conversationId == groupId)
                 .filter(DBConversationMember.Columns.memberId == memberInboxId)
                 .fetchOne(db) {
-                let updatedMember = DBConversationMember(
-                    conversationId: member.conversationId,
-                    memberId: member.memberId,
-                    role: .superAdmin,
-                    consent: member.consent,
-                    createdAt: member.createdAt
-                )
+                let updatedMember = member.with(role: .superAdmin)
                 try updatedMember.save(db)
                 Logger.info("Updated local member \(memberInboxId) role to superAdmin in \(groupId)")
             }
@@ -274,13 +256,7 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
                 .filter(DBConversationMember.Columns.conversationId == groupId)
                 .filter(DBConversationMember.Columns.memberId == memberInboxId)
                 .fetchOne(db) {
-                let updatedMember = DBConversationMember(
-                    conversationId: member.conversationId,
-                    memberId: member.memberId,
-                    role: .admin,
-                    consent: member.consent,
-                    createdAt: member.createdAt
-                )
+                let updatedMember = member.with(role: .admin)
                 try updatedMember.save(db)
                 Logger.info("Updated local member \(memberInboxId) role to admin in \(groupId)")
             }

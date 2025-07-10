@@ -316,6 +316,18 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
     )
 }
 
+extension DBConversationMember {
+    func with(role: Role) -> Self {
+        .init(
+            conversationId: conversationId,
+            memberId: memberId,
+            role: role,
+            consent: consent,
+            createdAt: createdAt
+        )
+    }
+}
+
 struct Conversation: Codable, Hashable, Identifiable {
     let id: String
     let creator: Profile
