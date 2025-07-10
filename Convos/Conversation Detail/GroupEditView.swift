@@ -44,6 +44,7 @@ struct GroupEditView: View {
     @State private var groupDescription: String
     @State private var uniqueLink: String
     @State private var imageState: GroupImageState = .empty
+
     @State private var imageSelection: PhotosPickerItem?
     @State private var showingAlert: Bool = false
     @State private var alertMessage: String = ""
@@ -185,7 +186,9 @@ struct GroupEditView: View {
                         }
                         .frame(width: 120, height: 120)
                     case .empty:
-                        MonogramView(name: conversation.name ?? "Group")
+                        // Use AvatarView directly - it handles caching and eliminates flicker
+                        AvatarView(imageURL: conversation.imageURL,
+                                  fallbackName: conversation.name ?? "Group")
                             .frame(width: 120, height: 120)
                     case let .success(image):
                         Image(uiImage: image)
@@ -316,7 +319,7 @@ struct GroupEditView: View {
             hasChanges = true
         }
 
-        // Check if image changed (new image selected)
+        // Check if image changed (new image selected or current image cleared)
         if case .success = imageState {
             hasChanges = true
         }
@@ -357,7 +360,6 @@ struct GroupEditView: View {
     }
 
     private func updateGroupName() async throws {
-        // Use real XMTP metadata writer
         let metadataWriter = messagingService.groupMetadataWriter()
         try await metadataWriter.updateGroupName(groupId: conversation.id, name: groupName)
 
@@ -365,7 +367,6 @@ struct GroupEditView: View {
     }
 
     private func updateGroupDescription() async throws {
-        // Use real XMTP metadata writer
         let metadataWriter = messagingService.groupMetadataWriter()
         try await metadataWriter.updateGroupDescription(groupId: conversation.id, description: groupDescription)
 
@@ -373,12 +374,13 @@ struct GroupEditView: View {
     }
 
     private func updateGroupImage(imageURL: String) async throws {
-        // Use real XMTP metadata writer
         let metadataWriter = messagingService.groupMetadataWriter()
         try await metadataWriter.updateGroupImageUrl(groupId: conversation.id, imageUrl: imageURL)
 
         Logger.info("Successfully updated group image to: \(imageURL)")
     }
+
+
 
     private func prepareImageForUpload() async throws -> Data {
         guard case .success(let image) = imageState else {
@@ -400,7 +402,7 @@ struct GroupEditView: View {
         return compressedImageData
     }
 
-    private func uploadImageAndUpdateProfile() async throws {
+        private func uploadImageAndUpdateProfile() async throws {
         Logger.info("Starting chained image upload and profile update...")
 
         let compressedImageData = try await prepareImageForUpload()
@@ -413,7 +415,7 @@ struct GroupEditView: View {
             data: compressedImageData,
             filename: filename
         ) { uploadedURL in
-            // This closure runs AFTER the upload is complete
+            // This closure runs after the upload is complete
             Logger.info("Upload completed successfully, updating group image with URL: \(uploadedURL)")
             try await self.updateGroupImage(imageURL: uploadedURL)
         }

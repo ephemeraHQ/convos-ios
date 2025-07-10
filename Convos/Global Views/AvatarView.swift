@@ -3,6 +3,8 @@ import SwiftUI
 struct AvatarView: View {
     let imageURL: URL?
     let fallbackName: String
+    @State private var cachedImage: UIImage?
+    @State private var isLoading: Bool = false
 
     init(imageURL: URL?,
          fallbackName: String) {
@@ -11,16 +13,79 @@ struct AvatarView: View {
     }
 
     var body: some View {
-        AsyncImage(url: imageURL) { image in
-            image
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-        } placeholder: {
-            MonogramView(name: fallbackName)
+        Group {
+            if let cachedImage {
+                Image(uiImage: cachedImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                MonogramView(name: fallbackName)
+                    .opacity(isLoading ? 0.7 : 1.0)
+            }
         }
         .aspectRatio(1.0, contentMode: .fit)
         .clipShape(Circle())
+        .task(id: imageURL) {
+            await loadImage()
+        }
     }
+
+    @MainActor
+    private func loadImage() async {
+        guard let imageURL else {
+            cachedImage = nil
+            return
+        }
+
+        // Check if we already have this image
+        if let existingImage = ImageCache.shared.image(for: imageURL) {
+            cachedImage = existingImage
+            return
+        }
+
+        isLoading = true
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: imageURL)
+            if let image = UIImage(data: data) {
+                // Cache the image for future use
+                ImageCache.shared.setImage(image, for: imageURL)
+                cachedImage = image
+            }
+        } catch {
+            // Keep showing monogram on error
+            cachedImage = nil
+        }
+
+        isLoading = false
+    }
+}
+
+// MARK: - Simple Image Cache
+/// Smart image cache that eliminates avatar flickering by showing cached images instantly
+///
+/// No manual invalidation needed - new uploads get new URLs (with UUID), so AvatarView
+/// automatically loads fresh images when `.task(id: imageURL)` re-runs with the new URL
+
+final class ImageCache {
+    static let shared = ImageCache()
+    private let cache = NSCache<NSString, UIImage>()
+
+    private init() {
+        cache.countLimit = 100 // Limit to 100 images
+        cache.totalCostLimit = 50 * 1024 * 1024 // 50 MB limit
+    }
+
+    func image(for url: URL) -> UIImage? {
+        return cache.object(forKey: url.absoluteString as NSString)
+    }
+
+    func setImage(_ image: UIImage, for url: URL) {
+        let cost = Int(image.size.width * image.size.height * 4) // Estimate memory usage
+        cache.setObject(image, forKey: url.absoluteString as NSString, cost: cost)
+    }
+
+
 }
 
 struct ProfileAvatarView: View {
