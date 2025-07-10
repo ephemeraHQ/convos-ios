@@ -118,6 +118,8 @@ class MessagesContainerViewController: UIViewController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
 
+        KeyboardListener.shared.remove(delegate: self)
+        resignFirstResponderAfterTransitionCompletes()
         markConversationAsRead()
     }
 

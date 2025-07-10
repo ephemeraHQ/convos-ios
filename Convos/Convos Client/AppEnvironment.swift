@@ -17,8 +17,8 @@ enum AppEnvironment {
 
     var appGroupIdentifier: String {
         switch self {
-        case .local, .tests: "group.com.convos.dev"
-        case .dev: "group.com.convos.preview"
+        case .local, .tests, .dev:
+            "group.com.convos.preview"
         case .production: "group.com.convos.prod"
         }
     }

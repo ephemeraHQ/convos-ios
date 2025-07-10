@@ -65,9 +65,14 @@ struct ConversationComposerView: View {
 }
 
 #Preview {
+    @Previewable @State var presented: Bool = true
     let convos = ConvosClient.mock()
-    ConversationComposerView(
-        session: convos.session
-    )
-    .ignoresSafeArea()
+    VStack {
+    }
+    .sheet(isPresented: $presented) {
+        ConversationComposerView(
+            session: convos.session
+        )
+        .ignoresSafeArea()
+    }
 }

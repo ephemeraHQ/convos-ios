@@ -55,10 +55,8 @@ struct MessagesToolbarView: View {
                         .lineLimit(1)
                 }
             }
-            .background(.clear)
         }
         .frame(height: barHeight)
-        .background(.clear)
     }
 }
 

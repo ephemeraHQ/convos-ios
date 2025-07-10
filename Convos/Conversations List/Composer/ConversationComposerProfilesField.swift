@@ -78,8 +78,8 @@ struct ConversationComposerProfilesField: View {
                             }
                         }
                     }
-                    .scrollBounceBehavior(.always)
                 }
+                .scrollBounceBehavior(.always)
                 .scrollClipDisabled()
                 .clipShape(VerticalEdgeClipShape())
             }

@@ -41,6 +41,7 @@ struct ConversationsView: View {
             ConversationComposerView(
                 session: session
             )
+            .interactiveDismissDisabled()
             .navigationTransition(
                 .zoom(
                     sourceID: "composer-transition-source",
