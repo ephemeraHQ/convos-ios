@@ -95,7 +95,12 @@ class MockAPIClient: ConvosAPIClientProtocol {
         ]
     }
 
-    func uploadAttachment(data: Data, filename: String) async throws -> String {
+    func uploadAttachment(
+        data: Data,
+        filename: String,
+        contentType: String,
+        acl: String
+    ) async throws -> String {
         return "https://mock-api.example.com/uploads/\(filename)"
     }
 

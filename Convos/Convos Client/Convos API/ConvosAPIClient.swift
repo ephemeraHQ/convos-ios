@@ -47,7 +47,12 @@ protocol ConvosAPIClientProtocol {
     func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse
     func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse]
 
-    func uploadAttachment(data: Data, filename: String) async throws -> String
+    func uploadAttachment(
+        data: Data,
+        filename: String,
+        contentType: String,
+        acl: String
+    ) async throws -> String
     func uploadAttachmentAndExecute(
         data: Data,
         filename: String,
@@ -244,7 +249,12 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
         }
     }
 
-    func uploadAttachment(data: Data, filename: String) async throws -> String {
+    func uploadAttachment(
+        data: Data,
+        filename: String,
+        contentType: String = "image/jpeg",
+        acl: String = "public-read"
+    ) async throws -> String {
         Logger.info("Starting attachment upload process for file: \(filename)")
         Logger.info("File data size: \(data.count) bytes")
 
@@ -252,7 +262,7 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
         let presignedRequest = try authenticatedRequest(
             for: "v1/attachments/presigned",
             method: "GET",
-            queryParameters: ["contentType": "image/jpeg"]
+            queryParameters: ["contentType": contentType]
         )
 
         Logger.info("Getting presigned URL from: \(presignedRequest.url?.absoluteString ?? "nil")")
@@ -272,8 +282,8 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
 
         var s3Request = URLRequest(url: s3URL)
         s3Request.httpMethod = "PUT"
-        s3Request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
-        s3Request.setValue("public-read", forHTTPHeaderField: "x-amz-acl")
+        s3Request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        s3Request.setValue(acl, forHTTPHeaderField: "x-amz-acl")
         s3Request.httpBody = data
 
         Logger.info("Uploading to S3: \(s3URL.absoluteString)")
@@ -320,7 +330,12 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
         Logger.info("Starting chained upload and execute process for file: \(filename)")
 
         // Step 1: Upload the attachment and get the URL
-        let uploadedURL = try await uploadAttachment(data: data, filename: filename)
+        let uploadedURL = try await uploadAttachment(
+            data: data,
+            filename: filename,
+            contentType: "image/jpeg",
+            acl: "public-read"
+        )
         Logger.info("Upload completed successfully, URL: \(uploadedURL)")
 
         // Step 2: Execute the provided closure with the uploaded URL

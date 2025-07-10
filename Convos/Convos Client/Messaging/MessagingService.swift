@@ -133,7 +133,12 @@ final class MessagingService: MessagingServiceProtocol {
     }
 
     func uploadImage(data: Data, filename: String) async throws -> String {
-        return try await apiClient.uploadAttachment(data: data, filename: filename)
+        return try await apiClient.uploadAttachment(
+            data: data,
+            filename: filename,
+            contentType: "image/jpeg",
+            acl: "public-read"
+        )
     }
 
     func uploadImageAndExecute(
