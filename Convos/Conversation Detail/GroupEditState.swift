@@ -4,12 +4,21 @@ import SwiftUI
 @Observable
 class GroupEditState {
     private let conversation: Conversation
-    private let repository: GroupEditRepositoryProtocol
+    private let messagingService: any MessagingServiceProtocol
 
     // Form state
-    var groupName: String
-    var groupDescription: String
-    var uniqueLink: String
+    private var _groupName: String
+    var groupName: String {
+        get { _groupName }
+        set { _groupName = validateGroupName(newValue) }
+    }
+
+    private var _groupDescription: String
+    var groupDescription: String {
+        get { _groupDescription }
+        set { _groupDescription = validateGroupDescription(newValue) }
+    }
+
     var imageState: GroupImageState = .empty
     var currentConversationImage: UIImage?
 
@@ -24,6 +33,7 @@ class GroupEditState {
             }
         }
     }
+
     var showingAlert: Bool = false
     var alertMessage: String = ""
 
@@ -48,12 +58,11 @@ class GroupEditState {
                hasImageChange
     }
 
-    init(conversation: Conversation, repository: GroupEditRepositoryProtocol) {
+    init(conversation: Conversation, messagingService: any MessagingServiceProtocol) {
         self.conversation = conversation
-        self.repository = repository
-        self.groupName = conversation.name ?? ""
-        self.groupDescription = conversation.description ?? ""
-        self.uniqueLink = "convosation"
+        self.messagingService = messagingService
+        self._groupName = conversation.name ?? ""
+        self._groupDescription = conversation.description ?? ""
     }
 
     @MainActor
@@ -138,15 +147,18 @@ class GroupEditState {
     }
 
     private func updateGroupName() async throws {
-        try await repository.updateGroupName(groupId: conversation.id, name: groupName)
+        let metadataWriter = messagingService.groupMetadataWriter()
+        try await metadataWriter.updateGroupName(groupId: conversation.id, name: groupName)
     }
 
     private func updateGroupDescription() async throws {
-        try await repository.updateGroupDescription(groupId: conversation.id, description: groupDescription)
+        let metadataWriter = messagingService.groupMetadataWriter()
+        try await metadataWriter.updateGroupDescription(groupId: conversation.id, description: groupDescription)
     }
 
     private func updateGroupImage(imageURL: String) async throws {
-        try await repository.updateGroupImage(groupId: conversation.id, imageUrl: imageURL)
+        let metadataWriter = messagingService.groupMetadataWriter()
+        try await metadataWriter.updateGroupImageUrl(groupId: conversation.id, imageUrl: imageURL)
     }
 
     @MainActor
@@ -180,12 +192,12 @@ class GroupEditState {
             throw GroupImageError.importFailed
         }
 
-        try await repository.uploadImageAndUpdateGroup(
-            groupId: conversation.id,
+        _ = try await messagingService.uploadImageAndExecute(
             data: compressedImageData,
-            filename: filename,
-            image: uploadedImage
-        )
+            filename: filename) { uploadedURL in
+            try await self.updateGroupImage(imageURL: uploadedURL)
+            ImageCache.shared.setImageForConversation(uploadedImage, conversationId: self.conversation.id)
+        }
     }
 
     @MainActor

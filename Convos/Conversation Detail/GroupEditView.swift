@@ -46,10 +46,9 @@ struct GroupEditView: View {
     init(conversation: Conversation, messagingService: any MessagingServiceProtocol) {
         self.conversation = conversation
         self.messagingService = messagingService
-        let repository = GroupEditRepository(messagingService: messagingService)
         self._editState = State(initialValue: GroupEditState(
             conversation: conversation,
-            repository: repository
+            messagingService: messagingService
         ))
     }
 
@@ -202,9 +201,6 @@ struct GroupEditView: View {
                 .textFieldStyle(.plain)
                 .font(.body)
                 .autocorrectionDisabled()
-                .onChange(of: editState.groupName) { _, newValue in
-                    editState.groupName = editState.validateGroupName(newValue)
-                }
 
             if editState.shouldShowNameCharacterCount {
                 HStack {
@@ -234,9 +230,6 @@ struct GroupEditView: View {
                 .lineLimit(1...10)
                 .autocorrectionDisabled()
                 .focused($isDescriptionFocused)
-                .onChange(of: editState.groupDescription) { _, newValue in
-                    editState.groupDescription = editState.validateGroupDescription(newValue)
-                }
 
             if editState.shouldShowDescriptionCharacterCount {
                 HStack {
