@@ -6,16 +6,7 @@ extension UIViewController {
     }
 
     func resignFirstResponderAfterTransitionCompletes() {
-        if let coordinator = transitionCoordinator {
-            // Resign before transition begins
-            resignFirstResponder()
-            coordinator.animate(alongsideTransition: nil) { _ in
-                // No additional action needed after transition
-            }
-        } else {
-            // No transition in progress, resign immediately
-            resignFirstResponder()
-        }
+        setFirstResponderAfterTransitionCompletes(shouldBecome: false)
     }
 
     private func setFirstResponderAfterTransitionCompletes(shouldBecome: Bool) {
