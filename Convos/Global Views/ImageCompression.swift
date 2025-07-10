@@ -29,8 +29,11 @@ struct ImageCompression {
             height: size.height * scaleFactor
         )
 
-        // Create resized image with high quality
-        let renderer = UIGraphicsImageRenderer(size: newSize)
+        // Create resized image with scale 1.0 to get exact pixel dimensions (not logical points)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1.0 // Force 1x scale to get exact pixel dimensions
+
+        let renderer = UIGraphicsImageRenderer(size: newSize, format: format)
         return renderer.image { context in
             context.cgContext.interpolationQuality = .high
             context.cgContext.setShouldAntialias(true)
