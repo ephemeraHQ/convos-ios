@@ -23,10 +23,12 @@ class GroupEditState {
     var currentConversationImage: UIImage?
 
     // UI state
+    private var imageLoadingTask: Task<Void, Never>?
     var imageSelection: PhotosPickerItem? {
         didSet {
             if let imageSelection {
-                Task {
+                imageLoadingTask?.cancel()
+                imageLoadingTask = Task {
                     await loadSelectedImage(imageSelection)
                 }
             }
