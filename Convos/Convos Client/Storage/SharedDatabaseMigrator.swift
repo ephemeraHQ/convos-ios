@@ -65,7 +65,6 @@ class SharedDatabaseMigrator {
                     .unique(onConflict: .replace)
                 t.column("creatorId", .text)
                     .notNull()
-//                    .references("member", onDelete: .none)
                 t.column("kind", .text).notNull()
                 t.column("consent", .text).notNull()
                 t.column("createdAt", .datetime).notNull()
