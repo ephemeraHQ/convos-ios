@@ -50,10 +50,7 @@ fileprivate extension Database {
 
         guard let dbConversation = try DBConversation
             .filter(DBConversation.Columns.id == conversationId)
-            .including(required: DBConversation.creatorProfile)
-            .including(required: DBConversation.localState)
-            .including(all: DBConversation.memberProfiles)
-            .asRequest(of: DBConversationDetails.self)
+            .detailedConversationQuery()
             .fetchOne(self) else {
             return nil
         }

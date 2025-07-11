@@ -4,14 +4,14 @@ import Foundation
 extension Conversation {
     static func mock(
         id: String = UUID().uuidString,
-        creator: Profile = .mock(),
+        creator: ConversationMember = .mock(),
         date: Date = Date(),
         consent: Consent = .allowed,
         kind: ConversationKind = .dm,
         name: String = "The Convo",
         description: String = "Where we talk about all things Convos.",
-        members: [Profile] = [],
-        otherMember: Profile? = .mock(),
+        members: [ConversationMember] = [],
+        otherMember: ConversationMember? = .mock(),
         messages: [Message] = [],
         lastMessage: MessagePreview? = nil
     ) -> Self {

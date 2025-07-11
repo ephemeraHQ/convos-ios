@@ -22,7 +22,7 @@ class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
         conversation.id
     }
 
-    var membersPublisher: AnyPublisher<[Profile], Never> {
+    var membersPublisher: AnyPublisher<[ConversationMember], Never> {
         Just([]).eraseToAnyPublisher()
     }
     var messagesRepository: any MessagesRepositoryProtocol {

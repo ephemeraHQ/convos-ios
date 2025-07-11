@@ -28,7 +28,7 @@ struct MemberProfile: Codable, FetchableRecord, PersistableRecord, Hashable {
 }
 
 struct Profile: Codable, Identifiable, Hashable {
-    let id: String
+    let id: String // @jarodl change to inboxId for clarity
     let name: String
     let username: String
     let avatar: String?
@@ -61,5 +61,28 @@ struct Profile: Codable, Identifiable, Hashable {
         self.name = name
         self.username = username
         self.avatar = avatar
+    }
+}
+
+// MARK: - Array Extensions
+
+extension Array where Element == ConversationMember {
+    func sortedByRole() -> [ConversationMember] {
+        sorted { member1, member2 in
+            // Show current user first
+            if member1.isCurrentUser { return true }
+            if member2.isCurrentUser { return false }
+
+            // Sort by role hierarchy: superAdmin > admin > member
+            let priority1 = member1.role.priority
+            let priority2 = member2.role.priority
+
+            if priority1 != priority2 {
+                return priority1 < priority2
+            }
+
+            // Same role, sort alphabetically by name
+            return member1.profile.displayName < member2.profile.displayName
+        }
     }
 }

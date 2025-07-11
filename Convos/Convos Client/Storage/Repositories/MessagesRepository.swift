@@ -97,19 +97,21 @@ extension Array where Element == MessageWithDetails {
         return try dbMessagesWithDetails.compactMap { dbMessageWithDetails -> AnyMessage? in
             let dbMessage = dbMessageWithDetails.message
             let dbReactions = dbMessageWithDetails.messageReactions
-            let dbSender = dbMessageWithDetails.messageSenderProfile
-            let sender: Profile = dbSender.hydrateProfile()
-            let isCurrentUser: Bool = dbSender.inboxId == currentUser.inboxId
-            let source: MessageSource = isCurrentUser ? .outgoing : .incoming
+            let dbSender = dbMessageWithDetails.messageSender
+
+            let sender = dbSender.hydrateConversationMember(currentInboxId: currentUser.inboxId)
+            let source: MessageSource = sender.isCurrentUser ? .outgoing : .incoming
             let reactions: [MessageReaction] = dbReactions.map {
-                .init(id: $0.clientMessageId,
-                      conversation: conversation,
-                      sender: sender,
-                      source: source,
-                      status: $0.status,
-                      content: .emoji($0.emoji ?? ""),
-                      date: Date(),
-                      emoji: $0.emoji ?? "")
+                .init(
+                    id: $0.clientMessageId,
+                    conversation: conversation,
+                    sender: sender,
+                    source: source,
+                    status: $0.status,
+                    content: .emoji($0.emoji ?? ""),
+                    date: Date(),
+                    emoji: $0.emoji ?? ""
+                )
             }
             switch dbMessage.messageType {
             case .original:
@@ -187,10 +189,7 @@ fileprivate extension Database {
 
         guard let dbConversationDetails = try DBConversation
             .filter(Column("id") == conversationId)
-            .including(required: DBConversation.creatorProfile)
-            .including(required: DBConversation.localState)
-            .including(all: DBConversation.memberProfiles)
-            .asRequest(of: DBConversationDetails.self)
+            .detailedConversationQuery()
             .fetchOne(self) else {
             return []
         }
@@ -200,7 +199,12 @@ fileprivate extension Database {
         )
         let dbMessages = try DBMessage
             .filter(Column("conversationId") == conversationId)
-            .including(required: DBMessage.senderProfile)
+            .including(
+                required: DBMessage.sender
+                    .forKey("messageSender")
+                    .select([DBConversationMember.Columns.role])
+                    .including(required: DBConversationMember.memberProfile)
+            )
             .including(all: DBMessage.reactions)
             // .including(all: DBMessage.replies)
             .including(optional: DBMessage.sourceMessage)

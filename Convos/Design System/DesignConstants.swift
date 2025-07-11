@@ -5,6 +5,8 @@ enum DesignConstants {
     enum ImageSizes {
         static let extraSmallAvatar: CGFloat = 16.0
         static let smallAvatar: CGFloat = 24.0
+        static let mediumAvatar: CGFloat = 40.0
+        static let largeAvatar: CGFloat = 80.0
     }
 
     enum Spacing {

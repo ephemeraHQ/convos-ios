@@ -23,6 +23,16 @@ protocol MessagingServiceProtocol {
 
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol
+
+    func groupMetadataWriter() -> any GroupMetadataWriterProtocol
+    func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol
+
+    func uploadImage(data: Data, filename: String) async throws -> String
+    func uploadImageAndExecute(
+        data: Data,
+        filename: String,
+        afterUpload: @escaping (String) async throws -> Void
+    ) async throws -> String
 }
 
 enum MessagingServiceState: Equatable {

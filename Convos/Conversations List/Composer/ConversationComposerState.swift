@@ -53,7 +53,7 @@ class ConversationComposerState {
                 guard let self else { return }
                 Logger.info("Publishing members with count: \(members.count)")
                 profilesAdded = OrderedSet<ProfileSearchResult>(members.map {
-                    .init(profile: $0, inboxId: $0.id)
+                    .init(profile: $0.profile, inboxId: $0.id)
                 })
             }
             .store(in: &cancellables)

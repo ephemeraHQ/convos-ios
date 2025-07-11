@@ -8,3 +8,43 @@ rules:
       Generated code should be as clean and concise as possible.
     severity: warning
     applies_to: [generated]
+
+  line-length:
+    description: >
+      Line should be 120 characters or less. Break long lines into multiple lines for better readability.
+    severity: warning
+    applies_to: [swift]
+
+  unused-variables-context:
+    description: >
+      Unused variables should generally be avoided in production code, but are acceptable in certain contexts:
+      - #Preview blocks: Named variables (like `let dmConversation = Conversation(...)`) are preferred for
+        clarity and future flexibility, even if not directly referenced
+      - Test code: Setup variables that aid in readability and maintenance
+      - Mock/example data: Variables that serve documentation purposes
+      Only use `_ = expression` or `let _ = expression` when truly discarding unneeded return values,
+      not for legitimate setup or example data.
+    severity: info
+    applies_to: [swift]
+
+  swiftui-button-pattern:
+    description: >
+      When writing SwiftUI Button views, always use this pattern to avoid multiple closure compilation errors:
+
+      ❌ Avoid this pattern:
+      Button(action: {
+          // action code here
+      }) {
+          // view content
+      }
+
+      ✅ Use this pattern instead:
+      Button {
+          // action code here
+      } label: {
+          // view content
+      }
+
+      This pattern helps Swift compiler resolve closure types and prevents "multiple closure" compilation errors.
+    severity: warning
+    applies_to: [swift]

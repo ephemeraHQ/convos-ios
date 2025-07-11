@@ -26,7 +26,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     }
 
     let id: String
-    let clientConversationId: String // always the same, used for conversation drafts
+    let clientConversationId: String // used for conversation drafts
     let creatorId: String
     let kind: ConversationKind
     let consent: Consent
@@ -35,11 +35,14 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     let description: String?
     let imageURLString: String?
 
-    static let creatorForeignKey: ForeignKey = ForeignKey(["creatorId"], to: ["inboxId"])
+    static let creatorForeignKey: ForeignKey = ForeignKey(
+        [Columns.creatorId],
+        to: [DBConversationMember.Columns.memberId]
+    )
     static let localStateForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
 
-    static let creator: BelongsToAssociation<DBConversation, Member> = belongsTo(
-        Member.self,
+    static let creator: BelongsToAssociation<DBConversation, DBConversationMember> = belongsTo(
+        DBConversationMember.self,
         key: "conversationCreator",
         using: creatorForeignKey
     )
@@ -47,7 +50,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     static let creatorProfile: HasOneThroughAssociation<DBConversation, MemberProfile> = hasOne(
         MemberProfile.self,
         through: creator,
-        using: Member.profile,
+        using: DBConversationMember.memberProfile,
         key: "conversationCreatorProfile"
     )
 
@@ -159,6 +162,50 @@ extension DBConversation {
             imageURLString: imageURLString
         )
     }
+
+    // MARK: - Group Conversation Properties
+
+    func with(name: String?) -> Self {
+        .init(
+            id: id,
+            clientConversationId: clientConversationId,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
+
+    func with(description: String?) -> Self {
+        .init(
+            id: id,
+            clientConversationId: clientConversationId,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
+
+    func with(imageURLString: String?) -> Self {
+        .init(
+            id: id,
+            clientConversationId: clientConversationId,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
 }
 
 extension DBConversation {
@@ -203,10 +250,18 @@ extension DBConversation {
 
 struct DBConversationDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
     let conversation: DBConversation
-    let conversationCreatorProfile: MemberProfile
-    let conversationMemberProfiles: [MemberProfile]
+    let conversationCreator: ConversationMemberProfileWithRole
+    let conversationMembers: [ConversationMemberProfileWithRole]
     let conversationLastMessage: DBMessage?
     let conversationLocalState: ConversationLocalState
+}
+
+extension DBConversationDetails {
+    func hydrateConversationMembers(currentInboxId: String) -> [ConversationMember] {
+        return conversationMembers.compactMap { member in
+            member.hydrateConversationMember(currentInboxId: currentInboxId)
+        }
+    }
 }
 
 extension Array where Element == Consent {
@@ -231,14 +286,41 @@ enum Consent: String, Codable, Hashable, SQLExpressible, CaseIterable {
     case allowed, denied, unknown
 }
 
+enum MemberRole: String, Codable, Hashable, CaseIterable {
+    case member, admin, superAdmin = "super_admin"
+
+    var displayName: String {
+        switch self {
+        case .member:
+            return ""
+        case .admin:
+            return "Admin"
+        case .superAdmin:
+            return "Super Admin"
+        }
+    }
+
+    var priority: Int {
+        switch self {
+        case .superAdmin: return 1
+        case .admin: return 2
+        case .member: return 3
+        }
+    }
+}
+
 struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashable {
-    enum Role: String, Codable, Hashable {
-        case member, admin, superAdmin = "super_admin"
+    enum Columns {
+        static let conversationId: Column = Column(CodingKeys.conversationId)
+        static let memberId: Column = Column(CodingKeys.memberId)
+        static let role: Column = Column(CodingKeys.role)
+        static let consent: Column = Column(CodingKeys.consent)
+        static let createdAt: Column = Column(CodingKeys.createdAt)
     }
 
     let conversationId: String
     let memberId: String
-    let role: Role
+    let role: MemberRole
     let consent: Consent
     let createdAt: Date
 
@@ -264,16 +346,50 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
     )
 }
 
+struct ConversationMemberProfileWithRole: Codable, FetchableRecord, PersistableRecord, Hashable {
+    let memberProfile: MemberProfile
+    let role: MemberRole
+}
+
+extension ConversationMemberProfileWithRole {
+    func hydrateConversationMember(currentInboxId: String) -> ConversationMember {
+        .init(
+            profile: memberProfile.hydrateProfile(),
+            role: role,
+            isCurrentUser: memberProfile.inboxId == currentInboxId
+        )
+    }
+}
+
+extension DBConversationMember {
+    func with(role: MemberRole) -> Self {
+        .init(
+            conversationId: conversationId,
+            memberId: memberId,
+            role: role,
+            consent: consent,
+            createdAt: createdAt
+        )
+    }
+}
+
+struct ConversationMember: Codable, Hashable, Identifiable {
+    var id: String { profile.id }
+    let profile: Profile
+    let role: MemberRole
+    let isCurrentUser: Bool
+}
+
 struct Conversation: Codable, Hashable, Identifiable {
     let id: String
-    let creator: Profile
+    let creator: ConversationMember
     let createdAt: Date
     let consent: Consent
     let kind: ConversationKind
     let name: String?
     let description: String?
-    let members: [Profile]
-    let otherMember: Profile?
+    let members: [ConversationMember]
+    let otherMember: ConversationMember?
     let messages: [Message]
     let isPinned: Bool
     let isUnread: Bool
@@ -281,15 +397,20 @@ struct Conversation: Codable, Hashable, Identifiable {
     let lastMessage: MessagePreview?
     let imageURL: URL?
     let isDraft: Bool
+
+    var membersWithoutCurrent: [ConversationMember] {
+        members.filter { !$0.isCurrentUser }
+    }
 }
 
 extension Conversation {
     var memberNamesString: String {
-        members.formattedNamesString
+        membersWithoutCurrent.formattedNamesString
     }
 
     var membersCountString: String {
-        "\(members.count) \(members.count == 1 ? "person" : "people")"
+        let totalCount = members.count
+        return "\(totalCount) \(totalCount == 1 ? "person" : "people")"
     }
 }
 
@@ -356,5 +477,11 @@ extension Array where Element == Profile {
             let last = displayNames.last ?? ""
             return "\(allButLast) and \(last)"
         }
+    }
+}
+
+extension Array where Element == ConversationMember {
+    var formattedNamesString: String {
+        map { $0.profile }.formattedNamesString
     }
 }

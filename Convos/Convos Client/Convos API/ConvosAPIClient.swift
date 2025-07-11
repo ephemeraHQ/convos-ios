@@ -46,6 +46,18 @@ protocol ConvosAPIClientProtocol {
     func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse
     func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse
     func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse]
+
+    func uploadAttachment(
+        data: Data,
+        filename: String,
+        contentType: String,
+        acl: String
+    ) async throws -> String
+    func uploadAttachmentAndExecute(
+        data: Data,
+        filename: String,
+        afterUpload: @escaping (String) async throws -> Void
+    ) async throws -> String
 }
 
 final class ConvosAPIClient: ConvosAPIClientProtocol {
@@ -236,6 +248,104 @@ final class ConvosAPIClient: ConvosAPIClientProtocol {
             throw APIError.serverError(nil)
         }
     }
+
+    func uploadAttachment(
+        data: Data,
+        filename: String,
+        contentType: String = "image/jpeg",
+        acl: String = "public-read"
+    ) async throws -> String {
+        Logger.info("Starting attachment upload process for file: \(filename)")
+        Logger.info("File data size: \(data.count) bytes")
+
+        // Step 1: Get presigned URL from Convos API
+        let presignedRequest = try authenticatedRequest(
+            for: "v1/attachments/presigned",
+            method: "GET",
+            queryParameters: ["contentType": contentType, "filename": filename]
+        )
+
+        Logger.info("Getting presigned URL from: \(presignedRequest.url?.absoluteString ?? "nil")")
+
+        struct PresignedResponse: Codable {
+            let url: String
+        }
+
+        let presignedResponse: PresignedResponse = try await performRequest(presignedRequest)
+        Logger.info("Received presigned URL: \(presignedResponse.url)")
+
+        // Step 2: Extract public URL BEFORE uploading (we already know what it will be!)
+        guard let urlComponents = URLComponents(string: presignedResponse.url) else {
+            Logger.error("Failed to parse presigned URL components")
+            throw APIError.invalidURL
+        }
+
+        guard let scheme = urlComponents.scheme, let host = urlComponents.host else {
+            Logger.error("Failed to extract scheme or host from presigned URL")
+            throw APIError.invalidURL
+        }
+        let publicURL = "\(scheme)://\(host)\(urlComponents.path)"
+        Logger.info("Final public URL will be: \(publicURL)")
+
+        // Step 3: Upload directly to S3 using presigned URL
+        guard let s3URL = URL(string: presignedResponse.url) else {
+            Logger.error("Invalid presigned URL: \(presignedResponse.url)")
+            throw APIError.invalidURL
+        }
+
+        var s3Request = URLRequest(url: s3URL)
+        s3Request.httpMethod = "PUT"
+        s3Request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        s3Request.setValue(acl, forHTTPHeaderField: "x-amz-acl")
+        s3Request.httpBody = data
+
+        Logger.info("Uploading to S3: \(s3URL.absoluteString)")
+        Logger.info("S3 upload data size: \(data.count) bytes")
+        Logger.info("S3 request headers: \(s3Request.allHTTPHeaderFields ?? [:])")
+
+        let (s3Data, s3Response) = try await URLSession.shared.data(for: s3Request)
+
+        guard let s3HttpResponse = s3Response as? HTTPURLResponse else {
+            Logger.error("Invalid S3 response type")
+            throw APIError.invalidResponse
+        }
+
+        Logger.info("S3 response status: \(s3HttpResponse.statusCode)")
+        Logger.info("S3 response headers: \(s3HttpResponse.allHeaderFields)")
+
+        guard s3HttpResponse.statusCode == 200 else {
+            Logger.error("S3 upload failed with status: \(s3HttpResponse.statusCode)")
+            Logger.error("S3 error response: \(String(data: s3Data, encoding: .utf8) ?? "nil")")
+            throw APIError.serverError(nil)
+        }
+
+        Logger.info("Successfully uploaded to S3, public URL: \(publicURL)")
+        return publicURL
+    }
+
+    func uploadAttachmentAndExecute(
+        data: Data,
+        filename: String,
+        afterUpload: @escaping (String) async throws -> Void
+    ) async throws -> String {
+        Logger.info("Starting chained upload and execute process for file: \(filename)")
+
+        // Step 1: Upload the attachment and get the URL
+        let uploadedURL = try await uploadAttachment(
+            data: data,
+            filename: filename,
+            contentType: "image/jpeg",
+            acl: "public-read"
+        )
+        Logger.info("Upload completed successfully, URL: \(uploadedURL)")
+
+        // Step 2: Execute the provided closure with the uploaded URL
+        Logger.info("Executing post-upload action with URL: \(uploadedURL)")
+        try await afterUpload(uploadedURL)
+        Logger.info("Post-upload action completed successfully")
+
+        return uploadedURL
+    }
 }
 
 // MARK: - Error Handling
@@ -247,5 +357,6 @@ enum APIError: Error {
     case forbidden
     case notFound
     case invalidResponse
+    case invalidRequest
     case serverError(Error?)
 }

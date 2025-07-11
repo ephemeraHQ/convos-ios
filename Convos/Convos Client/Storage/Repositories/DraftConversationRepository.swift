@@ -3,7 +3,7 @@ import Foundation
 import GRDB
 
 protocol DraftConversationRepositoryProtocol: ConversationRepositoryProtocol {
-    var membersPublisher: AnyPublisher<[Profile], Never> { get }
+    var membersPublisher: AnyPublisher<[ConversationMember], Never> { get }
     var messagesRepository: any MessagesRepositoryProtocol { get }
 }
 
@@ -26,7 +26,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
         )
     }
 
-    lazy var membersPublisher: AnyPublisher<[Profile], Never> = {
+    lazy var membersPublisher: AnyPublisher<[ConversationMember], Never> = {
         let draftConversationId = writer.draftConversationId
         return ValueObservation
             .tracking { [weak self] db in
@@ -36,10 +36,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
                 }
                 guard let dbConversation = try DBConversation
                     .filter(Column("clientConversationId") == draftConversationId)
-                    .including(required: DBConversation.creatorProfile)
-                    .including(required: DBConversation.localState)
-                    .including(all: DBConversation.memberProfiles)
-                    .asRequest(of: DBConversationDetails.self)
+                    .detailedConversationQuery()
                     .fetchOne(db) else {
                     return []
                 }
@@ -87,20 +84,9 @@ fileprivate extension Database {
             throw CurrentSessionError.missingCurrentUser
         }
 
-        let lastMessage = DBConversation.association(
-            to: DBConversation.lastMessageCTE,
-            on: { conversation, lastMessage in
-                conversation.clientConversationId == lastMessage.conversationId
-            }).forKey("conversationLastMessage")
-            .order(\.date.desc)
         guard let dbConversation = try DBConversation
             .filter(Column("clientConversationId") == conversationId)
-            .including(required: DBConversation.creatorProfile)
-            .including(required: DBConversation.localState)
-            .including(all: DBConversation.memberProfiles)
-            .with(DBConversation.lastMessageCTE)
-            .including(optional: lastMessage)
-            .asRequest(of: DBConversationDetails.self)
+            .detailedConversationQuery()
             .fetchOne(self) else {
             return nil
         }

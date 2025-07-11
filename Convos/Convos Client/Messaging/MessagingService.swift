@@ -119,6 +119,40 @@ final class MessagingService: MessagingServiceProtocol {
                               conversationId: conversationId)
     }
 
+    // MARK: - Group Management
+
+    func groupMetadataWriter() -> any GroupMetadataWriterProtocol {
+        GroupMetadataWriter(databaseWriter: databaseWriter,
+                            clientPublisher: stateMachine.clientPublisher)
+    }
+
+    func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
+        GroupPermissionsRepository(databaseReader: databaseReader,
+                                   clientPublisher: stateMachine.clientPublisher,
+                                   userRepository: userRepository())
+    }
+
+    func uploadImage(data: Data, filename: String) async throws -> String {
+        return try await apiClient.uploadAttachment(
+            data: data,
+            filename: filename,
+            contentType: "image/jpeg",
+            acl: "public-read"
+        )
+    }
+
+    func uploadImageAndExecute(
+        data: Data,
+        filename: String,
+        afterUpload: @escaping (String) async throws -> Void
+    ) async throws -> String {
+        return try await apiClient.uploadAttachmentAndExecute(
+            data: data,
+            filename: filename,
+            afterUpload: afterUpload
+        )
+    }
+
     // MARK: State Machine
 
     var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {

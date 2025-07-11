@@ -4,7 +4,7 @@ extension Conversation {
     var title: String {
         switch kind {
         case .dm:
-            return otherMember?.displayName ?? ""
+            return otherMember?.profile.displayName ?? ""
         case .group:
             guard let name else {
                 return memberNamesString

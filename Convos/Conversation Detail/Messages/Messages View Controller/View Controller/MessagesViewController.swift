@@ -302,7 +302,7 @@ extension MessagesViewController {
             let senderTitleCell = MessagesCollectionCell.messageGroup(
                 .init(
                     id: message.base.sender.id,
-                    title: message.base.sender.displayName,
+                    title: message.base.sender.profile.displayName,
                     source: message.base.source
                 )
             )

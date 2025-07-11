@@ -76,7 +76,16 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
     }
 
     static let sourceMessageForeignKey: ForeignKey = ForeignKey(["sourceMessageId"], to: ["id"])
-    static let senderForeignKey: ForeignKey = ForeignKey(["senderId"], to: ["inboxId"])
+    static let senderForeignKey: ForeignKey = ForeignKey(
+        [
+            Columns.senderId,
+            Columns.conversationId
+        ],
+        to: [
+            DBConversationMember.Columns.memberId,
+            DBConversationMember.Columns.conversationId
+        ]
+    )
     static let conversationForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
 
     static let conversation: HasOneAssociation<DBMessage, DBConversation> = hasOne(
@@ -84,8 +93,8 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
         using: conversationForeignKey
     )
 
-    static let sender: BelongsToAssociation<DBMessage, Member> = belongsTo(
-        Member.self,
+    static let sender: BelongsToAssociation<DBMessage, DBConversationMember> = belongsTo(
+        DBConversationMember.self,
         key: "messageSender",
         using: senderForeignKey
     )
@@ -93,7 +102,7 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
     static let senderProfile: HasOneThroughAssociation<DBMessage, MemberProfile> = hasOne(
         MemberProfile.self,
         through: sender,
-        using: Member.profile,
+        using: DBConversationMember.memberProfile,
         key: "messageSenderProfile"
     )
 
@@ -174,14 +183,14 @@ extension DBMessage {
 
 struct MessageWithDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
     let message: DBMessage
-    let messageSenderProfile: MemberProfile
+    let messageSender: ConversationMemberProfileWithRole
     let messageReactions: [DBMessage]
     let sourceMessage: DBMessage?
 }
 
 struct MessageWithDetailsAndReplies: Codable, FetchableRecord, PersistableRecord, Hashable {
     let message: DBMessage
-    let sender: MemberProfile
+    let sender: ConversationMemberProfileWithRole
     let reactions: [DBMessage]
     let replies: [DBMessage]
 }
@@ -189,7 +198,7 @@ struct MessageWithDetailsAndReplies: Codable, FetchableRecord, PersistableRecord
 protocol MessageType {
     var id: String { get }
     var conversation: Conversation { get }
-    var sender: Profile { get }
+    var sender: ConversationMember { get }
     var source: MessageSource { get }
     var status: MessageStatus { get }
     var content: MessageContent { get }
@@ -240,7 +249,7 @@ enum MessageContent: Hashable, Codable {
 struct Message: MessageType, Hashable, Codable {
     let id: String
     let conversation: Conversation
-    let sender: Profile
+    let sender: ConversationMember
     let source: MessageSource
     let status: MessageStatus
     let content: MessageContent
@@ -252,7 +261,7 @@ struct Message: MessageType, Hashable, Codable {
 struct MessageReply: MessageType, Hashable, Codable {
     let id: String
     let conversation: Conversation
-    let sender: Profile
+    let sender: ConversationMember
     let source: MessageSource
     let status: MessageStatus
     let content: MessageContent
@@ -265,7 +274,7 @@ struct MessageReply: MessageType, Hashable, Codable {
 struct MessageReaction: MessageType, Hashable, Codable {
     let id: String
     let conversation: Conversation
-    let sender: Profile
+    let sender: ConversationMember
     let source: MessageSource
     let status: MessageStatus
     let content: MessageContent

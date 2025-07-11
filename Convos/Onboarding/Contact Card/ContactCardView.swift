@@ -13,9 +13,10 @@ struct ContactCardView: View {
     var body: some View {
         VStack(spacing: 10.0) {
             HStack(alignment: .top) {
-                ContactCardAvatarView(isEditing: $isEditing, imageState: $imageState) {
-                    MonogramView(name: name)
-                }
+                ContactCardAvatarView(isEditing: $isEditing, imageState: $imageState, emptyView: {
+                    let localName = name
+                    return AnyView(MonogramView(name: localName))
+                })
 
                 Spacer()
 

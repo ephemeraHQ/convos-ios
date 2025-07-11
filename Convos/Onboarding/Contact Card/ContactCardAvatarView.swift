@@ -21,9 +21,10 @@ struct ContactCardImage: Transferable {
         case loading, empty, success(Image), failure(Error)
         var isEmpty: Bool {
             if case .empty = self {
-                return true
+                true
+            } else {
+                false
             }
-            return false
         }
     }
 
@@ -61,18 +62,18 @@ struct ContactCardCameraButton: View {
         var font: Font {
             switch self {
             case .regular:
-                return DesignConstants.Fonts.standard
+                DesignConstants.Fonts.standard
             case .compact:
-                return DesignConstants.Fonts.medium
+                DesignConstants.Fonts.medium
             }
         }
 
         var spacerOffset: CGFloat {
             switch self {
             case .regular:
-                return 0.0
+                0.0
             case .compact:
-                return 56.0
+                56.0
             }
         }
     }
@@ -98,7 +99,7 @@ struct ContactCardCameraButton: View {
     }
 }
 
-struct ContactCardAvatarView<Content: View>: View {
+struct ContactCardAvatarView: View {
     @Binding var isEditing: Bool
     @Binding var imageState: ContactCardImage.State {
         didSet {
@@ -108,7 +109,7 @@ struct ContactCardAvatarView<Content: View>: View {
         }
     }
 
-    let emptyView: () -> Content
+    let emptyView: () -> AnyView
 
     @State private var cameraButtonSize: ContactCardCameraButton.Size = .regular
     @State private var imageSelection: PhotosPickerItem?
@@ -165,8 +166,10 @@ struct ContactCardAvatarView<Content: View>: View {
                     self.imageState = .loading
                     Task {
                         let imageState = await imageSelection.loadContactCardImage()
-                        withAnimation {
-                            self.imageState = imageState
+                        await MainActor.run {
+                            withAnimation {
+                                self.imageState = imageState
+                            }
                         }
                     }
                 }
@@ -183,9 +186,10 @@ struct ContactCardAvatarView<Content: View>: View {
     @Previewable @State var isEditing = true
 
     VStack {
-        ContactCardAvatarView(isEditing: $isEditing, imageState: $imageState) {
-            MonogramView(name: name)
-        }
+        ContactCardAvatarView(isEditing: $isEditing, imageState: $imageState, emptyView: {
+            let localName = name
+            return AnyView(MonogramView(name: localName))
+        })
 
         Button(isEditing ? "Done" : "Edit") {
             isEditing.toggle()

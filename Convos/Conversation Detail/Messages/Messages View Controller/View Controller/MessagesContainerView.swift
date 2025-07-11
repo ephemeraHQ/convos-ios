@@ -72,7 +72,7 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
     func sendMessage() {
         let messageText = text
         text = ""
-        Task {
+        Task { [outgoingMessageWriter] in
             do {
                 try await outgoingMessageWriter.send(text: messageText)
             } catch {
@@ -83,9 +83,10 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
 
     func joinConversation() {
         guard let conversation = conversationState.conversation else { return }
+        let writer = conversationConsentWriter
         Task {
             do {
-                try await conversationConsentWriter.join(conversation: conversation)
+                try await writer.join(conversation: conversation)
             } catch {
                 Logger.error("Error joining conversation: \(error)")
             }
@@ -95,9 +96,10 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
     func deleteConversation() {
         guard let conversation = conversationState.conversation else { return }
         dismiss()
+        let writer = conversationConsentWriter
         Task {
             do {
-                try await conversationConsentWriter.delete(conversation: conversation)
+                try await writer.delete(conversation: conversation)
             } catch {
                 Logger.error("Error deleting conversation: \(error)")
             }

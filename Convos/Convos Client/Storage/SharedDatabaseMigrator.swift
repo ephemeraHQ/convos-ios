@@ -1,8 +1,6 @@
 import Foundation
 import GRDB
 
-// swiftlint:disable function_body_length
-
 class SharedDatabaseMigrator {
     static let shared: SharedDatabaseMigrator = SharedDatabaseMigrator()
     private var defaultMigrator: DatabaseMigrator
@@ -67,7 +65,6 @@ class SharedDatabaseMigrator {
                     .unique(onConflict: .replace)
                 t.column("creatorId", .text)
                     .notNull()
-                    .references("member", onDelete: .none)
                 t.column("kind", .text).notNull()
                 t.column("consent", .text).notNull()
                 t.column("createdAt", .datetime).notNull()
@@ -151,5 +148,3 @@ class SharedDatabaseMigrator {
         try defaultMigrator.migrate(database)
     }
 }
-
-// swiftlint:enable function_body_length

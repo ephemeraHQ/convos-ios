@@ -5,15 +5,16 @@ extension DBConversationDetails {
         let lastMessage: MessagePreview? = conversationLastMessage?.hydrateMessagePreview(
             conversationKind: conversation.kind
         )
-        let creatorProfile = conversationCreatorProfile.hydrateProfile()
+        let members = hydrateConversationMembers(currentInboxId: currentUser.inboxId)
+        let creator = conversationCreator.hydrateConversationMember(currentInboxId: currentUser.inboxId)
 
-        let otherMemberProfile: Profile?
+        let otherMember: ConversationMember?
         if conversation.kind == .dm,
-            let otherProfile = conversationMemberProfiles.first(
-                where: { $0.inboxId != currentUser.inboxId }) {
-            otherMemberProfile = otherProfile.hydrateProfile()
+            let other = members.first(
+                where: { !$0.isCurrentUser }) {
+            otherMember = other
         } else {
-            otherMemberProfile = nil
+            otherMember = nil
         }
 
         // we don't need messages for the conversations list
@@ -26,20 +27,16 @@ extension DBConversationDetails {
             imageURL = nil
         }
 
-        let members = conversationMemberProfiles
-            .filter { $0.inboxId != currentUser.inboxId }
-            .map { $0.hydrateProfile() }
-
         return Conversation(
             id: conversation.id,
-            creator: creatorProfile,
+            creator: creator,
             createdAt: conversation.createdAt,
             consent: conversation.consent,
             kind: conversation.kind,
             name: conversation.name,
             description: conversation.description,
             members: members,
-            otherMember: otherMemberProfile,
+            otherMember: otherMember,
             messages: messages,
             isPinned: conversationLocalState.isPinned,
             isUnread: conversationLocalState.isUnread,

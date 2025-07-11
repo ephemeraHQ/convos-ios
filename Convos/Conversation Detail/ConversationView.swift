@@ -6,7 +6,9 @@ struct ConversationView: View {
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
+    let messagingService: any MessagingServiceProtocol
     let conversationState: ConversationState
+    let userState: UserState
     @State private var showInfo: Bool = false
 
     init(
@@ -14,14 +16,17 @@ struct ConversationView: View {
         messagesRepository: any MessagesRepositoryProtocol,
         outgoingMessageWriter: any OutgoingMessageWriterProtocol,
         conversationConsentWriter: any ConversationConsentWriterProtocol,
-        conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
+        conversationLocalStateWriter: any ConversationLocalStateWriterProtocol,
+        messagingService: any MessagingServiceProtocol
     ) {
         self.conversationRepository = conversationRepository
         self.messagesRepository = messagesRepository
         self.outgoingMessageWriter = outgoingMessageWriter
         self.conversationConsentWriter = conversationConsentWriter
         self.conversationLocalStateWriter = conversationLocalStateWriter
+        self.messagingService = messagingService
         self.conversationState = ConversationState(conversationRepository: conversationRepository)
+        self.userState = UserState(userRepository: messagingService.userRepository())
     }
 
     var body: some View {
@@ -40,7 +45,11 @@ struct ConversationView: View {
             .ignoresSafeArea()
         }
         .navigationDestination(isPresented: $showInfo) {
-            ConversationInfoView()
+            ConversationInfoView(
+                userState: userState,
+                conversationState: conversationState,
+                messagingService: messagingService
+            )
         }
     }
 }
@@ -53,7 +62,8 @@ struct ConversationView: View {
         messagesRepository: convos.messaging.messagesRepository(for: conversationId),
         outgoingMessageWriter: convos.messaging.messageWriter(for: conversationId),
         conversationConsentWriter: convos.messaging.conversationConsentWriter(),
-        conversationLocalStateWriter: convos.messaging.conversationLocalStateWriter()
+        conversationLocalStateWriter: convos.messaging.conversationLocalStateWriter(),
+        messagingService: convos.messaging
     )
     .ignoresSafeArea()
 }
