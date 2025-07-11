@@ -59,6 +59,11 @@ if [ ! "${CI}" = true ]; then
   # Skip fingerprint validation for plugins and macros in Xcode (like SwiftLintBuildToolPlugin)
   defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidatation -bool YES
   defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES
+else
+  info "CI environment detected - setting Xcode defaults for CI..."
+  # In CI, also skip plugin validation to avoid build failures
+  defaults write com.apple.dt.Xcode IDESkipPackagePluginFingerprintValidatation -bool YES
+  defaults write com.apple.dt.Xcode IDESkipMacroFingerprintValidation -bool YES
 fi
 
 ################################################################################
@@ -127,6 +132,17 @@ fi
 
 # Install dependencies from Gemfile
 echo "Installing dependencies from Gemfile..."
+
+# In CI, allow flexible Ruby version by regenerating Gemfile.lock if needed
+if [ "${CI}" = true ]; then
+    echo "CI environment detected - ensuring compatible Gemfile.lock"
+    # Remove lockfile if Ruby version mismatch in CI
+    if bundle check 2>/dev/null | grep -q "Your Ruby version is"; then
+        echo "Ruby version mismatch in CI - regenerating Gemfile.lock"
+        rm -f Gemfile.lock
+    fi
+fi
+
 if ! bundle install; then
     echo "❌ Failed to install dependencies. Please check the Gemfile and try again."
     exit 1
