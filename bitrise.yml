@@ -2,35 +2,101 @@
 format_version: '23'
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 project_type: ios
+
 workflows:
-  release:
-    summary: Create an IPA file to install your app on a device or share it with your
-      team.
-    description: The workflow will first clone your Git repository, cache and install
-      your project's dependencies if any, export an IPA file from the project and
-      save it.
+  # Workflow for PR - WITHOUT SENSITIVE SECRETS
+  pr-check:
+    summary: Run tests and checks on pull requests WITHOUT sensitive secrets
+    description: This workflow runs on PRs with mock/dev values for sensitive secrets
     steps:
     - activate-ssh-key@4: {}
     - git-clone@8: {}
-    - file-downloader@1:
-        inputs:
-        - source: "$BITRISEIO_env_URL"
-        - file_permission: 600
-        - destination: "./.env"
-        title: "\U0001F510 Load .env file (SECRETS)"
     - script@1:
-        title: "\U0001F510 Make Secrets"
+        title: "🔧 Setup Development Environment"
         inputs:
         - content: |-
             #!/usr/bin/env bash
-            # fail if any commands fails
             set -e
-            # make pipelines' return status equal the last command to exit with a non-zero status, or zero if all commands exit successfully
+            set -u
             set -o pipefail
-            # debug log
-            set -x
 
-            make secrets
+            echo "🔧 Setting up development environment for PR"
+
+            # Public environment variables (available in PRs)
+            export CONVOS_API_BASE_URL="${CONVOS_API_BASE_URL:-https://api.preview.convos.org}"
+            export PASSKEY_API_BASE_URL="${PASSKEY_API_BASE_URL:-https://api.preview.convos.org}"
+            export POSTHOG_HOST="${POSTHOG_HOST:-https://app.posthog.com}"
+            export API_RP_ID="${API_RP_ID:-preview.convos.org}"
+            export SLACK_URL_WITHOUT_KEY="${SLACK_URL_WITHOUT_KEY:-https://slack.com/api/chat.postMessage}"
+            export SLACK_CHANNEL_ID="${SLACK_CHANNEL_ID:-dev-channel}"
+            export SENTRY_ORG="${SENTRY_ORG:-convos-dev}"
+            export SENTRY_PROJECT="${SENTRY_PROJECT:-convos-ios-dev}"
+
+            # Mocked secrets for PRs (not real ones!)
+            export POSTHOG_API_KEY="ph_dev_mock_key"
+            export FIREBASE_APP_CHECK_TOKEN="mock_firebase_token"
+            export SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN="mock_sentry_token"
+            export SLACK_OAUTH_KEY="mock_slack_token"
+            export SENTRY_DSN="https://mock@sentry.io/mock"
+            export TURNKEY_PUBLIC_ORGANIZATION_ID="mock_turnkey_org"
+
+            # Generate secrets with mocked values
+            ./Scripts/generate-secrets-secure.sh
+            make entitlements
+
+            echo "✅ Development environment configured"
+    - xcode-test@4:
+        inputs:
+        - project_path: "$BITRISE_PROJECT_PATH"
+        - scheme: "$BITRISE_SCHEME"
+        - destination: platform=iOS Simulator,name=iPhone 15,OS=latest
+
+  # Workflow for RELEASE - WITH REAL SECRETS
+  release:
+    summary: Create release build with production secrets
+    description: This workflow has access to production secrets for release builds
+    steps:
+    - activate-ssh-key@4: {}
+    - git-clone@8: {}
+    - script@1:
+        title: "🔐 Setup Production Environment"
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            set -e
+            set -o pipefail
+            # NO set -x to avoid exposing secrets
+
+            echo "🔐 Setting up production environment"
+
+            # Check that all secrets are present
+            required_secrets=(
+                "POSTHOG_API_KEY"
+                "FIREBASE_APP_CHECK_TOKEN"
+                "SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN"
+                "SLACK_OAUTH_KEY"
+                "SENTRY_DSN"
+                "TURNKEY_PUBLIC_ORGANIZATION_ID"
+            )
+
+            missing_secrets=()
+            for secret in "${required_secrets[@]}"; do
+                if [[ -z "${!secret}" ]]; then
+                    missing_secrets+=("$secret")
+                fi
+            done
+
+            if [[ ${#missing_secrets[@]} -gt 0 ]]; then
+                echo "❌ Missing required secrets:"
+                printf '  - %s\n' "${missing_secrets[@]}"
+                exit 1
+            fi
+
+            # Generate secrets with real values
+            ./Scripts/generate-secrets-secure.sh
+            make entitlements
+
+            echo "✅ Production environment configured"
     - xcode-archive@5:
         inputs:
         - project_path: "$BITRISE_PROJECT_PATH"
@@ -38,36 +104,37 @@ workflows:
         - distribution_method: "$BITRISE_DISTRIBUTION_METHOD"
         - automatic_code_signing: api-key
         - cache_level: none
-        - verbose_log: 'yes'
+        - verbose_log: 'no'  # No verbose logs to avoid exposure
         - xcodebuild_options: "-skipPackagePluginValidation -skipMacroValidation"
     - deploy-to-itunesconnect-application-loader@1: {}
     - deploy-to-bitrise-io@2: {}
-    - brew-install@1:
-        inputs:
-        - packages: sentry-cli
-        - verbose_log: 'yes'
-        title: Install Sentry CLI
     - script@1:
-        title: Upload Symbols to Sentry
+        title: "📊 Upload Symbols to Sentry"
         inputs:
         - content: |-
             #!/usr/bin/env bash
-            # fail if any commands fails
             set -e
-            # make pipelines' return status equal the last command to exit with a non-zero status, or zero if all commands exit successfully
             set -o pipefail
-            # debug log
-            set -x
 
-            # run bash script (@joe: can also run ruby ./path-to/my-file.rb)
-            bash ./Scripts/upload_symbols.sh
-    triggers:
-      push:
-      - branch: release/*
+            echo "📊 Uploading symbols to Sentry"
+            ./Scripts/upload_symbols.sh
+            echo "✅ Symbols uploaded successfully"
+
+triggers:
+  pull_request:
+    - target_branch: "*"
+      workflow: pr-check
+  push:
+    - branch: release/*
+      workflow: release
+    - branch: main
+      workflow: release
+
 meta:
   bitrise.io:
     stack: osx-xcode-16.3.x
     machine_type_id: g2-m1.4core
+
 app:
   envs:
   - BITRISE_PROJECT_PATH: Convos.xcodeproj
