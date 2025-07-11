@@ -34,14 +34,14 @@ final class CellFactory {
                     text: string,
                     bubbleType: bubbleType,
                     messageType: message.source,
-                    profile: message.sender
+                    profile: message.sender.profile
                 )
             case .attachment(let attachmentURL):
                 return createImageCell(
                     in: collectionView,
                     messageId: message.id,
                     for: indexPath,
-                    profile: message.sender,
+                    profile: message.sender.profile,
                     source: .imageURL(attachmentURL),
                     messageType: message.source
                 )
@@ -57,14 +57,14 @@ final class CellFactory {
                     text: string,
                     bubbleType: bubbleType,
                     messageType: reply.source,
-                    profile: reply.sender
+                    profile: reply.sender.profile
                 )
             case .attachment(let attachmentURL):
                 return createImageCell(
                     in: collectionView,
                     messageId: reply.id,
                     for: indexPath,
-                    profile: reply.sender,
+                    profile: reply.sender.profile,
                     source: .imageURL(attachmentURL),
                     messageType: reply.source
                 )

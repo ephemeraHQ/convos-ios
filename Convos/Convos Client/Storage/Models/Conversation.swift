@@ -248,9 +248,26 @@ extension DBConversation {
 struct DBConversationDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
     let conversation: DBConversation
     let conversationCreatorProfile: MemberProfile
-    let conversationMemberProfiles: [MemberProfile]
+    let conversationMembers: [ConversationMemberProfileWithRole]
     let conversationLastMessage: DBMessage?
     let conversationLocalState: ConversationLocalState
+}
+
+extension DBConversationDetails {
+    func hydrateConversationMembers(currentInboxId: String) -> [ConversationMember] {
+        return conversationMembers.compactMap { member in
+            let hydratedProfile = member.memberProfile.hydrateProfile()
+
+            // Determine if this member is the current user
+            let isCurrentUser = member.memberProfile.inboxId == currentInboxId
+
+            return ConversationMember(
+                profile: hydratedProfile,
+                role: member.role,
+                isCurrentUser: isCurrentUser
+            )
+        }
+    }
 }
 
 extension Array where Element == Consent {
@@ -275,11 +292,30 @@ enum Consent: String, Codable, Hashable, SQLExpressible, CaseIterable {
     case allowed, denied, unknown
 }
 
-struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashable {
-    enum Role: String, Codable, Hashable {
-        case member, admin, superAdmin = "super_admin"
+enum MemberRole: String, Codable, Hashable, CaseIterable {
+    case member, admin, superAdmin = "super_admin"
+
+    var displayName: String {
+        switch self {
+        case .member:
+            return ""
+        case .admin:
+            return "Admin"
+        case .superAdmin:
+            return "Super Admin"
+        }
     }
 
+    var priority: Int {
+        switch self {
+        case .superAdmin: return 1
+        case .admin: return 2
+        case .member: return 3
+        }
+    }
+}
+
+struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashable {
     enum Columns {
         static let conversationId: Column = Column(CodingKeys.conversationId)
         static let memberId: Column = Column(CodingKeys.memberId)
@@ -290,7 +326,7 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
 
     let conversationId: String
     let memberId: String
-    let role: Role
+    let role: MemberRole
     let consent: Consent
     let createdAt: Date
 
@@ -316,8 +352,13 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
     )
 }
 
+struct ConversationMemberProfileWithRole: Codable, FetchableRecord, PersistableRecord, Hashable {
+    let memberProfile: MemberProfile
+    let role: MemberRole
+}
+
 extension DBConversationMember {
-    func with(role: Role) -> Self {
+    func with(role: MemberRole) -> Self {
         .init(
             conversationId: conversationId,
             memberId: memberId,
@@ -328,16 +369,23 @@ extension DBConversationMember {
     }
 }
 
+struct ConversationMember: Codable, Hashable, Identifiable {
+    var id: String { profile.id }
+    let profile: Profile
+    let role: MemberRole
+    let isCurrentUser: Bool
+}
+
 struct Conversation: Codable, Hashable, Identifiable {
     let id: String
-    let creator: Profile
+    let creator: ConversationMember
     let createdAt: Date
     let consent: Consent
     let kind: ConversationKind
     let name: String?
     let description: String?
-    let members: [Profile]
-    let otherMember: Profile?
+    let members: [ConversationMember]
+    let otherMember: ConversationMember?
     let messages: [Message]
     let isPinned: Bool
     let isUnread: Bool
@@ -345,15 +393,19 @@ struct Conversation: Codable, Hashable, Identifiable {
     let lastMessage: MessagePreview?
     let imageURL: URL?
     let isDraft: Bool
+
+    var membersWithoutCurrent: [ConversationMember] {
+        members.filter { !$0.isCurrentUser }
+    }
 }
 
 extension Conversation {
     var memberNamesString: String {
-        members.formattedNamesString
+        membersWithoutCurrent.formattedNamesString
     }
 
     var membersCountString: String {
-        let totalCount = withCurrentUserIncluded().members.count
+        let totalCount = members.count
         return "\(totalCount) \(totalCount == 1 ? "person" : "people")"
     }
 }
@@ -403,43 +455,6 @@ extension ConversationLocalState {
     }
 }
 
-extension Conversation {
-    func withCurrentUserIncluded() -> Conversation {
-        // @lourou: Get actual current user from session/messaging service
-        let currentUser = Profile(id: "current", name: "You", username: "you", avatar: nil)
-
-        // Check if current user is already in the members list
-        let hasCurrentUser = members.contains { $0.id == currentUser.id }
-
-        if hasCurrentUser {
-            return self
-        }
-
-        // Create new conversation with current user added to members
-        var updatedMembers = members
-        updatedMembers.append(currentUser)
-
-        return Conversation(
-            id: id,
-            creator: creator,
-            createdAt: createdAt,
-            consent: consent,
-            kind: kind,
-            name: name,
-            description: description,
-            members: updatedMembers,
-            otherMember: otherMember,
-            messages: messages,
-            isPinned: isPinned,
-            isUnread: isUnread,
-            isMuted: isMuted,
-            lastMessage: lastMessage,
-            imageURL: imageURL,
-            isDraft: isDraft
-        )
-    }
-}
-
 extension Array where Element == Profile {
     var formattedNamesString: String {
         let displayNames = self.map { $0.displayName }
@@ -458,5 +473,11 @@ extension Array where Element == Profile {
             let last = displayNames.last ?? ""
             return "\(allButLast) and \(last)"
         }
+    }
+}
+
+extension Array where Element == ConversationMember {
+    var formattedNamesString: String {
+        map { $0.profile }.formattedNamesString
     }
 }

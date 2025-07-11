@@ -3,7 +3,7 @@ import Foundation
 import GRDB
 
 protocol DraftConversationRepositoryProtocol: ConversationRepositoryProtocol {
-    var membersPublisher: AnyPublisher<[Profile], Never> { get }
+    var membersPublisher: AnyPublisher<[ConversationMember], Never> { get }
     var messagesRepository: any MessagesRepositoryProtocol { get }
 }
 
@@ -26,7 +26,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
         )
     }
 
-    lazy var membersPublisher: AnyPublisher<[Profile], Never> = {
+    lazy var membersPublisher: AnyPublisher<[ConversationMember], Never> = {
         let draftConversationId = writer.draftConversationId
         return ValueObservation
             .tracking { [weak self] db in
@@ -38,7 +38,12 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
                     .filter(Column("clientConversationId") == draftConversationId)
                     .including(required: DBConversation.creatorProfile)
                     .including(required: DBConversation.localState)
-                    .including(all: DBConversation.memberProfiles)
+                    .including(
+                        all: DBConversation._members
+                            .forKey("conversationMembers")
+                            .select([DBConversationMember.Columns.role])
+                            .including(required: DBConversationMember.memberProfile)
+                    )
                     .asRequest(of: DBConversationDetails.self)
                     .fetchOne(db) else {
                     return []
@@ -73,38 +78,11 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
             .eraseToAnyPublisher()
     }()
 
-    // MARK: - Role-related methods (simplified for draft conversations)
-
-    lazy var conversationWithRolesPublisher: AnyPublisher<(Conversation, [ProfileWithRole])?, Never> = {
-        // For draft conversations, just map the regular conversation publisher
-        // and assign .member role to everyone since roles aren't established yet
-        conversationPublisher
-            .map { conversation -> (Conversation, [ProfileWithRole])? in
-                guard let conversation = conversation else { return nil }
-                let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
-                    ProfileWithRole(profile: profile, role: .member)
-                }
-                return (conversation, membersWithRoles)
-            }
-            .eraseToAnyPublisher()
-    }()
-
     func fetchConversation() throws -> Conversation? {
         try dbReader.read { [weak self] db in
             guard let self else { return nil }
             return try db.composeConversation(for: writer.conversationId)
         }
-    }
-
-    func fetchConversationWithRoles() throws -> (Conversation, [ProfileWithRole])? {
-        guard let conversation = try fetchConversation() else { return nil }
-
-        // For draft conversations, all members are just .member since roles aren't established yet
-        let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
-            ProfileWithRole(profile: profile, role: .member)
-        }
-
-        return (conversation, membersWithRoles)
     }
 }
 
@@ -124,7 +102,12 @@ fileprivate extension Database {
             .filter(Column("clientConversationId") == conversationId)
             .including(required: DBConversation.creatorProfile)
             .including(required: DBConversation.localState)
-            .including(all: DBConversation.memberProfiles)
+            .including(
+                all: DBConversation._members
+                    .forKey("conversationMembers")
+                    .select([DBConversationMember.Columns.role])
+                    .including(required: DBConversationMember.memberProfile)
+            )
             .with(DBConversation.lastMessageCTE)
             .including(optional: lastMessage)
             .asRequest(of: DBConversationDetails.self)

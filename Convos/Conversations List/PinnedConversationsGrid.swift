@@ -36,7 +36,7 @@ struct PinnedConversationsGrid: View {
 
                         let displayName = conversation.kind == .group
                             ? conversation.name ?? "Group"
-                            : conversation.otherMember?.username ?? "Unknown"
+                        : conversation.otherMember?.profile.username ?? "Unknown"
 
                         Text(displayName)
                             .font(.system(size: 13, weight: .medium))

@@ -195,17 +195,18 @@ struct ConversationAvatarView: View {
     init(conversation: Conversation) {
         self.conversation = conversation
 
-        let membersToShow: [Profile]
+        let membersToShow: [ConversationMember]
 
         if conversation.kind == .group {
             // For groups, show all members including current user
-            membersToShow = conversation.withCurrentUserIncluded().members
+            membersToShow = conversation.members
         } else {
             // For DMs, show only the other party
-            membersToShow = conversation.members
+            membersToShow = conversation.membersWithoutCurrent
         }
 
         self.avatars = membersToShow
+            .map { $0.profile }
             .sorted { $0.id < $1.id }
             .map {
                 .init(

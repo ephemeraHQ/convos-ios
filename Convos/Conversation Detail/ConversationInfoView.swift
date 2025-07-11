@@ -6,32 +6,21 @@ struct ConversationInfoView: View {
     let conversationState: ConversationState
     let messagingService: any MessagingServiceProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
-    @State private var showAllMembers: Bool = false
-    @State private var showGroupEdit: Bool = false
+    @State private var showAllMembersForConversation: Conversation?
+    @State private var showGroupEditForConversation: Conversation?
     @State private var showAddMember: Bool = false
 
     private var conversation: Conversation? {
         conversationState.conversation
     }
 
-    private var membersWithRoles: [ProfileWithRole] {
-        conversationState.membersWithRoles
-    }
-
-    private var conversationWithAllMembers: Conversation? {
-        guard let conversation = conversation else { return nil }
-        // For group conversations, ensure current user is included in member list for proper display
-        if conversation.kind == .group {
-            return conversation.withCurrentUserIncluded()
-        }
-        return conversation
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             CustomToolbarView(onBack: { dismiss() }, rightContent: {
                 if conversation?.kind == .group {
-                    EditGroupButton(action: { showGroupEdit = true })
+                    EditGroupButton(action: {
+                        showGroupEditForConversation = conversation
+                    })
                 }
             })
 
@@ -41,17 +30,14 @@ struct ConversationInfoView: View {
                 case .dm:
                     DMInfoView(conversation: conversation)
                 case .group:
-                    if let conversationWithAllMembers = conversationWithAllMembers {
-                        GroupInfoView(
-                            conversation: conversationWithAllMembers,
-                            userState: userState,
-                            conversationState: conversationState,
-                            messagingService: messagingService,
-                            showAllMembers: $showAllMembers,
-                            showAddMember: $showAddMember,
-                            membersWithRoles: membersWithRoles
-                        )
-                    }
+                    GroupInfoView(
+                        conversation: conversation,
+                        userState: userState,
+                        conversationState: conversationState,
+                        messagingService: messagingService,
+                        showAllMembersForConversation: $showAllMembersForConversation,
+                        showAddMember: $showAddMember
+                    )
                 }
             } else {
                 // Loading state
@@ -63,24 +49,19 @@ struct ConversationInfoView: View {
             }
         }
         .navigationBarHidden(true)
-        .navigationDestination(isPresented: $showAllMembers) {
-            if let conversationWithAllMembers = conversationWithAllMembers {
-                AllMembersView(
-                    conversation: conversationWithAllMembers,
-                    userState: userState,
-                    conversationState: conversationState,
-                    messagingService: messagingService,
-                    membersWithRoles: membersWithRoles
-                )
-            }
+        .navigationDestination(item: $showAllMembersForConversation) { conversation in
+            AllMembersView(
+                conversation: conversation,
+                userState: userState,
+                conversationState: conversationState,
+                messagingService: messagingService
+            )
         }
-        .navigationDestination(isPresented: $showGroupEdit) {
-            if let conversation = conversation {
-                GroupEditView(
-                    conversation: conversation,
-                    messagingService: messagingService
-                )
-            }
+        .navigationDestination(item: $showGroupEditForConversation) { conversation in
+            GroupEditView(
+                conversation: conversation,
+                messagingService: messagingService
+            )
         }
     }
 }
@@ -95,18 +76,18 @@ struct DMInfoView: View {
                 // Profile Header
                 if let otherMember = conversation.otherMember {
                     VStack(spacing: DesignConstants.Spacing.step4x) {
-                        ProfileAvatarView(profile: otherMember)
+                        ProfileAvatarView(profile: otherMember.profile)
                             .frame(
                                 width: DesignConstants.ImageSizes.largeAvatar,
                                 height: DesignConstants.ImageSizes.largeAvatar
                             )
 
                         VStack(spacing: DesignConstants.Spacing.stepX) {
-                            Text(otherMember.displayName)
+                            Text(otherMember.profile.displayName)
                                 .font(.title2)
                                 .fontWeight(.semibold)
 
-                            Text("@\(otherMember.username)")
+                            Text("@\(otherMember.profile.username)")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -160,9 +141,8 @@ struct GroupInfoView: View {
     let userState: UserState
     let conversationState: ConversationState
     let messagingService: any MessagingServiceProtocol
-    @Binding var showAllMembers: Bool
+    @Binding var showAllMembersForConversation: Conversation?
     @Binding var showAddMember: Bool
-    let membersWithRoles: [ProfileWithRole]
     @State private var showingAvailableSoonAlert: Bool = false
     @State private var showingAddMemberAlert: Bool = false
 
@@ -170,8 +150,8 @@ struct GroupInfoView: View {
         userState.currentUser?.profile
     }
 
-    private var displayedMembers: [ProfileWithRole] {
-        let sortedMembers = membersWithRoles.sortedByRole(currentUser: currentUser)
+    private var displayedMembers: [ConversationMember] {
+        let sortedMembers = conversation.members.sortedByRole()
         return Array(sortedMembers.prefix(6))
     }
 
@@ -209,7 +189,7 @@ struct GroupInfoView: View {
                 // Members Section
                 VStack(alignment: .leading, spacing: DesignConstants.Spacing.step4x) {
                     HStack {
-                        Text("\(conversation.withCurrentUserIncluded().members.count) Members")
+                        Text("\(conversation.members.count) Members")
                             .font(.headline)
                         Spacer()
                         AddMemberButton(action: {
@@ -220,9 +200,9 @@ struct GroupInfoView: View {
                     .padding(.horizontal)
 
                     LazyVStack(spacing: 0) {
-                        ForEach(displayedMembers, id: \.id) { memberWithRole in
-                            MemberRowWithRole(
-                                memberWithRole: memberWithRole,
+                        ForEach(displayedMembers, id: \.id) { member in
+                            ConversationMemberRow(
+                                member: member,
                                 conversationID: conversation.id,
                                 messagingService: messagingService,
                                 canDeleteMembers: true,
@@ -232,16 +212,16 @@ struct GroupInfoView: View {
                                 currentUser: currentUser
                             )
 
-                            if memberWithRole.id != displayedMembers.last?.id {
+                            if member.id != displayedMembers.last?.id {
                                 Divider()
                                     .padding(.leading, DesignConstants.Spacing.step12x + DesignConstants.Spacing.step5x)
                             }
                         }
 
-                        if conversation.withCurrentUserIncluded().members.count > 6 {
+                        if conversation.members.count > 6 {
                             SeeAllMembersButton(
-                                memberCount: conversation.withCurrentUserIncluded().members.count,
-                                action: { showAllMembers = true }
+                                memberCount: conversation.members.count,
+                                action: { showAllMembersForConversation = conversation }
                             )
                         }
                     }
@@ -308,8 +288,8 @@ struct SettingsRow: View {
     }
 }
 
-struct MemberRowWithRole: View {
-    let memberWithRole: ProfileWithRole
+struct ConversationMemberRow: View {
+    let member: ConversationMember
     let conversationID: String
     let messagingService: (any MessagingServiceProtocol)?
     let canDeleteMembers: Bool
@@ -320,39 +300,39 @@ struct MemberRowWithRole: View {
     @State private var isDeleting: Bool = false
 
     init(
-        memberWithRole: ProfileWithRole,
+        member: ConversationMember,
         conversationID: String,
         messagingService: (any MessagingServiceProtocol)? = nil,
         canDeleteMembers: Bool = false,
         onMemberRemoved: ((String) -> Void)? = nil,
         currentUser: Profile? = nil) {
-        self.memberWithRole = memberWithRole
-        self.conversationID = conversationID
-        self.messagingService = messagingService
-        self.canDeleteMembers = canDeleteMembers
-        self.onMemberRemoved = onMemberRemoved
-        self.currentUser = currentUser
-    }
+            self.member = member
+            self.conversationID = conversationID
+            self.messagingService = messagingService
+            self.canDeleteMembers = canDeleteMembers
+            self.onMemberRemoved = onMemberRemoved
+            self.currentUser = currentUser
+        }
 
     var body: some View {
         HStack {
-            ProfileAvatarView(profile: memberWithRole.profile)
+            ProfileAvatarView(profile: member.profile)
                 .frame(width: DesignConstants.ImageSizes.mediumAvatar, height: DesignConstants.ImageSizes.mediumAvatar)
 
             VStack(alignment: .leading, spacing: DesignConstants.Spacing.stepHalf) {
-                Text(memberWithRole.displayName)
+                Text(member.profile.displayName)
                     .font(.body)
                     .fontWeight(.medium)
 
-                Text("@\(memberWithRole.username)")
+                Text("@\(member.profile.username)")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
 
             Spacer()
 
-            if !memberWithRole.role.displayName.isEmpty {
-                Text(memberWithRole.role.displayName)
+            if !member.role.displayName.isEmpty {
+                Text(member.role.displayName)
                     .font(.caption)
                     .foregroundColor(.blue)
                     .padding(.horizontal, DesignConstants.Spacing.step2x)
@@ -361,7 +341,7 @@ struct MemberRowWithRole: View {
                     .cornerRadius(DesignConstants.CornerRadius.small)
             }
 
-            if canDeleteMembers && !isCurrentUser {
+            if canDeleteMembers && !member.isCurrentUser {
                 let action = { showingDeleteAlert = true }
                 Button(action: action) {
                     Image(systemName: "minus.circle.fill")
@@ -381,14 +361,8 @@ struct MemberRowWithRole: View {
                 }
             }
         }, message: {
-            Text("Are you sure you want to remove \(memberWithRole.displayName) from this group?")
+            Text("Are you sure you want to remove \(member.profile.displayName) from this group?")
         })
-    }
-
-    private var isCurrentUser: Bool {
-        // Check if this member is the current user by comparing IDs
-        guard let currentUser = currentUser else { return false }
-        return memberWithRole.id == currentUser.id
     }
 
     private func removeMember() async {
@@ -400,16 +374,16 @@ struct MemberRowWithRole: View {
             let metadataWriter = messagingService.groupMetadataWriter()
             try await metadataWriter.removeGroupMembers(
                 groupId: conversationID,
-                memberInboxIds: [memberWithRole.id]
+                memberInboxIds: [member.id]
             )
             await MainActor.run {
-                onMemberRemoved?(memberWithRole.id)
+                onMemberRemoved?(member.id)
                 isDeleting = false
             }
         } catch {
             await MainActor.run {
                 // @lourou: Show error alert
-                Logger.error("Failed to remove member \(memberWithRole.id): \(error)")
+                Logger.error("Failed to remove member \(member.id): \(error)")
                 isDeleting = false
             }
         }
@@ -468,15 +442,14 @@ struct AllMembersView: View {
     let messagingService: any MessagingServiceProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showAddMember: Bool = false
-    let membersWithRoles: [ProfileWithRole]
     @State private var showingAddMemberAlert: Bool = false
 
     private var currentUser: Profile? {
         userState.currentUser?.profile
     }
 
-    private var sortedMembers: [ProfileWithRole] {
-        return membersWithRoles.sortedByRole(currentUser: currentUser)
+    private var sortedMembers: [ConversationMember] {
+        conversation.members.sortedByRole()
     }
 
     var body: some View {
@@ -490,9 +463,9 @@ struct AllMembersView: View {
 
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(sortedMembers, id: \.id) { memberWithRole in
-                        MemberRowWithRole(
-                            memberWithRole: memberWithRole,
+                    ForEach(sortedMembers, id: \.id) { member in
+                        ConversationMemberRow(
+                            member: member,
                             conversationID: conversation.id,
                             messagingService: messagingService,
                             canDeleteMembers: true,
@@ -502,7 +475,7 @@ struct AllMembersView: View {
                             currentUser: currentUser
                         )
 
-                        if memberWithRole.id != sortedMembers.last?.id {
+                        if member.id != sortedMembers.last?.id {
                             Divider()
                                 .padding(.leading, DesignConstants.Spacing.step12x + DesignConstants.Spacing.step5x)
                         }
@@ -532,39 +505,6 @@ struct AllMembersView: View {
         conversationRepository: MockMessagingService().conversationRepository(for: "dm1")
     )
 
-    let dmProfile = Profile(
-        id: "user1",
-        name: "John Doe",
-        username: "johndoe",
-        avatar: nil
-    )
-
-    let currentUser = Profile(
-        id: "current",
-        name: "Me",
-        username: "me",
-        avatar: nil
-    )
-
-    let dmConversation = Conversation(
-        id: "dm1",
-        creator: currentUser,
-        createdAt: Date(),
-        consent: .allowed,
-        kind: .dm,
-        name: nil,
-        description: nil,
-        members: [currentUser, dmProfile],
-        otherMember: dmProfile,
-        messages: [],
-        isPinned: false,
-        isUnread: false,
-        isMuted: false,
-        lastMessage: nil,
-        imageURL: nil,
-        isDraft: false
-    )
-
     let mockMessagingService = MockMessagingService()
 
     ConversationInfoView(
@@ -578,40 +518,6 @@ struct AllMembersView: View {
     @Previewable @State var userState: UserState = .init(userRepository: MockUserRepository())
     @Previewable @State var conversationState: ConversationState = .init(
         conversationRepository: MockMessagingService().conversationRepository(for: "group1")
-    )
-
-    let members = [
-        Profile(id: "user1", name: "Alice Johnson", username: "alice", avatar: nil),
-        Profile(id: "user2", name: "Bob Smith", username: "bob", avatar: nil),
-        Profile(id: "user3", name: "Charlie Brown", username: "charlie", avatar: nil),
-        Profile(id: "user4", name: "Diana Prince", username: "diana", avatar: nil),
-        Profile(id: "user5", name: "Eve Wilson", username: "eve", avatar: nil),
-        Profile(id: "user6", name: "Frank Miller", username: "frank", avatar: nil),
-        Profile(id: "user7", name: "Grace Lee", username: "grace", avatar: nil),
-        Profile(id: "user8", name: "Henry Ford", username: "henry", avatar: nil),
-        Profile(id: "user9", name: "Ivy Chen", username: "ivy", avatar: nil),
-        Profile(id: "user10", name: "Jack Ryan", username: "jack", avatar: nil),
-        Profile(id: "user11", name: "Kate Morgan", username: "kate", avatar: nil),
-        Profile(id: "current", name: "Me", username: "me", avatar: nil)
-    ]
-
-    let groupConversation = Conversation(
-        id: "group1",
-        creator: members[0],
-        createdAt: Date(),
-        consent: .allowed,
-        kind: .group,
-        name: "The Conversation",
-        description: "The official Ephemera hangout in Convos",
-        members: members,
-        otherMember: nil,
-        messages: [],
-        isPinned: false,
-        isUnread: false,
-        isMuted: false,
-        lastMessage: nil,
-        imageURL: nil,
-        isDraft: false
     )
 
     let mockMessagingService = MockMessagingService()

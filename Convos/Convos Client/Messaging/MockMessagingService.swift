@@ -4,7 +4,7 @@ import XMTPiOS
 
 class MockMessagingService: MessagingServiceProtocol {
     let currentUser: User = .mock()
-    let allUsers: [Profile]
+    let allUsers: [ConversationMember]
     let conversations: [Conversation]
     private var unpublishedMessages: [AnyMessage] = []
 
@@ -143,8 +143,8 @@ extension MockMessagingService: UserRepositoryProtocol {
 
 extension MockMessagingService: ProfileSearchRepositoryProtocol {
     func search(using query: String) async throws -> [ProfileSearchResult] {
-        allUsers.filter { $0.name.contains(query) }.map { profile in
-                .init(profile: profile, inboxId: profile.id)
+        allUsers.filter { $0.profile.name.contains(query) }.map { member in
+                .init(profile: member.profile, inboxId: member.profile.id)
         }
     }
 }
@@ -193,32 +193,8 @@ extension MockMessagingService: ConversationRepositoryProtocol {
         Just(conversation).eraseToAnyPublisher()
     }
 
-    var conversationWithRolesPublisher: AnyPublisher<(Conversation, [ProfileWithRole])?, Never> {
-        guard let conversation = conversation else { return Just(nil).eraseToAnyPublisher() }
-
-        // Mock implementation: assign random roles to members
-        let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
-            let role: MemberRole = [.member, .admin, .superAdmin].randomElement() ?? .member
-            return ProfileWithRole(profile: profile, role: role)
-        }
-
-        return Just((conversation, membersWithRoles)).eraseToAnyPublisher()
-    }
-
     func fetchConversation() throws -> Conversation? {
         conversation
-    }
-
-    func fetchConversationWithRoles() throws -> (Conversation, [ProfileWithRole])? {
-        guard let conversation = conversation else { return nil }
-
-        // Mock implementation: assign random roles to members
-        let membersWithRoles = conversation.withCurrentUserIncluded().members.map { profile in
-            let role: MemberRole = [.member, .admin, .superAdmin].randomElement() ?? .member
-            return ProfileWithRole(profile: profile, role: role)
-        }
-
-        return (conversation, membersWithRoles)
     }
 }
 
@@ -316,7 +292,7 @@ extension MockMessagingService: MessageSender {
         let message: AnyMessage = .message(
             .init(id: UUID().uuidString,
                   conversation: conversation,
-                  sender: currentUser.profile,
+                  sender: ConversationMember(profile: currentUser.profile, role: .member, isCurrentUser: true),
                   source: .outgoing,
                   status: .published,
                   content: .text(text),
@@ -338,13 +314,13 @@ extension MockMessagingService: MessageSender {
 // MARK: - Mock Data Generation
 
 extension MockMessagingService {
-    static func randomConversations(with users: [Profile]) -> [Conversation] {
+    static func randomConversations(with users: [ConversationMember]) -> [Conversation] {
         (0..<Int.random(in: 10...50)).map { index in
             Self.generateRandomConversation(id: "\(index)", from: users)
         }
     }
 
-    static func randomUsers() -> [Profile] {
+    static func randomUsers() -> [ConversationMember] {
         [
             .mock(name: "Alice Johnson"),
             .mock(name: "Bob Smith"),
@@ -359,7 +335,7 @@ extension MockMessagingService {
         ]
     }
 
-    static func generateRandomConversation(id: String, from users: [Profile]) -> Conversation {
+    static func generateRandomConversation(id: String, from users: [ConversationMember]) -> Conversation {
         var availableUsers = users
         // swiftlint:disable:next force_unwrapping
         let randomCreator = availableUsers.randomElement()!
@@ -377,7 +353,7 @@ extension MockMessagingService {
         )
 
         // swiftlint:disable:next force_unwrapping
-        let randomName = isDirectMessage ? otherMember!.name : [
+        let randomName = isDirectMessage ? otherMember!.profile.name : [
             "Team Discussion",
             "Project Planning",
             "Coffee Chat",
@@ -433,7 +409,11 @@ extension MockMessagingService {
 
     private func generateRandomMessageAndAppend() {
         guard let conversation = currentConversation ?? conversations.first else { return }
-        let sender = conversation.members.randomElement() ?? allUsers.randomElement() ?? currentUser.profile
+        let sender = conversation.members.randomElement() ?? allUsers.randomElement() ?? ConversationMember(
+            profile: currentUser.profile,
+            role: .member,
+            isCurrentUser: true
+        )
         let message = Message(
             id: UUID().uuidString,
             conversation: conversation,
@@ -449,7 +429,11 @@ extension MockMessagingService {
         messagesSubject.send(messages)
     }
 
-    static func generateRandomMessages(count: Int, conversation: Conversation, users: [Profile]) -> [AnyMessage] {
+    static func generateRandomMessages(
+        count: Int,
+        conversation: Conversation,
+        users: [ConversationMember]
+    ) -> [AnyMessage] {
         (0..<count).map { _ in
             let sender = conversation.members.randomElement() ?? users.randomElement() ?? users[0]
             let message = Message(
@@ -529,14 +513,5 @@ class MockGroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
 
     func getGroupMembers(for groupId: String) async throws -> [GroupMemberInfo] {
         return []
-    }
-
-    func getGroupMembersWithProfiles(
-        for groupId: String,
-        from conversation: Conversation
-    ) async throws -> [ProfileWithRole] {
-        return conversation.withCurrentUserIncluded().members.map { profile in
-            ProfileWithRole(profile: profile, role: .member)
-        }
     }
 }

@@ -189,7 +189,7 @@ struct MessageWithDetailsAndReplies: Codable, FetchableRecord, PersistableRecord
 protocol MessageType {
     var id: String { get }
     var conversation: Conversation { get }
-    var sender: Profile { get }
+    var sender: ConversationMember { get }
     var source: MessageSource { get }
     var status: MessageStatus { get }
     var content: MessageContent { get }
@@ -240,7 +240,7 @@ enum MessageContent: Hashable, Codable {
 struct Message: MessageType, Hashable, Codable {
     let id: String
     let conversation: Conversation
-    let sender: Profile
+    let sender: ConversationMember
     let source: MessageSource
     let status: MessageStatus
     let content: MessageContent
@@ -252,7 +252,7 @@ struct Message: MessageType, Hashable, Codable {
 struct MessageReply: MessageType, Hashable, Codable {
     let id: String
     let conversation: Conversation
-    let sender: Profile
+    let sender: ConversationMember
     let source: MessageSource
     let status: MessageStatus
     let content: MessageContent
@@ -265,7 +265,7 @@ struct MessageReply: MessageType, Hashable, Codable {
 struct MessageReaction: MessageType, Hashable, Codable {
     let id: String
     let conversation: Conversation
-    let sender: Profile
+    let sender: ConversationMember
     let source: MessageSource
     let status: MessageStatus
     let content: MessageContent

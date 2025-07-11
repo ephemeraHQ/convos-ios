@@ -98,18 +98,28 @@ extension Array where Element == MessageWithDetails {
             let dbMessage = dbMessageWithDetails.message
             let dbReactions = dbMessageWithDetails.messageReactions
             let dbSender = dbMessageWithDetails.messageSenderProfile
-            let sender: Profile = dbSender.hydrateProfile()
+
+            // @jarodl figure out a better way to do this
+            let sender = conversation.members.first(where: { $0.profile.id == dbSender.inboxId }) ??
+            ConversationMember(
+                profile: dbSender.hydrateProfile(),
+                role: .member,
+                isCurrentUser: dbSender.inboxId == currentUser.inboxId
+            )
+
             let isCurrentUser: Bool = dbSender.inboxId == currentUser.inboxId
             let source: MessageSource = isCurrentUser ? .outgoing : .incoming
             let reactions: [MessageReaction] = dbReactions.map {
-                .init(id: $0.clientMessageId,
-                      conversation: conversation,
-                      sender: sender,
-                      source: source,
-                      status: $0.status,
-                      content: .emoji($0.emoji ?? ""),
-                      date: Date(),
-                      emoji: $0.emoji ?? "")
+                .init(
+                    id: $0.clientMessageId,
+                    conversation: conversation,
+                    sender: sender,
+                    source: source,
+                    status: $0.status,
+                    content: .emoji($0.emoji ?? ""),
+                    date: Date(),
+                    emoji: $0.emoji ?? ""
+                )
             }
             switch dbMessage.messageType {
             case .original:
@@ -189,7 +199,12 @@ fileprivate extension Database {
             .filter(Column("id") == conversationId)
             .including(required: DBConversation.creatorProfile)
             .including(required: DBConversation.localState)
-            .including(all: DBConversation.memberProfiles)
+            .including(
+                all: DBConversation._members
+                    .forKey("conversationMembers")
+                    .select([DBConversationMember.Columns.role])
+                    .including(required: DBConversationMember.memberProfile)
+            )
             .asRequest(of: DBConversationDetails.self)
             .fetchOne(self) else {
             return []

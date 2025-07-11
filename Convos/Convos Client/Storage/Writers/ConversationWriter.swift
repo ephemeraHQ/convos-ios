@@ -155,7 +155,7 @@ fileprivate extension XMTPiOS.Member {
 }
 
 fileprivate extension XMTPiOS.PermissionLevel {
-    var role: DBConversationMember.Role {
+    var role: MemberRole {
         switch self {
         case .SuperAdmin: return .superAdmin
         case .Admin: return .admin

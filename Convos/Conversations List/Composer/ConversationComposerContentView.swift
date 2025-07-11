@@ -25,7 +25,7 @@ struct ConversationComposerContentView: View {
 
                             switch conversation.kind {
                             case .dm:
-                                Text(conversation.otherMember?.username ?? "")
+                                Text(conversation.otherMember?.profile.username ?? "")
                                     .font(.system(size: 14.0))
                                     .foregroundStyle(.colorTextSecondary)
                             case .group:

@@ -67,7 +67,12 @@ fileprivate extension Database {
             .filter(consent.contains(DBConversation.Columns.consent))
             .including(required: DBConversation.creatorProfile)
             .including(required: DBConversation.localState)
-            .including(all: DBConversation.memberProfiles)
+            .including(
+                all: DBConversation._members
+                    .forKey("conversationMembers")
+                    .select([DBConversationMember.Columns.role])
+                    .including(required: DBConversationMember.memberProfile)
+            )
             .with(DBConversation.lastMessageCTE)
             .including(optional: lastMessage)
             .asRequest(of: DBConversationDetails.self)

@@ -381,8 +381,8 @@ struct AddMemberRow: View {
 
 #Preview {
     let members = [
-        Profile(id: "user1", name: "Alice Johnson", username: "alice", avatar: nil),
-        Profile(id: "user2", name: "Bob Smith", username: "bob", avatar: nil)
+        ConversationMember.mock(name: "Alice"),
+        ConversationMember.mock(name: "Mary"),
     ]
 
     let groupConversation = Conversation(

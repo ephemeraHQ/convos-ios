@@ -249,9 +249,9 @@ struct GroupEditView: View {
 
 #Preview {
     let members = [
-        Profile(id: "user1", name: "Alice Johnson", username: "alice", avatar: nil),
-        Profile(id: "user2", name: "Bob Smith", username: "bob", avatar: nil),
-        Profile(id: "current", name: "Me", username: "me", avatar: nil)
+        ConversationMember.mock(name: "Alice"),
+        ConversationMember.mock(name: "Bobe"),
+        ConversationMember.mock(name: "Me")
     ]
 
     let groupConversation = Conversation(

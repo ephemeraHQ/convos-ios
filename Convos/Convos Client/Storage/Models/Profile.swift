@@ -27,31 +27,8 @@ struct MemberProfile: Codable, FetchableRecord, PersistableRecord, Hashable {
     )
 }
 
-enum MemberRole: String, Codable, Hashable {
-    case member, admin, superAdmin = "super_admin"
-
-    var displayName: String {
-        switch self {
-        case .member:
-            return ""
-        case .admin:
-            return "Admin"
-        case .superAdmin:
-            return "Super Admin"
-        }
-    }
-
-    var priority: Int {
-        switch self {
-        case .superAdmin: return 1
-        case .admin: return 2
-        case .member: return 3
-        }
-    }
-}
-
 struct Profile: Codable, Identifiable, Hashable {
-    let id: String
+    let id: String // @jarodl change to inboxId for clarity
     let name: String
     let username: String
     let avatar: String?
@@ -87,35 +64,14 @@ struct Profile: Codable, Identifiable, Hashable {
     }
 }
 
-struct ProfileWithRole: Codable, Identifiable, Hashable {
-    let profile: Profile
-    let role: MemberRole
-
-    var id: String { profile.id }
-    var displayName: String { profile.displayName }
-    var username: String { profile.username }
-    var avatar: String? { profile.avatar }
-    var avatarURL: URL? { profile.avatarURL }
-
-    init(profile: Profile, role: MemberRole) {
-        self.profile = profile
-        self.role = role
-    }
-}
-
 // MARK: - Array Extensions
 
-extension Array where Element == ProfileWithRole {
-    func sortedByRole(currentUser: Profile?) -> [ProfileWithRole] {
-        return self.sorted { member1, member2 in
+extension Array where Element == ConversationMember {
+    func sortedByRole() -> [ConversationMember] {
+        sorted { member1, member2 in
             // Show current user first
-            if let currentUser = currentUser {
-                if member1.id == currentUser.id { return true }
-                if member2.id == currentUser.id { return false }
-            }
-            // Fallback to hardcoded "current" for backwards compatibility
-            if member1.id == "current" { return true }
-            if member2.id == "current" { return false }
+            if member1.isCurrentUser { return true }
+            if member2.isCurrentUser { return false }
 
             // Sort by role hierarchy: superAdmin > admin > member
             let priority1 = member1.role.priority
@@ -126,7 +82,7 @@ extension Array where Element == ProfileWithRole {
             }
 
             // Same role, sort alphabetically by name
-            return member1.displayName < member2.displayName
+            return member1.profile.displayName < member2.profile.displayName
         }
     }
 }

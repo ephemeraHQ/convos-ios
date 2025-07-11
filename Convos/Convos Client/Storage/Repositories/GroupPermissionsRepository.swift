@@ -10,10 +10,6 @@ protocol GroupPermissionsRepositoryProtocol {
     func getMemberRole(memberInboxId: String, in groupId: String) async throws -> MemberRole
     func canPerformAction(memberInboxId: String, action: GroupPermissionAction, in groupId: String) async throws -> Bool
     func getGroupMembers(for groupId: String) async throws -> [GroupMemberInfo]
-    func getGroupMembersWithProfiles(
-        for groupId: String,
-        from conversation: Conversation
-    ) async throws -> [ProfileWithRole]
     func addAdmin(memberInboxId: String, to groupId: String) async throws
     func removeAdmin(memberInboxId: String, from groupId: String) async throws
     func addSuperAdmin(memberInboxId: String, to groupId: String) async throws
@@ -289,36 +285,6 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
         return groupMemberInfos
     }
 
-    func getGroupMembersWithProfiles(
-        for groupId: String,
-        from conversation: Conversation
-    ) async throws -> [ProfileWithRole] {
-        // For DM conversations, members don't have roles
-        guard conversation.kind == .group else {
-            return conversation.withCurrentUserIncluded().members.map { profile in
-                ProfileWithRole(profile: profile, role: .member)
-            }
-        }
-
-        // Get group members with roles from XMTP
-        let groupMembers = try await getGroupMembers(for: groupId)
-
-        // Map to ProfileWithRole, matching by inbox ID
-        let allMembers = conversation.withCurrentUserIncluded().members
-        var profilesWithRoles: [ProfileWithRole] = []
-
-        for profile in allMembers {
-            if let groupMember = groupMembers.first(where: { $0.inboxId == profile.id }) {
-                profilesWithRoles.append(ProfileWithRole(profile: profile, role: groupMember.role))
-            } else {
-                // Fallback to member role if not found in group members
-                profilesWithRoles.append(ProfileWithRole(profile: profile, role: .member))
-            }
-        }
-
-        return profilesWithRoles
-    }
-
     func addAdmin(memberInboxId: String, to groupId: String) async throws {
         guard let client = await getCurrentClient() else {
             throw GroupPermissionsError.clientNotAvailable
@@ -381,7 +347,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
             throw GroupPermissionsError.groupNotFound(groupId: groupId)
         }
 
-        try await group.addMembers(inboxIds: inboxIds)
+        _ = try await group.addMembers(inboxIds: inboxIds)
     }
 
     func removeMembers(inboxIds: [String], from groupId: String) async throws {

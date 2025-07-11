@@ -118,7 +118,7 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
         }
 
-        try await group.addMembers(inboxIds: memberInboxIds)
+        _ = try await group.addMembers(inboxIds: memberInboxIds)
 
         try await databaseWriter.write { db in
             for memberInboxId in memberInboxIds {
