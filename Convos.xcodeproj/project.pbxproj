@@ -193,6 +193,12 @@
 		D8A2B6A32DA4BA4C00EF8577 /* Exceptions for "Convos" folder in "Convos" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Convos Client/Auth/Passkey/AsyncAuthorizationController.swift",
+				"Convos Client/Auth/Passkey/PasskeyAuthError.swift",
+				"Convos Client/Auth/Passkey/PasskeyAuthService.swift",
+				"Convos Client/Auth/Passkey/PasskeyIdentityStore.swift",
+				"Convos Client/Auth/Passkey/PasskeyPresentationProvider.swift",
+				"Convos Client/Auth/Passkey/PasskeySigningKey.swift",
 				Info.plist,
 			);
 			target = D8A2B6902DA4BA4B00EF8577 /* Convos */;
