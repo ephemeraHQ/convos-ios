@@ -128,11 +128,12 @@ final class LayoutModel<Layout: MessagesLayoutProtocol> {
         }
         if index < sections.count &- 1 {
             let nextIndex = index &+ 1
-            let localHeightDiff = heightDiff
-
-            // Process sections sequentially to avoid sendable issues
-            for i in nextIndex..<sections.count {
-                sections[i].offsetY += localHeightDiff
+            sections.withUnsafeMutableBufferPointer { directlyMutableSections in
+                nonisolated(unsafe) let directlyMutableSections = directlyMutableSections
+                DispatchQueue
+                    .concurrentPerform(iterations: directlyMutableSections.count &- nextIndex) { internalIndex in
+                        directlyMutableSections[internalIndex &+ nextIndex].offsetY += heightDiff
+                    }
             }
         }
     }

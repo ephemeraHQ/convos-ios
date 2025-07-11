@@ -76,9 +76,7 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
             do {
                 try await outgoingMessageWriter.send(text: messageText)
             } catch {
-                await MainActor.run {
-                    Logger.error("Error sending message: \(error)")
-                }
+                Logger.error("Error sending message: \(error)")
             }
         }
     }
@@ -90,9 +88,7 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
             do {
                 try await writer.join(conversation: conversation)
             } catch {
-                await MainActor.run {
-                    Logger.error("Error joining conversation: \(error)")
-                }
+                Logger.error("Error joining conversation: \(error)")
             }
         }
     }
@@ -105,9 +101,7 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
             do {
                 try await writer.delete(conversation: conversation)
             } catch {
-                await MainActor.run {
-                    Logger.error("Error deleting conversation: \(error)")
-                }
+                Logger.error("Error deleting conversation: \(error)")
             }
         }
     }
