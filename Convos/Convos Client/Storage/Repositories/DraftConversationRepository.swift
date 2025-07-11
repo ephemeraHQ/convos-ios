@@ -36,20 +36,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
                 }
                 guard let dbConversation = try DBConversation
                     .filter(Column("clientConversationId") == draftConversationId)
-                    .including(
-                        required: DBConversation.creator
-                            .forKey("conversationCreator")
-                            .select([DBConversationMember.Columns.role])
-                            .including(required: DBConversationMember.memberProfile)
-                    )
-                    .including(required: DBConversation.localState)
-                    .including(
-                        all: DBConversation._members
-                            .forKey("conversationMembers")
-                            .select([DBConversationMember.Columns.role])
-                            .including(required: DBConversationMember.memberProfile)
-                    )
-                    .asRequest(of: DBConversationDetails.self)
+                    .detailedConversationQuery()
                     .fetchOne(db) else {
                     return []
                 }
@@ -97,30 +84,9 @@ fileprivate extension Database {
             throw CurrentSessionError.missingCurrentUser
         }
 
-        let lastMessage = DBConversation.association(
-            to: DBConversation.lastMessageCTE,
-            on: { conversation, lastMessage in
-                conversation.clientConversationId == lastMessage.conversationId
-            }).forKey("conversationLastMessage")
-            .order(\.date.desc)
         guard let dbConversation = try DBConversation
             .filter(Column("clientConversationId") == conversationId)
-            .including(
-                required: DBConversation.creator
-                    .forKey("conversationCreator")
-                    .select([DBConversationMember.Columns.role])
-                    .including(required: DBConversationMember.memberProfile)
-            )
-            .including(required: DBConversation.localState)
-            .including(
-                all: DBConversation._members
-                    .forKey("conversationMembers")
-                    .select([DBConversationMember.Columns.role])
-                    .including(required: DBConversationMember.memberProfile)
-            )
-            .with(DBConversation.lastMessageCTE)
-            .including(optional: lastMessage)
-            .asRequest(of: DBConversationDetails.self)
+            .detailedConversationQuery()
             .fetchOne(self) else {
             return nil
         }

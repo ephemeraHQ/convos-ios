@@ -56,15 +56,26 @@ extension Array where Element == DBConversationDetails {
 
 fileprivate extension Database {
     func composeAllConversations(consent: [Consent]) throws -> [Conversation] {
+        let dbConversationDetails = try DBConversation
+            .filter(!Column("id").like("draft-%"))
+            .filter(consent.contains(DBConversation.Columns.consent))
+            .detailedConversationQuery()
+            .fetchAll(self)
+        return try dbConversationDetails.composeConversations(from: self)
+    }
+}
+
+extension QueryInterfaceRequest where RowDecoder == DBConversation {
+    func detailedConversationQuery() -> QueryInterfaceRequest<DBConversationDetails> {
         let lastMessage = DBConversation.association(
             to: DBConversation.lastMessageCTE,
             on: { conversation, lastMessage in
                 conversation.id == lastMessage.conversationId
-            }).forKey("conversationLastMessage")
-            .order(\.date.desc)
-        let request = DBConversation
-            .filter(!Column("id").like("draft-%"))
-            .filter(consent.contains(DBConversation.Columns.consent))
+            }
+        ).forKey("conversationLastMessage")
+         .order(\.date.desc)
+
+        return self
             .including(
                 required: DBConversation.creator
                     .forKey("conversationCreator")
@@ -81,10 +92,6 @@ fileprivate extension Database {
                     .including(required: DBConversationMember.memberProfile)
             )
             .group(Column("id"))
-
-        let dbConversationDetails = try DBConversationDetails
-            .fetchAll(self, request)
-
-        return try dbConversationDetails.composeConversations(from: self)
+            .asRequest(of: DBConversationDetails.self)
     }
 }
