@@ -1,7 +1,7 @@
 import Observation
 import SwiftUI
 
-struct MessagesContainerView<Content: View>: UIViewControllerRepresentable, @unchecked Sendable {
+struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
     let conversationState: ConversationState
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol

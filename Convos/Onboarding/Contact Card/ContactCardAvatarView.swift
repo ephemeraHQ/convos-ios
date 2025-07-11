@@ -99,7 +99,7 @@ struct ContactCardCameraButton: View {
     }
 }
 
-struct ContactCardAvatarView: View, @unchecked Sendable {
+struct ContactCardAvatarView: View {
     @Binding var isEditing: Bool
     @Binding var imageState: ContactCardImage.State {
         didSet {
