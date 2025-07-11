@@ -39,10 +39,9 @@ rules:
       }
 
       ✅ Use this pattern instead:
-      let action = {
+      Button {
           // action code here
-      }
-      Button(action: action) {
+      } label: {
           // view content
       }
 
