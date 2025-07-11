@@ -26,7 +26,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     }
 
     let id: String
-    let clientConversationId: String // always the same, used for conversation drafts
+    let clientConversationId: String // used for conversation drafts
     let creatorId: String
     let kind: ConversationKind
     let consent: Consent
@@ -35,11 +35,14 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     let description: String?
     let imageURLString: String?
 
-    static let creatorForeignKey: ForeignKey = ForeignKey(["creatorId"], to: ["inboxId"])
+    static let creatorForeignKey: ForeignKey = ForeignKey(
+        [Columns.creatorId],
+        to: [DBConversationMember.Columns.memberId]
+    )
     static let localStateForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
 
-    static let creator: BelongsToAssociation<DBConversation, Member> = belongsTo(
-        Member.self,
+    static let creator: BelongsToAssociation<DBConversation, DBConversationMember> = belongsTo(
+        DBConversationMember.self,
         key: "conversationCreator",
         using: creatorForeignKey
     )
@@ -47,7 +50,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     static let creatorProfile: HasOneThroughAssociation<DBConversation, MemberProfile> = hasOne(
         MemberProfile.self,
         through: creator,
-        using: Member.profile,
+        using: DBConversationMember.memberProfile,
         key: "conversationCreatorProfile"
     )
 
@@ -247,7 +250,7 @@ extension DBConversation {
 
 struct DBConversationDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
     let conversation: DBConversation
-    let conversationCreatorProfile: MemberProfile
+    let conversationCreator: ConversationMemberProfileWithRole
     let conversationMembers: [ConversationMemberProfileWithRole]
     let conversationLastMessage: DBMessage?
     let conversationLocalState: ConversationLocalState
@@ -256,16 +259,7 @@ struct DBConversationDetails: Codable, FetchableRecord, PersistableRecord, Hasha
 extension DBConversationDetails {
     func hydrateConversationMembers(currentInboxId: String) -> [ConversationMember] {
         return conversationMembers.compactMap { member in
-            let hydratedProfile = member.memberProfile.hydrateProfile()
-
-            // Determine if this member is the current user
-            let isCurrentUser = member.memberProfile.inboxId == currentInboxId
-
-            return ConversationMember(
-                profile: hydratedProfile,
-                role: member.role,
-                isCurrentUser: isCurrentUser
-            )
+            member.hydrateConversationMember(currentInboxId: currentInboxId)
         }
     }
 }
@@ -355,6 +349,16 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
 struct ConversationMemberProfileWithRole: Codable, FetchableRecord, PersistableRecord, Hashable {
     let memberProfile: MemberProfile
     let role: MemberRole
+}
+
+extension ConversationMemberProfileWithRole {
+    func hydrateConversationMember(currentInboxId: String) -> ConversationMember {
+        .init(
+            profile: memberProfile.hydrateProfile(),
+            role: role,
+            isCurrentUser: memberProfile.inboxId == currentInboxId
+        )
+    }
 }
 
 extension DBConversationMember {

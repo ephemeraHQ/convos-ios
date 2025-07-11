@@ -97,18 +97,10 @@ extension Array where Element == MessageWithDetails {
         return try dbMessagesWithDetails.compactMap { dbMessageWithDetails -> AnyMessage? in
             let dbMessage = dbMessageWithDetails.message
             let dbReactions = dbMessageWithDetails.messageReactions
-            let dbSender = dbMessageWithDetails.messageSenderProfile
+            let dbSender = dbMessageWithDetails.messageSender
 
-            // @jarodl figure out a better way to do this
-            let sender = conversation.members.first(where: { $0.profile.id == dbSender.inboxId }) ??
-            ConversationMember(
-                profile: dbSender.hydrateProfile(),
-                role: .member,
-                isCurrentUser: dbSender.inboxId == currentUser.inboxId
-            )
-
-            let isCurrentUser: Bool = dbSender.inboxId == currentUser.inboxId
-            let source: MessageSource = isCurrentUser ? .outgoing : .incoming
+            let sender = dbSender.hydrateConversationMember(currentInboxId: currentUser.inboxId)
+            let source: MessageSource = sender.isCurrentUser ? .outgoing : .incoming
             let reactions: [MessageReaction] = dbReactions.map {
                 .init(
                     id: $0.clientMessageId,
@@ -197,7 +189,12 @@ fileprivate extension Database {
 
         guard let dbConversationDetails = try DBConversation
             .filter(Column("id") == conversationId)
-            .including(required: DBConversation.creatorProfile)
+            .including(
+                required: DBConversation.creator
+                    .forKey("conversationCreator")
+                    .select([DBConversationMember.Columns.role])
+                    .including(required: DBConversationMember.memberProfile)
+            )
             .including(required: DBConversation.localState)
             .including(
                 all: DBConversation._members
@@ -215,7 +212,12 @@ fileprivate extension Database {
         )
         let dbMessages = try DBMessage
             .filter(Column("conversationId") == conversationId)
-            .including(required: DBMessage.senderProfile)
+            .including(
+                required: DBMessage.sender
+                    .forKey("messageSender")
+                    .select([DBConversationMember.Columns.role])
+                    .including(required: DBConversationMember.memberProfile)
+            )
             .including(all: DBMessage.reactions)
             // .including(all: DBMessage.replies)
             .including(optional: DBMessage.sourceMessage)

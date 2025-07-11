@@ -50,7 +50,12 @@ fileprivate extension Database {
 
         guard let dbConversation = try DBConversation
             .filter(DBConversation.Columns.id == conversationId)
-            .including(required: DBConversation.creatorProfile)
+            .including(
+                required: DBConversation.creator
+                    .forKey("conversationCreator")
+                    .select([DBConversationMember.Columns.role])
+                    .including(required: DBConversationMember.memberProfile)
+            )
             .including(required: DBConversation.localState)
             .including(
                 all: DBConversation._members

@@ -6,14 +6,7 @@ extension DBConversationDetails {
             conversationKind: conversation.kind
         )
         let members = hydrateConversationMembers(currentInboxId: currentUser.inboxId)
-        let creator = (
-            members.first(where: { $0.profile.id == conversationCreatorProfile.inboxId }) ??
-            ConversationMember(
-                profile: conversationCreatorProfile.hydrateProfile(),
-                role: .superAdmin,
-                isCurrentUser: currentUser.inboxId == conversationCreatorProfile.inboxId
-            )
-        )
+        let creator = conversationCreator.hydrateConversationMember(currentInboxId: currentUser.inboxId)
 
         let otherMember: ConversationMember?
         if conversation.kind == .dm,

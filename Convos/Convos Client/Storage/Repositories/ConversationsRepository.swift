@@ -62,21 +62,28 @@ fileprivate extension Database {
                 conversation.id == lastMessage.conversationId
             }).forKey("conversationLastMessage")
             .order(\.date.desc)
-        let dbConversationDetails = try DBConversation
+        let request = DBConversation
             .filter(!Column("id").like("draft-%"))
             .filter(consent.contains(DBConversation.Columns.consent))
-            .including(required: DBConversation.creatorProfile)
+            .including(
+                required: DBConversation.creator
+                    .forKey("conversationCreator")
+                    .select([DBConversationMember.Columns.role])
+                    .including(required: DBConversationMember.memberProfile)
+            )
             .including(required: DBConversation.localState)
+            .with(DBConversation.lastMessageCTE)
+            .including(optional: lastMessage)
             .including(
                 all: DBConversation._members
                     .forKey("conversationMembers")
                     .select([DBConversationMember.Columns.role])
                     .including(required: DBConversationMember.memberProfile)
             )
-            .with(DBConversation.lastMessageCTE)
-            .including(optional: lastMessage)
-            .asRequest(of: DBConversationDetails.self)
-            .fetchAll(self)
+            .group(Column("id"))
+
+        let dbConversationDetails = try DBConversationDetails
+            .fetchAll(self, request)
 
         return try dbConversationDetails.composeConversations(from: self)
     }

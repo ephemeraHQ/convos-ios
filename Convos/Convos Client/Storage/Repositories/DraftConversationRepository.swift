@@ -36,7 +36,12 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
                 }
                 guard let dbConversation = try DBConversation
                     .filter(Column("clientConversationId") == draftConversationId)
-                    .including(required: DBConversation.creatorProfile)
+                    .including(
+                        required: DBConversation.creator
+                            .forKey("conversationCreator")
+                            .select([DBConversationMember.Columns.role])
+                            .including(required: DBConversationMember.memberProfile)
+                    )
                     .including(required: DBConversation.localState)
                     .including(
                         all: DBConversation._members
@@ -100,7 +105,12 @@ fileprivate extension Database {
             .order(\.date.desc)
         guard let dbConversation = try DBConversation
             .filter(Column("clientConversationId") == conversationId)
-            .including(required: DBConversation.creatorProfile)
+            .including(
+                required: DBConversation.creator
+                    .forKey("conversationCreator")
+                    .select([DBConversationMember.Columns.role])
+                    .including(required: DBConversationMember.memberProfile)
+            )
             .including(required: DBConversation.localState)
             .including(
                 all: DBConversation._members
