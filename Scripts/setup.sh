@@ -108,23 +108,16 @@ if ! command -v swiftformat &> /dev/null; then
     fi
 fi
 
-# Check Ruby version (require Ruby 3.3.0 or higher)
+# Check Ruby version (require Ruby 3.3.3)
 RUBY_VERSION=$(ruby -v | awk '{print $2}' | cut -d'p' -f1)
-RUBY_MAJOR=$(echo "$RUBY_VERSION" | cut -d'.' -f1)
-RUBY_MINOR=$(echo "$RUBY_VERSION" | cut -d'.' -f2)
-RUBY_PATCH=$(echo "$RUBY_VERSION" | cut -d'.' -f3)
-
-# Check if Ruby version is 3.3.0 or higher
-if [ "$RUBY_MAJOR" -lt 3 ] || [ "$RUBY_MAJOR" -eq 3 -a "$RUBY_MINOR" -lt 3 ]; then
+if [ "$RUBY_VERSION" != "3.3.3" ]; then
     echo "❌ Ruby version $RUBY_VERSION is not compatible."
-    echo "This project requires Ruby 3.3.0 or higher"
-    echo "Please install a compatible version using:"
+    echo "This project requires Ruby 3.3.3"
+    echo "Please install the correct version using:"
     echo "  - rbenv: rbenv install 3.3.3 && rbenv global 3.3.3"
     echo "  - rvm: rvm install 3.3.3 && rvm use 3.3.3"
     echo "  - Homebrew: brew install ruby@3.3 && brew link ruby@3.3"
     exit 1
-else
-    echo "✅ Ruby version $RUBY_VERSION is compatible (3.3.0+ required)"
 fi
 
 # Check if Bundler is installed
@@ -155,4 +148,4 @@ if ! bundle install; then
     exit 1
 fi
 
-echo "✅ All dependencies are properly installed"
+echo "✅ All dependencies are properly installed" 
