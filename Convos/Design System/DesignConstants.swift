@@ -23,9 +23,11 @@ enum DesignConstants {
         static let step8x: CGFloat = 32.0
         static let step10x: CGFloat = 40.0
         static let step12x: CGFloat = 48.0
+        static let step16x: CGFloat = 64.0
     }
 
     enum CornerRadius {
+        static let large: CGFloat = 40.0
         static let medium: CGFloat = 16.0
         static let regular: CGFloat = 12.0
         static let small: CGFloat = 8.0

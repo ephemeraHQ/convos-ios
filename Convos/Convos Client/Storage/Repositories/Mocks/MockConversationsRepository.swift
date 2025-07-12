@@ -17,6 +17,7 @@ extension Conversation {
     ) -> Self {
         .init(
             id: id,
+            inboxId: UUID().uuidString,
             creator: creator,
             createdAt: Date(),
             consent: consent,

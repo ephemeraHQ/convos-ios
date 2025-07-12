@@ -16,14 +16,12 @@ final class AppViewModel {
     init(convos: ConvosClient) {
         self.convos = convos
 
-        Task {
-            do {
-                try await convos.prepare()
-            } catch {
-                Logger.error("Convos SDK failed preparing: \(error.localizedDescription)")
-            }
-            observeAuthState()
+        do {
+            try convos.prepare()
+        } catch {
+            Logger.error("Convos SDK failed preparing: \(error.localizedDescription)")
         }
+        observeAuthState()
     }
 
     private func observeAuthState() {

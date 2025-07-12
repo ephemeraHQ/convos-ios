@@ -387,6 +387,7 @@ struct AddMemberRow: View {
 
     let groupConversation = Conversation(
         id: "group1",
+        inboxId: UUID().uuidString,
         creator: members[0],
         createdAt: Date(),
         consent: .allowed,

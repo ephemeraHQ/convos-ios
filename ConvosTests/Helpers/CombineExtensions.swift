@@ -4,12 +4,12 @@ enum WaitForMatchError: Error {
     case timeout
 }
 
-extension Publisher {
+extension Publisher where Output: Sendable {
     func waitForFirstMatch(
         where predicate: @escaping (Output) -> Bool,
         timeout: Duration = .seconds(2)
     ) async throws -> Output {
-        try await withThrowingTaskGroup(of: Output.self) { group in
+        return try await withThrowingTaskGroup(of: Output.self) { group in
             group.addTask {
                 for try await value in self.values {
                     if predicate(value) {

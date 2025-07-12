@@ -48,15 +48,17 @@ struct ContactCardCreateView: View {
                 }
 
                 DraggableSpringyView {
-                    ContactCardView(name: $name,
-                                    imageState: $imageState,
-                                    nameIsValid: $nameIsValid,
-                                    nameError: $nameError,
-                                    isEditing: $isEditing,
-                                    isNameFocused: $isNameFocused,
-                                    importAction: {
-                                        importCardAction()
-                                    })
+                    ContactCardEditView(
+                        name: $name,
+                        imageState: $imageState,
+                        nameIsValid: $nameIsValid,
+                        nameError: $nameError,
+                        isEditing: $isEditing,
+                        isNameFocused: $isNameFocused,
+                        importAction: {
+                            importCardAction()
+                        }
+                    )
                 }
                 .zIndex(1)
                 .overlay(alignment: .bottom) {

@@ -4,7 +4,8 @@ import GRDB
 
 final class ConvosClient {
     private let authService: AuthServiceProtocol
-    private let messagingService: any MessagingServiceProtocol
+    private let localAuthService: LocalAuthServiceProtocol
+    private let sessionManager: any SessionManagerProtocol
     private let databaseManager: any DatabaseManagerProtocol
 
     var databaseWriter: any DatabaseWriter {
@@ -15,53 +16,71 @@ final class ConvosClient {
         databaseManager.dbReader
     }
 
+    var session: any SessionManagerProtocol {
+        sessionManager
+    }
+
     static func testClient(
-        authService: AuthServiceProtocol = MockAuthService()
+        authService: AuthServiceProtocol = MockAuthService(),
+        localAuthService: LocalAuthServiceProtocol = SecureEnclaveAuthService()
     ) -> ConvosClient {
         let databaseManager = MockDatabaseManager.shared
-        let messagingService = MessagingService(
+        let sessionManager = SessionManager(
             authService: authService,
+            localAuthService: localAuthService,
             databaseWriter: databaseManager.dbWriter,
             databaseReader: databaseManager.dbReader,
-            apiClient: MockAPIClient(),
-            environment: .local
+            environment: .tests
         )
         return .init(authService: authService,
-                     messagingService: messagingService,
+                     localAuthService: localAuthService,
+                     sessionManager: sessionManager,
                      databaseManager: databaseManager)
     }
 
     static func mock() -> ConvosClient {
         let authService = MockAuthService()
         let databaseManager = MockDatabaseManager.previews
-        let messagingService = MockMessagingService()
+        let sessionManager = MockInboxesService()
+        let localAuthService = SecureEnclaveAuthService()
         return .init(authService: authService,
-                     messagingService: messagingService,
+                     localAuthService: localAuthService,
+                     sessionManager: sessionManager,
                      databaseManager: databaseManager)
     }
 
     internal init(authService: any AuthServiceProtocol,
-                  messagingService: any MessagingServiceProtocol,
+                  localAuthService: any LocalAuthServiceProtocol,
+                  sessionManager: any SessionManagerProtocol,
                   databaseManager: any DatabaseManagerProtocol) {
         self.authService = authService
-        self.messagingService = messagingService
+        self.localAuthService = localAuthService
+        self.sessionManager = sessionManager
         self.databaseManager = databaseManager
     }
 
     var authState: AnyPublisher<AuthServiceState, Never> {
+        sessionManager.authState
+    }
+
+    var externalAuthState: AnyPublisher<AuthServiceState, Never> {
         authService.authStatePublisher.eraseToAnyPublisher()
     }
 
-    var supportsMultipleAccounts: Bool {
-        authService.supportsMultipleAccounts
+    var localAuthState: AnyPublisher<AuthServiceState, Never> {
+        localAuthService.authStatePublisher.eraseToAnyPublisher()
     }
 
-    func prepare() async throws {
-        try await authService.prepare()
+    func prepare() throws {
+        try sessionManager.prepare()
     }
 
     func signIn() async throws {
         try await authService.signIn()
+    }
+
+    func getStarted() throws {
+        _ = try localAuthService.register(displayName: "User", inboxType: .standard)
     }
 
     func register(displayName: String) async throws {
@@ -69,11 +88,8 @@ final class ConvosClient {
     }
 
     func signOut() async throws {
+        try localAuthService.deleteAll()
         try await authService.signOut()
-        await messagingService.stop()
-    }
-
-    var messaging: any MessagingServiceProtocol {
-        messagingService
+//        await messagingService.stop()
     }
 }

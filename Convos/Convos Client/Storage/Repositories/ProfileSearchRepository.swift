@@ -31,35 +31,27 @@ extension ConvosAPI.ProfileResponse {
 }
 
 class ProfileSearchRepository: ProfileSearchRepositoryProtocol {
-    private let apiClient: any ConvosAPIClientProtocol
-    private let clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never>
-    private var clientProvider: (any XMTPClientProvider)?
-    private var cancellable: AnyCancellable?
+    private let inboxReadyPublisher: InboxReadyResultPublisher
+    private let inboxReadyValue: PublisherValue<InboxReadyResult>
 
-    init(apiClient: any ConvosAPIClientProtocol,
-         clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never>) {
-        self.apiClient = apiClient
-        self.clientPublisher = clientPublisher
-        cancellable = clientPublisher.sink { [weak self] clientProvider in
-            guard let self else { return }
-            self.clientProvider = clientProvider
-        }
-    }
-
-    deinit {
-        cancellable?.cancel()
+    init(
+        inboxReady: InboxReadyResult?,
+        inboxReadyPublisher: InboxReadyResultPublisher
+    ) {
+        self.inboxReadyPublisher = inboxReadyPublisher
+        self.inboxReadyValue = .init(initial: inboxReady, upstream: inboxReadyPublisher)
     }
 
     func search(using query: String) async throws -> [ProfileSearchResult] {
+        guard let result = inboxReadyValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
         if query.isValidEthereumAddressFormat {
-            guard let clientProvider else {
-                Logger.error("Attempting profile search from wallet address without XMTP Client Provider")
+            guard let inboxId = try await result.client.inboxId(for: query) else {
                 return []
             }
-            guard let inboxId = try await clientProvider.inboxId(for: query) else {
-                return []
-            }
-            guard let profile = try? await apiClient.getProfile(inboxId: inboxId) else {
+            guard let profile = try? await result.apiClient.getProfile(inboxId: inboxId) else {
                 return [
                     .init(
                         profile: .init(
@@ -73,7 +65,7 @@ class ProfileSearchRepository: ProfileSearchRepositoryProtocol {
             }
             return [profile.profileSearchResult]
         } else {
-            let profiles = try await apiClient.getProfiles(matching: query)
+            let profiles = try await result.apiClient.getProfiles(matching: query)
             return profiles.map { $0.profileSearchResult }
         }
     }

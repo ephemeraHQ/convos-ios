@@ -2,66 +2,47 @@ import Combine
 import SwiftUI
 
 struct ConversationInfoView: View {
-    let userState: UserState
-    let conversationState: ConversationState
-    let messagingService: any MessagingServiceProtocol
-    @Environment(\.dismiss) private var dismiss: DismissAction
+    let conversation: Conversation
+    let groupMetadataWriter: any GroupMetadataWriterProtocol
     @State private var showAllMembersForConversation: Conversation?
     @State private var showGroupEditForConversation: Conversation?
     @State private var showAddMember: Bool = false
 
-    private var conversation: Conversation? {
-        conversationState.conversation
-    }
-
     var body: some View {
         VStack(spacing: 0) {
-            CustomToolbarView(onBack: { dismiss() }, rightContent: {
-                if conversation?.kind == .group {
-                    EditGroupButton(action: {
-                        showGroupEditForConversation = conversation
-                    })
-                }
-            })
-
-            // Content
-            if let conversation = conversation {
-                switch conversation.kind {
-                case .dm:
-                    DMInfoView(conversation: conversation)
-                case .group:
-                    GroupInfoView(
-                        conversation: conversation,
-                        userState: userState,
-                        conversationState: conversationState,
-                        messagingService: messagingService,
-                        showAllMembersForConversation: $showAllMembersForConversation,
-                        showAddMember: $showAddMember
-                    )
-                }
-            } else {
-                // Loading state
-                VStack {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
-                }
+            switch conversation.kind {
+            case .dm:
+                DMInfoView(conversation: conversation)
+            case .group:
+                GroupInfoView(
+                    conversation: conversation,
+                    groupMetadataWriter: groupMetadataWriter,
+                    showAllMembersForConversation: $showAllMembersForConversation,
+                    showAddMember: $showAddMember
+                )
             }
         }
-        .navigationBarHidden(true)
         .navigationDestination(item: $showAllMembersForConversation) { conversation in
             AllMembersView(
                 conversation: conversation,
-                userState: userState,
-                conversationState: conversationState,
-                messagingService: messagingService
+                groupMetadataWriter: groupMetadataWriter
             )
         }
         .navigationDestination(item: $showGroupEditForConversation) { conversation in
             GroupEditView(
                 conversation: conversation,
-                messagingService: messagingService
+                groupMetadataWriter: groupMetadataWriter
             )
+        }
+        .toolbarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if conversation.kind == .group {
+                    EditGroupButton {
+                        showGroupEditForConversation = conversation
+                    }
+                }
+            }
         }
     }
 }
@@ -138,17 +119,11 @@ struct DMInfoView: View {
 // MARK: - Group Info View
 struct GroupInfoView: View {
     let conversation: Conversation
-    let userState: UserState
-    let conversationState: ConversationState
-    let messagingService: any MessagingServiceProtocol
+    let groupMetadataWriter: any GroupMetadataWriterProtocol
     @Binding var showAllMembersForConversation: Conversation?
     @Binding var showAddMember: Bool
     @State private var showingAvailableSoonAlert: Bool = false
     @State private var showingAddMemberAlert: Bool = false
-
-    private var currentUser: Profile? {
-        userState.currentUser?.profile
-    }
 
     private var displayedMembers: [ConversationMember] {
         let sortedMembers = conversation.members.sortedByRole()
@@ -204,12 +179,11 @@ struct GroupInfoView: View {
                             ConversationMemberRow(
                                 member: member,
                                 conversationID: conversation.id,
-                                messagingService: messagingService,
+                                groupMetadataWriter: groupMetadataWriter,
                                 canDeleteMembers: true,
                                 onMemberRemoved: { _ in
                                     // @lourou: Refresh conversation data
-                                },
-                                currentUser: currentUser
+                                }
                             )
 
                             if member.id != displayedMembers.last?.id {
@@ -291,10 +265,9 @@ struct SettingsRow: View {
 struct ConversationMemberRow: View {
     let member: ConversationMember
     let conversationID: String
-    let messagingService: (any MessagingServiceProtocol)?
+    let groupMetadataWriter: any GroupMetadataWriterProtocol
     let canDeleteMembers: Bool
     let onMemberRemoved: ((String) -> Void)?
-    let currentUser: Profile?
 
     @State private var showingDeleteAlert: Bool = false
     @State private var isDeleting: Bool = false
@@ -302,16 +275,14 @@ struct ConversationMemberRow: View {
     init(
         member: ConversationMember,
         conversationID: String,
-        messagingService: (any MessagingServiceProtocol)? = nil,
+        groupMetadataWriter: any GroupMetadataWriterProtocol,
         canDeleteMembers: Bool = false,
-        onMemberRemoved: ((String) -> Void)? = nil,
-        currentUser: Profile? = nil) {
+        onMemberRemoved: ((String) -> Void)? = nil) {
             self.member = member
             self.conversationID = conversationID
-            self.messagingService = messagingService
+            self.groupMetadataWriter = groupMetadataWriter
             self.canDeleteMembers = canDeleteMembers
             self.onMemberRemoved = onMemberRemoved
-            self.currentUser = currentUser
         }
 
     var body: some View {
@@ -366,13 +337,10 @@ struct ConversationMemberRow: View {
     }
 
     private func removeMember() async {
-        guard let messagingService = messagingService else { return }
-
         isDeleting = true
 
         do {
-            let metadataWriter = messagingService.groupMetadataWriter()
-            try await metadataWriter.removeGroupMembers(
+            try await groupMetadataWriter.removeGroupMembers(
                 groupId: conversationID,
                 memberInboxIds: [member.id]
             )
@@ -437,16 +405,10 @@ struct AddMemberButton: View {
 // MARK: - All Members View
 struct AllMembersView: View {
     let conversation: Conversation
-    let userState: UserState
-    let conversationState: ConversationState
-    let messagingService: any MessagingServiceProtocol
+    let groupMetadataWriter: any GroupMetadataWriterProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showAddMember: Bool = false
     @State private var showingAddMemberAlert: Bool = false
-
-    private var currentUser: Profile? {
-        userState.currentUser?.profile
-    }
 
     private var sortedMembers: [ConversationMember] {
         conversation.members.sortedByRole()
@@ -467,12 +429,11 @@ struct AllMembersView: View {
                         ConversationMemberRow(
                             member: member,
                             conversationID: conversation.id,
-                            messagingService: messagingService,
+                            groupMetadataWriter: groupMetadataWriter,
                             canDeleteMembers: true,
                             onMemberRemoved: { _ in
                                 // @lourou: Refresh conversation data
-                            },
-                            currentUser: currentUser
+                            }
                         )
 
                         if member.id != sortedMembers.last?.id {
@@ -500,31 +461,15 @@ struct AllMembersView: View {
 }
 
 #Preview("DM Conversation") {
-    @Previewable @State var userState: UserState = .init(userRepository: MockUserRepository())
-    @Previewable @State var conversationState: ConversationState = .init(
-        conversationRepository: MockMessagingService().conversationRepository(for: "dm1")
-    )
-
-    let mockMessagingService = MockMessagingService()
-
     ConversationInfoView(
-        userState: userState,
-        conversationState: conversationState,
-        messagingService: mockMessagingService
+        conversation: .mock(),
+        groupMetadataWriter: MockGroupMetadataWriter()
     )
 }
 
 #Preview("Group Conversation") {
-    @Previewable @State var userState: UserState = .init(userRepository: MockUserRepository())
-    @Previewable @State var conversationState: ConversationState = .init(
-        conversationRepository: MockMessagingService().conversationRepository(for: "group1")
-    )
-
-    let mockMessagingService = MockMessagingService()
-
     ConversationInfoView(
-        userState: userState,
-        conversationState: conversationState,
-        messagingService: mockMessagingService
+        conversation: .mock(),
+        groupMetadataWriter: MockGroupMetadataWriter()
     )
 }

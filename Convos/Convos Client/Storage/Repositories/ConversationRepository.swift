@@ -44,10 +44,6 @@ class ConversationRepository: ConversationRepositoryProtocol {
 
 fileprivate extension Database {
     func composeConversation(for conversationId: String) throws -> Conversation? {
-        guard let currentUser = try currentUser() else {
-            throw CurrentSessionError.missingCurrentUser
-        }
-
         guard let dbConversation = try DBConversation
             .filter(DBConversation.Columns.id == conversationId)
             .detailedConversationQuery()
@@ -55,8 +51,6 @@ fileprivate extension Database {
             return nil
         }
 
-        return dbConversation.hydrateConversation(
-            currentUser: currentUser
-        )
+        return dbConversation.hydrateConversation()
     }
 }

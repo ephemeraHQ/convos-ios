@@ -4,11 +4,37 @@ import XMTPiOS
 
 protocol AuthServiceRegisteredResultType: AuthServiceResultType {
     var displayName: String { get }
+    var inbox: any AuthServiceInboxType { get }
 }
 
 protocol AuthServiceResultType {
+    var inboxes: [any AuthServiceInboxType] { get }
+}
+
+protocol AuthServiceInboxType {
+    var type: InboxType { get }
+    var provider: InboxProvider { get }
+    var providerId: String { get }
     var signingKey: any XMTPiOS.SigningKey { get }
     var databaseKey: Data { get }
+}
+
+struct AuthServiceRegisteredResult: AuthServiceRegisteredResultType {
+    let displayName: String
+    let inbox: any AuthServiceInboxType
+    var inboxes: [any AuthServiceInboxType] { [inbox] }
+}
+
+struct AuthServiceResult: AuthServiceResultType {
+    var inboxes: [any AuthServiceInboxType]
+}
+
+struct AuthServiceInbox: AuthServiceInboxType {
+    let type: InboxType
+    let provider: InboxProvider
+    let providerId: String
+    let signingKey: any XMTPiOS.SigningKey
+    let databaseKey: Data
 }
 
 enum AuthServiceState {
@@ -39,18 +65,22 @@ enum AuthServiceState {
     }
 }
 
-protocol AuthServiceProtocol {
+protocol BaseAuthServiceProtocol {
     var state: AuthServiceState { get }
     var authStatePublisher: AnyPublisher<AuthServiceState, Never> { get }
-    var supportsMultipleAccounts: Bool { get }
 
-    func prepare() async throws
+    func prepare() throws
+}
+
+protocol AuthServiceProtocol: BaseAuthServiceProtocol {
+    var accountsService: (any AuthAccountsServiceProtocol)? { get }
 
     func signIn() async throws
     func register(displayName: String) async throws
     func signOut() async throws
 }
 
-extension AuthServiceProtocol {
-    var supportsMultipleAccounts: Bool { true }
+protocol LocalAuthServiceProtocol: BaseAuthServiceProtocol {
+    func register(displayName: String, inboxType: InboxType) throws -> any AuthServiceRegisteredResultType
+    func deleteAll() throws
 }

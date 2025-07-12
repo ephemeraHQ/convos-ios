@@ -131,7 +131,9 @@ final class LayoutModel<Layout: MessagesLayoutProtocol> {
             sections.withUnsafeMutableBufferPointer { directlyMutableSections in
                 nonisolated(unsafe) let directlyMutableSections = directlyMutableSections
                 DispatchQueue
-                    .concurrentPerform(iterations: directlyMutableSections.count &- nextIndex) { internalIndex in
+                    .concurrentPerform(
+                        iterations: directlyMutableSections.count &- nextIndex
+                    ) { internalIndex in
                         directlyMutableSections[internalIndex &+ nextIndex].offsetY += heightDiff
                     }
             }

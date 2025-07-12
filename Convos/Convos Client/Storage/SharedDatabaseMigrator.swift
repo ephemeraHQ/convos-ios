@@ -14,7 +14,25 @@ class SharedDatabaseMigrator {
         defaultMigrator.eraseDatabaseOnSchemaChange = true
 #endif
 
-        defaultMigrator.registerMigration("createUserSchema") { db in
+        defaultMigrator.registerMigration("createSchema") { db in
+            try db.create(table: "session") { t in
+                t.column("id", .integer)
+                    .unique()
+                    .primaryKey()
+            }
+
+            try db.create(table: "inbox") { t in
+                t.column("inboxId", .text)
+                    .unique()
+                    .primaryKey()
+                t.column("providerId", .text)
+                    .notNull()
+                t.column("sessionId", .integer)
+                    .references("session", onDelete: .cascade)
+                t.column("type", .jsonText).notNull()
+                t.column("provider", .text).notNull()
+            }
+
             try db.create(table: "member") { t in
                 t.column("inboxId", .text)
                     .unique()
@@ -22,37 +40,15 @@ class SharedDatabaseMigrator {
                     .primaryKey()
             }
 
-            try db.create(table: "user") { t in
-                t.column("id", .text)
-                    .unique()
-                    .primaryKey()
-                t.column("inboxId", .text)
-                    .unique()
-                    .indexed()
-                    .references("member", onDelete: .none)
-            }
-
             try db.create(table: "identity") { t in
                 t.column("id", .text)
                     .unique()
                     .primaryKey()
-                t.column("userId", .text)
+                t.column("inboxId", .text)
                     .notNull()
                     .indexed()
-                    .references("user", onDelete: .cascade)
+                    .references("inbox", onDelete: .cascade)
                 t.column("walletAddress", .text).notNull()
-                t.column("xmtpId", .text)
-            }
-
-            try db.create(table: "userProfile") { t in
-                t.column("userId", .text)
-                    .notNull()
-                    .unique()
-                    .references("user", onDelete: .cascade)
-                    .primaryKey()
-                t.column("name", .text).notNull()
-                t.column("username", .text).notNull()
-                t.column("avatar", .text)
             }
 
             try db.create(table: "conversation") { t in
@@ -60,6 +56,9 @@ class SharedDatabaseMigrator {
                     .notNull()
                     .primaryKey()
                     .unique(onConflict: .replace)
+                t.column("inboxId", .text)
+                    .notNull()
+                    .references("inbox", onDelete: .cascade)
                 t.column("clientConversationId", .text)
                     .notNull()
                     .unique(onConflict: .replace)
@@ -78,6 +77,7 @@ class SharedDatabaseMigrator {
                     .notNull()
                     .unique()
                     .primaryKey()
+                    .references("member", onDelete: .cascade)
                 t.column("name", .text).notNull()
                 t.column("username", .text).notNull()
                 t.column("avatar", .text)
@@ -133,15 +133,6 @@ class SharedDatabaseMigrator {
                 t.column("sourceMessageId", .text)
                 t.column("attachmentUrls", .text)
                 t.column("update", .jsonText)
-            }
-
-            try db.create(table: "session") { t in
-                t.column("id", .integer)
-                    .unique()
-                    .primaryKey()
-                t.column("userId", .text)
-                    .notNull()
-                    .references("user", onDelete: .cascade)
             }
         }
 

@@ -37,6 +37,10 @@ class ConversationLocalStateWriter: ConversationLocalStateWriterProtocol {
         _ update: @escaping (ConversationLocalState) -> ConversationLocalState
     ) async throws {
         try await databaseWriter.write { db in
+            guard try DBConversation.fetchOne(db, key: conversationId) != nil else {
+                throw ConversationLocalStateWriterError.conversationNotFound
+            }
+
             let current = try ConversationLocalState
                 .filter(Column("conversationId") == conversationId)
                 .fetchOne(db)
@@ -51,4 +55,8 @@ class ConversationLocalStateWriter: ConversationLocalStateWriterProtocol {
             try updated.save(db)
         }
     }
+}
+
+enum ConversationLocalStateWriterError: Error {
+    case conversationNotFound
 }

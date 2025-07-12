@@ -69,11 +69,12 @@ struct ConversationComposerContentView: View {
                     }
                 }
                 .listRowSeparator(.hidden)
-                .listRowBackground(Color.colorBackgroundPrimary)
+                .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
                 .listRowSpacing(0.0)
             }
         }
+        .background(.clear)
         .listStyle(.plain)
         .listRowSpacing(0.0)
         .opacity(
@@ -110,13 +111,12 @@ struct ConversationComposerContentView: View {
                     .opacity(composerState.searchText.isEmpty ? 1.0 : 0.2)
                     .frame(height: headerHeight)
                 }
-                       .contentShape(Rectangle())
                        .onTapGesture {
                            composerState.selectedProfile = nil
                            isTextFieldFocused = true
                        }
                        .padding(.horizontal, DesignConstants.Spacing.step4x)
-                       .background(.colorBackgroundPrimary)
+                       .padding(.top, 4.0) // @jarodl temporary fix for iOS 26 toolbar issue
             }
 
             MessagesView(
@@ -127,6 +127,7 @@ struct ConversationComposerContentView: View {
                     resultsList
                 }
             }
+
             Spacer().frame(height: 0.0)
         }
         .onAppear {

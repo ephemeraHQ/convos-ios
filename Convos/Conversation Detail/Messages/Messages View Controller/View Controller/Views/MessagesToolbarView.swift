@@ -3,17 +3,11 @@ import SwiftUI
 struct MessagesToolbarView: View {
     let conversationState: ConversationState
     let emptyConversationTitle: String
-    let dismissAction: DismissAction
-    let onInfoTap: () -> Void
 
     init(conversationState: ConversationState,
-         emptyConversationTitle: String = "New chat",
-         dismissAction: DismissAction,
-         onInfoTap: @escaping () -> Void) {
+         emptyConversationTitle: String = "New chat") {
         self.conversationState = conversationState
         self.emptyConversationTitle = emptyConversationTitle
-        self.dismissAction = dismissAction
-        self.onInfoTap = onInfoTap
     }
 
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
@@ -43,87 +37,36 @@ struct MessagesToolbarView: View {
     }
 
     var body: some View {
-        CustomToolbarView(
-            onBack: { dismissAction() },
-            showBackText: false,
-            showBottomBorder: conversationState.conversation?.isDraft ?? true,
-            rightContent: {
-                HStack(spacing: 0) {
-                    // Middle content (avatar and title)
-                    let contentView = HStack(spacing: 0) {
-                        if let conversation = conversationState.conversation, !conversation.isDraft {
-                            ConversationAvatarView(conversation: conversation)
-                                .padding(.vertical, avatarVerticalPadding)
-                        }
-                        VStack(alignment: .leading, spacing: 2.0) {
-                            Text(title)
-                                .font(.system(size: 16.0))
-                                .foregroundStyle(.colorTextPrimary)
-                                .lineLimit(1)
-                            if let conversation = conversationState.conversation, conversation.kind == .group {
-                                Text(conversation.membersCountString)
-                                    .font(.system(size: 12.0))
-                                    .foregroundStyle(.colorTextSecondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        .padding(.leading, needsAvatarSpacing ? DesignConstants.Spacing.step2x : 0)
-                    }
+        HStack(spacing: DesignConstants.Spacing.step2x) {
+            if let conversation = conversationState.conversation, !conversation.isDraft {
+                ConversationAvatarView(conversation: conversation)
+                    .padding(.vertical, avatarVerticalPadding)
+            }
 
-                    if conversationState.conversation?.isDraft == false {
-                        Button(action: onInfoTap) {
-                            contentView
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    } else {
-                        contentView
-                    }
-
-                    Spacer()
-
-                    // Right side buttons
-                    if let conversation = conversationState.conversation {
-                        switch conversation.kind {
-                        case .group:
-                            Button {
-                            } label: {
-                                Image(systemName: "qrcode")
-                                    .font(.system(size: 24.0))
-                                    .foregroundStyle(.colorTextPrimary)
-                                    .padding(.vertical, 10.0)
-                                    .padding(.horizontal, DesignConstants.Spacing.step2x)
-                            }
-                        case .dm:
-                            Button {
-                            } label: {
-                                Image(systemName: "timer")
-                                    .font(.system(size: 24.0))
-                                    .foregroundStyle(.colorTextPrimary)
-                                    .padding(.vertical, 10.0)
-                                    .padding(.horizontal, DesignConstants.Spacing.step2x)
-                            }
-                        }
-                    }
+            VStack(alignment: .leading) {
+                Text(title)
+                    .font(.system(size: 16.0))
+                    .foregroundStyle(.colorTextPrimary)
+                    .lineLimit(1)
+                if let conversation = conversationState.conversation, conversation.kind == .group {
+                    Text(conversation.membersCountString)
+                        .font(.system(size: 12.0))
+                        .foregroundStyle(.colorTextSecondary)
+                        .lineLimit(1)
                 }
             }
-        )
+        }
         .frame(height: barHeight)
     }
 }
 
 #Preview {
     @Previewable @Environment(\.dismiss) var dismiss: DismissAction
-    let convos = ConvosClient.mock()
-    let conversationId: String = "1"
     let conversationState = ConversationState(
-        conversationRepository: convos.messaging.conversationRepository(
-            for: conversationId
-        )
+        conversationRepository: MockConversationRepository()
     )
 
     MessagesToolbarView(
-        conversationState: conversationState,
-        dismissAction: dismiss,
-        onInfoTap: {}
+        conversationState: conversationState
     )
 }

@@ -42,9 +42,7 @@ struct AppVersionView: View {
             }
 
             Group {
-                Text("Convos ")
-                    .bold() +
-                    Text("v\(versionString)")
+                Text("Convos v\(versionString)")
             }
             .multilineTextAlignment(.center)
             .font(.caption)
