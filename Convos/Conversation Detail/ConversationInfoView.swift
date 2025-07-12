@@ -4,7 +4,6 @@ import SwiftUI
 struct ConversationInfoView: View {
     let conversation: Conversation
     let groupMetadataWriter: any GroupMetadataWriterProtocol
-    @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showAllMembersForConversation: Conversation?
     @State private var showGroupEditForConversation: Conversation?
     @State private var showAddMember: Bool = false
@@ -42,10 +41,6 @@ struct ConversationInfoView: View {
                     EditGroupButton {
                         showGroupEditForConversation = conversation
                     }
-                }
-
-                Button(role: .close) {
-                    dismiss()
                 }
             }
         }

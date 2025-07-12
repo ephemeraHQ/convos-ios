@@ -103,14 +103,14 @@ if ! command -v swiftformat &> /dev/null; then
     fi
 fi
 
-# Check Ruby version (require Ruby 3.3.8)
+# Check Ruby version (require Ruby 3.3.3)
 RUBY_VERSION=$(ruby -v | awk '{print $2}' | cut -d'p' -f1)
-if [ "$RUBY_VERSION" != "3.3.8" ]; then
+if [ "$RUBY_VERSION" != "3.3.3" ]; then
     echo "❌ Ruby version $RUBY_VERSION is not compatible."
-    echo "This project requires Ruby 3.3.8"
+    echo "This project requires Ruby 3.3.3"
     echo "Please install the correct version using:"
-    echo "  - rbenv: rbenv install 3.3.8 && rbenv global 3.3.8"
-    echo "  - rvm: rvm install 3.3.8 && rvm use 3.3.8"
+    echo "  - rbenv: rbenv install 3.3.3 && rbenv global 3.3.3"
+    echo "  - rvm: rvm install 3.3.3 && rvm use 3.3.3"
     echo "  - Homebrew: brew install ruby@3.3 && brew link ruby@3.3"
     exit 1
 fi
