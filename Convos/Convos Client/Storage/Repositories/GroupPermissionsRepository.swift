@@ -120,7 +120,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
 
     init(client: AnyClientProvider?,
          clientPublisher: AnyClientProviderPublisher,
-        databaseReader: any DatabaseReader) {
+         databaseReader: any DatabaseReader) {
         self.clientValue = .init(initial: client, upstream: clientPublisher)
         self.databaseReader = databaseReader
     }

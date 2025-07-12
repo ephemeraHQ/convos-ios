@@ -185,14 +185,14 @@ class GroupEditState {
     }
 
     private func uploadImageAndUpdateProfile() async throws {
-        let compressedImageData = try await prepareImageForUpload()
-        let filename = "group-image-\(UUID().uuidString).jpg"
-
-        guard case .success(let uploadedImage) = imageState else {
-            throw GroupImageError.importFailed
-        }
-
         // @jarodl fix this
+//        let compressedImageData = try await prepareImageForUpload()
+//        let filename = "group-image-\(UUID().uuidString).jpg"
+//
+//        guard case .success(let uploadedImage) = imageState else {
+//            throw GroupImageError.importFailed
+//        }
+
 //        _ = try await messagingService.uploadImageAndExecute(
 //            data: compressedImageData,
 //            filename: filename) { uploadedURL in
