@@ -38,7 +38,6 @@ final class ConvosClient {
         let authService = MockAuthService()
         let databaseManager = MockDatabaseManager.previews
         let sessionManager = MockInboxesService()
-        let localAuthService = SecureEnclaveAuthService()
         return .init(authService: authService,
                      sessionManager: sessionManager,
                      databaseManager: databaseManager)
