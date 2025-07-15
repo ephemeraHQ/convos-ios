@@ -5,7 +5,6 @@ import UIKit
 class MessagesContainerViewController: UIViewController {
     let contentView: UIView = UIView()
     let messagesInputView: MessagesInputView
-    private var joinConversationInputView: InputHostingController<JoinConversationInputView>
     private var conversationCancellable: AnyCancellable?
 
     // MARK: - First Responder Management
@@ -20,10 +19,8 @@ class MessagesContainerViewController: UIViewController {
         switch conversation.consent {
         case .allowed:
             return messagesInputView
-        case .denied:
+        case .denied, .unknown:
             return nil
-        case .unknown:
-            return joinConversationInputView
         }
     }
 
@@ -55,12 +52,6 @@ class MessagesContainerViewController: UIViewController {
         self.conversationConsentWriter = conversationConsentWriter
         self.conversationLocalStateWriter = conversationLocalStateWriter
         self.messagesInputView = MessagesInputView(sendMessage: sendMessage)
-        self.joinConversationInputView = .init(
-            rootView: JoinConversationInputView(
-                onJoinConversation: joinConversation,
-                onDeleteConversation: deleteConversation
-            )
-        )
         super.init(nibName: nil, bundle: nil)
         conversationCancellable = conversationState
             .conversationPublisher
@@ -142,32 +133,6 @@ class MessagesContainerViewController: UIViewController {
 
     private func setupInputBar() {
         messagesInputView.translatesAutoresizingMaskIntoConstraints = false
-        joinConversationInputView.translatesAutoresizingMaskIntoConstraints = false
-    }
-
-    // MARK: - JoinConversationInputViewDelegate
-
-    func joinConversation() {
-        guard let conversation = conversationState.conversation else { return }
-        Task {
-            do {
-                try await conversationConsentWriter.join(conversation: conversation)
-            } catch {
-                Logger.error("Error joining conversation: \(error)")
-            }
-        }
-    }
-
-    func deleteConversation() {
-        guard let conversation = conversationState.conversation else { return }
-        navigationController?.popViewController(animated: true)
-        Task {
-            do {
-                try await conversationConsentWriter.delete(conversation: conversation)
-            } catch {
-                Logger.error("Error deleting conversation: \(error)")
-            }
-        }
     }
 
     // MARK: - Child VC Embedding

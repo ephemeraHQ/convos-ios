@@ -416,13 +416,6 @@ struct AllMembersView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            CustomToolbarView(onBack: { dismiss() }, rightContent: {
-                AddMemberButton(action: {
-                    // @lourou add member to group
-                    showingAddMemberAlert = true
-                })
-            })
-
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(sortedMembers, id: \.id) { member in
@@ -447,7 +440,22 @@ struct AllMembersView: View {
                 .padding()
             }
         }
-        .navigationBarHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Back")
+                }
+            }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                AddMemberButton {
+                    // @lourou add member to group
+                    showingAddMemberAlert = true
+                }
+            }
+        }
         // @lourou add member to group
         // .navigationDestination(isPresented: $showAddMember) {
         //     AddMemberView(conversation: conversation, messagingService: messagingService)

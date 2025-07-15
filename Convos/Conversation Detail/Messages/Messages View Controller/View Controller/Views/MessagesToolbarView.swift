@@ -13,7 +13,7 @@ struct MessagesToolbarView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass: UserInterfaceSizeClass?
 
     var barHeight: CGFloat {
-        verticalSizeClass == .compact ? CustomToolbarConstants.compactHeight : CustomToolbarConstants.regularHeight
+        verticalSizeClass == .compact ? Constant.compactHeight : Constant.regularHeight
     }
 
     var avatarVerticalPadding: CGFloat {
@@ -57,6 +57,11 @@ struct MessagesToolbarView: View {
             }
         }
         .frame(height: barHeight)
+    }
+
+    enum Constant {
+        static let regularHeight: CGFloat = 72.0
+        static let compactHeight: CGFloat = 52.0
     }
 }
 

@@ -10,13 +10,11 @@
 		7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1C3C742DB6F7AD00B723C0 /* PostHog */; };
 		7A349B6E2DD6FF5400E526A3 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */; };
 		7A349CA62DD7017B00E526A3 /* GRDB-dynamic in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		7A349D042DD96EA400E526A3 /* PasskeyAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7A349D032DD96EA400E526A3 /* PasskeyAuth */; };
 		7A5200F82DF0EF0800D2C55D /* TurnkeyPasskeys in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5200F72DF0EF0800D2C55D /* TurnkeyPasskeys */; };
 		7A5200FA2DF0EF0800D2C55D /* TurnkeyStamper in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5200F92DF0EF0800D2C55D /* TurnkeyStamper */; };
 		7A5200FC2DF0EF0800D2C55D /* TurnkeySwift in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5200FB2DF0EF0800D2C55D /* TurnkeySwift */; };
 		7A5201372DF0EFBC00D2C55D /* TurnkeyCrypto in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5201362DF0EFBC00D2C55D /* TurnkeyCrypto */; };
 		7A5201392DF0F1E600D2C55D /* TurnkeyHttp in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5201382DF0F1E600D2C55D /* TurnkeyHttp */; };
-		7ACA83952DDC395600848799 /* SwiftCBOR in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA83942DDC395600848799 /* SwiftCBOR */; };
 		7ACA83B22DDD19B200848799 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA83B12DDD19B200848799 /* OrderedCollections */; };
 		7ACA8BC82DE17FF800848799 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA8BC72DE17FF800848799 /* GRDB-dynamic */; };
 		7ACA8BCC2DE1800500848799 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA8BCB2DE1800500848799 /* XMTPiOS */; };
@@ -24,9 +22,7 @@
 		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
-		D834386F2DB19D8C00A50F45 /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = D834386E2DB19D8C00A50F45 /* Factory */; };
 		D85B9B9F2DD26BC400831D58 /* (null) in Embed Frameworks */ = {isa = PBXBuildFile; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */; };
 		D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = D8B5A9032DC272BD006003A4 /* XMTPiOS */; };
 /* End PBXBuildFile section */
 
@@ -108,89 +104,86 @@
 		7ACA8BD52DE180B800848799 /* Exceptions for "Convos" folder in "ConvosTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"Convos Client/AppEnvironment.swift",
-				"Convos Client/Auth/AuthAccountServiceProtocol.swift",
-				"Convos Client/Auth/AuthServiceProtocol.swift",
-				"Convos Client/Auth/KeychainService.swift",
-				"Convos Client/Auth/Migrations/ReactNativeMigration.swift",
-				"Convos Client/Auth/MockAuthService.swift",
-				"Convos Client/Auth/Secure Enclave/SecureEnclaveAuthService.swift",
-				"Convos Client/Auth/Secure Enclave/SecureEnclaveIdentityStore.swift",
-				"Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
-				"Convos Client/Convos API/ConvosAPIClient.swift",
-				"Convos Client/Convos API/ConvosAPIClient+Models.swift",
-				"Convos Client/Convos API/MockAPIClient.swift",
-				"Convos Client/ConvosClient.swift",
-				"Convos Client/Inboxes/AuthorizeInboxOperation.swift",
-				"Convos Client/Inboxes/InboxStateMachine.swift",
-				"Convos Client/Inboxes/MockInboxesService.swift",
-				"Convos Client/Inboxes/SessionManager.swift",
-				"Convos Client/Inboxes/SessionManagerProtocol.swift",
-				"Convos Client/Messaging/MessagingService.swift",
-				"Convos Client/Messaging/MessagingServiceProtocol.swift",
-				"Convos Client/Messaging/MockMessagingService.swift",
-				"Convos Client/Messaging/SyncingManager.swift",
-				"Convos Client/Messaging/XMTPClientProvider.swift",
-				"Convos Client/Mock Data Helpers/TextGenerator.swift",
-				"Convos Client/Shared/ConvosKeychainItem.swift",
-				"Convos Client/Shared/Data+Hex.swift",
-				"Convos Client/Shared/Data+JsonString.swift",
-				"Convos Client/Storage/DatabaseManager.swift",
-				"Convos Client/Storage/Dependency Bundles/ConversationComposer.swift",
-				"Convos Client/Storage/Hydration/DBConversationDetails+Conversation.swift",
-				"Convos Client/Storage/Hydration/DBInboxDetails+Inbox.swift",
-				"Convos Client/Storage/Hydration/DBMessage+MessagePreview.swift",
-				"Convos Client/Storage/Hydration/DBProfile+Profile.swift",
-				"Convos Client/Storage/MockDatabaseManager.swift",
-				"Convos Client/Storage/Models/Conversation.swift",
-				"Convos Client/Storage/Models/Database+CurrentSession.swift",
-				"Convos Client/Storage/Models/Identity.swift",
-				"Convos Client/Storage/Models/Inbox.swift",
-				"Convos Client/Storage/Models/Member.swift",
-				"Convos Client/Storage/Models/Message.swift",
-				"Convos Client/Storage/Models/Profile.swift",
-				"Convos Client/Storage/Models/Session.swift",
-				"Convos Client/Storage/Repositories/ConversationRepository.swift",
-				"Convos Client/Storage/Repositories/ConversationsCountRepository.swift",
-				"Convos Client/Storage/Repositories/ConversationsRepository.swift",
-				"Convos Client/Storage/Repositories/CurrentSessionRepository.swift",
-				"Convos Client/Storage/Repositories/DB XMTP Representations/Consent+ConsentState.swift",
-				"Convos Client/Storage/Repositories/DraftConversationRepository.swift",
-				"Convos Client/Storage/Repositories/InboxesRepository.swift",
-				"Convos Client/Storage/Repositories/MessagesRepository.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockConversationConsentWriter.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockConversationRepository.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockConversationsRepository.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockDraftConversationWriter.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockInboxesRepository.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockMessagesRepository.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockOutgoingMessageWriter.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockProfileSearchRepository.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockSyncingManager.swift",
-				"Convos Client/Storage/Repositories/ProfileSearchRepository.swift",
-				"Convos Client/Storage/SharedDatabaseMigrator.swift",
-				"Convos Client/Storage/States/DraftConversationState.swift",
-				"Convos Client/Storage/Writers/ConversationConsentWriter.swift",
-				"Convos Client/Storage/Writers/ConversationLocalStateWriter.swift",
-				"Convos Client/Storage/Writers/ConversationWriter.swift",
-				"Convos Client/Storage/Writers/DraftConversationWriter.swift",
-				"Convos Client/Storage/Writers/InboxWriter.swift",
-				"Convos Client/Storage/Writers/IncomingMessageWriter.swift",
-				"Convos Client/Storage/Writers/MemberProfileWriter.swift",
-				"Convos Client/Storage/Writers/OutgoingMessageWriter.swift",
-				"Convos Client/Storage/XMTP DB Representations/DecodedMessage+DBRepresentation.swift",
-				"Convos Client/Storage/XMTP DB Representations/MessageDeliveryStatus+DBRepresentation.swift",
-				"Convos Client/Storage/XMTP DB Representations/Reaction+DBRepresentation.swift",
+				"_Archive/Convos Client/Auth/Migrations/ReactNativeMigration.swift",
+				"_Archive/Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
+				"_Archive/Convos Client/Storage/Dependency Bundles/ConversationComposer.swift",
+				"_Archive/Utilities/EthereumAddress+Validation.swift",
+				Config/Secrets.swift,
+				Core/API/ConvosAPIClient.swift,
+				"Core/API/ConvosAPIClient+Models.swift",
+				Core/API/MockAPIClient.swift,
+				Core/AppEnvironment.swift,
+				Core/Auth/AuthAccountServiceProtocol.swift,
+				Core/Auth/AuthServiceProtocol.swift,
+				Core/Auth/KeychainService.swift,
+				Core/Auth/MockAuthService.swift,
+				"Core/Auth/Secure Enclave/SecureEnclaveAuthService.swift",
+				"Core/Auth/Secure Enclave/SecureEnclaveIdentityStore.swift",
+				Core/ConvosClient.swift,
+				Core/Inboxes/AuthorizeInboxOperation.swift,
+				Core/Inboxes/InboxStateMachine.swift,
+				Core/Inboxes/MockInboxesService.swift,
+				Core/Messaging/MessagingService.swift,
+				Core/Messaging/MessagingServiceProtocol.swift,
+				Core/Messaging/MockMessagingService.swift,
+				Core/Messaging/XMTPClientProvider.swift,
+				"Core/Mock Data Helpers/TextGenerator.swift",
+				Core/Sessions/SessionManager.swift,
+				Core/Sessions/SessionManagerProtocol.swift,
+				Core/Shared/ConvosKeychainItem.swift,
+				"Core/Shared/Data+Hex.swift",
+				"Core/Shared/Data+JsonString.swift",
+				Core/Storage/DatabaseManager.swift,
+				"Core/Storage/Hydration/DBConversationDetails+Conversation.swift",
+				"Core/Storage/Hydration/DBInboxDetails+Inbox.swift",
+				"Core/Storage/Hydration/DBMessage+MessagePreview.swift",
+				"Core/Storage/Hydration/DBProfile+Profile.swift",
+				Core/Storage/MockDatabaseManager.swift,
+				Core/Storage/Models/Conversation.swift,
+				"Core/Storage/Models/Database+CurrentSession.swift",
+				Core/Storage/Models/Identity.swift,
+				Core/Storage/Models/Inbox.swift,
+				Core/Storage/Models/Member.swift,
+				Core/Storage/Models/Message.swift,
+				Core/Storage/Models/Profile.swift,
+				Core/Storage/Models/Session.swift,
+				Core/Storage/Repositories/ConversationRepository.swift,
+				Core/Storage/Repositories/ConversationsCountRepository.swift,
+				Core/Storage/Repositories/ConversationsRepository.swift,
+				Core/Storage/Repositories/CurrentSessionRepository.swift,
+				"Core/Storage/Repositories/DB XMTP Representations/Consent+ConsentState.swift",
+				Core/Storage/Repositories/DraftConversationRepository.swift,
+				Core/Storage/Repositories/GroupPermissionsRepository.swift,
+				Core/Storage/Repositories/InboxesRepository.swift,
+				Core/Storage/Repositories/MessagesRepository.swift,
+				Core/Storage/Repositories/Mocks/MockConversationConsentWriter.swift,
+				Core/Storage/Repositories/Mocks/MockConversationRepository.swift,
+				Core/Storage/Repositories/Mocks/MockConversationsRepository.swift,
+				Core/Storage/Repositories/Mocks/MockDraftConversationWriter.swift,
+				Core/Storage/Repositories/Mocks/MockInboxesRepository.swift,
+				Core/Storage/Repositories/Mocks/MockMessagesRepository.swift,
+				Core/Storage/Repositories/Mocks/MockOutgoingMessageWriter.swift,
+				Core/Storage/Repositories/Mocks/MockProfileSearchRepository.swift,
+				Core/Storage/Repositories/Mocks/MockSyncingManager.swift,
+				Core/Storage/Repositories/Mocks/MockUserRepository.swift,
+				Core/Storage/Repositories/ProfileSearchRepository.swift,
+				Core/Storage/SharedDatabaseMigrator.swift,
+				Core/Storage/States/DraftConversationState.swift,
+				Core/Storage/Writers/ConversationConsentWriter.swift,
+				Core/Storage/Writers/ConversationLocalStateWriter.swift,
+				Core/Storage/Writers/ConversationWriter.swift,
+				Core/Storage/Writers/DraftConversationWriter.swift,
+				Core/Storage/Writers/GroupMetadataWriter.swift,
+				Core/Storage/Writers/InboxWriter.swift,
+				Core/Storage/Writers/IncomingMessageWriter.swift,
+				Core/Storage/Writers/MemberProfileWriter.swift,
+				Core/Storage/Writers/OutgoingMessageWriter.swift,
+				"Core/Storage/XMTP DB Representations/DecodedMessage+DBRepresentation.swift",
+				"Core/Storage/XMTP DB Representations/MessageDeliveryStatus+DBRepresentation.swift",
+				"Core/Storage/XMTP DB Representations/Reaction+DBRepresentation.swift",
+				Core/Syncing/SyncingManager.swift,
 				Logging/Logger.swift,
-				"Utilities/Combine+Extensions.swift",
-				"Utilities/EthereumAddress+Validation.swift",
-			);
-			target = 7ACA8BA22DE16DE200848799 /* ConvosTests */;
-		};
-		7ACA8BFA2DE181B800848799 /* Exceptions for "Config" folder in "ConvosTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Secrets.swift,
+				"Utilities & Extensions/Combine+Extensions.swift",
 			);
 			target = 7ACA8BA22DE16DE200848799 /* ConvosTests */;
 		};
@@ -204,13 +197,59 @@
 		D8A2B6A32DA4BA4C00EF8577 /* Exceptions for "Convos" folder in "Convos" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"Convos Client/Auth/Passkey/AsyncAuthorizationController.swift",
-				"Convos Client/Auth/Passkey/PasskeyAuthError.swift",
-				"Convos Client/Auth/Passkey/PasskeyAuthService.swift",
-				"Convos Client/Auth/Passkey/PasskeyIdentityStore.swift",
-				"Convos Client/Auth/Passkey/PasskeyPresentationProvider.swift",
-				"Convos Client/Auth/Passkey/PasskeySigningKey.swift",
+				"_Archive/Contact Cards/ContactCard.swift",
+				"_Archive/Contact Cards/ContactCardDetailView.swift",
+				"_Archive/Contact Cards/ContactCardsView.swift",
+				"_Archive/Contact Cards/ContactCardView.swift",
+				"_Archive/Conversation Detail/CustomToolbarView.swift",
+				"_Archive/Conversations List/Composer/ComposerProfileChipView.swift",
+				"_Archive/Conversations List/Composer/ConversationComposerContentView.swift",
+				"_Archive/Conversations List/Composer/ConversationComposerProfilesField.swift",
+				"_Archive/Conversations List/Composer/ConversationComposerState.swift",
+				"_Archive/Conversations List/Composer/ConversationsComposerView.swift",
+				"_Archive/Conversations List/ConversationsListNavigationBar.swift",
+				"_Archive/Conversations List/ConversationsRequestsItemView.swift",
+				"_Archive/Conversations List/DropdownMenu.swift",
+				"_Archive/Conversations List/PinnedConversationsGrid.swift",
+				"_Archive/Conversations List/ProfileView.swift",
+				"_Archive/Conversations List/Security Line/DeniedConversationsListItem.swift",
+				"_Archive/Conversations List/Security Line/InputHostingController.swift",
+				"_Archive/Conversations List/Security Line/JoinConversationInputView.swift",
+				"_Archive/Conversations List/Security Line/SecurityLineListItem.swift",
+				"_Archive/Conversations List/Security Line/SecurityLineView.swift",
+				"_Archive/Convos Client/Auth/Migrations/ReactNativeMigration.swift",
+				"_Archive/Convos Client/Auth/Passkey/AsyncAuthorizationController.swift",
+				"_Archive/Convos Client/Auth/Passkey/PasskeyAuthError.swift",
+				"_Archive/Convos Client/Auth/Passkey/PasskeyAuthService.swift",
+				"_Archive/Convos Client/Auth/Passkey/PasskeyIdentityStore.swift",
+				"_Archive/Convos Client/Auth/Passkey/PasskeyPresentationProvider.swift",
+				"_Archive/Convos Client/Auth/Passkey/PasskeySigningKey.swift",
+				"_Archive/Convos Client/Auth/Turnkey/TurnkeyAccountsService.swift",
+				"_Archive/Convos Client/Auth/Turnkey/TurnkeyAuthService.swift",
+				"_Archive/Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
+				"_Archive/Convos Client/Auth/Turnkey/TurnkeyPresentationAnchorProvider.swift",
+				"_Archive/Convos Client/Storage/Dependency Bundles/ConversationComposer.swift",
+				"_Archive/Onboarding/Contact Card/ContactCardAvatarView.swift",
+				"_Archive/Onboarding/Contact Card/ContactCardCreateView.swift",
+				"_Archive/Onboarding/Contact Card/ContactCardEditView.swift",
+				"_Archive/Onboarding/Contact Card/ContactCardsState.swift",
+				_Archive/Onboarding/OnboardingMigratingView.swift,
+				_Archive/Onboarding/OnboardingView.swift,
+				_Archive/Onboarding/OnboardingViewModel.swift,
+				"_Archive/Utilities/EthereumAddress+Validation.swift",
+				"Conversation Detail/AddMemberView.swift",
+				Core/Storage/Repositories/DraftConversationRepository.swift,
+				Core/Storage/Repositories/Mocks/MockDraftConversationWriter.swift,
+				Core/Storage/Repositories/Mocks/MockProfileSearchRepository.swift,
+				Core/Storage/Repositories/ProfileSearchRepository.swift,
+				Core/Storage/States/DraftConversationState.swift,
+				Core/Storage/Writers/DraftConversationWriter.swift,
+				"Design System/Animation/DraggableSpringyView.swift",
+				"Design System/Components/LabeledTextField.swift",
 				Info.plist,
+				"Shared Views/BackspaceTextField.swift",
+				"Shared Views/FlowLayout.swift",
+				"Shared Views/FlowLayoutTextEditor.swift",
 			);
 			target = D8A2B6902DA4BA4B00EF8577 /* Convos */;
 		};
@@ -228,14 +267,6 @@
 				D80850402DC94F4C00E708B0 /* Exceptions for "NotificationService" folder in "NotificationService" target */,
 			);
 			path = NotificationService;
-			sourceTree = "<group>";
-		};
-		D83A7ABA2DA5C98400879441 /* Config */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				7ACA8BFA2DE181B800848799 /* Exceptions for "Config" folder in "ConvosTests" target */,
-			);
-			path = Config;
 			sourceTree = "<group>";
 		};
 		D8A2B6932DA4BA4B00EF8577 /* Convos */ = {
@@ -273,18 +304,14 @@
 				7A5200FA2DF0EF0800D2C55D /* TurnkeyStamper in Frameworks */,
 				7A5201392DF0F1E600D2C55D /* TurnkeyHttp in Frameworks */,
 				7ACA83B22DDD19B200848799 /* OrderedCollections in Frameworks */,
-				D834386F2DB19D8C00A50F45 /* Factory in Frameworks */,
-				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
 				7A5200F82DF0EF0800D2C55D /* TurnkeyPasskeys in Frameworks */,
 				D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */,
 				D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */,
 				7A349B6E2DD6FF5400E526A3 /* GRDB-dynamic in Frameworks */,
-				7A349D042DD96EA400E526A3 /* PasskeyAuth in Frameworks */,
 				7A5200FC2DF0EF0800D2C55D /* TurnkeySwift in Frameworks */,
 				7A5201372DF0EFBC00D2C55D /* TurnkeyCrypto in Frameworks */,
 				7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */,
 				D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */,
-				7ACA83952DDC395600848799 /* SwiftCBOR in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -317,7 +344,6 @@
 			children = (
 				D8477AD42DCBA52F00E31E54 /* .env */,
 				D8477AD52DCBA52F00E31E54 /* .env.example */,
-				D83A7ABA2DA5C98400879441 /* Config */,
 				D8A2B6932DA4BA4B00EF8577 /* Convos */,
 				D80850352DC94F4C00E708B0 /* NotificationService */,
 				7ACA8BA42DE16DE200848799 /* ConvosTests */,
@@ -404,20 +430,15 @@
 				D808503A2DC94F4C00E708B0 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				D83A7ABA2DA5C98400879441 /* Config */,
 				D8A2B6932DA4BA4B00EF8577 /* Convos */,
 			);
 			name = Convos;
 			packageProductDependencies = (
-				D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */,
-				D834386E2DB19D8C00A50F45 /* Factory */,
 				D80BAAC12DB2C36500C2FB42 /* Sentry */,
 				7A1C3C742DB6F7AD00B723C0 /* PostHog */,
 				D8B5A9032DC272BD006003A4 /* XMTPiOS */,
 				D8084BA82DC9193A00E708B0 /* DifferenceKit */,
 				7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */,
-				7A349D032DD96EA400E526A3 /* PasskeyAuth */,
-				7ACA83942DDC395600848799 /* SwiftCBOR */,
 				7ACA83B12DDD19B200848799 /* OrderedCollections */,
 				7A5200F72DF0EF0800D2C55D /* TurnkeyPasskeys */,
 				7A5200F92DF0EF0800D2C55D /* TurnkeyStamper */,
@@ -460,16 +481,12 @@
 			mainGroup = D8A2B6882DA4BA4B00EF8577;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */,
-				D834386D2DB19D8C00A50F45 /* XCRemoteSwiftPackageReference "Factory" */,
 				D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
 				7A1C3C732DB6F7AD00B723C0 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 				D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */,
 				D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */,
 				7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
-				7A349D022DD96EA400E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */,
-				7ACA83932DDC395600848799 /* XCRemoteSwiftPackageReference "SwiftCBOR" */,
 				7ACA83B02DDD19B200848799 /* XCRemoteSwiftPackageReference "swift-collections" */,
 				7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */,
 			);
@@ -616,7 +633,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview.ConvosNSE;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.convos.ios-preview.ConvosNSE";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -642,7 +659,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview.ConvosNSE;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.convos.ios-preview.ConvosNSE";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -672,7 +689,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.convos.ios-preview";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -701,7 +718,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.convos.ios-preview";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -890,28 +907,12 @@
 				version = 7.5.0;
 			};
 		};
-		7A349D022DD96EA400E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/ephemeraHQ/PasskeyAuth";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
 		7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/tkhq/swift-sdk.git";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 2.2.0;
-			};
-		};
-		7ACA83932DDC395600848799 /* XCRemoteSwiftPackageReference "SwiftCBOR" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/valpackett/SwiftCBOR";
-			requirement = {
-				branch = master;
-				kind = branch;
 			};
 		};
 		7ACA83B02DDD19B200848799 /* XCRemoteSwiftPackageReference "swift-collections" */ = {
@@ -946,28 +947,12 @@
 				minimumVersion = 0.59.1;
 			};
 		};
-		D834386D2DB19D8C00A50F45 /* XCRemoteSwiftPackageReference "Factory" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/hmlongco/Factory";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.4.3;
-			};
-		};
-		D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Weebly/AnchorKit.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.0.3;
-			};
-		};
 		D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/xmtp/xmtp-ios.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 4.2.0;
+				minimumVersion = 4.3.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -982,11 +967,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = "GRDB-dynamic";
-		};
-		7A349D032DD96EA400E526A3 /* PasskeyAuth */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7A349D022DD96EA400E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */;
-			productName = PasskeyAuth;
 		};
 		7A5200F72DF0EF0800D2C55D /* TurnkeyPasskeys */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -1012,11 +992,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */;
 			productName = TurnkeyHttp;
-		};
-		7ACA83942DDC395600848799 /* SwiftCBOR */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7ACA83932DDC395600848799 /* XCRemoteSwiftPackageReference "SwiftCBOR" */;
-			productName = SwiftCBOR;
 		};
 		7ACA83B12DDD19B200848799 /* OrderedCollections */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -1052,16 +1027,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
-		};
-		D834386E2DB19D8C00A50F45 /* Factory */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D834386D2DB19D8C00A50F45 /* XCRemoteSwiftPackageReference "Factory" */;
-			productName = Factory;
-		};
-		D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */;
-			productName = AnchorKit;
 		};
 		D8B5A9032DC272BD006003A4 /* XMTPiOS */ = {
 			isa = XCSwiftPackageProductDependency;

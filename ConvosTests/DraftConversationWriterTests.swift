@@ -112,7 +112,7 @@ struct DraftConversationWriterTests {
 
         Logger.info("🔍 Waiting for conversation to be created...")
         let conversation = try await repository.conversationPublisher
-            .waitForFirstMatch(where: { $0?.members == [firstProfile.hydrateProfile()] })
+            .waitForFirstMatch(where: { $0?.members.map { $0.id } == [firstProfile.inboxId] })
         Logger.info("🔍 Conversation created successfully")
 
         Logger.info("🔍 Removing first profile...")

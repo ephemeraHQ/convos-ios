@@ -21,12 +21,6 @@ struct ConversationsListView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                if viewModel.securityLineConversationsCount != 0 {
-                    NavigationLink(value: ConversationsRoute.securityLine) {
-                        SecurityLineListItem(count: viewModel.securityLineConversationsCount)
-                    }
-                }
-
                 ForEach(viewModel.unpinnedConversations) { conversation in
                     NavigationLink(value: ConversationsRoute.conversation(conversation)) {
                         ConversationsListItem(conversation: conversation)
@@ -35,11 +29,6 @@ struct ConversationsListView: View {
             }
             .navigationDestination(for: ConversationsRoute.self) { route in
                 switch route {
-                case .securityLine:
-                    SecurityLineView(
-                        session: session,
-                        path: $path
-                    )
                 case .conversation(let conversation):
                     let messagingService = session.messagingService(for: conversation.inboxId)
                     let conversationRepository = messagingService.conversationRepository(

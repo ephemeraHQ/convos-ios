@@ -1,8 +1,7 @@
 import SwiftUI
 
 enum ConversationsRoute: Hashable {
-    case securityLine,
-         conversation(Conversation)
+    case conversation(Conversation)
 }
 
 struct ConversationsView: View {
@@ -38,9 +37,10 @@ struct ConversationsView: View {
         }
         .background(.colorBackgroundPrimary)
         .sheet(isPresented: $isPresentingComposer) {
-            ConversationComposerView(
-                session: session
-            )
+//            ConversationComposerView(
+//                session: session
+//            )
+            EmptyView()
             .interactiveDismissDisabled()
             .navigationTransition(
                 .zoom(

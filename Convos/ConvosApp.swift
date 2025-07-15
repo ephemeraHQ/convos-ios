@@ -6,7 +6,6 @@ struct ConvosApp: App {
     let analyticsService: AnalyticsServiceProtocol = PosthogAnalyticsService.shared
 
     init() {
-        setenv("CFNETWORK_DIAGNOSTICS", "3", 1)
         SDKConfiguration.configureSDKs()
     }
 

@@ -54,29 +54,6 @@ struct GroupEditView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            CustomToolbarView(onBack: { dismiss() }, rightContent: {
-                let action = {
-                    // Mark changes as saved to prevent revert on dismiss
-                    editState.markChangesSaved()
-
-                    // Dismiss immediately for instant UI (optimistic)
-                    dismiss()
-
-                    // Save in background
-                    Task {
-                        await editState.saveGroupChanges()
-                    }
-                }
-                Button(action: action) {
-                    Text("Done")
-                        .foregroundColor(.blue)
-                        .font(.system(size: 16, weight: .medium))
-                }
-                .padding(.vertical, 10.0)
-                .padding(.horizontal, DesignConstants.Spacing.step2x)
-                .disabled(!editState.canEditGroup)
-            })
-
             ScrollViewReader { scrollProxy in
                 Form {
                     Section {
@@ -110,6 +87,26 @@ struct GroupEditView: View {
                             }
                         }
                     }
+                }
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    // Mark changes as saved to prevent revert on dismiss
+                    editState.markChangesSaved()
+
+                    // Dismiss immediately for instant UI (optimistic)
+                    dismiss()
+
+                    // Save in background
+                    Task {
+                        await editState.saveGroupChanges()
+                    }
+                } label: {
+                    Text("Done")
+                        .foregroundColor(.blue)
+                        .font(.system(size: 16, weight: .medium))
                 }
             }
         }
