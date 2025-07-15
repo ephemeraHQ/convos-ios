@@ -144,7 +144,7 @@ class MockAuthService: LocalAuthServiceProtocol {
         authStateSubject.send(.registered(mockAuthResult))
     }
 
-    func register(displayName: String, inboxType: InboxType) throws -> any AuthServiceRegisteredResultType {
+    func register(displayName: String) throws -> any AuthServiceRegisteredResultType {
         let mockAuthResult = MockAuthResult(name: displayName)
         if persist {
             let encoder = JSONEncoder()

@@ -52,14 +52,12 @@ class SharedDatabaseMigrator {
             }
 
             try db.create(table: "conversation") { t in
-                t.autoIncrementedPrimaryKey("pk")
                 t.column("id", .text)
                     .notNull()
+                    .primaryKey()
                 t.column("inboxId", .text)
                     .notNull()
                     .references("inbox", onDelete: .cascade)
-                t.uniqueKey(["id", "inboxId"])
-
                 t.column("clientConversationId", .text)
                     .notNull()
                     .unique(onConflict: .replace)

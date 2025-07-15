@@ -80,6 +80,6 @@ protocol AuthServiceProtocol: BaseAuthServiceProtocol {
 }
 
 protocol LocalAuthServiceProtocol: BaseAuthServiceProtocol {
-    func register(displayName: String, inboxType: InboxType) throws -> any AuthServiceRegisteredResultType
+    func register(displayName: String) throws -> any AuthServiceRegisteredResultType
     func deleteAll() throws
 }

@@ -109,7 +109,7 @@ class SessionManager: SessionManagerProtocol {
     }
 
     func addAccount() async throws {
-        let result = try authService.register(displayName: "User", inboxType: .ephemeral)
+        let result = try authService.register(displayName: "User")
         Logger.info("Added account: \(result)")
     }
 

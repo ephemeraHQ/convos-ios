@@ -19,7 +19,6 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
         static let imageURLString: Column = Column(CodingKeys.imageURLString)
     }
 
-    var pk: Int64? // auto-generated primary-key
     let id: String
     let inboxId: String
     let clientConversationId: String // used for conversation drafts
@@ -107,7 +106,6 @@ extension DBConversation {
 
     func with(id: String) -> Self {
         .init(
-            pk: pk,
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
@@ -123,7 +121,6 @@ extension DBConversation {
 
     func with(clientConversationId: String) -> Self {
         .init(
-            pk: pk,
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
@@ -139,7 +136,6 @@ extension DBConversation {
 
     func with(kind: ConversationKind) -> Self {
         .init(
-            pk: pk,
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
@@ -155,7 +151,6 @@ extension DBConversation {
 
     func with(consent: Consent) -> Self {
         .init(
-            pk: pk,
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
@@ -173,7 +168,6 @@ extension DBConversation {
 
     func with(name: String?) -> Self {
         .init(
-            pk: pk,
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
@@ -189,7 +183,6 @@ extension DBConversation {
 
     func with(description: String?) -> Self {
         .init(
-            pk: pk,
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
@@ -205,7 +198,6 @@ extension DBConversation {
 
     func with(imageURLString: String?) -> Self {
         .init(
-            pk: pk,
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
@@ -226,7 +218,7 @@ extension DBConversation {
         guard !ids.isEmpty else { return nil }
         let count = ids.count
 
-        // Step 1: Find candidate conversation IDs
+        // Find candidate conversation IDs
         let placeholders = databaseQuestionMarks(count: count)
         let sql = """
         SELECT conversationId
@@ -244,7 +236,7 @@ extension DBConversation {
 
         let candidateIds = try String.fetchAll(db, sql: sql, arguments: arguments)
 
-        // Step 2: For each candidate, check if the set of member IDs matches exactly
+        // For each candidate, check if the set of member IDs matches exactly
         for conversationId in candidateIds {
             let memberIds = try String.fetchAll(
                 db,
