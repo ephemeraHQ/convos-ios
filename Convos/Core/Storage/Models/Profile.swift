@@ -74,3 +74,24 @@ extension Array where Element == ConversationMember {
         }
     }
 }
+
+extension Array where Element == Profile {
+    var formattedNamesString: String {
+        let displayNames = self.map { $0.displayName }
+            .filter { !$0.isEmpty }
+            .sorted()
+
+        switch displayNames.count {
+        case 0:
+            return ""
+        case 1:
+            return displayNames[0]
+        case 2:
+            return displayNames.joined(separator: " & ")
+        default:
+            let allButLast = displayNames.dropLast().joined(separator: ", ")
+            let last = displayNames.last ?? ""
+            return "\(allButLast) and \(last)"
+        }
+    }
+}
