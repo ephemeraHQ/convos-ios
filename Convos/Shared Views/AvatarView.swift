@@ -264,7 +264,7 @@ struct ConversationAvatarView: View {
 
 #Preview {
     let profile = Profile(
-        id: "1",
+        inboxId: "1",
         name: "John Doe",
         username: "johndoe",
         avatar: nil
