@@ -62,7 +62,15 @@ final class MessagesInputView: UIView {
     weak var delegate: MessagesInputViewDelegate?
     private var keyboardIsShowing: Bool = false
     private var containerViewHeightConstraint: NSLayoutConstraint?
-    private var profile: Profile = .mock()
+    private var profile: Profile = .mock() {
+        didSet {
+            profileAvatarButton.update(
+                profileAvatarButton(for: profile)
+            )
+            placeholderLabel.text = "Chat as \(profile.displayName)"
+            profileNameTextField.placeholder = "\(profile.displayName)..."
+        }
+    }
     private let sendMessage: () -> Void
 
     private var _isEditingProfile: Bool = false
@@ -147,6 +155,8 @@ final class MessagesInputView: UIView {
         tf.translatesAutoresizingMaskIntoConstraints = false
         tf.font = .systemFont(ofSize: 17.0)
         tf.placeholder = "\(profile.displayName)..."
+        tf.delegate = self
+        tf.clearButtonMode = .whileEditing
         tf.returnKeyType = .done
         return tf
     }()
@@ -171,12 +181,16 @@ final class MessagesInputView: UIView {
 
     // MARK: - Sending Messages Components
 
+    private func profileAvatarButton(for profile: Profile) -> ProfileAvatarButton {
+        ProfileAvatarButton(profile: profile) { [weak self] in
+            guard let self = self else { return }
+            isEditingProfile = true
+        }
+    }
+
     private(set) lazy var profileAvatarButton: SwiftUIViewWrapper<ProfileAvatarButton> = {
         let wrappedView = SwiftUIViewWrapper {
-            ProfileAvatarButton(profile: profile) { [weak self] in
-                guard let self = self else { return }
-                isEditingProfile = true
-            }
+            profileAvatarButton(for: profile)
         }
         wrappedView.translatesAutoresizingMaskIntoConstraints = false
         return wrappedView
@@ -509,6 +523,9 @@ final class MessagesInputView: UIView {
     private func setEditingProfile(_ editing: Bool, animated: Bool) {
         guard editing != _isEditingProfile else { return }
         _isEditingProfile = editing
+        if isEditingProfile {
+            profileNameTextField.becomeFirstResponder()
+        }
         updateForEditingProfile(animated: animated)
     }
 
@@ -666,6 +683,21 @@ extension MessagesInputView: KeyboardListenerDelegate {
     func keyboardWillChangeFrame(info: KeyboardInfo) {
         keyboardIsShowing = info.frameEnd.height >= intrinsicContentSize.height
         invalidateIntrinsicContentSize()
+    }
+}
+
+// MARK: - UITextFieldDelegate
+
+extension MessagesInputView: UITextFieldDelegate {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textView.becomeFirstResponder()
+        if let name = textField.text, !name.isEmpty {
+            profile = .mock(name: name)
+        } else {
+            profile = .mock()
+        }
+        isEditingProfile = false
+        return true
     }
 }
 
