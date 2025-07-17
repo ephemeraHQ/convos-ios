@@ -1,15 +1,6 @@
 {
-  "originHash" : "d8dad89e94a06f95ae88aef21f60d6691722802c2aae53acb44fe41954246691",
+  "originHash" : "19a54ba97a755252820c54f66e68b8adbe883ef8aaac29ff86bad0c44c937a18",
   "pins" : [
-    {
-      "identity" : "anchorkit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Weebly/AnchorKit.git",
-      "state" : {
-        "revision" : "d8ac708856ee1975c705ebd44b0fa2b68e393e58",
-        "version" : "3.0.3"
-      }
-    },
     {
       "identity" : "base58",
       "kind" : "remoteSourceControl",
@@ -74,15 +65,6 @@
       }
     },
     {
-      "identity" : "factory",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/hmlongco/Factory",
-      "state" : {
-        "revision" : "22157b88670bbeac591895c0fc8b8f7f340cf757",
-        "version" : "2.5.0"
-      }
-    },
-    {
       "identity" : "grdb.swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/groue/GRDB.swift.git",
@@ -96,17 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/xmtp/libxmtp-swift.git",
       "state" : {
-        "revision" : "1d56c66592ca55d5790bd6f227bba4f757f7d67a",
-        "version" : "4.3.0-rc1.1"
-      }
-    },
-    {
-      "identity" : "passkeyauth",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/ephemeraHQ/PasskeyAuth",
-      "state" : {
-        "branch" : "main",
-        "revision" : "aa89ebf3fb6f79c78977e08f98be8ee1d9fa56f0"
+        "revision" : "f5e8891dd8f4656cb7c9ceba2c87a90559a90cf3",
+        "version" : "4.3.0"
       }
     },
     {
@@ -227,15 +200,6 @@
       }
     },
     {
-      "identity" : "swiftcbor",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/valpackett/SwiftCBOR",
-      "state" : {
-        "branch" : "master",
-        "revision" : "ea5ece79b0efde241495bfaa74eccceeffc382bc"
-      }
-    },
-    {
       "identity" : "swiftlintplugins",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/SimplyDanny/SwiftLintPlugins",
@@ -249,8 +213,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/xmtp/xmtp-ios.git",
       "state" : {
-        "branch" : "main",
-        "revision" : "7d976bed9b1a5879b4ad45bd910b9e56ac67620c"
+        "revision" : "893dcf5ff4fd57de33bc3d0d4cd40d666a50b9e0",
+        "version" : "4.3.0"
       }
     }
   ],

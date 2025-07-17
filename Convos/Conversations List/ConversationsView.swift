@@ -1,7 +1,12 @@
 import SwiftUI
 
 enum ConversationsRoute: Hashable {
-    case conversation(Conversation)
+    case conversation(ConversationViewDependencies)
+}
+
+struct ConversationDetail {
+    let conversation: Conversation
+    let messagingService: AnyMessagingService
 }
 
 struct ConversationsView: View {

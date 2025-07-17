@@ -7,6 +7,10 @@ typealias AnyMessagingServicePublisher = AnyPublisher<AnyMessagingService, Never
 typealias AnyClientProvider = any XMTPClientProvider
 typealias AnyClientProviderPublisher = AnyPublisher<AnyClientProvider, Never>
 
+enum SessionManagerError: Error {
+    case missingOperationForAddedInbox
+}
+
 class SessionManager: SessionManagerProtocol {
     let authState: AnyPublisher<AuthServiceState, Never>
     let inboxesRepository: any InboxesRepositoryProtocol
@@ -37,37 +41,32 @@ class SessionManager: SessionManagerProtocol {
             .eraseToAnyPublisher()
         authState
             .sink { [weak self] authState in
-                self?.handleAuthStateChange(authState)
+                do {
+                    try self?.handleAuthStateChange(authState)
+                } catch {
+                    Logger.error("Error handling auth state change: \(authState)")
+                }
             }
             .store(in: &cancellables)
     }
 
     // MARK: - Private Methods
 
-    private func handleAuthStateChange(_ authState: AuthServiceState) {
+    private func handleAuthStateChange(_ authState: AuthServiceState) throws {
         Logger.info("Auth state changed: \(authState)")
 
         switch authState {
         case .authorized(let authResult):
-            updateOperationsForInboxes(authResult.inboxes)
+            try updateOperations(for: authResult.inboxes)
         case .registered(let registeredResult):
-            updateOperationsForInboxes(registeredResult.inboxes)
+            try updateOperations(for: registeredResult.inboxes)
         case .unauthorized, .notReady, .unknown:
             clearAllOperations()
         }
     }
 
-    private func updateOperationsForInboxes(_ inboxes: [any AuthServiceInboxType]) {
-        let currentInboxIds = Set(inboxes.map { $0.signingKey.identity.identifier })
-
-        // Stop and remove operations for inboxes that are no longer present
-        let operationsToRemove = operationsByInboxId.keys.filter { !currentInboxIds.contains($0) }
-        for inboxId in operationsToRemove {
-            operationsByInboxId[inboxId]?.stop()
-            operationsByInboxId.removeValue(forKey: inboxId)
-        }
-
-        // Create or update operations for current inboxes
+    private func updateOperations(for inboxes: [any AuthServiceInboxType]) throws {
+        // Create or update operations for inboxes
         for inbox in inboxes {
             let inboxId = inbox.signingKey.identity.identifier
 
@@ -82,10 +81,14 @@ class SessionManager: SessionManagerProtocol {
                 operationsByInboxId[inboxId] = operation
             }
 
+            guard let operation = operationsByInboxId[inboxId] else {
+                throw SessionManagerError.missingOperationForAddedInbox
+            }
+
             if let registeredResult = inbox as? AuthServiceRegisteredResultType {
-                operationsByInboxId[inboxId]?.register(displayName: registeredResult.displayName)
+                operation.register(displayName: registeredResult.displayName)
             } else {
-                operationsByInboxId[inboxId]?.authorize()
+                operation.authorize()
             }
         }
 
@@ -108,8 +111,8 @@ class SessionManager: SessionManagerProtocol {
         try authService.prepare()
     }
 
-    func addAccount() async throws {
-        let result = try authService.register(displayName: "User")
+    func addAccount() throws {
+        let result = try authService.register(displayName: "Somebody")
         Logger.info("Added account: \(result)")
     }
 

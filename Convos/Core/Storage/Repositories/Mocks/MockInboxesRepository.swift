@@ -21,7 +21,7 @@ class MockInboxesRepository: InboxesRepositoryProtocol {
 }
 
 extension Profile {
-    static func mock(name: String = "Andrew") -> Profile {
+    static func mock(name: String = "Somebody") -> Profile {
         .init(
             inboxId: UUID().uuidString,
             name: name,

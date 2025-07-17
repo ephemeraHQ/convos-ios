@@ -9,6 +9,10 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
     @ViewBuilder let content: () -> Content
 
     @State private var text: String = ""
+    @State private var sendButtonEnabled: Bool = false
+    @State private var profile: Profile = .mock()
+    @State private var profileName: String = ""
+    @State private var showingProfileNameEditor: Bool = false
 
     @Environment(\.dismiss) private var dismiss: DismissAction
 
@@ -20,7 +24,12 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
             conversationLocalStateWriter: conversationLocalStateWriter,
             dismissAction: context.environment.dismiss,
             sendMessage: sendMessage,
+            textDidChange: textDidChange(_:),
             textBinding: $text,
+            sendButtonEnabled: $sendButtonEnabled,
+            showingProfileNameEditor: $showingProfileNameEditor,
+            profile: $profile,
+            profileName: $profileName,
             joinConversation: joinConversation,
             deleteConversation: deleteConversation
         )
@@ -77,6 +86,11 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
                 Logger.error("Error sending message: \(error)")
             }
         }
+    }
+
+    func textDidChange(_ text: String) {
+        let conversationHasMembers: Bool = !(conversationState.conversation?.members.isEmpty ?? true)
+        sendButtonEnabled = conversationHasMembers && !text.isEmpty
     }
 
     func joinConversation() {

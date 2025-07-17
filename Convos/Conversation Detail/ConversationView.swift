@@ -1,5 +1,23 @@
 import SwiftUI
 
+struct ConversationViewDependencies: Hashable {
+    let conversationId: String
+    let conversationRepository: any ConversationRepositoryProtocol
+    let messagesRepository: any MessagesRepositoryProtocol
+    let outgoingMessageWriter: any OutgoingMessageWriterProtocol
+    let conversationConsentWriter: any ConversationConsentWriterProtocol
+    let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
+    let groupMetadataWriter: any GroupMetadataWriterProtocol
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.conversationId == rhs.conversationId
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(conversationId)
+    }
+}
+
 struct ConversationView: View {
     let conversationRepository: any ConversationRepositoryProtocol
     let messagesRepository: any MessagesRepositoryProtocol
@@ -10,21 +28,14 @@ struct ConversationView: View {
     let conversationState: ConversationState
     @State private var showInfoForConversation: Conversation?
 
-    init(
-        conversationRepository: any ConversationRepositoryProtocol,
-        messagesRepository: any MessagesRepositoryProtocol,
-        outgoingMessageWriter: any OutgoingMessageWriterProtocol,
-        conversationConsentWriter: any ConversationConsentWriterProtocol,
-        conversationLocalStateWriter: any ConversationLocalStateWriterProtocol,
-        groupMetadataWriter: any GroupMetadataWriterProtocol
-    ) {
-        self.conversationRepository = conversationRepository
-        self.messagesRepository = messagesRepository
-        self.outgoingMessageWriter = outgoingMessageWriter
-        self.conversationConsentWriter = conversationConsentWriter
-        self.conversationLocalStateWriter = conversationLocalStateWriter
-        self.groupMetadataWriter = groupMetadataWriter
-        self.conversationState = ConversationState(conversationRepository: conversationRepository)
+    init(dependencies: ConversationViewDependencies) {
+        self.conversationRepository = dependencies.conversationRepository
+        self.messagesRepository = dependencies.messagesRepository
+        self.outgoingMessageWriter = dependencies.outgoingMessageWriter
+        self.conversationConsentWriter = dependencies.conversationConsentWriter
+        self.conversationLocalStateWriter = dependencies.conversationLocalStateWriter
+        self.groupMetadataWriter = dependencies.groupMetadataWriter
+        self.conversationState = ConversationState(conversationRepository: dependencies.conversationRepository)
     }
 
     var body: some View {
@@ -63,7 +74,8 @@ struct ConversationView: View {
 #Preview {
     let messaging = MockMessagingService()
     let conversationId: String = "1"
-    ConversationView(
+    let dependencies = ConversationViewDependencies(
+        conversationId: conversationId,
         conversationRepository: messaging.conversationRepository(for: conversationId),
         messagesRepository: messaging.messagesRepository(for: conversationId),
         outgoingMessageWriter: messaging.messageWriter(for: conversationId),
@@ -71,5 +83,6 @@ struct ConversationView: View {
         conversationLocalStateWriter: messaging.conversationLocalStateWriter(),
         groupMetadataWriter: messaging.groupMetadataWriter()
     )
-    .ignoresSafeArea()
+    ConversationView(dependencies: dependencies)
+        .ignoresSafeArea()
 }

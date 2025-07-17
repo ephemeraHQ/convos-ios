@@ -22,38 +22,32 @@ struct ConversationsListView: View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(viewModel.unpinnedConversations) { conversation in
-                    NavigationLink(value: ConversationsRoute.conversation(conversation)) {
+                    NavigationLink(value: ConversationsRoute.conversation(dependencies(for: conversation))) {
                         ConversationsListItem(conversation: conversation)
                     }
                 }
             }
             .navigationDestination(for: ConversationsRoute.self) { route in
                 switch route {
-                case .conversation(let conversation):
-                    let messagingService = session.messagingService(for: conversation.inboxId)
-                    let conversationRepository = messagingService.conversationRepository(
-                        for: conversation.id
-                    )
-                    let messagesRepository = messagingService.messagesRepository(
-                        for: conversation.id
-                    )
-                    let messageWriter = messagingService.messageWriter(
-                        for: conversation.id
-                    )
-                    let consentWriter = messagingService.conversationConsentWriter()
-                    let localStateWriter = messagingService.conversationLocalStateWriter()
-                    ConversationView(
-                        conversationRepository: conversationRepository,
-                        messagesRepository: messagesRepository,
-                        outgoingMessageWriter: messageWriter,
-                        conversationConsentWriter: consentWriter,
-                        conversationLocalStateWriter: localStateWriter,
-                        groupMetadataWriter: messagingService.groupMetadataWriter()
-                    )
-                    .ignoresSafeArea()
+                case .conversation(let conversationDetail):
+                    ConversationView(dependencies: conversationDetail)
+                        .ignoresSafeArea()
                 }
             }
         }
+    }
+
+    private func dependencies(for conversation: Conversation) -> ConversationViewDependencies {
+        let messagingService = session.messagingService(for: conversation.inboxId)
+        return .init(
+            conversationId: conversation.id,
+            conversationRepository: messagingService.conversationRepository(for: conversation.id),
+            messagesRepository: messagingService.messagesRepository(for: conversation.id),
+            outgoingMessageWriter: messagingService.messageWriter(for: conversation.id),
+            conversationConsentWriter: messagingService.conversationConsentWriter(),
+            conversationLocalStateWriter: messagingService.conversationLocalStateWriter(),
+            groupMetadataWriter: messagingService.groupMetadataWriter()
+        )
     }
 }
 

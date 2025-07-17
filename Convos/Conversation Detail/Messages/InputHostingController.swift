@@ -9,6 +9,7 @@ final class InputHostingController<Content: View>: UIView {
         super.init(frame: .zero)
         addSubview(hostingController.view)
         hostingController.view.translatesAutoresizingMaskIntoConstraints = false
+        hostingController.view.backgroundColor = .clear
         NSLayoutConstraint.activate([
             hostingController.view.topAnchor.constraint(equalTo: topAnchor),
             hostingController.view.bottomAnchor.constraint(equalTo: bottomAnchor),

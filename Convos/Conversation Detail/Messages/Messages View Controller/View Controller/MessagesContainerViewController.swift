@@ -12,16 +12,7 @@ class MessagesContainerViewController: UIViewController {
     var shouldBecomeFirstResponder: Bool = true
 
     override var inputAccessoryView: UIView? {
-        guard let conversation = conversationState.conversation,
-              !conversation.isDraft else {
-            return messagesInputView
-        }
-        switch conversation.consent {
-        case .allowed:
-            return messagesInputView
-        case .denied, .unknown:
-            return nil
-        }
+        messagesInputView
     }
 
     override var canBecomeFirstResponder: Bool {
@@ -44,7 +35,12 @@ class MessagesContainerViewController: UIViewController {
          conversationLocalStateWriter: any ConversationLocalStateWriterProtocol,
          dismissAction: DismissAction,
          sendMessage: @escaping () -> Void,
+         textDidChange: @escaping (String) -> Void,
          textBinding: Binding<String>,
+         sendButtonEnabled: Binding<Bool>,
+         showingProfileNameEditor: Binding<Bool>,
+         profile: Binding<Profile>,
+         profileName: Binding<String>,
          joinConversation: @escaping () -> Void,
          deleteConversation: @escaping () -> Void) {
         self.conversationState = conversationState
@@ -53,15 +49,6 @@ class MessagesContainerViewController: UIViewController {
         self.conversationLocalStateWriter = conversationLocalStateWriter
         self.messagesInputView = MessagesInputView(sendMessage: sendMessage)
         super.init(nibName: nil, bundle: nil)
-        conversationCancellable = conversationState
-            .conversationPublisher
-            .receive(on: DispatchQueue.main)
-            .withPrevious()
-            .sink { [weak self] previous, current in
-                guard let self else { return }
-                guard previous?.consent != current?.consent else { return }
-                reloadInputViews()
-            }
     }
 
     required init?(coder: NSCoder) {
