@@ -30,7 +30,7 @@ struct ProfileAvatarPickerButton: View {
                 .tint(.colorBackgroundPrimary)
                 .labelStyle(.iconOnly)
                 .foregroundColor(.white)
-                .padding(8.0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(.colorBackgroundInverted)
         .mask(Circle())
@@ -65,7 +65,49 @@ final class MessagesInputView: UIView {
     private var profile: Profile = .mock()
     private let sendMessage: () -> Void
 
-    private var isEditingProfile: Bool = false
+    private var _isEditingProfile: Bool = false
+    var isEditingProfile: Bool {
+        get { _isEditingProfile }
+        set { setEditingProfile(newValue, animated: true) }
+    }
+    private var normalConstraints: [NSLayoutConstraint] = []
+    private var editingProfileConstraints: [NSLayoutConstraint] = []
+
+    private var editingViews: [UIView] {
+        [profileNameTextField, profileAvatarPickerButton]
+    }
+    private var normalViews: [UIView] {
+        [profileAvatarButton, textView, sendButton, placeholderLabel]
+    }
+
+    // MARK: - Base Components
+
+    private lazy var backgroundView: UIView = {
+        let view = UIView(frame: .zero)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .clear
+        return view
+    }()
+
+    private(set) lazy var containerView: ShadowedRoundedView = {
+        let container = ShadowedRoundedView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.backgroundColor = .clear
+        container.cornerRadius = Constant.textViewCornerRadius
+        container.fillColor = .colorBackgroundPrimary
+        container.shadowColor = UIColor.black.withAlphaComponent(0.15)
+        container.shadowOpacity = 1.0
+        container.shadowRadius = 16.0
+        container.shadowOffset = CGSize(width: 0.0, height: 4.0)
+        return container
+    }()
+
+    private(set) lazy var buttonContainer: UIView = {
+        let view = UIView(frame: .zero)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .clear
+        return view
+    }()
 
     // MARK: - Editing Profile Components
 
@@ -74,6 +116,7 @@ final class MessagesInputView: UIView {
         tf.translatesAutoresizingMaskIntoConstraints = false
         tf.font = .systemFont(ofSize: 17.0)
         tf.placeholder = "\(profile.displayName)..."
+        tf.returnKeyType = .done
         return tf
     }()
 
@@ -97,13 +140,6 @@ final class MessagesInputView: UIView {
 
     // MARK: - Sending Messages Components
 
-    private lazy var backgroundView: UIView = {
-        let view = UIView(frame: .zero)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .clear
-        return view
-    }()
-
     private(set) lazy var profileAvatarButton: SwiftUIViewWrapper<ProfileAvatarButton> = {
         let wrappedView = SwiftUIViewWrapper {
             ProfileAvatarButton(profile: profile) { [weak self] in
@@ -123,26 +159,6 @@ final class MessagesInputView: UIView {
         label.font = .systemFont(ofSize: Constant.textViewFontSize)
         label.isUserInteractionEnabled = false
         return label
-    }()
-
-    private(set) lazy var containerView: ShadowedRoundedView = {
-        let container = ShadowedRoundedView()
-        container.translatesAutoresizingMaskIntoConstraints = false
-        container.backgroundColor = .clear
-        container.cornerRadius = Constant.textViewCornerRadius
-        container.fillColor = .colorBackgroundPrimary
-        container.shadowColor = UIColor.black.withAlphaComponent(0.15)
-        container.shadowOpacity = 1.0
-        container.shadowRadius = 16.0
-        container.shadowOffset = CGSize(width: 0.0, height: 4.0)
-        return container
-    }()
-
-    private(set) lazy var buttonContainer: UIView = {
-        let view = UIView(frame: .zero)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .clear
-        return view
     }()
 
     private(set) lazy var textView: UITextView = {
@@ -233,18 +249,21 @@ final class MessagesInputView: UIView {
     }
 
     private func setupContainerViewHeightConstraint() {
-        containerViewHeightConstraint = textView.heightAnchor.constraint(equalToConstant: Constant.baseHeight)
+        containerViewHeightConstraint = containerView.heightAnchor.constraint(equalToConstant: Constant.baseHeight)
         containerViewHeightConstraint?.isActive = true
     }
 
     private func setupLayoutConstraints() {
-        NSLayoutConstraint.activate([
+        normalConstraints = [
             backgroundView.topAnchor.constraint(equalTo: topAnchor),
             backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
             backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
             backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
 
-            containerView.topAnchor.constraint(equalTo: textView.topAnchor),
+            containerView.topAnchor.constraint(
+                equalTo: topAnchor,
+                constant: Constant.margin
+            ),
             containerView.leadingAnchor.constraint(
                 equalTo: safeAreaLayoutGuide.leadingAnchor,
                 constant: Constant.margin
@@ -253,27 +272,39 @@ final class MessagesInputView: UIView {
                 equalTo: safeAreaLayoutGuide.trailingAnchor,
                 constant: -Constant.margin
             ),
-            containerView.bottomAnchor.constraint(equalTo: textView.bottomAnchor),
 
             buttonContainer.topAnchor.constraint(equalTo: containerView.topAnchor),
             buttonContainer.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
-            buttonContainer.leadingAnchor.constraint(
-                equalTo: containerView.leadingAnchor
-            ),
-            buttonContainer.widthAnchor.constraint(equalTo: buttonContainer.heightAnchor),
+            buttonContainer.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            buttonContainer.trailingAnchor.constraint(equalTo: textView.leadingAnchor),
 
-            profileAvatarButton.heightAnchor.constraint(equalToConstant: Constant.baseHeight),
-            profileAvatarButton.widthAnchor.constraint(equalTo: profileAvatarButton.heightAnchor),
-            profileAvatarButton.leadingAnchor.constraint(equalTo: buttonContainer.leadingAnchor),
-            profileAvatarButton.bottomAnchor.constraint(equalTo: buttonContainer.bottomAnchor),
+            profileAvatarButton.widthAnchor.constraint(
+                equalTo: buttonContainer.widthAnchor
+            ),
+            profileAvatarButton.heightAnchor.constraint(
+                equalTo: profileAvatarButton.widthAnchor
+            ),
+            profileAvatarButton.leadingAnchor.constraint(
+                equalTo: buttonContainer.leadingAnchor
+            ),
+            profileAvatarButton.bottomAnchor.constraint(
+                equalTo: buttonContainer.bottomAnchor
+            ),
 
             profileAvatarPickerButton.topAnchor.constraint(equalTo: buttonContainer.topAnchor),
             profileAvatarPickerButton.bottomAnchor.constraint(equalTo: buttonContainer.bottomAnchor),
             profileAvatarPickerButton.leadingAnchor.constraint(equalTo: buttonContainer.leadingAnchor),
             profileAvatarPickerButton.trailingAnchor.constraint(equalTo: buttonContainer.trailingAnchor),
 
-            textView.topAnchor.constraint(equalTo: topAnchor, constant: Constant.margin),
-            textView.leadingAnchor.constraint(equalTo: profileAvatarButton.trailingAnchor),
+            textView.topAnchor.constraint(
+                equalTo: containerView.topAnchor
+            ),
+            textView.bottomAnchor.constraint(
+                equalTo: containerView.bottomAnchor
+            ),
+            textView.leadingAnchor.constraint(
+                equalTo: profileAvatarButton.trailingAnchor
+            ),
             textView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
 
             profileNameTextField.topAnchor.constraint(equalTo: textView.topAnchor),
@@ -286,12 +317,141 @@ final class MessagesInputView: UIView {
             sendButton.widthAnchor.constraint(equalToConstant: Constant.sendButtonSize),
             sendButton.heightAnchor.constraint(equalToConstant: Constant.sendButtonSize),
 
-            placeholderLabel.leadingAnchor
-                .constraint(equalTo: textView.leadingAnchor, constant: Constant.textViewInset.left + 6.0),
+            placeholderLabel.leadingAnchor.constraint(
+                equalTo: textView.leadingAnchor,
+                constant: Constant.textViewInset.left + 6.0
+            ),
             placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor, constant: 8),
-            placeholderLabel.trailingAnchor
-                .constraint(lessThanOrEqualTo: textView.trailingAnchor, constant: -Constant.textViewInset.right),
-        ])
+            placeholderLabel.trailingAnchor.constraint(
+                lessThanOrEqualTo: textView.trailingAnchor,
+                constant: -Constant.textViewInset.right
+            ),
+        ]
+
+        editingProfileConstraints = [
+            backgroundView.topAnchor.constraint(equalTo: topAnchor),
+            backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
+
+            containerView.topAnchor.constraint(
+                equalTo: topAnchor,
+                constant: 8
+            ),
+            containerView.leadingAnchor.constraint(
+                equalTo: safeAreaLayoutGuide.leadingAnchor,
+                constant: Constant.margin
+            ),
+            containerView.trailingAnchor.constraint(
+                equalTo: safeAreaLayoutGuide.trailingAnchor,
+                constant: -Constant.margin
+            ),
+            containerView.bottomAnchor.constraint(
+                equalTo: bottomAnchor,
+                constant: -8
+            ),
+
+            buttonContainer.topAnchor
+                .constraint(
+                    equalTo: containerView.topAnchor,
+                    constant: DesignConstants.Spacing.step6x
+                ),
+            buttonContainer.bottomAnchor
+                .constraint(
+                    equalTo: containerView.bottomAnchor,
+                    constant: -DesignConstants.Spacing.step6x
+                ),
+            buttonContainer.leadingAnchor.constraint(
+                equalTo: containerView.leadingAnchor,
+                constant: DesignConstants.Spacing.step6x
+            ),
+            buttonContainer.widthAnchor.constraint(equalTo: buttonContainer.heightAnchor),
+
+            profileAvatarButton.widthAnchor.constraint(
+                equalTo: buttonContainer.widthAnchor
+            ),
+            profileAvatarButton.heightAnchor.constraint(
+                equalTo: profileAvatarButton.widthAnchor
+            ),
+            profileAvatarButton.leadingAnchor.constraint(
+                equalTo: buttonContainer.leadingAnchor
+            ),
+            profileAvatarButton.bottomAnchor.constraint(
+                equalTo: buttonContainer.bottomAnchor
+            ),
+
+            profileAvatarPickerButton.topAnchor.constraint(equalTo: buttonContainer.topAnchor),
+            profileAvatarPickerButton.bottomAnchor.constraint(equalTo: buttonContainer.bottomAnchor),
+            profileAvatarPickerButton.leadingAnchor.constraint(equalTo: buttonContainer.leadingAnchor),
+            profileAvatarPickerButton.trailingAnchor.constraint(equalTo: buttonContainer.trailingAnchor),
+
+            sendButton.bottomAnchor.constraint(equalTo: textView.bottomAnchor),
+            sendButton.leadingAnchor.constraint(equalTo: trailingAnchor),
+            sendButton.widthAnchor.constraint(equalToConstant: Constant.sendButtonSize),
+            sendButton.heightAnchor.constraint(equalToConstant: Constant.sendButtonSize),
+
+            textView.topAnchor.constraint(
+                equalTo: containerView.topAnchor
+            ),
+            textView.bottomAnchor.constraint(
+                equalTo: containerView.bottomAnchor
+            ),
+            textView.leadingAnchor.constraint(
+                equalTo: profileNameTextField.leadingAnchor
+            ),
+            textView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+
+            profileNameTextField.topAnchor.constraint(
+                equalTo: containerView.topAnchor,
+                constant: DesignConstants.Spacing.step6x
+            ),
+            profileNameTextField.bottomAnchor.constraint(
+                equalTo: containerView.bottomAnchor,
+                constant: -DesignConstants.Spacing.step6x
+            ),
+            profileNameTextField.leadingAnchor.constraint(
+                equalTo: profileAvatarPickerButton.trailingAnchor,
+                constant: Constant.margin
+            ),
+            profileNameTextField.trailingAnchor.constraint(
+                equalTo: containerView.trailingAnchor,
+                constant: -Constant.margin
+            )
+        ]
+
+        NSLayoutConstraint.activate(normalConstraints)
+        updateEditingProfileAlpha()
+    }
+
+    private func setEditingProfile(_ editing: Bool, animated: Bool) {
+        guard editing != _isEditingProfile else { return }
+        _isEditingProfile = editing
+        updateForEditingProfile(animated: animated)
+    }
+
+    private func updateForEditingProfile(animated: Bool) {
+        let toActivate = isEditingProfile ? editingProfileConstraints : normalConstraints
+        let toDeactivate = isEditingProfile ? normalConstraints : editingProfileConstraints
+        NSLayoutConstraint.deactivate(toDeactivate)
+        NSLayoutConstraint.activate(toActivate)
+        let animations = {
+            self.containerView.cornerRadius = self.isEditingProfile ? 40.0 : 20.0
+            self.updateEditingProfileAlpha()
+            self.updateContainerViewHeight()
+            self.layoutIfNeeded()
+        }
+        if animated {
+            UIView.animate(withDuration: 0.3, animations: animations)
+        } else {
+            animations()
+        }
+    }
+
+    private func updateEditingProfileAlpha() {
+        let editingAlpha: CGFloat = isEditingProfile ? 1 : 0
+        let normalAlpha: CGFloat = isEditingProfile ? 0 : 1
+        editingViews.forEach { $0.alpha = editingAlpha }
+        normalViews.forEach { $0.alpha = normalAlpha }
     }
 
     private func setupNotifications() {
@@ -332,15 +492,25 @@ final class MessagesInputView: UIView {
 
     @objc private func handleTextChange() {
         updateContainerViewHeight()
-        invalidateIntrinsicContentSize()
         placeholderLabel.isHidden = !(textView.text?.isEmpty ?? true)
     }
 
     private func updateContainerViewHeight() {
-        let size = CGSize(width: textView.bounds.width, height: .infinity)
-        let estimatedSize = textView.sizeThatFits(size)
-        let newHeight = min(max(estimatedSize.height, Constant.baseHeight), Constant.maxHeight)
-        containerViewHeightConstraint?.constant = newHeight
+        if isEditingProfile {
+            containerViewHeightConstraint?.constant = 100.0
+        } else {
+            let size = CGSize(
+                width: textView.bounds.width,
+                height: .infinity
+            )
+            let estimatedSize = textView.sizeThatFits(size)
+            let newHeight = min(
+                max(estimatedSize.height, Constant.baseHeight),
+                Constant.maxHeight
+            )
+            containerViewHeightConstraint?.constant = newHeight
+        }
+        invalidateIntrinsicContentSize()
     }
 
     @objc private func handleSendButtonTap() {
@@ -407,7 +577,7 @@ extension MessagesInputView: KeyboardListenerDelegate {
     }
 
     func keyboardWillHide(info: KeyboardInfo) {
-        invalidateIntrinsicContentSize()
+        isEditingProfile = false
     }
 
     func keyboardWillChangeFrame(info: KeyboardInfo) {
