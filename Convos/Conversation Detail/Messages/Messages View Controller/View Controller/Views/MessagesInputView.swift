@@ -74,7 +74,7 @@ final class MessagesInputView: UIView {
     private var editingProfileConstraints: [NSLayoutConstraint] = []
 
     private var editingViews: [UIView] {
-        [profileNameTextField, profileAvatarPickerButton]
+        [editProfileContainer, profileAvatarPickerButton]
     }
     private var normalViews: [UIView] {
         [profileAvatarButton, textView, sendButton, placeholderLabel]
@@ -102,6 +102,13 @@ final class MessagesInputView: UIView {
         return container
     }()
 
+    private(set) lazy var contentView: UIView = {
+        let view = UIView(frame: .zero)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .clear
+        return view
+    }()
+
     private(set) lazy var buttonContainer: UIView = {
         let view = UIView(frame: .zero)
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -109,7 +116,31 @@ final class MessagesInputView: UIView {
         return view
     }()
 
+    private(set) lazy var centerContainer: UIView = {
+        let view = UIView(frame: .zero)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .clear
+        return view
+    }()
+
+    private(set) lazy var rightContainer: UIView = {
+        let view = UIView(frame: .zero)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .clear
+        return view
+    }()
+
+
     // MARK: - Editing Profile Components
+
+    private(set) lazy var editProfileContainer: UIView = {
+        let view = UIView(frame: .zero)
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .colorFillMinimal
+        view.layer.cornerRadius = 24.0
+        view.layer.masksToBounds = true
+        return view
+    }()
 
     private(set) lazy var profileNameTextField: UITextField = {
         let tf = UITextField()
@@ -233,14 +264,37 @@ final class MessagesInputView: UIView {
         [
             backgroundView,
             containerView,
+        ].forEach { addSubview($0) }
+
+        [
+            contentView
+        ].forEach { containerView.addSubview($0) }
+
+        [
             buttonContainer,
+            centerContainer,
+            rightContainer
+        ].forEach { contentView.addSubview($0) }
+
+        [
             profileAvatarPickerButton,
             profileAvatarButton,
+        ].forEach { buttonContainer.addSubview($0) }
+
+        [
             profileNameTextField,
+        ]
+        .forEach { editProfileContainer.addSubview($0) }
+
+        [
+            editProfileContainer,
             textView,
-            placeholderLabel,
+            placeholderLabel
+        ].forEach { centerContainer.addSubview($0) }
+
+        [
             sendButton
-        ].forEach { addSubview($0) }
+        ].forEach { rightContainer.addSubview($0) }
     }
 
     private func setupConstraints() {
@@ -254,7 +308,7 @@ final class MessagesInputView: UIView {
     }
 
     private func setupLayoutConstraints() {
-        normalConstraints = [
+        NSLayoutConstraint.activate([
             backgroundView.topAnchor.constraint(equalTo: topAnchor),
             backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
             backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -273,10 +327,59 @@ final class MessagesInputView: UIView {
                 constant: -Constant.margin
             ),
 
-            buttonContainer.topAnchor.constraint(equalTo: containerView.topAnchor),
-            buttonContainer.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
-            buttonContainer.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            buttonContainer.trailingAnchor.constraint(equalTo: textView.leadingAnchor),
+            // containers
+            buttonContainer.topAnchor.constraint(
+                equalTo: contentView.topAnchor
+            ),
+            buttonContainer.bottomAnchor.constraint(
+                equalTo: contentView.bottomAnchor
+            ),
+            buttonContainer.leadingAnchor.constraint(
+                equalTo: contentView.leadingAnchor
+            ),
+            buttonContainer.widthAnchor.constraint(
+                equalTo: buttonContainer.heightAnchor
+            ),
+
+            centerContainer.topAnchor.constraint(
+                equalTo: contentView.topAnchor
+            ),
+            centerContainer.bottomAnchor.constraint(
+                equalTo: contentView.bottomAnchor
+            ),
+            centerContainer.leadingAnchor.constraint(
+                equalTo: buttonContainer.trailingAnchor
+            ),
+            centerContainer.trailingAnchor.constraint(
+                equalTo: rightContainer.leadingAnchor
+            ),
+
+            rightContainer.topAnchor.constraint(
+                equalTo: contentView.topAnchor
+            ),
+            rightContainer.bottomAnchor.constraint(
+                equalTo: contentView.bottomAnchor
+            ),
+            rightContainer.trailingAnchor.constraint(
+                equalTo: contentView.trailingAnchor
+            ),
+            rightContainer.widthAnchor.constraint(
+                equalTo: rightContainer.heightAnchor
+            ),
+
+            // left views
+            profileAvatarPickerButton.topAnchor.constraint(
+                equalTo: buttonContainer.topAnchor
+            ),
+            profileAvatarPickerButton.bottomAnchor.constraint(
+                equalTo: buttonContainer.bottomAnchor
+            ),
+            profileAvatarPickerButton.leadingAnchor.constraint(
+                equalTo: buttonContainer.leadingAnchor
+            ),
+            profileAvatarPickerButton.trailingAnchor.constraint(
+                equalTo: buttonContainer.trailingAnchor
+            ),
 
             profileAvatarButton.widthAnchor.constraint(
                 equalTo: buttonContainer.widthAnchor
@@ -291,132 +394,112 @@ final class MessagesInputView: UIView {
                 equalTo: buttonContainer.bottomAnchor
             ),
 
-            profileAvatarPickerButton.topAnchor.constraint(equalTo: buttonContainer.topAnchor),
-            profileAvatarPickerButton.bottomAnchor.constraint(equalTo: buttonContainer.bottomAnchor),
-            profileAvatarPickerButton.leadingAnchor.constraint(equalTo: buttonContainer.leadingAnchor),
-            profileAvatarPickerButton.trailingAnchor.constraint(equalTo: buttonContainer.trailingAnchor),
-
+            // center views
             textView.topAnchor.constraint(
-                equalTo: containerView.topAnchor
+                equalTo: centerContainer.topAnchor
             ),
             textView.bottomAnchor.constraint(
-                equalTo: containerView.bottomAnchor
+                equalTo: centerContainer.bottomAnchor
             ),
             textView.leadingAnchor.constraint(
-                equalTo: profileAvatarButton.trailingAnchor
+                equalTo: centerContainer.leadingAnchor
             ),
-            textView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            textView.trailingAnchor.constraint(
+                equalTo: centerContainer.trailingAnchor
+            ),
 
-            profileNameTextField.topAnchor.constraint(equalTo: textView.topAnchor),
-            profileNameTextField.bottomAnchor.constraint(equalTo: textView.bottomAnchor),
-            profileNameTextField.leadingAnchor.constraint(equalTo: textView.leadingAnchor),
-            profileNameTextField.trailingAnchor.constraint(equalTo: textView.trailingAnchor),
+            editProfileContainer.topAnchor.constraint(
+                equalTo: centerContainer.topAnchor
+            ),
+            editProfileContainer.bottomAnchor.constraint(
+                equalTo: centerContainer.bottomAnchor
+            ),
+            editProfileContainer.leadingAnchor.constraint(
+                equalTo: centerContainer.leadingAnchor,
+                constant: DesignConstants.Spacing.step2x
+            ),
+            editProfileContainer.trailingAnchor.constraint(
+                equalTo: centerContainer.trailingAnchor
+            ),
 
-            sendButton.bottomAnchor.constraint(equalTo: textView.bottomAnchor),
-            sendButton.trailingAnchor.constraint(equalTo: textView.trailingAnchor),
-            sendButton.widthAnchor.constraint(equalToConstant: Constant.sendButtonSize),
-            sendButton.heightAnchor.constraint(equalToConstant: Constant.sendButtonSize),
+            profileNameTextField.topAnchor.constraint(
+                equalTo: editProfileContainer.topAnchor
+            ),
+            profileNameTextField.bottomAnchor.constraint(
+                equalTo: editProfileContainer.bottomAnchor
+            ),
+            profileNameTextField.leadingAnchor.constraint(
+                equalTo: editProfileContainer.leadingAnchor,
+                constant: DesignConstants.Spacing.step6x
+            ),
+            profileNameTextField.trailingAnchor.constraint(
+                equalTo: editProfileContainer.trailingAnchor,
+                constant: -DesignConstants.Spacing.step6x
+            ),
 
             placeholderLabel.leadingAnchor.constraint(
                 equalTo: textView.leadingAnchor,
                 constant: Constant.textViewInset.left + 6.0
             ),
-            placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor, constant: 8),
+            placeholderLabel.centerYAnchor.constraint(
+                equalTo: textView.centerYAnchor
+            ),
             placeholderLabel.trailingAnchor.constraint(
                 lessThanOrEqualTo: textView.trailingAnchor,
                 constant: -Constant.textViewInset.right
             ),
+
+            // right views
+            sendButton.bottomAnchor.constraint(
+                equalTo: rightContainer.bottomAnchor
+            ),
+            sendButton.trailingAnchor.constraint(
+                equalTo: rightContainer.trailingAnchor
+            ),
+            sendButton.widthAnchor.constraint(
+                equalToConstant: Constant.sendButtonSize
+            ),
+            sendButton.heightAnchor.constraint(
+                equalToConstant: Constant.sendButtonSize
+            ),
+        ])
+
+        normalConstraints = [
+            contentView.topAnchor.constraint(
+                equalTo: containerView.topAnchor,
+                constant: 0.0
+            ),
+            contentView.bottomAnchor.constraint(
+                equalTo: containerView.bottomAnchor,
+                constant: 0.0
+            ),
+            contentView.leadingAnchor.constraint(
+                equalTo: containerView.leadingAnchor,
+                constant: 0.0
+            ),
+            contentView.trailingAnchor.constraint(
+                equalTo: containerView.trailingAnchor,
+                constant: 0.0
+            ),
         ]
 
         editingProfileConstraints = [
-            backgroundView.topAnchor.constraint(equalTo: topAnchor),
-            backgroundView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            backgroundView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor),
-
-            containerView.topAnchor.constraint(
-                equalTo: topAnchor,
-                constant: 8
-            ),
-            containerView.leadingAnchor.constraint(
-                equalTo: safeAreaLayoutGuide.leadingAnchor,
-                constant: Constant.margin
-            ),
-            containerView.trailingAnchor.constraint(
-                equalTo: safeAreaLayoutGuide.trailingAnchor,
-                constant: -Constant.margin
-            ),
-            containerView.bottomAnchor.constraint(
-                equalTo: bottomAnchor,
-                constant: -8
-            ),
-
-            buttonContainer.topAnchor
-                .constraint(
-                    equalTo: containerView.topAnchor,
-                    constant: DesignConstants.Spacing.step6x
-                ),
-            buttonContainer.bottomAnchor
-                .constraint(
-                    equalTo: containerView.bottomAnchor,
-                    constant: -DesignConstants.Spacing.step6x
-                ),
-            buttonContainer.leadingAnchor.constraint(
-                equalTo: containerView.leadingAnchor,
-                constant: DesignConstants.Spacing.step6x
-            ),
-            buttonContainer.widthAnchor.constraint(equalTo: buttonContainer.heightAnchor),
-
-            profileAvatarButton.widthAnchor.constraint(
-                equalTo: buttonContainer.widthAnchor
-            ),
-            profileAvatarButton.heightAnchor.constraint(
-                equalTo: profileAvatarButton.widthAnchor
-            ),
-            profileAvatarButton.leadingAnchor.constraint(
-                equalTo: buttonContainer.leadingAnchor
-            ),
-            profileAvatarButton.bottomAnchor.constraint(
-                equalTo: buttonContainer.bottomAnchor
-            ),
-
-            profileAvatarPickerButton.topAnchor.constraint(equalTo: buttonContainer.topAnchor),
-            profileAvatarPickerButton.bottomAnchor.constraint(equalTo: buttonContainer.bottomAnchor),
-            profileAvatarPickerButton.leadingAnchor.constraint(equalTo: buttonContainer.leadingAnchor),
-            profileAvatarPickerButton.trailingAnchor.constraint(equalTo: buttonContainer.trailingAnchor),
-
-            sendButton.bottomAnchor.constraint(equalTo: textView.bottomAnchor),
-            sendButton.leadingAnchor.constraint(equalTo: trailingAnchor),
-            sendButton.widthAnchor.constraint(equalToConstant: Constant.sendButtonSize),
-            sendButton.heightAnchor.constraint(equalToConstant: Constant.sendButtonSize),
-
-            textView.topAnchor.constraint(
-                equalTo: containerView.topAnchor
-            ),
-            textView.bottomAnchor.constraint(
-                equalTo: containerView.bottomAnchor
-            ),
-            textView.leadingAnchor.constraint(
-                equalTo: profileNameTextField.leadingAnchor
-            ),
-            textView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-
-            profileNameTextField.topAnchor.constraint(
+            contentView.topAnchor.constraint(
                 equalTo: containerView.topAnchor,
                 constant: DesignConstants.Spacing.step6x
             ),
-            profileNameTextField.bottomAnchor.constraint(
+            contentView.bottomAnchor.constraint(
                 equalTo: containerView.bottomAnchor,
                 constant: -DesignConstants.Spacing.step6x
             ),
-            profileNameTextField.leadingAnchor.constraint(
-                equalTo: profileAvatarPickerButton.trailingAnchor,
-                constant: Constant.margin
+            contentView.leadingAnchor.constraint(
+                equalTo: containerView.leadingAnchor,
+                constant: DesignConstants.Spacing.step6x
             ),
-            profileNameTextField.trailingAnchor.constraint(
+            contentView.trailingAnchor.constraint(
                 equalTo: containerView.trailingAnchor,
-                constant: -Constant.margin
-            )
+                constant: -DesignConstants.Spacing.step6x
+            ),
         ]
 
         NSLayoutConstraint.activate(normalConstraints)
