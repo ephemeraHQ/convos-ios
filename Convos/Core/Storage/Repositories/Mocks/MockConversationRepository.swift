@@ -16,3 +16,27 @@ class MockConversationRepository: ConversationRepositoryProtocol {
         conversation
     }
 }
+
+class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
+    var conversationId: String {
+        conversation.id
+    }
+
+    var membersPublisher: AnyPublisher<[ConversationMember], Never> {
+        Just([]).eraseToAnyPublisher()
+    }
+
+    var messagesRepository: any MessagesRepositoryProtocol {
+        MockMessagesRepository(conversation: conversation)
+    }
+
+    var conversationPublisher: AnyPublisher<Conversation?, Never> {
+        Just(conversation).eraseToAnyPublisher()
+    }
+
+    private let conversation: Conversation = .mock(id: "draft-123")
+
+    func fetchConversation() throws -> Conversation? {
+        conversation
+    }
+}

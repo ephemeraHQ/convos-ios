@@ -85,7 +85,6 @@ final class MessagesInputView: UIView {
                 profileAvatarButton(for: profile)
             )
             placeholderLabel.text = "Chat as \(profile.displayName)"
-            profileNameTextField.placeholder = "\(profile.displayName)..."
         }
     }
     private let sendMessage: () -> Void
@@ -170,7 +169,7 @@ final class MessagesInputView: UIView {
         let tf = UITextField()
         tf.translatesAutoresizingMaskIntoConstraints = false
         tf.font = .systemFont(ofSize: 17.0)
-        tf.placeholder = "\(profile.displayName)..."
+        tf.placeholder = "Somebody..."
         tf.delegate = self
         tf.clearButtonMode = .whileEditing
         tf.returnKeyType = .done
@@ -426,7 +425,20 @@ final class MessagesInputView: UIView {
                 equalTo: buttonContainer.widthAnchor
             ),
             profileAvatarButton.heightAnchor.constraint(
-                equalTo: profileAvatarButton.widthAnchor
+                equalTo: profileAvatarButton.heightAnchor
+            ),
+            profileAvatarButton.centerXAnchor.constraint(
+                equalTo: buttonContainer.centerXAnchor
+            ),
+            profileAvatarButton.centerYAnchor.constraint(
+                equalTo: buttonContainer.centerYAnchor
+            ),
+
+            profileAvatarButton.widthAnchor.constraint(
+                equalToConstant: Constant.avatarSize
+            ),
+            profileAvatarButton.heightAnchor.constraint(
+                equalToConstant: Constant.avatarSize
             ),
             profileAvatarButton.leadingAnchor.constraint(
                 equalTo: buttonContainer.leadingAnchor
@@ -672,6 +684,7 @@ final class MessagesInputView: UIView {
         static let bottomInset: CGFloat = 14.0
         static let margin: CGFloat = 14.0
         static let sendButtonSize: CGFloat = 36.0
+        static let avatarSize: CGFloat = 36.0
         static let baseHeight: CGFloat = 36.0
         static let maxHeight: CGFloat = 150.0
         static let textViewCornerRadius: CGFloat = 16.0
@@ -755,20 +768,31 @@ extension MessagesInputView: UITextViewDelegate {
 import SwiftUI
 import UIKit
 
-struct MessagesInputView_Previews: PreviewProvider {
-    struct Wrapper: UIViewRepresentable {
-        func makeUIView(context: Context) -> MessagesInputView {
-            let view = MessagesInputView(sendMessage: { print("Send tapped") })
-            view.sendButtonEnabled = true
-            return view
-        }
-        func updateUIView(_ uiView: MessagesInputView, context: Context) {}
+fileprivate struct Wrapper: UIViewRepresentable {
+    @Binding var isEditing: Bool
+    func makeUIView(context: Context) -> MessagesInputView {
+        let view = MessagesInputView(sendMessage: { print("Send tapped") })
+        view.sendButtonEnabled = true
+        return view
     }
-    static var previews: some View {
-        Wrapper()
+    func updateUIView(_ uiView: MessagesInputView, context: Context) {
+        uiView.isEditingProfile = isEditing
+    }
+}
+
+#Preview {
+    @Previewable @State var isEditing: Bool = false
+
+    VStack(spacing: 20.0) {
+        Wrapper(isEditing: $isEditing)
             .frame(height: 80)
-            .previewLayout(.sizeThatFits)
             .padding()
+
+        Button {
+            isEditing.toggle()
+        } label: {
+            Text("Toggle Editing")
+        }
     }
 }
 

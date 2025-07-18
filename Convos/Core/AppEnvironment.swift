@@ -6,8 +6,8 @@ enum AppEnvironment {
     var apiBaseURL: String {
         switch self {
         case .local, .tests: "http://localhost:4000/api/"
-        case .dev: "https://api.convos-dev.convos-api.xyz/api/"
-        case .production: "https://api.convos-prod.convos-api.xyz/api/"
+        case .dev: "https://api.convos-otr-dev.convos-api.xyz/api/"
+        case .production: "https://api.convos-otr-prod.convos-api.xyz/api/"
         }
     }
 

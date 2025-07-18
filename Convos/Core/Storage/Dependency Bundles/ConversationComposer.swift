@@ -13,10 +13,6 @@ struct AnyDraftConversationComposer: DraftConversationComposerProtocol, Hashable
         base.draftConversationRepository
     }
 
-    var profileSearchRepository: any ProfileSearchRepositoryProtocol {
-        base.profileSearchRepository
-    }
-
     var draftConversationWriter: any DraftConversationWriterProtocol {
         base.draftConversationWriter
     }
@@ -41,7 +37,6 @@ struct AnyDraftConversationComposer: DraftConversationComposerProtocol, Hashable
 protocol DraftConversationComposerProtocol {
     var draftConversationWriter: any DraftConversationWriterProtocol { get }
     var draftConversationRepository: any DraftConversationRepositoryProtocol { get }
-    var profileSearchRepository: any ProfileSearchRepositoryProtocol { get }
     var conversationConsentWriter: any ConversationConsentWriterProtocol { get }
     var conversationLocalStateWriter: any ConversationLocalStateWriterProtocol { get }
 }
@@ -49,7 +44,6 @@ protocol DraftConversationComposerProtocol {
 struct DraftConversationComposer: DraftConversationComposerProtocol {
     let draftConversationWriter: any DraftConversationWriterProtocol
     let draftConversationRepository: any DraftConversationRepositoryProtocol
-    let profileSearchRepository: any ProfileSearchRepositoryProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
 }
@@ -57,7 +51,6 @@ struct DraftConversationComposer: DraftConversationComposerProtocol {
 struct MockDraftConversationComposer: DraftConversationComposerProtocol {
     let draftConversationWriter: any DraftConversationWriterProtocol = MockDraftConversationWriter()
     let draftConversationRepository: any DraftConversationRepositoryProtocol = MockDraftConversationRepository()
-    let profileSearchRepository: any ProfileSearchRepositoryProtocol = MockProfileSearchRepository()
     let conversationConsentWriter: any ConversationConsentWriterProtocol = MockConversationConsentWriter()
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol = MockConversationLocalStateWriter()
 }

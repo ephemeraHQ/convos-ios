@@ -27,6 +27,18 @@ final class MessagingService: MessagingServiceProtocol {
         self.databaseWriter = databaseWriter
     }
 
+    // MARK: New Conversation
+
+    func draftConversationComposer() -> any DraftConversationComposerProtocol {
+        let conversationWriter = MockDraftConversationWriter()
+        return DraftConversationComposer(
+            draftConversationWriter: conversationWriter,
+            draftConversationRepository: MockDraftConversationRepository(),
+            conversationConsentWriter: MockConversationConsentWriter(),
+            conversationLocalStateWriter: MockConversationLocalStateWriter()
+        )
+    }
+
     // MARK: Conversations
 
     func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {

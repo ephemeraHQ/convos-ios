@@ -4,10 +4,10 @@
 <dict>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>webcredentials:preview.convos.org</string>
-		<string>applinks:preview.convos.org</string>
-		<string>applinks:*.preview.convos.org</string>
-		<string>appclips:preview.convos.org</string>
+		<string>webcredentials:otr-preview.convos.org</string>
+		<string>applinks:otr-preview.convos.org</string>
+		<string>applinks:*.otr-preview.convos.org</string>
+		<string>appclips:otr-preview.convos.org</string>
 	</array>
 	<key>com.apple.developer.parent-application-identifiers</key>
 	<array>

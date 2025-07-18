@@ -33,6 +33,10 @@ class MockMessagingService: MessagingServiceProtocol {
 
     // MARK: - Protocol Conformance
 
+    func draftConversationComposer() -> any DraftConversationComposerProtocol {
+        MockDraftConversationComposer()
+    }
+
     var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
         Just(self).eraseToAnyPublisher()
     }

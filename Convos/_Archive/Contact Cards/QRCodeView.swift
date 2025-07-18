@@ -21,8 +21,8 @@ struct QRCodeView: View {
 
         filter.message = Data(identifier.utf8)
         filter.roundedMarkers = 1
-        filter.roundedData = true
-        filter.centerSpaceSize = 0.33
+        filter.roundedData = false
+        filter.centerSpaceSize = 0.3
         filter.correctionLevel = "H"
         filter.color1 = CIColor(color: UIColor(foregroundColor))
         filter.color0 = CIColor(color: UIColor(backgroundColor))
@@ -61,21 +61,21 @@ struct QRCodeView: View {
                     .interpolation(.none)
                     .resizable()
                     .aspectRatio(1.0, contentMode: .fit)
-                    .frame(maxWidth: 250, maxHeight: 250)
+                    .frame(maxWidth: 220, maxHeight: 220)
             } else {
                 RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.medium)
                     .fill(backgroundColor)
-                    .frame(width: 250, height: 250)
+                    .frame(width: 220, height: 220)
             }
 
             ShareLink(item: identifier) {
                 Image(systemName: "square.and.arrow.up")
                     .font(.system(size: 24.0, weight: .medium))
-                    .foregroundStyle(backgroundColor)
+                    .foregroundStyle(foregroundColor)
                     .frame(width: 50, height: 50)
                     .padding(DesignConstants.Spacing.step2x)
             }
-            .glassEffect()
+            .background(backgroundColor)
             .disabled(isRegenerating)
             .opacity(isRegenerating ? 0.0 : 1.0)
             .animation(.easeInOut(duration: 0.95), value: isRegenerating)

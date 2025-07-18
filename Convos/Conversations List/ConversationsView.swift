@@ -62,25 +62,16 @@ struct ConversationsView: View {
                     )
                 }
                 .fullScreenCover(isPresented: $isPresentingComposer) {
-                    NavigationStack {
-                        ConversationView(dependencies: .mock())
-                            .ignoresSafeArea()
-                            .toolbar {
-                                ToolbarItem(placement: .topBarLeading) {
-                                    Button(role: .cancel) {
-                                        isPresentingComposer = false
-                                    }
-                                }
-                            }
-                    }
-                    .background(.white)
-                    .interactiveDismissDisabled()
-                    .navigationTransition(
-                        .zoom(
-                            sourceID: "composer-transition-source",
-                            in: namespace
+                    NewConversationView(session: session)
+                        .ignoresSafeArea()
+                        .background(.white)
+                        .interactiveDismissDisabled()
+                        .navigationTransition(
+                            .zoom(
+                                sourceID: "composer-transition-source",
+                                in: namespace
+                            )
                         )
-                    )
                 }
         }
         .background(.colorBackgroundPrimary)

@@ -142,7 +142,6 @@
 			membershipExceptions = (
 				"_Archive/Convos Client/Auth/Migrations/ReactNativeMigration.swift",
 				"_Archive/Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
-				"_Archive/Convos Client/Storage/Dependency Bundles/ConversationComposer.swift",
 				"_Archive/Utilities/EthereumAddress+Validation.swift",
 				Config/Secrets.swift,
 				Core/API/ConvosAPIClient.swift,
@@ -170,6 +169,7 @@
 				"Core/Shared/Data+Hex.swift",
 				"Core/Shared/Data+JsonString.swift",
 				Core/Storage/DatabaseManager.swift,
+				"Core/Storage/Dependency Bundles/ConversationComposer.swift",
 				"Core/Storage/Hydration/DBConversationDetails+Conversation.swift",
 				"Core/Storage/Hydration/DBInboxDetails+Inbox.swift",
 				"Core/Storage/Hydration/DBMessage+MessagePreview.swift",
@@ -248,7 +248,6 @@
 				"_Archive/Conversations List/Composer/ComposerProfileChipView.swift",
 				"_Archive/Conversations List/Composer/ConversationComposerContentView.swift",
 				"_Archive/Conversations List/Composer/ConversationComposerProfilesField.swift",
-				"_Archive/Conversations List/Composer/ConversationComposerState.swift",
 				"_Archive/Conversations List/Composer/ConversationsComposerView.swift",
 				"_Archive/Conversations List/ConversationsListNavigationBar.swift",
 				"_Archive/Conversations List/ConversationsRequestsItemView.swift",
@@ -270,7 +269,6 @@
 				"_Archive/Convos Client/Auth/Turnkey/TurnkeyAuthService.swift",
 				"_Archive/Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
 				"_Archive/Convos Client/Auth/Turnkey/TurnkeyPresentationAnchorProvider.swift",
-				"_Archive/Convos Client/Storage/Dependency Bundles/ConversationComposer.swift",
 				"_Archive/Onboarding/Contact Card/ContactCardAvatarView.swift",
 				"_Archive/Onboarding/Contact Card/ContactCardCreateView.swift",
 				"_Archive/Onboarding/Contact Card/ContactCardEditView.swift",
@@ -281,12 +279,9 @@
 				"_Archive/Utilities/EthereumAddress+Validation.swift",
 				"Conversation Detail/AddMemberView.swift",
 				"Conversation Detail/Messages/Messages View Controller/View Controller/Views/_MessagesInputView.swift",
-				Core/Storage/Repositories/DraftConversationRepository.swift,
-				Core/Storage/Repositories/Mocks/MockDraftConversationWriter.swift,
 				Core/Storage/Repositories/Mocks/MockProfileSearchRepository.swift,
 				Core/Storage/Repositories/ProfileSearchRepository.swift,
 				Core/Storage/States/DraftConversationState.swift,
-				Core/Storage/Writers/DraftConversationWriter.swift,
 				"Design System/Animation/DraggableSpringyView.swift",
 				"Design System/Components/LabeledTextField.swift",
 				Info.plist,
@@ -852,7 +847,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ConvosAppClip/ConvosAppClip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ConvosAppClip/Info.plist;
@@ -867,7 +862,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.convos.ios-preview.Clip";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -887,7 +882,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ConvosAppClip/ConvosAppClip.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ConvosAppClip/Info.plist;
@@ -902,7 +897,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.convos.ios-preview.Clip";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

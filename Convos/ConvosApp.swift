@@ -23,15 +23,10 @@ struct ConvosApp: App {
 
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                ConversationView(dependencies: dependencies)
-                    .ignoresSafeArea()
-            }
-//
-//            RootView(
-//                convos: convos,
-//                analyticsService: analyticsService
-//            )
+            RootView(
+                convos: convos,
+                analyticsService: analyticsService
+            )
         }
     }
 }

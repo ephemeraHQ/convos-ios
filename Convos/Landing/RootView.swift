@@ -18,7 +18,7 @@ struct RootView: View {
         case .loading:
             EmptyView()
         case .ready:
-            EmptyView()
+            ConversationsView(session: convos.session)
         }
     }
 }
