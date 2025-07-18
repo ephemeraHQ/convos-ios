@@ -18,6 +18,22 @@ struct ConversationViewDependencies: Hashable {
     }
 }
 
+extension ConversationViewDependencies {
+    static func mock() -> ConversationViewDependencies {
+        let messaging = MockMessagingService()
+        let conversationId: String = "1"
+        return ConversationViewDependencies(
+            conversationId: conversationId,
+            conversationRepository: messaging.conversationRepository(for: conversationId),
+            messagesRepository: messaging.messagesRepository(for: conversationId),
+            outgoingMessageWriter: messaging.messageWriter(for: conversationId),
+            conversationConsentWriter: messaging.conversationConsentWriter(),
+            conversationLocalStateWriter: messaging.conversationLocalStateWriter(),
+            groupMetadataWriter: messaging.groupMetadataWriter()
+        )
+    }
+}
+
 struct ConversationView: View {
     let conversationRepository: any ConversationRepositoryProtocol
     let messagesRepository: any MessagesRepositoryProtocol
@@ -72,17 +88,6 @@ struct ConversationView: View {
 }
 
 #Preview {
-    let messaging = MockMessagingService()
-    let conversationId: String = "1"
-    let dependencies = ConversationViewDependencies(
-        conversationId: conversationId,
-        conversationRepository: messaging.conversationRepository(for: conversationId),
-        messagesRepository: messaging.messagesRepository(for: conversationId),
-        outgoingMessageWriter: messaging.messageWriter(for: conversationId),
-        conversationConsentWriter: messaging.conversationConsentWriter(),
-        conversationLocalStateWriter: messaging.conversationLocalStateWriter(),
-        groupMetadataWriter: messaging.groupMetadataWriter()
-    )
-    ConversationView(dependencies: dependencies)
+    ConversationView(dependencies: .mock())
         .ignoresSafeArea()
 }
