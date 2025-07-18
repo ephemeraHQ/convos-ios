@@ -37,6 +37,23 @@ struct ProfileAvatarPickerButton: View {
     }
 }
 
+struct ProfileSettingsButton: View {
+    let onTap: () -> Void
+    var body: some View {
+        Button {
+            onTap()
+        } label: {
+            Image(systemName: "gear")
+                .foregroundStyle(.colorTextSecondary)
+                .font(.system(size: 24.0))
+                .padding(8.0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.colorFillMinimal)
+        .mask(Circle())
+    }
+}
+
 struct RandomNameButton: View {
     let onTap: () -> Void
     var body: some View {
@@ -82,7 +99,7 @@ final class MessagesInputView: UIView {
     private var editingProfileConstraints: [NSLayoutConstraint] = []
 
     private var editingViews: [UIView] {
-        [editProfileContainer, profileAvatarPickerButton]
+        [editProfileContainer, profileAvatarPickerButton, profileSettingsButton]
     }
     private var normalViews: [UIView] {
         [profileAvatarButton, textView, sendButton, placeholderLabel]
@@ -173,6 +190,16 @@ final class MessagesInputView: UIView {
     private(set) lazy var profileAvatarPickerButton: SwiftUIViewWrapper<ProfileAvatarPickerButton> = {
         let wrappedView = SwiftUIViewWrapper {
             ProfileAvatarPickerButton(profile: profile)
+        }
+        wrappedView.translatesAutoresizingMaskIntoConstraints = false
+        return wrappedView
+    }()
+
+    private(set) lazy var profileSettingsButton: SwiftUIViewWrapper<ProfileSettingsButton> = {
+        let wrappedView = SwiftUIViewWrapper {
+            ProfileSettingsButton {
+                //
+            }
         }
         wrappedView.translatesAutoresizingMaskIntoConstraints = false
         return wrappedView
@@ -306,7 +333,8 @@ final class MessagesInputView: UIView {
         ].forEach { centerContainer.addSubview($0) }
 
         [
-            sendButton
+            sendButton,
+            profileSettingsButton
         ].forEach { rightContainer.addSubview($0) }
     }
 
@@ -432,7 +460,8 @@ final class MessagesInputView: UIView {
                 constant: DesignConstants.Spacing.step2x
             ),
             editProfileContainer.trailingAnchor.constraint(
-                equalTo: centerContainer.trailingAnchor
+                equalTo: centerContainer.trailingAnchor,
+                constant: -DesignConstants.Spacing.step2x
             ),
 
             profileNameTextField.topAnchor.constraint(
@@ -475,6 +504,19 @@ final class MessagesInputView: UIView {
             sendButton.heightAnchor.constraint(
                 equalToConstant: Constant.sendButtonSize
             ),
+
+            profileSettingsButton.topAnchor.constraint(
+                equalTo: rightContainer.topAnchor
+            ),
+            profileSettingsButton.bottomAnchor.constraint(
+                equalTo: rightContainer.bottomAnchor
+            ),
+            profileSettingsButton.leadingAnchor.constraint(
+                equalTo: rightContainer.leadingAnchor
+            ),
+            profileSettingsButton.trailingAnchor.constraint(
+                equalTo: rightContainer.trailingAnchor
+            )
         ])
 
         normalConstraints = [
