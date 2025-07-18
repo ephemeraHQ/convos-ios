@@ -138,7 +138,6 @@ final class MessagesInputView: UIView {
         return view
     }()
 
-
     // MARK: - Editing Profile Components
 
     private(set) lazy var editProfileContainer: UIView = {
