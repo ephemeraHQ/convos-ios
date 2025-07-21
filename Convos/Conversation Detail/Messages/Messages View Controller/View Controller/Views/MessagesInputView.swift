@@ -109,7 +109,6 @@ struct MessagesInputView: View {
     @Namespace private var profileEditorAnimation: Namespace.ID
     @State private var mode: DualTextView.Mode = .textView
 
-
     var body: some View {
         HStack(alignment: .bottom) {
             if viewModel.showingProfileNameEditor {

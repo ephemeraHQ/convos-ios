@@ -62,8 +62,7 @@ struct ConversationsView: View {
                     )
                 }
                 .fullScreenCover(isPresented: $isPresentingComposer) {
-                    ConversationView(dependencies: .mock())
-//                    NewConversationView(session: session)
+                    NewConversationView(session: session)
                         .ignoresSafeArea()
                         .background(.white)
                         .interactiveDismissDisabled()

@@ -53,23 +53,23 @@ struct NewConversationView: View {
             .toolbar {
                 ToolbarItem(placement: .title) {
                     Button {
-
                     } label: {
                         HStack(spacing: DesignConstants.Spacing.step2x) {
                             ConversationAvatarView(conversation: .mock(name: ""))
                                 .frame(width: 36.0, height: 36.0)
 
-                            VStack(alignment: .leading) {
+                            VStack(alignment: .leading, spacing: 0.0) {
                                 Text("New convo")
                                     .font(.system(size: 16.0, weight: .medium))
                                 Text("Customize")
-                                        .font(.system(size: 12.0, weight: .regular))
+                                    .font(.system(size: 12.0, weight: .regular))
                                     .foregroundStyle(.colorTextSecondary)
                             }
                             .padding(.trailing, DesignConstants.Spacing.step2x)
                         }
                     }
-                    .padding(DesignConstants.Spacing.step2x)
+                    .padding(.horizontal, DesignConstants.Spacing.step2x)
+                    .padding(.vertical, DesignConstants.Spacing.stepX)
                     .glassEffect()
                 }
 
