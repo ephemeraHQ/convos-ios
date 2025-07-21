@@ -278,7 +278,6 @@
 				_Archive/Onboarding/OnboardingViewModel.swift,
 				"_Archive/Utilities/EthereumAddress+Validation.swift",
 				"Conversation Detail/AddMemberView.swift",
-				"Conversation Detail/Messages/Messages View Controller/View Controller/Views/_MessagesInputView.swift",
 				Core/Storage/Repositories/Mocks/MockProfileSearchRepository.swift,
 				Core/Storage/Repositories/ProfileSearchRepository.swift,
 				Core/Storage/States/DraftConversationState.swift,

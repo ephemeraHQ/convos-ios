@@ -33,7 +33,7 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
             joinConversation: joinConversation,
             deleteConversation: deleteConversation
         )
-        viewController.messagesInputView.delegate = context.coordinator
+//        viewController.messagesInputView.delegate = context.coordinator
 
         let hostingController = UIHostingController(
             rootView: content()
@@ -44,8 +44,8 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: MessagesContainerViewController, context: Context) {
-        uiViewController.messagesInputView.sendButtonEnabled = sendButtonEnabled(for: conversationState.conversation)
-        uiViewController.messagesInputView.text = text
+//        uiViewController.messagesInputView.sendButtonEnabled = sendButtonEnabled(for: conversationState.conversation)
+//        uiViewController.messagesInputView.text = text
     }
 
     // MARK: - Coordinator

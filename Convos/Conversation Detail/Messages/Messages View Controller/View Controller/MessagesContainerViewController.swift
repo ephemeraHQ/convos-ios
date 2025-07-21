@@ -4,7 +4,7 @@ import UIKit
 
 class MessagesContainerViewController: UIViewController {
     let contentView: UIView = UIView()
-    let messagesInputView: MessagesInputView
+    let messagesInputView: InputHostingController<__MessagesInputView>
     private var conversationCancellable: AnyCancellable?
 
     // MARK: - First Responder Management
@@ -47,7 +47,15 @@ class MessagesContainerViewController: UIViewController {
         self.outgoingMessageWriter = outgoingMessageWriter
         self.conversationConsentWriter = conversationConsentWriter
         self.conversationLocalStateWriter = conversationLocalStateWriter
-        self.messagesInputView = MessagesInputView(sendMessage: sendMessage)
+        self.messagesInputView = InputHostingController(
+            rootView: __MessagesInputView(
+                messageText: textBinding,
+                profileNameText: profileName,
+                sendButtonEnabled: sendButtonEnabled,
+                profile: profile,
+                onSend: sendMessage
+            )
+        )
         super.init(nibName: nil, bundle: nil)
     }
 

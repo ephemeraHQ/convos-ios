@@ -77,7 +77,6 @@ protocol MessagesInputViewDelegate: AnyObject {
 
 final class MessagesInputView: UIView {
     weak var delegate: MessagesInputViewDelegate?
-    private var keyboardIsShowing: Bool = false
     private var profile: Profile = .mock() {
         didSet {
             profileAvatarButton.update(
@@ -103,8 +102,10 @@ final class MessagesInputView: UIView {
         return view
     }()
 
-    private(set) lazy var containerView: ShadowedRoundedView = {
-        let container = ShadowedRoundedView()
+    private(set) lazy var containerView: AnimatedShadowView = {
+        let container = AnimatedShadowView()
+        container.layer.borderColor = UIColor.red.cgColor
+        container.layer.borderWidth = 1.0
         container.backgroundColor = .clear
         container.cornerRadius = Constant.textViewCornerRadius
         container.fillColor = .colorBackgroundPrimary
@@ -271,9 +272,9 @@ final class MessagesInputView: UIView {
     private func addSubviews() {
         addSubview(backgroundView)
         addSubview(containerView)
-        containerView.addSubview(leftContainer)
-        containerView.addSubview(centerContainer)
-        containerView.addSubview(rightContainer)
+        containerView.content.addSubview(leftContainer)
+        containerView.content.addSubview(centerContainer)
+        containerView.content.addSubview(rightContainer)
 
         [profileAvatarPickerButton, profileAvatarButton].forEach { leftContainer.addSubview($0) }
         [profileNameTextField].forEach { editProfileContainer.addSubview($0) }
@@ -386,7 +387,7 @@ final class MessagesInputView: UIView {
             self.updateEditingProfileAlpha()
         }
         if animated {
-            UIView.animate(withDuration: 0.3, delay: 0.0, options: [.layoutSubviews], animations: animations)
+            UIView.animate(withDuration: 0.8, delay: 0.0, options: [.layoutSubviews], animations: animations)
         } else {
             animations()
         }
@@ -479,30 +480,76 @@ final class MessagesInputView: UIView {
     }
 }
 
-// MARK: - ShadowedRoundedView
+// MARK: - AnimatedShadowView (replacement for ShadowedRoundedView)
 
-class ShadowedRoundedView: UIView {
-    private var shadowLayer: CAShapeLayer?
-    var cornerRadius: CGFloat = 20.0 { didSet { setNeedsLayout() } }
-    var fillColor: UIColor = .colorBackgroundPrimary { didSet { setNeedsLayout() } }
-    var shadowColor: UIColor = UIColor.black.withAlphaComponent(0.15) { didSet { setNeedsLayout() } }
-    var shadowOpacity: Float = 1.0 { didSet { setNeedsLayout() } }
-    var shadowRadius: CGFloat = 16.0 { didSet { setNeedsLayout() } }
-    var shadowOffset: CGSize = CGSize(width: 0, height: 4) { didSet { setNeedsLayout() } }
+class AnimatedShadowView: UIView {
+    private let shadowLayer = CAShapeLayer()
+    private let contentView = UIView()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        // Insert shadow layer below content
+        layer.insertSublayer(shadowLayer, at: 0)
+        // Setup shadow
+        shadowLayer.fillColor = UIColor.white.cgColor // Default fill, can be customized
+        shadowLayer.shadowColor = UIColor.black.withAlphaComponent(0.15).cgColor
+        shadowLayer.shadowOpacity = 1.0
+        shadowLayer.shadowRadius = 16.0
+        shadowLayer.shadowOffset = CGSize(width: 0, height: 4)
+        // Setup content view
+        contentView.backgroundColor = .clear
+        contentView.clipsToBounds = true
+        addSubview(contentView)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    // Expose contentView for adding subviews
+    var content: UIView { contentView }
+
+    // Expose properties for customization
+    var fillColor: UIColor {
+        get { UIColor(cgColor: shadowLayer.fillColor ?? UIColor.white.cgColor) }
+        set { shadowLayer.fillColor = newValue.cgColor }
+    }
+    var shadowColor: UIColor {
+        get { UIColor(cgColor: shadowLayer.shadowColor ?? UIColor.black.cgColor) }
+        set { shadowLayer.shadowColor = newValue.cgColor }
+    }
+    var shadowOpacity: Float {
+        get { shadowLayer.shadowOpacity }
+        set { shadowLayer.shadowOpacity = newValue }
+    }
+    var shadowRadius: CGFloat {
+        get { shadowLayer.shadowRadius }
+        set { shadowLayer.shadowRadius = newValue }
+    }
+    var shadowOffset: CGSize {
+        get { shadowLayer.shadowOffset }
+        set { shadowLayer.shadowOffset = newValue }
+    }
+    var cornerRadius: CGFloat {
+        get { layer.cornerRadius }
+        set {
+            layer.cornerRadius = newValue
+            contentView.layer.cornerRadius = newValue
+            updateShadowPath()
+        }
+    }
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        shadowLayer?.removeFromSuperlayer()
-        let layer = CAShapeLayer()
-        layer.path = UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius).cgPath
-        layer.fillColor = fillColor.cgColor
-        layer.shadowColor = shadowColor.cgColor
-        layer.shadowPath = layer.path
-        layer.shadowOffset = shadowOffset
-        layer.shadowOpacity = shadowOpacity
-        layer.shadowRadius = shadowRadius
-        self.layer.insertSublayer(layer, at: 0)
-        shadowLayer = layer
+        // Layout shadow layer
+        shadowLayer.frame = bounds
+        updateShadowPath()
+        // Layout content view
+        contentView.frame = bounds
+    }
+
+    private func updateShadowPath() {
+        let path = UIBezierPath(roundedRect: bounds, cornerRadius: cornerRadius).cgPath
+        shadowLayer.path = path
+        shadowLayer.shadowPath = path
     }
 }
 
@@ -518,7 +565,6 @@ extension MessagesInputView: KeyboardListenerDelegate {
     }
 
     func keyboardWillChangeFrame(info: KeyboardInfo) {
-        keyboardIsShowing = info.frameEnd.height >= intrinsicContentSize.height
         invalidateIntrinsicContentSize()
     }
 }
