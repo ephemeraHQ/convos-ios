@@ -15,6 +15,10 @@ class MessagesContainerViewController: UIViewController {
         messagesInputView
     }
 
+    override var canResignFirstResponder: Bool {
+        true
+    }
+
     override var canBecomeFirstResponder: Bool {
         true
     }
@@ -55,7 +59,6 @@ class MessagesContainerViewController: UIViewController {
 
     deinit {
         conversationRepositoryCancellable?.cancel()
-        KeyboardListener.shared.remove(delegate: self)
     }
 
     // MARK: - Actions
@@ -78,7 +81,6 @@ class MessagesContainerViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        KeyboardListener.shared.add(delegate: self)
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -94,7 +96,6 @@ class MessagesContainerViewController: UIViewController {
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
 
-        KeyboardListener.shared.remove(delegate: self)
         resignFirstResponderAfterTransitionCompletes()
         markConversationAsRead()
     }
@@ -129,13 +130,5 @@ class MessagesContainerViewController: UIViewController {
         child.view.frame = contentView.bounds
         child.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         child.didMove(toParent: self)
-    }
-}
-
-// MARK: - Keyboard
-
-extension MessagesContainerViewController: KeyboardListenerDelegate {
-    func keyboardWillHide(info: KeyboardInfo) {
-        becomeFirstResponder()
     }
 }

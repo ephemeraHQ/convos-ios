@@ -34,10 +34,6 @@ final class InputHostingController<Content: View>: UIView {
         let size = hostingController.view.intrinsicContentSize
         return .init(width: size.width, height: size.height + DesignConstants.Spacing.step2x)
     }
-
-    override var canBecomeFirstResponder: Bool {
-        true
-    }
 }
 
 extension InputHostingController: KeyboardListenerDelegate {

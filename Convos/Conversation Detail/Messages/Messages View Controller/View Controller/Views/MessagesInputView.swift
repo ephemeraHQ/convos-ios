@@ -2,7 +2,7 @@ import PhotosUI
 import SwiftUI
 
 @Observable
-class MessagesInputViewModel {
+class MessagesInputViewModel: KeyboardListenerDelegate {
     let conversationState: ConversationState
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
 
@@ -15,6 +15,18 @@ class MessagesInputViewModel {
         self.profileNameText = profile.displayName
         self.conversationState = conversationState
         self.outgoingMessageWriter = outgoingMessageWriter
+
+        KeyboardListener.shared.add(delegate: self)
+    }
+
+    deinit {
+        KeyboardListener.shared.remove(delegate: self)
+    }
+
+    func keyboardWillHide(info: KeyboardInfo) {
+        withAnimation {
+            showingProfileNameEditor = false
+        }
     }
 
     var messageText: String = "" {
@@ -54,6 +66,10 @@ class MessagesInputViewModel {
             username: profile.username,
             avatar: profile.avatar
         )
+
+        withAnimation {
+            showingProfileNameEditor = false
+        }
     }
 }
 
@@ -157,11 +173,7 @@ struct MessagesInputView: View {
                         font: .systemFont(ofSize: 16.0),
                         textColor: .colorTextPrimary,
                         textFieldShouldReturn: { _ in
-                            withAnimation {
-                                viewModel.saveProfileName()
-                                viewModel.showingProfileNameEditor = false
-                            }
-
+                            viewModel.saveProfileName()
                             return true
                         }
                     )

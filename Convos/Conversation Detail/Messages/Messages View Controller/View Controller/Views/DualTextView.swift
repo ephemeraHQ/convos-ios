@@ -23,9 +23,6 @@ class DualTextView: UIView {
         set {
             currentMode = newValue
             invalidateIntrinsicContentSize()
-            DispatchQueue.main.async {
-                _ = self.becomeFirstResponder()
-            }
         }
     }
 
@@ -130,6 +127,7 @@ class DualTextView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+
         // Both views take up the entire bounds
         textView.frame = bounds
         textField.frame = bounds
@@ -270,7 +268,6 @@ struct DualTextViewRepresentable: UIViewRepresentable {
         uiView.textFieldText = textFieldText
         uiView.textFieldPlaceholder = textFieldPlaceholder
         uiView.mode = mode
-
         DispatchQueue.main.async {
             height = uiView.intrinsicContentSize.height
         }
@@ -317,7 +314,7 @@ struct DualTextInputView: View {
     @State private var textViewText: String = ""
     @State private var textFieldText: String = ""
     @State private var mode: DualTextView.Mode = .textView
-    @State private var currentHeight: CGFloat = 44
+    @State private var currentHeight: CGFloat = 44.0
 
     var body: some View {
         VStack {

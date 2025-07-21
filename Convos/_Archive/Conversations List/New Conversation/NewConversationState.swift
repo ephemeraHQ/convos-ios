@@ -28,8 +28,7 @@ class NewConversationState {
         self.draftConversationWriter
             .sentMessage
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-            guard let self else { return }
+            .sink { _ in
 //            showProfileSearchHeader = false
         }
         .store(in: &cancellables)
