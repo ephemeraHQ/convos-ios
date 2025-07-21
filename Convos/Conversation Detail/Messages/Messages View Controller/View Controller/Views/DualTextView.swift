@@ -22,7 +22,7 @@ class DualTextView: UIView {
         get { currentMode }
         set {
             currentMode = newValue
-            // Automatically become first responder when switching modes
+            invalidateIntrinsicContentSize()
             DispatchQueue.main.async {
                 _ = self.becomeFirstResponder()
             }
@@ -104,6 +104,7 @@ class DualTextView: UIView {
         addSubview(textViewPlaceholderLabel)
 
         // Configure textField
+        textField.returnKeyType = .done
         textField.backgroundColor = .clear
         textField.borderStyle = .none
         textField.addTarget(
@@ -145,14 +146,24 @@ class DualTextView: UIView {
     }
 
     override var intrinsicContentSize: CGSize {
+        let targetSize = CGSize(width: bounds.width,
+                                height: UIView.layoutFittingCompressedSize.height)
         let size: CGSize
         switch currentMode {
         case .textView:
-            let textSize = textView.sizeThatFits(CGSize(width: bounds.width, height: .infinity))
-            size = CGSize(width: UIView.noIntrinsicMetric, height: textSize.height)
+            let fittingSize = textView.systemLayoutSizeFitting(
+                targetSize,
+                withHorizontalFittingPriority: .required,
+                verticalFittingPriority: .fittingSizeLevel
+            )
+            size = CGSize(width: UIView.noIntrinsicMetric, height: fittingSize.height)
         case .textField:
-            let textSize = textField.sizeThatFits(CGSize(width: bounds.width, height: .infinity))
-            size = CGSize(width: UIView.noIntrinsicMetric, height: textSize.height)
+            let fittingSize = textField.systemLayoutSizeFitting(
+                targetSize,
+                withHorizontalFittingPriority: .required,
+                verticalFittingPriority: .fittingSizeLevel
+            )
+            size = CGSize(width: UIView.noIntrinsicMetric, height: fittingSize.height)
         }
         return size
     }
@@ -192,6 +203,7 @@ extension DualTextView: UITextViewDelegate {
     func textViewDidChange(_ textView: UITextView) {
         updateTextViewPlaceholder()
         invalidateIntrinsicContentSize()
+        layoutIfNeeded()
         textViewDelegate?.textViewDidChange?(textView)
     }
 
@@ -215,6 +227,7 @@ struct DualTextViewRepresentable: UIViewRepresentable {
     let textFieldPlaceholder: String?
     let font: UIFont?
     let textColor: UIColor?
+    let textFieldShouldReturn: (String) -> Bool
 
     init(
         textViewText: Binding<String>,
@@ -224,7 +237,8 @@ struct DualTextViewRepresentable: UIViewRepresentable {
         textViewPlaceholder: String? = nil,
         textFieldPlaceholder: String? = nil,
         font: UIFont? = nil,
-        textColor: UIColor? = nil
+        textColor: UIColor? = nil,
+        textFieldShouldReturn: @escaping (String) -> Bool
     ) {
         self._textViewText = textViewText
         self._textFieldText = textFieldText
@@ -234,6 +248,7 @@ struct DualTextViewRepresentable: UIViewRepresentable {
         self.textFieldPlaceholder = textFieldPlaceholder
         self.font = font
         self.textColor = textColor
+        self.textFieldShouldReturn = textFieldShouldReturn
     }
 
     func makeUIView(context: Context) -> DualTextView {
@@ -243,6 +258,7 @@ struct DualTextViewRepresentable: UIViewRepresentable {
         view.font = font
         view.textColor = textColor
         view.textViewDelegate = context.coordinator
+        view.textField.delegate = context.coordinator
         view.textField
             .addTarget(context.coordinator, action: #selector(Coordinator.textFieldDidChange(_:)), for: .editingChanged)
         return view
@@ -250,7 +266,9 @@ struct DualTextViewRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: DualTextView, context: Context) {
         uiView.textViewText = textViewText
+        uiView.textViewPlaceholder = textViewPlaceholder
         uiView.textFieldText = textFieldText
+        uiView.textFieldPlaceholder = textFieldPlaceholder
         uiView.mode = mode
 
         DispatchQueue.main.async {
@@ -262,11 +280,15 @@ struct DualTextViewRepresentable: UIViewRepresentable {
         Coordinator(self)
     }
 
-    class Coordinator: NSObject, UITextViewDelegate {
+    class Coordinator: NSObject, UITextViewDelegate, UITextFieldDelegate {
         let parent: DualTextViewRepresentable
 
         init(_ parent: DualTextViewRepresentable) {
             self.parent = parent
+        }
+
+        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            return parent.textFieldShouldReturn(textField.text ?? "")
         }
 
         func textViewDidChange(_ textView: UITextView) {
@@ -307,7 +329,13 @@ struct DualTextInputView: View {
                 textViewPlaceholder: "Enter long text here...",
                 textFieldPlaceholder: "Enter short text here...",
                 font: .systemFont(ofSize: 16),
-                textColor: .label
+                textColor: .label,
+                textFieldShouldReturn: { _ in
+                    withAnimation {
+                        mode = .textView
+                    }
+                    return true
+                }
             )
             .frame(height: max(44, currentHeight))
             .padding()

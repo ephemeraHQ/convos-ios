@@ -4,7 +4,7 @@ import UIKit
 
 class MessagesContainerViewController: UIViewController {
     let contentView: UIView = UIView()
-    let messagesInputView: InputHostingController<__MessagesInputView>
+    let messagesInputView: InputHostingController<MessagesInputView>
     private var conversationCancellable: AnyCancellable?
 
     // MARK: - First Responder Management
@@ -30,17 +30,11 @@ class MessagesContainerViewController: UIViewController {
     // MARK: - Init
 
     init(conversationState: ConversationState,
+         messagesInputViewModel: MessagesInputViewModel,
          outgoingMessageWriter: any OutgoingMessageWriterProtocol,
          conversationConsentWriter: any ConversationConsentWriterProtocol,
          conversationLocalStateWriter: any ConversationLocalStateWriterProtocol,
          dismissAction: DismissAction,
-         sendMessage: @escaping () -> Void,
-         textDidChange: @escaping (String) -> Void,
-         textBinding: Binding<String>,
-         sendButtonEnabled: Binding<Bool>,
-         showingProfileNameEditor: Binding<Bool>,
-         profile: Binding<Profile>,
-         profileName: Binding<String>,
          joinConversation: @escaping () -> Void,
          deleteConversation: @escaping () -> Void) {
         self.conversationState = conversationState
@@ -48,12 +42,8 @@ class MessagesContainerViewController: UIViewController {
         self.conversationConsentWriter = conversationConsentWriter
         self.conversationLocalStateWriter = conversationLocalStateWriter
         self.messagesInputView = InputHostingController(
-            rootView: __MessagesInputView(
-                messageText: textBinding,
-                profileNameText: profileName,
-                sendButtonEnabled: sendButtonEnabled,
-                profile: profile,
-                onSend: sendMessage
+            rootView: MessagesInputView(
+                viewModel: messagesInputViewModel
             )
         )
         super.init(nibName: nil, bundle: nil)

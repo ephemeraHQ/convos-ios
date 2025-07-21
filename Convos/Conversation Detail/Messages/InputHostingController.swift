@@ -6,13 +6,15 @@ final class InputHostingController<Content: View>: UIView {
 
     init(rootView: Content) {
         self.hostingController = UIHostingController<Content>(rootView: rootView)
+        self.hostingController.sizingOptions = .intrinsicContentSize
         super.init(frame: .zero)
         addSubview(hostingController.view)
+        autoresizingMask = [.flexibleHeight]
         hostingController.view.translatesAutoresizingMaskIntoConstraints = false
         hostingController.view.backgroundColor = .clear
         NSLayoutConstraint.activate([
             hostingController.view.topAnchor.constraint(equalTo: topAnchor),
-            hostingController.view.bottomAnchor.constraint(equalTo: bottomAnchor),
+            hostingController.view.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor),
             hostingController.view.leadingAnchor.constraint(equalTo: leadingAnchor),
             hostingController.view.trailingAnchor.constraint(equalTo: trailingAnchor),
         ])
@@ -29,7 +31,8 @@ final class InputHostingController<Content: View>: UIView {
     }
 
     override var intrinsicContentSize: CGSize {
-        hostingController.view.intrinsicContentSize
+        let size = hostingController.view.intrinsicContentSize
+        return .init(width: size.width, height: size.height + DesignConstants.Spacing.step2x)
     }
 
     override var canBecomeFirstResponder: Bool {
@@ -40,21 +43,17 @@ final class InputHostingController<Content: View>: UIView {
 extension InputHostingController: KeyboardListenerDelegate {
     func keyboardWillShow(info: KeyboardInfo) {
         invalidateIntrinsicContentSize()
-        setNeedsLayout()
     }
 
     func keyboardWillHide(info: KeyboardInfo) {
         invalidateIntrinsicContentSize()
-        setNeedsLayout()
     }
 
     func keyboardWillChangeFrame(info: KeyboardInfo) {
         invalidateIntrinsicContentSize()
-        setNeedsLayout()
     }
 
     func keyboardDidChangeFrame(info: KeyboardInfo) {
         invalidateIntrinsicContentSize()
-        setNeedsLayout()
     }
 }

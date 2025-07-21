@@ -503,6 +503,7 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
         currentInterfaceActions.options.insert(.changingKeyboardFrame)
         let newBottomInset = calculateNewBottomInset(for: info)
+        Logger.info("Calculated new bottom inset: \(newBottomInset)")
 
         guard newBottomInset > 0,
               collectionView.contentInset.bottom != newBottomInset else { return }

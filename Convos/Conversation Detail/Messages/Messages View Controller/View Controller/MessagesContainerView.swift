@@ -8,32 +8,40 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
     @ViewBuilder let content: () -> Content
 
-    @State private var text: String = ""
-    @State private var sendButtonEnabled: Bool = false
-    @State private var profile: Profile = .mock()
-    @State private var profileName: String = ""
-    @State private var showingProfileNameEditor: Bool = false
+    @State private var inputViewModel: MessagesInputViewModel
 
     @Environment(\.dismiss) private var dismiss: DismissAction
+
+    init(
+        conversationState: ConversationState,
+        outgoingMessageWriter: any OutgoingMessageWriterProtocol,
+        conversationConsentWriter: any ConversationConsentWriterProtocol,
+        conversationLocalStateWriter: any ConversationLocalStateWriterProtocol,
+        content: @escaping () -> Content,
+    ) {
+        self.conversationState = conversationState
+        self.outgoingMessageWriter = outgoingMessageWriter
+        self.conversationConsentWriter = conversationConsentWriter
+        self.conversationLocalStateWriter = conversationLocalStateWriter
+        self.content = content
+        _inputViewModel = State(initialValue: .init(
+            conversationState: conversationState,
+            outgoingMessageWriter: outgoingMessageWriter,
+            profile: .mock(name: "")
+        ))
+    }
 
     func makeUIViewController(context: Context) -> MessagesContainerViewController {
         let viewController = MessagesContainerViewController(
             conversationState: conversationState,
+            messagesInputViewModel: inputViewModel,
             outgoingMessageWriter: outgoingMessageWriter,
             conversationConsentWriter: conversationConsentWriter,
             conversationLocalStateWriter: conversationLocalStateWriter,
             dismissAction: context.environment.dismiss,
-            sendMessage: sendMessage,
-            textDidChange: textDidChange(_:),
-            textBinding: $text,
-            sendButtonEnabled: $sendButtonEnabled,
-            showingProfileNameEditor: $showingProfileNameEditor,
-            profile: $profile,
-            profileName: $profileName,
             joinConversation: joinConversation,
             deleteConversation: deleteConversation
         )
-//        viewController.messagesInputView.delegate = context.coordinator
 
         let hostingController = UIHostingController(
             rootView: content()
@@ -44,54 +52,9 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: MessagesContainerViewController, context: Context) {
-//        uiViewController.messagesInputView.sendButtonEnabled = sendButtonEnabled(for: conversationState.conversation)
-//        uiViewController.messagesInputView.text = text
-    }
-
-    // MARK: - Coordinator
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    class Coordinator: NSObject, MessagesInputViewDelegate {
-        var containerView: MessagesContainerView
-
-        init(_ containerView: MessagesContainerView) {
-            self.containerView = containerView
-        }
-
-        @objc
-        func messagesInputView(_ view: MessagesInputView, didChangeText text: String) {
-            containerView.text = text
-        }
-    }
-
-    // MARK: - Observations
-
-    private func sendButtonEnabled(for conversation: Conversation?) -> Bool {
-        let conversationHasMembers: Bool = !(conversation?.members.isEmpty ?? true)
-        return conversationHasMembers && !text.isEmpty
     }
 
     // MARK: - Actions
-
-    func sendMessage() {
-        let messageText = text
-        text = ""
-        Task { [outgoingMessageWriter] in
-            do {
-                try await outgoingMessageWriter.send(text: messageText)
-            } catch {
-                Logger.error("Error sending message: \(error)")
-            }
-        }
-    }
-
-    func textDidChange(_ text: String) {
-        let conversationHasMembers: Bool = !(conversationState.conversation?.members.isEmpty ?? true)
-        sendButtonEnabled = conversationHasMembers && !text.isEmpty
-    }
 
     func joinConversation() {
         guard let conversation = conversationState.conversation else { return }
