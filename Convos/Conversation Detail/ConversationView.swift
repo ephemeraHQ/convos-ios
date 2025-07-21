@@ -66,12 +66,12 @@ struct ConversationView: View {
             )
             .ignoresSafeArea()
         }
-        .navigationDestination(item: $showInfoForConversation) { conversation in
-            ConversationInfoView(
-                conversation: conversation,
-                groupMetadataWriter: groupMetadataWriter
-            )
-        }
+//        .navigationDestination(item: $showInfoForConversation) { conversation in
+//            ConversationInfoView(
+//                conversation: conversation,
+//                groupMetadataWriter: groupMetadataWriter
+//            )
+//        }
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .title) {

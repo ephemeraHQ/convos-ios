@@ -110,6 +110,7 @@ class DualTextView: UIView {
         textField.backgroundColor = .clear
         textField.borderStyle = .none
         textField.delegate = self
+        textField.clearButtonMode = .whileEditing
         textField.addTarget(
             self,
             action: #selector(Self.textFieldDidChange(_:)),
@@ -181,7 +182,9 @@ class DualTextView: UIView {
 
 extension DualTextView: UITextViewDelegate, UITextFieldDelegate {
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        textView.becomeFirstResponder()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: {
+            self.textView.becomeFirstResponder()
+        })
         return textFieldDelegate?.textFieldShouldReturn?(textField) ?? false
     }
 
