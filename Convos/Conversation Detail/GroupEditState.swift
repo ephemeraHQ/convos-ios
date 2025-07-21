@@ -185,20 +185,24 @@ class GroupEditState {
     }
 
     private func uploadImageAndUpdateProfile() async throws {
-        // @jarodl fix this
-//        let compressedImageData = try await prepareImageForUpload()
-//        let filename = "group-image-\(UUID().uuidString).jpg"
-//
-//        guard case .success(let uploadedImage) = imageState else {
-//            throw GroupImageError.importFailed
-//        }
+        let compressedImageData = try await prepareImageForUpload()
+        let filename = "group-image-\(UUID().uuidString).jpg"
 
-//        _ = try await messagingService.uploadImageAndExecute(
-//            data: compressedImageData,
-//            filename: filename) { uploadedURL in
-//            try await self.updateGroupImage(imageURL: uploadedURL)
-//            ImageCache.shared.setImageForConversation(uploadedImage, conversationId: self.conversation.id)
-//        }
+        guard case .success(let uploadedImage) = imageState else {
+            throw GroupImageError.importFailed
+        }
+
+        // Use the GroupMetadataWriter to handle both upload and metadata update
+        let uploadedURL = try await groupMetadataWriter.uploadAndUpdateGroupImage(
+            groupId: conversation.id,
+            imageData: compressedImageData,
+            filename: filename
+        )
+
+        Logger.info("Group image uploaded and metadata updated successfully: \(uploadedURL)")
+
+        // Cache the uploaded image for instant UI updates
+        ImageCache.shared.setImageForConversation(uploadedImage, conversationId: conversation.id)
     }
 
     @MainActor

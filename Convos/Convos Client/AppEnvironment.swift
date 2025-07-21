@@ -1,12 +1,13 @@
 import Foundation
 
 enum AppEnvironment {
-    case local, tests, dev, production
+    case local, tests, dev, otrDev, production
 
     var apiBaseURL: String {
         switch self {
         case .local, .tests: "http://localhost:4000/api/"
         case .dev: "https://api.convos-dev.convos-api.xyz/api/"
+        case .otrDev: "https://api.convos-otr-dev.convos-api.xyz/api/"
         case .production: "https://api.convos-prod.convos-api.xyz/api/"
         }
     }
@@ -17,7 +18,7 @@ enum AppEnvironment {
 
     var appGroupIdentifier: String {
         switch self {
-        case .local, .tests, .dev:
+        case .local, .tests, .dev, .otrDev:
             "group.com.convos.preview"
         case .production: "group.com.convos.prod"
         }
@@ -26,6 +27,7 @@ enum AppEnvironment {
     var relyingPartyIdentifier: String {
         switch self {
         case .local, .tests, .dev: "preview.convos.org"
+        case .otrDev: "otr-preview.convos.org"
         case .production: "convos.org"
         }
     }

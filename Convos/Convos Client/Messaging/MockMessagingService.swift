@@ -457,6 +457,10 @@ class MockGroupMetadataWriter: GroupMetadataWriterProtocol {
     func updateGroupName(groupId: String, name: String) async throws {}
     func updateGroupDescription(groupId: String, description: String) async throws {}
     func updateGroupImageUrl(groupId: String, imageUrl: String) async throws {}
+    func uploadAndUpdateGroupImage(groupId: String, imageData: Data, filename: String) async throws -> String {
+        // Return a mock URL for testing
+        return "https://example.com/uploads/\(filename)"
+    }
     func addGroupMembers(groupId: String, memberInboxIds: [String]) async throws {}
     func removeGroupMembers(groupId: String, memberInboxIds: [String]) async throws {}
     func promoteToAdmin(groupId: String, memberInboxId: String) async throws {}

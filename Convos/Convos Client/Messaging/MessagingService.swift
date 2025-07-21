@@ -106,6 +106,7 @@ final class MessagingService: MessagingServiceProtocol {
     func groupMetadataWriter() -> any GroupMetadataWriterProtocol {
         GroupMetadataWriter(client: clientValue.value,
                             clientPublisher: clientPublisher,
+                            inboxReadyValue: inboxReadyValue,
                             databaseWriter: databaseWriter)
     }
 
@@ -116,14 +117,16 @@ final class MessagingService: MessagingServiceProtocol {
     }
 
     func uploadImage(data: Data, filename: String) async throws -> String {
-        // @jarodl fix this
-        return ""
-//        return try await apiClient.uploadAttachment(
-//            data: data,
-//            filename: filename,
-//            contentType: "image/jpeg",
-//            acl: "public-read"
-//        )
+        guard let inboxReady = inboxReadyValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
+        return try await inboxReady.apiClient.uploadAttachment(
+            data: data,
+            filename: filename,
+            contentType: "image/jpeg",
+            acl: "public-read"
+        )
     }
 
     func uploadImageAndExecute(
@@ -131,12 +134,14 @@ final class MessagingService: MessagingServiceProtocol {
         filename: String,
         afterUpload: @escaping (String) async throws -> Void
     ) async throws -> String {
-        // @jarodl fix this
-        return ""
-//        return try await apiClient.uploadAttachmentAndExecute(
-//            data: data,
-//            filename: filename,
-//            afterUpload: afterUpload
-//        )
+        guard let inboxReady = inboxReadyValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
+        return try await inboxReady.apiClient.uploadAttachmentAndExecute(
+            data: data,
+            filename: filename,
+            afterUpload: afterUpload
+        )
     }
 }

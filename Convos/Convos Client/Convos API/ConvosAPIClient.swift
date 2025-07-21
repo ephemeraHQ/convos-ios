@@ -367,7 +367,6 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         var s3Request = URLRequest(url: s3URL)
         s3Request.httpMethod = "PUT"
         s3Request.setValue(contentType, forHTTPHeaderField: "Content-Type")
-        s3Request.setValue(acl, forHTTPHeaderField: "x-amz-acl")
         s3Request.httpBody = data
 
         Logger.info("Uploading to S3: \(s3URL.absoluteString)")

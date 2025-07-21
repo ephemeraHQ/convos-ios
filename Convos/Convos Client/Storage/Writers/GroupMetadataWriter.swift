@@ -9,6 +9,7 @@ protocol GroupMetadataWriterProtocol {
     func updateGroupName(groupId: String, name: String) async throws
     func updateGroupDescription(groupId: String, description: String) async throws
     func updateGroupImageUrl(groupId: String, imageUrl: String) async throws
+    func uploadAndUpdateGroupImage(groupId: String, imageData: Data, filename: String) async throws -> String
     func addGroupMembers(groupId: String, memberInboxIds: [String]) async throws
     func removeGroupMembers(groupId: String, memberInboxIds: [String]) async throws
     func promoteToAdmin(groupId: String, memberInboxId: String) async throws
@@ -21,12 +22,15 @@ protocol GroupMetadataWriterProtocol {
 
 final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     private let clientValue: PublisherValue<AnyClientProvider>
+    private let inboxReadyValue: PublisherValue<InboxReadyResult>
     private let databaseWriter: any DatabaseWriter
 
     init(client: AnyClientProvider?,
          clientPublisher: AnyClientProviderPublisher,
+         inboxReadyValue: PublisherValue<InboxReadyResult>,
          databaseWriter: any DatabaseWriter) {
         self.clientValue = .init(initial: client, upstream: clientPublisher)
+        self.inboxReadyValue = inboxReadyValue
         self.databaseWriter = databaseWriter
     }
 
@@ -105,6 +109,31 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
         }
 
         Logger.info("Updated group image for \(groupId): \(imageUrl)")
+    }
+
+    func uploadAndUpdateGroupImage(groupId: String, imageData: Data, filename: String) async throws -> String {
+        guard let inboxReady = inboxReadyValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
+        Logger.info("Starting group image upload for group \(groupId), file: \(filename)")
+
+        // Step 1: Upload the image to get the public URL
+        let uploadedURL = try await inboxReady.apiClient.uploadAttachment(
+            data: imageData,
+            filename: filename,
+            contentType: "image/jpeg",
+            acl: "public-read"
+        )
+
+        Logger.info("Group image uploaded successfully for group \(groupId), URL: \(uploadedURL)")
+
+        // Step 2: Update the group metadata with the new image URL
+        try await updateGroupImageUrl(groupId: groupId, imageUrl: uploadedURL)
+
+        Logger.info("Group image metadata updated for group \(groupId)")
+
+        return uploadedURL
     }
 
     // MARK: - Member Management

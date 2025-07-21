@@ -6,7 +6,7 @@ private extension AppEnvironment {
     var xmtpEnv: XMTPEnvironment {
         switch self {
         case .local, .tests: return .local
-        case .dev: return .dev
+        case .dev, .otrDev: return .dev
         case .production: return .production
         }
     }
