@@ -23,9 +23,14 @@ class DualTextView: UIView {
         set {
             currentMode = newValue
             invalidateIntrinsicContentSize()
+
+            if currentMode == .textField {
+                textField.becomeFirstResponder()
+            }
         }
     }
 
+    weak var textFieldDelegate: UITextFieldDelegate?
     weak var textViewDelegate: UITextViewDelegate?
 
     var textViewText: String {
@@ -104,6 +109,7 @@ class DualTextView: UIView {
         textField.returnKeyType = .done
         textField.backgroundColor = .clear
         textField.borderStyle = .none
+        textField.delegate = self
         textField.addTarget(
             self,
             action: #selector(Self.textFieldDidChange(_:)),
@@ -166,30 +172,6 @@ class DualTextView: UIView {
         return size
     }
 
-    override var canBecomeFirstResponder: Bool {
-        switch currentMode {
-        case .textView:
-            return textView.canBecomeFirstResponder
-        case .textField:
-            return textField.canBecomeFirstResponder
-        }
-    }
-
-    override func becomeFirstResponder() -> Bool {
-        switch currentMode {
-        case .textView:
-            return textView.becomeFirstResponder()
-        case .textField:
-            return textField.becomeFirstResponder()
-        }
-    }
-
-    override func resignFirstResponder() -> Bool {
-        let textViewResigned = textView.resignFirstResponder()
-        let textFieldResigned = textField.resignFirstResponder()
-        return textViewResigned || textFieldResigned
-    }
-
     @objc func textFieldDidChange(_ textField: UITextField) {
         invalidateIntrinsicContentSize()
     }
@@ -197,7 +179,12 @@ class DualTextView: UIView {
 
 // MARK: - DualTextView Delegates
 
-extension DualTextView: UITextViewDelegate {
+extension DualTextView: UITextViewDelegate, UITextFieldDelegate {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textView.becomeFirstResponder()
+        return textFieldDelegate?.textFieldShouldReturn?(textField) ?? false
+    }
+
     func textViewDidChange(_ textView: UITextView) {
         updateTextViewPlaceholder()
         invalidateIntrinsicContentSize()
@@ -256,9 +243,12 @@ struct DualTextViewRepresentable: UIViewRepresentable {
         view.font = font
         view.textColor = textColor
         view.textViewDelegate = context.coordinator
-        view.textField.delegate = context.coordinator
-        view.textField
-            .addTarget(context.coordinator, action: #selector(Coordinator.textFieldDidChange(_:)), for: .editingChanged)
+        view.textFieldDelegate = context.coordinator
+        view.textField.addTarget(
+            context.coordinator,
+            action: #selector(Coordinator.textFieldDidChange(_:)),
+            for: .editingChanged
+        )
         return view
     }
 

@@ -1,6 +1,12 @@
 import PhotosUI
 import SwiftUI
 
+extension Notification.Name {
+    static let messagesInputViewHeightDidChange: Notification.Name = Notification.Name(
+        "messagesInputViewHeightDidChange"
+    )
+}
+
 @Observable
 class MessagesInputViewModel: KeyboardListenerDelegate {
     let conversationState: ConversationState
@@ -102,6 +108,7 @@ struct MessagesInputView: View {
 
     @Namespace private var profileEditorAnimation: Namespace.ID
     @State private var mode: DualTextView.Mode = .textView
+
 
     var body: some View {
         HStack(alignment: .bottom) {
@@ -252,6 +259,20 @@ struct MessagesInputView: View {
                 }
             }
         }
+        .background(
+            GeometryReader { geometry in
+                Color.clear
+                    .preference(
+                        key: HeightPreferenceKey.self,
+                        value: geometry.size.height
+                    )
+            }
+        )
+        .onPreferenceChange(HeightPreferenceKey.self) { newHeight in
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .messagesInputViewHeightDidChange, object: newHeight)
+            }
+        }
     }
 }
 
@@ -261,6 +282,5 @@ struct MessagesInputView: View {
             conversationState: .init(conversationRepository: MockConversationRepository()),
             outgoingMessageWriter: MockOutgoingMessageWriter(),
             profile: .mock()
-        ),
-    )
+        ))
 }

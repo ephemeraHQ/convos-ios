@@ -134,6 +134,16 @@ final class MessagesViewController: UIViewController {
 
         reloadMessagesFromRepository()
         observe(messagesRepository: messagesRepository)
+
+        NotificationCenter.default.addObserver(
+            forName: .messagesInputViewHeightDidChange,
+            object: nil,
+            queue: .main
+        ) { notification in
+            if let height = notification.object as? CGFloat {
+                Logger.info("Messages input height changed to: \(height)")
+            }
+        }
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
