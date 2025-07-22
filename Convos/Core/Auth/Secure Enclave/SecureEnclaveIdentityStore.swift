@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import LocalAuthentication
 import Security
@@ -52,6 +53,8 @@ extension SecureEnclaveKeyStore {
             guard updateStatus == errSecSuccess else {
                 throw SecureEnclaveKeyStoreError.failedSavingDatabaseKey
             }
+        } else if status != errSecSuccess {
+            throw SecureEnclaveKeyStoreError.failedSavingDatabaseKey
         }
         return databaseKey
     }
@@ -81,7 +84,6 @@ extension SecureEnclaveKeyStore {
 
 final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     internal let keychainService: String = "com.convos.ios.SecureEnclaveIdentityStore"
-    private let keyTagString: String = "com.convos.ios.SecureEnclaveIdentityStore.secp256k1"
     private let identitiesListKey: String = "com.convos.ios.SecureEnclaveIdentityStore.identitiesList"
 
     enum SecureEnclaveUserStoreError: Error {
@@ -92,21 +94,57 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
              failedSavingDatabaseKey,
              failedSavingInboxType,
              failedGeneratingDatabaseKey,
-             keyTagMismatch,
-             biometryAuthFailed,
-             privateKeyNotFound,
              failedGeneratingPrivateKey,
+             failedSavingPrivateKey,
+             failedLoadingPrivateKey,
              failedSavingIdentitiesList,
-             failedLoadingIdentitiesList
+             failedLoadingIdentitiesList,
+             rollbackFailed
     }
 
     func save(type: InboxType) throws -> SecureEnclaveIdentity {
         let identityId = UUID().uuidString
-        let privateKey = try generatePrivateKeyWithBiometry(for: identityId)
-        let databaseKey = try generateAndSaveDatabaseKey(for: identityId)
 
-        try saveInboxType(type: type, for: identityId)
-        try addIdentityIdToList(identityId)
+        let privateKey: PrivateKey
+        do {
+            privateKey = try PrivateKey.generate()
+        } catch {
+            throw SecureEnclaveUserStoreError.failedGeneratingPrivateKey
+        }
+
+        do {
+            try savePrivateKey(privateKey, for: identityId)
+        } catch {
+            throw error
+        }
+
+        let databaseKey: Data
+        do {
+            databaseKey = try generateAndSaveDatabaseKey(for: identityId)
+        } catch {
+            // Rollback: Delete the private key
+            try? deletePrivateKey(for: identityId)
+            throw error
+        }
+
+        do {
+            try saveInboxType(type: type, for: identityId)
+        } catch {
+            // Rollback: Delete private key and database key
+            try? deletePrivateKey(for: identityId)
+            try? deleteDatabaseKey(for: identityId)
+            throw error
+        }
+
+        do {
+            try addIdentityIdToList(identityId)
+        } catch {
+            // Rollback: Delete everything
+            try? deletePrivateKey(for: identityId)
+            try? deleteDatabaseKey(for: identityId)
+            try? deleteInboxType(for: identityId)
+            throw error
+        }
 
         return SecureEnclaveIdentity(
             id: identityId,
@@ -122,7 +160,8 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         }
 
         let inboxType: InboxType = try loadInboxType(for: identityId)
-        let privateKey = try loadPrivateKeyWithBiometry(for: identityId)
+        let privateKey = try loadPrivateKey(for: identityId)
+
         return SecureEnclaveIdentity(
             id: identityId,
             privateKey: privateKey,
@@ -136,8 +175,12 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         var identities: [SecureEnclaveIdentity] = []
 
         for identityId in identityIds {
-            if let identity = try load(for: identityId) {
-                identities.append(identity)
+            do {
+                if let identity = try load(for: identityId) {
+                    identities.append(identity)
+                }
+            } catch {
+                Logger.error("Failed loading private key for identity: \(error)")
             }
         }
 
@@ -145,89 +188,90 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     }
 
     func delete(for identityId: String) throws {
-        let databaseKeyQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: identityId,
-            kSecAttrService as String: keychainService
-        ]
-
-        let databaseKeyStatus = SecItemDelete(databaseKeyQuery as CFDictionary)
-        guard databaseKeyStatus == errSecSuccess || databaseKeyStatus == errSecItemNotFound else {
-            throw SecureEnclaveUserStoreError.failedDeletingDatabaseKey
-        }
-
-        let keyTag = Data("\(keyTagString).\(identityId)".utf8)
-
-        let privateKeyQuery: [String: Any] = [
-            kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: keyTag
-        ]
-
-        let privateKeyStatus = SecItemDelete(privateKeyQuery as CFDictionary)
-        guard privateKeyStatus == errSecSuccess || privateKeyStatus == errSecItemNotFound else {
-            throw SecureEnclaveUserStoreError.failedDeletingPrivateKey
-        }
-
+        // Delete in reverse order of creation
         try removeIdentityIdFromList(identityId)
+        try deleteInboxType(for: identityId)
+        try deleteDatabaseKey(for: identityId)
+        try deletePrivateKey(for: identityId)
     }
 
     // MARK: - Private Helpers
 
-    private func generatePrivateKeyWithBiometry(for identityId: String) throws -> PrivateKey {
-        let keyTag = Data("\(keyTagString).\(identityId)".utf8)
+    private func savePrivateKey(_ privateKey: PrivateKey, for identityId: String) throws {
+        let privateKeyData = privateKey.secp256K1.bytes
 
-        let privateKey = try PrivateKey.generate()
-
+        // Use access control for better security (requires authentication to access)
         guard let accessControl = SecAccessControlCreateWithFlags(
             nil,
-            kSecAttrAccessibleAfterFirstUnlock,
-            [.userPresence],
+            kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+            [.userPresence],  // Require biometric/passcode to access
             nil
         ) else {
-            throw SecureEnclaveUserStoreError.failedGeneratingPrivateKey
+            throw SecureEnclaveUserStoreError.failedSavingPrivateKey
         }
 
-        let attributes: [String: Any] = [
-            kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: keyTag,
-            kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
-            kSecValueData as String: privateKey.secp256K1.bytes,
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "\(identityId).privateKey",
+            kSecAttrService as String: keychainService,
+            kSecValueData as String: privateKeyData,
             kSecAttrAccessControl as String: accessControl
         ]
 
-        SecItemDelete(attributes as CFDictionary)
-
-        let status = SecItemAdd(attributes as CFDictionary, nil)
+        let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else {
-            throw SecureEnclaveUserStoreError.failedGeneratingPrivateKey
+            throw SecureEnclaveUserStoreError.failedSavingPrivateKey
         }
-
-        return privateKey
     }
 
-    private func loadPrivateKeyWithBiometry(for identityId: String) throws -> PrivateKey {
-        let keyTag = Data("\(keyTagString).\(identityId)".utf8)
-
+    private func loadPrivateKey(for identityId: String) throws -> PrivateKey {
         let context = LAContext()
-        context.localizedReason = "Authenticate to access Convos"
-        context.interactionNotAllowed = false
+        context.localizedReason = "Authenticate to access your Convos account"
 
         let query: [String: Any] = [
-            kSecClass as String: kSecClassKey,
-            kSecAttrApplicationTag as String: keyTag,
-            kSecAttrKeyType as String: kSecAttrKeyTypeECSECPrimeRandom,
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "\(identityId).privateKey",
+            kSecAttrService as String: keychainService,
             kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
             kSecUseAuthenticationContext as String: context
         ]
 
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
 
-        guard status == errSecSuccess, let data = result as? Data else {
-            throw SecureEnclaveUserStoreError.privateKeyNotFound
+        guard status == errSecSuccess, let data = item as? Data else {
+            throw SecureEnclaveUserStoreError.failedLoadingPrivateKey
         }
 
         return try PrivateKey(data)
+    }
+
+    private func deletePrivateKey(for identityId: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "\(identityId).privateKey",
+            kSecAttrService as String: keychainService
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
+    private func deleteDatabaseKey(for identityId: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: identityId.lowercased(),
+            kSecAttrService as String: keychainService
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
+    private func deleteInboxType(for identityId: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "\(identityId.lowercased()).inboxType",
+            kSecAttrService as String: keychainService
+        ]
+        SecItemDelete(query as CFDictionary)
     }
 
     private func loadIdentitiesList() throws -> [String] {
@@ -236,8 +280,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccount as String: identitiesListKey,
             kSecAttrService as String: keychainService,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-//            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+            kSecMatchLimit as String: kSecMatchLimitOne
         ]
 
         var item: CFTypeRef?
@@ -262,22 +305,13 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: identitiesListKey,
             kSecAttrService as String: keychainService,
-            kSecValueData as String: data,
-//            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+            kSecValueData as String: data
         ]
 
+        SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
+
         let status = SecItemAdd(query as CFDictionary, nil)
-        if status == errSecDuplicateItem {
-            let attributesToUpdate: [String: Any] = [
-                kSecValueData as String: data
-            ]
-            var updateQuery = query
-            updateQuery.removeValue(forKey: kSecValueData as String)
-            let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributesToUpdate as CFDictionary)
-            guard updateStatus == errSecSuccess else {
-                throw SecureEnclaveUserStoreError.failedSavingIdentitiesList
-            }
-        } else if status != errSecSuccess {
+        guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedSavingIdentitiesList
         }
     }
@@ -308,19 +342,10 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
+        SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
+
         let status = SecItemAdd(query as CFDictionary, nil)
-        if status == errSecDuplicateItem {
-            Logger.info("Inbox type found for identifier: \(identifier), overwriting...")
-            let attributesToUpdate: [String: Any] = [
-                kSecValueData as String: typeData
-            ]
-            var updateQuery = query
-            updateQuery.removeValue(forKey: kSecValueData as String)
-            let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributesToUpdate as CFDictionary)
-            guard updateStatus == errSecSuccess else {
-                throw SecureEnclaveUserStoreError.failedSavingInboxType
-            }
-        } else if status != errSecSuccess {
+        guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedSavingInboxType
         }
     }

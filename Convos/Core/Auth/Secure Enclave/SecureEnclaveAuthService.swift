@@ -43,28 +43,23 @@ class SecureEnclaveAuthService: LocalAuthServiceProtocol {
     // MARK: - Private Helpers
 
     private func refreshAuthState() throws {
-        do {
-            let identities = try identityStore.loadAll()
-            if !identities.isEmpty {
-                let inboxes: [AuthServiceInbox] = identities.map { identity in
-                    AuthServiceInbox(
-                        type: identity.type,
-                        provider: .local,
-                        providerId: identity.id,
-                        signingKey: identity.privateKey,
-                        databaseKey: identity.databaseKey
-                    )
-                }
-                authStateSubject.send(.authorized(
-                    AuthServiceResult(
-                        inboxes: inboxes
-                    )
-                ))
-            } else {
-                authStateSubject.send(.unauthorized)
-            }
-        } catch {
+        let identities = try identityStore.loadAll()
+        if identities.isEmpty {
             authStateSubject.send(.unauthorized)
+            return
         }
+
+        let inboxes: [AuthServiceInbox] = identities.map { identity in
+            AuthServiceInbox(
+                type: identity.type,
+                provider: .local,
+                providerId: identity.id,
+                signingKey: identity.privateKey,
+                databaseKey: identity.databaseKey
+            )
+        }
+
+        let result = AuthServiceResult(inboxes: inboxes)
+        authStateSubject.send(.authorized(result))
     }
 }
