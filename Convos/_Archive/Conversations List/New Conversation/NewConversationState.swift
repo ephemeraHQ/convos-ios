@@ -8,7 +8,6 @@ class NewConversationState {
     private let session: any SessionManagerProtocol
     private(set) var conversationState: ConversationState?
     private(set) var draftConversationComposer: (any DraftConversationComposerProtocol)?
-    private(set) var messagingService: (any MessagingServiceProtocol)?
 
     init(session: any SessionManagerProtocol) {
         self.session = session
@@ -20,7 +19,6 @@ class NewConversationState {
             do {
                 let messagingService = try session.addAccount()
                 let draftConversationComposer = messagingService.draftConversationComposer()
-                self.messagingService = messagingService
                 self.draftConversationComposer = draftConversationComposer
                 self.conversationState = ConversationState(
                     conversationRepository: draftConversationComposer.draftConversationRepository
