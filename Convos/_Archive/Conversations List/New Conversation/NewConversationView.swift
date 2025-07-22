@@ -41,13 +41,6 @@ struct NewConversationView: View {
             ) {
                 EmptyView()
                     .ignoresSafeArea()
-//                ConversationComposerContentView(
-//                    composerState: conversationComposerState,
-//                    profileSearchText: $conversationComposerState.searchText,
-//                    selectedProfile: $conversationComposerState.selectedProfile
-//                )
-//                .background(.clear)
-//                .ignoresSafeArea()
             }
             .toolbarTitleDisplayMode(.inline)
             .toolbar {

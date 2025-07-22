@@ -112,7 +112,7 @@ class SessionManager: SessionManagerProtocol {
     }
 
     func addAccount() throws {
-        let result = try authService.register(displayName: "Somebody")
+        let result = try authService.register(displayName: "")
         Logger.info("Added account: \(result)")
     }
 

@@ -112,20 +112,26 @@ struct MessagesInputView: View {
     var body: some View {
         HStack(alignment: .bottom) {
             if viewModel.showingProfileNameEditor {
-                // empty
+                EmptyView()
+                    .matchedGeometryEffect(
+                        id: "AddButton",
+                        in: profileEditorAnimation,
+                    )
             } else {
                 Button {
                 } label: {
                     Image(systemName: "plus")
                         .foregroundStyle(.colorTextSecondary)
                         .font(.body)
-                        .frame(minWidth: addButtonSize,
-                               minHeight: addButtonSize)
+                        .frame(width: addButtonSize, height: addButtonSize)
                         .padding(.vertical, buttonVerticalPadding)
                         .padding(.horizontal, 7.0)
                 }
-                .aspectRatio(1.0, contentMode: .fill)
                 .glassEffect(.regular, in: .circle)
+                .matchedGeometryEffect(
+                    id: "AddButton",
+                    in: profileEditorAnimation,
+                )
                 .padding(DesignConstants.Spacing.stepX)
             }
 

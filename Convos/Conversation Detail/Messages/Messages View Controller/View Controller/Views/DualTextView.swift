@@ -23,10 +23,6 @@ class DualTextView: UIView {
         set {
             currentMode = newValue
             invalidateIntrinsicContentSize()
-
-            if currentMode == .textField {
-                textField.becomeFirstResponder()
-            }
         }
     }
 
@@ -263,6 +259,9 @@ struct DualTextViewRepresentable: UIViewRepresentable {
         uiView.mode = mode
         DispatchQueue.main.async {
             height = uiView.intrinsicContentSize.height
+            if mode == .textField && !uiView.textField.isFirstResponder {
+                uiView.textField.becomeFirstResponder()
+            }
         }
     }
 

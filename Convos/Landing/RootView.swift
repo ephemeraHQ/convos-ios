@@ -14,12 +14,7 @@ struct RootView: View {
     }
 
     var body: some View {
-        switch viewModel.appState {
-        case .loading:
-            EmptyView()
-        case .ready:
-            ConversationsView(session: convos.session)
-        }
+        ConversationsView(session: convos.session)
     }
 }
 

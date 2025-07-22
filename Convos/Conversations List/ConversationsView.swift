@@ -18,61 +18,65 @@ struct ConversationsView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            ConversationsListView(session: session, path: $path)
-                .toolbarTitleDisplayMode(.inlineLarge)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            //
-                        } label: {
-                            HStack(spacing: DesignConstants.Spacing.step2x) {
-                                Circle()
-                                    .fill(.colorOrange)
-                                    .frame(width: 24.0, height: 24.0)
+            ConversationsListView(
+                session: session,
+                isPresentingComposer: $isPresentingComposer,
+                path: $path
+            )
+            .toolbarTitleDisplayMode(.inlineLarge)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        //
+                    } label: {
+                        HStack(spacing: DesignConstants.Spacing.step2x) {
+                            Circle()
+                                .fill(.colorOrange)
+                                .frame(width: 24.0, height: 24.0)
 
-                                Text("Convos")
-                                    .font(.system(size: 16.0, weight: .medium))
-                                    .foregroundStyle(.colorTextPrimary)
-                            }
-                            .padding(10)
-                            .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: 8)
+                            Text("Convos")
+                                .font(.system(size: 16.0, weight: .medium))
+                                .foregroundStyle(.colorTextPrimary)
                         }
-                        .glassEffect(.clear.tint(.white))
+                        .padding(10)
+                        .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: 8)
                     }
-
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Filter", systemImage: "line.3.horizontal.decrease") {
-                            //
-                        }
-                        .disabled(true)
-                    }
-
-                    ToolbarItem(placement: .bottomBar) {
-                        Spacer()
-                    }
-
-                    ToolbarItem(placement: .bottomBar) {
-                        Button("Compose", systemImage: "plus") {
-                            isPresentingComposer = true
-                        }
-                    }
-                    .matchedTransitionSource(
-                        id: "composer-transition-source",
-                        in: namespace
-                    )
+                    .glassEffect(.clear.tint(.white))
                 }
-                .fullScreenCover(isPresented: $isPresentingComposer) {
-                    NewConversationView(session: session)
-                        .ignoresSafeArea()
-                        .background(.white)
-                        .interactiveDismissDisabled()
-                        .navigationTransition(
-                            .zoom(
-                                sourceID: "composer-transition-source",
-                                in: namespace
-                            )
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Filter", systemImage: "line.3.horizontal.decrease") {
+                        //
+                    }
+                    .disabled(true)
+                }
+
+                ToolbarItem(placement: .bottomBar) {
+                    Spacer()
+                }
+
+                ToolbarItem(placement: .bottomBar) {
+                    Button("Compose", systemImage: "plus") {
+                        isPresentingComposer = true
+                    }
+                }
+                .matchedTransitionSource(
+                    id: "composer-transition-source",
+                    in: namespace
+                )
+            }
+            .fullScreenCover(isPresented: $isPresentingComposer) {
+                NewConversationView(session: session)
+                    .ignoresSafeArea()
+                    .background(.white)
+                    .interactiveDismissDisabled()
+                    .navigationTransition(
+                        .zoom(
+                            sourceID: "composer-transition-source",
+                            in: namespace
                         )
-                }
+                    )
+            }
         }
         .background(.colorBackgroundPrimary)
     }

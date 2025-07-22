@@ -53,7 +53,7 @@ struct RoundedButtonStyle: ButtonStyle {
             .padding(.horizontal, DesignConstants.Spacing.step4x)
             .opacity(configuration.isPressed ? 0.6 : 1.0)
             .background(.colorFillPrimary)
-            .clipShape(RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.medium))
+            .clipShape(Capsule())
             .foregroundColor(isEnabled ? .colorTextPrimaryInverted : .colorTextTertiary)
     }
 }
