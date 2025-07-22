@@ -297,9 +297,11 @@ struct ConversationMemberRow: View {
                     .font(.body)
                     .fontWeight(.medium)
 
-                Text("@\(member.profile.username)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                if let username = member.profile.username {
+                    Text("@\(username)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
 
             Spacer()

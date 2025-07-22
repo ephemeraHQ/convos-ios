@@ -1,6 +1,8 @@
 import Foundation
 import GRDB
 
+// swiftlint:disable function_body_length
+
 class SharedDatabaseMigrator {
     static let shared: SharedDatabaseMigrator = SharedDatabaseMigrator()
     private var defaultMigrator: DatabaseMigrator
@@ -158,3 +160,5 @@ class SharedDatabaseMigrator {
         try defaultMigrator.migrate(database)
     }
 }
+
+// swiftlint:enable function_body_length
