@@ -43,7 +43,8 @@ extension DBConversationDetails {
             isMuted: conversationLocalState.isMuted,
             lastMessage: lastMessage,
             imageURL: imageURL,
-            isDraft: conversation.isDraft
+            isDraft: conversation.isDraft,
+            invite: conversationInvite?.hydrateInvite()
         )
     }
 }

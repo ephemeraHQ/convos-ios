@@ -4,7 +4,6 @@ import GRDB
 struct MemberProfile: Codable, FetchableRecord, PersistableRecord, Hashable {
     let inboxId: String
     let name: String
-    let username: String
     let avatar: String?
 
     static let memberForeignKey: ForeignKey = ForeignKey(["inboxId"], to: ["inboxId"])

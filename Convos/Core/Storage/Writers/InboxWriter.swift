@@ -49,7 +49,6 @@ final class InboxWriter: InboxWriterProtocol {
 
             let memberProfile: MemberProfile = .init(inboxId: inboxId,
                                                      name: profile.name,
-                                                     username: profile.username,
                                                      avatar: profile.avatar)
             let member: Member = .init(inboxId: inboxId)
             try member.save(db)
@@ -76,7 +75,6 @@ final class InboxWriter: InboxWriterProtocol {
         let member: Member = .init(inboxId: inboxId)
         let memberProfile: MemberProfile = .init(inboxId: inboxId,
                                                  name: user.profile.name,
-                                                 username: user.profile.username,
                                                  avatar: user.profile.avatar)
         let dbInbox = DBInbox(
             inboxId: inboxId,

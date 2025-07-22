@@ -76,7 +76,6 @@ class ConversationWriter: ConversationWriterProtocol {
         let creatorProfile = MemberProfile(
             inboxId: dbConversation.creatorId,
             name: "",
-            username: "",
             avatar: nil,
         )
 
@@ -116,7 +115,6 @@ class ConversationWriter: ConversationWriterProtocol {
                 let memberProfile = MemberProfile(
                     inboxId: member.inboxId,
                     name: "",
-                    username: "",
                     avatar: nil
                 )
                 try? memberProfile.insert(db)

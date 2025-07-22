@@ -326,10 +326,10 @@ struct DualTextInputView: View {
                     return true
                 }
             )
-            .frame(height: max(44, currentHeight))
+            .frame(height: max(44.0, currentHeight))
             .padding()
             .background(Color(.systemGray6))
-            .cornerRadius(8)
+            .cornerRadius(8.0)
 
             HStack {
                 Button("Show TextView") {

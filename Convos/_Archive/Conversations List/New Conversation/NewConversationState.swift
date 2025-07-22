@@ -4,33 +4,30 @@ import SwiftUI
 
 @Observable
 class NewConversationState {
-    let draftConversationRepo: any DraftConversationRepositoryProtocol
-    let draftConversationWriter: any DraftConversationWriterProtocol
-    let conversationConsentWriter: any ConversationConsentWriterProtocol
-    let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
     private var cancellables: Set<AnyCancellable> = []
-    private(set) var messagesRepository: any MessagesRepositoryProtocol
+    private let session: any SessionManagerProtocol
+    private(set) var conversationState: ConversationState?
+    private(set) var draftConversationComposer: (any DraftConversationComposerProtocol)?
+    private(set) var messagingService: (any MessagingServiceProtocol)?
 
-    private var searchTask: Task<Void, Never>?
+    init(session: any SessionManagerProtocol) {
+        self.session = session
+        newConversation()
+    }
 
-    init(
-        draftConversationRepo: any DraftConversationRepositoryProtocol,
-        draftConversationWriter: any DraftConversationWriterProtocol,
-        conversationConsentWriter: any ConversationConsentWriterProtocol,
-        conversationLocalStateWriter: any ConversationLocalStateWriterProtocol,
-        messagesRepository: any MessagesRepositoryProtocol
-    ) {
-        self.draftConversationRepo = draftConversationRepo
-        self.draftConversationWriter = draftConversationWriter
-        self.messagesRepository = messagesRepository
-        self.conversationConsentWriter = conversationConsentWriter
-        self.conversationLocalStateWriter = conversationLocalStateWriter
-        self.draftConversationWriter
-            .sentMessage
-            .receive(on: DispatchQueue.main)
-            .sink { _ in
-//            showProfileSearchHeader = false
+    private func newConversation() {
+        Task {
+            do {
+                let messagingService = try session.addAccount()
+                let draftConversationComposer = messagingService.draftConversationComposer()
+                self.messagingService = messagingService
+                self.draftConversationComposer = draftConversationComposer
+                self.conversationState = ConversationState(
+                    conversationRepository: draftConversationComposer.draftConversationRepository
+                )
+            } catch {
+                Logger.error("Error starting new conversation: \(error.localizedDescription)")
+            }
         }
-        .store(in: &cancellables)
     }
 }

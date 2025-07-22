@@ -269,7 +269,8 @@ struct GroupEditView: View {
         isMuted: false,
         lastMessage: nil,
         imageURL: nil,
-        isDraft: false
+        isDraft: false,
+        invite: .mock()
     )
 
     GroupEditView(

@@ -2,68 +2,63 @@ import SwiftUI
 
 struct NewConversationView: View {
     let session: any SessionManagerProtocol
-    @State private var draftConversationComposer: any DraftConversationComposerProtocol
-    @State private var conversationState: ConversationState
     @State private var newConversationState: NewConversationState
     @Environment(\.dismiss) private var dismiss: DismissAction
-
-    @State private var qrCodeIdentifier: String = "otr-invite"
 
     init(
         session: any SessionManagerProtocol
     ) {
         self.session = session
-        let inbox = try? session.inboxesRepository.allInboxes().first(where: { $0.type == .standard })
-        let messaging = session.messagingService(for: inbox?.inboxId ?? "")
-        let draftConversationComposer = messaging.draftConversationComposer()
-        _draftConversationComposer = State(initialValue: draftConversationComposer)
-        let draftConversationRepo = draftConversationComposer.draftConversationRepository
-        let composerState = NewConversationState(
-            draftConversationRepo: draftConversationRepo,
-            draftConversationWriter: draftConversationComposer.draftConversationWriter,
-            conversationConsentWriter: draftConversationComposer.conversationConsentWriter,
-            conversationLocalStateWriter: draftConversationComposer.conversationLocalStateWriter,
-            messagesRepository: draftConversationRepo.messagesRepository
-        )
-        _newConversationState = State(initialValue: composerState)
-        _conversationState = State(initialValue: ConversationState(
-            conversationRepository: draftConversationRepo
-        ))
+        _newConversationState = .init(initialValue: .init(session: session))
     }
 
     var body: some View {
         NavigationStack {
-            MessagesContainerView(
-                conversationState: conversationState,
-                outgoingMessageWriter: draftConversationComposer.draftConversationWriter,
-                conversationConsentWriter: draftConversationComposer.conversationConsentWriter,
-                conversationLocalStateWriter: draftConversationComposer.conversationLocalStateWriter
-            ) {
-                EmptyView()
-                    .ignoresSafeArea()
+            Group {
+                if let conversationState = newConversationState.conversationState,
+                   let composer = newConversationState.draftConversationComposer {
+                    MessagesContainerView(
+                        conversationState: conversationState,
+                        outgoingMessageWriter: composer.draftConversationWriter,
+                        conversationLocalStateWriter: composer.conversationLocalStateWriter
+                    ) {
+                        MessagesView(messagesRepository: composer.draftConversationRepository.messagesRepository)
+                            .ignoresSafeArea()
+                    }
+                } else {
+                    EmptyView()
+                        .ignoresSafeArea()
+                }
             }
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .title) {
-                    Button {
-                    } label: {
-                        HStack(spacing: DesignConstants.Spacing.step2x) {
-                            ConversationAvatarView(conversation: .mock(name: ""))
-                                .frame(width: 36.0, height: 36.0)
+                    if let conversation = newConversationState.conversationState?.conversation {
+                        Button {
+                        } label: {
+                            HStack(spacing: DesignConstants.Spacing.step2x) {
+                                ConversationAvatarView(conversation: conversation)
+                                    .frame(width: 36.0, height: 36.0)
 
-                            VStack(alignment: .leading, spacing: 0.0) {
-                                Text("New convo")
-                                    .font(.system(size: 16.0, weight: .medium))
-                                Text("Customize")
-                                    .font(.system(size: 12.0, weight: .regular))
-                                    .foregroundStyle(.colorTextSecondary)
+                                VStack(alignment: .leading, spacing: 0.0) {
+                                    if conversation.isDraft {
+                                        Text("New convo")
+                                            .font(.system(size: 16.0, weight: .medium))
+                                    } else {
+                                        Text(conversation.name ?? "New convo")
+                                            .font(.system(size: 16.0, weight: .medium))
+                                    }
+                                    Text("Customize")
+                                        .font(.system(size: 12.0, weight: .regular))
+                                        .foregroundStyle(.colorTextSecondary)
+                                }
+                                .padding(.trailing, DesignConstants.Spacing.step2x)
                             }
-                            .padding(.trailing, DesignConstants.Spacing.step2x)
                         }
+                        .padding(.horizontal, DesignConstants.Spacing.step2x)
+                        .padding(.vertical, DesignConstants.Spacing.stepX)
+                        .glassEffect()
                     }
-                    .padding(.horizontal, DesignConstants.Spacing.step2x)
-                    .padding(.vertical, DesignConstants.Spacing.stepX)
-                    .glassEffect()
                 }
 
                 ToolbarItem(placement: .topBarLeading) {

@@ -9,17 +9,14 @@ extension Notification.Name {
 
 @Observable
 class MessagesInputViewModel: KeyboardListenerDelegate {
-    let conversationState: ConversationState
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
 
     init(
-        conversationState: ConversationState,
         outgoingMessageWriter: any OutgoingMessageWriterProtocol,
         profile: Profile
     ) {
         self.profile = profile
         self.profileNameText = profile.displayName
-        self.conversationState = conversationState
         self.outgoingMessageWriter = outgoingMessageWriter
 
         KeyboardListener.shared.add(delegate: self)
@@ -37,8 +34,7 @@ class MessagesInputViewModel: KeyboardListenerDelegate {
 
     var messageText: String = "" {
         didSet {
-            let conversationHasMembers: Bool = !(conversationState.conversation?.members.isEmpty ?? true)
-            sendButtonEnabled = !messageText.isEmpty && conversationHasMembers
+            sendButtonEnabled = !messageText.isEmpty
         }
     }
     var profileNameText: String
@@ -236,14 +232,15 @@ struct MessagesInputView: View {
                             .tint(.colorTextPrimary)
                             .font(.system(size: 16.0, weight: .medium))
                     }
-                    .frame(width: sendButtonSize, height: sendButtonSize, alignment: .bottomTrailing)
                     .background(.colorFillMinimal)
                     .mask(Circle())
                     .matchedGeometryEffect(
                         id: "RightView",
                         in: profileEditorAnimation
                     )
+                    .frame(width: sendButtonSize, height: sendButtonSize, alignment: .bottomLeading)
                     .padding(.vertical, DesignConstants.Spacing.stepX)
+                    .padding(.trailing, DesignConstants.Spacing.stepX)
                     .disabled(!viewModel.sendButtonEnabled)
                 }
             }
@@ -285,7 +282,6 @@ struct MessagesInputView: View {
 #Preview {
     MessagesInputView(
         viewModel: .init(
-            conversationState: .init(conversationRepository: MockConversationRepository()),
             outgoingMessageWriter: MockOutgoingMessageWriter(),
             profile: .mock()
         ))

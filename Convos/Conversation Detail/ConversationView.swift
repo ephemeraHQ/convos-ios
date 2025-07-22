@@ -58,7 +58,6 @@ struct ConversationView: View {
         MessagesContainerView(
             conversationState: conversationState,
             outgoingMessageWriter: outgoingMessageWriter,
-            conversationConsentWriter: conversationConsentWriter,
             conversationLocalStateWriter: conversationLocalStateWriter
         ) {
             MessagesView(

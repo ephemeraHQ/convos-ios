@@ -3,6 +3,7 @@ import Foundation
 import GRDB
 
 protocol AuthorizeInboxOperationProtocol {
+    var inbox: any AuthServiceInboxType { get }
     var state: InboxStateMachine.State { get }
     var statePublisher: AnyPublisher<InboxStateMachine.State, Never> { get }
     var inboxReadyPublisher: InboxReadyResultPublisher { get }
@@ -13,6 +14,8 @@ protocol AuthorizeInboxOperationProtocol {
 }
 
 class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
+    let inbox: any AuthServiceInboxType
+
     var state: InboxStateMachine.State {
         stateMachine.state
     }
@@ -33,6 +36,7 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment
     ) {
+        self.inbox = inbox
         let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
         stateMachine = InboxStateMachine(
             inbox: inbox,

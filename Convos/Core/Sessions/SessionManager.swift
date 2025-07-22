@@ -57,15 +57,23 @@ class SessionManager: SessionManagerProtocol {
 
         switch authState {
         case .authorized(let authResult):
-            try updateOperations(for: authResult.inboxes)
+            try updateOperations(for: authResult.inboxes, forRegistration: false)
         case .registered(let registeredResult):
-            try updateOperations(for: registeredResult.inboxes)
+            try updateOperations(
+                for: registeredResult.inboxes,
+                forRegistration: true,
+                displayName: registeredResult.displayName
+            )
         case .unauthorized, .notReady, .unknown:
             clearAllOperations()
         }
     }
 
-    private func updateOperations(for inboxes: [any AuthServiceInboxType]) throws {
+    private func updateOperations(
+        for inboxes: [any AuthServiceInboxType],
+        forRegistration: Bool,
+        displayName: String = ""
+    ) throws {
         // Create or update operations for inboxes
         for inbox in inboxes {
             let inboxId = inbox.signingKey.identity.identifier
@@ -85,8 +93,8 @@ class SessionManager: SessionManagerProtocol {
                 throw SessionManagerError.missingOperationForAddedInbox
             }
 
-            if let registeredResult = inbox as? AuthServiceRegisteredResultType {
-                operation.register(displayName: registeredResult.displayName)
+            if forRegistration {
+                operation.register(displayName: displayName)
             } else {
                 operation.authorize()
             }
@@ -111,9 +119,24 @@ class SessionManager: SessionManagerProtocol {
         try authService.prepare()
     }
 
-    func addAccount() throws {
-        let result = try authService.register(displayName: "")
-        Logger.info("Added account: \(result)")
+    func addAccount() throws -> AnyMessagingService {
+        let authResult = try authService.register(displayName: "")
+        Logger.info("Added account: \(authResult)")
+        let matchingInboxReadyPublisher = inboxOperationsPublisher
+            .flatMap { operations in
+                Publishers.MergeMany(
+                    operations.map { $0.inboxReadyPublisher }
+                )
+            }
+            .first { result in
+                result.inbox.providerId == authResult.inbox.providerId
+            }
+            .eraseToAnyPublisher()
+        return MessagingService(
+            inboxReadyPublisher: matchingInboxReadyPublisher,
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader
+        )
     }
 
     // MARK: Messaging

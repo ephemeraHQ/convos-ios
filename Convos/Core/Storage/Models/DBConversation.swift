@@ -35,6 +35,13 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
         to: [DBConversationMember.Columns.inboxId]
     )
     static let localStateForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
+    static let inviteForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
+
+    static let invite: HasOneAssociation<DBConversation, DBInvite> = hasOne(
+        DBInvite.self,
+        key: "conversationInvite",
+        using: inviteForeignKey
+    )
 
     static let creator: BelongsToAssociation<DBConversation, DBConversationMember> = belongsTo(
         DBConversationMember.self,

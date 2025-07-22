@@ -21,6 +21,7 @@ struct Conversation: Codable, Hashable, Identifiable {
     let lastMessage: MessagePreview?
     let imageURL: URL?
     let isDraft: Bool
+    let invite: Invite?
 
     var membersWithoutCurrent: [ConversationMember] {
         members.filter { !$0.isCurrentUser }

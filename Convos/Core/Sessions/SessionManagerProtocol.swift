@@ -7,7 +7,7 @@ protocol SessionManagerProtocol {
     var authState: AnyPublisher<AuthServiceState, Never> { get }
 
     func prepare() throws
-    func addAccount() throws
+    func addAccount() throws -> AnyMessagingService
     func messagingService(for inboxId: String) -> AnyMessagingService
     func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol
     func conversationsCountRepo(for consent: [Consent]) -> any ConversationsCountRepositoryProtocol

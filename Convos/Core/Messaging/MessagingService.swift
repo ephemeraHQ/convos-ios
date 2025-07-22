@@ -30,12 +30,21 @@ final class MessagingService: MessagingServiceProtocol {
     // MARK: New Conversation
 
     func draftConversationComposer() -> any DraftConversationComposerProtocol {
-        let conversationWriter = MockDraftConversationWriter()
+        let clientConversationId: String = DBConversation.generateDraftConversationId()
+        let draftConversationWriter = DraftConversationWriter(
+            inboxReadyValue: inboxReadyValue,
+            databaseReader: databaseReader,
+            databaseWriter: databaseWriter,
+            draftConversationId: clientConversationId
+        )
         return DraftConversationComposer(
-            draftConversationWriter: conversationWriter,
-            draftConversationRepository: MockDraftConversationRepository(),
-            conversationConsentWriter: MockConversationConsentWriter(),
-            conversationLocalStateWriter: MockConversationLocalStateWriter()
+            draftConversationWriter: draftConversationWriter,
+            draftConversationRepository: DraftConversationRepository(
+                dbReader: databaseReader,
+                writer: draftConversationWriter
+            ),
+            conversationConsentWriter: conversationConsentWriter(),
+            conversationLocalStateWriter: conversationLocalStateWriter()
         )
     }
 

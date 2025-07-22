@@ -4,7 +4,7 @@ import GRDB
 struct Identity: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
     let id: String
     let inboxId: String
-    let walletAddress: String
+    let walletAddress: String?
 
     static let inboxForeignKey: ForeignKey = ForeignKey(["inboxId"])
 

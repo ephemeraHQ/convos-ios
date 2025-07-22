@@ -58,8 +58,4 @@ final class ConvosClient {
     func prepare() throws {
         try sessionManager.prepare()
     }
-
-//    func register(displayName: String) async throws {
-//        try await authService.register(displayName: displayName, inboxType: .ephemeral)
-//    }
 }

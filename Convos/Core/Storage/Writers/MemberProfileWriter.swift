@@ -28,7 +28,6 @@ class MemberProfileWriter: MemberProfileWriterProtocol {
         let memberProfiles: [MemberProfile] = profiles.map { profile in
                 .init(inboxId: profile.xmtpId,
                       name: profile.name,
-                      username: profile.username,
                       avatar: profile.avatar)
         }
         try await store(memberProfiles: memberProfiles)

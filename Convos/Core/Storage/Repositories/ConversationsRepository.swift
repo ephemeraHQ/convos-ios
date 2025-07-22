@@ -68,6 +68,7 @@ extension QueryInterfaceRequest where RowDecoder == DBConversation {
          .order(\.date.desc)
 
         return self
+            .including(optional: DBConversation.invite)
             .including(
                 required: DBConversation.creator
                     .forKey("conversationCreator")

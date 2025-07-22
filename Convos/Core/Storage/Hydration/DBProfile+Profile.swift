@@ -5,7 +5,7 @@ extension MemberProfile {
         Profile(
             inboxId: inboxId,
             name: name,
-            username: username.isEmpty ? inboxId : username,
+            username: inboxId,
             avatar: avatar
         )
     }

@@ -22,7 +22,6 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
             let senderProfile = MemberProfile(
                 inboxId: message.senderInboxId,
                 name: "",
-                username: "",
                 avatar: nil
             )
             try? senderProfile.insert(db)

@@ -1,43 +1,11 @@
 import Foundation
 
-// MARK: - Response Types
-struct FetchJwtResponse: Codable {
-    let token: String
-}
-
-struct CreateSubOrganizationResponse: Codable {
-    let subOrgId: String
-    let walletAddress: String
-}
-
-// MARK: - Transport Types
-enum AuthenticatorTransport: String, Codable {
-    case ble = "AUTHENTICATOR_TRANSPORT_BLE"
-    case transportInternal = "AUTHENTICATOR_TRANSPORT_INTERNAL"
-    case nfc = "AUTHENTICATOR_TRANSPORT_NFC"
-    case usb = "AUTHENTICATOR_TRANSPORT_USB"
-    case hybrid = "AUTHENTICATOR_TRANSPORT_HYBRID"
-}
-
-// MARK: - Request Types
-struct PasskeyAttestation: Codable {
-    let credentialId: String
-    let clientDataJson: String
-    let attestationObject: String
-    let transports: [AuthenticatorTransport]
-}
-
-struct Passkey: Codable {
-    let challenge: String
-    let attestation: PasskeyAttestation
-}
-
 protocol ConvosAPIBaseProtocol {
     // turnkey specific
     func createSubOrganization(
         ephemeralPublicKey: String,
-        passkey: Passkey
-    ) async throws -> CreateSubOrganizationResponse
+        passkey: ConvosAPI.Passkey
+    ) async throws -> ConvosAPI.CreateSubOrganizationResponse
 }
 
 protocol ConvosAPIClientFactoryType {
@@ -72,6 +40,9 @@ protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
     func createUser(_ requestBody: ConvosAPI.CreateUserRequest) async throws -> ConvosAPI.CreatedUserResponse
     func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse
 
+    func createInvite(_ requestBody: ConvosAPI.CreateInviteRequest) async throws -> ConvosAPI.InviteDetailsResponse
+    func inviteDetails(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsResponse
+
     func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse
     func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse
     func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse]
@@ -103,8 +74,8 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
 
     func createSubOrganization(
         ephemeralPublicKey: String,
-        passkey: Passkey
-    ) async throws -> CreateSubOrganizationResponse {
+        passkey: ConvosAPI.Passkey
+    ) async throws -> ConvosAPI.CreateSubOrganizationResponse {
         let url = baseURL.appendingPathComponent("v1/wallets")
 
         var request = URLRequest(url: url)
@@ -133,7 +104,7 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
                 throw APIError.authenticationFailed
             }
 
-            let result = try JSONDecoder().decode(CreateSubOrganizationResponse.self, from: data)
+            let result = try JSONDecoder().decode(ConvosAPI.CreateSubOrganizationResponse.self, from: data)
             return result
         } catch {
             throw APIError.serverError(error)
@@ -227,6 +198,23 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         return result
     }
 
+    // MARK: - Invites
+
+    func createInvite(_ requestBody: ConvosAPI.CreateInviteRequest) async throws -> ConvosAPI.InviteDetailsResponse {
+        var request = try authenticatedRequest(for: "v1/invites", method: "POST")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        Logger.info("Sending create invite request with body: \(requestBody)")
+        request.httpBody = try JSONEncoder().encode(requestBody)
+        Logger.info("Creating invite with json body: \(request.httpBody?.prettyPrintedJSONString ?? "")")
+        return try await performRequest(request)
+    }
+
+    func inviteDetails(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsResponse {
+        let request = try authenticatedRequest(for: "v1/invites/\(inviteId)")
+        let invite: ConvosAPI.InviteDetailsResponse = try await performRequest(request)
+        return invite
+    }
+
     // MARK: - Profiles
 
     func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse {
@@ -288,7 +276,9 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
         switch httpResponse.statusCode {
         case 200...299:
-            return try JSONDecoder().decode(T.self, from: data)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode(T.self, from: data)
         case 401:
             // Check if we've exceeded max retries
             guard retryCount < maxRetryCount else {

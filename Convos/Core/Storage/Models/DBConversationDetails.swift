@@ -9,6 +9,7 @@ struct DBConversationDetails: Codable, FetchableRecord, PersistableRecord, Hasha
     let conversationMembers: [ConversationMemberProfileWithRole]
     let conversationLastMessage: DBMessage?
     let conversationLocalState: ConversationLocalState
+    let conversationInvite: DBInvite?
 }
 
 extension DBConversationDetails {

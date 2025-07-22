@@ -57,10 +57,11 @@ enum InboxStateError: Error {
 
 typealias InboxReadyResultPublisher = AnyPublisher<InboxReadyResult, Never>
 
-typealias InboxReadyResult = (
-    client: any XMTPClientProvider,
-    apiClient: any ConvosAPIClientProtocol
-)
+struct InboxReadyResult {
+    let inbox: any AuthServiceInboxType
+    let client: any XMTPClientProvider
+    let apiClient: any ConvosAPIClientProtocol
+}
 
 actor InboxStateMachine {
     enum Action {
@@ -195,9 +196,9 @@ actor InboxStateMachine {
                 try await handleClientInitialized(client)
             case (.initializing, let .clientRegistered(client, displayName)):
                 try await handleClientRegistered(client, displayName: displayName)
-            case (.authorizing, let .authorized((client, apiClient))),
-                (.registering, let .authorized((client, apiClient))):
-                try handleAuthorized(client: client, apiClient: apiClient)
+            case (.authorizing, let .authorized(result)),
+                (.registering, let .authorized(result)):
+                try handleAuthorized(client: result.client, apiClient: result.apiClient)
             case (.ready, .stop), (.error, .stop):
                 try handleStop()
             case (.uninitialized, .stop):
@@ -222,7 +223,7 @@ actor InboxStateMachine {
                 options: clientOptions
             )
         } catch {
-            Logger.error("Error building client, trying create: \(error)")
+            Logger.info("Error building client, trying create...")
             client = try await createXmtpClient(
                 signingKey: inbox.signingKey,
                 options: clientOptions
@@ -244,8 +245,12 @@ actor InboxStateMachine {
         _state = .authorizing
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
-        try await refreshUserAndProfile(client: client, apiClient: apiClient)
-        enqueueAction(.authorized((client, apiClient)))
+        do {
+            try await refreshUserAndProfile(client: client, apiClient: apiClient)
+        } catch {
+            Logger.error("Error refreshing user and profile: \(error.localizedDescription)")
+        }
+        enqueueAction(.authorized(.init(inbox: inbox, client: client, apiClient: apiClient)))
     }
 
     private func handleClientRegistered(_ client: any XMTPClientProvider, displayName: String) async throws {
@@ -266,11 +271,11 @@ actor InboxStateMachine {
             provider: inbox.provider,
             providerId: inbox.providerId
         )
-        enqueueAction(.authorized((client, apiClient)))
+        enqueueAction(.authorized(.init(inbox: inbox, client: client, apiClient: apiClient)))
     }
 
     private func handleAuthorized(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) throws {
-        _state = .ready((client, apiClient))
+        _state = .ready(.init(inbox: inbox, client: client, apiClient: apiClient))
         syncingManager.start(with: client, apiClient: apiClient)
     }
 
@@ -356,6 +361,8 @@ actor InboxStateMachine {
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol
     ) async throws -> ConvosAPI.CreatedUserResponse {
+        // @jarodl remove display name and username requirements
+        let displayName: String = displayName.isEmpty ? "Someone" : displayName
         let username = try await generateUsername(apiClient: apiClient, from: displayName)
         let requestBody: ConvosAPI.CreateUserRequest = .init(
             turnkeyUserId: inbox.providerId,
@@ -363,8 +370,8 @@ actor InboxStateMachine {
             identity: .init(turnkeyAddress: inbox.signingKey.identity.identifier,
                             xmtpId: client.inboxId,
                             xmtpInstallationId: client.installationId),
-            profile: .init(name: displayName,
-                           username: username,
+            profile: .init(name: displayName, // @jarodl remove once optional in backend
+                           username: username, // @jarodl remove once removed in backend
                            description: nil,
                            avatar: nil)
         )

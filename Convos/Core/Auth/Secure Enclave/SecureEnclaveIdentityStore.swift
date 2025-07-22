@@ -38,7 +38,7 @@ extension SecureEnclaveKeyStore {
             kSecAttrAccount as String: identifier,
             kSecAttrService as String: keychainService,
             kSecValueData as String: databaseKey,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
         let status = SecItemAdd(query as CFDictionary, nil)
         if status == errSecDuplicateItem {
@@ -64,7 +64,7 @@ extension SecureEnclaveKeyStore {
             kSecAttrService as String: keychainService,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
         var item: CFTypeRef?
@@ -180,7 +180,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
 
         guard let accessControl = SecAccessControlCreateWithFlags(
             nil,
-            kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            kSecAttrAccessibleAfterFirstUnlock,
             [.userPresence],
             nil
         ) else {
@@ -237,7 +237,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrService as String: keychainService,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
+//            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
         var item: CFTypeRef?
@@ -263,7 +263,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccount as String: identitiesListKey,
             kSecAttrService as String: keychainService,
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
+//            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
         let status = SecItemAdd(query as CFDictionary, nil)
@@ -305,7 +305,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccount as String: "\(identifier).inboxType",
             kSecAttrService as String: keychainService,
             kSecValueData as String: typeData,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
         let status = SecItemAdd(query as CFDictionary, nil)
@@ -333,7 +333,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrService as String: keychainService,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
         var item: CFTypeRef?

@@ -16,8 +16,8 @@ class MockAPIClientFactory: ConvosAPIClientFactoryType {
 class MockBaseAPIClient: ConvosAPIBaseProtocol {
     func createSubOrganization(
         ephemeralPublicKey: String,
-        passkey: Passkey
-    ) async throws -> CreateSubOrganizationResponse {
+        passkey: ConvosAPI.Passkey
+    ) async throws -> ConvosAPI.CreateSubOrganizationResponse {
         .init(subOrgId: UUID().uuidString, walletAddress: UUID().uuidString)
     }
 }
@@ -68,11 +68,46 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
             profile: ConvosAPI.CreatedUserResponse.Profile(
                 id: "profile_1",
                 name: requestBody.profile.name,
-                username: requestBody.profile.username,
                 description: requestBody.profile.description,
                 avatar: requestBody.profile.avatar
             )
         )
+    }
+
+    func createInvite(_ requestBody: ConvosAPI.CreateInviteRequest) async throws -> ConvosAPI.InviteDetailsResponse {
+        return ConvosAPI
+            .InviteDetailsResponse(
+                id: "created_invite_123",
+                name: "My Group",
+                description: nil,
+                imageUrl: nil,
+                maxUses: nil,
+                usesCount: 0,
+                status: .active,
+                expiresAt: nil,
+                autoApprove: false,
+                groupId: "my_group_123",
+                createdAt: Date(),
+                inviteLinkURL: "http://convos.org/invite/my_group_123"
+            )
+    }
+
+    func inviteDetails(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsResponse {
+        return ConvosAPI
+            .InviteDetailsResponse(
+                id: "created_invite_123",
+                name: "My Group",
+                description: nil,
+                imageUrl: nil,
+                maxUses: nil,
+                usesCount: 0,
+                status: .active,
+                expiresAt: nil,
+                autoApprove: false,
+                groupId: "my_group_123",
+                createdAt: Date(),
+                inviteLinkURL: "http://convos.org/invite/my_group_123"
+            )
     }
 
     func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse {

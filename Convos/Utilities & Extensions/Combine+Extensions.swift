@@ -22,6 +22,10 @@ final class PublisherValue<T> {
         subject.value
     }
 
+    var publisher: AnyPublisher<T?, Never> {
+        subject.eraseToAnyPublisher()
+    }
+
     init(initial: T?, upstream: AnyPublisher<T, Never>) {
         subject = CurrentValueSubject(initial)
         cancellable = upstream.sink { [weak subject] value in

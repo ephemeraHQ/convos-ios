@@ -48,7 +48,7 @@ class SharedDatabaseMigrator {
                     .notNull()
                     .indexed()
                     .references("inbox", onDelete: .cascade)
-                t.column("walletAddress", .text).notNull()
+                t.column("walletAddress", .text)
             }
 
             try db.create(table: "conversation") { t in
@@ -79,9 +79,28 @@ class SharedDatabaseMigrator {
                     .unique()
                     .primaryKey()
                     .references("member", onDelete: .cascade)
-                t.column("name", .text).notNull()
-                t.column("username", .text).notNull()
+                t.column("name", .text)
+                    .notNull()
                 t.column("avatar", .text)
+            }
+
+            try db.create(table: "invite") { t in
+                t.column("id", .text)
+                    .notNull()
+                    .primaryKey()
+                t.column("conversationId", .text)
+                    .notNull()
+                    .references("conversation", onDelete: .cascade)
+                t.column("inviteUrlString", .text)
+                    .notNull()
+                t.column("maxUses", .numeric)
+                t.column("usesCount", .numeric)
+                    .defaults(to: 0)
+                    .notNull()
+                t.column("status", .text)
+                    .notNull()
+                t.column("createdAt", .datetime)
+                    .notNull()
             }
 
             try db.create(table: "conversation_members") { t in

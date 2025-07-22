@@ -32,7 +32,22 @@ extension Conversation {
             isMuted: false,
             lastMessage: lastMessage,
             imageURL: nil,
-            isDraft: false
+            isDraft: false,
+            invite: nil
+        )
+    }
+}
+
+extension Invite {
+    static func mock() -> Self {
+        .init(
+            code: "invite_code_123",
+            conversationId: "conversation_123",
+            inviteUrlString: "http://convos.org/invite/invite_code_123",
+            status: .active,
+            createdAt: Date(),
+            maxUses: 0,
+            usesCount: 0
         )
     }
 }

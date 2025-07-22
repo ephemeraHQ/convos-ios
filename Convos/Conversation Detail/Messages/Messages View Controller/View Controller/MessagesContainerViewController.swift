@@ -28,7 +28,6 @@ class MessagesContainerViewController: UIViewController {
     private var conversationRepositoryCancellable: AnyCancellable?
     private let conversationState: ConversationState
     private let outgoingMessageWriter: any OutgoingMessageWriterProtocol
-    private let conversationConsentWriter: any ConversationConsentWriterProtocol
     private let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
 
     // MARK: - Init
@@ -36,14 +35,10 @@ class MessagesContainerViewController: UIViewController {
     init(conversationState: ConversationState,
          messagesInputViewModel: MessagesInputViewModel,
          outgoingMessageWriter: any OutgoingMessageWriterProtocol,
-         conversationConsentWriter: any ConversationConsentWriterProtocol,
          conversationLocalStateWriter: any ConversationLocalStateWriterProtocol,
-         dismissAction: DismissAction,
-         joinConversation: @escaping () -> Void,
-         deleteConversation: @escaping () -> Void) {
+         dismissAction: DismissAction) {
         self.conversationState = conversationState
         self.outgoingMessageWriter = outgoingMessageWriter
-        self.conversationConsentWriter = conversationConsentWriter
         self.conversationLocalStateWriter = conversationLocalStateWriter
         self.messagesInputView = InputHostingController(
             rootView: MessagesInputView(
