@@ -136,3 +136,5 @@ custom_rules:
 excluded:
   - ConvosTests
   - ConvosTests/Helpers
+  - ConvosAppClipTests
+  - ConvosAppClipUITests
