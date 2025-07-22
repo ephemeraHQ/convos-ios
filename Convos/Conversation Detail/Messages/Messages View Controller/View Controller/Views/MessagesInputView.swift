@@ -137,17 +137,19 @@ struct MessagesInputView: View {
                         photoLibrary: .shared()
                     ) {
                         Image(systemName: "photo.on.rectangle.angled")
+                            .frame(width: 52.0, height: 52.0)
                             .font(.system(size: 24.0))
                             .padding(.vertical, 7.5)
                             .padding(.horizontal, 14.0)
                             .foregroundColor(.white)
                     }
-                    .frame(width: 52.0, height: 52.0, alignment: .center)
-                    .background(Circle().fill(.gray))
-//                    .matchedGeometryEffect(
-//                        id: "LeftView",
-//                        in: profileEditorAnimation
-//                    )
+                    .frame(width: 52.0, height: 52.0)
+                    .background(.colorFillSecondary)
+                    .mask(Circle())
+                    .matchedGeometryEffect(
+                        id: "LeftView",
+                        in: profileEditorAnimation,
+                    )
                     .padding([.leading, .vertical], DesignConstants.Spacing.step6x)
                     .padding(.trailing, 0.0)
                 } else {
@@ -157,15 +159,14 @@ struct MessagesInputView: View {
                         }
                     } label: {
                         ProfileAvatarView(profile: viewModel.profile)
+                            .matchedGeometryEffect(
+                                id: "LeftView",
+                                in: profileEditorAnimation,
+                            )
                     }
-                    .frame(height: sendButtonSize, alignment: .center)
-//                    .matchedGeometryEffect(
-//                        id: "LeftView",
-//                        in: profileEditorAnimation
-//                    )
+                    .frame(width: sendButtonSize, height: sendButtonSize, alignment: .bottomLeading)
                     .padding(.vertical, DesignConstants.Spacing.stepX)
                     .padding(.leading, DesignConstants.Spacing.stepX)
-                    .frame(height: sendButtonSize, alignment: .bottomLeading)
                 }
 
                 Group {
@@ -206,36 +207,36 @@ struct MessagesInputView: View {
                         }
                     } label: {
                         Image(systemName: "gear")
+                            .frame(width: 52.0, height: 52.0)
                             .foregroundStyle(.colorTextSecondary)
                             .font(.system(size: 24.0))
                             .padding(.vertical, 7.5)
                             .padding(.horizontal, 14.0)
-                            .frame(width: 52.0, height: 52.0, alignment: .center)
-                            .background(.colorFillMinimal)
-                            .mask(Circle())
                     }
-//                    .matchedGeometryEffect(
-//                        id: "RightView",
-//                        in: profileEditorAnimation
-//                    )
+                    .frame(width: 52.0, height: 52.0)
+                    .background(.colorFillMinimal)
+                    .mask(Circle())
+                    .matchedGeometryEffect(
+                        id: "RightView",
+                        in: profileEditorAnimation
+                    )
                     .padding([.trailing, .vertical], DesignConstants.Spacing.step6x)
                 } else {
                     Button {
                         viewModel.sendMessage()
                     } label: {
                         Image(systemName: "arrow.up")
+                            .frame(width: sendButtonSize, height: sendButtonSize, alignment: .center)
                             .tint(.colorTextPrimary)
                             .font(.system(size: 16.0, weight: .medium))
-                            .padding()
-                            .frame(height: sendButtonSize, alignment: .center)
-                            .background(.colorFillMinimal)
-                            .mask(Circle())
                     }
-//                    .matchedGeometryEffect(
-//                        id: "RightView",
-//                        in: profileEditorAnimation
-//                    )
-                    .frame(maxHeight: .infinity, alignment: .bottomTrailing)
+                    .frame(width: sendButtonSize, height: sendButtonSize, alignment: .bottomTrailing)
+                    .background(.colorFillMinimal)
+                    .mask(Circle())
+                    .matchedGeometryEffect(
+                        id: "RightView",
+                        in: profileEditorAnimation
+                    )
                     .padding(.vertical, DesignConstants.Spacing.stepX)
                     .disabled(!viewModel.sendButtonEnabled)
                 }
