@@ -80,7 +80,6 @@ class SharedDatabaseMigrator {
                     .primaryKey()
                     .references("member", onDelete: .cascade)
                 t.column("name", .text)
-                    .notNull()
                 t.column("avatar", .text)
             }
 

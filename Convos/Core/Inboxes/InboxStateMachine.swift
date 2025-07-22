@@ -66,9 +66,9 @@ struct InboxReadyResult {
 actor InboxStateMachine {
     enum Action {
         case authorize,
-             register(String),
+             register(String?),
              clientInitialized(any XMTPClientProvider),
-             clientRegistered(any XMTPClientProvider, String),
+             clientRegistered(any XMTPClientProvider, String?),
              authorized(InboxReadyResult),
              stop
     }
@@ -155,7 +155,7 @@ actor InboxStateMachine {
         enqueueAction(.authorize)
     }
 
-    func register(displayName: String) {
+    func register(displayName: String?) {
         enqueueAction(.register(displayName))
     }
 
@@ -232,7 +232,7 @@ actor InboxStateMachine {
         enqueueAction(.clientInitialized(client))
     }
 
-    private func handleRegister(displayName: String) async throws {
+    private func handleRegister(displayName: String?) async throws {
         _state = .initializing
         let client = try await createXmtpClient(
             signingKey: inbox.signingKey,
@@ -253,12 +253,12 @@ actor InboxStateMachine {
         enqueueAction(.authorized(.init(inbox: inbox, client: client, apiClient: apiClient)))
     }
 
-    private func handleClientRegistered(_ client: any XMTPClientProvider, displayName: String) async throws {
+    private func handleClientRegistered(_ client: any XMTPClientProvider, displayName: String?) async throws {
         _state = .authorizing
         Logger.info("Authorizing backend for registration...")
         let apiClient = try await authorizeConvosBackend(client: client)
         _state = .registering
-        Logger.info("Creating user with display name '\(displayName)'...")
+        Logger.info("Creating user with display name '\(displayName ?? "nil")'...")
         let user = try await createUser(
             displayName: displayName,
             client: client,
@@ -357,23 +357,22 @@ actor InboxStateMachine {
     // MARK: - User Creation
 
     private func createUser(
-        displayName: String,
+        displayName: String?,
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol
     ) async throws -> ConvosAPI.CreatedUserResponse {
-        // @jarodl remove display name and username requirements
-        let displayName: String = displayName.isEmpty ? "Someone" : displayName
-        let username = try await generateUsername(apiClient: apiClient, from: displayName)
         let requestBody: ConvosAPI.CreateUserRequest = .init(
             turnkeyUserId: inbox.providerId,
             device: .current(),
             identity: .init(turnkeyAddress: inbox.signingKey.identity.identifier,
                             xmtpId: client.inboxId,
                             xmtpInstallationId: client.installationId),
-            profile: .init(name: displayName, // @jarodl remove once optional in backend
-                           username: username, // @jarodl remove once removed in backend
-                           description: nil,
-                           avatar: nil)
+            profile: .init(
+                name: displayName,
+                username: nil,
+                description: nil,
+                avatar: nil
+            )
         )
         return try await apiClient.createUser(requestBody)
     }

@@ -56,8 +56,8 @@ enum ConvosAPI {
             let xmtpInstallationId: String?
         }
         struct Profile: Encodable {
-            let name: String
-            let username: String
+            let name: String?
+            let username: String?
             let description: String?
             let avatar: String?
         }
@@ -121,7 +121,7 @@ enum ConvosAPI {
         }
         struct Profile: Decodable {
             let id: String
-            let name: String
+            let name: String?
             let description: String?
             let avatar: String?
         }
@@ -137,7 +137,7 @@ enum ConvosAPI {
 
     struct ProfileResponse: Decodable {
         let id: String
-        let name: String
+        let name: String?
         let username: String?
         let description: String?
         let avatar: String?

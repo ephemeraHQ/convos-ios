@@ -68,9 +68,11 @@ struct DMInfoView: View {
                                 .font(.title2)
                                 .fontWeight(.semibold)
 
-                            Text("@\(otherMember.profile.username)")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                            if let username = otherMember.profile.username {
+                                Text("@\(username)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
                     .padding(.top, DesignConstants.Spacing.step5x)

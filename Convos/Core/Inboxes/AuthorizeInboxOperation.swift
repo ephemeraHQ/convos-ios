@@ -9,7 +9,7 @@ protocol AuthorizeInboxOperationProtocol {
     var inboxReadyPublisher: InboxReadyResultPublisher { get }
 
     func authorize()
-    func register(displayName: String)
+    func register(displayName: String?)
     func stop()
 }
 
@@ -69,7 +69,7 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         }
     }
 
-    func register(displayName: String) {
+    func register(displayName: String?) {
         task?.cancel()
         task = Task {
             await stateMachine.register(displayName: displayName)

@@ -212,7 +212,7 @@ struct ConversationAvatarView: View {
                 .init(
                     id: $0.id,
                     imageURL: $0.avatarURL,
-                    fallbackName: $0.name
+                    fallbackName: $0.displayName
                 )
             }
     }

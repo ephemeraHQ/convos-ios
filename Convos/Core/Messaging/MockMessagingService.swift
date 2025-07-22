@@ -343,7 +343,7 @@ extension MockMessagingService {
         )
 
         // swiftlint:disable:next force_unwrapping
-        let randomName = isDirectMessage ? otherMember!.profile.name : [
+        let randomName = isDirectMessage ? otherMember!.profile.displayName : [
             "Team Discussion",
             "Project Planning",
             "Coffee Chat",

@@ -87,8 +87,10 @@ struct ConversationComposerContentView: View {
         VStack(spacing: 0.0) {
             if composerState.showProfileSearchHeader {
                 // profile search header
-                HStack(alignment: .top,
-                       spacing: DesignConstants.Spacing.step2x) {
+                HStack(
+                    alignment: .top,
+                    spacing: DesignConstants.Spacing.step2x
+                ) {
                     Text("To")
                         .font(.system(size: 16.0))
                         .foregroundStyle(.colorTextSecondary)
@@ -111,12 +113,12 @@ struct ConversationComposerContentView: View {
                     .opacity(composerState.searchText.isEmpty ? 1.0 : 0.2)
                     .frame(height: headerHeight)
                 }
-                       .onTapGesture {
-                           composerState.selectedProfile = nil
-                           isTextFieldFocused = true
-                       }
-                       .padding(.horizontal, DesignConstants.Spacing.step4x)
-                       .padding(.top, 4.0) // @jarodl temporary fix for iOS 26 toolbar issue
+                .onTapGesture {
+                    composerState.selectedProfile = nil
+                    isTextFieldFocused = true
+                }
+                .padding(.horizontal, DesignConstants.Spacing.step4x)
+                .padding(.top, 4.0) // @jarodl temporary fix for iOS 26 toolbar issue
             }
 
             MessagesView(

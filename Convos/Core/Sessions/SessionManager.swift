@@ -72,7 +72,7 @@ class SessionManager: SessionManagerProtocol {
     private func updateOperations(
         for inboxes: [any AuthServiceInboxType],
         forRegistration: Bool,
-        displayName: String = ""
+        displayName: String? = nil
     ) throws {
         // Create or update operations for inboxes
         for inbox in inboxes {
@@ -120,7 +120,7 @@ class SessionManager: SessionManagerProtocol {
     }
 
     func addAccount() throws -> AnyMessagingService {
-        let authResult = try authService.register(displayName: "")
+        let authResult = try authService.register(displayName: nil)
         Logger.info("Added account: \(authResult)")
         let matchingInboxReadyPublisher = inboxOperationsPublisher
             .flatMap { operations in

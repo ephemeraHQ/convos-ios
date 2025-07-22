@@ -4,8 +4,8 @@ import GRDB
 struct Profile: Codable, Identifiable, Hashable {
     var id: String { inboxId }
     let inboxId: String
-    let name: String
-    let username: String
+    let name: String?
+    let username: String?
     let avatar: String?
 
     var avatarURL: URL? {
@@ -16,14 +16,14 @@ struct Profile: Codable, Identifiable, Hashable {
     }
 
     var displayName: String {
-        name.isEmpty ? username : name
+        name ?? "Someone"
     }
 
     static var empty: Profile {
         .init(
             inboxId: UUID().uuidString,
-            name: "",
-            username: "",
+            name: nil,
+            username: nil,
             avatar: nil
         )
     }

@@ -35,7 +35,7 @@ struct MockAuthResult: AuthServiceResultType, AuthServiceRegisteredResultType, C
         [inbox]
     }
 
-    var displayName: String {
+    var displayName: String? {
         profile.name
     }
 
@@ -144,8 +144,8 @@ class MockAuthService: LocalAuthServiceProtocol {
         authStateSubject.send(.registered(mockAuthResult))
     }
 
-    func register(displayName: String) throws -> any AuthServiceRegisteredResultType {
-        let mockAuthResult = MockAuthResult(name: displayName)
+    func register(displayName: String?) throws -> any AuthServiceRegisteredResultType {
+        let mockAuthResult = MockAuthResult(name: displayName ?? "")
         if persist {
             let encoder = JSONEncoder()
             let data = try encoder.encode(mockAuthResult)
