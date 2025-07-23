@@ -41,11 +41,11 @@ struct NewConversationView: View {
                                     .frame(width: 36.0, height: 36.0)
 
                                 VStack(alignment: .leading, spacing: 0.0) {
-                                    if conversation.isDraft {
-                                        Text("New convo")
+                                    if !conversation.isDraft, let name = conversation.name, !name.isEmpty {
+                                        Text(name)
                                             .font(.system(size: 16.0, weight: .medium))
                                     } else {
-                                        Text(conversation.name ?? "New convo")
+                                        Text("New convo")
                                             .font(.system(size: 16.0, weight: .medium))
                                     }
                                     Text("Customize")

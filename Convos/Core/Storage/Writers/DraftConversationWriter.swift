@@ -210,7 +210,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
                 let creatorProfile = MemberProfile(
                     inboxId: client.inboxId,
-                    name: "",
+                    name: nil,
                     avatar: nil,
                 )
                 try creatorProfile.insert(db, onConflict: .ignore)

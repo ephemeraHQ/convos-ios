@@ -204,7 +204,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         guard let accessControl = SecAccessControlCreateWithFlags(
             nil,
             kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-            [.userPresence],  // Require biometric/passcode to access
+            [],
             nil
         ) else {
             throw SecureEnclaveUserStoreError.failedSavingPrivateKey
