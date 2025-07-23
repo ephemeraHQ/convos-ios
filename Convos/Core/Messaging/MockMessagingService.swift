@@ -177,6 +177,10 @@ extension MockMessagingService: OutgoingMessageWriterProtocol {
 }
 
 extension MockMessagingService: ConversationSender {
+    var id: String {
+        "conversationId"
+    }
+
     func add(members inboxIds: [String]) async throws {
     }
 

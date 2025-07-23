@@ -7,6 +7,7 @@ protocol MessageSender {
 }
 
 protocol ConversationSender {
+    var id: String { get }
     func add(members inboxIds: [String]) async throws
     func remove(members inboxIds: [String]) async throws
     func prepare(text: String) async throws -> String

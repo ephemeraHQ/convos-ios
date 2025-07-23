@@ -138,13 +138,17 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         client: AnyClientProvider,
         apiClient: any ConvosAPIClientProtocol
     ) async throws {
-        let externalConversationId = try await client.newConversation(
-            with: [ client.inboxId ],
-            name: "",
-            description: "",
-            imageUrl: ""
-        )
+        let optimisticConversation = try await client.prepareConversation()
+        let externalConversationId = optimisticConversation.id
         state = .created(id: externalConversationId)
+
+        Task {
+            do {
+                try await optimisticConversation.publish()
+            } catch {
+                Logger.error("Error publishing conversation: \(externalConversationId)")
+            }
+        }
 
         guard let createdConversation = try await client.conversation(
             with: externalConversationId
