@@ -14,7 +14,7 @@ class NewConversationState {
     }
 
     private(set) var showJoinConversation: Bool = true // false once someone joins or a message is sent
-    private(set) var promptToKeepConversation: Bool = true // false once
+    private(set) var promptToKeepConversation: Bool = true
 
     private var addAccountResult: AddAccountResultType?
     private var newConversationTask: Task<Void, Never>?
