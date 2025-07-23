@@ -21,7 +21,7 @@ struct Profile: Codable, Identifiable, Hashable {
 
     static var empty: Profile {
         .init(
-            inboxId: UUID().uuidString,
+            inboxId: "",
             name: nil,
             username: nil,
             avatar: nil

@@ -68,10 +68,18 @@ struct NewConversationView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        //
-                    } label: {
-                        Image(systemName: "qrcode.viewfinder")
+                    if newConversationState.showJoinConversation {
+                        Button {
+                            //
+                        } label: {
+                            Image(systemName: "qrcode.viewfinder")
+                        }
+                    } else {
+                        Button {
+                            // invite
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                        }
                     }
                 }
             }

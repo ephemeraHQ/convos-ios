@@ -5,7 +5,7 @@ struct MessagesToolbarView: View {
     let emptyConversationTitle: String
 
     init(conversationState: ConversationState,
-         emptyConversationTitle: String = "New chat") {
+         emptyConversationTitle: String = "New convo") {
         self.conversationState = conversationState
         self.emptyConversationTitle = emptyConversationTitle
     }
@@ -23,9 +23,8 @@ struct MessagesToolbarView: View {
     }
 
     var title: String {
-        if let conversation = conversationState.conversation,
-           !conversation.isDraft {
-            conversation.title
+        if !conversationState.conversation.isDraft {
+            conversationState.conversation.title
         } else {
             emptyConversationTitle
         }
@@ -33,23 +32,21 @@ struct MessagesToolbarView: View {
 
     var needsAvatarSpacing: Bool {
         // Only add spacing when we have a real conversation with an avatar
-        conversationState.conversation?.isDraft == false
+        conversationState.conversation.isDraft == false
     }
 
     var body: some View {
         HStack(spacing: DesignConstants.Spacing.step2x) {
-            if let conversation = conversationState.conversation, !conversation.isDraft {
-                ConversationAvatarView(conversation: conversation)
-                    .padding(.vertical, avatarVerticalPadding)
-            }
+            ConversationAvatarView(conversation: conversationState.conversation)
+                .padding(.vertical, avatarVerticalPadding)
 
             VStack(alignment: .leading) {
                 Text(title)
                     .font(.system(size: 16.0))
                     .foregroundStyle(.colorTextPrimary)
                     .lineLimit(1)
-                if let conversation = conversationState.conversation, conversation.kind == .group {
-                    Text(conversation.membersCountString)
+                if conversationState.conversation.kind == .group {
+                    Text(conversationState.conversation.membersCountString)
                         .font(.system(size: 12.0))
                         .foregroundStyle(.colorTextSecondary)
                         .lineLimit(1)

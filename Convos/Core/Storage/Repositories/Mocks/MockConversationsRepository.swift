@@ -36,6 +36,28 @@ extension Conversation {
             invite: nil
         )
     }
+    static func empty(id: String = "") -> Self {
+        .init(
+            id: id,
+            inboxId: "",
+            creator: .empty(isCurrentUser: true),
+            createdAt: Date(),
+            consent: .allowed,
+            kind: .group,
+            name: "",
+            description: "",
+            members: [],
+            otherMember: nil,
+            messages: [],
+            isPinned: false,
+            isUnread: false,
+            isMuted: false,
+            lastMessage: nil,
+            imageURL: nil,
+            isDraft: false,
+            invite: nil
+        )
+    }
 }
 
 extension Invite {

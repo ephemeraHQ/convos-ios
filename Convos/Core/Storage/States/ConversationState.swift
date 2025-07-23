@@ -8,7 +8,7 @@ final class ConversationState {
         conversationRepository.conversationId
     }
 
-    private(set) var conversation: Conversation?
+    private(set) var conversation: Conversation
     private let conversationRepository: ConversationRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = .init()
 
@@ -18,11 +18,11 @@ final class ConversationState {
 
     init(conversationRepository: ConversationRepositoryProtocol) {
         self.conversationRepository = conversationRepository
+        self.conversation = .empty(id: conversationRepository.conversationId)
         do {
-            self.conversation = try conversationRepository.fetchConversation()
+            self.conversation = try conversationRepository.fetchConversation() ?? .empty(id: conversationId)
         } catch {
             Logger.error("Error fetching conversation: \(error)")
-            self.conversation = nil
         }
         observe()
     }

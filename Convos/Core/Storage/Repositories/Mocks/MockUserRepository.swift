@@ -9,4 +9,8 @@ extension ConversationMember {
             isCurrentUser: false
         )
     }
+
+    static func empty(role: MemberRole = .member, isCurrentUser: Bool = false) -> ConversationMember {
+        .init(profile: .empty, role: role, isCurrentUser: isCurrentUser)
+    }
 }
