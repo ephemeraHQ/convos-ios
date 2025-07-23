@@ -3,6 +3,7 @@ import SwiftUI
 struct NewConversationView: View {
     let session: any SessionManagerProtocol
     @State private var newConversationState: NewConversationState
+    @State private var presentingDeleteConfirmation: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     init(
@@ -27,8 +28,12 @@ struct NewConversationView: View {
                             .ignoresSafeArea()
                     }
                 } else {
-                    EmptyView()
-                        .ignoresSafeArea()
+                    VStack(alignment: .center) {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
+                    }
+                    .ignoresSafeArea()
                 }
             }
             .toolbarTitleDisplayMode(.inline)
@@ -64,7 +69,27 @@ struct NewConversationView: View {
 
                 ToolbarItem(placement: .topBarLeading) {
                     Button(role: .close) {
-                        dismiss()
+                        if newConversationState.promptToKeepConversation {
+                            presentingDeleteConfirmation = true
+                        } else {
+                            dismiss()
+                        }
+                    }
+                    .confirmationDialog("", isPresented: $presentingDeleteConfirmation) {
+                        Button("Delete", role: .destructive) {
+                            Task {
+                                do {
+                                    try newConversationState.deleteConversation()
+                                } catch {
+                                    Logger.error("Error deleting conversation: \(error.localizedDescription)")
+                                }
+                            }
+                            dismiss()
+                        }
+
+                        Button("Keep") {
+                            dismiss()
+                        }
                     }
                 }
 

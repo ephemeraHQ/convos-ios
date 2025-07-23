@@ -38,6 +38,7 @@ extension InboxStateMachine.State: Equatable {
             (.authorizing, .authorizing),
             (.registering, .registering),
             (.stopping, .stopping),
+            (.deleting, .deleting),
             (.error, .error):
             return true
         case let (.ready(lhsResult),
@@ -70,6 +71,7 @@ actor InboxStateMachine {
              clientInitialized(any XMTPClientProvider),
              clientRegistered(any XMTPClientProvider, String?),
              authorized(InboxReadyResult),
+             delete,
              stop
     }
 
@@ -79,6 +81,7 @@ actor InboxStateMachine {
              authorizing,
              registering,
              ready(InboxReadyResult),
+             deleting,
              stopping,
              error(Error)
     }
@@ -166,6 +169,10 @@ actor InboxStateMachine {
         enqueueAction(.stop)
     }
 
+    func deleteAndStop() {
+        enqueueAction(.delete)
+    }
+
     // MARK: - Private
 
     private func enqueueAction(_ action: Action) {
@@ -202,6 +209,8 @@ actor InboxStateMachine {
             case (.authorizing, let .authorized(result)),
                 (.registering, let .authorized(result)):
                 try handleAuthorized(client: result.client, apiClient: result.apiClient)
+            case (let .ready(result), .delete):
+                try await handleDelete(inboxId: result.client.inboxId)
             case (.ready, .stop), (.error, .stop):
                 try handleStop()
             case (.uninitialized, .stop):
@@ -281,6 +290,12 @@ actor InboxStateMachine {
         _state = .ready(.init(inbox: inbox, client: client, apiClient: apiClient))
         syncingManager.start(with: client, apiClient: apiClient)
         inviteJoinRequestsManager.start(with: client, apiClient: apiClient)
+    }
+
+    private func handleDelete(inboxId: String) async throws {
+        _state = .deleting
+        try await inboxWriter.deleteInbox(inboxId: inboxId)
+        enqueueAction(.stop)
     }
 
     private func handleStop() throws {

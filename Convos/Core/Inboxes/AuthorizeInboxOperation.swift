@@ -10,6 +10,7 @@ protocol AuthorizeInboxOperationProtocol {
 
     func authorize()
     func register(displayName: String?)
+    func deleteAndStop()
     func stop()
 }
 
@@ -77,6 +78,13 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         task?.cancel()
         task = Task {
             await stateMachine.register(displayName: displayName)
+        }
+    }
+
+    func deleteAndStop() {
+        task?.cancel()
+        task = Task {
+            await stateMachine.deleteAndStop()
         }
     }
 

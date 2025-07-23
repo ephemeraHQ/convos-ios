@@ -13,6 +13,7 @@ protocol InboxWriterProtocol {
                     type: InboxType,
                     provider: InboxProvider,
                     providerId: String) async throws
+    func deleteInbox(inboxId: String) async throws
 }
 
 final class InboxWriter: InboxWriterProtocol {
@@ -92,6 +93,20 @@ final class InboxWriter: InboxWriterProtocol {
 
             for identity in identities {
                 try identity.save(db)
+            }
+        }
+    }
+
+    func deleteInbox(inboxId: String) async throws {
+        try await databaseWriter.write { db in
+            let inbox = try DBInbox.fetchOne(db, id: inboxId)
+            let conversations = DBConversation.filter(DBConversation.Columns.inboxId == inboxId)
+            try inbox?.delete(db)
+            try conversations.deleteAll(db)
+            if let inbox {
+                Logger.info("Successfully deleted inbox \(inbox.inboxId)")
+            } else {
+                Logger.warning("Inbox not found, skipping delete for inbox \(inboxId)")
             }
         }
     }

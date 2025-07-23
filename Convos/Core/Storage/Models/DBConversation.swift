@@ -43,6 +43,12 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
         using: inviteForeignKey
     )
 
+    static let inbox: BelongsToAssociation<DBConversation, DBInbox> = belongsTo(
+        DBInbox.self,
+        key: "conversationInbox",
+        using: .init([Columns.inboxId], to: [DBInbox.Columns.inboxId])
+    )
+
     static let creator: BelongsToAssociation<DBConversation, DBConversationMember> = belongsTo(
         DBConversationMember.self,
         key: "conversationCreator",

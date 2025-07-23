@@ -62,6 +62,8 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         conversationIdSubject.eraseToAnyPublisher()
     }
     private var clientPublisherCancellable: AnyCancellable?
+    private var createConversationTask: Task<Void, Never>?
+    private var publishConversationTask: Task<Void, Never>?
 
     init(inboxReadyValue: PublisherValue<InboxReadyResult>,
          databaseReader: any DatabaseReader,
@@ -82,7 +84,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             .eraseToAnyPublisher()
             .sink { [weak self] inboxReady in
                 guard let self else { return }
-                Task {
+                self.createConversationTask = Task {
                     do {
                         try await self.createExternalConversation(
                             client: inboxReady.client,
@@ -95,34 +97,60 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             }
     }
 
+    private func createDraftConversation(conversationId: String, inboxId: String) throws {
+        let conversation = DBConversation(
+            id: draftConversationId,
+            inboxId: inboxId,
+            clientConversationId: draftConversationId,
+            creatorId: inboxId,
+            kind: .dm,
+            consent: .allowed,
+            createdAt: Date(),
+            name: nil,
+            description: nil,
+            imageURLString: nil
+        )
+        try databaseWriter.write { db in
+            let memberProfile = MemberProfile(inboxId: inboxId, name: nil, avatar: nil)
+            let member = Member(inboxId: inboxId)
+            try member.save(db)
+            try memberProfile.save(db)
+            try conversation.save(db)
+            let localState = ConversationLocalState(
+                conversationId: conversation.id,
+                isPinned: false,
+                isUnread: false,
+                isUnreadUpdatedAt: Date(),
+                isMuted: false
+            )
+            try localState.save(db)
+            let conversationMember = DBConversationMember(
+                conversationId: conversation.id,
+                inboxId: memberProfile.inboxId,
+                role: .superAdmin,
+                consent: .allowed,
+                createdAt: Date()
+            )
+            try conversationMember.save(db)
+            Logger.info("Saved draft conversation")
+        }
+    }
+
     private func createExternalConversation(
         client: AnyClientProvider,
         apiClient: any ConvosAPIClientProtocol
     ) async throws {
         let optimisticConversation = try await client.prepareConversation()
         let externalConversationId = optimisticConversation.id
+        try createDraftConversation(conversationId: externalConversationId, inboxId: client.inboxId)
         state = .created(id: externalConversationId)
 
-        Task {
-            do {
-                try await optimisticConversation.publish()
-            } catch {
-                Logger.error("Error publishing conversation: \(externalConversationId)")
-            }
-        }
+        try await optimisticConversation.publish()
 
         guard let createdConversation = try await client.conversation(
             with: externalConversationId
         ) else {
             throw DraftConversationWriterError.failedFindingConversation
-        }
-
-        let draftConversation = try await databaseReader.read { [weak self] db -> DBConversation? in
-            guard let self else { return nil }
-            return try DBConversation.fetchOne(db, key: conversationId)
-        }?.with(id: externalConversationId)
-        try await databaseWriter.write { db in
-            try draftConversation?.save(db)
         }
 
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)

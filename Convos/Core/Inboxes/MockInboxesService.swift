@@ -9,8 +9,11 @@ class MockInboxesService: SessionManagerProtocol {
     func prepare() throws {
     }
 
-    func addAccount() throws -> AnyMessagingService {
-        MockMessagingService()
+    func addAccount() throws -> AddAccountResultType {
+        .init(providerId: "", messagingService: MockMessagingService())
+    }
+
+    func deleteAccount(with providerId: String) throws {
     }
 
     var inboxesRepository: any InboxesRepositoryProtocol {

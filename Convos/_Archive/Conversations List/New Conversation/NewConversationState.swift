@@ -12,7 +12,12 @@ class NewConversationState {
             setupObservations()
         }
     }
+
     private(set) var showJoinConversation: Bool = true // false once someone joins or a message is sent
+    private(set) var promptToKeepConversation: Bool = true // false once
+
+    private var addAccountResult: AddAccountResultType?
+    private var newConversationTask: Task<Void, Never>?
 
     init(session: any SessionManagerProtocol) {
         self.session = session
@@ -20,19 +25,27 @@ class NewConversationState {
     }
 
     private func newConversation() {
-        Task {
+        newConversationTask = Task {
             do {
-                let messagingService = try session.addAccount()
-                let draftConversationComposer = messagingService.draftConversationComposer()
+                let addAccountResult = try session.addAccount()
+                self.addAccountResult = addAccountResult
+                let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
                 self.draftConversationComposer = draftConversationComposer
                 self.conversationState = ConversationState(
-                    myProfileRepository: messagingService.myProfileRepository(),
+                    myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
                     conversationRepository: draftConversationComposer.draftConversationRepository
                 )
             } catch {
                 Logger.error("Error starting new conversation: \(error.localizedDescription)")
             }
         }
+    }
+
+    func deleteConversation() throws {
+        newConversationTask?.cancel()
+        guard let addAccountResult else { return }
+        try session.deleteAccount(with: addAccountResult.providerId)
+        self.addAccountResult = nil
     }
 
     private func setupObservations() {
@@ -54,6 +67,7 @@ class NewConversationState {
         .sink { [weak self] in
             guard let self else { return }
             showJoinConversation = false
+            promptToKeepConversation = false
         }
         .store(in: &cancellables)
     }

@@ -81,5 +81,6 @@ protocol AuthServiceProtocol: BaseAuthServiceProtocol {
 
 protocol LocalAuthServiceProtocol: BaseAuthServiceProtocol {
     func register(displayName: String?) throws -> any AuthServiceRegisteredResultType
+    func deleteAccount(with providerId: String) throws
     func deleteAll() throws
 }

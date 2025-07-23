@@ -18,8 +18,8 @@ class SessionManager: SessionManagerProtocol {
     private let inboxOperationsPublisher: CurrentValueSubject<[any AuthorizeInboxOperationProtocol], Never> = .init([])
     private var cancellables: Set<AnyCancellable> = []
 
-    // Dictionary to track operations by inbox ID to prevent duplicates
-    private var operationsByInboxId: [String: any AuthorizeInboxOperationProtocol] = [:]
+    // Dictionary to track operations by provider ID to prevent duplicates
+    private var operationsByProviderId: [String: any AuthorizeInboxOperationProtocol] = [:]
 
     private let databaseWriter: any DatabaseWriter
     private let databaseReader: any DatabaseReader
@@ -74,44 +74,49 @@ class SessionManager: SessionManagerProtocol {
         forRegistration: Bool,
         displayName: String? = nil
     ) throws {
+        // @jarodl revisit how we're responding to auth state changes
+        //        let incomingProviderIds = Set(inboxes.map { $0.providerId })
+//        let providerIdsToRemove = operationsByProviderId.keys.filter { !incomingProviderIds.contains($0) }
+//        for providerId in providerIdsToRemove {
+//            if let operation = operationsByProviderId.removeValue(forKey: providerId) {
+//                operation.stop()
+//            }
+//        }
+
         // Create or update operations for inboxes
         for inbox in inboxes {
-            let inboxId = inbox.signingKey.identity.identifier
+            let providerId = inbox.providerId
 
             // Create new operation if it doesn't exist
-            if operationsByInboxId[inboxId] == nil {
+            if operationsByProviderId[providerId] == nil {
                 let operation = AuthorizeInboxOperation(
                     inbox: inbox,
                     databaseReader: databaseReader,
                     databaseWriter: databaseWriter,
                     environment: environment
                 )
-                operationsByInboxId[inboxId] = operation
-            }
+                operationsByProviderId[providerId] = operation
 
-            guard let operation = operationsByInboxId[inboxId] else {
-                throw SessionManagerError.missingOperationForAddedInbox
-            }
-
-            if forRegistration {
-                operation.register(displayName: displayName)
-            } else {
-                operation.authorize()
+                if forRegistration {
+                    operation.register(displayName: displayName)
+                } else {
+                    operation.authorize()
+                }
             }
         }
 
         // Update the publisher with current operations
-        inboxOperationsPublisher.send(Array(operationsByInboxId.values))
+        inboxOperationsPublisher.send(Array(operationsByProviderId.values))
     }
 
     private func clearAllOperations() {
         // Stop all existing operations
-        for operation in operationsByInboxId.values {
+        for operation in operationsByProviderId.values {
             operation.stop()
         }
 
         // Clear the dictionary and publisher
-        operationsByInboxId.removeAll()
+        operationsByProviderId.removeAll()
         inboxOperationsPublisher.send([])
     }
 
@@ -119,7 +124,7 @@ class SessionManager: SessionManagerProtocol {
         try authService.prepare()
     }
 
-    func addAccount() throws -> AnyMessagingService {
+    func addAccount() throws -> AddAccountResultType {
         let authResult = try authService.register(displayName: nil)
         Logger.info("Added account: \(authResult)")
         let matchingInboxReadyPublisher = inboxOperationsPublisher
@@ -132,11 +137,21 @@ class SessionManager: SessionManagerProtocol {
                 result.inbox.providerId == authResult.inbox.providerId
             }
             .eraseToAnyPublisher()
-        return MessagingService(
-            inboxReadyPublisher: matchingInboxReadyPublisher,
-            databaseWriter: databaseWriter,
-            databaseReader: databaseReader
+        return .init(
+            providerId: authResult.inbox.providerId,
+            messagingService: MessagingService(
+                inboxReadyPublisher: matchingInboxReadyPublisher,
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader
+            )
         )
+    }
+
+    func deleteAccount(with providerId: String) throws {
+        if let operation = operationsByProviderId[providerId] {
+            operation.deleteAndStop()
+        }
+        try authService.deleteAccount(with: providerId)
     }
 
     // MARK: Messaging

@@ -35,9 +35,15 @@ class SecureEnclaveAuthService: LocalAuthServiceProtocol {
         return result
     }
 
+    func deleteAccount(with providerId: String) throws {
+        try identityStore.delete(for: providerId)
+        try refreshAuthState()
+    }
+
     func deleteAll() throws {
         let identities = try identityStore.loadAll()
         try identities.forEach { try identityStore.delete(for: $0.id) }
+        try refreshAuthState()
     }
 
     // MARK: - Private Helpers
