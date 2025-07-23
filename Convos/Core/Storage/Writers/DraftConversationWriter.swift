@@ -95,45 +95,6 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             }
     }
 
-    private func addDraftConversation(inboxId: String) async throws {
-        let conversation = DBConversation(
-            id: draftConversationId,
-            inboxId: inboxId,
-            clientConversationId: draftConversationId,
-            creatorId: inboxId,
-            kind: .group,
-            consent: .allowed,
-            createdAt: Date(),
-            name: nil,
-            description: nil,
-            imageURLString: nil
-        )
-
-        try await databaseWriter.write { [inboxId] db in
-            try conversation.save(db)
-            let localState = ConversationLocalState(
-                conversationId: conversation.id,
-                isPinned: false,
-                isUnread: false,
-                isUnreadUpdatedAt: Date(),
-                isMuted: false
-            )
-            try localState.save(db)
-            let conversationMember = DBConversationMember(
-                conversationId: conversation.id,
-                inboxId: inboxId,
-                role: .superAdmin,
-                consent: .allowed,
-                createdAt: Date()
-            )
-            try conversationMember.save(db)
-            Logger.info("Saved conversation member and updated conversation to database")
-        }
-
-        Logger.info("No existing conversation found, staying in draft state")
-        state = .draft(id: draftConversationId)
-    }
-
     private func createExternalConversation(
         client: AnyClientProvider,
         apiClient: any ConvosAPIClientProtocol

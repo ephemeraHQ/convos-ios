@@ -43,6 +43,11 @@ protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
     func createInvite(_ requestBody: ConvosAPI.CreateInviteRequest) async throws -> ConvosAPI.InviteDetailsResponse
     func inviteDetails(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsResponse
 
+    func updateProfile(
+        inboxId: String,
+        with requestBody: ConvosAPI.UpdateProfileRequest
+    ) async throws -> ConvosAPI.UpdateProfileResponse
+
     func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse
     func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse
     func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse]
@@ -216,6 +221,16 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     }
 
     // MARK: - Profiles
+
+    func updateProfile(
+        inboxId: String,
+        with requestBody: ConvosAPI.UpdateProfileRequest
+    ) async throws -> ConvosAPI.UpdateProfileResponse {
+        var request = try authenticatedRequest(for: "v1/profiles/\(inboxId)", method: "PUT")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(requestBody)
+        return try await performRequest(request)
+    }
 
     func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse {
         let request = try authenticatedRequest(for: "v1/profiles/\(inboxId)")

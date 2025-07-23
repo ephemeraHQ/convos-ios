@@ -9,14 +9,14 @@ extension Notification.Name {
 
 @Observable
 class MessagesInputViewModel: KeyboardListenerDelegate {
+    let myProfileWriter: any MyProfileWriterProtocol
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
 
     init(
+        myProfileWriter: any MyProfileWriterProtocol,
         outgoingMessageWriter: any OutgoingMessageWriterProtocol,
-        profile: Profile
     ) {
-        self.profile = profile
-        self.profileNameText = profile.displayName
+        self.myProfileWriter = myProfileWriter
         self.outgoingMessageWriter = outgoingMessageWriter
 
         KeyboardListener.shared.add(delegate: self)
@@ -37,15 +37,10 @@ class MessagesInputViewModel: KeyboardListenerDelegate {
             sendButtonEnabled = !messageText.isEmpty
         }
     }
-    var profileNameText: String
+    var profileNameText: String = ""
     var profileNamePlaceholder: String = "Somebody"
     var sendButtonEnabled: Bool = false
     var showingProfileNameEditor: Bool = false
-    var profile: Profile {
-        didSet {
-            profileNamePlaceholder = profile.displayName.isEmpty ? "Somebody" : profile.displayName
-        }
-    }
     var imageSelection: PhotosPickerItem?
 
     func sendMessage() {
@@ -61,13 +56,13 @@ class MessagesInputViewModel: KeyboardListenerDelegate {
     }
 
     func saveProfileName() {
-        // @jarodl update profile on convos backend
-        profile = .init(
-            inboxId: profile.inboxId,
-            name: profileNameText,
-            username: profile.username,
-            avatar: profile.avatar
-        )
+        Task {
+            do {
+                try await myProfileWriter.update(displayName: profileNameText)
+            } catch {
+                Logger.error("Error saving profile name: \(error)")
+            }
+        }
 
         withAnimation {
             showingProfileNameEditor = false
@@ -77,6 +72,7 @@ class MessagesInputViewModel: KeyboardListenerDelegate {
 
 struct MessagesInputView: View {
     @State var viewModel: MessagesInputViewModel
+    @State var conversationState: ConversationState
     @State private var textEditorHeight: CGFloat = 0
     private let maxCapsuleHeight: CGFloat = 46.0
 
@@ -160,7 +156,7 @@ struct MessagesInputView: View {
                             viewModel.showingProfileNameEditor = true
                         }
                     } label: {
-                        ProfileAvatarView(profile: viewModel.profile)
+                        ProfileAvatarView(profile: conversationState.myProfile)
                             .matchedGeometryEffect(
                                 id: "LeftView",
                                 in: profileEditorAnimation,
@@ -177,7 +173,7 @@ struct MessagesInputView: View {
                         textFieldText: $viewModel.profileNameText,
                         mode: $mode,
                         height: $textEditorHeight,
-                        textViewPlaceholder: "Chat as \(viewModel.profileNamePlaceholder)",
+                        textViewPlaceholder: "Chat as \(conversationState.myProfile.displayName)",
                         textFieldPlaceholder: "Somebody...",
                         font: .systemFont(ofSize: 16.0),
                         textColor: .colorTextPrimary,
@@ -280,9 +276,15 @@ struct MessagesInputView: View {
 }
 
 #Preview {
+    let messagingService = MockMessagingService()
     MessagesInputView(
         viewModel: .init(
-            outgoingMessageWriter: MockOutgoingMessageWriter(),
-            profile: .mock()
-        ))
+            myProfileWriter: messagingService,
+            outgoingMessageWriter: MockOutgoingMessageWriter()
+        ),
+        conversationState: .init(
+            myProfileRepository: messagingService,
+            conversationRepository: MockConversationRepository()
+        )
+    )
 }

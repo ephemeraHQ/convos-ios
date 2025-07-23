@@ -27,6 +27,16 @@ final class MessagingService: MessagingServiceProtocol {
         self.databaseWriter = databaseWriter
     }
 
+    // MARK: My Profile
+
+    func myProfileRepository() -> any MyProfileRepositoryProtocol {
+        MyProfileRepository(inboxReadyValue: inboxReadyValue, databaseReader: databaseReader)
+    }
+
+    func myProfileWriter() -> any MyProfileWriterProtocol {
+        MyProfileWriter(inboxReadyValue: inboxReadyValue, databaseWriter: databaseWriter)
+    }
+
     // MARK: New Conversation
 
     func draftConversationComposer() -> any DraftConversationComposerProtocol {
@@ -38,6 +48,7 @@ final class MessagingService: MessagingServiceProtocol {
             draftConversationId: clientConversationId
         )
         return DraftConversationComposer(
+            myProfileWriter: myProfileWriter(),
             draftConversationWriter: draftConversationWriter,
             draftConversationRepository: DraftConversationRepository(
                 dbReader: databaseReader,

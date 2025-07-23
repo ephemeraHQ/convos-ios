@@ -114,6 +114,21 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         return ConvosAPI.UsernameCheckResponse(taken: username == "takenusername")
     }
 
+    func updateProfile(
+        inboxId: String,
+        with requestBody: ConvosAPI.UpdateProfileRequest
+    ) async throws -> ConvosAPI.UpdateProfileResponse {
+        .init(
+            id: "",
+            name: requestBody.name ?? "",
+            username: requestBody.username ?? "",
+            description: nil,
+            avatar: requestBody.avatar,
+            createdAt: Date().ISO8601Format(),
+            updatedAt: Date().ISO8601Format()
+        )
+    }
+
     func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse {
         return ConvosAPI.ProfileResponse(
             id: inboxId,

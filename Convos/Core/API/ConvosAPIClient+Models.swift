@@ -74,6 +74,30 @@ enum ConvosAPI {
         let notificationTargets: [String] = []
     }
 
+    struct UpdateProfileRequest: Encodable {
+        let name: String?
+        let username: String?
+        let description: String?
+        let avatar: String?
+
+        init(name: String? = nil, username: String? = nil, description: String? = nil, avatar: String? = nil) {
+            self.name = name
+            self.username = username
+            self.description = description
+            self.avatar = avatar
+        }
+    }
+
+    struct UpdateProfileResponse: Decodable {
+        let id: String
+        let name: String?
+        let username: String?
+        let description: String?
+        let avatar: String?
+        let createdAt: String
+        let updatedAt: String
+    }
+
     enum InviteCodeStatus: String, Decodable {
         case active = "ACTIVE",
              expired = "EXPIRED",

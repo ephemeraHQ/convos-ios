@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ConversationViewDependencies: Hashable {
     let conversationId: String
+    let myProfileWriter: any MyProfileWriterProtocol
+    let myProfileRepository: any MyProfileRepositoryProtocol
     let conversationRepository: any ConversationRepositoryProtocol
     let messagesRepository: any MessagesRepositoryProtocol
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
@@ -24,6 +26,8 @@ extension ConversationViewDependencies {
         let conversationId: String = "1"
         return ConversationViewDependencies(
             conversationId: conversationId,
+            myProfileWriter: messaging.myProfileWriter(),
+            myProfileRepository: messaging.myProfileRepository(),
             conversationRepository: messaging.conversationRepository(for: conversationId),
             messagesRepository: messaging.messagesRepository(for: conversationId),
             outgoingMessageWriter: messaging.messageWriter(for: conversationId),
@@ -36,6 +40,7 @@ extension ConversationViewDependencies {
 
 struct ConversationView: View {
     let conversationRepository: any ConversationRepositoryProtocol
+    let myProfileWriter: any MyProfileWriterProtocol
     let messagesRepository: any MessagesRepositoryProtocol
     let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
@@ -46,17 +51,22 @@ struct ConversationView: View {
 
     init(dependencies: ConversationViewDependencies) {
         self.conversationRepository = dependencies.conversationRepository
+        self.myProfileWriter = dependencies.myProfileWriter
         self.messagesRepository = dependencies.messagesRepository
         self.outgoingMessageWriter = dependencies.outgoingMessageWriter
         self.conversationConsentWriter = dependencies.conversationConsentWriter
         self.conversationLocalStateWriter = dependencies.conversationLocalStateWriter
         self.groupMetadataWriter = dependencies.groupMetadataWriter
-        self.conversationState = ConversationState(conversationRepository: dependencies.conversationRepository)
+        self.conversationState = ConversationState(
+            myProfileRepository: dependencies.myProfileRepository,
+            conversationRepository: dependencies.conversationRepository
+        )
     }
 
     var body: some View {
         MessagesContainerView(
             conversationState: conversationState,
+            myProfileWriter: myProfileWriter,
             outgoingMessageWriter: outgoingMessageWriter,
             conversationLocalStateWriter: conversationLocalStateWriter
         ) {

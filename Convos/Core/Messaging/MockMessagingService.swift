@@ -33,6 +33,14 @@ class MockMessagingService: MessagingServiceProtocol {
 
     // MARK: - Protocol Conformance
 
+    func myProfileWriter() -> any MyProfileWriterProtocol {
+        self
+    }
+
+    func myProfileRepository() -> any MyProfileRepositoryProtocol {
+        self
+    }
+
     func draftConversationComposer() -> any DraftConversationComposerProtocol {
         MockDraftConversationComposer()
     }
@@ -96,6 +104,17 @@ class MockMessagingService: MessagingServiceProtocol {
         let uploadedURL = "https://example.com/uploads/\(filename)"
         try await afterUpload(uploadedURL)
         return uploadedURL
+    }
+}
+
+extension MockMessagingService: MyProfileWriterProtocol {
+    func update(displayName: String) {
+    }
+}
+
+extension MockMessagingService: MyProfileRepositoryProtocol {
+    var myProfilePublisher: AnyPublisher<Profile, Never> {
+        Just(currentUser.profile).eraseToAnyPublisher()
     }
 }
 

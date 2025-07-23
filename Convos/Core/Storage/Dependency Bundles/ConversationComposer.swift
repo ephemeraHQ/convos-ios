@@ -1,6 +1,7 @@
 import Foundation
 
 protocol DraftConversationComposerProtocol {
+    var myProfileWriter: any MyProfileWriterProtocol { get }
     var draftConversationWriter: any DraftConversationWriterProtocol { get }
     var draftConversationRepository: any DraftConversationRepositoryProtocol { get }
     var conversationConsentWriter: any ConversationConsentWriterProtocol { get }
@@ -8,6 +9,7 @@ protocol DraftConversationComposerProtocol {
 }
 
 struct DraftConversationComposer: DraftConversationComposerProtocol {
+    let myProfileWriter: any MyProfileWriterProtocol
     let draftConversationWriter: any DraftConversationWriterProtocol
     let draftConversationRepository: any DraftConversationRepositoryProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
@@ -15,6 +17,7 @@ struct DraftConversationComposer: DraftConversationComposerProtocol {
 }
 
 struct MockDraftConversationComposer: DraftConversationComposerProtocol {
+    let myProfileWriter: any MyProfileWriterProtocol = MockMyProfileWriter()
     let draftConversationWriter: any DraftConversationWriterProtocol = MockDraftConversationWriter()
     let draftConversationRepository: any DraftConversationRepositoryProtocol = MockDraftConversationRepository()
     let conversationConsentWriter: any ConversationConsentWriterProtocol = MockConversationConsentWriter()

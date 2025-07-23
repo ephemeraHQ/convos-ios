@@ -19,9 +19,9 @@ struct Profile: Codable, Identifiable, Hashable {
         name ?? "Someone"
     }
 
-    static var empty: Profile {
+    static func empty(inboxId: String = "") -> Profile {
         .init(
-            inboxId: "",
+            inboxId: inboxId,
             name: nil,
             username: nil,
             avatar: nil

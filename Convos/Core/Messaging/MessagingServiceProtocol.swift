@@ -4,6 +4,9 @@ import Foundation
 protocol MessagingServiceProtocol {
     var inboxReadyPublisher: InboxReadyResultPublisher { get }
 
+    func myProfileRepository() -> any MyProfileRepositoryProtocol
+    func myProfileWriter() -> any MyProfileWriterProtocol
+
     func draftConversationComposer() -> any DraftConversationComposerProtocol
 
     func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol

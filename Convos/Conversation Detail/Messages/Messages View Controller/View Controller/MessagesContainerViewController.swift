@@ -42,7 +42,8 @@ class MessagesContainerViewController: UIViewController {
         self.conversationLocalStateWriter = conversationLocalStateWriter
         self.messagesInputView = InputHostingController(
             rootView: MessagesInputView(
-                viewModel: messagesInputViewModel
+                viewModel: messagesInputViewModel,
+                conversationState: conversationState
             )
         )
         super.init(nibName: nil, bundle: nil)

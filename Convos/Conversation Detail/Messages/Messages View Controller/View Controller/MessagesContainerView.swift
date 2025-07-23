@@ -13,6 +13,7 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
 
     init(
         conversationState: ConversationState,
+        myProfileWriter: any MyProfileWriterProtocol,
         outgoingMessageWriter: any OutgoingMessageWriterProtocol,
         conversationLocalStateWriter: any ConversationLocalStateWriterProtocol,
         content: @escaping () -> Content,
@@ -22,8 +23,8 @@ struct MessagesContainerView<Content: View>: UIViewControllerRepresentable {
         self.conversationLocalStateWriter = conversationLocalStateWriter
         self.content = content
         _inputViewModel = State(initialValue: .init(
-            outgoingMessageWriter: outgoingMessageWriter,
-            profile: .mock(name: "")
+            myProfileWriter: myProfileWriter,
+            outgoingMessageWriter: outgoingMessageWriter
         ))
     }
 

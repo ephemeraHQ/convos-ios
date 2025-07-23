@@ -11,18 +11,17 @@ protocol InboxesRepositoryProtocol {
 final class InboxesRepository: InboxesRepositoryProtocol {
     private let databaseReader: any DatabaseReader
 
-    var inboxesPublisher: AnyPublisher<[Inbox], Never> {
-        ValueObservation
+    let inboxesPublisher: AnyPublisher<[Inbox], Never>
+
+    init(databaseReader: any DatabaseReader) {
+        self.databaseReader = databaseReader
+        self.inboxesPublisher = ValueObservation
             .tracking { db in
                 try db.composeAllInboxes()
             }
             .publisher(in: databaseReader)
             .replaceError(with: [])
             .eraseToAnyPublisher()
-    }
-
-    init(databaseReader: any DatabaseReader) {
-        self.databaseReader = databaseReader
     }
 
     func allInboxes() throws -> [Inbox] {

@@ -19,6 +19,7 @@ struct NewConversationView: View {
                    let composer = newConversationState.draftConversationComposer {
                     MessagesContainerView(
                         conversationState: conversationState,
+                        myProfileWriter: composer.myProfileWriter,
                         outgoingMessageWriter: composer.draftConversationWriter,
                         conversationLocalStateWriter: composer.conversationLocalStateWriter
                     ) {

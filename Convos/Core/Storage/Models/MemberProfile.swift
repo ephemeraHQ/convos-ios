@@ -13,3 +13,9 @@ struct MemberProfile: Codable, FetchableRecord, PersistableRecord, Hashable {
         using: memberForeignKey
     )
 }
+
+extension MemberProfile {
+    func with(name: String) -> MemberProfile {
+        .init(inboxId: inboxId, name: name, avatar: avatar)
+    }
+}

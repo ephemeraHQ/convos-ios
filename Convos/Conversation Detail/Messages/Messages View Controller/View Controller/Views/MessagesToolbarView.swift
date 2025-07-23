@@ -65,6 +65,7 @@ struct MessagesToolbarView: View {
 #Preview {
     @Previewable @Environment(\.dismiss) var dismiss: DismissAction
     let conversationState = ConversationState(
+        myProfileRepository: MockMessagingService(),
         conversationRepository: MockConversationRepository()
     )
 

@@ -26,6 +26,7 @@ class NewConversationState {
                 let draftConversationComposer = messagingService.draftConversationComposer()
                 self.draftConversationComposer = draftConversationComposer
                 self.conversationState = ConversationState(
+                    myProfileRepository: messagingService.myProfileRepository(),
                     conversationRepository: draftConversationComposer.draftConversationRepository
                 )
             } catch {

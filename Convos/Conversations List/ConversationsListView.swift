@@ -88,6 +88,8 @@ struct ConversationsListView: View {
         let messagingService = session.messagingService(for: conversation.inboxId)
         return .init(
             conversationId: conversation.id,
+            myProfileWriter: messagingService.myProfileWriter(),
+            myProfileRepository: messagingService.myProfileRepository(),
             conversationRepository: messagingService.conversationRepository(for: conversation.id),
             messagesRepository: messagingService.messagesRepository(for: conversation.id),
             outgoingMessageWriter: messagingService.messageWriter(for: conversation.id),
