@@ -90,6 +90,7 @@ actor InboxStateMachine {
     private let environment: AppEnvironment
     private let clientOptions: ClientOptions
     private let syncingManager: any SyncingManagerProtocol
+    private let inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol
 
     private var _state: State = .uninitialized {
         didSet {
@@ -125,11 +126,13 @@ actor InboxStateMachine {
         inbox: any AuthServiceInboxType,
         inboxWriter: any InboxWriterProtocol,
         syncingManager: any SyncingManagerProtocol,
+        inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol,
         environment: AppEnvironment
     ) {
         self.inbox = inbox
         self.inboxWriter = inboxWriter
         self.syncingManager = syncingManager
+        self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
         self.clientOptions = ClientOptions(
             api: .init(
@@ -277,6 +280,7 @@ actor InboxStateMachine {
     private func handleAuthorized(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) throws {
         _state = .ready(.init(inbox: inbox, client: client, apiClient: apiClient))
         syncingManager.start(with: client, apiClient: apiClient)
+        inviteJoinRequestsManager.start(with: client, apiClient: apiClient)
     }
 
     private func handleStop() throws {

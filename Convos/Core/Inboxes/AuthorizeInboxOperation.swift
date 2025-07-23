@@ -42,6 +42,10 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             inbox: inbox,
             inboxWriter: inboxWriter,
             syncingManager: SyncingManager(databaseWriter: databaseWriter),
+            inviteJoinRequestsManager: InviteJoinRequestsManager(
+                databaseReader: databaseReader,
+                databaseWriter: databaseWriter
+            ),
             environment: environment
         )
         inboxReadyPublisher = stateMachine

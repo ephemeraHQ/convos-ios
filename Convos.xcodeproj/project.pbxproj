@@ -219,6 +219,7 @@
 				"Core/Storage/XMTP DB Representations/DecodedMessage+DBRepresentation.swift",
 				"Core/Storage/XMTP DB Representations/MessageDeliveryStatus+DBRepresentation.swift",
 				"Core/Storage/XMTP DB Representations/Reaction+DBRepresentation.swift",
+				Core/Syncing/InviteJoinRequestsManager.swift,
 				Core/Syncing/SyncingManager.swift,
 				Logging/Logger.swift,
 				"Utilities & Extensions/Combine+Extensions.swift",
