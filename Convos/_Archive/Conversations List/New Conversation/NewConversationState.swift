@@ -30,11 +30,13 @@ class NewConversationState {
                 let addAccountResult = try session.addAccount()
                 self.addAccountResult = addAccountResult
                 let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
-                self.draftConversationComposer = draftConversationComposer
-                self.conversationState = ConversationState(
-                    myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
-                    conversationRepository: draftConversationComposer.draftConversationRepository
-                )
+                await MainActor.run {
+                    self.draftConversationComposer = draftConversationComposer
+                    self.conversationState = ConversationState(
+                        myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
+                        conversationRepository: draftConversationComposer.draftConversationRepository
+                    )
+                }
             } catch {
                 Logger.error("Error starting new conversation: \(error.localizedDescription)")
             }
@@ -43,9 +45,13 @@ class NewConversationState {
 
     func deleteConversation() throws {
         newConversationTask?.cancel()
-        guard let addAccountResult else { return }
-        try session.deleteAccount(with: addAccountResult.providerId)
-        self.addAccountResult = nil
+        draftConversationComposer = nil
+        conversationState = nil
+        Task {
+            guard let addAccountResult else { return }
+            try session.deleteAccount(with: addAccountResult.providerId)
+            self.addAccountResult = nil
+        }
     }
 
     private func setupObservations() {

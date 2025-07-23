@@ -77,12 +77,10 @@ struct NewConversationView: View {
                     }
                     .confirmationDialog("", isPresented: $presentingDeleteConfirmation) {
                         Button("Delete", role: .destructive) {
-                            Task {
-                                do {
-                                    try newConversationState.deleteConversation()
-                                } catch {
-                                    Logger.error("Error deleting conversation: \(error.localizedDescription)")
-                                }
+                            do {
+                                try newConversationState.deleteConversation()
+                            } catch {
+                                Logger.error("Error deleting conversation: \(error.localizedDescription)")
                             }
                             dismiss()
                         }
