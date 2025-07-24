@@ -6,6 +6,9 @@ protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
     var draftConversationId: String { get }
     var conversationId: String { get }
     var conversationIdPublisher: AnyPublisher<String, Never> { get }
+
+    func createConversationWhenInboxReady()
+    func joinConversationWhenInboxReady(inboxId: String, inviteCode: String)
 }
 
 class DraftConversationWriter: DraftConversationWriterProtocol {
@@ -63,7 +66,9 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     }
     private var clientPublisherCancellable: AnyCancellable?
     private var createConversationTask: Task<Void, Never>?
+    private var joinConversationTask: Task<Void, Never>?
     private var publishConversationTask: Task<Void, Never>?
+    private var streamConversationsTask: Task<Void, Never>?
 
     init(inboxReadyValue: PublisherValue<InboxReadyResult>,
          databaseReader: any DatabaseReader,
@@ -76,7 +81,11 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         self.conversationIdSubject = .init(draftConversationId)
         self.draftConversationId = draftConversationId
         self.inviteWriter = InviteWriter(databaseWriter: databaseWriter)
+    }
 
+    func createConversationWhenInboxReady() {
+        createConversationTask?.cancel()
+        clientPublisherCancellable?.cancel()
         clientPublisherCancellable = inboxReadyValue
             .publisher
             .compactMap { $0 }
@@ -95,6 +104,59 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                     }
                 }
             }
+    }
+
+    func joinConversationWhenInboxReady(inboxId: String, inviteCode: String) {
+        joinConversationTask?.cancel()
+        clientPublisherCancellable?.cancel()
+        clientPublisherCancellable = inboxReadyValue
+            .publisher
+            .compactMap { $0 }
+            .first()
+            .eraseToAnyPublisher()
+            .sink { [weak self] inboxReady in
+                guard let self else { return }
+                self.joinConversationTask = Task {
+                    do {
+                        try await self.joinConversation(
+                            inboxId: inboxId,
+                            inviteCode: inviteCode,
+                            client: inboxReady.client
+                        )
+                    } catch {
+                        Logger.error("Error creating external conversation: \(error.localizedDescription)")
+                    }
+                }
+            }
+    }
+
+    // @jarodl this is just a temporary workaround while waiting for push notifications
+    private func joinConversation(inboxId: String, inviteCode: String, client: AnyClientProvider) async throws {
+        let temporaryConversationId = try await client.newConversation(with: inboxId)
+        guard let messageSender = try await client.messageSender(for: temporaryConversationId) else {
+            Logger.error("Failed sending conversation join request")
+            return
+        }
+
+        _ = try await messageSender.prepare(text: inviteCode)
+        try await messageSender.publish()
+
+        // wait for response
+        streamConversationsTask = Task {
+            do {
+                for try await conversation in await client.conversationsProvider.stream(
+                    type: .groups,
+                    onClose: {
+                        Logger.warning("Closing conversations stream for inboxId: \(client.inboxId)...")
+                    }
+                ) where try await conversation.creatorInboxId == inboxId {
+                    self.state = .existing(id: conversation.id)
+                    streamConversationsTask?.cancel()
+                }
+            } catch {
+                Logger.error("Error streaming conversations: \(error)")
+            }
+        }
     }
 
     private func createDraftConversation(conversationId: String, inboxId: String) throws {
@@ -169,7 +231,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                 expiresAt: nil
             )
         )
-        let invite = try await inviteWriter.store(invite: response)
+        let invite = try await inviteWriter.store(invite: response, inboxId: client.inboxId)
         Logger.info("Created invite for conversation \(externalConversationId): \(invite)")
     }
 

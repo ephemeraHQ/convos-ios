@@ -9,7 +9,8 @@ extension DBInvite {
             status: status,
             createdAt: createdAt,
             maxUses: maxUses,
-            usesCount: usesCount
+            usesCount: usesCount,
+            inboxId: inboxId
         )
     }
 }

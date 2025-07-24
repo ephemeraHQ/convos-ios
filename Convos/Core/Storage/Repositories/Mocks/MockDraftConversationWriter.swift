@@ -2,6 +2,9 @@ import Combine
 import Foundation
 
 class MockDraftConversationWriter: DraftConversationWriterProtocol {
+    func joinConversationWhenInboxReady(inboxId: String, inviteCode: String) {
+    }
+
     var isSendingPublisher: AnyPublisher<Bool, Never> {
         Just(false).eraseToAnyPublisher()
     }
@@ -25,5 +28,8 @@ class MockDraftConversationWriter: DraftConversationWriterProtocol {
     }
 
     func send(text: String) async throws {
+    }
+
+    func createConversationWhenInboxReady() {
     }
 }

@@ -2,8 +2,21 @@ import AVFoundation
 import SwiftUI
 
 struct JoinConversationView: View {
+    let newConversationState: NewConversationState
+    let showsToolbar: Bool
     @StateObject private var qrScannerDelegate: QRScannerDelegate = QRScannerDelegate()
     @Environment(\.dismiss) var dismiss: DismissAction
+    let onScannedCode: () -> Void
+
+    init(
+        newConversationState: NewConversationState,
+        showsToolbar: Bool,
+        onScannedCode: @escaping () -> Void = {}
+    ) {
+        self.newConversationState = newConversationState
+        self.showsToolbar = showsToolbar
+        self.onScannedCode = onScannedCode
+    }
 
     var body: some View {
         NavigationStack {
@@ -40,16 +53,23 @@ struct JoinConversationView: View {
                 .compositingGroup()
             }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(role: .close) {
-                        dismiss()
+                if showsToolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(role: .close) {
+                            dismiss()
+                        }
                     }
                 }
             }
         }
         .onChange(of: qrScannerDelegate.scannedCode) { _, newValue in
             if let code = newValue {
-                Logger.info("Scanned code: \(code)")
+                guard let result = Invite.parse(temporaryInviteString: code) else {
+                    return
+                }
+                Logger.info("Scanned code: \(result)")
+                newConversationState.joinConversation(inboxId: result.inboxId, inviteCode: result.code)
+                onScannedCode()
             }
         }
     }
@@ -175,5 +195,5 @@ struct QRScannerView: UIViewRepresentable {
 }
 
 #Preview {
-    JoinConversationView()
+    JoinConversationView(newConversationState: .init(session: MockInboxesService()), showsToolbar: true)
 }

@@ -164,7 +164,7 @@ fileprivate extension XMTPiOS.PermissionLevel {
     }
 }
 
-fileprivate extension XMTPiOS.Conversation {
+extension XMTPiOS.Conversation {
     var creatorInboxId: String {
         get async throws {
             switch self {

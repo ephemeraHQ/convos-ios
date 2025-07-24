@@ -65,13 +65,12 @@ struct QRCodeView: View {
                     .aspectRatio(1.0, contentMode: .fit)
                     .frame(maxWidth: 220, maxHeight: 220)
             } else {
-                ZStack {
-                    RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.medium)
-                        .fill(backgroundColor)
-                        .frame(width: 220, height: 220)
-
-                    ProgressView()
-                }
+                RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.medium)
+                    .fill(backgroundColor)
+                    .frame(width: 220, height: 220)
+                    .overlay(
+                        ProgressView()
+                    )
             }
 
             ShareLink(item: identifier) {
@@ -81,6 +80,7 @@ struct QRCodeView: View {
                     .frame(width: 60, height: 60)
                     .padding(DesignConstants.Spacing.step2x)
             }
+            .opacity(currentQRCode == nil ? 0.0 : 1.0)
             .disabled(isRegenerating)
             .animation(.easeInOut(duration: 0.95), value: isRegenerating)
         }

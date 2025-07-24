@@ -80,11 +80,14 @@ struct ConversationsView: View {
                     in: namespace
                 )
             }
-            .sheet(isPresented: $isPresentingJoinConversation) {
-                JoinConversationView()
+            .fullScreenCover(isPresented: $isPresentingJoinConversation) {
+                NewConversationView(session: session, presentingJoinConversation: true)
+                    .ignoresSafeArea()
+                    .background(.white)
+                    .interactiveDismissDisabled()
             }
             .fullScreenCover(isPresented: $isPresentingComposer) {
-                NewConversationView(session: session)
+                NewConversationView(session: session, presentingJoinConversation: false)
                     .ignoresSafeArea()
                     .background(.white)
                     .interactiveDismissDisabled()

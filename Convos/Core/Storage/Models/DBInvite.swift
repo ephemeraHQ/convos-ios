@@ -18,6 +18,7 @@ struct DBInvite: Codable, FetchableRecord, PersistableRecord, Identifiable, Hash
         static let usesCount: Column = Column(CodingKeys.usesCount)
         static let status: Column = Column(CodingKeys.status)
         static let createdAt: Column = Column(CodingKeys.createdAt)
+        static let inboxId: Column = Column(CodingKeys.inboxId)
     }
 
     let id: String
@@ -27,6 +28,7 @@ struct DBInvite: Codable, FetchableRecord, PersistableRecord, Identifiable, Hash
     let usesCount: Int
     let status: InviteStatus
     let createdAt: Date
+    let inboxId: String // @jarodl temporary
 
     static let conversationForeignKey: ForeignKey = ForeignKey(
         [Columns.conversationId],

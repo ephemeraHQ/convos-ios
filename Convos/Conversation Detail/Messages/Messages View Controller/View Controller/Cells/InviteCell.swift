@@ -17,7 +17,7 @@ struct InviteView: View {
         VStack {
             Group {
                 QRCodeView(
-                    identifier: invite.inviteUrlString,
+                    identifier: invite.temporaryInviteString, //invite.inviteUrlString, @jarodl temporary
                     backgroundColor: .colorFillMinimal
                 )
                 .padding(DesignConstants.Spacing.step12x)

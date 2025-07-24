@@ -10,10 +10,10 @@ final class ConversationsListViewModel {
     var selectedInbox: Inbox?
 
     var pinnedConversations: [Conversation] {
-        conversations.filter { $0.isPinned }
+        conversations.filter { $0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
     }
     var unpinnedConversations: [Conversation] {
-        conversations.filter { !$0.isPinned }
+        conversations.filter { !$0.isPinned }.filter { $0.kind == .group }// @jarodl temporarily filtering out dms
     }
 
     private let conversationsRepository: any ConversationsRepositoryProtocol

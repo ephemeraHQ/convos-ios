@@ -18,6 +18,7 @@ class NewConversationState {
 
     private var addAccountResult: AddAccountResultType?
     private var newConversationTask: Task<Void, Never>?
+    private var joinConversationTask: Task<Void, Never>?
 
     init(session: any SessionManagerProtocol) {
         self.session = session
@@ -30,6 +31,7 @@ class NewConversationState {
                 let addAccountResult = try session.addAccount()
                 self.addAccountResult = addAccountResult
                 let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
+                draftConversationComposer.draftConversationWriter.createConversationWhenInboxReady()
                 await MainActor.run {
                     self.draftConversationComposer = draftConversationComposer
                     self.conversationState = ConversationState(
@@ -39,6 +41,28 @@ class NewConversationState {
                 }
             } catch {
                 Logger.error("Error starting new conversation: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func joinConversation(inboxId: String, inviteCode: String) {
+        joinConversationTask?.cancel()
+        joinConversationTask = Task {
+            do {
+                let addAccountResult = try session.addAccount()
+                self.addAccountResult = addAccountResult
+                let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
+                draftConversationComposer.draftConversationWriter
+                    .joinConversationWhenInboxReady(inboxId: inboxId, inviteCode: inviteCode)
+                await MainActor.run {
+                    self.draftConversationComposer = draftConversationComposer
+                    self.conversationState = ConversationState(
+                        myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
+                        conversationRepository: draftConversationComposer.draftConversationRepository
+                    )
+                }
+            } catch {
+                Logger.error("Error joining new conversation: \(error.localizedDescription)")
             }
         }
     }

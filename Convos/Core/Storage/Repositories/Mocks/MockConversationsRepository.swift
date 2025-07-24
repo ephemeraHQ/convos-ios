@@ -69,7 +69,8 @@ extension Invite {
             status: .active,
             createdAt: Date(),
             maxUses: 0,
-            usesCount: 0
+            usesCount: 0,
+            inboxId: ""
         )
     }
 }

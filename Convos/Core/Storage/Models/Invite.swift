@@ -11,4 +11,20 @@ struct Invite: Codable, Hashable, Identifiable {
     let createdAt: Date
     let maxUses: Int?
     let usesCount: Int
+    let inboxId: String // @jarodl temporary workaround
+
+    var temporaryInviteString: String {
+        "\(inboxId)-\(code)"
+    }
+
+    static func parse(temporaryInviteString: String) -> (inboxId: String, code: String)? {
+        let result = temporaryInviteString.split(separator: "-")
+        guard result.count == 2 else {
+            return nil
+        }
+        guard let inboxId = result.first, let code = result.last else {
+            return nil
+        }
+        return (String(inboxId), String(code))
+    }
 }

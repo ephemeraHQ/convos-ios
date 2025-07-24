@@ -63,7 +63,9 @@ final class SyncingManager: SyncingManagerProtocol {
                     .streamAllMessages(
                         type: .all,
                         consentStates: consentStates,
-                        onClose: nil
+                        onClose: {
+                            Logger.warning("Closing messages stream for inboxId: \(client.inboxId)...")
+                        }
                     ) {
                     guard let conversation = try await client.conversationsProvider.findConversation(
                         conversationId: message.conversationId
@@ -83,7 +85,12 @@ final class SyncingManager: SyncingManagerProtocol {
         }
         streamConversationsTask = Task {
             do {
-                for try await conversation in await client.conversationsProvider.stream(type: .all, onClose: nil) {
+                for try await conversation in await client.conversationsProvider.stream(
+                    type: .groups,
+                    onClose: {
+                        Logger.warning("Closing conversations stream for inboxId: \(client.inboxId)...")
+                    }
+                ) {
                     syncMemberProfiles(apiClient: apiClient, for: [conversation])
                     try await conversationWriter.store(conversation: conversation)
                 }

@@ -2,22 +2,29 @@ import SwiftUI
 
 struct NewConversationView: View {
     let session: any SessionManagerProtocol
+    @State private var startedWithJoinConversationPresented: Bool
     @State private var newConversationState: NewConversationState
     @State private var presentingJoinConversation: Bool = false
     @State private var presentingDeleteConfirmation: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     init(
-        session: any SessionManagerProtocol
+        session: any SessionManagerProtocol,
+        presentingJoinConversation: Bool
     ) {
         self.session = session
+        _startedWithJoinConversationPresented = .init(initialValue: presentingJoinConversation)
         _newConversationState = .init(initialValue: .init(session: session))
     }
 
     var body: some View {
         NavigationStack {
             Group {
-                if let conversationState = newConversationState.conversationState,
+                if startedWithJoinConversationPresented {
+                    JoinConversationView(newConversationState: newConversationState, showsToolbar: false) {
+                        startedWithJoinConversationPresented = false
+                    }
+                } else if let conversationState = newConversationState.conversationState,
                    let composer = newConversationState.draftConversationComposer {
                     MessagesContainerView(
                         conversationState: conversationState,
@@ -40,46 +47,50 @@ struct NewConversationView: View {
                     .ignoresSafeArea()
                 }
             }
-            .onAppear {
-                newConversationState.newConversation()
+            .sheet(isPresented: $presentingJoinConversation) {
+                JoinConversationView(newConversationState: newConversationState, showsToolbar: true)
             }
-            .fullScreenCover(isPresented: $presentingJoinConversation) {
-                JoinConversationView()
+            .onAppear {
+                if !startedWithJoinConversationPresented {
+                    newConversationState.newConversation()
+                }
             }
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .title) {
-                    if let conversation = newConversationState.conversationState?.conversation {
-                        Button {
-                        } label: {
-                            HStack(spacing: DesignConstants.Spacing.step2x) {
-                                ConversationAvatarView(conversation: conversation)
-                                    .frame(width: 36.0, height: 36.0)
+                if !startedWithJoinConversationPresented {
+                    ToolbarItem(placement: .title) {
+                        if let conversation = newConversationState.conversationState?.conversation {
+                            Button {
+                            } label: {
+                                HStack(spacing: DesignConstants.Spacing.step2x) {
+                                    ConversationAvatarView(conversation: conversation)
+                                        .frame(width: 36.0, height: 36.0)
 
-                                VStack(alignment: .leading, spacing: 0.0) {
-                                    if !conversation.isDraft, let name = conversation.name, !name.isEmpty {
-                                        Text(name)
-                                            .font(.system(size: 16.0, weight: .medium))
-                                    } else {
-                                        Text("New convo")
-                                            .font(.system(size: 16.0, weight: .medium))
+                                    VStack(alignment: .leading, spacing: 0.0) {
+                                        if !conversation.isDraft, let name = conversation.name, !name.isEmpty {
+                                            Text(name)
+                                                .font(.system(size: 16.0, weight: .medium))
+                                        } else {
+                                            Text("New convo")
+                                                .font(.system(size: 16.0, weight: .medium))
+                                        }
+                                        Text("Customize")
+                                            .font(.system(size: 12.0, weight: .regular))
+                                            .foregroundStyle(.colorTextSecondary)
                                     }
-                                    Text("Customize")
-                                        .font(.system(size: 12.0, weight: .regular))
-                                        .foregroundStyle(.colorTextSecondary)
+                                    .padding(.trailing, DesignConstants.Spacing.step2x)
                                 }
-                                .padding(.trailing, DesignConstants.Spacing.step2x)
                             }
+                            .padding(.horizontal, DesignConstants.Spacing.step2x)
+                            .padding(.vertical, DesignConstants.Spacing.stepX)
+                            .glassEffect()
                         }
-                        .padding(.horizontal, DesignConstants.Spacing.step2x)
-                        .padding(.vertical, DesignConstants.Spacing.stepX)
-                        .glassEffect()
                     }
                 }
 
                 ToolbarItem(placement: .topBarLeading) {
                     Button(role: .close) {
-                        if newConversationState.promptToKeepConversation {
+                        if newConversationState.promptToKeepConversation && !startedWithJoinConversationPresented {
                             presentingDeleteConfirmation = true
                         } else {
                             dismiss()
@@ -101,18 +112,20 @@ struct NewConversationView: View {
                     }
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    if newConversationState.showJoinConversation {
-                        Button {
-                            presentingJoinConversation = true
-                        } label: {
-                            Image(systemName: "qrcode.viewfinder")
-                        }
-                    } else {
-                        Button {
-                            // invite
-                        } label: {
-                            Image(systemName: "square.and.arrow.up")
+                if !startedWithJoinConversationPresented {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        if newConversationState.showJoinConversation {
+                            Button {
+                                presentingJoinConversation = true
+                            } label: {
+                                Image(systemName: "qrcode.viewfinder")
+                            }
+                        } else {
+                            Button {
+                                // invite
+                            } label: {
+                                Image(systemName: "square.and.arrow.up")
+                            }
                         }
                     }
                 }
@@ -128,7 +141,8 @@ struct NewConversationView: View {
     }
     .fullScreenCover(isPresented: $presented) {
         NewConversationView(
-            session: convos.session
+            session: convos.session,
+            presentingJoinConversation: false
         )
         .ignoresSafeArea()
     }

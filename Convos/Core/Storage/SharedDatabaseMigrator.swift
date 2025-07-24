@@ -109,6 +109,7 @@ extension SharedDatabaseMigrator {
                     .notNull()
                 t.column("createdAt", .datetime)
                     .notNull()
+                t.column("inboxId", .text).notNull() // @jarodl temporary
             }
 
             try db.create(table: "conversation_members") { t in

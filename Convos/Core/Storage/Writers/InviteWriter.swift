@@ -3,7 +3,7 @@ import GRDB
 
 protocol InviteWriterProtocol {
     @discardableResult
-    func store(invite: ConvosAPI.InviteDetailsResponse) async throws -> Invite
+    func store(invite: ConvosAPI.InviteDetailsResponse, inboxId: String) async throws -> Invite
 }
 
 class InviteWriter: InviteWriterProtocol {
@@ -13,7 +13,7 @@ class InviteWriter: InviteWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    func store(invite: ConvosAPI.InviteDetailsResponse) async throws -> Invite {
+    func store(invite: ConvosAPI.InviteDetailsResponse, inboxId: String) async throws -> Invite {
         let dbInvite = DBInvite(
             id: invite.id,
             conversationId: invite.groupId,
@@ -21,7 +21,8 @@ class InviteWriter: InviteWriterProtocol {
             maxUses: invite.maxUses,
             usesCount: invite.usesCount,
             status: invite.status.inviteStatus,
-            createdAt: invite.createdAt
+            createdAt: invite.createdAt,
+            inboxId: inboxId
         )
         try await databaseWriter.write { db in
             try dbInvite.save(db)
