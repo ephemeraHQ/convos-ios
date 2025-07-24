@@ -15,6 +15,11 @@ class MockDatabaseManager: DatabaseManagerProtocol {
         dbPool as DatabaseReader
     }
 
+    func erase() throws {
+        try dbPool.erase()
+        try SharedDatabaseMigrator.shared.migrate(database: dbPool)
+    }
+
     private init(migrate: Bool = true) {
         do {
             dbPool = try DatabaseQueue(named: "MockDatabase")

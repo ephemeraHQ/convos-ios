@@ -18,6 +18,10 @@ class MockConversationRepository: ConversationRepositoryProtocol {
 }
 
 class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
+    var inviteRepository: any InviteRepositoryProtocol {
+        MockInviteRepository()
+    }
+
     var conversationId: String {
         conversation.id
     }

@@ -95,7 +95,8 @@ struct ConversationsListView: View {
             outgoingMessageWriter: messagingService.messageWriter(for: conversation.id),
             conversationConsentWriter: messagingService.conversationConsentWriter(),
             conversationLocalStateWriter: messagingService.conversationLocalStateWriter(),
-            groupMetadataWriter: messagingService.groupMetadataWriter()
+            groupMetadataWriter: messagingService.groupMetadataWriter(),
+            inviteRepository: messagingService.inviteRepository(for: conversation.id)
         )
     }
 }

@@ -43,6 +43,7 @@ final class MessagesViewController: UIViewController {
     }
 
     let messagesRepository: any MessagesRepositoryProtocol
+    private let inviteRepository: any InviteRepositoryProtocol
     private var messagesRepositoryCancellable: AnyCancellable?
     private var cancellables: Set<AnyCancellable> = []
     private var conversationHasMembers: Bool = false
@@ -51,13 +52,17 @@ final class MessagesViewController: UIViewController {
 
     // MARK: - Initialization
 
-    init(messagesRepository: any MessagesRepositoryProtocol) {
+    init(
+        messagesRepository: any MessagesRepositoryProtocol,
+        inviteRepository: any InviteRepositoryProtocol
+    ) {
         self.dataSource = MessagesCollectionViewDataSource()
         self.collectionView = UICollectionView(
             frame: .zero,
             collectionViewLayout: messagesLayout
         )
         self.messagesRepository = messagesRepository
+        self.inviteRepository = inviteRepository
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -78,27 +83,43 @@ final class MessagesViewController: UIViewController {
 
     // MARK: -
 
-    func observe(messagesRepository: (any MessagesRepositoryProtocol)) {
+    func observe(
+        messagesRepository: any MessagesRepositoryProtocol,
+        inviteRepository: any InviteRepositoryProtocol
+    ) {
         messagesRepositoryCancellable?.cancel()
         messagesRepositoryCancellable = nil
-        self.messagesRepositoryCancellable = messagesRepository
+
+        let messagesPublisher = messagesRepository
             .conversationMessagesPublisher
             .withPrevious()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] previous, current in
-                guard let self else { return }
-                let animated = previous.conversationId == current.conversationId
-                processUpdates(
-                    with: current.messages,
-                    animated: animated,
-                    requiresIsolatedProcess: true) {
-                        if previous.conversationId != current.conversationId {
-                            UIView.performWithoutAnimation {
-                                self.scrollToBottom()
-                            }
+
+        let invitePublisher = inviteRepository
+            .invitePublisher
+            .map { $0 as Invite? }
+            .prepend(nil)
+
+        self.messagesRepositoryCancellable = Publishers.CombineLatest(
+            messagesPublisher,
+            invitePublisher
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] messagesData, invite in
+            guard let self else { return }
+            let (previous, current) = messagesData
+            let animated = previous.conversationId == current.conversationId
+            processUpdates(
+                with: current.messages,
+                invite: invite,
+                animated: animated,
+                requiresIsolatedProcess: true) {
+                    if previous.conversationId != current.conversationId {
+                        UIView.performWithoutAnimation {
+                            self.scrollToBottom()
                         }
                     }
-            }
+                }
+        }
     }
 
     private func reloadMessagesFromRepository() {
@@ -108,6 +129,7 @@ final class MessagesViewController: UIViewController {
                 let messages = try messagesRepository.fetchAll()
                 processUpdates(
                     with: messages,
+                    invite: nil,
                     animated: true,
                     requiresIsolatedProcess: false
                 )
@@ -133,7 +155,7 @@ final class MessagesViewController: UIViewController {
         reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
 
         reloadMessagesFromRepository()
-        observe(messagesRepository: messagesRepository)
+        observe(messagesRepository: messagesRepository, inviteRepository: inviteRepository)
 
         NotificationCenter.default.addObserver(
             forName: .messagesInputViewHeightDidChange,
@@ -303,10 +325,11 @@ final class MessagesViewController: UIViewController {
 
 extension MessagesViewController {
     private func processUpdates(with messages: [AnyMessage],
+                                invite: Invite?,
                                 animated: Bool = true,
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
-        let cells: [MessagesCollectionCell] = messages.enumerated().flatMap { index, message in
+        var cells: [MessagesCollectionCell] = messages.enumerated().flatMap { index, message in
             var cells: [MessagesCollectionCell] = []
 
             let senderTitleCell = MessagesCollectionCell.messageGroup(
@@ -343,6 +366,11 @@ extension MessagesViewController {
             cells.append(MessagesCollectionCell.message(message, bubbleType: bubbleType))
             return cells
         }
+
+        if let invite {
+            cells.insert(.invite(invite, verticalPadding: messages.isEmpty), at: 0)
+        }
+
         let sections: [MessagesCollectionSection] = [
             .init(id: 0, title: "", cells: cells)
         ]
@@ -353,6 +381,7 @@ extension MessagesViewController {
 
         guard currentInterfaceActions.options.isEmpty else {
             scheduleDelayedUpdate(with: messages,
+                                  invite: invite,
                                   animated: animated,
                                   requiresIsolatedProcess: requiresIsolatedProcess,
                                   completion: completion)
@@ -366,6 +395,7 @@ extension MessagesViewController {
     }
 
     private func scheduleDelayedUpdate(with messages: [AnyMessage],
+                                       invite: Invite?,
                                        animated: Bool,
                                        requiresIsolatedProcess: Bool,
                                        completion: (() -> Void)?) {
@@ -376,6 +406,7 @@ extension MessagesViewController {
             actionBlock: { [weak self] in
                 guard let self else { return }
                 processUpdates(with: messages,
+                               invite: invite,
                                animated: animated,
                                requiresIsolatedProcess: requiresIsolatedProcess,
                                completion: completion)

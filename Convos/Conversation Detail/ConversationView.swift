@@ -10,6 +10,7 @@ struct ConversationViewDependencies: Hashable {
     let conversationConsentWriter: any ConversationConsentWriterProtocol
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
     let groupMetadataWriter: any GroupMetadataWriterProtocol
+    let inviteRepository: any InviteRepositoryProtocol
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.conversationId == rhs.conversationId
@@ -33,7 +34,8 @@ extension ConversationViewDependencies {
             outgoingMessageWriter: messaging.messageWriter(for: conversationId),
             conversationConsentWriter: messaging.conversationConsentWriter(),
             conversationLocalStateWriter: messaging.conversationLocalStateWriter(),
-            groupMetadataWriter: messaging.groupMetadataWriter()
+            groupMetadataWriter: messaging.groupMetadataWriter(),
+            inviteRepository: messaging.inviteRepository(for: conversationId)
         )
     }
 }
@@ -46,6 +48,7 @@ struct ConversationView: View {
     let conversationConsentWriter: any ConversationConsentWriterProtocol
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
     let groupMetadataWriter: any GroupMetadataWriterProtocol
+    let inviteRepository: any InviteRepositoryProtocol
     let conversationState: ConversationState
     @State private var showInfoForConversation: Conversation?
 
@@ -57,6 +60,7 @@ struct ConversationView: View {
         self.conversationConsentWriter = dependencies.conversationConsentWriter
         self.conversationLocalStateWriter = dependencies.conversationLocalStateWriter
         self.groupMetadataWriter = dependencies.groupMetadataWriter
+        self.inviteRepository = dependencies.inviteRepository
         self.conversationState = ConversationState(
             myProfileRepository: dependencies.myProfileRepository,
             conversationRepository: dependencies.conversationRepository
@@ -71,7 +75,8 @@ struct ConversationView: View {
             conversationLocalStateWriter: conversationLocalStateWriter
         ) {
             MessagesView(
-                messagesRepository: messagesRepository
+                messagesRepository: messagesRepository,
+                inviteRepository: inviteRepository
             )
             .ignoresSafeArea()
         }

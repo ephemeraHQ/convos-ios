@@ -21,10 +21,10 @@ class NewConversationState {
 
     init(session: any SessionManagerProtocol) {
         self.session = session
-        newConversation()
     }
 
-    private func newConversation() {
+    func newConversation() {
+        newConversationTask?.cancel()
         newConversationTask = Task {
             do {
                 let addAccountResult = try session.addAccount()

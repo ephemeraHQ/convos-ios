@@ -13,6 +13,7 @@ struct ConversationsView: View {
     let session: any SessionManagerProtocol
     @Namespace var namespace: Namespace.ID
     @State var isPresentingComposer: Bool = false
+    @State var presentingExplodeConfirmation: Bool = false
     @State var path: [ConversationsRoute] = []
     @Environment(\.dismiss) var dismiss: DismissAction
 
@@ -27,7 +28,7 @@ struct ConversationsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        //
+                        presentingExplodeConfirmation = true
                     } label: {
                         HStack(spacing: DesignConstants.Spacing.step2x) {
                             Circle()
@@ -42,6 +43,19 @@ struct ConversationsView: View {
                         .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: 8)
                     }
                     .glassEffect(.clear.tint(.white))
+                    .confirmationDialog("", isPresented: $presentingExplodeConfirmation) {
+                        Button("Explode", role: .destructive) {
+                            do {
+                                try session.deleteAllAccounts()
+                            } catch {
+                                Logger.error("Error deleting all accounts: \(error)")
+                            }
+                        }
+
+                        Button("Cancel") {
+                            presentingExplodeConfirmation = false
+                        }
+                    }
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {

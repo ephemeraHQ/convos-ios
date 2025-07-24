@@ -15,6 +15,13 @@ final class CellFactory {
             return createDateTitle(in: collectionView, for: indexPath, title: group.value)
         case .typingIndicator:
             return createTypingIndicatorCell(in: collectionView, for: indexPath)
+        case let .invite(invite, verticalPadding: verticalPadding):
+            return createInviteCell(
+                in: collectionView,
+                for: indexPath,
+                invite: invite,
+                verticalPadding: verticalPadding
+            )
         }
     }
 
@@ -102,6 +109,18 @@ final class CellFactory {
         ) as! ImageCollectionCell
         cell.setup(with: source, messageType: messageType)
         cell.layoutMargins = .init(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
+        return cell
+    }
+
+    private static func createInviteCell(in collectionView: UICollectionView,
+                                         for indexPath: IndexPath,
+                                         invite: Invite,
+                                         verticalPadding: Bool) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: InviteCell.reuseIdentifier,
+            for: indexPath
+        ) as! InviteCell
+        cell.prepare(with: invite, hasVerticalPadding: verticalPadding)
         return cell
     }
 

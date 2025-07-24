@@ -99,15 +99,14 @@ final class InboxWriter: InboxWriterProtocol {
 
     func deleteInbox(inboxId: String) async throws {
         try await databaseWriter.write { db in
-            let inbox = try DBInbox.fetchOne(db, id: inboxId)
-            let conversations = DBConversation.filter(DBConversation.Columns.inboxId == inboxId)
-            try inbox?.delete(db)
-            try conversations.deleteAll(db)
-            if let inbox {
-                Logger.info("Successfully deleted inbox \(inbox.inboxId)")
-            } else {
-                Logger.warning("Inbox not found, skipping delete for inbox \(inboxId)")
+            guard let inbox = try DBInbox.fetchOne(db, id: inboxId) else {
+                Logger.error("Inbox not found, skipping delete")
+                return
             }
+            let conversations = DBConversation.filter(DBConversation.Columns.inboxId == inboxId)
+            try inbox.delete(db)
+            try conversations.deleteAll(db)
+            Logger.info("Successfully deleted inbox \(inbox.inboxId)")
         }
     }
 }

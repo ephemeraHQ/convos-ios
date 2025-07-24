@@ -35,6 +35,8 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
                 }
             case .date:
                 return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 18))
+            case .invite:
+                return .auto
             case .typingIndicator:
                 return .estimated(CGSize(width: 60, height: 36))
             case .messageGroup:
@@ -54,7 +56,7 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         case .cell:
             let item = sections[indexPath.section].cells[indexPath.item]
             switch item {
-            case .date:
+            case .date, .invite:
                 return .center
             case .message(let message, _):
                 switch message.base.content {
@@ -121,12 +123,15 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
                           of kind: ItemKind,
                           after indexPath: IndexPath) -> CGFloat? {
         let item = sections[indexPath.section].cells[indexPath.item]
+
         switch item {
         case .messageGroup:
             return 3.0
         case .message:
             return 2.0
         case .date:
+            return 0.0
+        case .invite:
             return 0.0
         default:
             return nil

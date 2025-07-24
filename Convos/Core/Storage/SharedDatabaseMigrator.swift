@@ -5,18 +5,24 @@ import GRDB
 
 class SharedDatabaseMigrator {
     static let shared: SharedDatabaseMigrator = SharedDatabaseMigrator()
-    private var defaultMigrator: DatabaseMigrator
 
-    private init() {
-        defaultMigrator = DatabaseMigrator()
-    }
+    private init() {}
 
     func migrate(database: any DatabaseWriter) throws {
+        let migrator = createMigrator()
+        try migrator.migrate(database)
+    }
+}
+
+extension SharedDatabaseMigrator {
+    private func createMigrator() -> DatabaseMigrator {
+        var migrator = DatabaseMigrator()
+
 #if DEBUG
-        defaultMigrator.eraseDatabaseOnSchemaChange = true
+        migrator.eraseDatabaseOnSchemaChange = true
 #endif
 
-        defaultMigrator.registerMigration("createSchema") { db in
+        migrator.registerMigration("createSchema") { db in
             try db.create(table: "session") { t in
                 t.column("id", .integer)
                     .unique()
@@ -91,6 +97,7 @@ class SharedDatabaseMigrator {
                     .primaryKey()
                 t.column("conversationId", .text)
                     .notNull()
+                    .unique(onConflict: .replace)
                     .references("conversation", onDelete: .cascade)
                 t.column("inviteUrlString", .text)
                     .notNull()
@@ -157,7 +164,7 @@ class SharedDatabaseMigrator {
             }
         }
 
-        try defaultMigrator.migrate(database)
+        return migrator
     }
 }
 

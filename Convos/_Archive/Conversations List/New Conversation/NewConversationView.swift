@@ -24,8 +24,11 @@ struct NewConversationView: View {
                         outgoingMessageWriter: composer.draftConversationWriter,
                         conversationLocalStateWriter: composer.conversationLocalStateWriter
                     ) {
-                        MessagesView(messagesRepository: composer.draftConversationRepository.messagesRepository)
-                            .ignoresSafeArea()
+                        MessagesView(
+                            messagesRepository: composer.draftConversationRepository.messagesRepository,
+                            inviteRepository: composer.draftConversationRepository.inviteRepository
+                        )
+                        .ignoresSafeArea()
                     }
                 } else {
                     VStack(alignment: .center) {
@@ -35,6 +38,9 @@ struct NewConversationView: View {
                     }
                     .ignoresSafeArea()
                 }
+            }
+            .onAppear {
+                newConversationState.newConversation()
             }
             .toolbarTitleDisplayMode(.inline)
             .toolbar {

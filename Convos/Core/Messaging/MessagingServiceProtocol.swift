@@ -9,6 +9,8 @@ protocol MessagingServiceProtocol {
 
     func draftConversationComposer() -> any DraftConversationComposerProtocol
 
+    func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol
+
     func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol
     func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol
     func conversationConsentWriter() -> any ConversationConsentWriterProtocol

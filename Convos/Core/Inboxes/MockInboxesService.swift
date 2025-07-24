@@ -16,6 +16,9 @@ class MockInboxesService: SessionManagerProtocol {
     func deleteAccount(with providerId: String) throws {
     }
 
+    func deleteAllAccounts() throws {
+    }
+
     var inboxesRepository: any InboxesRepositoryProtocol {
         self
     }

@@ -15,6 +15,7 @@ enum MessagesCollectionCell: Hashable {
     case typingIndicator
     case messageGroup(MessageGroup)
     case date(DateGroup)
+    case invite(Invite, verticalPadding: Bool)
 
     var alignment: MessagesCollectionCell.Alignment {
         switch self {
@@ -29,7 +30,7 @@ enum MessagesCollectionCell: Hashable {
             .leading
         case let .messageGroup(group):
             group.source == .incoming ? .leading : .trailing
-        case .date:
+        case .date, .invite:
             .center
         }
     }
@@ -46,6 +47,8 @@ extension MessagesCollectionCell: Differentiable {
             group.differenceIdentifier
         case let .date(group):
             group.differenceIdentifier
+        case let .invite(invite, verticalPadding):
+            "\(invite.id)-\(verticalPadding)".hashValue
         }
     }
 

@@ -75,6 +75,10 @@ class MockMessagingService: MessagingServiceProtocol {
         return self
     }
 
+    func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {
+        self
+    }
+
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
         self
     }
@@ -104,6 +108,12 @@ class MockMessagingService: MessagingServiceProtocol {
         let uploadedURL = "https://example.com/uploads/\(filename)"
         try await afterUpload(uploadedURL)
         return uploadedURL
+    }
+}
+
+extension MockMessagingService: InviteRepositoryProtocol {
+    var invitePublisher: AnyPublisher<Invite?, Never> {
+        Just(.mock()).eraseToAnyPublisher()
     }
 }
 

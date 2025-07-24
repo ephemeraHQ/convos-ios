@@ -5,12 +5,14 @@ import GRDB
 protocol DraftConversationRepositoryProtocol: ConversationRepositoryProtocol {
     var membersPublisher: AnyPublisher<[ConversationMember], Never> { get }
     var messagesRepository: any MessagesRepositoryProtocol { get }
+    var inviteRepository: any InviteRepositoryProtocol { get }
 }
 
 class DraftConversationRepository: DraftConversationRepositoryProtocol {
     private let dbReader: any DatabaseReader
     private let writer: any DraftConversationWriterProtocol
     let messagesRepository: any MessagesRepositoryProtocol
+    let inviteRepository: any InviteRepositoryProtocol
 
     var conversationId: String {
         writer.conversationId
@@ -22,6 +24,11 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
         Logger.info("Initializing DraftConversationRepository with conversationId: \(writer.conversationId)")
         messagesRepository = MessagesRepository(
             dbReader: dbReader,
+            conversationId: writer.conversationId,
+            conversationIdPublisher: writer.conversationIdPublisher
+        )
+        inviteRepository = InviteRepository(
+            databaseReader: dbReader,
             conversationId: writer.conversationId,
             conversationIdPublisher: writer.conversationIdPublisher
         )

@@ -27,6 +27,16 @@ final class MessagingService: MessagingServiceProtocol {
         self.databaseWriter = databaseWriter
     }
 
+    // MARK: Invites
+
+    func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {
+        InviteRepository(
+            databaseReader: databaseReader,
+            conversationId: conversationId,
+            conversationIdPublisher: Just(conversationId).eraseToAnyPublisher()
+        )
+    }
+
     // MARK: My Profile
 
     func myProfileRepository() -> any MyProfileRepositoryProtocol {

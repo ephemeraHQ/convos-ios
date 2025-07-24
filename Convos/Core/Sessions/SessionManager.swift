@@ -154,6 +154,19 @@ class SessionManager: SessionManagerProtocol {
         try authService.deleteAccount(with: providerId)
     }
 
+    func deleteAllAccounts() throws {
+        try authService.deleteAll()
+        try databaseWriter.write { db in
+            try DBInbox.deleteAll(db)
+            try DBConversation.deleteAll(db)
+            try DBConversationMember.deleteAll(db)
+            try Member.deleteAll(db)
+            try MemberProfile.deleteAll(db)
+            try DBInvite.deleteAll(db)
+            try DBMessage.deleteAll(db)
+        }
+    }
+
     // MARK: Messaging
 
     func messagingService(for inboxId: String) -> AnyMessagingService {

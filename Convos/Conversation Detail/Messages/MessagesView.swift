@@ -2,10 +2,12 @@ import SwiftUI
 
 struct MessagesView: UIViewControllerRepresentable {
     let messagesRepository: any MessagesRepositoryProtocol
+    let inviteRepository: any InviteRepositoryProtocol
 
     func makeUIViewController(context: Context) -> MessagesViewController {
         let messageViewController = MessagesViewController(
-            messagesRepository: messagesRepository
+            messagesRepository: messagesRepository,
+            inviteRepository: inviteRepository
         )
         return messageViewController
     }
@@ -18,6 +20,7 @@ struct MessagesView: UIViewControllerRepresentable {
     let messaging = MockMessagingService()
     let conversationId: String = "1"
     MessagesView(
-        messagesRepository: messaging.messagesRepository(for: conversationId)
+        messagesRepository: messaging.messagesRepository(for: conversationId),
+        inviteRepository: messaging.inviteRepository(for: conversationId)
     )
 }
