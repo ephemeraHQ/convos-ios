@@ -39,14 +39,17 @@ struct ConversationsListEmptyCTA: View {
 struct ConversationsListView: View {
     private let session: any SessionManagerProtocol
     @Binding var isPresentingComposer: Bool
+    @Binding var isPresentingJoinConversation: Bool
     @Binding var path: [ConversationsRoute]
     @State var viewModel: ConversationsListViewModel
 
     init(session: any SessionManagerProtocol,
          isPresentingComposer: Binding<Bool>,
+         isPresentingJoinConversation: Binding<Bool>,
          path: Binding<[ConversationsRoute]>) {
         self.session = session
         _isPresentingComposer = isPresentingComposer
+        _isPresentingJoinConversation = isPresentingJoinConversation
         _path = path
         let conversationsRepository = session.conversationsRepository(for: .allowed)
         let securityLineConversationsCountRepo = session.conversationsCountRepo(for: .securityLine)
@@ -63,7 +66,7 @@ struct ConversationsListView: View {
                     ConversationsListEmptyCTA {
                         isPresentingComposer = true
                     } onJoinConvo: {
-                        isPresentingComposer = true
+                        isPresentingJoinConversation = true
                     }
                     .padding(DesignConstants.Spacing.step6x)
                 } else {
@@ -103,12 +106,14 @@ struct ConversationsListView: View {
 
 #Preview {
     @Previewable @State var isPresentingComposer: Bool = false
+    @Previewable @State var isPresentingJoinConversation: Bool = false
     @Previewable @State var path: [ConversationsRoute] = []
     let convos = ConvosClient.mock()
 
     ConversationsListView(
         session: convos.session,
         isPresentingComposer: $isPresentingComposer,
+        isPresentingJoinConversation: $isPresentingJoinConversation,
         path: $path
     )
 }

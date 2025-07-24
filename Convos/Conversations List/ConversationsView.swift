@@ -13,6 +13,7 @@ struct ConversationsView: View {
     let session: any SessionManagerProtocol
     @Namespace var namespace: Namespace.ID
     @State var isPresentingComposer: Bool = false
+    @State var isPresentingJoinConversation: Bool = false
     @State var presentingExplodeConfirmation: Bool = false
     @State var path: [ConversationsRoute] = []
     @Environment(\.dismiss) var dismiss: DismissAction
@@ -22,6 +23,7 @@ struct ConversationsView: View {
             ConversationsListView(
                 session: session,
                 isPresentingComposer: $isPresentingComposer,
+                isPresentingJoinConversation: $isPresentingJoinConversation,
                 path: $path
             )
             .toolbarTitleDisplayMode(.inlineLarge)
@@ -40,7 +42,6 @@ struct ConversationsView: View {
                                 .foregroundStyle(.colorTextPrimary)
                         }
                         .padding(10)
-                        .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: 8)
                     }
                     .glassEffect(.clear.tint(.white))
                     .confirmationDialog("", isPresented: $presentingExplodeConfirmation) {
@@ -78,6 +79,9 @@ struct ConversationsView: View {
                     id: "composer-transition-source",
                     in: namespace
                 )
+            }
+            .sheet(isPresented: $isPresentingJoinConversation) {
+                JoinConversationView()
             }
             .fullScreenCover(isPresented: $isPresentingComposer) {
                 NewConversationView(session: session)

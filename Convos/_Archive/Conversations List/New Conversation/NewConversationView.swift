@@ -3,6 +3,7 @@ import SwiftUI
 struct NewConversationView: View {
     let session: any SessionManagerProtocol
     @State private var newConversationState: NewConversationState
+    @State private var presentingJoinConversation: Bool = false
     @State private var presentingDeleteConfirmation: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
 
@@ -41,6 +42,9 @@ struct NewConversationView: View {
             }
             .onAppear {
                 newConversationState.newConversation()
+            }
+            .fullScreenCover(isPresented: $presentingJoinConversation) {
+                JoinConversationView()
             }
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -100,7 +104,7 @@ struct NewConversationView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     if newConversationState.showJoinConversation {
                         Button {
-                            //
+                            presentingJoinConversation = true
                         } label: {
                             Image(systemName: "qrcode.viewfinder")
                         }
