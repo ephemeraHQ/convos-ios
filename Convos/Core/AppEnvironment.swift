@@ -8,11 +8,11 @@ enum AppEnvironment {
         if let configURL = ConfigManager.shared.backendURLOverride {
             return configURL
         }
-        
+
         // Fall back to environment-specific defaults
         switch self {
         case .local, .tests:
-            return Secrets.CONVOS_API_BASE_URL.isEmpty ? 
+            return Secrets.CONVOS_API_BASE_URL.isEmpty ?
                 "http://localhost:4000/api/" : Secrets.CONVOS_API_BASE_URL
         case .dev:
             return "https://api.convos-otr-dev.convos-api.xyz/api/"
@@ -26,7 +26,7 @@ enum AppEnvironment {
         if let configGroupId = ConfigManager.shared.appGroupOverride {
             return configGroupId
         }
-        
+
         // Fall back to environment-specific defaults
         switch self {
         case .local: return "group.org.convos.ios-local"
@@ -40,7 +40,7 @@ enum AppEnvironment {
         if let configRpId = ConfigManager.shared.relyingPartyOverride {
             return configRpId
         }
-        
+
         // Fall back to environment-specific defaults
         switch self {
         case .local, .tests: return "local.convos.org"
