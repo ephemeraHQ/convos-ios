@@ -1118,7 +1118,7 @@
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Convos/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Convos Local";
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Convos uses the camera to scan QR code invites";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -1152,7 +1152,7 @@
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Convos/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Convos Local";
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Convos uses the camera to scan QR code invites";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -1380,7 +1380,7 @@
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Convos/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Convos Local";
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Convos uses the camera to scan QR code invites";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
