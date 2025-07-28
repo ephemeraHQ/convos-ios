@@ -4,29 +4,48 @@ enum AppEnvironment {
     case local, tests, dev, production
 
     var apiBaseURL: String {
+        // Check ConfigManager override first
+        if let configURL = ConfigManager.shared.backendURLOverride {
+            return configURL
+        }
+        
+        // Fall back to environment-specific defaults
         switch self {
-        case .local, .tests: "http://localhost:4000/api/"
-        case .dev: "https://api.convos-otr-dev.convos-api.xyz/api/"
-        case .production: "https://api.convos-otr-prod.convos-api.xyz/api/"
+        case .local, .tests:
+            return Secrets.CONVOS_API_BASE_URL.isEmpty ? 
+                "http://localhost:4000/api/" : Secrets.CONVOS_API_BASE_URL
+        case .dev:
+            return "https://api.convos-otr-dev.convos-api.xyz/api/"
+        case .production:
+            return "https://api.convos-otr-prod.convos-api.xyz/api/"
         }
     }
 
-    var passkeyApiBaseURL: String {
-        "https://passkey-auth-backend.vercel.app/api"
-    }
-
     var appGroupIdentifier: String {
+        // Check ConfigManager override first
+        if let configGroupId = ConfigManager.shared.appGroupOverride {
+            return configGroupId
+        }
+        
+        // Fall back to environment-specific defaults
         switch self {
-        case .local, .tests, .dev:
-            "group.com.convos.preview"
-        case .production: "group.com.convos.prod"
+        case .local: return "group.org.convos.ios-local"
+        case .tests, .dev: return "group.org.convos.ios-preview"
+        case .production: return "group.org.convos.ios"
         }
     }
 
     var relyingPartyIdentifier: String {
+        // Check ConfigManager override first
+        if let configRpId = ConfigManager.shared.relyingPartyOverride {
+            return configRpId
+        }
+        
+        // Fall back to environment-specific defaults
         switch self {
-        case .local, .tests, .dev: "preview.convos.org"
-        case .production: "convos.org"
+        case .local, .tests: return "local.convos.org"
+        case .dev: return "otr-preview.convos.org"
+        case .production: return "convos.org"
         }
     }
 
@@ -44,7 +63,7 @@ enum AppEnvironment {
     }
 
     var defaultDatabasesDirectory: String {
-        return defaultDatabasesDirectoryURL.path
+        defaultDatabasesDirectoryURL.path
     }
 
     var reactNativeDatabaseDirectory: URL {

@@ -4,12 +4,12 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.convos.preview</string>
+		<string>group.org.convos.ios-local</string>
 	</array>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)com.convos.preview.ConvosNSE</string>
-		<string>$(AppIdentifierPrefix)group.com.convos.preview</string>
+		<string>$(AppIdentifierPrefix)org.convos.ios-local.ConvosNSE</string>
+		<string>$(AppIdentifierPrefix)group.org.convos.ios-local</string>
 	</array>
 </dict>
 </plist>

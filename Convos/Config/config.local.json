@@ -1,0 +1,8 @@
+{
+  "environment": "local",
+  "backendUrl": "http://localhost:4000/api/",
+  "bundleId": "org.convos.ios-local",
+  "appGroupIdentifier": "group.org.convos.ios-local",
+  "relyingPartyIdentifier": "local.convos.org",
+  "enableMockXMTP": true
+}
