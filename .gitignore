@@ -7,7 +7,7 @@
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
 
 ### Secrets ###
-Config/Secrets.swift
+**/Secrets.swift
 .env
 .env.local
 
