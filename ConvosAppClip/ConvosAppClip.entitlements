@@ -4,18 +4,18 @@
 <dict>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>webcredentials:otr-preview.convos.org</string>
-		<string>applinks:otr-preview.convos.org</string>
-		<string>applinks:*.otr-preview.convos.org</string>
-		<string>appclips:otr-preview.convos.org</string>
+		<string>webcredentials:$(ASSOCIATED_DOMAIN)</string>
+		<string>applinks:$(ASSOCIATED_DOMAIN)</string>
+		<string>applinks:*.$(ASSOCIATED_DOMAIN)</string>
+		<string>appclips:$(ASSOCIATED_DOMAIN)</string>
 	</array>
 	<key>com.apple.developer.parent-application-identifiers</key>
 	<array>
-		<string>$(AppIdentifierPrefix)org.convos.ios-preview</string>
+		<string>$(AppIdentifierPrefix)$(KEYCHAIN_GROUP_IDENTIFIER)</string>
 	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.convos.preview</string>
+		<string>$(APP_GROUP_IDENTIFIER)</string>
 	</array>
 </dict>
 </plist>

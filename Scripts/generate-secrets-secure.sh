@@ -4,7 +4,7 @@ set -e
 set -o pipefail
 # NO set -x to avoid exposing secrets in logs
 
-SECRETS_FILE="Config/Secrets.swift"
+SECRETS_FILE="Convos/Config/Secrets.swift"
 
 echo "🔑 Generating $SECRETS_FILE from environment variables"
 

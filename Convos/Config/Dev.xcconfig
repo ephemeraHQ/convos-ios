@@ -1,0 +1,25 @@
+// Development/TestFlight Configuration
+CONFIG_FILE = config.dev.json
+DEVELOPMENT_TEAM = FY4NZR34Z3
+
+// Bundle IDs for all targets
+MAIN_BUNDLE_ID = org.convos.ios-preview
+PRODUCT_BUNDLE_IDENTIFIER = $(MAIN_BUNDLE_ID)
+
+// Target-specific bundle IDs (will be used in target build settings)
+CONVOS_BUNDLE_ID = $(MAIN_BUNDLE_ID)
+CONVOS_TESTS_BUNDLE_ID = $(MAIN_BUNDLE_ID).tests
+CONVOS_APP_CLIP_BUNDLE_ID = $(MAIN_BUNDLE_ID).Clip
+CONVOS_APP_CLIP_TESTS_BUNDLE_ID = $(MAIN_BUNDLE_ID).ConvosAppClipTests
+CONVOS_APP_CLIP_UI_TESTS_BUNDLE_ID = $(MAIN_BUNDLE_ID).ConvosAppClipUITests
+NOTIFICATION_SERVICE_BUNDLE_ID = $(MAIN_BUNDLE_ID).ConvosNSE
+
+// Environment-specific entitlements
+APP_GROUP_IDENTIFIER = group.$(MAIN_BUNDLE_ID)
+ASSOCIATED_DOMAIN = otr-preview.convos.org
+KEYCHAIN_GROUP_IDENTIFIER = $(MAIN_BUNDLE_ID)
+APP_DISPLAY_NAME = Convos Dev
+
+// Info.plist preprocessing for Dev builds
+INFOPLIST_PREPROCESS = YES
+INFOPLIST_PREFIX_HEADER = $(SRCROOT)/Convos/Config/InfoPlistPrefix.Dev.h

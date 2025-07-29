@@ -12,7 +12,7 @@ set -o pipefail
 # The path to the Secrets.swift file
 # Xcode knows about this file and expects it to exist.
 # If you change this path, you need to reflect the change in the Xcode project.
-SECRETS_FILE="Config/Secrets.swift"
+SECRETS_FILE="Convos/Config/Secrets.swift"
 
 echo "🔑 Generating $SECRETS_FILE"
 
@@ -23,7 +23,7 @@ if [ ! -f ".env" ]; then
 fi
 
 # Create the output directory if it doesn't exist
-mkdir -p "Config"
+mkdir -p "Convos/Config"
 
 # Read .env file and generate Secrets.swift
 cat >"$SECRETS_FILE" <<'EOF'

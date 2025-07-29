@@ -4,11 +4,23 @@ import XMTPiOS
 
 private extension AppEnvironment {
     var xmtpEnv: XMTPEnvironment {
+        // If custom host is set, use local environment
+        if self.xmtpEndpoint != nil {
+            return .local
+        }
+
         switch self {
         case .local, .tests: return .local
         case .dev: return .dev
         case .production: return .production
         }
+    }
+
+    var customLocalAddress: String? {
+        guard let endpoint = self.xmtpEndpoint, !endpoint.isEmpty else {
+            return nil
+        }
+        return endpoint
     }
 
     var isSecure: Bool {
@@ -137,6 +149,20 @@ actor InboxStateMachine {
         self.syncingManager = syncingManager
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
+
+        // Set custom XMTP host if provided
+        Logger.info("🔧 XMTP Configuration:")
+        Logger.info("   XMTP_CUSTOM_HOST = \(environment.xmtpEndpoint ?? "nil")")
+        Logger.info("   customLocalAddress = \(environment.customLocalAddress ?? "nil")")
+        Logger.info("   xmtpEnv = \(environment.xmtpEnv)")
+
+        if let customHost = environment.customLocalAddress {
+            Logger.info("🌐 Setting XMTPEnvironment.customLocalAddress = \(customHost)")
+            XMTPEnvironment.customLocalAddress = customHost
+        } else {
+            Logger.info("🌐 Using default XMTP endpoints")
+        }
+
         self.clientOptions = ClientOptions(
             api: .init(
                 env: environment.xmtpEnv,

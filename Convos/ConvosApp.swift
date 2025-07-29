@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct ConvosApp: App {
-    let convos: ConvosClient = .client(environment: .dev)
+    let convos: ConvosClient = .client(environment: ConfigManager.shared.currentEnvironment)
     let analyticsService: AnalyticsServiceProtocol = PosthogAnalyticsService.shared
 
     init() {

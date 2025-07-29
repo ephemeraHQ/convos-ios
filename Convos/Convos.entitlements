@@ -4,20 +4,20 @@
 <dict>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>webcredentials:preview.convos.org</string>
-		<string>applinks:preview.convos.org</string>
-		<string>applinks:*.preview.convos.org</string>
+		<string>webcredentials:$(ASSOCIATED_DOMAIN)</string>
+		<string>applinks:$(ASSOCIATED_DOMAIN)</string>
+		<string>applinks:*.$(ASSOCIATED_DOMAIN)</string>
 	</array>
 	<key>com.apple.developer.devicecheck.appattest-environment</key>
 	<string>development</string>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.convos.preview</string>
+		<string>$(APP_GROUP_IDENTIFIER)</string>
 	</array>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)group.com.convos.preview</string>
-		<string>$(AppIdentifierPrefix)com.convos.preview</string>
+		<string>$(AppIdentifierPrefix)$(APP_GROUP_IDENTIFIER)</string>
+		<string>$(AppIdentifierPrefix)$(KEYCHAIN_GROUP_IDENTIFIER)</string>
 	</array>
 </dict>
 </plist>
