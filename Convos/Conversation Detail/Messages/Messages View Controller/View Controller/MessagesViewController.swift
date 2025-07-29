@@ -154,18 +154,20 @@ final class MessagesViewController: UIViewController {
         setupUI()
         reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
 
-        reloadMessagesFromRepository()
-        observe(messagesRepository: messagesRepository, inviteRepository: inviteRepository)
-
         NotificationCenter.default.addObserver(
             forName: .messagesInputViewHeightDidChange,
             object: nil,
             queue: .main
-        ) { notification in
+        ) { [weak self] notification in
+            guard let self else { return }
             if let height = notification.object as? CGFloat {
                 Logger.info("Messages input height changed to: \(height)")
+                reloadInputViews()
             }
         }
+
+        reloadMessagesFromRepository()
+        observe(messagesRepository: messagesRepository, inviteRepository: inviteRepository)
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -569,7 +571,8 @@ extension MessagesViewController: KeyboardListenerDelegate {
                 collectionView.safeAreaInsets.bottom)
     }
 
-    private func updateCollectionViewInsets(to newBottomInset: CGFloat, with info: KeyboardInfo) {
+    private func updateCollectionViewInsets(to newBottomInset: CGFloat, with info: KeyboardInfo?) {
+        Logger.info("updateCollectionViewInsets: \(newBottomInset)")
         let positionSnapshot = messagesLayout.getContentOffsetSnapshot(from: .bottom)
 
         if currentControllerActions.options.contains(.updatingCollection) {
@@ -579,7 +582,7 @@ extension MessagesViewController: KeyboardListenerDelegate {
         }
 
         currentInterfaceActions.options.insert(.changingContentInsets)
-        UIView.animate(withDuration: info.animationDuration, animations: {
+        UIView.animate(withDuration: info?.animationDuration ?? 0.2, animations: {
             self.collectionView.performBatchUpdates({
                 self.collectionView.contentInset.bottom = newBottomInset
                 self.collectionView.verticalScrollIndicatorInsets.bottom = newBottomInset
