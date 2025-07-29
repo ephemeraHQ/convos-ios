@@ -30,7 +30,17 @@ struct QRCodeView: View {
 
         guard let outputImage = filter.outputImage else { return nil }
 
-        let transform = CGAffineTransform(scaleX: 10, y: 10)
+        let displaySize: CGFloat = 220 // The max size we display in the UI
+        let screenScale = await MainActor.run { UIScreen.main.scale }
+
+        let outputExtent = outputImage.extent
+        let baseSize = max(outputExtent.width, outputExtent.height)
+
+        // Scale to match the display size * screen scale (e.g., 220 * 3 = 660 pixels on 3x screens)
+        let targetPixelSize = displaySize * screenScale
+        let scaleFactor = targetPixelSize / baseSize
+
+        let transform = CGAffineTransform(scaleX: scaleFactor, y: scaleFactor)
         let scaledImage = outputImage.transformed(by: transform)
 
         guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
