@@ -4,7 +4,12 @@ enum AppEnvironment {
     case local, tests, dev, production
 
     var apiBaseURL: String {
-        // Check ConfigManager override first
+        // Check environment variable first (highest priority)
+        if !Secrets.CONVOS_API_BASE_URL.isEmpty {
+            return Secrets.CONVOS_API_BASE_URL
+        }
+
+        // Then check ConfigManager
         if let configURL = ConfigManager.shared.backendURLOverride {
             return configURL
         }
@@ -12,8 +17,7 @@ enum AppEnvironment {
         // Fall back to environment-specific defaults
         switch self {
         case .local, .tests:
-            return Secrets.CONVOS_API_BASE_URL.isEmpty ?
-                "http://localhost:4000/api/" : Secrets.CONVOS_API_BASE_URL
+            return "http://localhost:4000/api/"
         case .dev:
             return "https://api.convos-otr-dev.convos-api.xyz/api/"
         case .production:
@@ -22,7 +26,12 @@ enum AppEnvironment {
     }
 
     var appGroupIdentifier: String {
-        // Check ConfigManager override first
+        // Check environment variable first (highest priority)
+        if let envValue = getEnvironmentVariable("APP_GROUP_IDENTIFIER"), !envValue.isEmpty {
+            return envValue
+        }
+
+        // Then check ConfigManager
         if let configGroupId = ConfigManager.shared.appGroupOverride {
             return configGroupId
         }
@@ -36,7 +45,12 @@ enum AppEnvironment {
     }
 
     var relyingPartyIdentifier: String {
-        // Check ConfigManager override first
+        // Check environment variable first (highest priority)
+        if let envValue = getEnvironmentVariable("RELYING_PARTY_IDENTIFIER"), !envValue.isEmpty {
+            return envValue
+        }
+
+        // Then check ConfigManager
         if let configRpId = ConfigManager.shared.relyingPartyOverride {
             return configRpId
         }
@@ -77,5 +91,16 @@ enum AppEnvironment {
             fatalError("Failed getting container URL for group identifier: \(appGroupIdentifier)")
         }
         return groupUrl
+    }
+
+    /// Helper function to get environment variables from Secrets using reflection
+    private func getEnvironmentVariable(_ key: String) -> String? {
+        let mirror = Mirror(reflecting: Secrets.self)
+        for child in mirror.children {
+            if child.label == key {
+                return child.value as? String
+            }
+        }
+        return nil
     }
 }
