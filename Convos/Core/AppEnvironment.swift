@@ -6,13 +6,13 @@ enum AppEnvironment {
     var apiBaseURL: String {
         // Check environment variable first (highest priority)
         if !Secrets.CONVOS_API_BASE_URL.isEmpty {
-            print("🌐 Using API URL from environment: \(Secrets.CONVOS_API_BASE_URL)")
+            Logger.info("🌐 Using API URL from environment: \(Secrets.CONVOS_API_BASE_URL)")
             return Secrets.CONVOS_API_BASE_URL
         }
 
         // Then check ConfigManager
         if let configURL = ConfigManager.shared.backendURLOverride {
-            print("🌐 Using API URL from ConfigManager: \(configURL)")
+            Logger.info("🌐 Using API URL from ConfigManager: \(configURL)")
             return configURL
         }
 
@@ -26,7 +26,7 @@ enum AppEnvironment {
         case .production:
             defaultURL = "https://api.convos-otr-prod.convos-api.xyz/api/"
         }
-        print("🌐 Using default API URL for \(self): \(defaultURL)")
+        Logger.info("🌐 Using default API URL for \(self): \(defaultURL)")
         return defaultURL
     }
 

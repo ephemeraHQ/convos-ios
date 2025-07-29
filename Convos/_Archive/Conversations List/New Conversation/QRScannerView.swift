@@ -59,7 +59,7 @@ struct QRScannerView: UIViewRepresentable {
         let captureSession = AVCaptureSession()
 
         guard let videoCaptureDevice = AVCaptureDevice.default(for: .video) else {
-            print("Failed to get video capture device")
+            Logger.info("Failed to get video capture device")
             return
         }
 
@@ -68,14 +68,14 @@ struct QRScannerView: UIViewRepresentable {
         do {
             videoInput = try AVCaptureDeviceInput(device: videoCaptureDevice)
         } catch {
-            print("Failed to create video input: \(error)")
+            Logger.info("Failed to create video input: \(error)")
             return
         }
 
         if captureSession.canAddInput(videoInput) {
             captureSession.addInput(videoInput)
         } else {
-            print("Cannot add video input")
+            Logger.info("Cannot add video input")
             return
         }
 
@@ -87,7 +87,7 @@ struct QRScannerView: UIViewRepresentable {
             metadataOutput.setMetadataObjectsDelegate(delegate, queue: DispatchQueue.main)
             metadataOutput.metadataObjectTypes = [.qr]
         } else {
-            print("Cannot add metadata output")
+            Logger.info("Cannot add metadata output")
             return
         }
 
