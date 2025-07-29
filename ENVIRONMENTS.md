@@ -5,8 +5,8 @@
 The app supports 3 environments with distinct configurations:
 
 | Environment | XMTP Network | Backend | Main Bundle ID | Purpose |
-|-------------|--------------|---------|----------------|---------|  
-| **Local** | Mock/Local | localhost:4000 | `org.convos.ios-local` | Development with mock XMTP |
+|-------------|--------------|---------|----------------|---------|
+| **Local** | XMTP Local | localhost:4000 | `org.convos.ios-local` | Development with local XMTP |
 | **Dev** | XMTP Dev | api.convos-otr-dev.convos-api.xyz | `org.convos.ios-preview` | TestFlight builds, real XMTP dev |
 | **Production** | XMTP Prod | api.convos-prod.convos-api.xyz | `org.convos.ios` | App Store release |
 
@@ -32,7 +32,7 @@ The app supports 3 environments with distinct configurations:
 ```
 Convos/Config/
 ├── config.local.json     # Local development settings
-├── config.dev.json       # TestFlight/staging settings  
+├── config.dev.json       # TestFlight/staging settings
 ├── config.prod.json      # Production settings
 ├── Local.xcconfig        # Build settings for local
 ├── Dev.xcconfig          # Build settings for dev
@@ -73,7 +73,7 @@ Scripts/
 1. **Project** → **Info** → **Configurations**
 2. For **ALL targets** (Convos, ConvosTests, ConvosAppClip, ConvosAppClipTests, NotificationService):
    - **Debug** → Select `Convos/Config/Local.xcconfig`
-   - **Dev** → Select `Convos/Config/Dev.xcconfig` 
+   - **Dev** → Select `Convos/Config/Dev.xcconfig`
    - **Release** → Select `Convos/Config/Prod.xcconfig`
 
 ### 2.1. Set Target-Specific Bundle IDs
@@ -95,7 +95,7 @@ After assigning `.xcconfig` files, update each target's bundle ID:
 1. **Product** → **Scheme** → **New Scheme**
 2. Create:
    - **Convos Local** (Debug config)
-   - **Convos Dev** (Dev config)  
+   - **Convos Dev** (Dev config)
    - **Convos Prod** (Release config)
 
 ## 🔍 Verification
@@ -113,14 +113,14 @@ print("🌐 Backend: \(ConfigManager.shared.backendURLOverride ?? "default")")
 - **Secrets stay in `.env`** → `Secrets.swift` (not in config JSON)
 - **Config files are tracked in Git** (no sensitive data!)
 - **Bundle IDs differ per environment** (allows side-by-side installation)
-- **Local uses mock XMTP**, Dev/Prod use real XMTP networks
+- **All environments use real XMTP networks** (local/dev/production)
 - **Build script fails fast** if config file missing
 
 ## 🛠️ Development Workflow
 
 ### Typical Usage:
 - **Daily dev work:** Use `Convos Local` scheme
-- **TestFlight builds:** Use `Convos Dev` scheme  
+- **TestFlight builds:** Use `Convos Dev` scheme
 - **App Store release:** Use `Convos Prod` scheme
 
 ### CI/CD Integration:

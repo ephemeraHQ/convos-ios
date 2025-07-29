@@ -49,9 +49,4 @@ final class ConfigManager {
     var relyingPartyOverride: String? {
         config["relyingPartyIdentifier"] as? String
     }
-
-    /// Whether to enable mock XMTP (useful for local dev)
-    var enableMockXMTP: Bool {
-        config["enableMockXMTP"] as? Bool ?? false
-    }
 }

@@ -26,12 +26,7 @@ enum AppEnvironment {
     }
 
     var appGroupIdentifier: String {
-        // Check environment variable first (highest priority)
-        if let envValue = getEnvironmentVariable("APP_GROUP_IDENTIFIER"), !envValue.isEmpty {
-            return envValue
-        }
-
-        // Then check ConfigManager
+        // Check ConfigManager override
         if let configGroupId = ConfigManager.shared.appGroupOverride {
             return configGroupId
         }
@@ -45,12 +40,7 @@ enum AppEnvironment {
     }
 
     var relyingPartyIdentifier: String {
-        // Check environment variable first (highest priority)
-        if let envValue = getEnvironmentVariable("RELYING_PARTY_IDENTIFIER"), !envValue.isEmpty {
-            return envValue
-        }
-
-        // Then check ConfigManager
+        // Check ConfigManager override
         if let configRpId = ConfigManager.shared.relyingPartyOverride {
             return configRpId
         }
@@ -61,6 +51,11 @@ enum AppEnvironment {
         case .dev: return "otr-preview.convos.org"
         case .production: return "convos.org"
         }
+    }
+
+    var xmtpEndpoint: String? {
+        let value = Secrets.XMTP_CUSTOM_HOST
+        return value.isEmpty ? nil : value
     }
 
     var defaultDatabasesDirectoryURL: URL {
@@ -91,16 +86,5 @@ enum AppEnvironment {
             fatalError("Failed getting container URL for group identifier: \(appGroupIdentifier)")
         }
         return groupUrl
-    }
-
-    /// Helper function to get environment variables from Secrets using reflection
-    private func getEnvironmentVariable(_ key: String) -> String? {
-        let mirror = Mirror(reflecting: Secrets.self)
-        for child in mirror.children {
-            if child.label == key {
-                return child.value as? String
-            }
-        }
-        return nil
     }
 }

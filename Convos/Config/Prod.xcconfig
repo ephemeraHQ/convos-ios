@@ -1,5 +1,5 @@
 // Production Configuration
-CONFIG_FILE = config.prod.json  
+CONFIG_FILE = config.prod.json
 DEVELOPMENT_TEAM = FY4NZR34Z3
 
 // Bundle IDs for all targets

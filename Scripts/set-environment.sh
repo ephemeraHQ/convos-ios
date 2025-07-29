@@ -18,8 +18,8 @@ show_usage() {
     echo "Usage: $0 [environment] [action]"
     echo ""
     echo "Environments:"
-    echo "  local  - Local development with mock XMTP"
-    echo "  dev    - Development/TestFlight with real XMTP dev network" 
+    echo "  local  - Local development with XMTP local network"
+    echo "  dev    - Development/TestFlight with real XMTP dev network"
     echo "  prod   - Production with real XMTP production network"
     echo ""
     echo "Actions:"
@@ -50,23 +50,23 @@ validate_env() {
 setup_environments() {
     echo "🛠️  Setting up environment configurations..."
     echo ""
-    
+
     # Check if we have the required config files
     for env in "${VALID_ENVS[@]}"; do
         config_file="Convos/Config/config.${env}.json"
         xcconfig_file="Convos/Config/$(echo ${env:0:1} | tr '[:lower:]' '[:upper:]')$(echo ${env:1}).xcconfig"
-        
+
         if [ ! -f "$config_file" ]; then
             echo "❌ Missing config file: $config_file"
             exit 1
         fi
-        
+
         if [ ! -f "$xcconfig_file" ]; then
             echo "❌ Missing xcconfig file: $xcconfig_file"
             exit 1
         fi
     done
-    
+
     echo "✅ All required configuration files found"
     echo ""
     echo "📝 Manual setup required in Xcode:"
@@ -103,20 +103,20 @@ setup_environments() {
 # Function to switch environment via scheme selection
 switch_environment() {
     local env=$1
-    
+
     if ! validate_env "$env"; then
         echo "❌ Invalid environment: $env"
         echo "Valid environments: ${VALID_ENVS[*]}"
         exit 1
     fi
-    
+
     # Map environment to scheme name
     case "$env" in
         local) scheme="Convos Local" ;;
         dev) scheme="Convos Dev" ;;
         prod) scheme="Convos Prod" ;;
     esac
-    
+
     echo "🔄 To switch to $env environment:"
     echo ""
     echo "In Xcode:"
@@ -131,7 +131,7 @@ switch_environment() {
     esac
     echo "xcodebuild -scheme '$scheme' -configuration $config build"
     echo ""
-    
+
     # Show what this environment includes
     config_file="Convos/Config/config.${env}.json"
     if [ -f "$config_file" ] && command -v jq >/dev/null 2>&1; then

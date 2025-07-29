@@ -1,8 +1,7 @@
 {
-  "environment": "dev", 
+  "environment": "dev",
   "backendUrl": "https://api.convos-otr-dev.convos-api.xyz/api/",
   "bundleId": "org.convos.ios-preview",
-  "appGroupIdentifier": "group.org.convos.ios-preview", 
-  "relyingPartyIdentifier": "otr-preview.convos.org",
-  "enableMockXMTP": false
+  "appGroupIdentifier": "group.org.convos.ios-preview",
+  "relyingPartyIdentifier": "otr-preview.convos.org"
 }
