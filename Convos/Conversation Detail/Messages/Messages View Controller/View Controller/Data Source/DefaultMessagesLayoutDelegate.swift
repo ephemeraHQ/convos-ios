@@ -36,7 +36,12 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
             case .date:
                 return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 18))
             case .invite:
-                return .auto
+                return .estimated(
+                    CGSize(
+                        width: messagesLayout.layoutFrame.width,
+                        height: messagesLayout.layoutFrame.width
+                    )
+                )
             case .typingIndicator:
                 return .estimated(CGSize(width: 60, height: 36))
             case .messageGroup:

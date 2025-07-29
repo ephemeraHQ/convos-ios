@@ -103,29 +103,29 @@ struct MessagesInputView: View {
 
     var body: some View {
         HStack(alignment: .bottom) {
-            if viewModel.showingProfileNameEditor {
-                EmptyView()
-                    .matchedGeometryEffect(
-                        id: "AddButton",
-                        in: profileEditorAnimation,
-                    )
-            } else {
-                Button {
-                } label: {
-                    Image(systemName: "plus")
-                        .foregroundStyle(.colorTextSecondary)
-                        .font(.body)
-                        .frame(width: addButtonSize, height: addButtonSize)
-                        .padding(.vertical, buttonVerticalPadding)
-                        .padding(.horizontal, 7.0)
-                }
-                .glassEffect(.regular, in: .circle)
-                .matchedGeometryEffect(
-                    id: "AddButton",
-                    in: profileEditorAnimation,
-                )
-                .padding(DesignConstants.Spacing.stepX)
-            }
+//            if viewModel.showingProfileNameEditor {
+//                EmptyView()
+//                    .matchedGeometryEffect(
+//                        id: "AddButton",
+//                        in: profileEditorAnimation,
+//                    )
+//            } else {
+//                Button {
+//                } label: {
+//                    Image(systemName: "plus")
+//                        .foregroundStyle(.colorTextSecondary)
+//                        .font(.body)
+//                        .frame(width: addButtonSize, height: addButtonSize)
+//                        .padding(.vertical, buttonVerticalPadding)
+//                        .padding(.horizontal, 7.0)
+//                }
+//                .glassEffect(.regular, in: .circle)
+//                .matchedGeometryEffect(
+//                    id: "AddButton",
+//                    in: profileEditorAnimation,
+//                )
+//                .padding(DesignConstants.Spacing.stepX)
+//            }
 
             HStack(alignment: .bottom, spacing: 0) {
                 if viewModel.showingProfileNameEditor {
