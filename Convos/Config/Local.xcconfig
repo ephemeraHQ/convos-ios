@@ -19,3 +19,7 @@ APP_GROUP_IDENTIFIER = group.$(MAIN_BUNDLE_ID)
 ASSOCIATED_DOMAIN = local.convos.org
 KEYCHAIN_GROUP_IDENTIFIER = $(MAIN_BUNDLE_ID)
 APP_DISPLAY_NAME = Convos Local
+
+// Info.plist preprocessing for Local builds
+INFOPLIST_PREPROCESS = YES
+INFOPLIST_PREFIX_HEADER = $(SRCROOT)/Convos/Config/InfoPlistPrefix.Local.h

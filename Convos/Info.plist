@@ -4,10 +4,6 @@
 <dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Convos uses the camera to scan QR code invites</string>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-	</dict>
+	ATS_DICTIONARY
 </dict>
 </plist>
