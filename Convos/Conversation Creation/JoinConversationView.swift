@@ -51,6 +51,7 @@ struct JoinConversationView: View {
                 }
                 .compositingGroup()
             }
+            .ignoresSafeArea()
             .toolbar {
                 if showsToolbar {
                     ToolbarItem(placement: .topBarTrailing) {

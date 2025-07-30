@@ -27,6 +27,7 @@ struct QRScannerView: UIViewRepresentable {
     func makeUIView(context: Context) -> UIView {
         let view = UIView()
         view.backgroundColor = .black
+        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
         // Check camera authorization
         checkCameraAuthorization { authorized in
@@ -57,6 +58,7 @@ struct QRScannerView: UIViewRepresentable {
 
     private func setupCamera(on view: UIView) {
         let captureSession = AVCaptureSession()
+        captureSession.sessionPreset = .high
 
         guard let videoCaptureDevice = AVCaptureDevice.default(for: .video) else {
             Logger.info("Failed to get video capture device")
@@ -92,7 +94,12 @@ struct QRScannerView: UIViewRepresentable {
         }
 
         let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-        previewLayer.frame = view.bounds
+        // Use window bounds to fill entire screen including safe areas
+        if let window = view.window {
+            previewLayer.frame = window.bounds
+        } else {
+            previewLayer.frame = view.bounds
+        }
         previewLayer.videoGravity = .resizeAspectFill
         view.layer.addSublayer(previewLayer)
 
@@ -109,7 +116,19 @@ struct QRScannerView: UIViewRepresentable {
             object: nil,
             queue: .main
         ) { _ in
-            self.updateVideoOrientation(for: previewLayer)
+            // Delay slightly to ensure view bounds are updated after rotation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                // Use window bounds to fill entire screen including safe areas
+                if let window = view.window {
+                    previewLayer.frame = view.convert(window.bounds, from: window)
+                } else {
+                    previewLayer.frame = view.bounds
+                }
+                CATransaction.commit()
+                self.updateVideoOrientation(for: previewLayer)
+            }
         }
 
         DispatchQueue.global(qos: .background).async {
@@ -120,8 +139,18 @@ struct QRScannerView: UIViewRepresentable {
     func updateUIView(_ uiView: UIView, context: Context) {
         // Update preview layer frame
         if let previewLayer = uiView.layer.value(forKey: "previewLayer") as? AVCaptureVideoPreviewLayer {
-            previewLayer.frame = uiView.bounds
-            updateVideoOrientation(for: previewLayer)
+            DispatchQueue.main.async {
+                CATransaction.begin()
+                CATransaction.setDisableActions(true)
+                // Use window bounds to fill entire screen including safe areas
+                if let window = uiView.window {
+                    previewLayer.frame = uiView.convert(window.bounds, from: window)
+                } else {
+                    previewLayer.frame = uiView.bounds
+                }
+                CATransaction.commit()
+                self.updateVideoOrientation(for: previewLayer)
+            }
         }
     }
 
@@ -130,32 +159,42 @@ struct QRScannerView: UIViewRepresentable {
 
         let orientation = UIDevice.current.orientation
 
+        // Map device orientation to video rotation angle
+        // Note: Camera sensor is mounted in landscape, so portrait needs 90° rotation
+        let rotationAngle: CGFloat
+
         switch orientation {
         case .portrait:
-            connection.videoOrientation = .portrait
+            rotationAngle = 90
         case .portraitUpsideDown:
-            connection.videoOrientation = .portraitUpsideDown
+            rotationAngle = 270
         case .landscapeLeft:
-            connection.videoOrientation = .landscapeRight
+            // Device rotated left (home button on right)
+            rotationAngle = 0
         case .landscapeRight:
-            connection.videoOrientation = .landscapeLeft
+            // Device rotated right (home button on left)
+            rotationAngle = 180
         default:
             // For face up, face down, and unknown, try to use the interface orientation
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                switch windowScene.interfaceOrientation {
+                switch windowScene.effectiveGeometry.interfaceOrientation {
                 case .portrait:
-                    connection.videoOrientation = .portrait
+                    rotationAngle = 90
                 case .portraitUpsideDown:
-                    connection.videoOrientation = .portraitUpsideDown
+                    rotationAngle = 270
                 case .landscapeLeft:
-                    connection.videoOrientation = .landscapeLeft
+                    rotationAngle = 180
                 case .landscapeRight:
-                    connection.videoOrientation = .landscapeRight
+                    rotationAngle = 0
                 default:
-                    connection.videoOrientation = .portrait
+                    rotationAngle = 90
                 }
+            } else {
+                rotationAngle = 90
             }
         }
+
+        connection.videoRotationAngle = rotationAngle
     }
 
     static func dismantleUIView(_ uiView: UIView, coordinator: ()) {
