@@ -67,7 +67,7 @@ class NewConversationState {
         }
     }
 
-    func deleteConversation() throws {
+    func deleteConversation() {
         newConversationTask?.cancel()
         draftConversationComposer = nil
         conversationState = nil

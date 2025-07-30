@@ -24,6 +24,24 @@ class QRScannerDelegate: NSObject, ObservableObject, AVCaptureMetadataOutputObje
 struct QRScannerView: UIViewRepresentable {
     let delegate: QRScannerDelegate
 
+    class Coordinator {
+        var orientationObserver: Any?
+        var captureSession: AVCaptureSession?
+        var previewLayer: AVCaptureVideoPreviewLayer?
+        var captureDevice: AVCaptureDevice?
+
+        deinit {
+            if let observer = orientationObserver {
+                NotificationCenter.default.removeObserver(observer)
+            }
+            captureSession?.stopRunning()
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
     func makeUIView(context: Context) -> UIView {
         let view = UIView()
         view.backgroundColor = .black
@@ -33,7 +51,7 @@ struct QRScannerView: UIViewRepresentable {
         checkCameraAuthorization { authorized in
             if authorized {
                 DispatchQueue.main.async {
-                    self.setupCamera(on: view)
+                    self.setupCamera(on: view, coordinator: context.coordinator)
                 }
             }
         }
@@ -56,7 +74,7 @@ struct QRScannerView: UIViewRepresentable {
         }
     }
 
-    private func setupCamera(on view: UIView) {
+    private func setupCamera(on view: UIView, coordinator: Coordinator) {
         let captureSession = AVCaptureSession()
         captureSession.sessionPreset = .high
 
@@ -106,12 +124,13 @@ struct QRScannerView: UIViewRepresentable {
         // Set initial orientation
         updateVideoOrientation(for: previewLayer)
 
-        view.layer.setValue(captureSession, forKey: "captureSession")
-        view.layer.setValue(previewLayer, forKey: "previewLayer")
-        view.layer.setValue(videoCaptureDevice, forKey: "captureDevice")
+        // Store references in coordinator
+        coordinator.captureSession = captureSession
+        coordinator.previewLayer = previewLayer
+        coordinator.captureDevice = videoCaptureDevice
 
         // Register for orientation notifications
-        NotificationCenter.default.addObserver(
+        coordinator.orientationObserver = NotificationCenter.default.addObserver(
             forName: UIDevice.orientationDidChangeNotification,
             object: nil,
             queue: .main
@@ -138,7 +157,7 @@ struct QRScannerView: UIViewRepresentable {
 
     func updateUIView(_ uiView: UIView, context: Context) {
         // Update preview layer frame
-        if let previewLayer = uiView.layer.value(forKey: "previewLayer") as? AVCaptureVideoPreviewLayer {
+        if let previewLayer = context.coordinator.previewLayer {
             DispatchQueue.main.async {
                 CATransaction.begin()
                 CATransaction.setDisableActions(true)
@@ -197,16 +216,7 @@ struct QRScannerView: UIViewRepresentable {
         connection.videoRotationAngle = rotationAngle
     }
 
-    static func dismantleUIView(_ uiView: UIView, coordinator: ()) {
-        if let captureSession = uiView.layer.value(forKey: "captureSession") as? AVCaptureSession {
-            captureSession.stopRunning()
-        }
-
-        // Remove orientation observer
-        NotificationCenter.default.removeObserver(
-            uiView,
-            name: UIDevice.orientationDidChangeNotification,
-            object: nil
-        )
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        // All cleanup is handled in Coordinator's deinit
     }
 }

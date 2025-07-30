@@ -45,7 +45,7 @@ struct JoinConversationView: View {
                         Text("You’ll join immediately and anonymously")
                             .font(.system(size: 12.0))
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.7))
                     }
                     .padding(.bottom, 100.0)
                 }
