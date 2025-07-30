@@ -5,7 +5,7 @@ enum AppEnvironment {
 
     var apiBaseURL: String {
         // Check environment variable first (highest priority)
-        if !Secrets.CONVOS_API_BASE_URL.isEmpty {
+        if self == .local, !Secrets.CONVOS_API_BASE_URL.isEmpty {
             Logger.info("🌐 Using API URL from environment: \(Secrets.CONVOS_API_BASE_URL)")
             return Secrets.CONVOS_API_BASE_URL
         }
