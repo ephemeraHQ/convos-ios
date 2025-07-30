@@ -201,7 +201,6 @@ struct MessagesInputView: View {
                 if viewModel.showingProfileNameEditor {
                     Button {
                         withAnimation {
-                            viewModel.showingProfileNameEditor = false
                         }
                     } label: {
                         Image(systemName: "gear")
@@ -211,6 +210,7 @@ struct MessagesInputView: View {
                             .padding(.vertical, 7.5)
                             .padding(.horizontal, 14.0)
                     }
+                    .disabled(true)
                     .frame(width: 52.0, height: 52.0)
                     .background(.colorFillMinimal)
                     .mask(Circle())

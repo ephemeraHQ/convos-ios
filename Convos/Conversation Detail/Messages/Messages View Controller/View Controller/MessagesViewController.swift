@@ -154,18 +154,6 @@ final class MessagesViewController: UIViewController {
         setupUI()
         reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
 
-        NotificationCenter.default.addObserver(
-            forName: .messagesInputViewHeightDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard let self else { return }
-            if let height = notification.object as? CGFloat {
-                Logger.info("Messages input height changed to: \(height)")
-                reloadInputViews()
-            }
-        }
-
         reloadMessagesFromRepository()
         observe(messagesRepository: messagesRepository, inviteRepository: inviteRepository)
     }
@@ -531,15 +519,18 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
 
 extension MessagesViewController: KeyboardListenerDelegate {
     func keyboardWillChangeFrame(info: KeyboardInfo) {
+        Logger.info("keyboardWillChangeFrame")
         handleKeyboardFrameChange(info: info)
     }
 
     func keyboardDidChangeFrame(info: KeyboardInfo) {
+        Logger.info("keyboardDidChangeFrame")
         guard currentInterfaceActions.options.contains(.changingKeyboardFrame) else { return }
         currentInterfaceActions.options.remove(.changingKeyboardFrame)
     }
 
     private func handleKeyboardFrameChange(info: KeyboardInfo) {
+        Logger.info("handleKeyboardFrameChange")
         guard shouldHandleKeyboardFrameChange(info: info) else { return }
 
         currentInterfaceActions.options.insert(.changingKeyboardFrame)
