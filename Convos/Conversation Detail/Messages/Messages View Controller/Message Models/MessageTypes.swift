@@ -33,6 +33,16 @@ extension DateGroup: Differentiable {
     }
 }
 
+extension Invite: Differentiable {
+    var differenceIdentifier: Int {
+        hashValue
+    }
+
+    func isContentEqual(to source: Invite) -> Bool {
+        self == source
+    }
+}
+
 struct MessageGroup: Hashable {
     var id: String
     var title: String

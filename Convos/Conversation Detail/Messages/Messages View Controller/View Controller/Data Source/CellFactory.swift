@@ -15,12 +15,11 @@ final class CellFactory {
             return createDateTitle(in: collectionView, for: indexPath, title: group.value)
         case .typingIndicator:
             return createTypingIndicatorCell(in: collectionView, for: indexPath)
-        case let .invite(invite, verticalPadding: verticalPadding):
+        case let .invite(invite):
             return createInviteCell(
                 in: collectionView,
                 for: indexPath,
-                invite: invite,
-                verticalPadding: verticalPadding
+                invite: invite
             )
         }
     }
@@ -114,13 +113,12 @@ final class CellFactory {
 
     private static func createInviteCell(in collectionView: UICollectionView,
                                          for indexPath: IndexPath,
-                                         invite: Invite,
-                                         verticalPadding: Bool) -> UICollectionViewCell {
+                                         invite: Invite) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: InviteCell.reuseIdentifier,
             for: indexPath
         ) as! InviteCell
-        cell.prepare(with: invite, hasVerticalPadding: verticalPadding)
+        cell.prepare(with: invite)
         return cell
     }
 

@@ -52,6 +52,8 @@ struct QRCodeView: View {
     private func updateQRCode() {
         generationTask?.cancel()
 
+        guard !identifier.isEmpty else { return }
+
         isRegenerating = true
 
         generationTask = Task {

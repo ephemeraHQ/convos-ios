@@ -1,6 +1,6 @@
 import Foundation
 
-struct Invite: Codable, Hashable, Identifiable {
+struct Invite: Codable, Hashable, Identifiable, Equatable {
     var id: String {
         code
     }
@@ -14,7 +14,7 @@ struct Invite: Codable, Hashable, Identifiable {
     let inboxId: String // @jarodl temporary workaround
 
     var temporaryInviteString: String {
-        "\(inboxId)-\(code)"
+        "\(inboxId)\(code)"
     }
 
     static func parse(temporaryInviteString: String) -> (inboxId: String, code: String)? {

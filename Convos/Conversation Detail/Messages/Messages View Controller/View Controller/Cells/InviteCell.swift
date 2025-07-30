@@ -7,9 +7,9 @@ class InviteCell: UICollectionViewCell {
         contentConfiguration = nil
     }
 
-    func prepare(with invite: Invite, hasVerticalPadding: Bool) {
+    func prepare(with invite: Invite) {
         contentConfiguration = UIHostingConfiguration {
-            InviteView(invite: invite, hasVerticalPadding: false)
+            InviteView(invite: invite)
         }
         .margins(.vertical, 0.0)
     }
@@ -26,7 +26,6 @@ class InviteCell: UICollectionViewCell {
 
 struct InviteView: View {
     let invite: Invite
-    let hasVerticalPadding: Bool
 
     var body: some View {
         VStack {
@@ -45,5 +44,5 @@ struct InviteView: View {
 }
 
 #Preview {
-    InviteView(invite: .mock(), hasVerticalPadding: true)
+    InviteView(invite: .mock())
 }

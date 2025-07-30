@@ -47,6 +47,8 @@ struct NewConversationView: View {
                     .ignoresSafeArea()
                 }
             }
+            .background(.colorBackgroundPrimary)
+            .ignoresSafeArea()
             .sheet(isPresented: $presentingJoinConversation) {
                 JoinConversationView(newConversationState: newConversationState, showsToolbar: true)
             }

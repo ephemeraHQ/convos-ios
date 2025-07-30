@@ -110,7 +110,7 @@ final class MessagesViewController: UIViewController {
             let animated = previous.conversationId == current.conversationId
             processUpdates(
                 with: current.messages,
-                invite: invite,
+                invite: invite ?? .empty,
                 animated: animated,
                 requiresIsolatedProcess: true) {
                     if previous.conversationId != current.conversationId {
@@ -129,7 +129,7 @@ final class MessagesViewController: UIViewController {
                 let messages = try messagesRepository.fetchAll()
                 processUpdates(
                     with: messages,
-                    invite: nil,
+                    invite: .empty,
                     animated: true,
                     requiresIsolatedProcess: false
                 )
@@ -327,7 +327,7 @@ final class MessagesViewController: UIViewController {
 
 extension MessagesViewController {
     private func processUpdates(with messages: [AnyMessage],
-                                invite: Invite?,
+                                invite: Invite,
                                 animated: Bool = true,
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
@@ -369,9 +369,7 @@ extension MessagesViewController {
             return cells
         }
 
-        if let invite {
-            cells.insert(.invite(invite, verticalPadding: messages.isEmpty), at: 0)
-        }
+        cells.insert(.invite(invite), at: 0)
 
         let sections: [MessagesCollectionSection] = [
             .init(id: 0, title: "", cells: cells)
@@ -397,7 +395,7 @@ extension MessagesViewController {
     }
 
     private func scheduleDelayedUpdate(with messages: [AnyMessage],
-                                       invite: Invite?,
+                                       invite: Invite,
                                        animated: Bool,
                                        requiresIsolatedProcess: Bool,
                                        completion: (() -> Void)?) {

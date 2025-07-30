@@ -61,6 +61,19 @@ extension Conversation {
 }
 
 extension Invite {
+    static var empty: Self {
+        .init(
+            code: "",
+            conversationId: "",
+            inviteUrlString: "",
+            status: .active,
+            createdAt: Date(),
+            maxUses: 0,
+            usesCount: 0,
+            inboxId: ""
+        )
+    }
+
     static func mock() -> Self {
         .init(
             code: "invite_code_123",
