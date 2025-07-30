@@ -4,6 +4,12 @@ enum AppEnvironment {
     case local, tests, dev, production
 
     var apiBaseURL: String {
+        // Check environment variable first (highest priority)
+        if !Secrets.CONVOS_API_BASE_URL.isEmpty {
+            Logger.info("🌐 Using API URL from environment: \(Secrets.CONVOS_API_BASE_URL)")
+            return Secrets.CONVOS_API_BASE_URL
+        }
+
         // Then check ConfigManager
         if let configURL = ConfigManager.shared.backendURLOverride {
             Logger.info("🌐 Using API URL from ConfigManager: \(configURL)")
