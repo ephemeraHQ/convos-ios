@@ -35,6 +35,8 @@ class MessagesInputViewModel: KeyboardListenerDelegate {
     var profileNamePlaceholder: String = "Somebody"
     var sendButtonEnabled: Bool = false
     var showingProfileNameEditor: Bool = false
+    var showingPhotosPicker: Bool = false
+    var avatarImage: Image?
     var imageSelection: PhotosPickerItem?
 
     func sendMessage() {
@@ -95,6 +97,10 @@ struct MessagesInputView: View {
     @Namespace private var profileEditorAnimation: Namespace.ID
     @State private var mode: DualTextView.Mode = .textView
 
+    var avatarImage: Image {
+        viewModel.avatarImage ?? Image(systemName: "photo.on.rectangle.fill")
+    }
+
     var body: some View {
         HStack(alignment: .bottom) {
 //            if viewModel.showingProfileNameEditor {
@@ -123,12 +129,10 @@ struct MessagesInputView: View {
 
             HStack(alignment: .bottom, spacing: 0) {
                 if viewModel.showingProfileNameEditor {
-                    PhotosPicker(
-                        selection: $viewModel.imageSelection,
-                        matching: .images,
-                        photoLibrary: .shared()
-                    ) {
-                        Image(systemName: "photo.on.rectangle.angled")
+                    Button {
+                        viewModel.showingPhotosPicker = true
+                    } label: {
+                        avatarImage
                             .frame(width: 52.0, height: 52.0)
                             .font(.system(size: 24.0))
                             .padding(.vertical, 7.5)
