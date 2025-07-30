@@ -22,6 +22,7 @@ class MyProfileWriter: MyProfileWriterProtocol {
             return
         }
 
+        let displayName: String? = displayName.isEmpty ? nil : displayName
         let inboxId = inboxReady.client.inboxId
         try await databaseWriter.write { db in
             let member = Member(inboxId: inboxId)

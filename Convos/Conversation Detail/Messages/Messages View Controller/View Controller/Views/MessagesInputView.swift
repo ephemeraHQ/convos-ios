@@ -1,12 +1,6 @@
 import PhotosUI
 import SwiftUI
 
-extension Notification.Name {
-    static let messagesInputViewHeightDidChange: Notification.Name = Notification.Name(
-        "messagesInputViewHeightDidChange"
-    )
-}
-
 @Observable
 class MessagesInputViewModel: KeyboardListenerDelegate {
     let myProfileWriter: any MyProfileWriterProtocol
@@ -267,11 +261,6 @@ struct MessagesInputView: View {
                     )
             }
         )
-        .onPreferenceChange(HeightPreferenceKey.self) { newHeight in
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: .messagesInputViewHeightDidChange, object: newHeight)
-            }
-        }
     }
 }
 
