@@ -155,10 +155,13 @@ actor InboxStateMachine {
         Logger.info("   XMTP_CUSTOM_HOST = \(environment.xmtpEndpoint ?? "nil")")
         Logger.info("   customLocalAddress = \(environment.customLocalAddress ?? "nil")")
         Logger.info("   xmtpEnv = \(environment.xmtpEnv)")
+        Logger.info("   isSecure = \(environment.isSecure)")
 
+        // Log the actual XMTPEnvironment.customLocalAddress after setting
         if let customHost = environment.customLocalAddress {
             Logger.info("🌐 Setting XMTPEnvironment.customLocalAddress = \(customHost)")
             XMTPEnvironment.customLocalAddress = customHost
+            Logger.info("🌐 Actual XMTPEnvironment.customLocalAddress = \(XMTPEnvironment.customLocalAddress ?? "nil")")
         } else {
             Logger.info("🌐 Using default XMTP endpoints")
         }

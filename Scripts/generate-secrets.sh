@@ -41,6 +41,10 @@ import Foundation
 enum Secrets {
 EOF
 
+# Track which required keys we've seen
+found_convos_api=false
+found_xmtp_host=false
+
 # Read each line from .env file, handles missing newline at EOF
 while IFS='=' read -r key value || [[ -n "$key" ]]; do
   # Skip comments and empty lines
@@ -50,9 +54,27 @@ while IFS='=' read -r key value || [[ -n "$key" ]]; do
   # Remove any quotes from the value
   value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
 
+  # Mark required keys as found
+  if [[ "$key" == "CONVOS_API_BASE_URL" ]]; then
+    found_convos_api=true
+  elif [[ "$key" == "XMTP_CUSTOM_HOST" ]]; then
+    found_xmtp_host=true
+  fi
+
   # Add the secret to the Swift file
   echo "    static let $key = \"$value\"" >>"$SECRETS_FILE"
 done <.env
+
+# Add missing required keys with empty values
+if [[ "$found_convos_api" == "false" ]]; then
+  echo "    static let CONVOS_API_BASE_URL = \"\"" >>"$SECRETS_FILE"
+  echo "⚠️  Added missing CONVOS_API_BASE_URL with empty value"
+fi
+
+if [[ "$found_xmtp_host" == "false" ]]; then
+  echo "    static let XMTP_CUSTOM_HOST = \"\"" >>"$SECRETS_FILE"
+  echo "⚠️  Added missing XMTP_CUSTOM_HOST with empty value"
+fi
 
 # Close the enum and add SwiftLint enable comment
 cat >>"$SECRETS_FILE" <<'EOF'
