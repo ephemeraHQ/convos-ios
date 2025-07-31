@@ -1,5 +1,11 @@
 import Foundation
 
+struct ParsedInvite {
+    let inviteId: String
+    let inboxId: String
+    let code: String
+}
+
 struct Invite: Codable, Hashable, Identifiable, Equatable {
     var id: String {
         code
@@ -18,7 +24,7 @@ struct Invite: Codable, Hashable, Identifiable, Equatable {
         return "\(id)-\(inboxId)-\(code)"
     }
 
-    static func parse(temporaryInviteString: String) -> (inviteId: String, inboxId: String, code: String)? {
+    static func parse(temporaryInviteString: String) -> ParsedInvite? {
         let result = temporaryInviteString.split(separator: "-")
         guard result.count == 3 else {
             return nil
@@ -26,6 +32,6 @@ struct Invite: Codable, Hashable, Identifiable, Equatable {
         let id = result[0]
         let inboxId = result[1]
         let code = result[2]
-        return (String(id), String(inboxId), String(code))
+        return .init(inviteId: String(id), inboxId: String(inboxId), code: String(code))
     }
 }
