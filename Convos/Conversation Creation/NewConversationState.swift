@@ -47,7 +47,7 @@ class NewConversationState: Identifiable {
         }
     }
 
-    func joinConversation(inboxId: String, inviteCode: String) {
+    func joinConversation(inviteId: String, inboxId: String, inviteCode: String) {
         joinConversationTask?.cancel()
         joinConversationTask = Task {
             do {
@@ -73,7 +73,7 @@ class NewConversationState: Identifiable {
                 }
 
                 draftConversationComposer.draftConversationWriter
-                    .joinConversationWhenInboxReady(inboxId: inboxId, inviteCode: inviteCode)
+                    .joinConversationWhenInboxReady(inviteId: inviteId, inboxId: inboxId, inviteCode: inviteCode)
                 await MainActor.run {
                     self.draftConversationComposer = draftConversationComposer
                     self.conversationState = ConversationState(

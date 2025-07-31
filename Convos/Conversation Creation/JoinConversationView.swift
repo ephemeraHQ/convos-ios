@@ -98,7 +98,11 @@ struct JoinConversationView: View {
             return false
         }
         Logger.info("Scanned code: \(result)")
-        newConversationState.joinConversation(inboxId: result.inboxId, inviteCode: result.code)
+        newConversationState.joinConversation(
+            inviteId: result.inviteId,
+            inboxId: result.inboxId,
+            inviteCode: result.code
+        )
         onScannedCode()
         return true
     }

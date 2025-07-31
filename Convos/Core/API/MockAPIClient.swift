@@ -13,6 +13,10 @@ class MockAPIClientFactory: ConvosAPIClientFactoryType {
     }
 }
 
+enum MockAPIError: Error {
+    case invalidURL
+}
+
 class MockBaseAPIClient: ConvosAPIBaseProtocol {
     func createSubOrganization(
         ephemeralPublicKey: String,
@@ -20,9 +24,20 @@ class MockBaseAPIClient: ConvosAPIBaseProtocol {
     ) async throws -> ConvosAPI.CreateSubOrganizationResponse {
         .init(subOrgId: UUID().uuidString, walletAddress: UUID().uuidString)
     }
+
+    func request(for path: String, method: String, queryParameters: [String: String]?) throws -> URLRequest {
+        guard let url = URL(string: "http://example.com") else {
+            throw MockAPIError.invalidURL
+        }
+        return URLRequest(url: url)
+    }
 }
 
 class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
+    func publicInviteDetails(_ inviteId: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
+        .init(id: "invite_123", name: "My Invite", description: "My fun group chat", imageUrl: nil, inviteLinkURL: "http://convos.org/invite/123456")
+    }
+
     var identifier: String {
         "\(client.inboxId)\(client.installationId)"
     }

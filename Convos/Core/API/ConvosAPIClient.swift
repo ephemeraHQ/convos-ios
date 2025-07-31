@@ -6,6 +6,10 @@ protocol ConvosAPIBaseProtocol {
         ephemeralPublicKey: String,
         passkey: ConvosAPI.Passkey
     ) async throws -> ConvosAPI.CreateSubOrganizationResponse
+
+    func request(for path: String,
+                 method: String,
+                 queryParameters: [String: String]?) throws -> URLRequest
 }
 
 protocol ConvosAPIClientFactoryType {
@@ -42,6 +46,7 @@ protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
 
     func createInvite(_ requestBody: ConvosAPI.CreateInviteRequest) async throws -> ConvosAPI.InviteDetailsResponse
     func inviteDetails(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsResponse
+    func publicInviteDetails(_ inviteId: String) async throws -> ConvosAPI.PublicInviteDetailsResponse
 
     func updateProfile(
         inboxId: String,
@@ -113,6 +118,54 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
             return result
         } catch {
             throw APIError.serverError(error)
+        }
+    }
+
+    func publicInviteDetails(_ inviteId: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
+        let request = try request(for: "v1/invites/public/\(inviteId)")
+        let invite: ConvosAPI.PublicInviteDetailsResponse = try await performRequest(request)
+        return invite
+    }
+
+    func request(for path: String,
+                 method: String = "GET",
+                 queryParameters: [String: String]? = nil) throws -> URLRequest {
+        var urlComponents = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)
+        if let queryParameters = queryParameters {
+            urlComponents?.queryItems = queryParameters.map { URLQueryItem(name: $0.key, value: $0.value) }
+        }
+
+        guard let url = urlComponents?.url else {
+            throw APIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        return request
+    }
+
+    private func performRequest<T: Decodable>(_ request: URLRequest, retryCount: Int = 0) async throws -> T {
+        let (data, response) = try await session.data(for: request)
+
+        Logger.info("Received response: \(data.prettyPrintedJSONString ?? "nil data")")
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        switch httpResponse.statusCode {
+        case 200...299:
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode(T.self, from: data)
+        case 401:
+            throw APIError.notAuthenticated
+        case 403:
+            throw APIError.forbidden
+        case 404:
+            throw APIError.notFound
+        default:
+            throw APIError.serverError(nil)
         }
     }
 }
@@ -264,18 +317,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         guard let jwt = try keychainService.retrieveString(.init(inboxId: client.inboxId)) else {
             throw APIError.notAuthenticated
         }
-
-        var urlComponents = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)
-        if let queryParameters = queryParameters {
-            urlComponents?.queryItems = queryParameters.map { URLQueryItem(name: $0.key, value: $0.value) }
-        }
-
-        guard let url = urlComponents?.url else {
-            throw APIError.invalidURL
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = method
+        var request = try request(for: path, method: method, queryParameters: queryParameters)
         request.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
         return request
     }

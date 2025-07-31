@@ -8,7 +8,7 @@ protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
     var conversationIdPublisher: AnyPublisher<String, Never> { get }
 
     func createConversationWhenInboxReady()
-    func joinConversationWhenInboxReady(inboxId: String, inviteCode: String)
+    func joinConversationWhenInboxReady(inviteId: String, inboxId: String, inviteCode: String)
 }
 
 class DraftConversationWriter: DraftConversationWriterProtocol {
@@ -106,7 +106,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             }
     }
 
-    func joinConversationWhenInboxReady(inboxId: String, inviteCode: String) {
+    func joinConversationWhenInboxReady(inviteId: String, inboxId: String, inviteCode: String) {
         joinConversationTask?.cancel()
         clientPublisherCancellable?.cancel()
         clientPublisherCancellable = inboxReadyValue
@@ -119,9 +119,11 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                 self.joinConversationTask = Task {
                     do {
                         try await self.joinConversation(
+                            inviteId: inviteId,
                             inboxId: inboxId,
                             inviteCode: inviteCode,
-                            client: inboxReady.client
+                            client: inboxReady.client,
+                            apiClient: inboxReady.apiClient
                         )
                     } catch {
                         Logger.error("Error creating external conversation: \(error.localizedDescription)")
@@ -131,7 +133,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     }
 
     // @jarodl this is just a temporary workaround while waiting for push notifications
-    private func joinConversation(inboxId: String, inviteCode: String, client: AnyClientProvider) async throws {
+    private func joinConversation(inviteId: String, inboxId: String, inviteCode: String, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
         let temporaryConversationId = try await client.newConversation(with: inboxId)
         guard let messageSender = try await client.messageSender(for: temporaryConversationId) else {
             Logger.error("Failed sending conversation join request")
@@ -174,6 +176,21 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                         Logger.warning("Closing conversations stream for inboxId: \(client.inboxId)...")
                     }
                 ) where try await conversation.creatorInboxId == inboxId {
+                    Task {
+                        // fetch invite details and save to the DB so the QR code shows when/if we join
+                        do {
+                            Logger.info("Fetching invite details...")
+                            let response = try await apiClient.publicInviteDetails(inviteId)
+                            try await inviteWriter.store(
+                                invite: response,
+                                conversationId: conversation.id,
+                                inboxId: client.inboxId
+                            )
+                        } catch {
+                            Logger.error("Failed fetching invite details after join: \(error.localizedDescription)")
+                        }
+                    }
+
                     Logger.info("Found conversation matching creator inboxId: \(inboxId), id: \(conversation.id)")
                     let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
                     let conversationWriter = ConversationWriter(databaseWriter: databaseWriter,

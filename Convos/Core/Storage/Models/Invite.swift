@@ -15,17 +15,17 @@ struct Invite: Codable, Hashable, Identifiable, Equatable {
 
     var temporaryInviteString: String {
         guard !inboxId.isEmpty && !code.isEmpty else { return "" }
-        return "\(inboxId)-\(code)"
+        return "\(id)-\(inboxId)-\(code)"
     }
 
-    static func parse(temporaryInviteString: String) -> (inboxId: String, code: String)? {
+    static func parse(temporaryInviteString: String) -> (inviteId: String, inboxId: String, code: String)? {
         let result = temporaryInviteString.split(separator: "-")
-        guard result.count == 2 else {
+        guard result.count == 3 else {
             return nil
         }
-        guard let inboxId = result.first, let code = result.last else {
-            return nil
-        }
-        return (String(inboxId), String(code))
+        let id = result[0]
+        let inboxId = result[1]
+        let code = result[2]
+        return (String(id), String(inboxId), String(code))
     }
 }
