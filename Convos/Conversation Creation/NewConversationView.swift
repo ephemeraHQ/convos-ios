@@ -55,8 +55,8 @@ struct NewConversationView: View {
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 if !newConversationState.showScannerOnAppear || hasShownScannerOnAppear {
-                    ToolbarItem(placement: .title) {
-                        if let conversation = newConversationState.conversationState?.conversation {
+                    if let conversation = newConversationState.conversationState?.conversation {
+                        ToolbarItem(placement: .title) {
                             Button {
                             } label: {
                                 HStack(spacing: 0.0) {
