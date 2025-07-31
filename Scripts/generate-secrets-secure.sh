@@ -38,7 +38,7 @@ for secret in "${SENSITIVE_SECRETS[@]}"; do
 done
 
 # Check non-required ENV_VARS (excluding CONVOS_API_BASE_URL and XMTP_CUSTOM_HOST)
-for secret in "POSTHOG_HOST" "API_RP_ID" "SENTRY_ORG" "SENTRY_PROJECT"; do
+for secret in "POSTHOG_HOST" "SENTRY_ORG" "SENTRY_PROJECT"; do
     if [[ -z "${!secret}" ]]; then
         missing_secrets+=("$secret")
     fi
