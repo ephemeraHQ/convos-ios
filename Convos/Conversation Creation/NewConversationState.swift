@@ -46,23 +46,33 @@ class NewConversationState {
     }
 
     func joinConversation(inboxId: String, inviteCode: String) {
+        Logger.info("NewConversationState: Starting joinConversation with inboxId: '\(inboxId)', inviteCode: '\(inviteCode)'")
+
         joinConversationTask?.cancel()
         joinConversationTask = Task {
             do {
+                Logger.info("NewConversationState: Adding account...")
                 let addAccountResult = try session.addAccount()
                 self.addAccountResult = addAccountResult
+
+                Logger.info("NewConversationState: Creating draft conversation composer...")
                 let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
+
+                Logger.info("NewConversationState: Calling joinConversationWhenInboxReady...")
                 draftConversationComposer.draftConversationWriter
                     .joinConversationWhenInboxReady(inboxId: inboxId, inviteCode: inviteCode)
+
                 await MainActor.run {
+                    Logger.info("NewConversationState: Setting up conversation state...")
                     self.draftConversationComposer = draftConversationComposer
                     self.conversationState = ConversationState(
                         myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
                         conversationRepository: draftConversationComposer.draftConversationRepository
                     )
+                    Logger.info("NewConversationState: Join conversation setup completed")
                 }
             } catch {
-                Logger.error("Error joining new conversation: \(error.localizedDescription)")
+                Logger.error("NewConversationState: Error joining new conversation: \(error.localizedDescription)")
             }
         }
     }

@@ -4,6 +4,7 @@ import SwiftUI
 // MARK: - QR Scanner Delegate
 class QRScannerDelegate: NSObject, ObservableObject, AVCaptureMetadataOutputObjectsDelegate {
     @Published var scannedCode: String?
+    private var hasScannedOnce: Bool = false
 
     func metadataOutput(
         _ output: AVCaptureMetadataOutput,
@@ -11,9 +12,23 @@ class QRScannerDelegate: NSObject, ObservableObject, AVCaptureMetadataOutputObje
         from connection: AVCaptureConnection
     ) {
         if let metadataObject = metadataObjects.first {
-            guard let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject else { return }
-            guard let stringValue = readableObject.stringValue else { return }
+            guard let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject else {
+                Logger.error("QR Scanner: Failed to cast to readable object")
+                return
+            }
 
+            guard let stringValue = readableObject.stringValue else {
+                Logger.error("QR Scanner: No string value found")
+                return
+            }
+
+            // Prevent duplicate scans
+            if hasScannedOnce {
+                return
+            }
+
+            hasScannedOnce = true
+            Logger.info("QR Scanner: Scanned code: '\(stringValue)'")
             AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
             scannedCode = stringValue
         }

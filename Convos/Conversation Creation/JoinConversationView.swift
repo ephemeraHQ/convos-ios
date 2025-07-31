@@ -65,9 +65,11 @@ struct JoinConversationView: View {
         .onChange(of: qrScannerDelegate.scannedCode) { _, newValue in
             if let code = newValue {
                 guard let result = Invite.parse(temporaryInviteString: code) else {
+                    Logger.error("Failed to parse invite code: '\(code)'")
                     return
                 }
-                Logger.info("Scanned code: \(result)")
+
+                Logger.info("Joining conversation with inboxId: '\(result.inboxId)', code: '\(result.code)'")
                 newConversationState.joinConversation(inboxId: result.inboxId, inviteCode: result.code)
                 onScannedCode()
             }
