@@ -148,12 +148,19 @@ struct MessagesInputView: View {
                     Button {
                         viewModel.showingPhotosPicker = true
                     } label: {
-                        Image(systemName: "photo.on.rectangle.fill")
-                            .frame(width: 52.0, height: 52.0)
-                            .font(.system(size: 24.0))
-                            .padding(.vertical, 7.5)
-                            .padding(.horizontal, 14.0)
-                            .foregroundColor(.white)
+                        ZStack(alignment: .center) {
+                            if viewModel.imageSelection != nil {
+                                ProfileAvatarView(profile: conversationState.myProfile)
+                                    .frame(width: 52.0, height: 52.0)
+                                    .overlay(.black.opacity(0.2))
+                            }
+                            Image(systemName: "photo.on.rectangle.fill")
+                                .font(.system(size: 24.0))
+                                .padding(.vertical, 7.5)
+                                .padding(.horizontal, 14.0)
+                                .foregroundColor(.white)
+                        }
+                        .frame(width: 52.0, height: 52.0)
                     }
                     .frame(width: 52.0, height: 52.0)
                     .background(.colorFillSecondary)

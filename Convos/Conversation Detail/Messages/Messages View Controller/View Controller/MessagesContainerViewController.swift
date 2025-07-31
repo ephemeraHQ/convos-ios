@@ -141,7 +141,10 @@ class MessagesContainerViewController: UIViewController, UIImagePickerController
         imagePicker.sourceType = .photoLibrary
         imagePicker.mediaTypes = ["public.image"]
         imagePicker.allowsEditing = false
-        present(imagePicker, animated: true)
+        present(imagePicker, animated: true) { [weak self] in
+            // @jarodl this is a hack to get around the editor hiding when the keyboard is dismissed from this modal
+            self?.messagesInputViewModel.showingProfileNameEditor = true
+        }
     }
 
     // MARK: - UIImagePickerControllerDelegate
@@ -150,6 +153,7 @@ class MessagesContainerViewController: UIViewController, UIImagePickerController
         picker.dismiss(animated: true) { [weak self] in
             self?.showingImagePicker = false
             self?.messagesInputViewModel.showingPhotosPicker = false
+            self?.messagesInputViewModel.showingProfileNameEditor = true
         }
 
         if let image = info[.originalImage] as? UIImage {
@@ -161,6 +165,7 @@ class MessagesContainerViewController: UIViewController, UIImagePickerController
         picker.dismiss(animated: true) { [weak self] in
             self?.showingImagePicker = false
             self?.messagesInputViewModel.showingPhotosPicker = false
+            self?.messagesInputViewModel.showingProfileNameEditor = true
         }
     }
 }
