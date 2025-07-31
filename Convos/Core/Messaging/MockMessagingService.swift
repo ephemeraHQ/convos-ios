@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import UIKit
 import XMTPiOS
 
 class MockMessagingService: MessagingServiceProtocol {
@@ -119,6 +120,9 @@ extension MockMessagingService: InviteRepositoryProtocol {
 
 extension MockMessagingService: MyProfileWriterProtocol {
     func update(displayName: String) {
+    }
+
+    func update(avatar: UIImage?) async throws {
     }
 }
 

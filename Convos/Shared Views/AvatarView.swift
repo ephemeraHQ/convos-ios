@@ -22,6 +22,7 @@ struct AvatarView: View {
             if let cachedImage {
                 Image(uiImage: cachedImage)
                     .resizable()
+                    .scaledToFit()
                     .aspectRatio(contentMode: .fill)
             } else {
                 MonogramView(name: fallbackName)

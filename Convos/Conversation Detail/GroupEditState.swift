@@ -177,7 +177,7 @@ class GroupEditState {
 
         let resizedImage = ImageCompression.resizeForCache(image)
 
-        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
+        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 1.0) else {
             throw GroupImageError.importFailed
         }
 

@@ -59,6 +59,7 @@ enum AppEnvironment {
     }
 
     var xmtpEndpoint: String? {
+        guard self == .local else { return nil }
         let value = Secrets.XMTP_CUSTOM_HOST
         return value.isEmpty ? nil : value
     }

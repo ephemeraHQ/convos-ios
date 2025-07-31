@@ -1,5 +1,6 @@
 import PhotosUI
 import SwiftUI
+import UIKit
 
 @Observable
 class MessagesInputViewModel: KeyboardListenerDelegate {
@@ -37,7 +38,13 @@ class MessagesInputViewModel: KeyboardListenerDelegate {
     var showingProfileNameEditor: Bool = false
     var showingPhotosPicker: Bool = false
     var avatarImage: Image?
-    var imageSelection: PhotosPickerItem?
+    var imageSelection: UIImage? {
+        didSet {
+            if let image = imageSelection {
+                handleImageSelection(image)
+            }
+        }
+    }
 
     func sendMessage() {
         let prevMessageText = messageText
@@ -62,6 +69,19 @@ class MessagesInputViewModel: KeyboardListenerDelegate {
 
         withAnimation {
             showingProfileNameEditor = false
+        }
+    }
+
+    private func handleImageSelection(_ image: UIImage) {
+        // Update the avatar image for display
+        avatarImage = Image(uiImage: image)
+
+        Task {
+            do {
+                try await myProfileWriter.update(avatar: image)
+            } catch {
+                Logger.error("Error updating profile photo: \(error.localizedDescription)")
+            }
         }
     }
 }
@@ -97,10 +117,6 @@ struct MessagesInputView: View {
     @Namespace private var profileEditorAnimation: Namespace.ID
     @State private var mode: DualTextView.Mode = .textView
 
-    var avatarImage: Image {
-        viewModel.avatarImage ?? Image(systemName: "photo.on.rectangle.fill")
-    }
-
     var body: some View {
         HStack(alignment: .bottom) {
 //            if viewModel.showingProfileNameEditor {
@@ -132,7 +148,7 @@ struct MessagesInputView: View {
                     Button {
                         viewModel.showingPhotosPicker = true
                     } label: {
-                        avatarImage
+                        Image(systemName: "photo.on.rectangle.fill")
                             .frame(width: 52.0, height: 52.0)
                             .font(.system(size: 24.0))
                             .padding(.vertical, 7.5)
@@ -155,12 +171,13 @@ struct MessagesInputView: View {
                         }
                     } label: {
                         ProfileAvatarView(profile: conversationState.myProfile)
+                            .frame(width: sendButtonSize, height: sendButtonSize)
                             .matchedGeometryEffect(
                                 id: "LeftView",
                                 in: profileEditorAnimation,
                             )
                     }
-                    .frame(width: sendButtonSize, height: sendButtonSize, alignment: .bottomLeading)
+                    .frame(alignment: .bottomLeading)
                     .padding(.vertical, DesignConstants.Spacing.stepX)
                     .padding(.leading, DesignConstants.Spacing.stepX)
                 }

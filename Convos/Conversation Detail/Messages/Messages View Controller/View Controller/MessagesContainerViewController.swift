@@ -2,10 +2,11 @@ import Combine
 import SwiftUI
 import UIKit
 
-class MessagesContainerViewController: UIViewController {
+class MessagesContainerViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     let contentView: UIView = UIView()
     let messagesInputView: InputHostingController<MessagesInputView>
-    private var conversationCancellable: AnyCancellable?
+    private let messagesInputViewModel: MessagesInputViewModel
+    private var showingImagePicker: Bool = false
 
     // MARK: - First Responder Management
 
@@ -25,7 +26,6 @@ class MessagesContainerViewController: UIViewController {
 
     // MARK: - Conversation
 
-    private var conversationRepositoryCancellable: AnyCancellable?
     private let conversationState: ConversationState
     private let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     private let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
@@ -38,6 +38,7 @@ class MessagesContainerViewController: UIViewController {
          conversationLocalStateWriter: any ConversationLocalStateWriterProtocol,
          dismissAction: DismissAction) {
         self.conversationState = conversationState
+        self.messagesInputViewModel = messagesInputViewModel
         self.outgoingMessageWriter = outgoingMessageWriter
         self.conversationLocalStateWriter = conversationLocalStateWriter
         self.messagesInputView = InputHostingController(
@@ -51,10 +52,6 @@ class MessagesContainerViewController: UIViewController {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-
-    deinit {
-        conversationRepositoryCancellable?.cancel()
     }
 
     // MARK: - Actions
@@ -73,6 +70,13 @@ class MessagesContainerViewController: UIViewController {
     }
 
     // MARK: - Lifecycle
+
+    override func viewWillLayoutSubviews() {
+        super.viewWillLayoutSubviews()
+        if messagesInputViewModel.showingPhotosPicker && !showingImagePicker {
+            self.presentImagePicker()
+        }
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -126,5 +130,37 @@ class MessagesContainerViewController: UIViewController {
         child.view.frame = contentView.bounds
         child.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         child.didMove(toParent: self)
+    }
+
+    // MARK: - Photo Picker
+
+    private func presentImagePicker() {
+        showingImagePicker = true
+        let imagePicker = UIImagePickerController()
+        imagePicker.delegate = self
+        imagePicker.sourceType = .photoLibrary
+        imagePicker.mediaTypes = ["public.image"]
+        imagePicker.allowsEditing = false
+        present(imagePicker, animated: true)
+    }
+
+    // MARK: - UIImagePickerControllerDelegate
+
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+        picker.dismiss(animated: true) { [weak self] in
+            self?.showingImagePicker = false
+            self?.messagesInputViewModel.showingPhotosPicker = false
+        }
+
+        if let image = info[.originalImage] as? UIImage {
+            messagesInputViewModel.imageSelection = image
+        }
+    }
+
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true) { [weak self] in
+            self?.showingImagePicker = false
+            self?.messagesInputViewModel.showingPhotosPicker = false
+        }
     }
 }

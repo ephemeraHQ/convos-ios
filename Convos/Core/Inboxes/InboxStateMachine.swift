@@ -4,11 +4,6 @@ import XMTPiOS
 
 private extension AppEnvironment {
     var xmtpEnv: XMTPEnvironment {
-        // If custom host is set, use local environment
-        if self.xmtpEndpoint != nil {
-            return .local
-        }
-
         switch self {
         case .local, .tests: return .local
         case .dev: return .dev

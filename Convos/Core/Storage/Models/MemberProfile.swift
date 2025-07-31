@@ -18,4 +18,8 @@ extension MemberProfile {
     func with(name: String?) -> MemberProfile {
         .init(inboxId: inboxId, name: name, avatar: avatar)
     }
+
+    func with(avatar: String?) -> MemberProfile {
+        .init(inboxId: inboxId, name: name, avatar: avatar)
+    }
 }
