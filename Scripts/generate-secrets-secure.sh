@@ -23,16 +23,22 @@ SENSITIVE_SECRETS=(
 # Environment variables (can be displayed)
 ENV_VARS=(
     "CONVOS_API_BASE_URL"
-    "PASSKEY_API_BASE_URL"
+    "XMTP_CUSTOM_HOST"
     "POSTHOG_HOST"
-    "API_RP_ID"
     "SENTRY_ORG"
     "SENTRY_PROJECT"
 )
 
-# Check that all secrets are present
+# Check that all secrets are present (but allow CONVOS_API_BASE_URL and XMTP_CUSTOM_HOST to be empty)
 missing_secrets=()
-for secret in "${SENSITIVE_SECRETS[@]}" "${ENV_VARS[@]}"; do
+for secret in "${SENSITIVE_SECRETS[@]}"; do
+    if [[ -z "${!secret}" ]]; then
+        missing_secrets+=("$secret")
+    fi
+done
+
+# Check non-required ENV_VARS (excluding CONVOS_API_BASE_URL and XMTP_CUSTOM_HOST)
+for secret in "POSTHOG_HOST" "SENTRY_ORG" "SENTRY_PROJECT"; do
     if [[ -z "${!secret}" ]]; then
         missing_secrets+=("$secret")
     fi
@@ -71,8 +77,8 @@ enum Secrets {
     static let TURNKEY_API_PRIVATE_KEY = #"${TURNKEY_API_PRIVATE_KEY}"#
 
     // Configuration URLs and IDs
-    static let CONVOS_API_BASE_URL = #"${CONVOS_API_BASE_URL}"#
-    static let PASSKEY_API_BASE_URL = #"${PASSKEY_API_BASE_URL}"#
+    static let CONVOS_API_BASE_URL = #"${CONVOS_API_BASE_URL:-}"#
+    static let XMTP_CUSTOM_HOST = #"${XMTP_CUSTOM_HOST:-}"#
     static let POSTHOG_HOST = #"${POSTHOG_HOST}"#
     static let API_RP_ID = #"${API_RP_ID}"#
     static let SENTRY_ORG = #"${SENTRY_ORG}"#
@@ -85,8 +91,26 @@ EOF
 # Display only environment variables (not secrets)
 echo "✅ Generated secrets with environment variables:"
 for var in "${ENV_VARS[@]}"; do
-    echo "  - $var: ${!var}"
+    if [[ "$var" == "CONVOS_API_BASE_URL" || "$var" == "XMTP_CUSTOM_HOST" ]]; then
+        if [[ -z "${!var}" ]]; then
+            echo "  - $var: (empty - will use default)"
+        else
+            echo "  - $var: ${!var}"
+        fi
+    else
+        echo "  - $var: ${!var}"
+    fi
 done
 
 echo "  - ${#SENSITIVE_SECRETS[@]} sensitive secrets configured (not displayed)"
+
+# Warn about empty values for optional configs
+if [[ -z "$CONVOS_API_BASE_URL" ]]; then
+    echo "⚠️  CONVOS_API_BASE_URL is empty - using default configuration"
+fi
+
+if [[ -z "$XMTP_CUSTOM_HOST" ]]; then
+    echo "⚠️  XMTP_CUSTOM_HOST is empty - using default configuration"
+fi
+
 echo "🔐 Secrets.swift generated successfully"
