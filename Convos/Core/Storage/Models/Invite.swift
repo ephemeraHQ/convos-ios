@@ -14,7 +14,8 @@ struct Invite: Codable, Hashable, Identifiable, Equatable {
     let inboxId: String // @jarodl temporary workaround
 
     var temporaryInviteString: String {
-        "\(inboxId)\(code)"
+        guard !inboxId.isEmpty && !code.isEmpty else { return "" }
+        return "\(inboxId)-\(code)"
     }
 
     static func parse(temporaryInviteString: String) -> (inboxId: String, code: String)? {

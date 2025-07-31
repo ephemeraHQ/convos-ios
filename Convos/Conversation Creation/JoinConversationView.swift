@@ -29,6 +29,8 @@ struct JoinConversationView: View {
                         .ignoresSafeArea()
 
                     VStack(spacing: DesignConstants.Spacing.stepX) {
+                        Spacer()
+
                         RoundedRectangle(cornerRadius: 20)
                             .frame(width: cutoutSize, height: cutoutSize)
                             .blendMode(.destinationOut)
@@ -46,6 +48,23 @@ struct JoinConversationView: View {
                             .font(.system(size: 12.0))
                             .multilineTextAlignment(.center)
                             .foregroundStyle(.white.opacity(0.7))
+
+                        Spacer()
+
+                        Button {
+                            if let code = UIPasteboard.general.string {
+                                handleCode(code: code)
+                            }
+                        } label: {
+                            Text("Or paste a link")
+                                .font(.system(size: 16.0))
+                                .foregroundStyle(.colorTextSecondary)
+                                .padding(.horizontal, DesignConstants.Spacing.step4x)
+                                .padding(.vertical, DesignConstants.Spacing.step3x)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .glassEffect(.regular, in: Capsule())
+                        .padding(.horizontal, DesignConstants.Spacing.step6x)
                     }
                     .padding(.bottom, 100.0)
                 }
@@ -64,14 +83,20 @@ struct JoinConversationView: View {
         }
         .onChange(of: qrScannerDelegate.scannedCode) { _, newValue in
             if let code = newValue {
-                guard let result = Invite.parse(temporaryInviteString: code) else {
-                    return
-                }
-                Logger.info("Scanned code: \(result)")
-                newConversationState.joinConversation(inboxId: result.inboxId, inviteCode: result.code)
-                onScannedCode()
+                handleCode(code: code)
             }
         }
+    }
+
+    @discardableResult
+    private func handleCode(code: String) -> Bool {
+        guard let result = Invite.parse(temporaryInviteString: code) else {
+            return false
+        }
+        Logger.info("Scanned code: \(result)")
+        newConversationState.joinConversation(inboxId: result.inboxId, inviteCode: result.code)
+        onScannedCode()
+        return true
     }
 }
 

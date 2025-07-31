@@ -43,9 +43,7 @@ struct RoundedButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .applyIf(fullWidth) { view in
-                view.frame(maxWidth: .infinity)
-            }
+            .frame(maxWidth: fullWidth ? .infinity : nil)
             .font(.subheadline)
             .lineLimit(1)
             .truncationMode(.middle)
@@ -80,9 +78,7 @@ struct OutlineButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .applyIf(fullWidth) { view in
-                view.frame(maxWidth: .infinity)
-            }
+            .frame(maxWidth: fullWidth ? .infinity : nil)
             .font(.subheadline)
             .lineLimit(1)
             .truncationMode(.middle)
