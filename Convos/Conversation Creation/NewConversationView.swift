@@ -40,7 +40,12 @@ struct NewConversationView: View {
             .background(.colorBackgroundPrimary)
             .ignoresSafeArea()
             .sheet(isPresented: $presentingJoinConversation) {
-                JoinConversationView(newConversationState: newConversationState, showsToolbar: true)
+                JoinConversationView(
+                    newConversationState: newConversationState,
+                    showsToolbar: true
+                ) {
+                    presentingJoinConversation = false
+                }
             }
             .onAppear {
                 if !newConversationState.showScannerOnAppear {
@@ -49,12 +54,12 @@ struct NewConversationView: View {
             }
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
-                if !newConversationState.showScannerOnAppear {
+                if !newConversationState.showScannerOnAppear || hasShownScannerOnAppear {
                     ToolbarItem(placement: .title) {
                         if let conversation = newConversationState.conversationState?.conversation {
                             Button {
                             } label: {
-                                HStack(spacing: DesignConstants.Spacing.step2x) {
+                                HStack(spacing: 0.0) {
                                     ConversationAvatarView(conversation: conversation)
                                         .frame(width: 36.0, height: 36.0)
 
@@ -70,12 +75,12 @@ struct NewConversationView: View {
                                             .font(.system(size: 12.0, weight: .regular))
                                             .foregroundStyle(.colorTextSecondary)
                                     }
-                                    .padding(.trailing, DesignConstants.Spacing.step2x)
+                                    .padding(.horizontal, DesignConstants.Spacing.step2x)
                                 }
                             }
-                            .padding(.horizontal, DesignConstants.Spacing.step2x)
-                            .padding(.vertical, DesignConstants.Spacing.stepX)
+                            .padding(DesignConstants.Spacing.step2x)
                             .glassEffect()
+                            .padding(.top, DesignConstants.Spacing.stepX) // @jarodl avoids dynamic island
                         }
                     }
                 }

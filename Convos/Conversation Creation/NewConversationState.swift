@@ -34,13 +34,11 @@ class NewConversationState: Identifiable {
                 self.addAccountResult = addAccountResult
                 let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
                 draftConversationComposer.draftConversationWriter.createConversationWhenInboxReady()
-                await MainActor.run {
-                    self.draftConversationComposer = draftConversationComposer
-                    self.conversationState = ConversationState(
-                        myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
-                        conversationRepository: draftConversationComposer.draftConversationRepository
-                    )
-                }
+                self.draftConversationComposer = draftConversationComposer
+                self.conversationState = ConversationState(
+                    myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
+                    conversationRepository: draftConversationComposer.draftConversationRepository
+                )
             } catch {
                 Logger.error("Error starting new conversation: \(error.localizedDescription)")
             }
@@ -65,6 +63,10 @@ class NewConversationState: Identifiable {
                     let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
                     draftConversationComposer.draftConversationWriter.createConversationWhenInboxReady()
                     self.draftConversationComposer = draftConversationComposer
+                    self.conversationState = ConversationState(
+                        myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
+                        conversationRepository: draftConversationComposer.draftConversationRepository
+                    )
                 }
 
                 guard let draftConversationComposer else {
@@ -72,15 +74,13 @@ class NewConversationState: Identifiable {
                     return
                 }
 
-                draftConversationComposer.draftConversationWriter
-                    .joinConversationWhenInboxReady(inviteId: inviteId, inboxId: inboxId, inviteCode: inviteCode)
-                await MainActor.run {
-                    self.draftConversationComposer = draftConversationComposer
-                    self.conversationState = ConversationState(
-                        myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
-                        conversationRepository: draftConversationComposer.draftConversationRepository
+                draftConversationComposer
+                    .draftConversationWriter
+                    .joinConversationWhenInboxReady(
+                        inviteId: inviteId,
+                        inboxId: inboxId,
+                        inviteCode: inviteCode
                     )
-                }
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
             }

@@ -53,9 +53,7 @@ struct JoinConversationView: View {
 
                         Button {
                             if let code = UIPasteboard.general.string {
-                                if handleCode(code: code) {
-                                    dismiss()
-                                }
+                                handleCode(code: code)
                             }
                         } label: {
                             Text("Or paste a link")
@@ -85,9 +83,7 @@ struct JoinConversationView: View {
         }
         .onChange(of: qrScannerDelegate.scannedCode) { _, newValue in
             if let code = newValue {
-                if handleCode(code: code) {
-                    dismiss()
-                }
+                handleCode(code: code)
             }
         }
     }
