@@ -69,7 +69,7 @@ class GroupEditState {
     @MainActor
     func onAppear() {
         loadCurrentConversationImage()
-        originalCachedImage = ImageCache.shared.imageForConversation(conversation.id)
+        originalCachedImage = ImageCache.shared.image(for: conversation)
     }
 
     @MainActor
@@ -143,7 +143,7 @@ class GroupEditState {
             withAnimation {
                 self.imageState = imageState
                 if case .success(let image) = imageState {
-                    ImageCache.shared.setImageForConversation(image, conversationId: conversation.id)
+                    ImageCache.shared.setImage(image, for: conversation)
                 }
             }
         }
@@ -163,7 +163,7 @@ class GroupEditState {
 
     @MainActor
     private func loadCurrentConversationImage() {
-        if let cachedImage = ImageCache.shared.imageForConversation(conversation.id) {
+        if let cachedImage = ImageCache.shared.image(for: conversation) {
             currentConversationImage = cachedImage
         } else {
             currentConversationImage = nil
@@ -177,7 +177,7 @@ class GroupEditState {
 
         let resizedImage = ImageCompression.resizeForCache(image)
 
-        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 1.0) else {
+        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
             throw GroupImageError.importFailed
         }
 
@@ -197,7 +197,7 @@ class GroupEditState {
 //            data: compressedImageData,
 //            filename: filename) { uploadedURL in
 //            try await self.updateGroupImage(imageURL: uploadedURL)
-//            ImageCache.shared.setImageForConversation(uploadedImage, conversationId: self.conversation.id)
+//            ImageCache.shared.setImage(uploadedImage, for: self.conversation)
 //        }
     }
 
@@ -205,9 +205,9 @@ class GroupEditState {
     private func revertImageChanges() {
         if case .success = imageState {
             if let originalImage = originalCachedImage {
-                ImageCache.shared.setImageForConversation(originalImage, conversationId: conversation.id)
+                ImageCache.shared.setImage(originalImage, for: conversation)
             } else {
-                ImageCache.shared.removeImageForConversation(conversation.id)
+                ImageCache.shared.removeImage(for: conversation)
             }
         }
     }

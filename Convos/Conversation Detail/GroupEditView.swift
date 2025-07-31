@@ -117,7 +117,7 @@ struct GroupEditView: View {
         .onDisappear {
             editState.onDisappear()
         }
-        .onChange(of: ImageCache.shared.lastUpdateTime) { _, _ in
+        .cachedImage(for: conversation) { _ in
             editState.onImageCacheUpdate()
         }
         .alert("Group Update", isPresented: $editState.showingAlert) {
@@ -155,10 +155,12 @@ struct GroupEditView: View {
                                 .frame(width: 120, height: 120)
                                 .clipShape(Circle())
                         } else {
-                            AvatarView(imageURL: conversation.imageURL,
-                                       fallbackName: conversation.name ?? "Group",
-                                       conversationId: conversation.id)
-                                .frame(width: 120, height: 120)
+                            AvatarView(
+                                imageURL: conversation.imageURL,
+                                fallbackName: conversation.name ?? "Group",
+                                cacheableObject: conversation
+                            )
+                            .frame(width: 120, height: 120)
                         }
                     case let .success(image):
                         Image(uiImage: image)

@@ -117,14 +117,19 @@ struct AvatarCloudView: View {
         } else if avatars.count == 1, let avatar = avatars.first {
             AvatarView(
                 imageURL: avatar.imageURL,
-                fallbackName: avatar.fallbackName
+                fallbackName: avatar.fallbackName,
+                cacheableObject: avatar
             )
         } else {
             ZStack {
                 BubbleCloudLayout(spacing: 6) {
                     ForEach(visibleAvatars) { avatar in
-                        AvatarView(imageURL: avatar.imageURL, fallbackName: avatar.fallbackName)
-                            .id(avatar.id)
+                        AvatarView(
+                            imageURL: avatar.imageURL,
+                            fallbackName: avatar.fallbackName,
+                            cacheableObject: avatar
+                        )
+                        .id(avatar.id)
                     }
 
                     if overflowCount > 0 {
@@ -139,10 +144,14 @@ struct AvatarCloudView: View {
     }
 }
 
-struct AvatarData: Identifiable, Equatable {
+struct AvatarData: Identifiable, Equatable, ImageCacheable {
     let id: String
     let imageURL: URL?
     let fallbackName: String
+
+    var imageCacheIdentifier: String {
+        id
+    }
 }
 
 #Preview {

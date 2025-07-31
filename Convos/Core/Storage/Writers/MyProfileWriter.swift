@@ -60,24 +60,25 @@ class MyProfileWriter: MyProfileWriterProtocol {
 
         guard let avatarImage = avatar else {
             // remove avatar image URL
+            ImageCache.shared.removeImage(for: profile.hydrateProfile())
             _ = try await inboxReady.apiClient.updateProfile(inboxId: inboxId, with: profile.asUpdateRequest())
             return
         }
 
+        ImageCache.shared.setImage(avatarImage, for: profile.hydrateProfile())
+
         let resizedImage = ImageCompression.resizeForCache(avatarImage)
 
-        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 1.0) else {
+        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
             throw GroupImageError.importFailed
         }
 
         let uploadedURL = try await inboxReady.apiClient.uploadAttachment(
             data: compressedImageData,
-            filename: "pfp-\(UUID().uuidString).jpg",
+            filename: "profile-\(UUID().uuidString).jpg",
             contentType: "image/jpeg",
             acl: "public-read"
         )
-
-        ImageCache.shared.setImage(resizedImage, for: uploadedURL)
 
         try await databaseWriter.write { db in
             try profile.with(avatar: uploadedURL).save(db)

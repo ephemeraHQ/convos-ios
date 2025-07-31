@@ -2,50 +2,94 @@ import Combine
 import Observation
 import SwiftUI
 
-// MARK: - Conversation-Based Image Cache
-/// Smart reactive image cache that stores images by conversation ID for instant updates across all views.
-/// When a new image is uploaded for a conversation, all views showing that conversation update instantly.
+// MARK: - ImageCacheable Protocol
+
+/// Protocol for objects that can have their images cached
+protocol ImageCacheable {
+    /// Unique identifier used for caching the image
+    var imageCacheIdentifier: String { get }
+}
+
+// MARK: - Generic Image Cache
+
+/// Smart reactive image cache that stores images for any ImageCacheable object with instant updates.
+/// When a new image is uploaded for an object, all views showing that object update instantly.
 @Observable
 final class ImageCache {
     static let shared: ImageCache = ImageCache()
 
-    private let identifierCache: NSCache<NSString, UIImage>
+    private let cache: NSCache<NSString, UIImage>
     private let urlCache: NSCache<NSString, UIImage>
-    private let conversationCache: NSCache<NSString, UIImage>
-    private var cacheUpdateSubject: PassthroughSubject<String, Never> = PassthroughSubject<String, Never>()
 
+    /// Publisher for specific cache updates by identifier
+    private let cacheUpdateSubject: PassthroughSubject<String, Never> = PassthroughSubject<String, Never>()
+
+    /// Publisher that emits when a specific cached image is updated
     var cacheUpdates: AnyPublisher<String, Never> {
         cacheUpdateSubject.eraseToAnyPublisher()
     }
 
-    // This property triggers view updates when changed
-    var lastUpdateTime: Date = Date()
-
     private init() {
-        identifierCache = NSCache<NSString, UIImage>()
-        identifierCache.countLimit = 200
-        identifierCache.totalCostLimit = 100 * 1024 * 1024 // 100MB for identifier cache
+        cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 400
+        cache.totalCostLimit = 200 * 1024 * 1024 // 200MB total
 
         urlCache = NSCache<NSString, UIImage>()
         urlCache.countLimit = 200
         urlCache.totalCostLimit = 100 * 1024 * 1024 // 100MB for URL cache
-
-        conversationCache = NSCache<NSString, UIImage>()
-        conversationCache.countLimit = 200
-        conversationCache.totalCostLimit = 100 * 1024 * 1024 // 100MB for conversation cache
     }
 
+    // MARK: - Generic Cache Methods
+
+        /// Get cached image for any ImageCacheable object
+    func image(for object: any ImageCacheable) -> UIImage? {
+        return cache.object(forKey: object.imageCacheIdentifier as NSString)
+    }
+
+    /// Set cached image for any ImageCacheable object
+    func setImage(_ image: UIImage, for object: any ImageCacheable) {
+        let identifier = object.imageCacheIdentifier
+        cacheImage(image, key: identifier, cache: cache, logContext: "Object cache")
+        cacheUpdateSubject.send(identifier)
+    }
+
+    /// Remove cached image for any ImageCacheable object
+    func removeImage(for object: any ImageCacheable) {
+        let identifier = object.imageCacheIdentifier
+        cache.removeObject(forKey: identifier as NSString)
+        cacheUpdateSubject.send(identifier)
+    }
+
+    // MARK: - Identifier-based Methods
+
+    /// Get cached image by identifier
     func image(for identifier: String) -> UIImage? {
-        return identifierCache.object(forKey: identifier as NSString)
+        return cache.object(forKey: identifier as NSString)
     }
 
+    /// Cache image by identifier
     func cacheImage(_ image: UIImage, for identifier: String) {
-        cacheImage(image, key: identifier, cache: identifierCache, logContext: "Identifier cache")
+        cacheImage(image, key: identifier, cache: cache, logContext: "Identifier cache")
+        cacheUpdateSubject.send(identifier)
     }
+
+    /// Remove cached image by identifier
+    func removeImage(for identifier: String) {
+        cache.removeObject(forKey: identifier as NSString)
+        cacheUpdateSubject.send(identifier)
+    }
+
+    // MARK: - URL-based Methods (kept for compatibility)
 
     func image(for url: URL) -> UIImage? {
         return urlCache.object(forKey: url.absoluteString as NSString)
     }
+
+    func setImage(_ image: UIImage, for url: String) {
+        cacheImage(image, key: url, cache: urlCache, logContext: "URL cache")
+    }
+
+    // MARK: - Private Methods
 
     private func cacheImage(_ image: UIImage, key: String, cache: NSCache<NSString, UIImage>, logContext: String) {
         let resizedImage = ImageCompression.resizeForCache(image)
@@ -59,31 +103,29 @@ final class ImageCache {
         cache.setObject(resizedImage, forKey: key as NSString, cost: cost)
         Logger.info("Successfully cached resized image for \(logContext): \(key)")
     }
+}
 
-    func setImage(_ image: UIImage, for url: String) {
-        cacheImage(image, key: url, cache: urlCache, logContext: "URL cache")
-        lastUpdateTime = Date()
-    }
+// MARK: - SwiftUI View Extension for Easy Image Cache Integration
 
-    // Get the latest image for a conversation, regardless of URL
-    func imageForConversation(_ conversationId: String) -> UIImage? {
-        return conversationCache.object(forKey: conversationId as NSString)
-    }
-
-    /// Set the image for a conversation
-    /// This triggers instant updates in all views showing this conversation
-    func setImageForConversation(_ image: UIImage, conversationId: String) {
-        cacheImage(image, key: conversationId, cache: conversationCache, logContext: "conversation cache")
-        cacheUpdateSubject.send(conversationId)
-        lastUpdateTime = Date()
-    }
-
-    /// Remove the cached image for a conversation
-    /// This triggers instant updates in all views showing this conversation
-    func removeImageForConversation(_ conversationId: String) {
-        conversationCache.removeObject(forKey: conversationId as NSString)
-        // Notify all views that this conversation's image was removed
-        cacheUpdateSubject.send(conversationId)
-        lastUpdateTime = Date()
+extension View {
+    /// Modifier that subscribes to image cache updates for a specific ImageCacheable object
+    func cachedImage(
+        for object: any ImageCacheable,
+        onChange: @escaping (UIImage?) -> Void
+    ) -> some View {
+        self
+            .onAppear {
+                // Load initial cached image
+                let image = ImageCache.shared.image(for: object)
+                onChange(image)
+            }
+            .onReceive(
+                ImageCache.shared.cacheUpdates
+                    .filter { $0 == object.imageCacheIdentifier }
+            ) { _ in
+                // Update when this specific object's image changes
+                let image = ImageCache.shared.image(for: object)
+                onChange(image)
+            }
     }
 }

@@ -5,16 +5,16 @@ import SwiftUI
 struct AvatarView: View {
     let imageURL: URL?
     let fallbackName: String
-    let conversationId: String?
+    let cacheableObject: (any ImageCacheable)?
     @State private var cachedImage: UIImage?
     @State private var isLoading: Bool = false
 
     init(imageURL: URL?,
          fallbackName: String,
-         conversationId: String? = nil) {
+         cacheableObject: (any ImageCacheable)? = nil) {
         self.imageURL = imageURL
         self.fallbackName = fallbackName
-        self.conversationId = conversationId
+        self.cacheableObject = cacheableObject
     }
 
     var body: some View {
@@ -34,20 +34,24 @@ struct AvatarView: View {
         .task(id: imageURL) {
             await loadImage()
         }
-        .onChange(of: ImageCache.shared.lastUpdateTime) { _, _ in
-            // When cache updates, check if we now have our image (URL or conversation-based)
-            let hasURLImage: Bool = {
-                guard let imageURL = imageURL else { return false }
-                return ImageCache.shared.image(for: imageURL) != nil
-            }()
-            let hasConversationImage: Bool = {
-                guard let conversationId = conversationId else { return false }
-                return ImageCache.shared.imageForConversation(conversationId) != nil
-            }()
-
-            if hasURLImage || hasConversationImage {
-                Task {
-                    await loadImage()
+        .onAppear {
+            if let cacheableObject = cacheableObject {
+                cachedImage = ImageCache.shared.image(for: cacheableObject)
+            }
+        }
+        .onReceive(
+            ImageCache.shared.cacheUpdates
+                .receive(on: DispatchQueue.main)
+                .compactMap { [cacheableObject] identifier in
+                    cacheableObject?.imageCacheIdentifier == identifier ? identifier : nil
+                }
+        ) { _ in
+            if let cacheableObject = cacheableObject {
+                cachedImage = ImageCache.shared.image(for: cacheableObject)
+                if cachedImage == nil && imageURL != nil {
+                    Task {
+                        await loadImage()
+                    }
                 }
             }
         }
@@ -55,10 +59,10 @@ struct AvatarView: View {
 
     @MainActor
     private func loadImage() async {
-        // First check conversation cache for instant updates
-        if let conversationId = conversationId,
-           let conversationImage = ImageCache.shared.imageForConversation(conversationId) {
-            cachedImage = conversationImage
+        // First check object cache for instant updates
+        if let cacheableObject = cacheableObject,
+           let cachedObjectImage = ImageCache.shared.image(for: cacheableObject) {
+            cachedImage = cachedObjectImage
             return
         }
 
@@ -81,9 +85,9 @@ struct AvatarView: View {
                 // Cache the image for future use
                 ImageCache.shared.setImage(image, for: imageURL.absoluteString)
 
-                // Also cache by conversation ID if available for instant cross-view updates
-                if let conversationId = conversationId {
-                    ImageCache.shared.setImageForConversation(image, conversationId: conversationId)
+                // Also cache by object if available for instant cross-view updates
+                if let cacheableObject = cacheableObject {
+                    ImageCache.shared.setImage(image, for: cacheableObject)
                 }
 
                 cachedImage = image
@@ -98,20 +102,19 @@ struct AvatarView: View {
 }
 
 struct ProfileAvatarView: View {
-    private let avatar: AvatarData
+    private let profile: Profile
 
     init(profile: Profile) {
-        self.avatar = .init(
-            id: profile.id,
-            imageURL: profile.avatarURL,
-            fallbackName: profile.displayName
-        )
+        self.profile = profile
     }
 
     var body: some View {
-        AvatarView(imageURL: avatar.imageURL,
-                   fallbackName: avatar.fallbackName)
-        .id(avatar.id)
+        AvatarView(
+            imageURL: profile.avatarURL,
+            fallbackName: profile.displayName,
+            cacheableObject: profile
+        )
+        .id(profile.id)
     }
 }
 
@@ -138,7 +141,7 @@ struct ConversationAvatarView: View {
             .sorted { $0.id < $1.id }
             .map {
                 .init(
-                    id: $0.id,
+                    id: $0.imageCacheIdentifier,
                     imageURL: $0.avatarURL,
                     fallbackName: $0.displayName
                 )
@@ -157,11 +160,11 @@ struct ConversationAvatarView: View {
                         .aspectRatio(1.0, contentMode: .fit)
                         .clipShape(Circle())
                 } else if conversation.imageURL != nil {
-                    // Fall back to URL-based loading with conversation ID for cache awareness
+                    // Fall back to URL-based loading with conversation object for cache awareness
                     AvatarView(
                         imageURL: conversation.imageURL,
                         fallbackName: conversation.name ?? "Group",
-                        conversationId: conversation.id
+                        cacheableObject: conversation
                     )
                 } else {
                     // No group image set, show member avatars
@@ -172,20 +175,8 @@ struct ConversationAvatarView: View {
                 AvatarCloudView(avatars: avatars)
             }
         }
-        .onAppear {
-            loadConversationImage()
-        }
-        .onChange(of: ImageCache.shared.lastUpdateTime) { _, _ in
-            loadConversationImage()
-        }
-    }
-
-    private func loadConversationImage() {
-        // Check conversation-based cache first for instant updates
-        if let cachedImage = ImageCache.shared.imageForConversation(conversation.id) {
-            conversationImage = cachedImage
-        } else {
-            conversationImage = nil
+        .cachedImage(for: conversation) { image in
+            conversationImage = image
         }
     }
 }
