@@ -79,6 +79,7 @@ extension SharedDatabaseMigrator {
                 t.column("imageURLString", .text)
 
                 t.uniqueKey(["id", "inboxId"])
+//                t.primaryKey(["id", "inboxId"])
             }
 
             try db.create(table: "memberProfile") { t in

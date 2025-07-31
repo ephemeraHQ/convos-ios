@@ -30,6 +30,15 @@ enum MessageContent: Hashable, Codable {
          attachment(URL),
          attachments([URL]),
          update(ConversationUpdate)
+
+    var showsSender: Bool {
+        switch self {
+        case .update:
+            false
+        default:
+            true
+        }
+    }
 }
 
 struct Message: MessageType, Hashable, Codable {

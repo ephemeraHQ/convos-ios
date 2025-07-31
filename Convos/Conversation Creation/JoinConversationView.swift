@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct JoinConversationView: View {
-    let newConversationState: NewConversationState
+    @Bindable var newConversationState: NewConversationState
     let showsToolbar: Bool
     @StateObject private var qrScannerDelegate: QRScannerDelegate = QRScannerDelegate()
     @Environment(\.dismiss) var dismiss: DismissAction
@@ -53,7 +53,9 @@ struct JoinConversationView: View {
 
                         Button {
                             if let code = UIPasteboard.general.string {
-                                handleCode(code: code)
+                                if handleCode(code: code) {
+                                    dismiss()
+                                }
                             }
                         } label: {
                             Text("Or paste a link")
@@ -73,7 +75,7 @@ struct JoinConversationView: View {
             .ignoresSafeArea()
             .toolbar {
                 if showsToolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .topBarLeading) {
                         Button(role: .close) {
                             dismiss()
                         }
@@ -83,7 +85,9 @@ struct JoinConversationView: View {
         }
         .onChange(of: qrScannerDelegate.scannedCode) { _, newValue in
             if let code = newValue {
-                handleCode(code: code)
+                if handleCode(code: code) {
+                    dismiss()
+                }
             }
         }
     }

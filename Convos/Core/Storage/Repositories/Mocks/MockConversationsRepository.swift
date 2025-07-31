@@ -41,7 +41,7 @@ extension Conversation {
             id: id,
             inboxId: "",
             creator: .empty(isCurrentUser: true),
-            createdAt: Date(),
+            createdAt: .distantFuture,
             consent: .allowed,
             kind: .group,
             name: "",
@@ -67,7 +67,7 @@ extension Invite {
             conversationId: "",
             inviteUrlString: "",
             status: .active,
-            createdAt: Date(),
+            createdAt: .distantFuture,
             maxUses: 0,
             usesCount: 0,
             inboxId: ""

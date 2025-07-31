@@ -336,12 +336,15 @@ extension MessagesViewController {
                 if timeDifference > 3600 { // 1 hour in seconds
                     cells.append(MessagesCollectionCell.date(.init(date: message.base.date)))
                 }
-                if previousMessage.base.sender.id != message.base.sender.id, message.base.source.isIncoming {
+                if previousMessage.base.sender.id != message.base.sender.id,
+                   message.base.source.isIncoming,
+                   message.base.content.showsSender {
                     cells.append(senderTitleCell)
                 }
             } else {
                 cells.append(MessagesCollectionCell.date(.init(date: message.base.date)))
-                if message.base.source.isIncoming {
+                if message.base.source.isIncoming,
+                   message.base.content.showsSender {
                     cells.append(senderTitleCell)
                 }
             }

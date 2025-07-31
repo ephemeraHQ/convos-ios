@@ -38,18 +38,15 @@ struct ConversationsListEmptyCTA: View {
 
 struct ConversationsListView: View {
     private let session: any SessionManagerProtocol
-    @Binding var isPresentingComposer: Bool
-    @Binding var isPresentingJoinConversation: Bool
+    @Binding var newConversationState: NewConversationState?
     @Binding var path: [ConversationsRoute]
     @State var viewModel: ConversationsListViewModel
 
     init(session: any SessionManagerProtocol,
-         isPresentingComposer: Binding<Bool>,
-         isPresentingJoinConversation: Binding<Bool>,
+         newConversationState: Binding<NewConversationState?>,
          path: Binding<[ConversationsRoute]>) {
         self.session = session
-        _isPresentingComposer = isPresentingComposer
-        _isPresentingJoinConversation = isPresentingJoinConversation
+        _newConversationState = newConversationState
         _path = path
         let conversationsRepository = session.conversationsRepository(for: .allowed)
         let securityLineConversationsCountRepo = session.conversationsCountRepo(for: .securityLine)
@@ -64,9 +61,9 @@ struct ConversationsListView: View {
             LazyVStack(spacing: 0) {
                 if viewModel.unpinnedConversations.isEmpty {
                     ConversationsListEmptyCTA {
-                        isPresentingComposer = true
+                        newConversationState = NewConversationState(session: session)
                     } onJoinConvo: {
-                        isPresentingJoinConversation = true
+                        newConversationState = NewConversationState(session: session, showScannerOnAppear: true)
                     }
                     .padding(DesignConstants.Spacing.step6x)
                 } else {
@@ -105,15 +102,13 @@ struct ConversationsListView: View {
 }
 
 #Preview {
-    @Previewable @State var isPresentingComposer: Bool = false
-    @Previewable @State var isPresentingJoinConversation: Bool = false
+    @Previewable @State var newConversationState: NewConversationState?
     @Previewable @State var path: [ConversationsRoute] = []
     let convos = ConvosClient.mock()
 
     ConversationsListView(
         session: convos.session,
-        isPresentingComposer: $isPresentingComposer,
-        isPresentingJoinConversation: $isPresentingJoinConversation,
+        newConversationState: $newConversationState,
         path: $path
     )
 }

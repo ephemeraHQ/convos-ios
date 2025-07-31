@@ -138,8 +138,32 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             return
         }
 
+        Logger.info("Created temporary DM with id: \(temporaryConversationId)")
+
         _ = try await messageSender.prepare(text: inviteCode)
         try await messageSender.publish()
+
+        Logger.info("Sent join request via XMTP")
+
+        // the join request succeeded, if we created a conversation we need to leave it
+        do {
+            Logger.info("Checking state of draft conversation writer, state: \(state)...")
+            if case .created(let createdConversationId) = state,
+               let createdConversation = try await client.conversation(with: createdConversationId),
+               case .group(let group) = createdConversation {
+                Logger.info("Leaving pre-created conversation: \(createdConversationId)")
+                try await group.removeMembers(inboxIds: [client.inboxId])
+                let dbCreatedConversation = try await databaseReader.read { db -> DBConversation? in
+                    try DBConversation.fetchOne(db, key: createdConversationId)
+                }
+                _ = try await databaseWriter.write { db in
+                    try dbCreatedConversation?.delete(db)
+                    Logger.info("Deleted pre-created conversation: \(String(describing: dbCreatedConversation))")
+                }
+            }
+        } catch {
+            Logger.error("Error leaving pre-created conversation: \(error)")
+        }
 
         // wait for response
         streamConversationsTask = Task {
@@ -150,6 +174,12 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                         Logger.warning("Closing conversations stream for inboxId: \(client.inboxId)...")
                     }
                 ) where try await conversation.creatorInboxId == inboxId {
+                    Logger.info("Found conversation matching creator inboxId: \(inboxId), id: \(conversation.id)")
+                    let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
+                    let conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
+                                                                messageWriter: messageWriter)
+                    _ = try await conversationWriter.store(conversation: conversation,
+                                                           clientConversationId: conversationId)
                     self.state = .existing(id: conversation.id)
                     streamConversationsTask?.cancel()
                 }

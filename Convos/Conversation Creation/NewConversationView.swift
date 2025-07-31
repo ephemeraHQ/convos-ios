@@ -1,28 +1,18 @@
 import SwiftUI
 
 struct NewConversationView: View {
-    let session: any SessionManagerProtocol
-    @State private var startedWithJoinConversationPresented: Bool
-    @State private var newConversationState: NewConversationState
+    @Bindable var newConversationState: NewConversationState
+    @State private var hasShownScannerOnAppear: Bool = false
     @State private var presentingJoinConversation: Bool = false
     @State private var presentingDeleteConfirmation: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
 
-    init(
-        session: any SessionManagerProtocol,
-        presentingJoinConversation: Bool
-    ) {
-        self.session = session
-        _startedWithJoinConversationPresented = .init(initialValue: presentingJoinConversation)
-        _newConversationState = .init(initialValue: .init(session: session))
-    }
-
     var body: some View {
         NavigationStack {
             Group {
-                if startedWithJoinConversationPresented {
+                if newConversationState.showScannerOnAppear && !hasShownScannerOnAppear {
                     JoinConversationView(newConversationState: newConversationState, showsToolbar: false) {
-                        startedWithJoinConversationPresented = false
+                        hasShownScannerOnAppear = true
                     }
                 } else if let conversationState = newConversationState.conversationState,
                    let composer = newConversationState.draftConversationComposer {
@@ -53,13 +43,13 @@ struct NewConversationView: View {
                 JoinConversationView(newConversationState: newConversationState, showsToolbar: true)
             }
             .onAppear {
-                if !startedWithJoinConversationPresented {
+                if !newConversationState.showScannerOnAppear {
                     newConversationState.newConversation()
                 }
             }
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
-                if !startedWithJoinConversationPresented {
+                if !newConversationState.showScannerOnAppear {
                     ToolbarItem(placement: .title) {
                         if let conversation = newConversationState.conversationState?.conversation {
                             Button {
@@ -92,7 +82,7 @@ struct NewConversationView: View {
 
                 ToolbarItem(placement: .topBarLeading) {
                     Button(role: .close) {
-                        if newConversationState.promptToKeepConversation && !startedWithJoinConversationPresented {
+                        if newConversationState.promptToKeepConversation && !newConversationState.showScannerOnAppear {
                             presentingDeleteConfirmation = true
                         } else {
                             dismiss()
@@ -110,7 +100,7 @@ struct NewConversationView: View {
                     }
                 }
 
-                if !startedWithJoinConversationPresented {
+                if !newConversationState.showScannerOnAppear {
                     ToolbarItem(placement: .topBarTrailing) {
                         if newConversationState.showJoinConversation {
                             Button {
@@ -133,14 +123,15 @@ struct NewConversationView: View {
 }
 
 #Preview {
+    @Previewable @State var state: NewConversationState = .init(
+        session: ConvosClient.mock().session
+    )
     @Previewable @State var presented: Bool = true
-    let convos = ConvosClient.mock()
     VStack {
     }
     .fullScreenCover(isPresented: $presented) {
         NewConversationView(
-            session: convos.session,
-            presentingJoinConversation: false
+            newConversationState: state
         )
         .ignoresSafeArea()
     }

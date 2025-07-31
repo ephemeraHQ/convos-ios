@@ -92,6 +92,7 @@ final class SyncingManager: SyncingManagerProtocol {
                     }
                 ) {
                     syncMemberProfiles(apiClient: apiClient, for: [conversation])
+                    Logger.info("Syncing conversation with id: \(conversation.id)")
                     try await conversationWriter.store(conversation: conversation)
                 }
             } catch {

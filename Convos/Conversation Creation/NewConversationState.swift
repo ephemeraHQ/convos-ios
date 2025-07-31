@@ -3,7 +3,7 @@ import OrderedCollections
 import SwiftUI
 
 @Observable
-class NewConversationState {
+class NewConversationState: Identifiable {
     private var cancellables: Set<AnyCancellable> = []
     private let session: any SessionManagerProtocol
     private(set) var conversationState: ConversationState?
@@ -15,13 +15,15 @@ class NewConversationState {
 
     private(set) var showJoinConversation: Bool = true // false once someone joins or a message is sent
     private(set) var promptToKeepConversation: Bool = true
+    private(set) var showScannerOnAppear: Bool
 
     private var addAccountResult: AddAccountResultType?
     private var newConversationTask: Task<Void, Never>?
     private var joinConversationTask: Task<Void, Never>?
 
-    init(session: any SessionManagerProtocol) {
+    init(session: any SessionManagerProtocol, showScannerOnAppear: Bool = false) {
         self.session = session
+        self.showScannerOnAppear = showScannerOnAppear
     }
 
     func newConversation() {
@@ -49,9 +51,27 @@ class NewConversationState {
         joinConversationTask?.cancel()
         joinConversationTask = Task {
             do {
-                let addAccountResult = try session.addAccount()
-                self.addAccountResult = addAccountResult
-                let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
+                if self.addAccountResult == nil {
+                    let addAccountResult = try session.addAccount()
+                    self.addAccountResult = addAccountResult
+                }
+
+                guard let addAccountResult else {
+                    Logger.error("Failed adding account while joining conversation")
+                    return
+                }
+
+                if self.draftConversationComposer == nil {
+                    let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
+                    draftConversationComposer.draftConversationWriter.createConversationWhenInboxReady()
+                    self.draftConversationComposer = draftConversationComposer
+                }
+
+                guard let draftConversationComposer else {
+                    Logger.error("Failed getting conversation composer while joining conversation")
+                    return
+                }
+
                 draftConversationComposer.draftConversationWriter
                     .joinConversationWhenInboxReady(inboxId: inboxId, inviteCode: inviteCode)
                 await MainActor.run {

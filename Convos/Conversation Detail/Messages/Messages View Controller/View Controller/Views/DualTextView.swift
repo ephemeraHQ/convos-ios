@@ -281,8 +281,8 @@ struct DualTextViewRepresentable: UIViewRepresentable {
         }
 
         func textViewDidChange(_ textView: UITextView) {
-            parent.textViewText = textView.text ?? ""
             DispatchQueue.main.async { [weak self] in
+                self?.parent.textViewText = textView.text ?? ""
                 if let dualTextView = textView.superview as? DualTextView {
                     self?.parent.height = dualTextView.intrinsicContentSize.height
                 }

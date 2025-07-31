@@ -12,8 +12,7 @@ struct ConversationDetail {
 struct ConversationsView: View {
     let session: any SessionManagerProtocol
     @Namespace var namespace: Namespace.ID
-    @State var isPresentingComposer: Bool = false
-    @State var isPresentingJoinConversation: Bool = false
+    @State var newConversationState: NewConversationState?
     @State var presentingExplodeConfirmation: Bool = false
     @State var path: [ConversationsRoute] = []
     @Environment(\.dismiss) var dismiss: DismissAction
@@ -22,8 +21,7 @@ struct ConversationsView: View {
         NavigationStack(path: $path) {
             ConversationsListView(
                 session: session,
-                isPresentingComposer: $isPresentingComposer,
-                isPresentingJoinConversation: $isPresentingJoinConversation,
+                newConversationState: $newConversationState,
                 path: $path
             )
             .toolbarTitleDisplayMode(.inlineLarge)
@@ -72,7 +70,7 @@ struct ConversationsView: View {
 
                 ToolbarItem(placement: .bottomBar) {
                     Button("Compose", systemImage: "plus") {
-                        isPresentingComposer = true
+                        newConversationState = NewConversationState(session: session)
                     }
                 }
                 .matchedTransitionSource(
@@ -80,14 +78,8 @@ struct ConversationsView: View {
                     in: namespace
                 )
             }
-            .fullScreenCover(isPresented: $isPresentingJoinConversation) {
-                NewConversationView(session: session, presentingJoinConversation: true)
-                    .ignoresSafeArea()
-                    .background(.white)
-                    .interactiveDismissDisabled()
-            }
-            .fullScreenCover(isPresented: $isPresentingComposer) {
-                NewConversationView(session: session, presentingJoinConversation: false)
+            .fullScreenCover(item: $newConversationState) { state in
+                NewConversationView(newConversationState: state)
                     .ignoresSafeArea()
                     .background(.white)
                     .interactiveDismissDisabled()
