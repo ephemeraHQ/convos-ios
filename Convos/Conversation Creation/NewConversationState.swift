@@ -27,6 +27,7 @@ class NewConversationState: Identifiable {
     }
 
     func newConversation() {
+        guard addAccountResult == nil else { return }
         newConversationTask?.cancel()
         newConversationTask = Task {
             do {

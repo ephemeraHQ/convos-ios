@@ -109,25 +109,27 @@ struct NewConversationView: View {
                     }
                 }
             }
-//            .groupCustomizationSheet(
-//                isPresented: $presentingCustomizationSheet,
-//                editState: newConversationState.conversationState?.editState ?? .init(conversation: .empty()),
-//            ) {
-//                if let editState = newConversationState.conversationState?.editState {
-//                    saveGroupChanges(editState)
-//                }
-//            }
+            .groupCustomizationSheet( // @jarodl fix the way we do this
+                isPresented: $presentingCustomizationSheet,
+                editState: newConversationState.conversationState?.editState ?? .init(conversation: .empty()),
+            ) {
+                if let editState = newConversationState.conversationState?.editState {
+                    saveGroupChanges(editState)
+                }
+            }
         }
     }
 
     private func saveGroupChanges(_ editState: GroupEditState) {
-//        guard let conversation = newConversationState.conversationState?.conversation else {
-//            return
-//        }
-//        groupMetadataWriter.saveGroupChanges(
-//            editState,
-//            conversation: conversation
-//        )
+        guard let conversation = newConversationState.conversationState?.conversation,
+        let composer = newConversationState.draftConversationComposer else {
+            return
+        }
+
+        composer.draftConversationWriter.conversationMetadataWriter.saveGroupChanges(
+            editState,
+            conversation: conversation
+        )
     }
 }
 

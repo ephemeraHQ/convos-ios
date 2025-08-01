@@ -2,6 +2,10 @@ import Combine
 import Foundation
 
 class MockDraftConversationWriter: DraftConversationWriterProtocol {
+    var conversationMetadataWriter: any GroupMetadataWriterProtocol {
+        MockGroupMetadataWriter()
+    }
+
     func joinConversationWhenInboxReady(inviteId: String, inviterInboxId: String, inviteCode: String) {
     }
 

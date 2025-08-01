@@ -6,6 +6,7 @@ protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
     var draftConversationId: String { get }
     var conversationId: String { get }
     var conversationIdPublisher: AnyPublisher<String, Never> { get }
+    var conversationMetadataWriter: any GroupMetadataWriterProtocol { get }
 
     func createConversationWhenInboxReady()
     func joinConversationWhenInboxReady(inviteId: String, inviterInboxId: String, inviteCode: String)
@@ -40,6 +41,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     private let isSendingValue: CurrentValueSubject<Bool, Never> = .init(false)
     private let sentMessageSubject: PassthroughSubject<String, Never> = .init()
     private let inviteWriter: any InviteWriterProtocol
+    let conversationMetadataWriter: any GroupMetadataWriterProtocol
 
     var isSendingPublisher: AnyPublisher<Bool, Never> {
         isSendingValue.eraseToAnyPublisher()
@@ -81,6 +83,10 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         self.conversationIdSubject = .init(draftConversationId)
         self.draftConversationId = draftConversationId
         self.inviteWriter = InviteWriter(databaseWriter: databaseWriter)
+        self.conversationMetadataWriter = GroupMetadataWriter(
+            inboxReadyValue: inboxReadyValue,
+            databaseWriter: databaseWriter
+        )
     }
 
     func createConversationWhenInboxReady() {
@@ -223,7 +229,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             inboxId: inboxId,
             clientConversationId: draftConversationId,
             creatorId: inboxId,
-            kind: .dm,
+            kind: .group,
             consent: .allowed,
             createdAt: Date(),
             name: nil,
@@ -260,11 +266,12 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         client: AnyClientProvider,
         apiClient: any ConvosAPIClientProtocol
     ) async throws {
+        guard case .draft = state else { return }
+
         let optimisticConversation = try await client.prepareConversation()
         let externalConversationId = optimisticConversation.id
-        try createDraftConversation(conversationId: externalConversationId, inboxId: client.inboxId)
         state = .created(id: externalConversationId)
-
+//        try createDraftConversation(conversationId: externalConversationId, inboxId: client.inboxId)
         try await optimisticConversation.publish()
 
         guard let createdConversation = try await client.conversation(
