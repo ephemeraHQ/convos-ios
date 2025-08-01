@@ -69,6 +69,7 @@ private struct GroupCustomizationContent: View {
                     .font(.system(size: 17.0))
                     .foregroundStyle(.colorTextPrimary)
                     .multilineTextAlignment(.center)
+                    .textInputAutocapitalization(.words)
                     .focused($isNameFocused)
                     .submitLabel(.done)
                     .onSubmit {
