@@ -57,30 +57,9 @@ struct NewConversationView: View {
                 if !newConversationState.showScannerOnAppear || hasShownScannerOnAppear {
                     if let conversation = newConversationState.conversationState?.conversation {
                         ToolbarItem(placement: .title) {
-                            Button {
-                            } label: {
-                                HStack(spacing: 0.0) {
-                                    ConversationAvatarView(conversation: conversation)
-                                        .frame(width: 36.0, height: 36.0)
-
-                                    VStack(alignment: .leading, spacing: 0.0) {
-                                        if !conversation.isDraft, let name = conversation.name, !name.isEmpty {
-                                            Text(name)
-                                                .font(.system(size: 16.0, weight: .medium))
-                                        } else {
-                                            Text("New convo")
-                                                .font(.system(size: 16.0, weight: .medium))
-                                        }
-                                        Text("Customize")
-                                            .font(.system(size: 12.0, weight: .regular))
-                                            .foregroundStyle(.colorTextSecondary)
-                                    }
-                                    .padding(.horizontal, DesignConstants.Spacing.step2x)
-                                }
+                            ConversationToolbarButton(conversation: conversation) {
+                                // @jarodl show convo editor
                             }
-                            .padding(DesignConstants.Spacing.step2x)
-                            .glassEffect()
-                            .padding(.top, DesignConstants.Spacing.stepX) // @jarodl avoids dynamic island
                         }
                     }
                 }

@@ -88,13 +88,12 @@ struct ConversationView: View {
 //        }
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItemGroup(placement: .title) {
-                Button {
+            ToolbarItem(placement: .title) {
+                ConversationToolbarButton(
+                    conversation: conversationState.conversation,
+                    draftTitle: "Untitled"
+                ) {
                     showInfoForConversation = conversationState.conversation
-                } label: {
-                    MessagesToolbarView(
-                        conversationState: conversationState,
-                    )
                 }
             }
         }
