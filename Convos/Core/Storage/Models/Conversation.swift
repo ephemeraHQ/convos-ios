@@ -34,6 +34,13 @@ struct Conversation: Codable, Hashable, Identifiable, ImageCacheable {
 }
 
 extension Conversation {
+    var displayName: String {
+        guard let name, !name.isEmpty else {
+            return "Untitled"
+        }
+        return name
+    }
+
     var memberNamesString: String {
         membersWithoutCurrent.formattedNamesString
     }
