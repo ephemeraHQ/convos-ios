@@ -1,40 +1,6 @@
 import PhotosUI
 import SwiftUI
 
-enum GroupImageState {
-    case loading, empty, success(UIImage), failure(Error)
-
-    var isEmpty: Bool {
-        if case .empty = self {
-            return true
-        }
-        return false
-    }
-}
-
-enum GroupImageError: Error {
-    case importFailed
-}
-
-extension PhotosPickerItem {
-    @MainActor
-    func loadImage() async -> GroupImageState {
-        do {
-            guard let data = try await loadTransferable(type: Data.self) else {
-                return .empty
-            }
-
-            guard let image = UIImage(data: data) else {
-                return .failure(GroupImageError.importFailed)
-            }
-
-            return .success(image)
-        } catch {
-            return .failure(error)
-        }
-    }
-}
-
 struct GroupEditView: View {
     let conversation: Conversation
     let groupMetadataWriter: any GroupMetadataWriterProtocol
@@ -57,7 +23,7 @@ struct GroupEditView: View {
             ScrollViewReader { scrollProxy in
                 Form {
                     Section {
-                        groupImageSection
+//                        groupImageSection
                     }
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
@@ -127,71 +93,71 @@ struct GroupEditView: View {
         }
     }
 
-    private var groupImageSection: some View {
-        HStack {
-            Spacer()
-            PhotosPicker(selection: $editState.imageSelection,
-                         matching: .images,
-                         photoLibrary: .shared()) {
-                ZStack {
-                    switch editState.imageState {
-                    case .loading:
-                        ProgressView()
-                            .frame(width: 120, height: 120)
-                    case .failure:
-                        VStack {
-                            Image(systemName: "exclamationmark.triangle")
-                                .foregroundColor(.red)
-                            Text("Error loading image")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        }
-                        .frame(width: 120, height: 120)
-                    case .empty:
-                        if let currentConversationImage = editState.currentConversationImage {
-                            Image(uiImage: currentConversationImage)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 120, height: 120)
-                                .clipShape(Circle())
-                        } else {
-                            AvatarView(
-                                imageURL: conversation.imageURL,
-                                fallbackName: conversation.name ?? "Group",
-                                cacheableObject: conversation
-                            )
-                            .frame(width: 120, height: 120)
-                        }
-                    case let .success(image):
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 120, height: 120)
-                            .clipShape(Circle())
-                    }
-
-                    VStack {
-                        Spacer()
-                        HStack {
-                            Spacer()
-                            ZStack {
-                                Circle()
-                                    .fill(.brown)
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "camera.fill")
-                                    .foregroundColor(.white)
-                                    .font(.system(size: 16))
-                            }
-                        }
-                    }
-                    .frame(width: 120, height: 120)
-                }
-            }
-            .buttonStyle(.borderless)
-            Spacer()
-        }
-        .padding(.vertical, 8)
-    }
+//    private var groupImageSection: some View {
+//        HStack {
+//            Spacer()
+//            PhotosPicker(selection: $editState.imageSelection,
+//                         matching: .images,
+//                         photoLibrary: .shared()) {
+//                ZStack {
+//                    switch editState.imageState {
+//                    case .loading:
+//                        ProgressView()
+//                            .frame(width: 120, height: 120)
+//                    case .failure:
+//                        VStack {
+//                            Image(systemName: "exclamationmark.triangle")
+//                                .foregroundColor(.red)
+//                            Text("Error loading image")
+//                                .font(.caption)
+//                                .foregroundColor(.red)
+//                        }
+//                        .frame(width: 120, height: 120)
+//                    case .empty:
+//                        if let currentConversationImage = editState.currentConversationImage {
+//                            Image(uiImage: currentConversationImage)
+//                                .resizable()
+//                                .aspectRatio(contentMode: .fill)
+//                                .frame(width: 120, height: 120)
+//                                .clipShape(Circle())
+//                        } else {
+//                            AvatarView(
+//                                imageURL: conversation.imageURL,
+//                                fallbackName: conversation.name ?? "Group",
+//                                cacheableObject: conversation
+//                            )
+//                            .frame(width: 120, height: 120)
+//                        }
+//                    case let .success(image):
+//                        Image(uiImage: image)
+//                            .resizable()
+//                            .aspectRatio(contentMode: .fill)
+//                            .frame(width: 120, height: 120)
+//                            .clipShape(Circle())
+//                    }
+//
+//                    VStack {
+//                        Spacer()
+//                        HStack {
+//                            Spacer()
+//                            ZStack {
+//                                Circle()
+//                                    .fill(.brown)
+//                                    .frame(width: 32, height: 32)
+//                                Image(systemName: "camera.fill")
+//                                    .foregroundColor(.white)
+//                                    .font(.system(size: 16))
+//                            }
+//                        }
+//                    }
+//                    .frame(width: 120, height: 120)
+//                }
+//            }
+//            .buttonStyle(.borderless)
+//            Spacer()
+//        }
+//        .padding(.vertical, 8)
+//    }
 
     private var groupNameField: some View {
         VStack(alignment: .leading, spacing: 8) {

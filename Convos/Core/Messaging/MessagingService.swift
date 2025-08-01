@@ -65,7 +65,8 @@ final class MessagingService: MessagingServiceProtocol {
                 writer: draftConversationWriter
             ),
             conversationConsentWriter: conversationConsentWriter(),
-            conversationLocalStateWriter: conversationLocalStateWriter()
+            conversationLocalStateWriter: conversationLocalStateWriter(),
+            conversationMetadataWriter: groupMetadataWriter()
         )
     }
 

@@ -28,12 +28,6 @@ struct ConversationInfoView: View {
                 groupMetadataWriter: groupMetadataWriter
             )
         }
-        .navigationDestination(item: $showGroupEditForConversation) { conversation in
-            GroupEditView(
-                conversation: conversation,
-                groupMetadataWriter: groupMetadataWriter
-            )
-        }
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {

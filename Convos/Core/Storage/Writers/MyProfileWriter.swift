@@ -70,7 +70,7 @@ class MyProfileWriter: MyProfileWriterProtocol {
         let resizedImage = ImageCompression.resizeForCache(avatarImage)
 
         guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
-            throw GroupImageError.importFailed
+            throw PhotosPickerImageError.importFailed
         }
 
         let uploadedURL = try await inboxReady.apiClient.uploadAttachment(

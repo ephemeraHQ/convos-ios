@@ -55,11 +55,13 @@ struct NewConversationView: View {
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 if !newConversationState.showScannerOnAppear || hasShownScannerOnAppear {
-                    if let conversation = newConversationState.conversationState?.conversation {
+                    if let conversationState = newConversationState.conversationState,
+                       let draftConversationComposer = newConversationState.draftConversationComposer {
                         ToolbarItem(placement: .title) {
-                            ConversationToolbarButton(conversation: conversation) {
-                                // @jarodl show convo editor
-                            }
+                            ConversationToolbarButton(
+                                conversation: conversationState.conversation,
+                                groupMetadataWriter: draftConversationComposer.conversationMetadataWriter
+                            )
                         }
                     }
                 }

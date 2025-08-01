@@ -91,10 +91,9 @@ struct ConversationView: View {
             ToolbarItem(placement: .title) {
                 ConversationToolbarButton(
                     conversation: conversationState.conversation,
+                    groupMetadataWriter: groupMetadataWriter,
                     draftTitle: "Untitled"
-                ) {
-                    showInfoForConversation = conversationState.conversation
-                }
+                )
             }
 
             ToolbarItem(placement: .topBarTrailing) {
