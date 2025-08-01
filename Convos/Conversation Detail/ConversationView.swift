@@ -96,6 +96,16 @@ struct ConversationView: View {
                     showInfoForConversation = conversationState.conversation
                 }
             }
+
+            ToolbarItem(placement: .topBarTrailing) {
+                let inviteString = conversationState.conversation.invite?.temporaryInviteString ?? ""
+                ShareLink(
+                    item: inviteString
+                ) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .disabled(inviteString.isEmpty)
+            }
         }
     }
 }

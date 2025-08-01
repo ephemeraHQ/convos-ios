@@ -93,11 +93,13 @@ struct NewConversationView: View {
                                 Image(systemName: "qrcode.viewfinder")
                             }
                         } else {
-                            Button {
-                                // invite
-                            } label: {
+                            let inviteString = newConversationState.conversationState?.conversation.invite?.temporaryInviteString ?? ""
+                            ShareLink(
+                                item: inviteString
+                            ) {
                                 Image(systemName: "square.and.arrow.up")
                             }
+                            .disabled(inviteString.isEmpty)
                         }
                     }
                 }
