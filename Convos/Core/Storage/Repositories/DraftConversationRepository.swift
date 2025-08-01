@@ -3,7 +3,6 @@ import Foundation
 import GRDB
 
 protocol DraftConversationRepositoryProtocol: ConversationRepositoryProtocol {
-    var membersPublisher: AnyPublisher<[ConversationMember], Never> { get }
     var messagesRepository: any MessagesRepositoryProtocol { get }
     var inviteRepository: any InviteRepositoryProtocol { get }
 }
@@ -33,26 +32,6 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
             conversationIdPublisher: writer.conversationIdPublisher
         )
     }
-
-    lazy var membersPublisher: AnyPublisher<[ConversationMember], Never> = {
-        let draftConversationId = writer.draftConversationId
-        Logger.info("Creating membersPublisher for draft conversation: \(draftConversationId)")
-        return ValueObservation
-            .tracking { [weak self] db in
-                guard let self else { return [] }
-                guard let dbConversation = try DBConversation
-                    .filter(Column("clientConversationId") == draftConversationId)
-                    .detailedConversationQuery()
-                    .fetchOne(db) else {
-                    Logger.debug("No conversation found for draft conversation ID: \(draftConversationId)")
-                    return []
-                }
-                return dbConversation.hydrateConversation().membersWithoutCurrent
-            }
-            .publisher(in: dbReader)
-            .replaceError(with: [])
-            .eraseToAnyPublisher()
-    }()
 
     lazy var conversationPublisher: AnyPublisher<Conversation?, Never> = {
         Logger.info("Creating conversationPublisher for conversationId: \(writer.conversationId)")

@@ -26,10 +26,6 @@ class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
         conversation.id
     }
 
-    var membersPublisher: AnyPublisher<[ConversationMember], Never> {
-        Just([]).eraseToAnyPublisher()
-    }
-
     var messagesRepository: any MessagesRepositoryProtocol {
         MockMessagesRepository(conversation: conversation)
     }
