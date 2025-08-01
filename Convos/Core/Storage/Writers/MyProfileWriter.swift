@@ -29,12 +29,12 @@ class MyProfileWriter: MyProfileWriterProtocol {
         let profile = try await databaseWriter.write { db in
             let member = Member(inboxId: inboxId)
             try member.save(db)
-            let profile = try MemberProfile.fetchOne(db, key: inboxId) ?? .init(
+            let profile = (try MemberProfile.fetchOne(db, key: inboxId) ?? .init(
                 inboxId: inboxId,
                 name: displayName,
                 avatar: nil
-            )
-            try profile.with(name: displayName).save(db)
+            )).with(name: displayName)
+            try profile.save(db)
             return profile
         }
 

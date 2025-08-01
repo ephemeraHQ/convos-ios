@@ -100,8 +100,12 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
             data: compressedImageData,
             filename: filename
         ) { uploadedURL in
-            try await self.updateGroupImageUrl(groupId: conversation.id, imageURL: uploadedURL)
-            ImageCache.shared.setImage(resizedImage, for: conversation)
+            do {
+                try await self.updateGroupImageUrl(groupId: conversation.id, imageURL: uploadedURL)
+                ImageCache.shared.setImage(resizedImage, for: conversation)
+            } catch {
+                Logger.error("Failed updating group image URL: \(error.localizedDescription)")
+            }
         }
     }
 

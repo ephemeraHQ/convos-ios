@@ -216,6 +216,11 @@ struct MessagesInputView: View {
                         RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.mediumLarge)
                             .fill(viewModel.showingProfileNameEditor ? .colorFillMinimal : .clear)
                     )
+                    .onAppear {
+                        if conversationState.myProfile.displayName != "Someone" {
+                            viewModel.profileNameText = conversationState.myProfile.displayName // @jarodl hacky
+                        }
+                    }
                 }
                 .padding(.horizontal, viewModel.showingProfileNameEditor ? DesignConstants.Spacing.step2x : 0.0)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)

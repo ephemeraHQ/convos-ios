@@ -51,7 +51,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
     private var state: DraftConversationWriterState {
         didSet {
-            Logger.info("DraftConversationWriter state changed from \(oldValue) to \(state)")
+            Logger.info("State changed from \(oldValue) to \(state)")
             conversationIdSubject.send(state.id)
         }
     }

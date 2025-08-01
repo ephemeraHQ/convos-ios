@@ -59,7 +59,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
                                     "Composed conversation: \(conversationId) with kind: \(conversation?.kind ?? .dm)"
                                 )
                             } else {
-                                Logger.warning("No conversation found for ID: \(conversationId)")
+                                Logger.debug("No conversation found for ID: \(conversationId)")
                             }
                             return conversation
                         } catch {

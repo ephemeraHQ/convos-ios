@@ -19,6 +19,10 @@ final class SyncingManager: SyncingManagerProtocol {
     private var syncMemberProfilesTasks: [Task<Void, Error>] = []
     private let consentStates: [ConsentState] = [.allowed, .unknown]
 
+    // Track last sync times for member profiles per conversation
+    private var lastMemberProfileSync: [String: Date] = [:]
+    private let memberProfileSyncInterval: TimeInterval = 10 // seconds
+
     init(databaseWriter: any DatabaseWriter) {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
@@ -73,6 +77,7 @@ final class SyncingManager: SyncingManagerProtocol {
                         Logger.error("Failed finding conversation for message in `streamAllMessages()`")
                         continue
                     }
+                    syncMemberProfiles(apiClient: apiClient, for: conversation)
                     let dbConversation = try await conversationWriter.store(
                         conversation: conversation
                     )
@@ -113,6 +118,22 @@ final class SyncingManager: SyncingManagerProtocol {
     }
 
     // MARK: - Private
+
+    private func syncMemberProfiles(
+        apiClient: any ConvosAPIClientProtocol,
+        for conversation: XMTPiOS.Conversation
+    ) {
+        let conversationId = conversation.id
+        let now = Date()
+        if let lastSync = lastMemberProfileSync[conversationId],
+           now.timeIntervalSince(lastSync) < memberProfileSyncInterval {
+            // Skip sync if less than 2 minutes have passed
+        } else {
+            // Update last sync time and sync
+            lastMemberProfileSync[conversationId] = now
+            syncMemberProfiles(apiClient: apiClient, for: [conversation])
+        }
+    }
 
     private func syncMemberProfiles(
         apiClient: any ConvosAPIClientProtocol,

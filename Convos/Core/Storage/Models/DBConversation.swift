@@ -88,6 +88,7 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
     ).order(Column("date").desc)
 
     static let lastMessageRequest: QueryInterfaceRequest<DBMessage> = DBMessage
+        .filter(DBMessage.Columns.contentType != MessageContentType.update.rawValue)
         .annotated { max($0.date) }
         .group(\.conversationId)
 
