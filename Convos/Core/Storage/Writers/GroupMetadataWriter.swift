@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 import GRDB
+import UIKit
 import XMTPiOS
 
 // MARK: - Group Metadata Writer Protocol
@@ -8,36 +9,36 @@ import XMTPiOS
 protocol GroupMetadataWriterProtocol {
     func updateGroupName(groupId: String, name: String) async throws
     func updateGroupDescription(groupId: String, description: String) async throws
-    func updateGroupImageUrl(groupId: String, imageUrl: String) async throws
+    func updateGroupImageUrl(groupId: String, imageURL: String) async throws
     func addGroupMembers(groupId: String, memberInboxIds: [String]) async throws
     func removeGroupMembers(groupId: String, memberInboxIds: [String]) async throws
     func promoteToAdmin(groupId: String, memberInboxId: String) async throws
     func demoteFromAdmin(groupId: String, memberInboxId: String) async throws
     func promoteToSuperAdmin(groupId: String, memberInboxId: String) async throws
     func demoteFromSuperAdmin(groupId: String, memberInboxId: String) async throws
+    func updateGroupImage(conversation: Conversation, image: UIImage) async throws
 }
 
 // MARK: - Group Metadata Writer Implementation
 
 final class GroupMetadataWriter: GroupMetadataWriterProtocol {
-    private let clientValue: PublisherValue<AnyClientProvider>
+    private let inboxReadyValue: PublisherValue<InboxReadyResult>
     private let databaseWriter: any DatabaseWriter
 
-    init(client: AnyClientProvider?,
-         clientPublisher: AnyClientProviderPublisher,
+    init(inboxReadyValue: PublisherValue<InboxReadyResult>,
          databaseWriter: any DatabaseWriter) {
-        self.clientValue = .init(initial: client, upstream: clientPublisher)
+        self.inboxReadyValue = inboxReadyValue
         self.databaseWriter = databaseWriter
     }
 
     // MARK: - Group Metadata Updates
 
     func updateGroupName(groupId: String, name: String) async throws {
-        guard let client = clientValue.value else {
+        guard let inboxReady = inboxReadyValue.value else {
             throw InboxStateError.inboxNotReady
         }
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
         }
@@ -58,11 +59,11 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     }
 
     func updateGroupDescription(groupId: String, description: String) async throws {
-        guard let client = clientValue.value else {
+        guard let inboxReady = inboxReadyValue.value else {
             throw InboxStateError.inboxNotReady
         }
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
         }
@@ -82,39 +83,61 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
         Logger.info("Updated group description for \(groupId): \(description)")
     }
 
-    func updateGroupImageUrl(groupId: String, imageUrl: String) async throws {
-        guard let client = clientValue.value else {
+    func updateGroupImage(conversation: Conversation, image: UIImage) async throws {
+        guard let inboxReady = inboxReadyValue.value else {
             throw InboxStateError.inboxNotReady
         }
 
-        guard let conversation = try await client.conversation(with: groupId),
+        let resizedImage = ImageCompression.resizeForCache(image)
+
+        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
+            throw PhotosPickerImageError.importFailed
+        }
+
+        let filename = "group-image-\(UUID().uuidString).jpg"
+
+        _ = try await inboxReady.apiClient.uploadAttachmentAndExecute(
+            data: compressedImageData,
+            filename: filename
+        ) { uploadedURL in
+            try await self.updateGroupImageUrl(groupId: conversation.id, imageURL: uploadedURL)
+            ImageCache.shared.setImage(resizedImage, for: conversation)
+        }
+    }
+
+    func updateGroupImageUrl(groupId: String, imageURL: String) async throws {
+        guard let inboxReady = inboxReadyValue.value else {
+            throw InboxStateError.inboxNotReady
+        }
+
+        guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
         }
 
-        try await group.updateImageUrl(imageUrl: imageUrl)
+        try await group.updateImageUrl(imageUrl: imageURL)
 
         try await databaseWriter.write { db in
             if let localConversation = try DBConversation
                 .filter(DBConversation.Columns.id == groupId)
                 .fetchOne(db) {
-                let updatedConversation = localConversation.with(imageURLString: imageUrl)
+                let updatedConversation = localConversation.with(imageURLString: imageURL)
                 try updatedConversation.save(db)
-                Logger.info("Updated local group image for \(groupId): \(imageUrl)")
+                Logger.info("Updated local group image for \(groupId): \(imageURL)")
             }
         }
 
-        Logger.info("Updated group image for \(groupId): \(imageUrl)")
+        Logger.info("Updated group image for \(groupId): \(imageURL)")
     }
 
     // MARK: - Member Management
 
     func addGroupMembers(groupId: String, memberInboxIds: [String]) async throws {
-        guard let client = clientValue.value else {
+        guard let inboxReady = inboxReadyValue.value else {
             throw InboxStateError.inboxNotReady
         }
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
         }
@@ -139,11 +162,11 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     }
 
     func removeGroupMembers(groupId: String, memberInboxIds: [String]) async throws {
-        guard let client = clientValue.value else {
+        guard let inboxReady = inboxReadyValue.value else {
             throw InboxStateError.inboxNotReady
         }
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
         }
@@ -166,11 +189,11 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     // MARK: - Admin Management
 
     func promoteToAdmin(groupId: String, memberInboxId: String) async throws {
-        guard let client = clientValue.value else {
+        guard let inboxReady = inboxReadyValue.value else {
             throw InboxStateError.inboxNotReady
         }
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
         }
@@ -192,11 +215,11 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     }
 
     func demoteFromAdmin(groupId: String, memberInboxId: String) async throws {
-        guard let client = clientValue.value else {
+        guard let inboxReady = inboxReadyValue.value else {
             throw InboxStateError.inboxNotReady
         }
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
         }
@@ -217,11 +240,11 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     }
 
     func promoteToSuperAdmin(groupId: String, memberInboxId: String) async throws {
-        guard let client = clientValue.value else {
+        guard let inboxReady = inboxReadyValue.value else {
             throw InboxStateError.inboxNotReady
         }
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
         }
@@ -242,11 +265,11 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
     }
 
     func demoteFromSuperAdmin(groupId: String, memberInboxId: String) async throws {
-        guard let client = clientValue.value else {
+        guard let inboxReady = inboxReadyValue.value else {
             throw InboxStateError.inboxNotReady
         }
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
         }

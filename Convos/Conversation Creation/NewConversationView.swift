@@ -5,6 +5,7 @@ struct NewConversationView: View {
     @State private var hasShownScannerOnAppear: Bool = false
     @State private var presentingJoinConversation: Bool = false
     @State private var presentingDeleteConfirmation: Bool = false
+    @State private var presentingCustomizationSheet: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     var body: some View {
@@ -60,6 +61,9 @@ struct NewConversationView: View {
                             ConversationToolbarButton(
                                 conversation: conversationState.conversation,
                             ) {
+                                withAnimation {
+                                    presentingCustomizationSheet = true
+                                }
                             }
                         }
                     }
@@ -105,7 +109,25 @@ struct NewConversationView: View {
                     }
                 }
             }
+//            .groupCustomizationSheet(
+//                isPresented: $presentingCustomizationSheet,
+//                editState: newConversationState.conversationState?.editState ?? .init(conversation: .empty()),
+//            ) {
+//                if let editState = newConversationState.conversationState?.editState {
+//                    saveGroupChanges(editState)
+//                }
+//            }
         }
+    }
+
+    private func saveGroupChanges(_ editState: GroupEditState) {
+//        guard let conversation = newConversationState.conversationState?.conversation else {
+//            return
+//        }
+//        groupMetadataWriter.saveGroupChanges(
+//            editState,
+//            conversation: conversation
+//        )
     }
 }
 

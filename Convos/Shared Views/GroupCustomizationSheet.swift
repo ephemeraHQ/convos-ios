@@ -58,6 +58,7 @@ private struct GroupCustomizationContent: View {
                 photoLibrary: .shared()
             ) {
                 GroupImageView(editState: editState)
+                    .frame(width: 52.0, height: 52.0)
             }
 
             ZStack {
@@ -92,6 +93,7 @@ private struct GroupCustomizationContent: View {
         }
         .padding(DesignConstants.Spacing.step6x)
         .onAppear {
+            editState.onAppear()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 isNameFocused = true
             }

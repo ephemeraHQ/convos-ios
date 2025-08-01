@@ -485,13 +485,14 @@ class MockConversationLocalStateWriter: ConversationLocalStateWriterProtocol {
 class MockGroupMetadataWriter: GroupMetadataWriterProtocol {
     func updateGroupName(groupId: String, name: String) async throws {}
     func updateGroupDescription(groupId: String, description: String) async throws {}
-    func updateGroupImageUrl(groupId: String, imageUrl: String) async throws {}
+    func updateGroupImageUrl(groupId: String, imageURL: String) async throws {}
     func addGroupMembers(groupId: String, memberInboxIds: [String]) async throws {}
     func removeGroupMembers(groupId: String, memberInboxIds: [String]) async throws {}
     func promoteToAdmin(groupId: String, memberInboxId: String) async throws {}
     func demoteFromAdmin(groupId: String, memberInboxId: String) async throws {}
     func promoteToSuperAdmin(groupId: String, memberInboxId: String) async throws {}
     func demoteFromSuperAdmin(groupId: String, memberInboxId: String) async throws {}
+    func updateGroupImage(conversation: Conversation, image: UIImage) async throws {}
 }
 
 class MockGroupPermissionsRepository: GroupPermissionsRepositoryProtocol {

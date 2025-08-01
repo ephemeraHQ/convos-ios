@@ -86,6 +86,7 @@ struct TopDownSheetAdvancedModifier<SheetContent: View, BackgroundContent: View>
 
                     Spacer()
                 }
+                .padding(.top, 60.0) // @jarodl get the actual safe area
                 .transition(.asymmetric(insertion: .identity, removal: .identity))
                 .zIndex(2)
             }

@@ -114,8 +114,7 @@ final class MessagingService: MessagingServiceProtocol {
     // MARK: - Group Management
 
     func groupMetadataWriter() -> any GroupMetadataWriterProtocol {
-        GroupMetadataWriter(client: clientValue.value,
-                            clientPublisher: clientPublisher,
+        GroupMetadataWriter(inboxReadyValue: inboxReadyValue,
                             databaseWriter: databaseWriter)
     }
 

@@ -40,6 +40,36 @@ extension ConversationViewDependencies {
     }
 }
 
+extension GroupMetadataWriterProtocol {
+    func saveGroupChanges(_ editState: GroupEditState, conversation: Conversation) {
+        if editState.groupName != conversation.name {
+            Task {
+                do {
+                    try await updateGroupName(
+                        groupId: conversation.id,
+                        name: editState.groupName
+                    )
+                } catch {
+                    Logger.error("Failed updating group name: \(error)")
+                }
+            }
+        }
+
+        if case .success(let image) = editState.imageState {
+            Task {
+                do {
+                    try await updateGroupImage(
+                        conversation: conversation,
+                        image: image
+                    )
+                } catch {
+                    Logger.error("Failed updating group image: \(error)")
+                }
+            }
+        }
+    }
+}
+
 struct ConversationView: View {
     let conversationRepository: any ConversationRepositoryProtocol
     let myProfileWriter: any MyProfileWriterProtocol
@@ -68,21 +98,11 @@ struct ConversationView: View {
         )
     }
 
-    private func saveGroupChanges(_ editState: GroupEditState) async {
-        do {
-            if editState.groupName != conversationState.conversation.name {
-                try await groupMetadataWriter.updateGroupName(
-                    groupId: conversationState.conversation.id,
-                    name: editState.groupName
-                )
-            }
-
-            if case .success(let image) = editState.imageState {
-                // Save image using writer
-            }
-        } catch {
-            Logger.error("Failed to save group changes: \(error)")
-        }
+    private func saveGroupChanges(_ editState: GroupEditState) {
+        groupMetadataWriter.saveGroupChanges(
+            editState,
+            conversation: conversationState.conversation
+        )
     }
 
     var body: some View {
@@ -98,12 +118,6 @@ struct ConversationView: View {
             )
             .ignoresSafeArea()
         }
-//        .navigationDestination(item: $showInfoForConversation) { conversation in
-//            ConversationInfoView(
-//                conversation: conversation,
-//                groupMetadataWriter: groupMetadataWriter
-//            )
-//        }
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
             if !presentingCustomizationSheet {
@@ -127,13 +141,12 @@ struct ConversationView: View {
                 }
             }
         }
+        .navigationBarBackButtonHidden(presentingCustomizationSheet)
         .groupCustomizationSheet(
             isPresented: $presentingCustomizationSheet,
             editState: conversationState.editState,
         ) {
-            Task {
-                await saveGroupChanges(conversationState.editState)
-            }
+            saveGroupChanges(conversationState.editState)
         }
     }
 }
