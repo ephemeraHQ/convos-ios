@@ -14,7 +14,10 @@ protocol MessagingServiceProtocol {
     func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol
     func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol
     func conversationConsentWriter() -> any ConversationConsentWriterProtocol
-    func conversationsCountRepo(for consent: [Consent]) -> any ConversationsCountRepositoryProtocol
+    func conversationsCountRepo(
+        for consent: [Consent],
+        kinds: [ConversationKind]
+    ) -> any ConversationsCountRepositoryProtocol
     func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol
 
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol

@@ -3,8 +3,22 @@ import GRDB
 
 // MARK: - ConversationKind
 
-enum ConversationKind: Hashable, Codable {
+enum ConversationKind: String, Codable, Hashable, SQLExpressible, CaseIterable {
     case group, dm
+}
+
+extension Array where Element == ConversationKind {
+    static var all: [ConversationKind] {
+        ConversationKind.allCases
+    }
+
+    static var groups: [ConversationKind] {
+        [.group]
+    }
+
+    static var dms: [ConversationKind] {
+        [.dm]
+    }
 }
 
 // MARK: - Consent

@@ -50,6 +50,7 @@ class NewConversationState: Identifiable {
         joinConversationTask = Task {
             do {
                 if self.addAccountResult == nil {
+                    Logger.info("No account found, creating one while joining conversation...")
                     let addAccountResult = try session.addAccount()
                     self.addAccountResult = addAccountResult
                 }
@@ -60,6 +61,7 @@ class NewConversationState: Identifiable {
                 }
 
                 if self.draftConversationComposer == nil {
+                    Logger.info("Setting up draft composer for joining conversation...")
                     let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
                     draftConversationComposer.draftConversationWriter.createConversationWhenInboxReady()
                     self.draftConversationComposer = draftConversationComposer

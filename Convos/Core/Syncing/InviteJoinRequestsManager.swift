@@ -70,7 +70,9 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
                         switch conversation {
                         case .group(let group):
+                            Logger.info("Adding \(message.senderInboxId) to group \(group.id)...")
                             try await group.add(members: [message.senderInboxId])
+                            Logger.info("Storing conversation with id: \(conversation.id)")
                             try await conversationWriter.store(conversation: conversation)
                         case .dm:
                             Logger.warning("Expected Group but found DM, ignoring invite join request...")

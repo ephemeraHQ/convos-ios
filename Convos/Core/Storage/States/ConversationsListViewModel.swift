@@ -5,51 +5,44 @@ import Observation
 @Observable
 final class ConversationsListViewModel {
     private(set) var conversations: [Conversation]
-    private(set) var securityLineConversationsCount: Int
-
-    var selectedInbox: Inbox?
+    private(set) var conversationsCount: Int = 0
 
     var pinnedConversations: [Conversation] {
         conversations.filter { $0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
     }
     var unpinnedConversations: [Conversation] {
-        conversations.filter { !$0.isPinned }.filter { $0.kind == .group }// @jarodl temporarily filtering out dms
+        conversations.filter { !$0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
     }
 
     private let conversationsRepository: any ConversationsRepositoryProtocol
-    private let securityLineConversationsCountRepo: any ConversationsCountRepositoryProtocol
+    private let conversationsCountRepository: any ConversationsCountRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = .init()
 
     init(conversationsRepository: any ConversationsRepositoryProtocol,
-         securityLineConversationsCountRepo: any ConversationsCountRepositoryProtocol) {
+         conversationsCountRepository: any ConversationsCountRepositoryProtocol) {
         self.conversationsRepository = conversationsRepository
-        self.securityLineConversationsCountRepo = securityLineConversationsCountRepo
+        self.conversationsCountRepository = conversationsCountRepository
         do {
             self.conversations = try conversationsRepository.fetchAll()
+            self.conversationsCount = try conversationsCountRepository.fetchCount()
         } catch {
             Logger.error("Error fetching conversations: \(error)")
             self.conversations = []
-        }
-        do {
-            self.securityLineConversationsCount = try securityLineConversationsCountRepo.fetchCount()
-        } catch {
-            Logger.error("Error fetching security line conversations: \(error)")
-            self.securityLineConversationsCount = 0
         }
         observe()
     }
 
     private func observe() {
+        conversationsCountRepository.conversationsCount
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] conversationsCount in
+                self?.conversationsCount = conversationsCount
+            }
+            .store(in: &cancellables)
         conversationsRepository.conversationsPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] conversations in
                 self?.conversations = conversations
-            }
-            .store(in: &cancellables)
-        securityLineConversationsCountRepo.conversationsCount
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] count in
-                self?.securityLineConversationsCount = count
             }
             .store(in: &cancellables)
     }

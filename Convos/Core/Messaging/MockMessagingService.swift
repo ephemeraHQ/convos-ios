@@ -54,7 +54,7 @@ class MockMessagingService: MessagingServiceProtocol {
         self
     }
 
-    func conversationsCountRepo(for consent: [Consent]) -> any ConversationsCountRepositoryProtocol {
+    func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
         self
     }
 
@@ -222,6 +222,10 @@ extension MockMessagingService: ConversationSender {
 }
 
 actor MockConversations: ConversationsProvider {
+    func listGroups(createdAfter: Date?, createdBefore: Date?, limit: Int?, consentStates: [ConsentState]?) throws -> [XMTPiOS.Group] {
+        []
+    }
+
     func list(
         createdAfter: Date?,
         createdBefore: Date?,

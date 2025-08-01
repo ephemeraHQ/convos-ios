@@ -116,6 +116,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             .eraseToAnyPublisher()
             .sink { [weak self] inboxReady in
                 guard let self else { return }
+                Logger.info("Inbox ready, joining conversation...")
                 self.joinConversationTask = Task {
                     do {
                         try await self.joinConversation(
@@ -176,6 +177,8 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                         Logger.warning("Closing conversations stream for inboxId: \(client.inboxId)...")
                     }
                 ) where try await conversation.creatorInboxId == inboxId {
+                    try await conversation.updateConsentState(state: .allowed)
+
                     Task {
                         // fetch invite details and save to the DB so the QR code shows when/if we join
                         do {
@@ -195,8 +198,10 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                     let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
                     let conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
                                                                 messageWriter: messageWriter)
-                    _ = try await conversationWriter.store(conversation: conversation,
-                                                           clientConversationId: conversationId)
+                    Logger.info("Current state conversation id: \(conversationId)")
+                    let dbConversation = try await conversationWriter.store(conversation: conversation,
+                                                                            clientConversationId: conversationId)
+                    Logger.info("Created conversation in database: \(dbConversation)")
                     self.state = .existing(id: conversation.id)
                     streamConversationsTask?.cancel()
                 }

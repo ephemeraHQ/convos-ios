@@ -51,7 +51,11 @@ final class SyncingManager: SyncingManagerProtocol {
                     try await withThrowingTaskGroup(of: Void.self) { group in
                         for conversation in chunk {
                             group.addTask {
-                                try await self.conversationWriter.store(conversation: conversation)
+                                if case .group = conversation {
+                                    try await self.conversationWriter.store(conversation: conversation)
+                                } else {
+                                    Logger.info("Listed DM, ignoring...")
+                                }
                             }
                         }
                         try await group.waitForAll()

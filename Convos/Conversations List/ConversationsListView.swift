@@ -49,10 +49,12 @@ struct ConversationsListView: View {
         _newConversationState = newConversationState
         _path = path
         let conversationsRepository = session.conversationsRepository(for: .allowed)
-        let securityLineConversationsCountRepo = session.conversationsCountRepo(for: .securityLine)
         self.viewModel = .init(
             conversationsRepository: conversationsRepository,
-            securityLineConversationsCountRepo: securityLineConversationsCountRepo
+            conversationsCountRepository: session.conversationsCountRepo(
+                for: .all,
+                kinds: .groups
+            )
         )
     }
 

@@ -242,7 +242,7 @@ class SessionManager: SessionManagerProtocol {
         ConversationsRepository(dbReader: databaseReader, consent: consent)
     }
 
-    func conversationsCountRepo(for consent: [Consent]) -> any ConversationsCountRepositoryProtocol {
-        ConversationsCountRepository(databaseReader: databaseReader, consent: consent)
+    func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
+        ConversationsCountRepository(databaseReader: databaseReader, consent: consent, kinds: kinds)
     }
 }

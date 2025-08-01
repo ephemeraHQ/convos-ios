@@ -31,7 +31,7 @@ class MockInboxesService: SessionManagerProtocol {
         MockConversationsRepository()
     }
 
-    func conversationsCountRepo(for consent: [Consent]) -> any ConversationsCountRepositoryProtocol {
+    func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
         self
     }
 }

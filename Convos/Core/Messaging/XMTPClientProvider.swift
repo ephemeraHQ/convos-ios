@@ -15,6 +15,13 @@ protocol ConversationSender {
 }
 
 protocol ConversationsProvider: Actor {
+    func listGroups(
+        createdAfter: Date?,
+        createdBefore: Date?,
+        limit: Int?,
+        consentStates: [ConsentState]?
+    ) throws -> [XMTPiOS.Group]
+
     func list(
         createdAfter: Date?,
         createdBefore: Date?,

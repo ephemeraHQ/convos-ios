@@ -18,9 +18,15 @@ final class ConversationsRepository: ConversationsRepositoryProtocol {
         self.consent = consent
         self.conversationsPublisher = ValueObservation
             .tracking { db in
-                try db.composeAllConversations(consent: consent)
+                do {
+                    return try db.composeAllConversations(consent: consent)
+                } catch {
+                    Logger.error("Error composing all conversations: \(error)")
+                    throw error
+                }
             }
             .publisher(in: dbReader)
+            .print("ConversationsRepository")
             .replaceError(with: [])
             .eraseToAnyPublisher()
     }

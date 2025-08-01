@@ -17,5 +17,8 @@ protocol SessionManagerProtocol {
     func deleteAllAccounts() throws
     func messagingService(for inboxId: String) -> AnyMessagingService
     func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol
-    func conversationsCountRepo(for consent: [Consent]) -> any ConversationsCountRepositoryProtocol
+    func conversationsCountRepo(
+        for consent: [Consent],
+        kinds: [ConversationKind]
+    ) -> any ConversationsCountRepositoryProtocol
 }
