@@ -163,12 +163,11 @@ struct ConversationAvatarView: View {
                     // Fall back to URL-based loading with conversation object for cache awareness
                     AvatarView(
                         imageURL: conversation.imageURL,
-                        fallbackName: conversation.name ?? "Group",
+                        fallbackName: conversation.name ?? "Untitled",
                         cacheableObject: conversation
                     )
                 } else {
-                    // No group image set, show member avatars
-                    AvatarCloudView(avatars: avatars)
+                    MonogramView(text: "")
                 }
             } else {
                 // Show member avatars for DMs
