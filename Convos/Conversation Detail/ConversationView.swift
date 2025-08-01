@@ -51,6 +51,7 @@ struct ConversationView: View {
     let inviteRepository: any InviteRepositoryProtocol
     let conversationState: ConversationState
     @State private var showInfoForConversation: Conversation?
+    @State private var presentingCustomizationSheet: Bool = false
 
     init(dependencies: ConversationViewDependencies) {
         self.conversationRepository = dependencies.conversationRepository
@@ -65,6 +66,23 @@ struct ConversationView: View {
             myProfileRepository: dependencies.myProfileRepository,
             conversationRepository: dependencies.conversationRepository
         )
+    }
+
+    private func saveGroupChanges(_ editState: GroupEditState) async {
+        do {
+            if editState.groupName != conversationState.conversation.name {
+                try await groupMetadataWriter.updateGroupName(
+                    groupId: conversationState.conversation.id,
+                    name: editState.groupName
+                )
+            }
+
+            if case .success(let image) = editState.imageState {
+                // Save image using writer
+            }
+        } catch {
+            Logger.error("Failed to save group changes: \(error)")
+        }
     }
 
     var body: some View {
@@ -88,22 +106,33 @@ struct ConversationView: View {
 //        }
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .title) {
-                ConversationToolbarButton(
-                    conversation: conversationState.conversation,
-                    groupMetadataWriter: groupMetadataWriter,
-                    draftTitle: "Untitled"
-                )
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                let inviteString = conversationState.conversation.invite?.temporaryInviteString ?? ""
-                ShareLink(
-                    item: inviteString
-                ) {
-                    Image(systemName: "square.and.arrow.up")
+            if !presentingCustomizationSheet {
+                ToolbarItem(placement: .title) {
+                    ConversationToolbarButton(
+                        conversation: conversationState.conversation,
+                        draftTitle: "Untitled"
+                    ) {
+                        presentingCustomizationSheet = true
+                    }
                 }
-                .disabled(inviteString.isEmpty)
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    let inviteString = conversationState.conversation.invite?.temporaryInviteString ?? ""
+                    ShareLink(
+                        item: inviteString
+                    ) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .disabled(inviteString.isEmpty)
+                }
+            }
+        }
+        .groupCustomizationSheet(
+            isPresented: $presentingCustomizationSheet,
+            editState: conversationState.editState,
+        ) {
+            Task {
+                await saveGroupChanges(conversationState.editState)
             }
         }
     }

@@ -136,7 +136,15 @@ extension Array where Element == MessageWithDetails {
                         .init(
                             creator: initiatedByMember.hydrateProfile(),
                             addedMembers: addedMembers.map { $0.hydrateProfile() },
-                            removedMembers: removedMembers.map { $0.hydrateProfile() }
+                            removedMembers: removedMembers.map { $0.hydrateProfile() },
+                            metadataChanges: update.metadataChanges
+                                .map {
+                                    .init(
+                                        field: .init(rawValue: $0.field) ?? .unknown,
+                                        oldValue: $0.oldValue,
+                                        newValue: $0.newValue
+                                    )
+                                }
                         )
                     )
                 }

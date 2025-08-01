@@ -55,13 +55,12 @@ struct NewConversationView: View {
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 if !newConversationState.showScannerOnAppear || hasShownScannerOnAppear {
-                    if let conversationState = newConversationState.conversationState,
-                       let draftConversationComposer = newConversationState.draftConversationComposer {
+                    if let conversationState = newConversationState.conversationState {
                         ToolbarItem(placement: .title) {
                             ConversationToolbarButton(
                                 conversation: conversationState.conversation,
-                                groupMetadataWriter: draftConversationComposer.conversationMetadataWriter
-                            )
+                            ) {
+                            }
                         }
                     }
                 }

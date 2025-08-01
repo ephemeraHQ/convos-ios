@@ -3,8 +3,7 @@ import SwiftUI
 
 @Observable
 class GroupEditState {
-    private let conversation: Conversation
-    private let groupMetadataWriter: any GroupMetadataWriterProtocol
+    let conversation: Conversation
 
     // Form state
     private var _groupName: String
@@ -40,7 +39,7 @@ class GroupEditState {
 
     // Track changes for reverting
     private var originalCachedImage: UIImage?
-    private var changesSaved: Bool = false
+    var changesSaved: Bool = false
 
     // Constants
     let nameCharacterLimit: Int = 100
@@ -59,9 +58,8 @@ class GroupEditState {
                hasImageChange
     }
 
-    init(conversation: Conversation, groupMetadataWriter: any GroupMetadataWriterProtocol) {
+    init(conversation: Conversation) {
         self.conversation = conversation
-        self.groupMetadataWriter = groupMetadataWriter
         self._groupName = conversation.name ?? ""
         self._groupDescription = conversation.description ?? ""
     }
@@ -106,37 +104,6 @@ class GroupEditState {
         changesSaved = true
     }
 
-    func saveGroupChanges() async -> Bool {
-        guard hasChanges else {
-            changesSaved = true
-            return true
-        }
-
-        do {
-            if groupName != conversation.name {
-                try await updateGroupName()
-            }
-
-            if groupDescription != conversation.description {
-                try await updateGroupDescription()
-            }
-
-            if case .success = imageState {
-                try await uploadImageAndUpdateProfile()
-            }
-
-            changesSaved = true
-            return true
-        } catch {
-            Logger.error("Failed to update group: \(error)")
-            await MainActor.run {
-                alertMessage = "Group update failed: \(error.localizedDescription)"
-                showingAlert = true
-            }
-            return false
-        }
-    }
-
     private func loadSelectedImage(_ imageSelection: PhotosPickerItem) async {
         let imageState = await imageSelection.loadImage()
         await MainActor.run {
@@ -149,18 +116,6 @@ class GroupEditState {
         }
     }
 
-    private func updateGroupName() async throws {
-        try await groupMetadataWriter.updateGroupName(groupId: conversation.id, name: groupName)
-    }
-
-    private func updateGroupDescription() async throws {
-        try await groupMetadataWriter.updateGroupDescription(groupId: conversation.id, description: groupDescription)
-    }
-
-    private func updateGroupImage(imageURL: String) async throws {
-        try await groupMetadataWriter.updateGroupImageUrl(groupId: conversation.id, imageUrl: imageURL)
-    }
-
     @MainActor
     private func loadCurrentConversationImage() {
         if let cachedImage = ImageCache.shared.image(for: conversation) {
@@ -170,7 +125,7 @@ class GroupEditState {
         }
     }
 
-    private func prepareImageForUpload() async throws -> Data {
+    func prepareImageForUpload() async throws -> Data {
         guard case .success(let image) = imageState else {
             throw PhotosPickerImageError.importFailed
         }
@@ -182,23 +137,6 @@ class GroupEditState {
         }
 
         return compressedImageData
-    }
-
-    private func uploadImageAndUpdateProfile() async throws {
-        // @jarodl fix this
-//        let compressedImageData = try await prepareImageForUpload()
-//        let filename = "group-image-\(UUID().uuidString).jpg"
-//
-//        guard case .success(let uploadedImage) = imageState else {
-//            throw GroupImageError.importFailed
-//        }
-
-//        _ = try await messagingService.uploadImageAndExecute(
-//            data: compressedImageData,
-//            filename: filename) { uploadedURL in
-//            try await self.updateGroupImage(imageURL: uploadedURL)
-//            ImageCache.shared.setImage(uploadedImage, for: self.conversation)
-//        }
     }
 
     @MainActor

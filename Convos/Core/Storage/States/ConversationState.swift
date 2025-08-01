@@ -10,6 +10,7 @@ final class ConversationState {
 
     private(set) var myProfile: Profile = .empty()
     private(set) var conversation: Conversation
+    private(set) var editState: GroupEditState
     private let myProfileRepository: any MyProfileRepositoryProtocol
     private let conversationRepository: any ConversationRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = .init()
@@ -25,11 +26,13 @@ final class ConversationState {
         self.myProfileRepository = myProfileRepository
         self.conversationRepository = conversationRepository
         self.conversation = .empty(id: conversationRepository.conversationId)
+        self.editState = .init(conversation: .empty())
         do {
             self.conversation = try conversationRepository.fetchConversation() ?? .empty(id: conversationId)
         } catch {
             Logger.error("Error fetching conversation: \(error)")
         }
+        self.editState = .init(conversation: conversation)
         observe()
     }
 
