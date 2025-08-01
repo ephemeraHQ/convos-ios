@@ -26,7 +26,6 @@ final class ConversationsRepository: ConversationsRepositoryProtocol {
                 }
             }
             .publisher(in: dbReader)
-            .print("ConversationsRepository")
             .replaceError(with: [])
             .eraseToAnyPublisher()
     }

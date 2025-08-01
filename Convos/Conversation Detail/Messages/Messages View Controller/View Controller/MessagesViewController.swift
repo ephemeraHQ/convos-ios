@@ -523,17 +523,6 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
 extension MessagesViewController: KeyboardListenerDelegate {
     func keyboardWillChangeFrame(info: KeyboardInfo) {
         Logger.info("keyboardWillChangeFrame")
-        handleKeyboardFrameChange(info: info)
-    }
-
-    func keyboardDidChangeFrame(info: KeyboardInfo) {
-        Logger.info("keyboardDidChangeFrame")
-        guard currentInterfaceActions.options.contains(.changingKeyboardFrame) else { return }
-        currentInterfaceActions.options.remove(.changingKeyboardFrame)
-    }
-
-    private func handleKeyboardFrameChange(info: KeyboardInfo) {
-        Logger.info("handleKeyboardFrameChange")
         guard shouldHandleKeyboardFrameChange(info: info) else { return }
 
         currentInterfaceActions.options.insert(.changingKeyboardFrame)
@@ -542,6 +531,12 @@ extension MessagesViewController: KeyboardListenerDelegate {
               collectionView.contentInset.bottom != newBottomInset else { return }
 
         updateCollectionViewInsets(to: newBottomInset, with: info)
+    }
+
+    func keyboardDidChangeFrame(info: KeyboardInfo) {
+        Logger.info("keyboardDidChangeFrame")
+        guard currentInterfaceActions.options.contains(.changingKeyboardFrame) else { return }
+        currentInterfaceActions.options.remove(.changingKeyboardFrame)
     }
 
     private func shouldHandleKeyboardFrameChange(info: KeyboardInfo) -> Bool {

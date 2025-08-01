@@ -38,11 +38,11 @@ final class InputHostingController<Content: View>: UIView {
 
 extension InputHostingController: KeyboardListenerDelegate {
     func keyboardWillShow(info: KeyboardInfo) {
-        invalidateIntrinsicContentSize()
+//        invalidateIntrinsicContentSize()
     }
 
     func keyboardWillHide(info: KeyboardInfo) {
-        invalidateIntrinsicContentSize()
+//        invalidateIntrinsicContentSize()
     }
 
     func keyboardWillChangeFrame(info: KeyboardInfo) {
