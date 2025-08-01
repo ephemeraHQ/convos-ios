@@ -8,7 +8,7 @@ protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
     var conversationIdPublisher: AnyPublisher<String, Never> { get }
 
     func createConversationWhenInboxReady()
-    func joinConversationWhenInboxReady(inviteId: String, inboxId: String, inviteCode: String)
+    func joinConversationWhenInboxReady(inviteId: String, inviterInboxId: String, inviteCode: String)
 }
 
 class DraftConversationWriter: DraftConversationWriterProtocol {
@@ -106,7 +106,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             }
     }
 
-    func joinConversationWhenInboxReady(inviteId: String, inboxId: String, inviteCode: String) {
+    func joinConversationWhenInboxReady(inviteId: String, inviterInboxId: String, inviteCode: String) {
         joinConversationTask?.cancel()
         clientPublisherCancellable?.cancel()
         clientPublisherCancellable = inboxReadyValue
@@ -121,7 +121,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                     do {
                         try await self.joinConversation(
                             inviteId: inviteId,
-                            inboxId: inboxId,
+                            inviterInboxId: inviterInboxId,
                             inviteCode: inviteCode,
                             client: inboxReady.client,
                             apiClient: inboxReady.apiClient
@@ -134,8 +134,14 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     }
 
     // @jarodl this is just a temporary workaround while waiting for push notifications
-    private func joinConversation(inviteId: String, inboxId: String, inviteCode: String, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
-        let temporaryConversationId = try await client.newConversation(with: inboxId)
+    private func joinConversation(
+        inviteId: String,
+        inviterInboxId: String,
+        inviteCode: String,
+        client: AnyClientProvider,
+        apiClient: any ConvosAPIClientProtocol
+    ) async throws {
+        let temporaryConversationId = try await client.newConversation(with: inviterInboxId)
         guard let messageSender = try await client.messageSender(for: temporaryConversationId) else {
             Logger.error("Failed sending conversation join request")
             return
@@ -176,7 +182,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                     onClose: {
                         Logger.warning("Closing conversations stream for inboxId: \(client.inboxId)...")
                     }
-                ) where try await conversation.creatorInboxId == inboxId {
+                ) where try await conversation.members().contains(where: { $0.inboxId == inviterInboxId }) {
                     try await conversation.updateConsentState(state: .allowed)
 
                     Task {
@@ -194,7 +200,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                         }
                     }
 
-                    Logger.info("Found conversation matching creator inboxId: \(inboxId), id: \(conversation.id)")
+                    Logger.info("Found conversation matching inviter inboxId: \(inviterInboxId), id: \(conversation.id)")
                     let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
                     let conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
                                                                 messageWriter: messageWriter)
@@ -266,6 +272,13 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         ) else {
             throw DraftConversationWriterError.failedFindingConversation
         }
+
+        guard case .group(let group) = createdConversation else {
+            Logger.error("Created conversation was not a group, returning...")
+            return
+        }
+
+        try await group.updateAddMemberPermission(newPermissionOption: .allow)
 
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         let conversationWriter = ConversationWriter(databaseWriter: databaseWriter,

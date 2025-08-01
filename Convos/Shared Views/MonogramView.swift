@@ -2,21 +2,13 @@ import SwiftUI
 
 struct MonogramView: View {
     private let initials: String
-    private let backgroundColor: Color
 
     init(text: String) {
         self.initials = text
-        self.backgroundColor = Self.colorForName(text)
     }
 
     init(name: String) {
         self.initials = Self.initials(from: name)
-        self.backgroundColor = Self.colorForName(name)
-    }
-
-    init() {
-        self.initials = ""
-        self.backgroundColor = .colorOrange
     }
 
     var body: some View {
@@ -34,7 +26,14 @@ struct MonogramView: View {
                     .padding(padding)
             }
             .frame(width: side, height: side)
-            .background(backgroundColor)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [.clear, .black.opacity(0.2)]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .background(.colorFillTertiary)
             .clipShape(Circle())
         }
         .aspectRatio(1.0, contentMode: .fit)
@@ -44,13 +43,6 @@ struct MonogramView: View {
         let components = fullName.split(separator: " ")
         let initials = components.prefix(2).map { $0.first.map(String.init) ?? "" }
         return initials.joined().uppercased()
-    }
-
-    private static func colorForName(_ name: String) -> Color {
-        let colors: [Color] = [.blue, .green, .purple, .orange, .pink, .teal, .indigo]
-        let hash = name.hashValue
-        let index = abs(hash) % colors.count
-        return colors[index]
     }
 }
 

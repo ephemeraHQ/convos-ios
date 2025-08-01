@@ -2,7 +2,7 @@ import Combine
 import Foundation
 
 class MockDraftConversationWriter: DraftConversationWriterProtocol {
-    func joinConversationWhenInboxReady(inviteId: String, inboxId: String, inviteCode: String) {
+    func joinConversationWhenInboxReady(inviteId: String, inviterInboxId: String, inviteCode: String) {
     }
 
     var isSendingPublisher: AnyPublisher<Bool, Never> {

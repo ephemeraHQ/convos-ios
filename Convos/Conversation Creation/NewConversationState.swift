@@ -80,7 +80,7 @@ class NewConversationState: Identifiable {
                     .draftConversationWriter
                     .joinConversationWhenInboxReady(
                         inviteId: inviteId,
-                        inboxId: inboxId,
+                        inviterInboxId: inboxId,
                         inviteCode: inviteCode
                     )
             } catch {
