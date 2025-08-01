@@ -105,13 +105,6 @@ class NewConversationState: Identifiable {
             return
         }
 
-        draftConversationComposer.draftConversationRepository.messagesRepository
-            .messagesPublisher
-            .sink { messages in
-                Logger.info("Publishing messages count: \(messages.count)")
-            }
-            .store(in: &cancellables)
-
         Publishers.Merge(
             draftConversationComposer.draftConversationWriter.sentMessage.map { _ in () },
             draftConversationComposer.draftConversationRepository.messagesRepository
