@@ -610,6 +610,6 @@ extension MessagesViewController: MessageReactionMenuCoordinatorDelegate {
 
     func messageReactionMenuCoordinator(_ coordinator: MessageReactionMenuCoordinator,
                                         shouldPresentMenuFor cell: PreviewableCollectionViewCell) -> Bool {
-        return true
+        return false // @jarodl temporarily disable reactions
     }
 }
