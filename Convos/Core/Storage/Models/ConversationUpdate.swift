@@ -3,7 +3,7 @@ import Foundation
 struct ConversationUpdate: Hashable, Codable {
     struct MetadataChange: Hashable, Codable {
         enum Field: String, Codable {
-            case name = "group_name", unknown
+            case name = "group_name", image = "group_image_url_square", unknown
         }
         let field: Field
         let oldValue: String?
@@ -17,15 +17,19 @@ struct ConversationUpdate: Hashable, Codable {
 
     var summary: String {
         if !addedMembers.isEmpty && !removedMembers.isEmpty {
-            "\(creator.displayName) added and removed members from the group"
+            "\(creator.displayName) added and removed members from the convo"
         } else if !addedMembers.isEmpty {
-            "\(creator.displayName) added \(addedMembers.formattedNamesString) to the group"
+            "\(addedMembers.formattedNamesString) joined the convo"
         } else if !removedMembers.isEmpty {
-            "\(creator.displayName) removed \(removedMembers.formattedNamesString) from the group"
+            "\(removedMembers.formattedNamesString) left the convo"
         } else if let metadataChange = metadataChanges.first,
                   metadataChange.field == .name,
                   let updatedName = metadataChange.newValue {
-            "\(creator.displayName) changed the group name to \"\(updatedName)\""
+            "\(creator.displayName) changed the convo name to \"\(updatedName)\""
+        } else if let metadataChange = metadataChanges.first,
+                  metadataChange.field == .image,
+                  metadataChange.newValue != nil {
+            "\(creator.displayName) changed the convo photo"
         } else {
             "Unknown update"
         }
