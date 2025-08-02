@@ -528,12 +528,13 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
     private func updateBottomInsetForInputViewHeight() {
         guard isViewLoaded else { return }
 
-        let newBottomInset = inputViewHeight
-        guard collectionView.contentInset.bottom != newBottomInset else { return }
-
-        Logger.info("Updating bottom inset for input view height: \(newBottomInset)")
-
-        updateCollectionViewInsets(to: newBottomInset, with: lastKeyboardFrameChange)
+        Logger.info("Updated input view height: \(inputViewHeight)")
+        if let lastKeyboardFrameChange {
+            let newBottomInset = calculateNewBottomInset(for: lastKeyboardFrameChange)
+            updateBottomInset(inset: newBottomInset, info: lastKeyboardFrameChange)
+        } else {
+            updateBottomInset(inset: inputViewHeight, info: nil)
+        }
     }
 }
 
@@ -548,10 +549,13 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
         currentInterfaceActions.options.insert(.changingKeyboardFrame)
         let newBottomInset = calculateNewBottomInset(for: info)
-        guard collectionView.contentInset.bottom != newBottomInset else { return }
-        Logger.info("Calculated new bottom inset: \(newBottomInset)")
+        updateBottomInset(inset: newBottomInset, info: info)
+    }
 
-        updateCollectionViewInsets(to: newBottomInset, with: info)
+    private func updateBottomInset(inset: CGFloat, info: KeyboardInfo?) {
+        guard collectionView.contentInset.bottom != inset else { return }
+        Logger.info("Updating bottom inset: \(inset)")
+        updateCollectionViewInsets(to: inset, with: info)
     }
 
     func keyboardWillHide(info: KeyboardInfo) {
