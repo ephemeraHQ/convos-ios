@@ -23,4 +23,5 @@ struct MessagesView: UIViewControllerRepresentable {
         messagesRepository: messaging.messagesRepository(for: conversationId),
         inviteRepository: messaging.inviteRepository(for: conversationId)
     )
+    .ignoresSafeArea()
 }

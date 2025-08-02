@@ -209,7 +209,8 @@ final class MessagesViewController: UIViewController {
         messagesLayout.delegate = dataSource
         collectionView.keyboardDismissMode = .interactive
 
-        collectionView.contentInsetAdjustmentBehavior = .always
+//        collectionView.clipsToBounds = false
+        collectionView.contentInsetAdjustmentBehavior = .never
         collectionView.automaticallyAdjustsScrollIndicatorInsets = true
         collectionView.selfSizingInvalidation = .enabled
         messagesLayout.supportSelfSizingInvalidation = true
@@ -554,8 +555,7 @@ extension MessagesViewController: KeyboardListenerDelegate {
     private func calculateNewBottomInset(for info: KeyboardInfo) -> CGFloat {
         let keyboardFrame = collectionView.window?.convert(info.frameEnd, to: view)
         return (collectionView.frame.minY +
-                collectionView.frame.size.height - (keyboardFrame?.minY ?? 0) -
-                collectionView.safeAreaInsets.bottom)
+                collectionView.frame.size.height - (keyboardFrame?.minY ?? 0) - collectionView.safeAreaInsets.bottom)
     }
 
     private func updateCollectionViewInsets(to newBottomInset: CGFloat, with info: KeyboardInfo?) {
