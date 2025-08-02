@@ -91,11 +91,17 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
             return
         }
 
-        switch sections[indexPath.section].cells[indexPath.item] {
+        let item = sections[indexPath.section].cells[indexPath.item]
+        switch item {
         case .messageGroup:
-            originalAttributes.alpha = 0.0
+            originalAttributes.center.y += originalAttributes.frame.height
         case let .message(message, bubbleType: _):
-            applyMessageAnimation(for: message, to: originalAttributes)
+            switch message.base.content {
+            case .text, .attachment, .attachments, .emoji:
+                applyMessageAnimation(for: message, to: originalAttributes)
+            default:
+                break
+            }
         case .typingIndicator:
             applyTypingIndicatorAnimation(to: originalAttributes)
         default:
@@ -112,11 +118,17 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
             return
         }
 
-        switch oldSections[indexPath.section].cells[indexPath.item] {
+        let oldItem = oldSections[indexPath.section].cells[indexPath.item]
+        switch oldItem {
         case .messageGroup:
-            originalAttributes.alpha = 0.0
+            originalAttributes.center.y += originalAttributes.frame.height
         case let .message(message, bubbleType: _):
-            applyMessageAnimation(for: message, to: originalAttributes)
+            switch message.base.content {
+            case .text, .attachment, .attachments, .emoji:
+                applyMessageAnimation(for: message, to: originalAttributes)
+            default:
+                break
+            }
         case .typingIndicator:
             applyTypingIndicatorAnimation(to: originalAttributes)
         default:
