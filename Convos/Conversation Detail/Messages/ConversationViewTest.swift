@@ -19,7 +19,8 @@ struct ConversationViewTest: View {
                     Group {
                         MessagesView(
                             messagesRepository: messagesRepository,
-                            inviteRepository: inviteRepository
+                            inviteRepository: inviteRepository,
+                            inputViewHeight: inputViewHeight
                         )
                         .ignoresSafeArea()
                     }
@@ -61,9 +62,7 @@ struct ConversationViewTest: View {
                         }
                         .buttonStyle(GlassButtonStyle())
                         .zIndex(1000)
-                        //                        ConversationToolbarButton(conversation: .mock(), action: {})
                         .padding(.top, reader.safeAreaInsets.top)
-                        //                            .glassEffect()
 
                         Spacer()
                     }

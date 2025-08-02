@@ -114,7 +114,8 @@ struct ConversationView: View {
         ) {
             MessagesView(
                 messagesRepository: messagesRepository,
-                inviteRepository: inviteRepository
+                inviteRepository: inviteRepository,
+                inputViewHeight: 0.0
             )
             .ignoresSafeArea()
         }

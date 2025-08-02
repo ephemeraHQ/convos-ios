@@ -42,7 +42,8 @@ struct NewConversationView: View {
                     ) {
                         MessagesView(
                             messagesRepository: composer.draftConversationRepository.messagesRepository,
-                            inviteRepository: composer.draftConversationRepository.inviteRepository
+                            inviteRepository: composer.draftConversationRepository.inviteRepository,
+                            inputViewHeight: 0.0
                         )
                         .ignoresSafeArea()
                     }

@@ -46,9 +46,17 @@ final class MessagesViewController: UIViewController {
     private let inviteRepository: any InviteRepositoryProtocol
     private var messagesRepositoryCancellable: AnyCancellable?
     private var cancellables: Set<AnyCancellable> = []
-    private var conversationHasMembers: Bool = false
 
     private var reactionMenuCoordinator: MessageReactionMenuCoordinator?
+
+    var inputViewHeight: CGFloat = 0 {
+        didSet {
+            if inputViewHeight != oldValue {
+                updateBottomInsetForInputViewHeight()
+            }
+        }
+    }
+    private var lastKeyboardFrameChange: KeyboardInfo? = nil
 
     // MARK: - Initialization
 
@@ -516,6 +524,17 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
             })
         }
     }
+
+    private func updateBottomInsetForInputViewHeight() {
+        guard isViewLoaded else { return }
+
+        let newBottomInset = inputViewHeight
+        guard collectionView.contentInset.bottom != newBottomInset else { return }
+
+        Logger.info("Updating bottom inset for input view height: \(newBottomInset)")
+
+        updateCollectionViewInsets(to: newBottomInset, with: lastKeyboardFrameChange)
+    }
 }
 
 // MARK: - KeyboardListenerDelegate
@@ -524,6 +543,8 @@ extension MessagesViewController: KeyboardListenerDelegate {
     func keyboardWillChangeFrame(info: KeyboardInfo) {
         Logger.info("keyboardWillChangeFrame")
         guard shouldHandleKeyboardFrameChange(info: info) else { return }
+
+        self.lastKeyboardFrameChange = info
 
         currentInterfaceActions.options.insert(.changingKeyboardFrame)
         let newBottomInset = calculateNewBottomInset(for: info)
@@ -555,10 +576,11 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
     private func calculateNewBottomInset(for info: KeyboardInfo) -> CGFloat {
         let keyboardFrame = collectionView.window?.convert(info.frameEnd, to: view)
-        let inset = (collectionView.frame.minY +
+        let keyboardInset = (inputViewHeight + collectionView.frame.minY +
                      collectionView.frame.size.height -
                      (keyboardFrame?.minY ?? 0) - collectionView.safeAreaInsets.bottom)
-        Logger.info("Calculated new bottom inset: \(inset)")
+        let inset = max(keyboardInset, inputViewHeight)
+        Logger.info("Calculated new bottom inset: \(inset) (keyboard: \(keyboardInset), inputView: \(inputViewHeight))")
         return inset
     }
 
