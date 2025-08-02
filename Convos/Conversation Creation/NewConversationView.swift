@@ -1,5 +1,22 @@
 import SwiftUI
 
+struct InviteShareLink: View {
+    let invite: Invite?
+    var body: some View {
+        let inviteString = invite?.temporaryInviteString ?? ""
+        ShareLink(
+            item: inviteString,
+            preview: SharePreview(
+                "Join a private convo",
+                image: Image("AppIcon")
+            )
+        ) {
+            Image(systemName: "square.and.arrow.up")
+        }
+        .disabled(inviteString.isEmpty)
+    }
+}
+
 struct NewConversationView: View {
     @Bindable var newConversationState: NewConversationState
     @State private var hasShownScannerOnAppear: Bool = false
@@ -98,13 +115,7 @@ struct NewConversationView: View {
                                 Image(systemName: "qrcode.viewfinder")
                             }
                         } else {
-                            let inviteString = newConversationState.conversationState?.conversation.invite?.temporaryInviteString ?? ""
-                            ShareLink(
-                                item: inviteString
-                            ) {
-                                Image(systemName: "square.and.arrow.up")
-                            }
-                            .disabled(inviteString.isEmpty)
+                            InviteShareLink(invite: newConversationState.conversationState?.conversation.invite)
                         }
                     }
                 }
