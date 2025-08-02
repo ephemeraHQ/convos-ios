@@ -269,7 +269,7 @@ struct MessagesInputView: View {
             }
             .fixedSize(horizontal: false, vertical: true)
             .padding(DesignConstants.Spacing.stepX)
-            .glassEffect(.regular, in: textClipShape)
+            .glassEffect(.regular.interactive(), in: textClipShape)
         }
         .padding(.horizontal, 10.0)
         .padding(.vertical, DesignConstants.Spacing.step2x)

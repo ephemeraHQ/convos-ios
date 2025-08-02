@@ -209,8 +209,7 @@ final class MessagesViewController: UIViewController {
         messagesLayout.delegate = dataSource
         collectionView.keyboardDismissMode = .interactive
 
-//        collectionView.clipsToBounds = false
-        collectionView.contentInsetAdjustmentBehavior = .never
+        collectionView.contentInsetAdjustmentBehavior = .always
         collectionView.automaticallyAdjustsScrollIndicatorInsets = true
         collectionView.selfSizingInvalidation = .enabled
         messagesLayout.supportSelfSizingInvalidation = true
@@ -528,10 +527,14 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
         currentInterfaceActions.options.insert(.changingKeyboardFrame)
         let newBottomInset = calculateNewBottomInset(for: info)
-        guard newBottomInset > 0,
-              collectionView.contentInset.bottom != newBottomInset else { return }
+        guard collectionView.contentInset.bottom != newBottomInset else { return }
+        Logger.info("Calculated new bottom inset: \(newBottomInset)")
 
         updateCollectionViewInsets(to: newBottomInset, with: info)
+    }
+
+    func keyboardWillHide(info: KeyboardInfo) {
+        Logger.info("keyboardWillHide")
     }
 
     func keyboardDidChangeFrame(info: KeyboardInfo) {
@@ -541,21 +544,22 @@ extension MessagesViewController: KeyboardListenerDelegate {
     }
 
     private func shouldHandleKeyboardFrameChange(info: KeyboardInfo) -> Bool {
-        guard !currentInterfaceActions.options.contains(.changingFrameSize),
-              !currentInterfaceActions.options.contains(.showingReactionsMenu),
-              collectionView.contentInsetAdjustmentBehavior != .never,
-              let keyboardFrame = collectionView.window?.convert(info.frameEnd, to: view),
-              keyboardFrame.minY > 0,
-              collectionView.convert(collectionView.bounds, to: collectionView.window).maxY > info.frameEnd.minY else {
-            return false
-        }
+//        guard !currentInterfaceActions.options.contains(.changingFrameSize),
+//              !currentInterfaceActions.options.contains(.showingReactionsMenu),
+//              collectionView.contentInsetAdjustmentBehavior != .never,
+//              collectionView.convert(collectionView.bounds, to: collectionView.window).maxY > info.frameEnd.minY else {
+//            return false
+//        }
         return true
     }
 
     private func calculateNewBottomInset(for info: KeyboardInfo) -> CGFloat {
         let keyboardFrame = collectionView.window?.convert(info.frameEnd, to: view)
-        return (collectionView.frame.minY +
-                collectionView.frame.size.height - (keyboardFrame?.minY ?? 0) - collectionView.safeAreaInsets.bottom)
+        let inset = (collectionView.frame.minY +
+                     collectionView.frame.size.height -
+                     (keyboardFrame?.minY ?? 0) - collectionView.safeAreaInsets.bottom)
+        Logger.info("Calculated new bottom inset: \(inset)")
+        return inset
     }
 
     private func updateCollectionViewInsets(to newBottomInset: CGFloat, with info: KeyboardInfo?) {
@@ -571,6 +575,7 @@ extension MessagesViewController: KeyboardListenerDelegate {
         currentInterfaceActions.options.insert(.changingContentInsets)
         UIView.animate(withDuration: info?.animationDuration ?? 0.2, animations: {
             self.collectionView.performBatchUpdates({
+                Logger.info("Setting new bottom inset: \(newBottomInset)")
                 self.collectionView.contentInset.bottom = newBottomInset
                 self.collectionView.verticalScrollIndicatorInsets.bottom = newBottomInset
             }, completion: nil)

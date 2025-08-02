@@ -6,14 +6,23 @@ struct ConversationViewTest: View {
     let messagesRepository: any MessagesRepositoryProtocol = Self.messaging.messagesRepository(for: "1")
     let inviteRepository: any InviteRepositoryProtocol = Self.messaging.inviteRepository(for: "1")
 
+    @State private var inputViewHeight: CGFloat = 0.0 {
+        didSet {
+            Logger.info("Input view height: \(inputViewHeight)")
+        }
+    }
+
     var body: some View {
         GeometryReader { reader in
             NavigationStack {
                 ZStack {
-                    MessagesView(
-                        messagesRepository: messagesRepository,
-                        inviteRepository: inviteRepository
-                    )
+                    Group {
+                        MessagesView(
+                            messagesRepository: messagesRepository,
+                            inviteRepository: inviteRepository
+                        )
+                        .ignoresSafeArea()
+                    }
                     .toolbarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .topBarLeading) {
@@ -25,6 +34,10 @@ struct ConversationViewTest: View {
                             InviteShareLink(invite: .mock())
                         }
                     }
+
+                    VStack {
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .safeAreaBar(edge: .bottom) {
                         MessagesInputView(
                             viewModel: .init(myProfileWriter: MockMyProfileWriter(), outgoingMessageWriter: MockOutgoingMessageWriter()),
@@ -33,6 +46,10 @@ struct ConversationViewTest: View {
                                 conversationRepository: MockConversationRepository()
                             )
                         )
+                        .background(HeightReader())
+                        .onPreferenceChange(HeightPreferenceKey.self) { height in
+                            inputViewHeight = height
+                        }
                     }
 
                     VStack {
