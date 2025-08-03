@@ -88,9 +88,7 @@ struct ConversationToolbarButton: View {
                 .padding(.horizontal, DesignConstants.Spacing.step2x)
             }
         }
-        .padding(DesignConstants.Spacing.step2x)
-        .glassEffect()
-        .padding(.top, DesignConstants.Spacing.stepX) // @jarodl avoids dynamic island
+        .buttonStyle(.glass)
     }
 }
 

@@ -119,13 +119,7 @@ struct MessagesInputView: View {
 
     var body: some View {
         HStack(alignment: .bottom) {
-//            if viewModel.showingProfileNameEditor {
-//                EmptyView()
-//                    .matchedGeometryEffect(
-//                        id: "AddButton",
-//                        in: profileEditorAnimation,
-//                    )
-//            } else {
+//            if !viewModel.showingProfileNameEditor {
 //                Button {
 //                } label: {
 //                    Image(systemName: "plus")
@@ -135,7 +129,7 @@ struct MessagesInputView: View {
 //                        .padding(.vertical, buttonVerticalPadding)
 //                        .padding(.horizontal, 7.0)
 //                }
-//                .glassEffect(.regular, in: .circle)
+//                .glassEffect(.regular.interactive(), in: .circle)
 //                .matchedGeometryEffect(
 //                    id: "AddButton",
 //                    in: profileEditorAnimation,
