@@ -56,7 +56,7 @@ final class MessagesViewController: UIViewController {
             }
         }
     }
-    private var lastKeyboardFrameChange: KeyboardInfo? = nil
+    private var lastKeyboardFrameChange: KeyboardInfo?
 
     // MARK: - Initialization
 

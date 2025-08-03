@@ -50,12 +50,12 @@ struct ConversationQuickEditView: View {
     @State var conversationName: String = ""
     @State var imageSelection: PhotosPickerItem? {
         didSet {
-            if let imageSelection {
+//            if let imageSelection {
 //                imageLoadingTask?.cancel()
 //                imageLoadingTask = Task {
 //                    await loadSelectedImage(imageSelection)
 //                }
-            }
+//            }
         }
     }
     @State var imageState: PhotosPickerImage.State = .empty
