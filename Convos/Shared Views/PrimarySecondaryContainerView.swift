@@ -119,6 +119,7 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
                     .fixedSize(horizontal: primaryProperties.fixedSizeHorizontal, vertical: false)
             }
             .compositingGroup()
+            .clipShape(.rect(cornerRadius: cornerRadius))
             .glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
         }
         .scaleEffect(
@@ -159,7 +160,6 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
 
             Spacer()
         }
-        .frame(maxWidth: .infinity)
 
         VStack {
             PrimarySecondaryContainerView(
@@ -178,11 +178,12 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
                 ConversationToolbarButton(conversation: .mock()) {
                 }
             } secondaryContent: {
-                ConversationQuickEditView(draftTitle: "New convo")
+                ConversationQuickEditView(draftTitle: "The Convo")
             }
             .padding(.horizontal, 8.0)
 
             Spacer()
+
             PrimarySecondaryContainerView(
                 progress: bottomProgress,
                 primaryProperties: .init(
@@ -258,7 +259,7 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
                     .padding(8.0)
                 }
             }
-            .padding(.horizontal, 8.0)
+            .padding(.horizontal, 16.0)
         }
     }
 }

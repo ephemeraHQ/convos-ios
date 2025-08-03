@@ -85,6 +85,7 @@ struct ConversationToolbarButton: View {
                         .font(.system(size: 12.0, weight: .regular))
                         .foregroundStyle(.colorTextSecondary)
                 }
+                .compositingGroup()
                 .padding(.horizontal, DesignConstants.Spacing.step2x)
             }
         }

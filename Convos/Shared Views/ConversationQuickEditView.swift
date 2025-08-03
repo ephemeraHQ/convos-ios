@@ -73,26 +73,23 @@ struct ConversationQuickEditView: View {
                     .frame(width: 52.0, height: 52.0)
             }
 
-            Group {
-                TextField(draftTitle, text: $conversationName)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 16.0)
-                    .font(.system(size: 17.0))
-                    .foregroundStyle(.colorTextPrimary)
-                    .multilineTextAlignment(.center)
-                    .textInputAutocapitalization(.words)
-                    .focused($isNameFocused)
-                    .submitLabel(.done)
-                    .onSubmit {
-                        //                        onDismiss?()
-                    }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 52.0)
-            .background(
-                Capsule()
-                    .stroke(.gray.opacity(0.2), lineWidth: 1.0)
-            )
+            TextField(draftTitle, text: $conversationName)
+                .padding(.horizontal, 16.0)
+                .font(.system(size: 17.0))
+                .foregroundStyle(.colorTextPrimary)
+                .multilineTextAlignment(.center)
+                .textInputAutocapitalization(.words)
+                .focused($isNameFocused)
+                .submitLabel(.done)
+                .onSubmit {
+                    //                        onDismiss?()
+                }
+                .frame(minWidth: 166.0, maxWidth: .infinity)
+                .frame(height: 52.0)
+                .background(
+                    Capsule()
+                        .stroke(.gray.opacity(0.2), lineWidth: 1.0)
+                )
 
             Button {
             } label: {
