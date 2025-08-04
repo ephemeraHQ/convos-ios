@@ -68,6 +68,9 @@ protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
         filename: String,
         afterUpload: @escaping (String) async throws -> Void
     ) async throws -> String
+
+    // Push notifications
+    func registerPushToken(_ request: PushTokenRegistrationRequest) async throws -> PushTokenRegistrationResponse
 }
 
 internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
@@ -462,6 +465,49 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         Logger.info("Post-upload action completed successfully")
 
         return uploadedURL
+    }
+
+    // MARK: - Push Notifications
+
+    func registerPushToken(_ request: PushTokenRegistrationRequest) async throws -> PushTokenRegistrationResponse {
+        var urlRequest = try authenticatedRequest(for: "v1/notifications/register", method: "POST")
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = try JSONEncoder().encode(request)
+
+        Logger.info("Registering push token for device: \(request.deviceId)")
+
+        // Use performRequest but we need to handle the response array manually since it's not a standard response
+        let (data, response) = try await session.data(for: urlRequest)
+
+        Logger.info("Received push registration response: \(data.prettyPrintedJSONString ?? "nil data")")
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        switch httpResponse.statusCode {
+        case 200...299:
+            let decoder = JSONDecoder()
+            let registrationResponse = try decoder.decode([InstallationRegistrationResponse].self, from: data)
+            Logger.info("Successfully registered push token. Registrations: \(registrationResponse.count)")
+            return PushTokenRegistrationResponse(responses: registrationResponse)
+
+        case 400:
+            Logger.error("Bad request when registering push token")
+            throw APIError.invalidRequest
+
+        case 401:
+            Logger.error("Authentication failed when registering push token")
+            throw APIError.authenticationFailed
+
+        case 403:
+            Logger.error("Forbidden when registering push token")
+            throw APIError.forbidden
+
+        default:
+            Logger.error("Failed to register push token. Status: \(httpResponse.statusCode)")
+            throw APIError.serverError(nil)
+        }
     }
 }
 

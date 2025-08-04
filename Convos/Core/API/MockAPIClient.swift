@@ -34,6 +34,19 @@ class MockBaseAPIClient: ConvosAPIBaseProtocol {
 }
 
 class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
+    func registerPushToken(_ request: PushTokenRegistrationRequest) async throws -> PushTokenRegistrationResponse {
+        // Mock successful registration for all installations
+        let mockResponses = request.installations.map { installation in
+            InstallationRegistrationResponse(
+                status: "registered",
+                xmtpInstallationId: installation.xmtpInstallationId,
+                validUntil: Int64(Date().addingTimeInterval(30 * 24 * 60 * 60).timeIntervalSince1970) // 30 days from now
+            )
+        }
+
+        return PushTokenRegistrationResponse(responses: mockResponses)
+    }
+
     func publicInviteDetails(_ inviteId: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
         .init(id: "invite_123", name: "My Invite", description: "My fun group chat", imageUrl: nil, inviteLinkURL: "http://convos.org/invite/123456")
     }

@@ -5,8 +5,8 @@ struct ConvosApp: App {
     let convos: ConvosClient = .client(environment: ConfigManager.shared.currentEnvironment)
     let analyticsService: AnalyticsServiceProtocol = PosthogAnalyticsService.shared
 
-    @UIApplicationDelegateAdaptor(PushNotificationDelegate.self) var pushDelegate
-    @StateObject private var pushNotificationManager = PushNotificationManager.shared
+    @UIApplicationDelegateAdaptor(PushNotificationDelegate.self) var pushDelegate: PushNotificationDelegate
+    @StateObject private var pushNotificationManager: PushNotificationManager = PushNotificationManager.shared
 
     init() {
         SDKConfiguration.configureSDKs()

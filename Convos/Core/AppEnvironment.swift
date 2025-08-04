@@ -1,5 +1,10 @@
 import Foundation
 
+public enum ApnsEnvironment: String, Codable {
+    case sandbox
+    case production
+}
+
 enum AppEnvironment {
     case local, tests, dev, production
 
@@ -63,7 +68,7 @@ enum AppEnvironment {
         let value = Secrets.XMTP_CUSTOM_HOST
         return value.isEmpty ? nil : value
     }
-    
+
     var apnsEnvironment: ApnsEnvironment {
         // Check if this is a debug build (built locally with Xcode)
         #if DEBUG
