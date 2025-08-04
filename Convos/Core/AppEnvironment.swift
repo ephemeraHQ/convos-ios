@@ -63,6 +63,16 @@ enum AppEnvironment {
         let value = Secrets.XMTP_CUSTOM_HOST
         return value.isEmpty ? nil : value
     }
+    
+    var apnsEnvironment: ApnsEnvironment {
+        // Check if this is a debug build (built locally with Xcode)
+        #if DEBUG
+        return .sandbox
+        #else
+        // Release builds (distributed via TestFlight/App Store) use production
+        return .production
+        #endif
+    }
 
     var defaultDatabasesDirectoryURL: URL {
         guard self != .tests else {
