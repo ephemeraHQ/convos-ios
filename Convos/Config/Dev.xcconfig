@@ -19,6 +19,7 @@ APP_GROUP_IDENTIFIER = group.$(MAIN_BUNDLE_ID)
 ASSOCIATED_DOMAIN = otr-preview.convos.org
 KEYCHAIN_GROUP_IDENTIFIER = $(MAIN_BUNDLE_ID)
 APP_DISPLAY_NAME = Convos Dev
+APNS_ENVIRONMENT = production
 
 // Info.plist preprocessing for Dev builds
 INFOPLIST_PREPROCESS = YES
