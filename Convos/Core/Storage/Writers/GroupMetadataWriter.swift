@@ -91,7 +91,7 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
         let resizedImage = ImageCompression.resizeForCache(image)
 
         guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
-            throw PhotosPickerImageError.importFailed
+            throw ImagePickerImageError.importFailed
         }
 
         let filename = "group-image-\(UUID().uuidString).jpg"

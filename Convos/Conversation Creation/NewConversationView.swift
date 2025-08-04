@@ -12,6 +12,7 @@ struct InviteShareLink: View {
             )
         ) {
             Image(systemName: "square.and.arrow.up")
+                .foregroundStyle(.colorTextPrimary)
         }
         .disabled(inviteString.isEmpty)
     }
@@ -27,108 +28,100 @@ struct NewConversationView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if newConversationState.showScannerOnAppear && !hasShownScannerOnAppear {
-                    JoinConversationView(newConversationState: newConversationState, showsToolbar: false) {
-                        hasShownScannerOnAppear = true
-                    }
-                } else if let conversationState = newConversationState.conversationState,
-                   let composer = newConversationState.draftConversationComposer {
-                    MessagesContainerView(
-                        conversationState: conversationState,
-                        myProfileWriter: composer.myProfileWriter,
-                        outgoingMessageWriter: composer.draftConversationWriter,
-                        conversationLocalStateWriter: composer.conversationLocalStateWriter
-                    ) {
-                        MessagesView(
-                            messagesRepository: composer.draftConversationRepository.messagesRepository,
-                            inviteRepository: composer.draftConversationRepository.inviteRepository,
-                            inputViewHeight: 0.0
-                        )
-                        .ignoresSafeArea()
-                    }
-                } else {
-                    VStack(alignment: .center) {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
-                    }
-                    .ignoresSafeArea()
-                }
-            }
-            .background(.colorBackgroundPrimary)
-            .ignoresSafeArea()
-            .sheet(isPresented: $presentingJoinConversation) {
-                JoinConversationView(
-                    newConversationState: newConversationState,
-                    showsToolbar: true
-                ) {
-                    presentingJoinConversation = false
-                }
-            }
-            .onAppear {
-                if !newConversationState.showScannerOnAppear {
-                    newConversationState.newConversation()
-                }
-            }
-            .toolbarTitleDisplayMode(.inline)
-            .toolbar {
-                if !newConversationState.showScannerOnAppear || hasShownScannerOnAppear {
-                    if let conversationState = newConversationState.conversationState {
-                        ToolbarItem(placement: .title) {
-                            ConversationToolbarButton(
-                                conversation: conversationState.conversation,
-                            ) {
-                                withAnimation {
-                                    presentingCustomizationSheet = true
-                                }
-                            }
-                        }
-                    }
-                }
-
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(role: .close) {
-                        if newConversationState.promptToKeepConversation && !newConversationState.showScannerOnAppear {
-                            presentingDeleteConfirmation = true
-                        } else {
-                            dismiss()
-                        }
-                    }
-                    .confirmationDialog("", isPresented: $presentingDeleteConfirmation) {
-                        Button("Delete", role: .destructive) {
-                            newConversationState.deleteConversation()
-                            dismiss()
-                        }
-
-                        Button("Keep") {
-                            dismiss()
-                        }
-                    }
-                }
-
-                if !newConversationState.showScannerOnAppear {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        if newConversationState.showJoinConversation {
-                            Button {
-                                presentingJoinConversation = true
-                            } label: {
-                                Image(systemName: "qrcode.viewfinder")
-                            }
-                        } else {
-                            InviteShareLink(invite: newConversationState.conversationState?.conversation.invite)
-                        }
-                    }
-                }
-            }
-            .groupCustomizationSheet( // @jarodl fix the way we do this
-                isPresented: $presentingCustomizationSheet,
-                editState: newConversationState.conversationState?.editState ?? .init(conversation: .empty()),
-            ) {
-                if let editState = newConversationState.conversationState?.editState {
-                    saveGroupChanges(editState)
-                }
-            }
+//            Group {
+//                if newConversationState.showScannerOnAppear && !hasShownScannerOnAppear {
+//                    JoinConversationView(newConversationState: newConversationState, showsToolbar: false) {
+//                        hasShownScannerOnAppear = true
+//                    }
+//                } else if let conversationState = newConversationState.conversationState,
+//                   let composer = newConversationState.draftConversationComposer {
+//                    MessagesContainerView(
+//                        conversationState: conversationState,
+//                        myProfileWriter: composer.myProfileWriter,
+//                        outgoingMessageWriter: composer.draftConversationWriter,
+//                        conversationLocalStateWriter: composer.conversationLocalStateWriter
+//                    ) {
+//                        MessagesView(
+//                            messagesRepository: composer.draftConversationRepository.messagesRepository,
+//                            inviteRepository: composer.draftConversationRepository.inviteRepository,
+//                            inputViewHeight: 0.0
+//                        )
+//                        .ignoresSafeArea()
+//                    }
+//                } else {
+//                    VStack(alignment: .center) {
+//                        Spacer()
+//                        ProgressView()
+//                        Spacer()
+//                    }
+//                    .ignoresSafeArea()
+//                }
+//            }
+//            .background(.colorBackgroundPrimary)
+//            .ignoresSafeArea()
+//            .sheet(isPresented: $presentingJoinConversation) {
+//                JoinConversationView(
+//                    newConversationState: newConversationState,
+//                    showsToolbar: true
+//                ) {
+//                    presentingJoinConversation = false
+//                }
+//            }
+//            .onAppear {
+//                if !newConversationState.showScannerOnAppear {
+//                    newConversationState.newConversation()
+//                }
+//            }
+//            .toolbarTitleDisplayMode(.inline)
+//            .toolbar {
+//                if !newConversationState.showScannerOnAppear || hasShownScannerOnAppear {
+//                    if let conversationState = newConversationState.conversationState {
+//                        ToolbarItem(placement: .title) {
+//                            ConversationToolbarButton(
+//                                conversation: conversationState.conversation,
+//                            ) {
+//                                withAnimation {
+//                                    presentingCustomizationSheet = true
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//
+//                ToolbarItem(placement: .topBarLeading) {
+//                    Button(role: .close) {
+//                        if newConversationState.promptToKeepConversation && !newConversationState.showScannerOnAppear {
+//                            presentingDeleteConfirmation = true
+//                        } else {
+//                            dismiss()
+//                        }
+//                    }
+//                    .confirmationDialog("", isPresented: $presentingDeleteConfirmation) {
+//                        Button("Delete", role: .destructive) {
+//                            newConversationState.deleteConversation()
+//                            dismiss()
+//                        }
+//
+//                        Button("Keep") {
+//                            dismiss()
+//                        }
+//                    }
+//                }
+//
+//                if !newConversationState.showScannerOnAppear {
+//                    ToolbarItem(placement: .topBarTrailing) {
+//                        if newConversationState.showJoinConversation {
+//                            Button {
+//                                presentingJoinConversation = true
+//                            } label: {
+//                                Image(systemName: "qrcode.viewfinder")
+//                            }
+//                        } else {
+//                            InviteShareLink(invite: newConversationState.conversationState?.conversation.invite)
+//                        }
+//                    }
+//                }
+//            }
         }
     }
 

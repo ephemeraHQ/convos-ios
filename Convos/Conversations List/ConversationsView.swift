@@ -11,11 +11,11 @@ struct ConversationDetail {
 
 struct ConversationsView: View {
     let session: any SessionManagerProtocol
-    @Namespace var namespace: Namespace.ID
-    @State var newConversationState: NewConversationState?
-    @State var presentingExplodeConfirmation: Bool = false
-    @State var path: [ConversationsRoute] = []
-    @Environment(\.dismiss) var dismiss: DismissAction
+    @Namespace private var namespace: Namespace.ID
+    @State private var newConversationState: NewConversationState?
+    @State private var presentingExplodeConfirmation: Bool = false
+    @State private var path: [ConversationsRoute] = []
+    @Environment(\.dismiss) private var dismiss: DismissAction
 
     var body: some View {
         NavigationStack(path: $path) {

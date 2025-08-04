@@ -1,89 +1,29 @@
-import PhotosUI
 import SwiftUI
 
-private struct ConversationEditImageView: View {
-    @State var imageState: PhotosPickerImage.State = .empty
-    @State var currentConversationImage: UIImage?
-
-    var body: some View {
-        if imageState.isEmpty {
-            if let currentConversationImage = currentConversationImage {
-                Image(uiImage: currentConversationImage)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .clipShape(Circle())
-            } else {
-                ZStack {
-                    Circle()
-                        .fill(.black)
-                    Image(systemName: "photo.on.rectangle.fill")
-                        .font(.system(size: 24.0))
-                        .foregroundColor(.white)
-                }
-            }
-        } else {
-            switch imageState {
-            case .loading:
-                ProgressView()
-            case .failure:
-                VStack {
-                    Image(systemName: "exclamationmark.triangle")
-                        .foregroundColor(.red)
-                    Text("Error loading image")
-                        .font(.caption)
-                        .foregroundColor(.red)
-                }
-            case let .success(image):
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .clipShape(Circle())
-            case .empty:
-                EmptyView()
-            }
-        }
-    }
-}
-
-struct ConversationQuickEditView: View {
-    let draftTitle: String
-    @State var conversationName: String = ""
-    @State var imageSelection: PhotosPickerItem? {
-        didSet {
-//            if let imageSelection {
-//                imageLoadingTask?.cancel()
-//                imageLoadingTask = Task {
-//                    await loadSelectedImage(imageSelection)
-//                }
-//            }
-        }
-    }
-    @State var imageState: PhotosPickerImage.State = .empty
-
-    @FocusState var isNameFocused: Bool
+struct QuickEditView: View {
+    let placeholderText: String
+    @Binding var text: String
+    @Binding var image: UIImage?
+    var focusState: FocusState<MessagesViewInputFocus?>.Binding
+    let focused: MessagesViewInputFocus
+    let onSubmit: () -> Void
+    let onSettings: () -> Void
 
     var body: some View {
         HStack {
-            PhotosPicker(
-                selection: $imageSelection,
-                matching: .images,
-                photoLibrary: .shared()
-            ) {
-                ConversationEditImageView(currentConversationImage: nil)
-                    .frame(width: 52.0, height: 52.0)
-            }
+            ImagePickerButton(currentImage: $image)
+                .frame(width: 52.0, height: 52.0)
 
-            TextField(draftTitle, text: $conversationName)
+            TextField(placeholderText, text: $text)
                 .padding(.horizontal, 16.0)
                 .font(.system(size: 17.0))
+                .tint(.colorTextPrimary)
                 .foregroundStyle(.colorTextPrimary)
                 .multilineTextAlignment(.center)
                 .textInputAutocapitalization(.words)
-                .focused($isNameFocused)
+                .focused(focusState, equals: focused)
                 .submitLabel(.done)
-                .onSubmit {
-                    //                        onDismiss?()
-                }
+                .onSubmit(onSubmit)
                 .frame(minWidth: 166.0, maxWidth: .infinity)
                 .frame(height: 52.0)
                 .background(
@@ -92,6 +32,7 @@ struct ConversationQuickEditView: View {
                 )
 
             Button {
+                onSettings()
             } label: {
                 Image(systemName: "gear")
                     .resizable()
@@ -103,15 +44,20 @@ struct ConversationQuickEditView: View {
             .background(Circle().fill(.gray.opacity(0.2)))
         }
         .frame(maxWidth: .infinity)
-//        .padding(DesignConstants.Spacing.step6x)
-//        .onAppear {
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-//                isNameFocused = true
-//            }
-//        }
     }
 }
 
 #Preview {
-    ConversationQuickEditView(draftTitle: "New convo")
+    @Previewable @State var text: String = ""
+    @Previewable @State var image: UIImage?
+    @Previewable @FocusState var focusState: MessagesViewInputFocus?
+    QuickEditView(
+        placeholderText: "New convo",
+        text: $text,
+        image: $image,
+        focusState: $focusState,
+        focused: .displayName,
+    ) {
+    } onSettings: {
+    }
 }

@@ -1,49 +1,6 @@
 import PhotosUI
 import SwiftUI
 
-enum PhotosPickerImageError: Error {
-    case importFailed
-}
-
-struct PhotosPickerImage: Transferable {
-    enum State {
-        case loading, empty, success(UIImage), failure(Error)
-        var isEmpty: Bool {
-            if case .empty = self {
-                true
-            } else {
-                false
-            }
-        }
-    }
-
-    let image: UIImage
-
-    static var transferRepresentation: some TransferRepresentation {
-        DataRepresentation(importedContentType: .image) { data in
-            guard let uiImage = UIImage(data: data) else {
-                throw PhotosPickerImageError.importFailed
-            }
-            return PhotosPickerImage(image: uiImage)
-        }
-    }
-}
-
-extension PhotosPickerItem {
-    @MainActor
-    func loadImage() async -> PhotosPickerImage.State {
-        do {
-            if let photosPickerImage = try await loadTransferable(type: PhotosPickerImage.self) {
-                return .success(photosPickerImage.image)
-            } else {
-                return .empty
-            }
-        } catch {
-            return .failure(error)
-        }
-    }
-}
-
 struct ConversationToolbarButton: View {
     let conversation: Conversation
     @Environment(\.dismiss) private var dismiss: DismissAction
@@ -77,6 +34,7 @@ struct ConversationToolbarButton: View {
                         Text(name)
                             .font(.system(size: 16.0, weight: .medium))
                             .foregroundStyle(.colorTextPrimary)
+                            .fixedSize()
                     } else {
                         Text(draftTitle)
                             .font(.system(size: 16.0, weight: .medium))
@@ -85,11 +43,10 @@ struct ConversationToolbarButton: View {
                         .font(.system(size: 12.0, weight: .regular))
                         .foregroundStyle(.colorTextSecondary)
                 }
-                .compositingGroup()
                 .padding(.horizontal, DesignConstants.Spacing.step2x)
             }
+            .compositingGroup()
         }
-        .buttonStyle(.glass)
     }
 }
 

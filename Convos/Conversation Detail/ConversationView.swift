@@ -70,83 +70,109 @@ extension GroupMetadataWriterProtocol {
     }
 }
 
+@Observable
+class ConversationViewModel {
+    var conversation: Conversation = .mock()
+    var messages: [AnyMessage] = []
+    var invite: Invite = .empty
+    var profile: Profile = .mock()
+    var conversationNamePlaceholder: String = "Name"
+    var displayName: String = ""
+    var conversationName: String = ""
+    var conversationImage: UIImage?
+    var messageText: String = ""
+    var sendButtonEnabled: Bool = false
+    var profileImage: UIImage?
+    var focus: MessagesViewInputFocus?
+
+    func onConversationInfoTap() {
+        focus = .conversationName
+    }
+
+    func onConversationNameEndedEditing() {
+        focus = .message
+    }
+
+    func onConversationSettings() {
+    }
+
+    func onProfilePhotoTap() {
+        focus = .displayName
+    }
+
+    func onSendMessage() {
+    }
+
+    func onDisplayNameEndedEditing() {
+        focus = .message
+    }
+
+    func onProfileSettings() {
+    }
+
+    func onScanInviteCode() {
+    }
+}
+
 struct ConversationView: View {
-    let conversationRepository: any ConversationRepositoryProtocol
-    let myProfileWriter: any MyProfileWriterProtocol
-    let messagesRepository: any MessagesRepositoryProtocol
-    let outgoingMessageWriter: any OutgoingMessageWriterProtocol
-    let conversationConsentWriter: any ConversationConsentWriterProtocol
-    let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
-    let groupMetadataWriter: any GroupMetadataWriterProtocol
-    let inviteRepository: any InviteRepositoryProtocol
-    let conversationState: ConversationState
-    @State private var showInfoForConversation: Conversation?
-    @State private var presentingCustomizationSheet: Bool = false
+//    let conversationRepository: any ConversationRepositoryProtocol
+//    let myProfileWriter: any MyProfileWriterProtocol
+//    let messagesRepository: any MessagesRepositoryProtocol
+//    let outgoingMessageWriter: any OutgoingMessageWriterProtocol
+//    let conversationConsentWriter: any ConversationConsentWriterProtocol
+//    let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
+//    let groupMetadataWriter: any GroupMetadataWriterProtocol
+//    let inviteRepository: any InviteRepositoryProtocol
+//    let conversationState: ConversationState
 
-    init(dependencies: ConversationViewDependencies) {
-        self.conversationRepository = dependencies.conversationRepository
-        self.myProfileWriter = dependencies.myProfileWriter
-        self.messagesRepository = dependencies.messagesRepository
-        self.outgoingMessageWriter = dependencies.outgoingMessageWriter
-        self.conversationConsentWriter = dependencies.conversationConsentWriter
-        self.conversationLocalStateWriter = dependencies.conversationLocalStateWriter
-        self.groupMetadataWriter = dependencies.groupMetadataWriter
-        self.inviteRepository = dependencies.inviteRepository
-        self.conversationState = ConversationState(
-            myProfileRepository: dependencies.myProfileRepository,
-            conversationRepository: dependencies.conversationRepository
-        )
-    }
+//    init(dependencies: ConversationViewDependencies) {
+//        self.conversationRepository = dependencies.conversationRepository
+//        self.myProfileWriter = dependencies.myProfileWriter
+//        self.messagesRepository = dependencies.messagesRepository
+//        self.outgoingMessageWriter = dependencies.outgoingMessageWriter
+//        self.conversationConsentWriter = dependencies.conversationConsentWriter
+//        self.conversationLocalStateWriter = dependencies.conversationLocalStateWriter
+//        self.groupMetadataWriter = dependencies.groupMetadataWriter
+//        self.inviteRepository = dependencies.inviteRepository
+//        self.conversationState = ConversationState(
+//            myProfileRepository: dependencies.myProfileRepository,
+//            conversationRepository: dependencies.conversationRepository
+//        )
+//    }
 
-    private func saveGroupChanges(_ editState: GroupEditState) {
-        groupMetadataWriter.saveGroupChanges(
-            editState,
-            conversation: conversationState.conversation
-        )
-    }
+    @State var viewModel: ConversationViewModel
+    @FocusState private var focusState: MessagesViewInputFocus?
 
     var body: some View {
-        MessagesContainerView(
-            conversationState: conversationState,
-            myProfileWriter: myProfileWriter,
-            outgoingMessageWriter: outgoingMessageWriter,
-            conversationLocalStateWriter: conversationLocalStateWriter
-        ) {
-            MessagesView(
-                messagesRepository: messagesRepository,
-                inviteRepository: inviteRepository,
-                inputViewHeight: 0.0
-            )
-            .ignoresSafeArea()
-        }
-        .toolbarTitleDisplayMode(.inline)
-        .toolbar {
-            if !presentingCustomizationSheet {
-                ToolbarItem(placement: .title) {
-                    ConversationToolbarButton(
-                        conversation: conversationState.conversation,
-                        draftTitle: "Untitled"
-                    ) {
-                        presentingCustomizationSheet = true
-                    }
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    InviteShareLink(invite: conversationState.conversation.invite)
-                }
-            }
-        }
-        .navigationBarBackButtonHidden(presentingCustomizationSheet)
-        .groupCustomizationSheet(
-            isPresented: $presentingCustomizationSheet,
-            editState: conversationState.editState,
-        ) {
-            saveGroupChanges(conversationState.editState)
+        MessagesView(
+            conversation: viewModel.conversation,
+            messages: viewModel.messages,
+            invite: viewModel.invite,
+            profile: viewModel.profile,
+            conversationNamePlaceholder: viewModel.conversationNamePlaceholder,
+            conversationName: $viewModel.conversationName,
+            conversationImage: $viewModel.conversationImage,
+            displayName: $viewModel.displayName,
+            messageText: $viewModel.messageText,
+            sendButtonEnabled: $viewModel.sendButtonEnabled,
+            profileImage: $viewModel.profileImage,
+            focusState: $focusState,
+            onConversationInfoTap: viewModel.onConversationInfoTap,
+            onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
+            onConversationSettings: viewModel.onConversationSettings,
+            onProfilePhotoTap: viewModel.onProfilePhotoTap,
+            onSendMessage: viewModel.onSendMessage,
+            onDisplayNameEndedEditing: viewModel.onDisplayNameEndedEditing,
+            onProfileSettings: viewModel.onProfileSettings,
+            onScanInviteCode: viewModel.onScanInviteCode
+        )
+        .onChange(of: viewModel.focus) { _, newValue in
+            focusState = newValue
         }
     }
 }
 
 #Preview {
-    ConversationView(dependencies: .mock())
-        .ignoresSafeArea()
+    @Previewable @State var viewModel: ConversationViewModel = ConversationViewModel()
+    ConversationView(viewModel: viewModel)
 }

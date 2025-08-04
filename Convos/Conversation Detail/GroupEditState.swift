@@ -18,7 +18,7 @@ class GroupEditState {
         set { _groupDescription = validateGroupDescription(newValue) }
     }
 
-    var imageState: PhotosPickerImage.State = .empty
+    var imageState: ImagePickerImage.State = .empty
     var currentConversationImage: UIImage?
 
     // UI state
@@ -127,13 +127,13 @@ class GroupEditState {
 
     func prepareImageForUpload() async throws -> Data {
         guard case .success(let image) = imageState else {
-            throw PhotosPickerImageError.importFailed
+            throw ImagePickerImageError.importFailed
         }
 
         let resizedImage = ImageCompression.resizeForCache(image)
 
         guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
-            throw PhotosPickerImageError.importFailed
+            throw ImagePickerImageError.importFailed
         }
 
         return compressedImageData

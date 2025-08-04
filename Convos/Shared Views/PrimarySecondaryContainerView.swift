@@ -116,7 +116,7 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
                         primaryContentSize = newValue
                     }
                     .opacity(primaryContentOpacity)
-                    .fixedSize(horizontal: primaryProperties.fixedSizeHorizontal, vertical: false)
+                    .fixedSize(horizontal: primaryProperties.fixedSizeHorizontal, vertical: true)
             }
             .compositingGroup()
             .clipShape(.rect(cornerRadius: cornerRadius))
@@ -130,9 +130,11 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
 }
 
 #Preview {
+    @Previewable @State var image: UIImage?
     @Previewable @State var text: String = ""
     @Previewable @State var topProgress: CGFloat = 0.0
     @Previewable @State var bottomProgress: CGFloat = 0.0
+    @Previewable @FocusState var focusState: MessagesViewInputFocus?
 
     ZStack {
         VStack {
@@ -178,9 +180,16 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
                 ConversationToolbarButton(conversation: .mock()) {
                 }
             } secondaryContent: {
-                ConversationQuickEditView(draftTitle: "The Convo")
+                QuickEditView(
+                    placeholderText: "The Convo",
+                    text: $text,
+                    image: $image,
+                    focusState: $focusState,
+                    focused: .conversationName,
+                    onSubmit: {
+                    }, onSettings: {
+                    })
             }
-            .padding(.horizontal, 8.0)
 
             Spacer()
 
@@ -222,44 +231,17 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
                     .background(Circle().fill(.black.opacity(0.2)))
                 }
             } secondaryContent: {
-                HStack(spacing: 0.0) {
-                    Button {
-                    } label: {
-                        Image(systemName: "photo.on.rectangle.angled.fill")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 12.0)
-                    }
-                    .frame(width: 52.0, height: 52.0)
-                    .background(Circle().fill(.black))
-                    .padding(8.0)
-
-                    Group {
-                        TextField("Somebody...", text: $text)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52.0)
-                            .padding(.horizontal, 16.0)
-                    }
-                    .background(
-                        Capsule()
-                            .stroke(.gray.opacity(0.2), lineWidth: 1.0)
-                    )
-
-                    Button {
-                    } label: {
-                        Image(systemName: "gear")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .foregroundStyle(.black.opacity(0.3))
-                            .padding(.horizontal, 12.0)
-                    }
-                    .frame(width: 52.0, height: 52.0)
-                    .background(Circle().fill(.gray.opacity(0.2)))
-                    .padding(8.0)
-                }
+                QuickEditView(
+                    placeholderText: "Somebody...",
+                    text: $text,
+                    image: $image,
+                    focusState: $focusState,
+                    focused: .displayName,
+                    onSubmit: {
+                    }, onSettings: {
+                    })
+                .padding(.horizontal, 16.0)
             }
-            .padding(.horizontal, 16.0)
         }
     }
 }

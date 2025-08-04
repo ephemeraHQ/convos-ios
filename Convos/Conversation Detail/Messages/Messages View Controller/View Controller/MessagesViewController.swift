@@ -5,6 +5,12 @@ import SwiftUI
 import UIKit
 
 final class MessagesViewController: UIViewController {
+    struct MessagesState {
+        let conversationId: String
+        let messages: [AnyMessage]
+        let invite: Invite
+    }
+
     private enum ReactionTypes {
         case delayedUpdate
     }
@@ -31,7 +37,7 @@ final class MessagesViewController: UIViewController {
     private var currentInterfaceActions: SetActor<Set<InterfaceActions>, ReactionTypes> = SetActor()
     private var currentControllerActions: SetActor<Set<ControllerActions>, ReactionTypes> = SetActor()
 
-    let collectionView: UICollectionView
+    internal let collectionView: UICollectionView
     private var messagesLayout: MessagesCollectionLayout = MessagesCollectionLayout()
 
     private let dataSource: MessagesCollectionDataSource
@@ -42,40 +48,63 @@ final class MessagesViewController: UIViewController {
         collectionView.isDragging || collectionView.isDecelerating
     }
 
-    let messagesRepository: any MessagesRepositoryProtocol
-    private let inviteRepository: any InviteRepositoryProtocol
-    private var messagesRepositoryCancellable: AnyCancellable?
-    private var cancellables: Set<AnyCancellable> = []
-
     private var reactionMenuCoordinator: MessageReactionMenuCoordinator?
 
-    var inputViewHeight: CGFloat = 0 {
+    // MARK: - Public
+
+    var state: MessagesState? {
         didSet {
-            if inputViewHeight != oldValue {
-                updateBottomInsetForInputViewHeight()
+            guard let state = state else {
+                processUpdates(
+                    with: [],
+                    invite: .empty,
+                    animated: true,
+                    requiresIsolatedProcess: false) {}
+                return
+            }
+
+            let animated = oldValue?.conversationId == state.conversationId
+            processUpdates(
+                with: state.messages,
+                invite: state.invite,
+                animated: animated,
+                requiresIsolatedProcess: true) {
+                    if oldValue?.conversationId != state.conversationId {
+                        UIView.performWithoutAnimation {
+                            self.scrollToBottom()
+                        }
+                    }
+                }
+        }
+    }
+
+    var topBarHeight: CGFloat = 0.0 {
+        didSet {
+        }
+    }
+
+    var bottomBarHeight: CGFloat = 0.0 {
+        didSet {
+            if bottomBarHeight != oldValue {
+                updateBottomInsetForBottomBarHeight()
             }
         }
     }
+
     private var lastKeyboardFrameChange: KeyboardInfo?
 
     // MARK: - Initialization
 
-    init(
-        messagesRepository: any MessagesRepositoryProtocol,
-        inviteRepository: any InviteRepositoryProtocol
-    ) {
+    init() {
         self.dataSource = MessagesCollectionViewDataSource()
         self.collectionView = UICollectionView(
             frame: .zero,
             collectionViewLayout: messagesLayout
         )
-        self.messagesRepository = messagesRepository
-        self.inviteRepository = inviteRepository
         super.init(nibName: nil, bundle: nil)
     }
 
     deinit {
-        messagesRepositoryCancellable?.cancel()
         KeyboardListener.shared.remove(delegate: self)
     }
 
@@ -91,60 +120,21 @@ final class MessagesViewController: UIViewController {
 
     // MARK: -
 
-    func observe(
-        messagesRepository: any MessagesRepositoryProtocol,
-        inviteRepository: any InviteRepositoryProtocol
-    ) {
-        messagesRepositoryCancellable?.cancel()
-        messagesRepositoryCancellable = nil
-
-        let messagesPublisher = messagesRepository
-            .conversationMessagesPublisher
-            .withPrevious()
-
-        let invitePublisher = inviteRepository
-            .invitePublisher
-            .map { $0 as Invite? }
-            .prepend(nil)
-
-        self.messagesRepositoryCancellable = Publishers.CombineLatest(
-            messagesPublisher,
-            invitePublisher
-        )
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] messagesData, invite in
-            guard let self else { return }
-            let (previous, current) = messagesData
-            let animated = previous.conversationId == current.conversationId
-            processUpdates(
-                with: current.messages,
-                invite: invite ?? .empty,
-                animated: animated,
-                requiresIsolatedProcess: true) {
-                    if previous.conversationId != current.conversationId {
-                        UIView.performWithoutAnimation {
-                            self.scrollToBottom()
-                        }
-                    }
-                }
-        }
-    }
-
     private func reloadMessagesFromRepository() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            do {
-                let messages = try messagesRepository.fetchAll()
-                processUpdates(
-                    with: messages,
-                    invite: .empty,
-                    animated: true,
-                    requiresIsolatedProcess: false
-                )
-            } catch {
-                Logger.error("Error fetching messages: \(error)")
-            }
-        }
+//        DispatchQueue.main.async { [weak self] in
+//            guard let self else { return }
+//            do {
+//                let messages = try messagesRepository.fetchAll()
+//                processUpdates(
+//                    with: messages,
+//                    invite: .empty,
+//                    animated: true,
+//                    requiresIsolatedProcess: false
+//                )
+//            } catch {
+//                Logger.error("Error fetching messages: \(error)")
+//            }
+//        }
     }
 
     // MARK: - Lifecycle Methods
@@ -163,7 +153,6 @@ final class MessagesViewController: UIViewController {
         reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
 
         reloadMessagesFromRepository()
-        observe(messagesRepository: messagesRepository, inviteRepository: inviteRepository)
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -525,15 +514,15 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
         }
     }
 
-    private func updateBottomInsetForInputViewHeight() {
+    private func updateBottomInsetForBottomBarHeight() {
         guard isViewLoaded else { return }
 
-        Logger.info("Updated input view height: \(inputViewHeight)")
+        Logger.info("Updated bottom bar height: \(bottomBarHeight)")
         if let lastKeyboardFrameChange {
             let newBottomInset = calculateNewBottomInset(for: lastKeyboardFrameChange)
             updateBottomInset(inset: newBottomInset, info: lastKeyboardFrameChange)
         } else {
-            updateBottomInset(inset: inputViewHeight, info: nil)
+            updateBottomInset(inset: bottomBarHeight, info: nil)
         }
     }
 }
@@ -580,11 +569,11 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
     private func calculateNewBottomInset(for info: KeyboardInfo) -> CGFloat {
         let keyboardFrame = collectionView.window?.convert(info.frameEnd, to: view)
-        let keyboardInset = (inputViewHeight + collectionView.frame.minY +
+        let keyboardInset = (bottomBarHeight + collectionView.frame.minY +
                      collectionView.frame.size.height -
                      (keyboardFrame?.minY ?? 0) - collectionView.safeAreaInsets.bottom)
-        let inset = max(keyboardInset, inputViewHeight)
-        Logger.info("Calculated new bottom inset: \(inset) (keyboard: \(keyboardInset), inputView: \(inputViewHeight))")
+        let inset = max(keyboardInset, bottomBarHeight)
+        Logger.info("Calculated new bottom inset: \(inset) (keyboard: \(keyboardInset), bottomBar: \(bottomBarHeight))")
         return inset
     }
 

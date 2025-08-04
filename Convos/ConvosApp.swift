@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct ConvosApp: App {
-//    let convos: ConvosClient = .client(environment: ConfigManager.shared.currentEnvironment)
+    let convos: ConvosClient = .client(environment: ConfigManager.shared.currentEnvironment)
     let analyticsService: AnalyticsServiceProtocol = PosthogAnalyticsService.shared
 
     init() {
@@ -11,11 +11,10 @@ struct ConvosApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ConversationViewTest()
-//            RootView(
-//                convos: convos,
-//                analyticsService: analyticsService
-//            )
+            RootView(
+                convos: convos,
+                analyticsService: analyticsService
+            )
         }
     }
 }
