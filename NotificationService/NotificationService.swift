@@ -1,4 +1,6 @@
 import UserNotifications
+// TODO: Import ConvosShared framework when added to project
+// import ConvosShared
 
 class NotificationService: UNNotificationServiceExtension {
     var contentHandler: ((UNNotificationContent) -> Void)?
@@ -10,8 +12,50 @@ class NotificationService: UNNotificationServiceExtension {
         bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
 
         if let bestAttemptContent = bestAttemptContent {
-            // Modify the notification content here...
-            bestAttemptContent.title = "\(bestAttemptContent.title) [modified]"
+            // Parse the notification payload
+            let userInfo = request.content.userInfo
+
+            // TODO: Use shared helpers when framework is set up
+            // let payload = PushNotificationHelpers.NotificationPayload(from: userInfo)
+            // let updatedContent = PushNotificationHelpers.buildNotificationContent(from: payload)
+
+            // For now, handle notification modification directly
+            if let conversationId = userInfo["conversation_id"] as? String {
+                bestAttemptContent.threadIdentifier = conversationId
+            }
+
+            // Handle different notification types
+            if let notificationType = userInfo["type"] as? String {
+                switch notificationType {
+                case "message":
+                    // Process message notification
+                    if let senderName = userInfo["sender_name"] as? String,
+                       let messageContent = userInfo["message_content"] as? String {
+                        bestAttemptContent.title = senderName
+                        bestAttemptContent.body = messageContent
+                    }
+
+                case "group_invite":
+                    // Process group invitation
+                    if let senderName = userInfo["sender_name"] as? String {
+                        bestAttemptContent.title = "Group Invitation"
+                        bestAttemptContent.body = "\(senderName) invited you to a group"
+                    }
+
+                case "reaction":
+                    // Process reaction notification
+                    if let senderName = userInfo["sender_name"] as? String {
+                        bestAttemptContent.title = "New Reaction"
+                        bestAttemptContent.body = "\(senderName) reacted to your message"
+                    }
+
+                default:
+                    break
+                }
+            }
+
+            // TODO: Download and attach media if needed
+            // This is where you'd download images/videos and attach them to the notification
 
             contentHandler(bestAttemptContent)
         }
