@@ -112,9 +112,9 @@ struct ImagePickerButton: View {
         await MainActor.run {
             withAnimation {
                 self.imageState = imageState
-                if case .success(let image) = imageState {
+//                if case .success(let image) = imageState {
 //                    ImageCache.shared.setImage(image, for: conversation)
-                }
+//                }
             }
         }
     }

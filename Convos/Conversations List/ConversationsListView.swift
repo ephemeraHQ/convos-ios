@@ -78,7 +78,7 @@ struct ConversationsListView: View {
             }
             .navigationDestination(for: ConversationsRoute.self) { route in
                 switch route {
-                case .conversation(let conversationDetail):
+                case .conversation:
                     EmptyView()
                         .ignoresSafeArea()
                 }
