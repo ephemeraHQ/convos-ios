@@ -135,6 +135,7 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
     @Previewable @State var topProgress: CGFloat = 0.0
     @Previewable @State var bottomProgress: CGFloat = 0.0
     @Previewable @FocusState var focusState: MessagesViewInputFocus?
+    let conversation: Conversation = .mock()
 
     ZStack {
         VStack {
@@ -177,7 +178,11 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
                     fixedSizeHorizontal: true
                 )
             ) {
-                ConversationToolbarButton(conversation: .mock()) {
+                ConversationToolbarButton(
+                    conversation: conversation,
+                    conversationName: conversation.name ?? "",
+                    placeholderName: "Draft"
+                ) {
                 }
             } secondaryContent: {
                 QuickEditView(

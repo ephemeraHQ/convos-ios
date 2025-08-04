@@ -5,20 +5,30 @@ struct ConversationToolbarButton: View {
     let conversation: Conversation
     @Environment(\.dismiss) private var dismiss: DismissAction
 
-    let draftTitle: String
+    let conversationName: String
+    let placeholderName: String
     let subtitle: String
     let action: () -> Void
 
     init(
         conversation: Conversation,
-        draftTitle: String = "New convo",
+        conversationName: String,
+        placeholderName: String,
         subtitle: String = "Customize",
         action: @escaping () -> Void,
     ) {
         self.conversation = conversation
-        self.draftTitle = draftTitle
+        self.conversationName = conversationName
+        self.placeholderName = placeholderName
         self.subtitle = subtitle
         self.action = action
+    }
+
+    var title: String {
+        guard !conversationName.isEmpty else {
+            return placeholderName
+        }
+        return conversationName
     }
 
     var body: some View {
@@ -30,16 +40,15 @@ struct ConversationToolbarButton: View {
                     .frame(width: 36.0, height: 36.0)
 
                 VStack(alignment: .leading, spacing: 0.0) {
-                    if !conversation.isDraft, let name = conversation.name, !name.isEmpty {
-                        Text(name)
-                            .font(.system(size: 16.0, weight: .medium))
-                            .foregroundStyle(.colorTextPrimary)
-                            .fixedSize()
-                    } else {
-                        Text(draftTitle)
-                            .font(.system(size: 16.0, weight: .medium))
-                    }
+                    Text(title)
+                        .lineLimit(1)
+                        .frame(maxWidth: 180.0)
+                        .font(.system(size: 16.0, weight: .medium))
+                        .truncationMode(.tail)
+                        .foregroundStyle(.colorTextPrimary)
+                        .fixedSize()
                     Text(subtitle)
+                        .lineLimit(1)
                         .font(.system(size: 12.0, weight: .regular))
                         .foregroundStyle(.colorTextSecondary)
                 }
@@ -54,6 +63,8 @@ struct ConversationToolbarButton: View {
     @Previewable @State var conversation: Conversation = .mock()
 
     VStack {
-        ConversationToolbarButton(conversation: conversation) {}
+        ConversationToolbarButton(conversation: conversation,
+                                  conversationName: "The Convo",
+                                  placeholderName: "Untitled") {}
     }
 }

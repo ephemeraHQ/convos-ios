@@ -21,10 +21,11 @@ struct QuickEditView: View {
                 .foregroundStyle(.colorTextPrimary)
                 .multilineTextAlignment(.center)
                 .textInputAutocapitalization(.words)
+                .truncationMode(.tail)
                 .focused(focusState, equals: focused)
                 .submitLabel(.done)
                 .onSubmit(onSubmit)
-                .frame(minWidth: 166.0, maxWidth: .infinity)
+                .frame(minWidth: 166.0, maxWidth: 180.0)
                 .frame(height: 52.0)
                 .background(
                     Capsule()

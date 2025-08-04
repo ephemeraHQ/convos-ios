@@ -3,6 +3,7 @@ import SwiftUI
 struct ConversationInfoButton: View {
     let conversation: Conversation
     let placeholderName: String
+    let untitledConversationPlaceholder: String
     @Binding var conversationName: String
     @Binding var conversationImage: UIImage?
     var focusState: FocusState<MessagesViewInputFocus?>.Binding
@@ -28,6 +29,8 @@ struct ConversationInfoButton: View {
         ) {
             ConversationToolbarButton(
                 conversation: conversation,
+                conversationName: conversationName,
+                placeholderName: untitledConversationPlaceholder,
                 action: onConversationInfoTapped
             )
         } secondaryContent: {
@@ -59,6 +62,7 @@ struct ConversationInfoButton: View {
     ConversationInfoButton(
         conversation: conversation,
         placeholderName: placeholderName,
+        untitledConversationPlaceholder: "Untitled",
         conversationName: $conversationName,
         conversationImage: $conversationImage,
         focusState: $focusState,

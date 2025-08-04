@@ -76,11 +76,16 @@ class ConversationViewModel {
     var messages: [AnyMessage] = []
     var invite: Invite = .empty
     var profile: Profile = .mock()
+    var untitledConversationPlaceholder: String = "Untitled"
     var conversationNamePlaceholder: String = "Name"
     var displayName: String = ""
     var conversationName: String = ""
     var conversationImage: UIImage?
-    var messageText: String = ""
+    var messageText: String = "" {
+        didSet {
+            sendButtonEnabled = !messageText.isEmpty
+        }
+    }
     var sendButtonEnabled: Bool = false
     var profileImage: UIImage?
     var focus: MessagesViewInputFocus?
@@ -101,6 +106,7 @@ class ConversationViewModel {
     }
 
     func onSendMessage() {
+        messageText = ""
     }
 
     func onDisplayNameEndedEditing() {
@@ -149,6 +155,7 @@ struct ConversationView: View {
             messages: viewModel.messages,
             invite: viewModel.invite,
             profile: viewModel.profile,
+            untitledConversationPlaceholder: viewModel.untitledConversationPlaceholder,
             conversationNamePlaceholder: viewModel.conversationNamePlaceholder,
             conversationName: $viewModel.conversationName,
             conversationImage: $viewModel.conversationImage,

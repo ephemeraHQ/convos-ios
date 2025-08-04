@@ -7,6 +7,7 @@ struct MessagesTopBar: View {
 
     let conversation: Conversation
     let invite: Invite
+    let untitledConversationPlaceholder: String
     let conversationNamePlaceholder: String
     @Binding var conversationName: String
     @Binding var conversationImage: UIImage?
@@ -64,6 +65,7 @@ struct MessagesTopBar: View {
             ConversationInfoButton(
                 conversation: conversation,
                 placeholderName: conversationNamePlaceholder,
+                untitledConversationPlaceholder: untitledConversationPlaceholder,
                 conversationName: $conversationName,
                 conversationImage: $conversationImage,
                 focusState: focusState,
@@ -83,7 +85,8 @@ struct MessagesTopBar: View {
     MessagesTopBar(
         conversation: .mock(),
         invite: .empty,
-        conversationNamePlaceholder: "New convo",
+        untitledConversationPlaceholder: "New convo",
+        conversationNamePlaceholder: "Name",
         conversationName: $conversationName,
         conversationImage: $conversationImage,
         focusState: $focusState,

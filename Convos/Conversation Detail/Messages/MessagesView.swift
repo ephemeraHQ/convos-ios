@@ -5,6 +5,7 @@ struct MessagesView: View {
     let messages: [AnyMessage]
     let invite: Invite
     let profile: Profile
+    let untitledConversationPlaceholder: String
     let conversationNamePlaceholder: String
     @Binding var conversationName: String
     @Binding var conversationImage: UIImage?
@@ -45,6 +46,7 @@ struct MessagesView: View {
                     MessagesTopBar(
                         conversation: conversation,
                         invite: invite,
+                        untitledConversationPlaceholder: untitledConversationPlaceholder,
                         conversationNamePlaceholder: conversationNamePlaceholder,
                         conversationName: $conversationName,
                         conversationImage: $conversationImage,

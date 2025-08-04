@@ -7,6 +7,7 @@ enum MessagesViewInputFocus: Hashable {
 struct MessagesBottomBar: View {
     let profile: Profile
     @Binding var displayName: String
+    let emptyDisplayNamePlaceholder: String = "Somebody"
     @Binding var messageText: String
     @Binding var sendButtonEnabled: Bool
     @Binding var profileImage: UIImage?
@@ -35,6 +36,7 @@ struct MessagesBottomBar: View {
             MessagesInputView(
                 profile: profile,
                 displayName: $displayName,
+                emptyDisplayNamePlaceholder: emptyDisplayNamePlaceholder,
                 messageText: $messageText,
                 sendButtonEnabled: $sendButtonEnabled,
                 focusState: focusState,
@@ -43,7 +45,7 @@ struct MessagesBottomBar: View {
             )
         } secondaryContent: {
             QuickEditView(
-                placeholderText: "Somebody...",
+                placeholderText: "\(emptyDisplayNamePlaceholder)...",
                 text: $displayName,
                 image: $profileImage,
                 focusState: focusState,

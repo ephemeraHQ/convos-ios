@@ -89,6 +89,7 @@ class MessagesInputViewModel: KeyboardListenerDelegate {
 struct MessagesInputView: View {
     let profile: Profile
     @Binding var displayName: String
+    let emptyDisplayNamePlaceholder: String
     @Binding var messageText: String
     @Binding var sendButtonEnabled: Bool
     var focusState: FocusState<MessagesViewInputFocus?>.Binding
@@ -120,7 +121,7 @@ struct MessagesInputView: View {
 
                 Group {
                     TextField(
-                        "Chat as \(displayName)",
+                        "Chat as \(displayName.isEmpty ? emptyDisplayNamePlaceholder : displayName)",
                         text: $messageText,
                         axis: .vertical
                     )
@@ -176,6 +177,7 @@ struct MessagesInputView: View {
     MessagesInputView(
         profile: profile,
         displayName: $displayName,
+        emptyDisplayNamePlaceholder: "Somebody",
         messageText: $messageText,
         sendButtonEnabled: $sendButtonEnabled,
         focusState: $focusState) {
