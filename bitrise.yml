@@ -2,101 +2,100 @@
 format_version: '23'
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 project_type: ios
-
+app:
+  envs:
+  - TEST_SHARD_COUNT: 2
+  - BITRISE_PROJECT_PATH: Convos.xcodeproj
+    opts:
+      is_expand: false
+  - BITRISE_SCHEME: Convos (Dev)
+    opts:
+      is_expand: false
+  - BITRISE_DISTRIBUTION_METHOD: app-store
+    opts:
+      is_expand: false
+  - POSTHOG_HOST: https://us.i.posthog.com
+    opts:
+      is_expand: false
+  - SENTRY_ORG: ephemerahq
+    opts:
+      is_expand: false
+  - SENTRY_PROJECT: apple-ios
+    opts:
+      is_expand: false
 workflows:
-  # Workflow for PR - WITHOUT SENSITIVE SECRETS
-  pr-check:
-    summary: Run tests and checks on pull requests WITHOUT sensitive secrets
-    description: This workflow runs on PRs with mock/dev values for sensitive secrets
+  archive_and_export_preview:
+    summary: Run your Xcode tests and create an IPA file to install your app on a
+      device or share it with your team.
+    description: The workflow will first clone your Git repository, cache and
+      install your project's dependencies if any, run your Xcode tests, export
+      an IPA file from the project and save it.
     steps:
-    - activate-ssh-key@4: {}
     - git-clone@8: {}
-    - script@1:
-        title: "🔧 Setup Development Environment"
+    - bundle::Setup: {}
+    - set-xcode-build-number@2:
+        title: Set Build Number - Convos (Dev)
         inputs:
-        - content: |-
-            #!/usr/bin/env bash
-            set -e
-            set -u
-            set -o pipefail
-
-            echo "🔧 Setting up development environment for PR"
-
-            # Public environment variables (available in PRs)
-            export CONVOS_API_BASE_URL="${CONVOS_API_BASE_URL:-https://api.preview.convos.org}"
-            export PASSKEY_API_BASE_URL="${PASSKEY_API_BASE_URL:-https://api.preview.convos.org}"
-            export POSTHOG_HOST="${POSTHOG_HOST:-https://app.posthog.com}"
-            export API_RP_ID="${API_RP_ID:-preview.convos.org}"
-            export SLACK_URL_WITHOUT_KEY="${SLACK_URL_WITHOUT_KEY:-https://slack.com/api/chat.postMessage}"
-            export SLACK_CHANNEL_ID="${SLACK_CHANNEL_ID:-dev-channel}"
-            export SENTRY_ORG="${SENTRY_ORG:-convos-dev}"
-            export SENTRY_PROJECT="${SENTRY_PROJECT:-convos-ios-dev}"
-
-            # Mocked secrets for PRs (not real ones!)
-            export POSTHOG_API_KEY="ph_dev_mock_key"
-            export FIREBASE_APP_CHECK_TOKEN="mock_firebase_token"
-            export SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN="mock_sentry_token"
-            export SLACK_OAUTH_KEY="mock_slack_token"
-            export SENTRY_DSN="https://mock@sentry.io/mock"
-            export TURNKEY_PUBLIC_ORGANIZATION_ID="mock_turnkey_org"
-
-            # Generate secrets with mocked values
-            ./Scripts/generate-secrets-secure.sh
-            make entitlements
-
-            echo "✅ Development environment configured"
-    - xcode-test@4:
+        - verbose: true
+        - scheme: Convos (Dev)
+        - target: Convos
+    - set-xcode-build-number@2:
+        title: Set Build Number - NotificationService (Dev)
+        inputs:
+        - verbose: true
+        - scheme: NotificationService (Dev)
+        - target: NotificationService
+    - set-xcode-build-number@2:
+        title: Set Build Number - AppClip (Dev)
+        inputs:
+        - verbose: true
+        - scheme: ConvosAppClip
+        - target: ConvosAppClip
+    - manage-ios-code-signing@2:
+        inputs:
+        - distribution_method: app-store
+        - scheme: Convos (Dev)
+        - verbose_log: 'yes'
+        - configuration: Dev
+        title: iOS Code Signing - Convos (Dev)
+    - manage-ios-code-signing@2:
+        inputs:
+        - distribution_method: app-store
+        - scheme: NotificationService (Dev)
+        - configuration: Dev
+        title: iOS Code Signing - NotificationService (Dev)
+    - xcode-archive@5:
+        inputs:
+        - project_path: "$BITRISE_PROJECT_PATH"
+        - scheme: Convos (Dev)
+        - configuration: Dev
+        - cache_level: none
+        - verbose_log: 'yes'
+        - distribution_method: app-store
+        - platform: iOS
+        - perform_clean_action: 'yes'
+        - export_development_team: FY4NZR34Z3
+        - automatic_code_signing: api-key
+    - deploy-to-itunesconnect-application-loader@1:
+        inputs:
+        - connection: api_key
+    meta:
+      bitrise.io:
+        stack: osx-xcode-26.0.x-edge
+  archive_and_export_app:
+    summary: Run your Xcode tests and create an IPA file to install your app on a
+      device or share it with your team.
+    description: The workflow will first clone your Git repository, cache and
+      install your project's dependencies if any, run your Xcode tests, export
+      an IPA file from the project and save it.
+    steps:
+    - git-clone@8: {}
+    - xcode-test@6:
         inputs:
         - project_path: "$BITRISE_PROJECT_PATH"
         - scheme: "$BITRISE_SCHEME"
-        - destination: platform=iOS Simulator,name=iPhone 15,OS=latest
-
-  # Workflow for RELEASE - WITH REAL SECRETS
-  release:
-    summary: Create release build with production secrets
-    description: This workflow has access to production secrets for release builds
-    steps:
-    - activate-ssh-key@4: {}
-    - git-clone@8: {}
-    - script@1:
-        title: "🔐 Setup Production Environment"
-        inputs:
-        - content: |-
-            #!/usr/bin/env bash
-            set -e
-            set -o pipefail
-            # NO set -x to avoid exposing secrets
-
-            echo "🔐 Setting up production environment"
-
-            # Check that all secrets are present
-            required_secrets=(
-                "POSTHOG_API_KEY"
-                "FIREBASE_APP_CHECK_TOKEN"
-                "SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN"
-                "SLACK_OAUTH_KEY"
-                "SENTRY_DSN"
-                "TURNKEY_PUBLIC_ORGANIZATION_ID"
-            )
-
-            missing_secrets=()
-            for secret in "${required_secrets[@]}"; do
-                if [[ -z "${!secret}" ]]; then
-                    missing_secrets+=("$secret")
-                fi
-            done
-
-            if [[ ${#missing_secrets[@]} -gt 0 ]]; then
-                echo "❌ Missing required secrets:"
-                printf '  - %s\n' "${missing_secrets[@]}"
-                exit 1
-            fi
-
-            # Generate secrets with real values
-            ./Scripts/generate-secrets-secure.sh
-            make entitlements
-
-            echo "✅ Production environment configured"
+        - test_repetition_mode: retry_on_failure
+        - cache_level: none
     - xcode-archive@5:
         inputs:
         - project_path: "$BITRISE_PROJECT_PATH"
@@ -104,43 +103,192 @@ workflows:
         - distribution_method: "$BITRISE_DISTRIBUTION_METHOD"
         - automatic_code_signing: api-key
         - cache_level: none
-        - verbose_log: 'no'  # No verbose logs to avoid exposure
-        - xcodebuild_options: "-skipPackagePluginValidation -skipMacroValidation"
-    - deploy-to-itunesconnect-application-loader@1: {}
     - deploy-to-bitrise-io@2: {}
+    meta:
+      bitrise.io:
+        stack: osx-xcode-26.0.x-edge
+  build_for_testing:
+    steps:
+    - git-clone@8: {}
+    - restore-spm-cache@2.1:
+        inputs:
+        - retries: '3'
+    - bundle::Setup: {}
+    - xcode-build-for-test@3:
+        inputs:
+        - project_path: "$BITRISE_PROJECT_PATH"
+        - scheme: Convos (Dev)
+        - destination: generic/platform=iOS Simulator
+        - cache_level: none
+        - configuration: Debug
+    - save-spm-cache@1: {}
+    - xcode-test-shard-calculation@0:
+        inputs:
+        - shard_count: "$TEST_SHARD_COUNT"
+        - product_path: "$BITRISE_XCTESTRUN_FILE_PATH"
+    meta:
+      bitrise.io:
+        stack: osx-xcode-26.0.x-edge
+    triggers:
+      pull_request:
+      - source_branch: "*"
+      push:
+      - branch: main
+      enabled: false
+  run_tests:
+    summary: Run your Xcode tests and get the test report.
+    description: The workflow will first clone your Git repository, cache and
+      install your project's dependencies if any, run your Xcode tests and save
+      the test results.
+    steps:
+    - git-clone@8: {}
+    - restore-spm-cache@1: {}
+    - xcode-test@6:
+        inputs:
+        - project_path: "$BITRISE_PROJECT_PATH"
+        - scheme: "$BITRISE_SCHEME"
+        - test_repetition_mode: retry_on_failure
+        - cache_level: none
+    - save-spm-cache@1: {}
+    - deploy-to-bitrise-io@2: {}
+    triggers:
+      push:
+      - branch: main
+        enabled: false
+      pull_request:
+      - source_branch: "*"
+        enabled: false
+      enabled: false
+    meta:
+      bitrise.io:
+        stack: osx-xcode-26.0.x-edge
+  test_without_building:
+    steps:
+    - pull-intermediate-files@1: {}
+    - xcode-test-without-building@0:
+        inputs:
+        - only_testing: "$BITRISE_TEST_SHARDS_PATH/$BITRISE_IO_PARALLEL_INDEX"
+        - xctestrun: "$BITRISE_TEST_BUNDLE_PATH/all_tests.xctestrun"
+    meta:
+      bitrise.io:
+        stack: osx-xcode-26.0.x-edge
+    triggers:
+      enabled: false
+meta:
+  bitrise.io:
+    stack: osx-xcode-26.0.x-edge
+    machine_type_id: g2.mac.medium
+step_bundles:
+  Setup:
+    steps:
     - script@1:
-        title: "📊 Upload Symbols to Sentry"
+        inputs:
+        - content: "#!/usr/bin/env bash
+
+            set -e
+
+            set -o pipefail
+
+            # NO set -x to avoid exposing commands in logs
+
+
+            echo \"🔧 Setting up development environment for testing\"
+
+
+            # Public environment variables (available in PRs)
+
+            export POSTHOG_HOST=\"${POSTHOG_HOST:-https://app.posthog.com}\"
+
+            export SENTRY_ORG=\"${SENTRY_ORG:-convos-dev}\"
+
+            export SENTRY_PROJECT=\"${SENTRY_PROJECT:-convos-ios-dev}\"
+
+
+            # Mocked secrets for testing (not real ones!)
+
+            export POSTHOG_API_KEY=\"ph_test_mock_key_for_ci\"
+
+            export FIREBASE_APP_CHECK_TOKEN=\"mock_firebase_token_for_testing\"
+
+            export
+            SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN=\"mock_sentry_token_for_testing\"
+
+            export
+            SLACK_URL_WITH_KEY=\"https://hooks.slack.com/services/mock/webhook/\
+            url\"
+
+            export SENTRY_DSN=\"https://mock@sentry.io/mock\"
+
+            export
+            TURNKEY_PUBLIC_ORGANIZATION_ID=\"mock_turnkey_org_for_testing\"
+
+            export
+            TURNKEY_API_PUBLIC_KEY=\"mock_turnkey_public_key_for_testing\"
+
+            export
+            TURNKEY_API_PRIVATE_KEY=\"mock_turnkey_private_key_for_testing\"
+
+
+            # Generate secrets using our secure script
+
+            ./Scripts/generate-secrets-secure.sh
+
+
+            echo \"✅ Development environment configured securely\""
+        title: Setup Development Environment (Secure)
+    - script@1:
         inputs:
         - content: |-
             #!/usr/bin/env bash
             set -e
             set -o pipefail
+            set -x
 
-            echo "📊 Uploading symbols to Sentry"
-            ./Scripts/upload_symbols.sh
-            echo "✅ Symbols uploaded successfully"
+            TARGET_RUBY_VERSION="3.3.3"
 
-triggers:
-  pull_request:
-    - target_branch: "*"
-      workflow: pr-check
-  push:
-    - branch: release/*
-      workflow: release
-    - branch: main
-      workflow: release
+            # Check if Ruby 3.3.3 is already installed
+            if rbenv versions | grep -q "$TARGET_RUBY_VERSION"; then
+                echo "Ruby $TARGET_RUBY_VERSION is already installed"
+                rbenv global "$TARGET_RUBY_VERSION"
+            else
+                echo "Installing Ruby $TARGET_RUBY_VERSION..."
+                rbenv install "$TARGET_RUBY_VERSION"
+                rbenv global "$TARGET_RUBY_VERSION"
+            fi
 
-meta:
-  bitrise.io:
-    stack: osx-xcode-16.3.x
-    machine_type_id: g2-m1.4core
+            # Verify installation
+            echo "Ruby version:"
+            ruby --version
 
-app:
-  envs:
-  - BITRISE_PROJECT_PATH: Convos.xcodeproj
-    opts:
-      is_expand: false
-  - BITRISE_SCHEME: Convos
-    opts:
-      is_expand: false
-  - BITRISE_DISTRIBUTION_METHOD: app-store
+            # Update RubyGems and install bundler only if needed
+            echo "Checking RubyGems and bundler..."
+            gem update --system
+            if ! gem list bundler -i > /dev/null 2>&1; then
+                echo "Installing bundler..."
+                gem install bundler
+            else
+                echo "Bundler is already installed"
+            fi
+
+            echo "Bundler version:"
+            bundle --version
+        title: Install Ruby 3.3.3
+    - script@1:
+        title: Setup
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            # fail if any commands fails
+            set -e
+            # make pipelines' return status equal the last command to exit with a non-zero status, or zero if all commands exit successfully
+            set -o pipefail
+            # debug log
+            set -x
+
+            make setup
+            # make secrets
+
+            # or run a script from your repository, like:
+            # bash ./path/to/script.sh
+            # not just bash, e.g.:
+            # ruby ./path/to/script.rb
