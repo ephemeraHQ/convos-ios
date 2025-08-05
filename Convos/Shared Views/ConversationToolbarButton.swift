@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ConversationToolbarButton: View {
     let conversation: Conversation
+    @Binding var conversationImage: UIImage?
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     let conversationName: String
@@ -12,12 +13,14 @@ struct ConversationToolbarButton: View {
 
     init(
         conversation: Conversation,
+        conversationImage: Binding<UIImage?>,
         conversationName: String,
         placeholderName: String,
         subtitle: String = "Customize",
         action: @escaping () -> Void,
     ) {
         self.conversation = conversation
+        self._conversationImage = conversationImage
         self.conversationName = conversationName
         self.placeholderName = placeholderName
         self.subtitle = subtitle
@@ -36,8 +39,13 @@ struct ConversationToolbarButton: View {
             action()
         } label: {
             HStack(spacing: 0.0) {
-                ConversationAvatarView(conversation: conversation)
-                    .frame(width: 36.0, height: 36.0)
+                AvatarView(
+                    imageURL: conversation.imageURL,
+                    fallbackName: "",
+                    cacheableObject: conversation,
+                    cachedImage: conversationImage
+                )
+                .frame(width: 36.0, height: 36.0)
 
                 VStack(alignment: .leading, spacing: 0.0) {
                     Text(title)
@@ -61,9 +69,11 @@ struct ConversationToolbarButton: View {
 
 #Preview {
     @Previewable @State var conversation: Conversation = .mock()
+    @Previewable @State var conversationImage: UIImage?
 
     VStack {
         ConversationToolbarButton(conversation: conversation,
+                                  conversationImage: $conversationImage,
                                   conversationName: "The Convo",
                                   placeholderName: "Untitled") {}
     }

@@ -48,12 +48,6 @@ struct ConversationComposerView: View {
             }
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .title) {
-                    MessagesToolbarView(
-                        conversationState: conversationState,
-                    )
-                }
-
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(role: .close) {
                         dismiss()

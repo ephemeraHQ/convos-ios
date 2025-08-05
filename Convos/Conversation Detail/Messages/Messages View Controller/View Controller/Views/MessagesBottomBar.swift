@@ -35,6 +35,7 @@ struct MessagesBottomBar: View {
         ) {
             MessagesInputView(
                 profile: profile,
+                profileImage: $profileImage,
                 displayName: $displayName,
                 emptyDisplayNamePlaceholder: emptyDisplayNamePlaceholder,
                 messageText: $messageText,

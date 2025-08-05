@@ -29,6 +29,7 @@ struct ConversationInfoButton: View {
         ) {
             ConversationToolbarButton(
                 conversation: conversation,
+                conversationImage: $conversationImage,
                 conversationName: conversationName,
                 placeholderName: untitledConversationPlaceholder,
                 action: onConversationInfoTapped

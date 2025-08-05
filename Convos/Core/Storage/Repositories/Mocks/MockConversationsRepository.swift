@@ -83,7 +83,7 @@ extension Invite {
             createdAt: Date(),
             maxUses: 0,
             usesCount: 0,
-            inboxId: ""
+            inboxId: "0x123456"
         )
     }
 }

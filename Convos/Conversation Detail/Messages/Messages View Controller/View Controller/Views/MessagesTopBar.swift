@@ -26,6 +26,7 @@ struct MessagesTopBar: View {
                 Button {
                 } label: {
                     Image(systemName: "chevron.left")
+                        .font(.system(size: 20.0))
                         .padding(8.0)
                 }
                 .frame(width: 44.0, height: 44.0)
@@ -46,6 +47,7 @@ struct MessagesTopBar: View {
                             onScanInviteCode()
                         } label: {
                             Image(systemName: "qrcode.viewfinder")
+                                .font(.system(size: 20.0))
                                 .padding(8.0)
                         }
                         .frame(width: 44.0, height: 44.0)

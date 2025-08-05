@@ -12,6 +12,7 @@ struct InviteShareLink: View {
             )
         ) {
             Image(systemName: "square.and.arrow.up")
+                .font(.system(size: 20.0))
                 .foregroundStyle(.colorTextPrimary)
         }
         .disabled(inviteString.isEmpty)

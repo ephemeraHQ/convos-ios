@@ -131,6 +131,7 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
 
 #Preview {
     @Previewable @State var image: UIImage?
+    @Previewable @State var conversationImage: UIImage?
     @Previewable @State var text: String = ""
     @Previewable @State var topProgress: CGFloat = 0.0
     @Previewable @State var bottomProgress: CGFloat = 0.0
@@ -180,6 +181,7 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
             ) {
                 ConversationToolbarButton(
                     conversation: conversation,
+                    conversationImage: $conversationImage,
                     conversationName: conversation.name ?? "",
                     placeholderName: "Draft"
                 ) {

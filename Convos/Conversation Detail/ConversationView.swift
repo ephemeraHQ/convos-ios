@@ -74,13 +74,17 @@ extension GroupMetadataWriterProtocol {
 class ConversationViewModel {
     var conversation: Conversation = .mock()
     var messages: [AnyMessage] = []
-    var invite: Invite = .empty
+    var invite: Invite = .mock()
     var profile: Profile = .mock()
     var untitledConversationPlaceholder: String = "Untitled"
     var conversationNamePlaceholder: String = "Name"
     var displayName: String = ""
     var conversationName: String = ""
-    var conversationImage: UIImage?
+    var conversationImage: UIImage? {
+        didSet {
+            Logger.info("Set conversation image")
+        }
+    }
     var messageText: String = "" {
         didSet {
             sendButtonEnabled = !messageText.isEmpty

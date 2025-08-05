@@ -6,6 +6,8 @@ struct RootView: View {
 
     @State var viewModel: AppViewModel
 
+    @State var conversationViewModel: ConversationViewModel = .init()
+
     init(convos: ConvosClient,
          analyticsService: AnalyticsServiceProtocol) {
         self.convos = convos
@@ -14,7 +16,8 @@ struct RootView: View {
     }
 
     var body: some View {
-        ConversationsView(session: convos.session)
+//        ConversationsView(session: convos.session)
+        ConversationView(viewModel: conversationViewModel)
     }
 }
 

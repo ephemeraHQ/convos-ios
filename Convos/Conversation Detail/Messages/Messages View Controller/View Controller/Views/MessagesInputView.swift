@@ -88,6 +88,7 @@ class MessagesInputViewModel: KeyboardListenerDelegate {
 
 struct MessagesInputView: View {
     let profile: Profile
+    @Binding var profileImage: UIImage?
     @Binding var displayName: String
     let emptyDisplayNamePlaceholder: String
     @Binding var messageText: String
@@ -112,8 +113,13 @@ struct MessagesInputView: View {
                 Button {
                     onProfilePhotoTap()
                 } label: {
-                    ProfileAvatarView(profile: profile)
-                        .frame(width: sendButtonSize, height: sendButtonSize)
+                    AvatarView(
+                        imageURL: profile.avatarURL,
+                        fallbackName: profile.displayName,
+                        cacheableObject: nil,
+                        cachedImage: profileImage
+                    )
+                    .frame(width: sendButtonSize, height: sendButtonSize)
                 }
                 .frame(alignment: .bottomLeading)
                 .padding(.vertical, DesignConstants.Spacing.stepX)
@@ -172,10 +178,12 @@ struct MessagesInputView: View {
     @Previewable @State var displayName: String = "Andrew"
     @Previewable @State var messageText: String = ""
     @Previewable @State var sendButtonEnabled: Bool = false
+    @Previewable @State var profileImage: UIImage?
     @Previewable @FocusState var focusState: MessagesViewInputFocus?
 
     MessagesInputView(
         profile: profile,
+        profileImage: $profileImage,
         displayName: $displayName,
         emptyDisplayNamePlaceholder: "Somebody",
         messageText: $messageText,
