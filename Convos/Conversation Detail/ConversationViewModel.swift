@@ -174,6 +174,27 @@ class ConversationViewModel {
 
     func onDisplayNameEndedEditing() {
         focus = .message
+
+        if profile.name != displayName {
+            Task { [myProfileWriter] in
+                do {
+                    try await myProfileWriter.update(displayName: displayName)
+                } catch {
+                    Logger.error("Error updating profile display name: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        // @jarodl check if the image was actually changed
+        if let profileImage {
+            Task { [myProfileWriter] in
+                do {
+                    try await myProfileWriter.update(avatar: profileImage)
+                } catch {
+                    Logger.error("Error updating profile image: \(error.localizedDescription)")
+                }
+            }
+        }
     }
 
     func onProfileSettings() {
