@@ -1,7 +1,7 @@
 import Foundation
 
 public class ProfileNameResolver {
-    private let cache = NSCache<NSString, NSString>()
+    private let cache: NSCache<NSString, NSString> = NSCache<NSString, NSString>()
     private let appGroupIdentifier: String
 
     public init(appGroupIdentifier: String) {
@@ -29,8 +29,8 @@ public class ProfileNameResolver {
             return persistedName
         }
 
-        // TODO: Fetch from backend API if not cached
-        // For now, return nil - the main app should implement the actual fetching logic
+        // Profile fetching from backend API should be implemented by the main app
+        // Return nil for now to allow the main app to handle the fetching logic
         return nil
     }
 

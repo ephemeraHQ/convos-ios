@@ -474,38 +474,45 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.httpBody = try JSONEncoder().encode(request)
 
-        Logger.info("Registering push token for device: \(request.deviceId)")
+        Logger.info("🔔 [ConvosAPIClient] Making push token registration request to: \(urlRequest.url?.absoluteString ?? "nil")")
+        Logger.info("🔔 [ConvosAPIClient] Request headers: \(urlRequest.allHTTPHeaderFields ?? [:])")
+        Logger.info("🔔 [ConvosAPIClient] Request body: \(urlRequest.httpBody?.prettyPrintedJSONString ?? "nil")")
 
-        // Use performRequest but we need to handle the response array manually since it's not a standard response
+        // Use raw URLSession to get detailed logging like other API calls
         let (data, response) = try await session.data(for: urlRequest)
 
-        Logger.info("Received push registration response: \(data.prettyPrintedJSONString ?? "nil data")")
+        Logger.info("🔔 [ConvosAPIClient] Received response: \(data.prettyPrintedJSONString ?? "nil data")")
 
         guard let httpResponse = response as? HTTPURLResponse else {
+            Logger.error("🔔 [ConvosAPIClient] Invalid response type")
             throw APIError.invalidResponse
         }
+
+        Logger.info("🔔 [ConvosAPIClient] HTTP Status Code: \(httpResponse.statusCode)")
+        Logger.info("🔔 [ConvosAPIClient] Response headers: \(httpResponse.allHeaderFields)")
 
         switch httpResponse.statusCode {
         case 200...299:
             let decoder = JSONDecoder()
             let registrationResponse = try decoder.decode([InstallationRegistrationResponse].self, from: data)
-            Logger.info("Successfully registered push token. Registrations: \(registrationResponse.count)")
+            Logger.info("🔔 [ConvosAPIClient] ✅ Successfully registered push token. Registrations: \(registrationResponse.count)")
             return PushTokenRegistrationResponse(responses: registrationResponse)
 
-        case 400:
-            Logger.error("Bad request when registering push token")
-            throw APIError.invalidRequest
-
         case 401:
-            Logger.error("Authentication failed when registering push token")
+            Logger.error("🔔 [ConvosAPIClient] Authentication failed (401) when registering push token")
             throw APIError.authenticationFailed
 
         case 403:
-            Logger.error("Forbidden when registering push token")
+            Logger.error("🔔 [ConvosAPIClient] Forbidden (403) when registering push token")
             throw APIError.forbidden
 
+        case 404:
+            Logger.error("🔔 [ConvosAPIClient] Not found (404) when registering push token")
+            throw APIError.notFound
+
         default:
-            Logger.error("Failed to register push token. Status: \(httpResponse.statusCode)")
+            Logger.error("🔔 [ConvosAPIClient] Failed to register push token. Status: \(httpResponse.statusCode)")
+            Logger.error("🔔 [ConvosAPIClient] Error response body: \(data.prettyPrintedJSONString ?? "nil")")
             throw APIError.serverError(nil)
         }
     }

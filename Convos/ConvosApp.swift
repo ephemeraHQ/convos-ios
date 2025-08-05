@@ -29,8 +29,11 @@ struct ConvosApp: App {
         Task {
             do {
                 try await pushNotificationManager.requestAuthorization()
+
+                // Also try to register existing token if we have one and user sessions are ready
+                await pushNotificationManager.manuallyRegisterCurrentToken()
             } catch {
-                print("Failed to request push notification authorization: \(error)")
+                Logger.error("🔔 [PushNotificationManager] ❌ Failed to request push notification authorization: \(error)")
             }
         }
     }

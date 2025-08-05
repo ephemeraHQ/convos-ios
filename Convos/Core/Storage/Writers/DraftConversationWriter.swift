@@ -293,6 +293,12 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         _ = try await conversationWriter.store(conversation: createdConversation,
                                                clientConversationId: conversationId)
 
+        // Register push token for new conversation
+        Logger.info("🔔 [DraftConversationWriter] New conversation created, registering push token for inboxId: \(client.inboxId)")
+        Task { @MainActor in
+            await PushNotificationManager.shared.registerPushTokenForNewConversation(inboxId: client.inboxId)
+        }
+
         let response = try await apiClient.createInvite(
             .init(
                 groupId: externalConversationId,

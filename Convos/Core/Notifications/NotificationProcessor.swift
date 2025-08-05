@@ -2,7 +2,7 @@ import Foundation
 import UserNotifications
 
 class NotificationProcessor {
-    static let shared = NotificationProcessor()
+    static let shared: NotificationProcessor = NotificationProcessor()
 
     private let appGroupIdentifier: String
 

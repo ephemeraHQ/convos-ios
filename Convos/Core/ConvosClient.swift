@@ -163,7 +163,31 @@ final class ConvosClient {
     // MARK: - Push Notifications
 
     func registerPushToken(_ request: PushTokenRegistrationRequest) async throws -> PushTokenRegistrationResponse {
-        let client = try await apiClient()
-        return try await client.registerPushToken(request)
+        Logger.info("🔔 [ConvosClient] ✅ ConvosClient.registerPushToken called!")
+        Logger.info("🔔 [ConvosClient] Getting API client for push token registration...")
+
+        let client: any ConvosAPIClientProtocol
+        do {
+            client = try await apiClient()
+            Logger.info("🔔 [ConvosClient] ✅ Got API client of type: \(type(of: client))")
+        } catch {
+            Logger.error("🔔 [ConvosClient] ❌ Failed to get API client: \(error)")
+            throw error
+        }
+
+        do {
+            Logger.info("🔔 [ConvosClient] Request details: deviceId=\(request.deviceId), " +
+                        "pushToken=\(request.pushToken), apnsEnvironment=\(request.apnsEnvironment), " +
+                        "installations=\(request.installations.count)")
+
+            Logger.info("🔔 [ConvosClient] 🚀 About to call client.registerPushToken...")
+            let response = try await client.registerPushToken(request)
+            Logger.info("🔔 [ConvosClient] ✅ Push token registration successful: \(response)")
+            return response
+        } catch {
+            Logger.error("🔔 [ConvosClient] ❌ Push token registration failed: \(error)")
+            Logger.error("🔔 [ConvosClient] ❌ Error details: \(String(describing: error))")
+            throw error
+        }
     }
 }

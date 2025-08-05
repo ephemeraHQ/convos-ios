@@ -104,14 +104,14 @@ public struct PushNotificationHelpers {
     // MARK: - Storage Keys
 
     public struct StorageKeys {
-        public static let deviceToken = "push_notification_device_token"
-        public static let lastRegistrationDate = "push_notification_last_registration"
-        public static let subscribedTopics = "push_notification_subscribed_topics"
+        public static let deviceToken: String = "push_notification_device_token"
+        public static let lastRegistrationDate: String = "push_notification_last_registration"
+        public static let subscribedTopics: String = "push_notification_subscribed_topics"
     }
 
     // MARK: - App Group Shared Storage
 
-    public static let appGroupIdentifier = "group.com.convos.shared"
+    public static let appGroupIdentifier: String = "group.com.convos.shared"
 
     public static var sharedUserDefaults: UserDefaults? {
         return UserDefaults(suiteName: appGroupIdentifier)
