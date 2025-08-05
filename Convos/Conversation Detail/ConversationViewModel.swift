@@ -24,6 +24,7 @@ class ConversationViewModel {
     var conversation: Conversation {
         didSet {
             conversationName = conversation.name ?? ""
+            loadConversationImage(from: conversation.imageURL)
         }
     }
     var messages: [AnyMessage] = []
@@ -120,37 +121,17 @@ class ConversationViewModel {
         }
     }
 
+    private func loadConversationImage(from imageURL: URL?) {
+        loadConversationImageTask?.cancel()
+        loadConversationImageTask = loadImage(from: imageURL, for: conversation, assignTo: { [weak self] image in
+            self?.conversationImage = image
+        })
+    }
+
     private func loadProfileImage(from imageURL: URL?) {
         loadProfileImageTask?.cancel()
-
-        guard let imageURL else {
-            return
-        }
-
-        if let existingImage = ImageCache.shared.image(for: imageURL) {
-            profileImage = existingImage
-            return
-        }
-
-        loadProfileImageTask = Task {
-            do {
-                let (data, _) = try await URLSession.shared.data(from: imageURL)
-                if let image = UIImage(data: data) {
-                    // Cache the image for future use
-                    ImageCache.shared.setImage(image, for: imageURL.absoluteString)
-
-                    // Also cache by object if available for instant cross-view updates
-                    ImageCache.shared.setImage(image, for: profile)
-
-                    await MainActor.run {
-                        profileImage = image
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    profileImage = nil
-                }
-            }
+        loadProfileImageTask = loadImage(from: imageURL, for: profile) { [weak self] image in
+            self?.profileImage = image
         }
     }
 
@@ -261,5 +242,43 @@ extension ConversationViewModel {
             metadataWriter: MockGroupMetadataWriter(),
             inviteRepository: MockInviteRepository()
         )
+    }
+}
+
+extension ConversationViewModel {
+    private func loadImage<T: ImageCacheable>(
+        from imageURL: URL?,
+        for cacheableObject: T,
+        assignTo setter: @escaping (UIImage?) -> Void
+    ) -> Task<Void, Never>? {
+        guard let imageURL else {
+            return nil
+        }
+
+        if let existingImage = ImageCache.shared.image(for: imageURL) {
+            setter(existingImage)
+            return nil
+        }
+
+        return Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: imageURL)
+                if let image = UIImage(data: data) {
+                    // Cache the image for future use
+                    ImageCache.shared.setImage(image, for: imageURL.absoluteString)
+
+                    // Also cache by object if available for instant cross-view updates
+                    ImageCache.shared.setImage(image, for: cacheableObject)
+
+                    await MainActor.run {
+                        setter(image)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    setter(nil)
+                }
+            }
+        }
     }
 }
