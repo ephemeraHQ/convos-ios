@@ -4,7 +4,7 @@ struct QuickEditView: View {
     let placeholderText: String
     @Binding var text: String
     @Binding var image: UIImage?
-    var focusState: FocusState<MessagesViewInputFocus?>.Binding
+    @FocusState.Binding var focusState: MessagesViewInputFocus?
     let focused: MessagesViewInputFocus
     let onSubmit: () -> Void
     let onSettings: () -> Void
@@ -22,7 +22,7 @@ struct QuickEditView: View {
                 .multilineTextAlignment(.center)
                 .textInputAutocapitalization(.words)
                 .truncationMode(.tail)
-                .focused(focusState, equals: focused)
+                .focused($focusState, equals: focused)
                 .submitLabel(.done)
                 .onSubmit(onSubmit)
                 .frame(minWidth: 166.0, maxWidth: 180.0)

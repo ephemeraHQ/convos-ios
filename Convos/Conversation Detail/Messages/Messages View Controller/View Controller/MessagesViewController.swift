@@ -316,6 +316,7 @@ extension MessagesViewController {
                                 animated: Bool = true,
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
+        Logger.info("Processing updates with \(messages.count) messages")
         var cells: [MessagesCollectionCell] = messages.enumerated().flatMap { index, message in
             var cells: [MessagesCollectionCell] = []
 
@@ -558,12 +559,11 @@ extension MessagesViewController: KeyboardListenerDelegate {
     }
 
     private func shouldHandleKeyboardFrameChange(info: KeyboardInfo) -> Bool {
-//        guard !currentInterfaceActions.options.contains(.changingFrameSize),
-//              !currentInterfaceActions.options.contains(.showingReactionsMenu),
-//              collectionView.contentInsetAdjustmentBehavior != .never,
-//              collectionView.convert(collectionView.bounds, to: collectionView.window).maxY > info.frameEnd.minY else {
-//            return false
-//        }
+        guard !currentInterfaceActions.options.contains(.changingFrameSize),
+              !currentInterfaceActions.options.contains(.showingReactionsMenu),
+              collectionView.contentInsetAdjustmentBehavior != .never else {
+            return false
+        }
         return true
     }
 

@@ -35,35 +35,32 @@ struct ConversationToolbarButton: View {
     }
 
     var body: some View {
-        Button {
-            action()
-        } label: {
-            HStack(spacing: 0.0) {
-                AvatarView(
-                    imageURL: conversation.imageURL,
-                    fallbackName: "",
-                    cacheableObject: conversation,
-                    cachedImage: conversationImage
-                )
-                .frame(width: 36.0, height: 36.0)
+        HStack(spacing: 0.0) {
+            AvatarView(
+                imageURL: conversation.imageURL,
+                fallbackName: "",
+                cacheableObject: conversation,
+                cachedImage: conversationImage
+            )
+            .frame(width: 36.0, height: 36.0)
 
-                VStack(alignment: .leading, spacing: 0.0) {
-                    Text(title)
-                        .lineLimit(1)
-                        .frame(maxWidth: 180.0)
-                        .font(.system(size: 16.0, weight: .medium))
-                        .truncationMode(.tail)
-                        .foregroundStyle(.colorTextPrimary)
-                        .fixedSize()
-                    Text(subtitle)
-                        .lineLimit(1)
-                        .font(.system(size: 12.0, weight: .regular))
-                        .foregroundStyle(.colorTextSecondary)
-                }
-                .padding(.horizontal, DesignConstants.Spacing.step2x)
+            VStack(alignment: .leading, spacing: 0.0) {
+                Text(title)
+                    .lineLimit(1)
+                    .frame(maxWidth: 180.0)
+                    .font(.system(size: 16.0, weight: .medium))
+                    .truncationMode(.tail)
+                    .foregroundStyle(.colorTextPrimary)
+                    .fixedSize()
+                Text(subtitle)
+                    .lineLimit(1)
+                    .font(.system(size: 12.0, weight: .regular))
+                    .foregroundStyle(.colorTextSecondary)
             }
-            .compositingGroup()
+            .padding(.horizontal, DesignConstants.Spacing.step2x)
         }
+        .onTapGesture(perform: action)
+        .compositingGroup()
     }
 }
 

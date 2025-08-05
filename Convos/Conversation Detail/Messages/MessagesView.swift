@@ -13,7 +13,7 @@ struct MessagesView: View {
     @Binding var messageText: String
     @Binding var sendButtonEnabled: Bool
     @Binding var profileImage: UIImage?
-    var focusState: FocusState<MessagesViewInputFocus?>.Binding
+    @FocusState.Binding var focusState: MessagesViewInputFocus?
     let onConversationInfoTap: () -> Void
     let onConversationNameEndedEditing: () -> Void
     let onConversationSettings: () -> Void
@@ -30,7 +30,7 @@ struct MessagesView: View {
     @State private var topBarHeight: CGFloat = 0.0
     @State private var bottomBarHeight: CGFloat = 0.0
     var body: some View {
-        VStack {
+        Group {
             MessagesViewRepresentable(
                 conversationId: conversation.id,
                 messages: messages,
@@ -49,7 +49,7 @@ struct MessagesView: View {
                 conversationNamePlaceholder: conversationNamePlaceholder,
                 conversationName: $conversationName,
                 conversationImage: $conversationImage,
-                focusState: focusState,
+                focusState: $focusState,
                 onConversationInfoTap: onConversationInfoTap,
                 onConversationNameEndedEditing: onConversationNameEndedEditing,
                 onConversationSettings: onConversationSettings,
@@ -71,7 +71,7 @@ struct MessagesView: View {
                 messageText: $messageText,
                 sendButtonEnabled: $sendButtonEnabled,
                 profileImage: $profileImage,
-                focusState: focusState,
+                focusState: $focusState,
                 onProfilePhotoTap: onProfilePhotoTap,
                 onSendMessage: onSendMessage,
                 onDisplayNameEndedEditing: onDisplayNameEndedEditing,

@@ -11,7 +11,7 @@ struct MessagesBottomBar: View {
     @Binding var messageText: String
     @Binding var sendButtonEnabled: Bool
     @Binding var profileImage: UIImage?
-    var focusState: FocusState<MessagesViewInputFocus?>.Binding
+    @FocusState.Binding var focusState: MessagesViewInputFocus?
     let onProfilePhotoTap: () -> Void
     let onSendMessage: () -> Void
     let onDisplayNameEndedEditing: () -> Void
@@ -40,7 +40,7 @@ struct MessagesBottomBar: View {
                 emptyDisplayNamePlaceholder: emptyDisplayNamePlaceholder,
                 messageText: $messageText,
                 sendButtonEnabled: $sendButtonEnabled,
-                focusState: focusState,
+                focusState: $focusState,
                 onProfilePhotoTap: onProfilePhotoTap,
                 onSendMessage: onSendMessage
             )
@@ -49,7 +49,7 @@ struct MessagesBottomBar: View {
                 placeholderText: "\(emptyDisplayNamePlaceholder)...",
                 text: $displayName,
                 image: $profileImage,
-                focusState: focusState,
+                focusState: $focusState,
                 focused: .displayName,
                 onSubmit: onDisplayNameEndedEditing,
                 onSettings: onProfileSettings
@@ -57,9 +57,10 @@ struct MessagesBottomBar: View {
         }
         .padding(.horizontal, 10.0)
         .padding(.vertical, DesignConstants.Spacing.step2x)
-        .onChange(of: focusState.wrappedValue) { _, newValue in
+        .onChange(of: focusState) {
+            Logger.info("Animating focus state change: \(focusState)")
             withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
-                progress = newValue == .displayName ? 1.0 : 0.0
+                progress = focusState == .displayName ? 1.0 : 0.0
             }
         }
     }

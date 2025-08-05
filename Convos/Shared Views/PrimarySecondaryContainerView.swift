@@ -250,5 +250,6 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
                 .padding(.horizontal, 16.0)
             }
         }
+        .padding(.horizontal, 16.0)
     }
 }

@@ -67,8 +67,11 @@ struct ConversationView: View {
         )
         .onAppear(perform: viewModel.onAppear)
         .onDisappear(perform: viewModel.onDisappear)
-        .onChange(of: viewModel.focus) { _, newValue in
-            focusState = newValue
+        .onChange(of: viewModel.focus) {
+            focusState = viewModel.focus
+        }
+        .onChange(of: focusState) {
+            viewModel.focus = focusState
         }
         .toolbarVisibility(.hidden, for: .navigationBar)
         .background(SwipeBackGestureEnabler())

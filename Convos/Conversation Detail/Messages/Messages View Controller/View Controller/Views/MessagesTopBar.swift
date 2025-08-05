@@ -14,7 +14,7 @@ struct MessagesTopBar: View {
     let conversationNamePlaceholder: String
     @Binding var conversationName: String
     @Binding var conversationImage: UIImage?
-    var focusState: FocusState<MessagesViewInputFocus?>.Binding
+    @FocusState.Binding var focusState: MessagesViewInputFocus?
     let onConversationInfoTap: () -> Void
     let onConversationNameEndedEditing: () -> Void
     let onConversationSettings: () -> Void
@@ -90,8 +90,9 @@ struct MessagesTopBar: View {
                 .offset(x: 88.0 * progress)
             }
             .padding(.horizontal, DesignConstants.Spacing.step4x)
-            .onChange(of: focusState.wrappedValue) { _, newValue in
-                withAnimation(.bouncy(duration: 0.4, extraBounce: 0.1)) {
+            .onChange(of: focusState) { _, newValue in
+                Logger.info("Animating focus state change: \(newValue)")
+                withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
                     progress = newValue == .conversationName ? 1.0 : 0.0
                 }
             }
@@ -102,7 +103,7 @@ struct MessagesTopBar: View {
                 untitledConversationPlaceholder: untitledConversationPlaceholder,
                 conversationName: $conversationName,
                 conversationImage: $conversationImage,
-                focusState: focusState,
+                focusState: $focusState,
                 onConversationInfoTapped: onConversationInfoTap,
                 onConversationNameEndedEditing: onConversationNameEndedEditing,
                 onConversationSettings: onConversationSettings

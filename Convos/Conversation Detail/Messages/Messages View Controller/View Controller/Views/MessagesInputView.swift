@@ -2,90 +2,6 @@ import PhotosUI
 import SwiftUI
 import UIKit
 
-@Observable
-class MessagesInputViewModel: KeyboardListenerDelegate {
-    let myProfileWriter: any MyProfileWriterProtocol
-    let outgoingMessageWriter: any OutgoingMessageWriterProtocol
-
-    init(
-        myProfileWriter: any MyProfileWriterProtocol,
-        outgoingMessageWriter: any OutgoingMessageWriterProtocol,
-    ) {
-        self.myProfileWriter = myProfileWriter
-        self.outgoingMessageWriter = outgoingMessageWriter
-
-        KeyboardListener.shared.add(delegate: self)
-    }
-
-    deinit {
-        KeyboardListener.shared.remove(delegate: self)
-    }
-
-    func keyboardWillHide(info: KeyboardInfo) {
-        withAnimation {
-            showingProfileNameEditor = false
-        }
-    }
-
-    var messageText: String = "" {
-        didSet {
-            sendButtonEnabled = !messageText.isEmpty
-        }
-    }
-    var profileNameText: String = ""
-    var profileNamePlaceholder: String = "Somebody"
-    var sendButtonEnabled: Bool = false
-    var showingProfileNameEditor: Bool = false
-    var showingPhotosPicker: Bool = false
-    var avatarImage: Image?
-    var imageSelection: UIImage? {
-        didSet {
-            if let image = imageSelection {
-                handleImageSelection(image)
-            }
-        }
-    }
-
-    func sendMessage() {
-        let prevMessageText = messageText
-        messageText = ""
-        Task { [outgoingMessageWriter] in
-            do {
-                try await outgoingMessageWriter.send(text: prevMessageText)
-            } catch {
-                Logger.error("Error sending message: \(error)")
-            }
-        }
-    }
-
-    func saveProfileName() {
-        Task {
-            do {
-                try await myProfileWriter.update(displayName: profileNameText)
-            } catch {
-                Logger.error("Error saving profile name: \(error)")
-            }
-        }
-
-        withAnimation {
-            showingProfileNameEditor = false
-        }
-    }
-
-    private func handleImageSelection(_ image: UIImage) {
-        // Update the avatar image for display
-        avatarImage = Image(uiImage: image)
-
-        Task {
-            do {
-                try await myProfileWriter.update(avatar: image)
-            } catch {
-                Logger.error("Error updating profile photo: \(error.localizedDescription)")
-            }
-        }
-    }
-}
-
 struct MessagesInputView: View {
     let profile: Profile
     @Binding var profileImage: UIImage?
@@ -93,7 +9,7 @@ struct MessagesInputView: View {
     let emptyDisplayNamePlaceholder: String
     @Binding var messageText: String
     @Binding var sendButtonEnabled: Bool
-    var focusState: FocusState<MessagesViewInputFocus?>.Binding
+    @FocusState.Binding var focusState: MessagesViewInputFocus?
     private let focused: MessagesViewInputFocus = .message
     let onProfilePhotoTap: () -> Void
     let onSendMessage: () -> Void
@@ -131,7 +47,7 @@ struct MessagesInputView: View {
                         text: $messageText,
                         axis: .vertical
                     )
-                    .focused(focusState, equals: focused)
+                    .focused($focusState, equals: focused)
                     .foregroundStyle(.colorTextPrimary)
                     .tint(.colorTextPrimary)
                     .frame(maxWidth: .infinity, minHeight: 20.0, alignment: .center)
