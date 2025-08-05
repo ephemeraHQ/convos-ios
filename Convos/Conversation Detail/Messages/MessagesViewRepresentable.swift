@@ -11,14 +11,22 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
         let messagesViewController = MessagesViewController()
         messagesViewController.topBarHeight = topBarHeight
         messagesViewController.bottomBarHeight = bottomBarHeight
-        messagesViewController.state = .init(conversationId: conversationId, messages: messages, invite: invite)
+//        messagesViewController.state = .init(
+//            conversationId: conversationId,
+//            messages: messages,
+//            invite: invite
+//        )
         return messagesViewController
     }
 
     func updateUIViewController(_ messagesViewController: MessagesViewController, context: Context) {
         messagesViewController.topBarHeight = topBarHeight
         messagesViewController.bottomBarHeight = bottomBarHeight
-        messagesViewController.state = .init(conversationId: conversationId, messages: messages, invite: invite)
+        messagesViewController.state = .init(
+            conversationId: conversationId,
+            messages: messages,
+            invite: invite
+        )
     }
 }
 

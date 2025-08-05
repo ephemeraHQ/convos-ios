@@ -24,6 +24,7 @@ final class MessagesViewController: UIViewController {
         case scrollingToBottom
         case updatingCollectionInIsolation
         case showingReactionsMenu
+        case determiningBarHeights
     }
 
     private enum ControllerActions {
@@ -49,6 +50,7 @@ final class MessagesViewController: UIViewController {
     }
 
     private var reactionMenuCoordinator: MessageReactionMenuCoordinator?
+    private var isFirstStateUpdate: Bool = true
 
     // MARK: - Public
 
@@ -68,18 +70,28 @@ final class MessagesViewController: UIViewController {
                 with: state.messages,
                 invite: state.invite,
                 animated: animated,
-                requiresIsolatedProcess: true) {
-                    if oldValue?.conversationId != state.conversationId {
+                requiresIsolatedProcess: !isFirstStateUpdate) { [currentControllerActions, isFirstStateUpdate] in
+                    if isFirstStateUpdate {
+                        currentControllerActions.options.remove(.loadingInitialMessages)
                         UIView.performWithoutAnimation {
                             self.scrollToBottom()
                         }
                     }
                 }
+            isFirstStateUpdate = false
         }
     }
 
     var topBarHeight: CGFloat = 0.0 {
         didSet {
+            // @jarodl fix this
+//            if topBarHeight != oldValue {
+//                updateCollectionViewInsets(to: topBarHeight)
+//            }
+//
+//            if bottomBarHeight > 0.0 && topBarHeight > 0.0 {
+//                currentInterfaceActions.options.remove(.determiningBarHeights)
+//            }
         }
     }
 
@@ -87,6 +99,10 @@ final class MessagesViewController: UIViewController {
         didSet {
             if bottomBarHeight != oldValue {
                 updateBottomInsetForBottomBarHeight()
+            }
+
+            if bottomBarHeight > 0.0 && topBarHeight > 0.0 {
+                currentInterfaceActions.options.remove(.determiningBarHeights)
             }
         }
     }
@@ -101,6 +117,8 @@ final class MessagesViewController: UIViewController {
             frame: .zero,
             collectionViewLayout: messagesLayout
         )
+        currentControllerActions.options.remove(.loadingInitialMessages)
+        currentInterfaceActions.options.insert(.determiningBarHeights)
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -118,25 +136,6 @@ final class MessagesViewController: UIViewController {
         fatalError()
     }
 
-    // MARK: -
-
-    private func reloadMessagesFromRepository() {
-//        DispatchQueue.main.async { [weak self] in
-//            guard let self else { return }
-//            do {
-//                let messages = try messagesRepository.fetchAll()
-//                processUpdates(
-//                    with: messages,
-//                    invite: .empty,
-//                    animated: true,
-//                    requiresIsolatedProcess: false
-//                )
-//            } catch {
-//                Logger.error("Error fetching messages: \(error)")
-//            }
-//        }
-    }
-
     // MARK: - Lifecycle Methods
 
     override func viewDidAppear(_ animated: Bool) {
@@ -151,8 +150,6 @@ final class MessagesViewController: UIViewController {
         setupCollectionView()
         setupUI()
         reactionMenuCoordinator = MessageReactionMenuCoordinator(delegate: self)
-
-        reloadMessagesFromRepository()
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -206,6 +203,8 @@ final class MessagesViewController: UIViewController {
         messagesLayout.delegate = dataSource
         collectionView.keyboardDismissMode = .interactive
 
+        collectionView.contentInset = .init(top: 76.0, left: 0.0, bottom: 0.0, right: 0.0)
+        collectionView.scrollIndicatorInsets = collectionView.contentInset
         collectionView.contentInsetAdjustmentBehavior = .always
         collectionView.automaticallyAdjustsScrollIndicatorInsets = true
         collectionView.selfSizingInvalidation = .enabled
@@ -363,6 +362,7 @@ extension MessagesViewController {
         let sections: [MessagesCollectionSection] = [
             .init(id: 0, title: "", cells: cells)
         ]
+
         guard isViewLoaded else {
             dataSource.sections = sections
             return
@@ -516,7 +516,10 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
     }
 
     private func updateBottomInsetForBottomBarHeight() {
-        guard isViewLoaded else { return }
+        guard isViewLoaded else {
+            Logger.info("View not loading, skipping bottom inset update...")
+            return
+        }
 
         Logger.info("Updated bottom bar height: \(bottomBarHeight)")
         if let lastKeyboardFrameChange {
@@ -575,6 +578,32 @@ extension MessagesViewController: KeyboardListenerDelegate {
         let inset = max(keyboardInset, bottomBarHeight)
         Logger.info("Calculated new bottom inset: \(inset) (keyboard: \(keyboardInset), bottomBar: \(bottomBarHeight))")
         return inset
+    }
+
+    private func updateCollectionViewInsets(to topInset: CGFloat) {
+        Logger.info("updateCollectionViewInsets topInset: \(topInset)")
+        let positionSnapshot = messagesLayout.getContentOffsetSnapshot(from: .top)
+
+        if currentControllerActions.options.contains(.updatingCollection) {
+            UIView.performWithoutAnimation {
+                self.collectionView.performBatchUpdates {}
+            }
+        }
+
+        currentInterfaceActions.options.insert(.changingContentInsets)
+        UIView.animate(withDuration: 0.2, animations: {
+            self.collectionView.performBatchUpdates({
+                Logger.info("Setting new top inset: \(topInset)")
+                self.collectionView.contentInset.top = topInset
+                self.collectionView.verticalScrollIndicatorInsets.top = topInset
+            }, completion: nil)
+
+            if let positionSnapshot, !self.isUserInitiatedScrolling {
+                self.messagesLayout.restoreContentOffset(with: positionSnapshot)
+            }
+        }, completion: { _ in
+            self.currentInterfaceActions.options.remove(.changingContentInsets)
+        })
     }
 
     private func updateCollectionViewInsets(to newBottomInset: CGFloat, with info: KeyboardInfo?) {
