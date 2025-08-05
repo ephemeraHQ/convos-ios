@@ -30,61 +30,56 @@ struct MessagesView: View {
     @State private var topBarHeight: CGFloat = 0.0
     @State private var bottomBarHeight: CGFloat = 0.0
     var body: some View {
-        ZStack {
-            Group {
-                MessagesViewRepresentable(
-                    conversationId: conversation.id,
-                    messages: messages,
-                    invite: invite,
-                    topBarHeight: topBarHeight,
-                    bottomBarHeight: bottomBarHeight
-                )
-                .ignoresSafeArea()
+        VStack {
+            MessagesViewRepresentable(
+                conversationId: conversation.id,
+                messages: messages,
+                invite: invite,
+                topBarHeight: topBarHeight,
+                bottomBarHeight: bottomBarHeight
+            )
+            .ignoresSafeArea()
+        }
+        .frame(maxHeight: .infinity)
+        .safeAreaBar(edge: .top) {
+            MessagesTopBar(
+                conversation: conversation,
+                invite: invite,
+                untitledConversationPlaceholder: untitledConversationPlaceholder,
+                conversationNamePlaceholder: conversationNamePlaceholder,
+                conversationName: $conversationName,
+                conversationImage: $conversationImage,
+                focusState: focusState,
+                onConversationInfoTap: onConversationInfoTap,
+                onConversationNameEndedEditing: onConversationNameEndedEditing,
+                onConversationSettings: onConversationSettings,
+                onScanInviteCode: onScanInviteCode,
+                onDeleteConversion: onDeleteConversation,
+                leadingItem: topBarLeadingItem,
+                trailingItem: topBarTrailingItem,
+                confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
+            )
+            .background(HeightReader())
+            .onPreferenceChange(HeightPreferenceKey.self) { height in
+                topBarHeight = height
             }
-
-            VStack {
-            }
-            .frame(maxHeight: .infinity)
-            .safeAreaBar(edge: .top) {
-                MessagesTopBar(
-                    conversation: conversation,
-                    invite: invite,
-                    untitledConversationPlaceholder: untitledConversationPlaceholder,
-                    conversationNamePlaceholder: conversationNamePlaceholder,
-                    conversationName: $conversationName,
-                    conversationImage: $conversationImage,
-                    focusState: focusState,
-                    onConversationInfoTap: onConversationInfoTap,
-                    onConversationNameEndedEditing: onConversationNameEndedEditing,
-                    onConversationSettings: onConversationSettings,
-                    onScanInviteCode: onScanInviteCode,
-                    onDeleteConversion: onDeleteConversation,
-                    leadingItem: topBarLeadingItem,
-                    trailingItem: topBarTrailingItem,
-                    confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
-                )
-                .background(HeightReader())
-                .onPreferenceChange(HeightPreferenceKey.self) { height in
-                    topBarHeight = height
-                }
-            }
-            .safeAreaBar(edge: .bottom) {
-                MessagesBottomBar(
-                    profile: profile,
-                    displayName: $displayName,
-                    messageText: $messageText,
-                    sendButtonEnabled: $sendButtonEnabled,
-                    profileImage: $profileImage,
-                    focusState: focusState,
-                    onProfilePhotoTap: onProfilePhotoTap,
-                    onSendMessage: onSendMessage,
-                    onDisplayNameEndedEditing: onDisplayNameEndedEditing,
-                    onProfileSettings: onProfileSettings
-                )
-                .background(HeightReader())
-                .onPreferenceChange(HeightPreferenceKey.self) { height in
-                    bottomBarHeight = height
-                }
+        }
+        .safeAreaBar(edge: .bottom) {
+            MessagesBottomBar(
+                profile: profile,
+                displayName: $displayName,
+                messageText: $messageText,
+                sendButtonEnabled: $sendButtonEnabled,
+                profileImage: $profileImage,
+                focusState: focusState,
+                onProfilePhotoTap: onProfilePhotoTap,
+                onSendMessage: onSendMessage,
+                onDisplayNameEndedEditing: onDisplayNameEndedEditing,
+                onProfileSettings: onProfileSettings
+            )
+            .background(HeightReader())
+            .onPreferenceChange(HeightPreferenceKey.self) { height in
+                bottomBarHeight = height
             }
         }
     }
