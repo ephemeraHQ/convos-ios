@@ -1,5 +1,5 @@
 import UserNotifications
-// TODO: Import ConvosShared framework when added to project
+// @lourou: Import ConvosShared framework when added to project
 // import ConvosShared
 
 class NotificationService: UNNotificationServiceExtension {
@@ -15,7 +15,7 @@ class NotificationService: UNNotificationServiceExtension {
             // Parse the notification payload
             let userInfo = request.content.userInfo
 
-            // TODO: Use shared helpers when framework is set up
+            // @lourou: Use shared helpers when framework is set up
             // let payload = PushNotificationHelpers.NotificationPayload(from: userInfo)
             // let updatedContent = PushNotificationHelpers.buildNotificationContent(from: payload)
 
@@ -54,7 +54,7 @@ class NotificationService: UNNotificationServiceExtension {
                 }
             }
 
-            // TODO: Download and attach media if needed
+            // @lourou: Download and attach media if needed
             // This is where you'd download images/videos and attach them to the notification
 
             contentHandler(bestAttemptContent)

@@ -4,10 +4,6 @@ import Foundation
 
 struct NotificationPayload: Codable {
     let body: NotificationBody
-
-    init(body: NotificationBody) {
-        self.body = body
-    }
 }
 
 struct NotificationBody: Codable {
