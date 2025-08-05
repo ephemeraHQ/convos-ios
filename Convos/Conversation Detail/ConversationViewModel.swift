@@ -16,6 +16,8 @@ class ConversationViewModel {
     private let metadataWriter: any GroupMetadataWriterProtocol
     private let inviteRepository: any InviteRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = []
+    private var loadProfileImageTask: Task<Void, Never>?
+    private var loadConversationImageTask: Task<Void, Never>?
 
     // MARK: - Public
 
@@ -29,6 +31,7 @@ class ConversationViewModel {
     var profile: Profile = .empty() {
         didSet {
             displayName = profile.name ?? ""
+            loadProfileImage(from: profile.avatarURL)
         }
     }
     var untitledConversationPlaceholder: String = "Untitled"
@@ -113,6 +116,40 @@ class ConversationViewModel {
                 try await localStateWriter.setUnread(false, for: conversation.id)
             } catch {
                 Logger.error("Error marking conversation as read: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func loadProfileImage(from imageURL: URL?) {
+        loadProfileImageTask?.cancel()
+
+        guard let imageURL else {
+            return
+        }
+
+        if let existingImage = ImageCache.shared.image(for: imageURL) {
+            profileImage = existingImage
+            return
+        }
+
+        loadProfileImageTask = Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: imageURL)
+                if let image = UIImage(data: data) {
+                    // Cache the image for future use
+                    ImageCache.shared.setImage(image, for: imageURL.absoluteString)
+
+                    // Also cache by object if available for instant cross-view updates
+                    ImageCache.shared.setImage(image, for: profile)
+
+                    await MainActor.run {
+                        profileImage = image
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    profileImage = nil
+                }
             }
         }
     }

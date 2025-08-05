@@ -24,7 +24,7 @@ struct MessagesBottomBar: View {
             progress: progress,
             primaryProperties: .init(
                 cornerRadius: 40.0,
-                padding: DesignConstants.Spacing.step2x,
+                padding: DesignConstants.Spacing.stepX,
                 fixedSizeHorizontal: false
             ),
             secondaryProperties: .init(
