@@ -118,8 +118,7 @@ struct AvatarCloudView: View {
             AvatarView(
                 imageURL: avatar.imageURL,
                 fallbackName: avatar.fallbackName,
-                cacheableObject: avatar,
-                cachedImage: nil
+                cacheableObject: avatar
             )
         } else {
             ZStack {
@@ -128,8 +127,7 @@ struct AvatarCloudView: View {
                         AvatarView(
                             imageURL: avatar.imageURL,
                             fallbackName: avatar.fallbackName,
-                            cacheableObject: avatar,
-                            cachedImage: nil
+                            cacheableObject: avatar
                         )
                         .id(avatar.id)
                     }

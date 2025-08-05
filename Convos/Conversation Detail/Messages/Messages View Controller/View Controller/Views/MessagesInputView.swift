@@ -29,13 +29,8 @@ struct MessagesInputView: View {
                 Button {
                     onProfilePhotoTap()
                 } label: {
-                    AvatarView(
-                        imageURL: profile.avatarURL,
-                        fallbackName: profile.displayName,
-                        cacheableObject: nil,
-                        cachedImage: profileImage
-                    )
-                    .frame(width: sendButtonSize, height: sendButtonSize)
+                    ProfileAvatarView(profile: profile)
+                        .frame(width: sendButtonSize, height: sendButtonSize)
                 }
                 .frame(alignment: .bottomLeading)
                 .padding(.vertical, DesignConstants.Spacing.stepX)

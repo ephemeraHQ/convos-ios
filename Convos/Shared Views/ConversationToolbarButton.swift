@@ -36,13 +36,8 @@ struct ConversationToolbarButton: View {
 
     var body: some View {
         HStack(spacing: 0.0) {
-            AvatarView(
-                imageURL: conversation.imageURL,
-                fallbackName: "",
-                cacheableObject: conversation,
-                cachedImage: conversationImage
-            )
-            .frame(width: 36.0, height: 36.0)
+            ConversationAvatarView(conversation: conversation)
+                .frame(width: 36.0, height: 36.0)
 
             VStack(alignment: .leading, spacing: 0.0) {
                 Text(title)

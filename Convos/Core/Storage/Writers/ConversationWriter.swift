@@ -117,7 +117,7 @@ class ConversationWriter: ConversationWriterProtocol {
                     name: nil,
                     avatar: nil
                 )
-                try? memberProfile.insert(db)
+                try? memberProfile.insert(db, onConflict: .ignore)
             }
         }
 

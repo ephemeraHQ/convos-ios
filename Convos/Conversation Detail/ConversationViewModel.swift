@@ -24,19 +24,14 @@ class ConversationViewModel {
     var conversation: Conversation {
         didSet {
             conversationName = conversation.name ?? ""
-            if conversation.imageURL != oldValue.imageURL {
-                loadConversationImage(from: conversation.imageURL)
-            }
         }
     }
     var messages: [AnyMessage] = []
     var invite: Invite = .empty
-    var profile: Profile = .empty() {
+    var profile: Profile {
         didSet {
+            Logger.info("Updated profile: \(profile)")
             displayName = profile.name ?? ""
-            if profile.avatarURL != oldValue.avatarURL {
-                loadProfileImage(from: profile.avatarURL)
-            }
         }
     }
     var untitledConversationPlaceholder: String = "Untitled"
@@ -79,6 +74,7 @@ class ConversationViewModel {
         self.localStateWriter = localStateWriter
         self.metadataWriter = metadataWriter
         self.inviteRepository = inviteRepository
+        self.profile = .empty(inboxId: conversation.inboxId)
 
         fetchLatest()
         observe()
@@ -127,20 +123,6 @@ class ConversationViewModel {
         }
     }
 
-    private func loadConversationImage(from imageURL: URL?) {
-        loadConversationImageTask?.cancel()
-        loadConversationImageTask = loadImage(from: imageURL, for: conversation, assignTo: { [weak self] image in
-            self?.conversationImage = image
-        })
-    }
-
-    private func loadProfileImage(from imageURL: URL?) {
-        loadProfileImageTask?.cancel()
-        loadProfileImageTask = loadImage(from: imageURL, for: profile) { [weak self] image in
-            self?.profileImage = image
-        }
-    }
-
     // MARK: - Public
 
     func onConversationInfoTap() {
@@ -164,6 +146,8 @@ class ConversationViewModel {
         }
 
         if let conversationImage = conversationImage {
+            ImageCache.shared.setImage(conversationImage, for: conversation)
+
             Task { [metadataWriter] in
                 do {
                     try await metadataWriter.updateGroupImage(
@@ -211,6 +195,8 @@ class ConversationViewModel {
 
         // @jarodl check if the image was actually changed
         if let profileImage {
+            ImageCache.shared.setImage(profileImage, for: profile)
+
             Task { [myProfileWriter] in
                 do {
                     try await myProfileWriter.update(avatar: profileImage)
@@ -248,43 +234,5 @@ extension ConversationViewModel {
             metadataWriter: MockGroupMetadataWriter(),
             inviteRepository: MockInviteRepository()
         )
-    }
-}
-
-extension ConversationViewModel {
-    private func loadImage<T: ImageCacheable>(
-        from imageURL: URL?,
-        for cacheableObject: T,
-        assignTo setter: @escaping (UIImage?) -> Void
-    ) -> Task<Void, Never>? {
-        guard let imageURL else {
-            return nil
-        }
-
-        if let existingImage = ImageCache.shared.image(for: imageURL) {
-            setter(existingImage)
-            return nil
-        }
-
-        return Task {
-            do {
-                let (data, _) = try await URLSession.shared.data(from: imageURL)
-                if let image = UIImage(data: data) {
-                    // Cache the image for future use
-                    ImageCache.shared.setImage(image, for: imageURL.absoluteString)
-
-                    // Also cache by object if available for instant cross-view updates
-                    ImageCache.shared.setImage(image, for: cacheableObject)
-
-                    await MainActor.run {
-                        setter(image)
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    setter(nil)
-                }
-            }
-        }
     }
 }
