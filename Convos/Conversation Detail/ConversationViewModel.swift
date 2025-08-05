@@ -78,6 +78,12 @@ class ConversationViewModel {
 
         fetchLatest()
         observe()
+
+        KeyboardListener.shared.add(delegate: self)
+    }
+
+    deinit {
+        KeyboardListener.shared.remove(delegate: self)
     }
 
     // MARK: - Private
@@ -216,6 +222,12 @@ class ConversationViewModel {
 
     func onDisappear() {
         markConversationAsRead()
+    }
+}
+
+extension ConversationViewModel: KeyboardListenerDelegate {
+    func keyboardDidHide(info: KeyboardInfo) {
+        focus = nil
     }
 }
 
