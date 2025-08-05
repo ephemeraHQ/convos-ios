@@ -57,14 +57,14 @@ struct QRCodeView: View {
         isRegenerating = true
 
         generationTask = Task {
-//            let newQRCode = await generateQRCode()
-//
-//            if !Task.isCancelled {
-//                await MainActor.run {
-//                    currentQRCode = newQRCode
-//                    isRegenerating = false
-//                }
-//            }
+            let newQRCode = await generateQRCode()
+
+            if !Task.isCancelled {
+                await MainActor.run {
+                    currentQRCode = newQRCode
+                    isRegenerating = false
+                }
+            }
         }
     }
 

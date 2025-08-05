@@ -15,6 +15,7 @@ struct MessagesTopBar: View {
     @Binding var conversationName: String
     @Binding var conversationImage: UIImage?
     @FocusState.Binding var focusState: MessagesViewInputFocus?
+    let viewModelFocus: MessagesViewInputFocus?
     let onConversationInfoTap: () -> Void
     let onConversationNameEndedEditing: () -> Void
     let onConversationSettings: () -> Void
@@ -90,8 +91,7 @@ struct MessagesTopBar: View {
                 .offset(x: 88.0 * progress)
             }
             .padding(.horizontal, DesignConstants.Spacing.step4x)
-            .onChange(of: focusState) { _, newValue in
-                Logger.info("Animating focus state change: \(newValue)")
+            .onChange(of: viewModelFocus) { _, newValue in
                 withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
                     progress = newValue == .conversationName ? 1.0 : 0.0
                 }
@@ -104,6 +104,7 @@ struct MessagesTopBar: View {
                 conversationName: $conversationName,
                 conversationImage: $conversationImage,
                 focusState: $focusState,
+                viewModelFocus: viewModelFocus,
                 onConversationInfoTapped: onConversationInfoTap,
                 onConversationNameEndedEditing: onConversationNameEndedEditing,
                 onConversationSettings: onConversationSettings
@@ -115,6 +116,7 @@ struct MessagesTopBar: View {
 #Preview {
     @Previewable @State var conversationName: String = ""
     @Previewable @State var conversationImage: UIImage?
+    @Previewable @State var viewModelFocus: MessagesViewInputFocus?
     @Previewable @FocusState var focusState: MessagesViewInputFocus?
 
     MessagesTopBar(
@@ -125,6 +127,7 @@ struct MessagesTopBar: View {
         conversationName: $conversationName,
         conversationImage: $conversationImage,
         focusState: $focusState,
+        viewModelFocus: viewModelFocus,
         onConversationInfoTap: {
             focusState = .conversationName
         },

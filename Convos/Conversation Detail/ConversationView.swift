@@ -52,6 +52,7 @@ struct ConversationView: View {
             sendButtonEnabled: $viewModel.sendButtonEnabled,
             profileImage: $viewModel.profileImage,
             focusState: $focusState,
+            viewModelFocus: viewModel.focus,
             onConversationInfoTap: viewModel.onConversationInfoTap,
             onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
             onConversationSettings: viewModel.onConversationSettings,

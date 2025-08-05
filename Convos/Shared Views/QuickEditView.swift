@@ -1,5 +1,50 @@
 import SwiftUI
 
+struct NonReturningTextField: UIViewRepresentable {
+    var placeholderText: String
+    @Binding var text: String
+    var onReturn: () -> Void
+
+    init(_ placeholderText: String, text: Binding<String>, onReturn: @escaping () -> Void) {
+        self.placeholderText = placeholderText
+        self._text = text
+        self.onReturn = onReturn
+    }
+
+    func makeUIView(context: Context) -> UITextField {
+        let textField = UITextField()
+        textField.placeholder = placeholderText
+        textField.delegate = context.coordinator
+        textField.returnKeyType = .done
+        return textField
+    }
+
+    func updateUIView(_ uiView: UITextField, context: Context) {
+        uiView.text = text
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: NonReturningTextField
+
+        init(_ parent: NonReturningTextField) {
+            self.parent = parent
+        }
+
+        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+            parent.onReturn()
+            return false // Don't dismiss keyboard
+        }
+
+        func textFieldDidChangeSelection(_ textField: UITextField) {
+            parent.text = textField.text ?? ""
+        }
+    }
+}
+
 struct QuickEditView: View {
     let placeholderText: String
     @Binding var text: String
@@ -14,23 +59,26 @@ struct QuickEditView: View {
             ImagePickerButton(currentImage: $image)
                 .frame(width: 52.0, height: 52.0)
 
-            TextField(placeholderText, text: $text)
-                .padding(.horizontal, 16.0)
-                .font(.system(size: 17.0))
-                .tint(.colorTextPrimary)
-                .foregroundStyle(.colorTextPrimary)
-                .multilineTextAlignment(.center)
-                .textInputAutocapitalization(.words)
-                .truncationMode(.tail)
-                .focused($focusState, equals: focused)
-                .submitLabel(.done)
-                .onSubmit(onSubmit)
-                .frame(minWidth: 166.0, maxWidth: 180.0)
-                .frame(height: 52.0)
-                .background(
-                    Capsule()
-                        .stroke(.gray.opacity(0.2), lineWidth: 1.0)
-                )
+            NonReturningTextField(
+                placeholderText,
+                text: $text,
+                onReturn: onSubmit
+            )
+            .padding(.horizontal, 16.0)
+            .font(.system(size: 17.0))
+            .tint(.colorTextPrimary)
+            .foregroundStyle(.colorTextPrimary)
+            .multilineTextAlignment(.center)
+            .textInputAutocapitalization(.words)
+            .truncationMode(.tail)
+            .focused($focusState, equals: focused)
+            .submitLabel(.done)
+            .frame(minWidth: 166.0, maxWidth: 180.0)
+            .frame(height: 52.0)
+            .background(
+                Capsule()
+                    .stroke(.gray.opacity(0.2), lineWidth: 1.0)
+            )
 
             Button {
                 onSettings()

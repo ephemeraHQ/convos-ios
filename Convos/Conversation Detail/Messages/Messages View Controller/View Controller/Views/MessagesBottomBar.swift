@@ -12,6 +12,7 @@ struct MessagesBottomBar: View {
     @Binding var sendButtonEnabled: Bool
     @Binding var profileImage: UIImage?
     @FocusState.Binding var focusState: MessagesViewInputFocus?
+    let viewModelFocus: MessagesViewInputFocus?
     let onProfilePhotoTap: () -> Void
     let onSendMessage: () -> Void
     let onDisplayNameEndedEditing: () -> Void
@@ -57,10 +58,10 @@ struct MessagesBottomBar: View {
         }
         .padding(.horizontal, 10.0)
         .padding(.vertical, DesignConstants.Spacing.step2x)
-        .onChange(of: focusState) {
-            Logger.info("Animating focus state change: \(focusState)")
+        .onChange(of: viewModelFocus) { _, newValue in
+            Logger.info("MessagesBottomBar onChange fired - viewModelFocus changed to: \(String(describing: newValue))")
             withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
-                progress = focusState == .displayName ? 1.0 : 0.0
+                progress = newValue == .displayName ? 1.0 : 0.0
             }
         }
     }

@@ -24,7 +24,9 @@ class ConversationViewModel {
     var conversation: Conversation {
         didSet {
             conversationName = conversation.name ?? ""
-            loadConversationImage(from: conversation.imageURL)
+            if conversation.imageURL != oldValue.imageURL {
+                loadConversationImage(from: conversation.imageURL)
+            }
         }
     }
     var messages: [AnyMessage] = []
@@ -32,7 +34,9 @@ class ConversationViewModel {
     var profile: Profile = .empty() {
         didSet {
             displayName = profile.name ?? ""
-            loadProfileImage(from: profile.avatarURL)
+            if profile.avatarURL != oldValue.avatarURL {
+                loadProfileImage(from: profile.avatarURL)
+            }
         }
     }
     var untitledConversationPlaceholder: String = "Untitled"
@@ -47,6 +51,8 @@ class ConversationViewModel {
     }
     var sendButtonEnabled: Bool = false
     var profileImage: UIImage?
+    /// we manage focus in the view model along with @FocusState in the view
+    /// since programatically changing @FocusState doesn't always propagate to child views
     var focus: MessagesViewInputFocus?
 
     // MARK: - Init

@@ -14,6 +14,7 @@ struct MessagesView: View {
     @Binding var sendButtonEnabled: Bool
     @Binding var profileImage: UIImage?
     @FocusState.Binding var focusState: MessagesViewInputFocus?
+    let viewModelFocus: MessagesViewInputFocus?
     let onConversationInfoTap: () -> Void
     let onConversationNameEndedEditing: () -> Void
     let onConversationSettings: () -> Void
@@ -50,6 +51,7 @@ struct MessagesView: View {
                 conversationName: $conversationName,
                 conversationImage: $conversationImage,
                 focusState: $focusState,
+                viewModelFocus: viewModelFocus,
                 onConversationInfoTap: onConversationInfoTap,
                 onConversationNameEndedEditing: onConversationNameEndedEditing,
                 onConversationSettings: onConversationSettings,
@@ -72,6 +74,7 @@ struct MessagesView: View {
                 sendButtonEnabled: $sendButtonEnabled,
                 profileImage: $profileImage,
                 focusState: $focusState,
+                viewModelFocus: viewModelFocus,
                 onProfilePhotoTap: onProfilePhotoTap,
                 onSendMessage: onSendMessage,
                 onDisplayNameEndedEditing: onDisplayNameEndedEditing,

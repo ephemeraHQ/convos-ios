@@ -7,6 +7,7 @@ struct ConversationInfoButton: View {
     @Binding var conversationName: String
     @Binding var conversationImage: UIImage?
     @FocusState.Binding var focusState: MessagesViewInputFocus?
+    let viewModelFocus: MessagesViewInputFocus?
     let onConversationInfoTapped: () -> Void
     let onConversationNameEndedEditing: () -> Void
     let onConversationSettings: () -> Void
@@ -44,8 +45,7 @@ struct ConversationInfoButton: View {
                 onSubmit: onConversationNameEndedEditing,
                 onSettings: onConversationSettings)
         }
-        .onChange(of: focusState) { _, newValue in
-            Logger.info("Animating focus state change: \(newValue)")
+        .onChange(of: viewModelFocus) { _, newValue in
             withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
                 progress = newValue == .conversationName ? 1.0 : 0.0
             }
@@ -56,6 +56,7 @@ struct ConversationInfoButton: View {
 #Preview {
     @Previewable @State var conversationName: String = ""
     @Previewable @State var conversationImage: UIImage?
+    @Previewable @State var viewModelFocus: MessagesViewInputFocus?
     @Previewable @FocusState var focusState: MessagesViewInputFocus?
 
     let conversation: Conversation = .mock()
@@ -68,6 +69,7 @@ struct ConversationInfoButton: View {
         conversationName: $conversationName,
         conversationImage: $conversationImage,
         focusState: $focusState,
+        viewModelFocus: viewModelFocus,
         onConversationInfoTapped: {
             focusState = .conversationName
         },
