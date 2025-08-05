@@ -266,8 +266,6 @@ class PushNotificationManager: NSObject, ObservableObject {
         // Wait for the inbox to be ready to get the XMTP client with timeout
         var inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
 
-        let inboxReady: InboxReadyResult
-
         // Try multiple times with increasing timeout for newly created inboxes
         var attempts = 0
         let maxAttempts = 3
@@ -292,9 +290,21 @@ class PushNotificationManager: NSObject, ObservableObject {
                     }
                     throw PushNotificationError.noActiveSession
                 }
-                inboxReady = readyResult
+
                 Logger.info("🔔 [PushNotificationManager] ✅ Inbox ready after \(attempts) attempts!")
-                break
+                let xmtpClient = readyResult.client
+                Logger.info("🔔 [PushNotificationManager] XMTP Client inbox ID: \(xmtpClient.inboxId)")
+                Logger.info("🔔 [PushNotificationManager] XMTP Client installation ID: \(xmtpClient.installationId)")
+
+                // Create installation info from the XMTP client
+                let installationInfo = InstallationInfo(
+                    identityId: targetInboxId, // Use inbox ID as identity ID
+                    xmtpInstallationId: xmtpClient.installationId
+                )
+
+                Logger.info("🔔 [PushNotificationManager] ✅ Created installation info: identityId=\(installationInfo.identityId), xmtpInstallationId=\(installationInfo.xmtpInstallationId)")
+
+                return [installationInfo]
             } catch {
                 Logger.error("🔔 [PushNotificationManager] ❌ Timeout waiting for inbox to be ready (attempt \(attempts)): \(error)")
                 if attempts < maxAttempts {
@@ -309,20 +319,9 @@ class PushNotificationManager: NSObject, ObservableObject {
             }
         }
 
-        Logger.info("🔔 [PushNotificationManager] ✅ Inbox is ready!")
-        let xmtpClient = inboxReady.client
-        Logger.info("🔔 [PushNotificationManager] XMTP Client inbox ID: \(xmtpClient.inboxId)")
-        Logger.info("🔔 [PushNotificationManager] XMTP Client installation ID: \(xmtpClient.installationId)")
-
-        // Create installation info from the XMTP client
-        let installationInfo = InstallationInfo(
-            identityId: targetInboxId, // Use inbox ID as identity ID
-            xmtpInstallationId: xmtpClient.installationId
-        )
-
-        Logger.info("🔔 [PushNotificationManager] ✅ Created installation info: identityId=\(installationInfo.identityId), xmtpInstallationId=\(installationInfo.xmtpInstallationId)")
-
-        return [installationInfo]
+        // This should never be reached, but just in case
+        Logger.error("🔔 [PushNotificationManager] ❌ Exhausted all attempts without success")
+        throw PushNotificationError.noActiveSession
     }
 
     // MARK: - Topic Subscription (for future use)
