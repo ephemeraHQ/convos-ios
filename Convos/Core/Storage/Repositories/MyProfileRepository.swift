@@ -4,6 +4,8 @@ import GRDB
 
 protocol MyProfileRepositoryProtocol {
     var myProfilePublisher: AnyPublisher<Profile, Never> { get }
+
+    func fetch(inboxId: String) throws -> Profile
 }
 
 class MyProfileRepository: MyProfileRepositoryProtocol {
@@ -32,5 +34,13 @@ class MyProfileRepository: MyProfileRepositoryProtocol {
             }
             .switchToLatest()
             .eraseToAnyPublisher()
+    }
+
+    func fetch(inboxId: String) throws -> Profile {
+        try databaseReader.read { db in
+            try MemberProfile
+                .fetchOne(db, key: inboxId)?
+                .hydrateProfile() ?? .empty(inboxId: inboxId)
+        }
     }
 }

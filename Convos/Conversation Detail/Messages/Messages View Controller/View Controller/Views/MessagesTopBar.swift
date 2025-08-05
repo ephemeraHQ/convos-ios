@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct MessagesTopBar: View {
+    enum LeadingItem {
+        case close, back
+    }
     enum TrailingItem {
         case share, scan
     }
@@ -16,18 +19,47 @@ struct MessagesTopBar: View {
     let onConversationNameEndedEditing: () -> Void
     let onConversationSettings: () -> Void
     let onScanInviteCode: () -> Void
-    let trailingItem: TrailingItem = .scan
+    let onDeleteConversion: () -> Void
+    let leadingItem: LeadingItem
+    let trailingItem: TrailingItem
+    let confirmDeletionBeforeDismissal: Bool
+    @Environment(\.dismiss) var dismiss: DismissAction
 
     @State private var progress: CGFloat = 0.0
+    @State private var presentingDeleteConfirmation: Bool = false
+
+    private var leadingItemImage: Image {
+        switch leadingItem {
+        case .close:
+            Image(systemName: "xmark")
+        case .back:
+            Image(systemName: "chevron.left")
+        }
+    }
 
     var body: some View {
         ZStack {
             HStack(spacing: 0.0) {
                 Button {
+                    if confirmDeletionBeforeDismissal {
+                        presentingDeleteConfirmation = true
+                    } else {
+                        dismiss()
+                    }
                 } label: {
-                    Image(systemName: "chevron.left")
+                    leadingItemImage
                         .font(.system(size: 20.0))
-                        .padding(8.0)
+                        .padding(4.0)
+                }
+                .confirmationDialog("", isPresented: $presentingDeleteConfirmation) {
+                    Button("Delete", role: .destructive) {
+                        onDeleteConversion()
+                        dismiss()
+                    }
+
+                    Button("Keep") {
+                        dismiss()
+                    }
                 }
                 .frame(width: 44.0, height: 44.0)
                 .buttonBorderShape(.circle)
@@ -48,7 +80,7 @@ struct MessagesTopBar: View {
                         } label: {
                             Image(systemName: "qrcode.viewfinder")
                                 .font(.system(size: 20.0))
-                                .padding(8.0)
+                                .padding(4.0)
                         }
                         .frame(width: 44.0, height: 44.0)
                         .buttonBorderShape(.circle)
@@ -97,6 +129,10 @@ struct MessagesTopBar: View {
         },
         onConversationNameEndedEditing: {},
         onConversationSettings: {},
-        onScanInviteCode: {}
+        onScanInviteCode: {},
+        onDeleteConversion: {},
+        leadingItem: .close,
+        trailingItem: .scan,
+        confirmDeletionBeforeDismissal: false
     )
 }

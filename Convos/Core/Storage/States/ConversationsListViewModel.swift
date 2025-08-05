@@ -14,12 +14,17 @@ final class ConversationsListViewModel {
         conversations.filter { !$0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
     }
 
+    private let session: any SessionManagerProtocol
     private let conversationsRepository: any ConversationsRepositoryProtocol
     private let conversationsCountRepository: any ConversationsCountRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = .init()
 
-    init(conversationsRepository: any ConversationsRepositoryProtocol,
-         conversationsCountRepository: any ConversationsCountRepositoryProtocol) {
+    init(
+        session: any SessionManagerProtocol,
+        conversationsRepository: any ConversationsRepositoryProtocol,
+        conversationsCountRepository: any ConversationsCountRepositoryProtocol
+    ) {
+        self.session = session
         self.conversationsRepository = conversationsRepository
         self.conversationsCountRepository = conversationsCountRepository
         do {
@@ -30,6 +35,22 @@ final class ConversationsListViewModel {
             self.conversations = []
         }
         observe()
+    }
+
+    func viewModel(for conversation: Conversation) -> ConversationViewModel {
+        let messagingService = session.messagingService(for: conversation.inboxId)
+        return .init(
+            conversation: conversation,
+            myProfileWriter: messagingService.myProfileWriter(),
+            myProfileRepository: messagingService.myProfileRepository(),
+            conversationRepository: messagingService.conversationRepository(for: conversation.id),
+            messagesRepository: messagingService.messagesRepository(for: conversation.id),
+            outgoingMessageWriter: messagingService.messageWriter(for: conversation.id),
+            consentWriter: messagingService.conversationConsentWriter(),
+            localStateWriter: messagingService.conversationLocalStateWriter(),
+            metadataWriter: messagingService.groupMetadataWriter(),
+            inviteRepository: messagingService.inviteRepository(for: conversation.id)
+        )
     }
 
     private func observe() {

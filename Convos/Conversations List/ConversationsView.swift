@@ -1,18 +1,13 @@
 import SwiftUI
 
 enum ConversationsRoute: Hashable {
-    case conversation(ConversationViewDependencies)
-}
-
-struct ConversationDetail {
-    let conversation: Conversation
-    let messagingService: AnyMessagingService
+    case conversation(Conversation)
 }
 
 struct ConversationsView: View {
     let session: any SessionManagerProtocol
     @Namespace private var namespace: Namespace.ID
-    @State private var newConversationState: NewConversationState?
+    @State private var newConversationViewModel: NewConversationViewModel?
     @State private var presentingExplodeConfirmation: Bool = false
     @State private var path: [ConversationsRoute] = []
     @Environment(\.dismiss) private var dismiss: DismissAction
@@ -21,7 +16,12 @@ struct ConversationsView: View {
         NavigationStack(path: $path) {
             ConversationsListView(
                 session: session,
-                newConversationState: $newConversationState,
+                onNewConversation: {
+                    newConversationViewModel = .init(session: session)
+                },
+                onJoinConversation: {
+                    newConversationViewModel = .init(session: session, showScannerOnAppear: true)
+                },
                 path: $path
             )
             .toolbarTitleDisplayMode(.inlineLarge)
@@ -70,7 +70,7 @@ struct ConversationsView: View {
 
                 ToolbarItem(placement: .bottomBar) {
                     Button("Compose", systemImage: "plus") {
-                        newConversationState = NewConversationState(session: session)
+                        newConversationViewModel = NewConversationViewModel(session: session)
                     }
                 }
                 .matchedTransitionSource(
@@ -78,9 +78,8 @@ struct ConversationsView: View {
                     in: namespace
                 )
             }
-            .fullScreenCover(item: $newConversationState) { state in
-                NewConversationView(newConversationState: state)
-                    .ignoresSafeArea()
+            .fullScreenCover(item: $newConversationViewModel) { viewModel in
+                NewConversationView(viewModel: viewModel)
                     .background(.white)
                     .interactiveDismissDisabled()
                     .navigationTransition(

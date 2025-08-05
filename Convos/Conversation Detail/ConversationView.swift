@@ -1,157 +1,27 @@
 import SwiftUI
 
-struct ConversationViewDependencies: Hashable {
-    let conversationId: String
-    let myProfileWriter: any MyProfileWriterProtocol
-    let myProfileRepository: any MyProfileRepositoryProtocol
-    let conversationRepository: any ConversationRepositoryProtocol
-    let messagesRepository: any MessagesRepositoryProtocol
-    let outgoingMessageWriter: any OutgoingMessageWriterProtocol
-    let conversationConsentWriter: any ConversationConsentWriterProtocol
-    let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
-    let groupMetadataWriter: any GroupMetadataWriterProtocol
-    let inviteRepository: any InviteRepositoryProtocol
-
-    static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.conversationId == rhs.conversationId
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(conversationId)
-    }
-}
-
-extension ConversationViewDependencies {
-    static func mock() -> ConversationViewDependencies {
-        let messaging = MockMessagingService()
-        let conversationId: String = "1"
-        return ConversationViewDependencies(
-            conversationId: conversationId,
-            myProfileWriter: messaging.myProfileWriter(),
-            myProfileRepository: messaging.myProfileRepository(),
-            conversationRepository: messaging.conversationRepository(for: conversationId),
-            messagesRepository: messaging.messagesRepository(for: conversationId),
-            outgoingMessageWriter: messaging.messageWriter(for: conversationId),
-            conversationConsentWriter: messaging.conversationConsentWriter(),
-            conversationLocalStateWriter: messaging.conversationLocalStateWriter(),
-            groupMetadataWriter: messaging.groupMetadataWriter(),
-            inviteRepository: messaging.inviteRepository(for: conversationId)
-        )
-    }
-}
-
-extension GroupMetadataWriterProtocol {
-    func saveGroupChanges(_ editState: GroupEditState, conversation: Conversation) {
-        if editState.groupName != conversation.name {
-            Task {
-                do {
-                    try await updateGroupName(
-                        groupId: conversation.id,
-                        name: editState.groupName
-                    )
-                } catch {
-                    Logger.error("Failed updating group name: \(error)")
-                }
-            }
-        }
-
-        if case .success(let image) = editState.imageState {
-            Task {
-                do {
-                    try await updateGroupImage(
-                        conversation: conversation,
-                        image: image
-                    )
-                } catch {
-                    Logger.error("Failed updating group image: \(error)")
-                }
-            }
-        }
-    }
-}
-
-@Observable
-class ConversationViewModel {
-    var conversation: Conversation = .mock()
-    var messages: [AnyMessage] = []
-    var invite: Invite = .mock()
-    var profile: Profile = .mock()
-    var untitledConversationPlaceholder: String = "Untitled"
-    var conversationNamePlaceholder: String = "Name"
-    var displayName: String = ""
-    var conversationName: String = ""
-    var conversationImage: UIImage? {
-        didSet {
-            Logger.info("Set conversation image")
-        }
-    }
-    var messageText: String = "" {
-        didSet {
-            sendButtonEnabled = !messageText.isEmpty
-        }
-    }
-    var sendButtonEnabled: Bool = false
-    var profileImage: UIImage?
-    var focus: MessagesViewInputFocus?
-
-    func onConversationInfoTap() {
-        focus = .conversationName
-    }
-
-    func onConversationNameEndedEditing() {
-        focus = .message
-    }
-
-    func onConversationSettings() {
-    }
-
-    func onProfilePhotoTap() {
-        focus = .displayName
-    }
-
-    func onSendMessage() {
-        messageText = ""
-    }
-
-    func onDisplayNameEndedEditing() {
-        focus = .message
-    }
-
-    func onProfileSettings() {
-    }
-
-    func onScanInviteCode() {
-    }
-}
-
 struct ConversationView: View {
-//    let conversationRepository: any ConversationRepositoryProtocol
-//    let myProfileWriter: any MyProfileWriterProtocol
-//    let messagesRepository: any MessagesRepositoryProtocol
-//    let outgoingMessageWriter: any OutgoingMessageWriterProtocol
-//    let conversationConsentWriter: any ConversationConsentWriterProtocol
-//    let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
-//    let groupMetadataWriter: any GroupMetadataWriterProtocol
-//    let inviteRepository: any InviteRepositoryProtocol
-//    let conversationState: ConversationState
-
-//    init(dependencies: ConversationViewDependencies) {
-//        self.conversationRepository = dependencies.conversationRepository
-//        self.myProfileWriter = dependencies.myProfileWriter
-//        self.messagesRepository = dependencies.messagesRepository
-//        self.outgoingMessageWriter = dependencies.outgoingMessageWriter
-//        self.conversationConsentWriter = dependencies.conversationConsentWriter
-//        self.conversationLocalStateWriter = dependencies.conversationLocalStateWriter
-//        self.groupMetadataWriter = dependencies.groupMetadataWriter
-//        self.inviteRepository = dependencies.inviteRepository
-//        self.conversationState = ConversationState(
-//            myProfileRepository: dependencies.myProfileRepository,
-//            conversationRepository: dependencies.conversationRepository
-//        )
-//    }
-
     @State var viewModel: ConversationViewModel
+    let onScanInviteCode: () -> Void
+    let onDeleteConversation: () -> Void
+    let confirmDeletionBeforeDismissal: Bool
+    let messagesTopBarTrailingItem: MessagesTopBar.TrailingItem
+
     @FocusState private var focusState: MessagesViewInputFocus?
+
+    init(
+        viewModel: ConversationViewModel,
+        onScanInviteCode: @escaping () -> Void = {},
+        onDeleteConversation: @escaping () -> Void = {},
+        confirmDeletionBeforeDismissal: Bool = false,
+        messagesTopBarTrailingItem: MessagesTopBar.TrailingItem = .share
+    ) {
+        self.viewModel = viewModel
+        self.onScanInviteCode = onScanInviteCode
+        self.onDeleteConversation = onDeleteConversation
+        self.confirmDeletionBeforeDismissal = confirmDeletionBeforeDismissal
+        self.messagesTopBarTrailingItem = messagesTopBarTrailingItem
+    }
 
     var body: some View {
         MessagesView(
@@ -175,15 +45,22 @@ struct ConversationView: View {
             onSendMessage: viewModel.onSendMessage,
             onDisplayNameEndedEditing: viewModel.onDisplayNameEndedEditing,
             onProfileSettings: viewModel.onProfileSettings,
-            onScanInviteCode: viewModel.onScanInviteCode
+            onScanInviteCode: onScanInviteCode,
+            onDeleteConversation: onDeleteConversation,
+            topBarLeadingItem: .back,
+            topBarTrailingItem: messagesTopBarTrailingItem,
+            confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
         )
+        .onAppear(perform: viewModel.onAppear)
+        .onDisappear(perform: viewModel.onDisappear)
         .onChange(of: viewModel.focus) { _, newValue in
             focusState = newValue
         }
+        .toolbarVisibility(.hidden, for: .navigationBar)
     }
 }
 
 #Preview {
-    @Previewable @State var viewModel: ConversationViewModel = ConversationViewModel()
+    @Previewable @State var viewModel: ConversationViewModel = .mock
     ConversationView(viewModel: viewModel)
 }
