@@ -1,30 +1,36 @@
 import Combine
-import OrderedCollections
 import SwiftUI
 
 @Observable
-class NewConversationState: Identifiable {
-    private var cancellables: Set<AnyCancellable> = []
-    private let session: any SessionManagerProtocol
-    private(set) var conversationState: ConversationState?
-    private(set) var draftConversationComposer: (any DraftConversationComposerProtocol)? {
+class NewConversationViewModel: Identifiable {
+    // MARK: - Public
+
+    let session: any SessionManagerProtocol
+    var conversationViewModel: ConversationViewModel?
+    private(set) var messagesTopBarTrailingItem: MessagesTopBar.TrailingItem = .scan
+    private(set) var shouldConfirmDeletingConversation: Bool = true
+    private(set) var showScannerOnAppear: Bool
+
+    // MARK: - Private
+
+    private var draftConversationComposer: (any DraftConversationComposerProtocol)? {
         didSet {
             setupObservations()
         }
     }
-
-    private(set) var showJoinConversation: Bool = true // false once someone joins or a message is sent
-    private(set) var promptToKeepConversation: Bool = true
-    private(set) var showScannerOnAppear: Bool
-
     private var addAccountResult: AddAccountResultType?
     private var newConversationTask: Task<Void, Never>?
     private var joinConversationTask: Task<Void, Never>?
+    private var cancellables: Set<AnyCancellable> = []
+
+    // MARK: - Init
 
     init(session: any SessionManagerProtocol, showScannerOnAppear: Bool = false) {
         self.session = session
         self.showScannerOnAppear = showScannerOnAppear
     }
+
+    // MARK: - Actions
 
     func newConversation() {
         guard addAccountResult == nil else { return }
@@ -34,11 +40,11 @@ class NewConversationState: Identifiable {
                 let addAccountResult = try session.addAccount()
                 self.addAccountResult = addAccountResult
                 let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
-                draftConversationComposer.draftConversationWriter.createConversationWhenInboxReady()
                 self.draftConversationComposer = draftConversationComposer
-                self.conversationState = ConversationState(
-                    myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
-                    conversationRepository: draftConversationComposer.draftConversationRepository
+                draftConversationComposer.draftConversationWriter.createConversationWhenInboxReady()
+                self.conversationViewModel = try conversationViewModel(
+                    for: addAccountResult,
+                    from: draftConversationComposer
                 )
             } catch {
                 Logger.error("Error starting new conversation: \(error.localizedDescription)")
@@ -46,7 +52,32 @@ class NewConversationState: Identifiable {
         }
     }
 
-    func joinConversation(inviteId: String, inboxId: String, inviteCode: String) {
+    func join(inviteCode: String) {
+        guard let result = Invite.parse(temporaryInviteString: inviteCode) else {
+            return
+        }
+        Logger.info("Scanned code: \(result)")
+        joinConversation(
+            inviteId: result.inviteId,
+            inboxId: result.inboxId,
+            inviteCode: result.code
+        )
+    }
+
+    func deleteConversation() {
+        newConversationTask?.cancel()
+        draftConversationComposer = nil
+        conversationViewModel = nil
+        Task {
+            guard let addAccountResult else { return }
+            try session.deleteAccount(with: addAccountResult.providerId)
+            self.addAccountResult = nil
+        }
+    }
+
+    // MARK: - Private
+
+    private func joinConversation(inviteId: String, inboxId: String, inviteCode: String) {
         joinConversationTask?.cancel()
         joinConversationTask = Task {
             do {
@@ -66,15 +97,18 @@ class NewConversationState: Identifiable {
                     let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
                     draftConversationComposer.draftConversationWriter.createConversationWhenInboxReady()
                     self.draftConversationComposer = draftConversationComposer
-                    self.conversationState = ConversationState(
-                        myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
-                        conversationRepository: draftConversationComposer.draftConversationRepository
-                    )
                 }
 
                 guard let draftConversationComposer else {
                     Logger.error("Failed getting conversation composer while joining conversation")
                     return
+                }
+
+                if self.conversationViewModel == nil {
+                    self.conversationViewModel = try conversationViewModel(
+                        for: addAccountResult,
+                        from: draftConversationComposer
+                    )
                 }
 
                 draftConversationComposer
@@ -87,17 +121,6 @@ class NewConversationState: Identifiable {
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
             }
-        }
-    }
-
-    func deleteConversation() {
-        newConversationTask?.cancel()
-        draftConversationComposer = nil
-        conversationState = nil
-        Task {
-            guard let addAccountResult else { return }
-            try session.deleteAccount(with: addAccountResult.providerId)
-            self.addAccountResult = nil
         }
     }
 
@@ -119,9 +142,32 @@ class NewConversationState: Identifiable {
         .receive(on: DispatchQueue.main)
         .sink { [weak self] in
             guard let self else { return }
-            showJoinConversation = false
-            promptToKeepConversation = false
+            messagesTopBarTrailingItem = .share
+            shouldConfirmDeletingConversation = false
         }
         .store(in: &cancellables)
+    }
+
+    func conversationViewModel(
+        for addAccountResult: AddAccountResultType,
+        from draftConversationComposer: any DraftConversationComposerProtocol
+    ) throws -> ConversationViewModel {
+        let draftConversation = try draftConversationComposer.draftConversationRepository.fetchConversation() ?? .empty(
+            id: draftConversationComposer.draftConversationRepository.conversationId
+        )
+        let viewModel: ConversationViewModel = .init(
+            conversation: draftConversation,
+            myProfileWriter: draftConversationComposer.myProfileWriter,
+            myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
+            conversationRepository: draftConversationComposer.draftConversationRepository,
+            messagesRepository: draftConversationComposer.draftConversationRepository.messagesRepository,
+            outgoingMessageWriter: draftConversationComposer.draftConversationWriter,
+            consentWriter: draftConversationComposer.conversationConsentWriter,
+            localStateWriter: draftConversationComposer.conversationLocalStateWriter,
+            metadataWriter: draftConversationComposer.conversationMetadataWriter,
+            inviteRepository: draftConversationComposer.draftConversationRepository.inviteRepository
+        )
+        viewModel.untitledConversationPlaceholder = "New convo"
+        return viewModel
     }
 }

@@ -11,7 +11,6 @@ protocol InviteJoinRequestsManagerProtocol {
 class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
     private let databaseReader: any DatabaseReader
     private let conversationWriter: any ConversationWriterProtocol
-    private let profileWriter: any MemberProfileWriterProtocol
 
     private var streamMessagesTask: Task<Void, Never>?
 
@@ -21,7 +20,6 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
                                                      messageWriter: messageWriter)
-        self.profileWriter = MemberProfileWriter(databaseWriter: databaseWriter)
     }
 
     func start(with client: AnyClientProvider,

@@ -2,8 +2,9 @@ import AVFoundation
 import SwiftUI
 
 // MARK: - QR Scanner Delegate
-class QRScannerDelegate: NSObject, ObservableObject, AVCaptureMetadataOutputObjectsDelegate {
-    @Published var scannedCode: String?
+@Observable
+class QRScannerDelegate: NSObject, AVCaptureMetadataOutputObjectsDelegate {
+    var scannedCode: String?
 
     func metadataOutput(
         _ output: AVCaptureMetadataOutput,

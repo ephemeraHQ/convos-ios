@@ -1,151 +1,90 @@
 import SwiftUI
 
-struct ConversationViewDependencies: Hashable {
-    let conversationId: String
-    let myProfileWriter: any MyProfileWriterProtocol
-    let myProfileRepository: any MyProfileRepositoryProtocol
-    let conversationRepository: any ConversationRepositoryProtocol
-    let messagesRepository: any MessagesRepositoryProtocol
-    let outgoingMessageWriter: any OutgoingMessageWriterProtocol
-    let conversationConsentWriter: any ConversationConsentWriterProtocol
-    let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
-    let groupMetadataWriter: any GroupMetadataWriterProtocol
-    let inviteRepository: any InviteRepositoryProtocol
-
-    static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.conversationId == rhs.conversationId
+/// This allows the interactive swipe to go back gesture while hiding the toolbar
+struct SwipeBackGestureEnabler: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> UIViewController {
+        UIViewController()
     }
 
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(conversationId)
-    }
-}
-
-extension ConversationViewDependencies {
-    static func mock() -> ConversationViewDependencies {
-        let messaging = MockMessagingService()
-        let conversationId: String = "1"
-        return ConversationViewDependencies(
-            conversationId: conversationId,
-            myProfileWriter: messaging.myProfileWriter(),
-            myProfileRepository: messaging.myProfileRepository(),
-            conversationRepository: messaging.conversationRepository(for: conversationId),
-            messagesRepository: messaging.messagesRepository(for: conversationId),
-            outgoingMessageWriter: messaging.messageWriter(for: conversationId),
-            conversationConsentWriter: messaging.conversationConsentWriter(),
-            conversationLocalStateWriter: messaging.conversationLocalStateWriter(),
-            groupMetadataWriter: messaging.groupMetadataWriter(),
-            inviteRepository: messaging.inviteRepository(for: conversationId)
-        )
-    }
-}
-
-extension GroupMetadataWriterProtocol {
-    func saveGroupChanges(_ editState: GroupEditState, conversation: Conversation) {
-        if editState.groupName != conversation.name {
-            Task {
-                do {
-                    try await updateGroupName(
-                        groupId: conversation.id,
-                        name: editState.groupName
-                    )
-                } catch {
-                    Logger.error("Failed updating group name: \(error)")
-                }
-            }
-        }
-
-        if case .success(let image) = editState.imageState {
-            Task {
-                do {
-                    try await updateGroupImage(
-                        conversation: conversation,
-                        image: image
-                    )
-                } catch {
-                    Logger.error("Failed updating group image: \(error)")
-                }
-            }
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        DispatchQueue.main.async {
+            uiViewController.navigationController?.interactivePopGestureRecognizer?.isEnabled = true
+            uiViewController.navigationController?.interactivePopGestureRecognizer?.delegate = nil
         }
     }
 }
 
 struct ConversationView: View {
-    let conversationRepository: any ConversationRepositoryProtocol
-    let myProfileWriter: any MyProfileWriterProtocol
-    let messagesRepository: any MessagesRepositoryProtocol
-    let outgoingMessageWriter: any OutgoingMessageWriterProtocol
-    let conversationConsentWriter: any ConversationConsentWriterProtocol
-    let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
-    let groupMetadataWriter: any GroupMetadataWriterProtocol
-    let inviteRepository: any InviteRepositoryProtocol
-    let conversationState: ConversationState
-    @State private var showInfoForConversation: Conversation?
-    @State private var presentingCustomizationSheet: Bool = false
+    @State var viewModel: ConversationViewModel
+    let onScanInviteCode: () -> Void
+    let onDeleteConversation: () -> Void
+    let confirmDeletionBeforeDismissal: Bool
+    let messagesTopBarLeadingItem: MessagesTopBar.LeadingItem
+    let messagesTopBarTrailingItem: MessagesTopBar.TrailingItem
 
-    init(dependencies: ConversationViewDependencies) {
-        self.conversationRepository = dependencies.conversationRepository
-        self.myProfileWriter = dependencies.myProfileWriter
-        self.messagesRepository = dependencies.messagesRepository
-        self.outgoingMessageWriter = dependencies.outgoingMessageWriter
-        self.conversationConsentWriter = dependencies.conversationConsentWriter
-        self.conversationLocalStateWriter = dependencies.conversationLocalStateWriter
-        self.groupMetadataWriter = dependencies.groupMetadataWriter
-        self.inviteRepository = dependencies.inviteRepository
-        self.conversationState = ConversationState(
-            myProfileRepository: dependencies.myProfileRepository,
-            conversationRepository: dependencies.conversationRepository
-        )
-    }
+    @FocusState private var focusState: MessagesViewInputFocus?
 
-    private func saveGroupChanges(_ editState: GroupEditState) {
-        groupMetadataWriter.saveGroupChanges(
-            editState,
-            conversation: conversationState.conversation
-        )
+    init(
+        viewModel: ConversationViewModel,
+        onScanInviteCode: @escaping () -> Void = {},
+        onDeleteConversation: @escaping () -> Void = {},
+        confirmDeletionBeforeDismissal: Bool = false,
+        messagesTopBarLeadingItem: MessagesTopBar.LeadingItem = .back,
+        messagesTopBarTrailingItem: MessagesTopBar.TrailingItem = .share
+    ) {
+        self.viewModel = viewModel
+        self.onScanInviteCode = onScanInviteCode
+        self.onDeleteConversation = onDeleteConversation
+        self.confirmDeletionBeforeDismissal = confirmDeletionBeforeDismissal
+        self.messagesTopBarLeadingItem = messagesTopBarLeadingItem
+        self.messagesTopBarTrailingItem = messagesTopBarTrailingItem
     }
 
     var body: some View {
-        MessagesContainerView(
-            conversationState: conversationState,
-            myProfileWriter: myProfileWriter,
-            outgoingMessageWriter: outgoingMessageWriter,
-            conversationLocalStateWriter: conversationLocalStateWriter
-        ) {
-            MessagesView(
-                messagesRepository: messagesRepository,
-                inviteRepository: inviteRepository
-            )
-            .ignoresSafeArea()
+        MessagesView(
+            conversation: viewModel.conversation,
+            messages: viewModel.messages,
+            invite: viewModel.invite,
+            profile: viewModel.profile,
+            untitledConversationPlaceholder: viewModel.untitledConversationPlaceholder,
+            conversationNamePlaceholder: viewModel.conversationNamePlaceholder,
+            conversationName: $viewModel.conversationName,
+            conversationImage: $viewModel.conversationImage,
+            displayName: $viewModel.displayName,
+            messageText: $viewModel.messageText,
+            sendButtonEnabled: $viewModel.sendButtonEnabled,
+            profileImage: $viewModel.profileImage,
+            focusState: $focusState,
+            viewModelFocus: viewModel.focus,
+            onConversationInfoTap: viewModel.onConversationInfoTap,
+            onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
+            onConversationSettings: viewModel.onConversationSettings,
+            onProfilePhotoTap: viewModel.onProfilePhotoTap,
+            onSendMessage: viewModel.onSendMessage,
+            onDisplayNameEndedEditing: viewModel.onDisplayNameEndedEditing,
+            onProfileSettings: viewModel.onProfileSettings,
+            onScanInviteCode: onScanInviteCode,
+            onDeleteConversation: onDeleteConversation,
+            topBarLeadingItem: messagesTopBarLeadingItem,
+            topBarTrailingItem: messagesTopBarTrailingItem,
+            confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
+        )
+        .onAppear(perform: viewModel.onAppear)
+        .onDisappear(perform: viewModel.onDisappear)
+        .onChange(of: viewModel.focus) {
+            Logger.info("Changing focus from viewModel to focusState: \(viewModel.focus)")
+            focusState = viewModel.focus
         }
-        .toolbarTitleDisplayMode(.inline)
-        .toolbar {
-            if !presentingCustomizationSheet {
-                ToolbarItem(placement: .title) {
-                    ConversationToolbarButton(
-                        conversation: conversationState.conversation,
-                        draftTitle: "Untitled"
-                    ) {
-                        presentingCustomizationSheet = true
-                    }
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    InviteShareLink(invite: conversationState.conversation.invite)
-                }
-            }
+        .onChange(of: focusState) {
+            Logger.info("Changing focus from focusState to viewModel: \(focusState)")
+            viewModel.focus = focusState
         }
-        .navigationBarBackButtonHidden(presentingCustomizationSheet)
-        .groupCustomizationSheet(
-            isPresented: $presentingCustomizationSheet,
-            editState: conversationState.editState,
-        ) {
-            saveGroupChanges(conversationState.editState)
-        }
+        .toolbarVisibility(.hidden, for: .navigationBar)
+        .background(SwipeBackGestureEnabler())
     }
 }
 
 #Preview {
-    ConversationView(dependencies: .mock())
-        .ignoresSafeArea()
+    @Previewable @State var viewModel: ConversationViewModel = .mock
+    ConversationView(viewModel: viewModel)
 }

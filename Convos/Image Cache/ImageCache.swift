@@ -26,7 +26,7 @@ final class ImageCache {
 
     /// Publisher that emits when a specific cached image is updated
     var cacheUpdates: AnyPublisher<String, Never> {
-        cacheUpdateSubject.eraseToAnyPublisher()
+        cacheUpdateSubject.receive(on: DispatchQueue.main).eraseToAnyPublisher()
     }
 
     private init() {

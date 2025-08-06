@@ -130,6 +130,10 @@ extension MockMessagingService: MyProfileRepositoryProtocol {
     var myProfilePublisher: AnyPublisher<Profile, Never> {
         Just(currentUser.profile).eraseToAnyPublisher()
     }
+
+    func fetch(inboxId: String) throws -> Profile {
+        .mock()
+    }
 }
 
 extension MockMessagingService: ConversationsRepositoryProtocol {

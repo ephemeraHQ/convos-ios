@@ -67,7 +67,7 @@ struct GroupEditView: View {
 
                     // Save in background
                     Task {
-                        await editState.saveGroupChanges()
+//                        await editState.saveGroupChanges()
                     }
                 } label: {
                     Text("Done")

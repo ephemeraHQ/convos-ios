@@ -50,12 +50,14 @@ class MyProfileWriter: MyProfileWriterProtocol {
         let profile = try await databaseWriter.write { db in
             let member = Member(inboxId: inboxId)
             try member.save(db)
-            var profile = try MemberProfile.fetchOne(db, key: inboxId) ?? .init(inboxId: inboxId, name: nil, avatar: nil)
-            if avatar == nil {
-                profile = profile.with(avatar: nil)
+            if let foundProfile = try MemberProfile.fetchOne(db, key: inboxId) {
+                Logger.info("Found profile: \(foundProfile)")
+                return foundProfile
+            } else {
+                let profile = MemberProfile(inboxId: inboxId, name: nil, avatar: nil)
+                try profile.save(db)
+                return profile
             }
-            try profile.save(db)
-            return profile
         }
 
         guard let avatarImage = avatar else {
@@ -70,7 +72,7 @@ class MyProfileWriter: MyProfileWriterProtocol {
         let resizedImage = ImageCompression.resizeForCache(avatarImage)
 
         guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
-            throw PhotosPickerImageError.importFailed
+            throw ImagePickerImageError.importFailed
         }
 
         let uploadedURL = try await inboxReady.apiClient.uploadAttachment(
@@ -79,9 +81,14 @@ class MyProfileWriter: MyProfileWriterProtocol {
             contentType: "image/jpeg",
             acl: "public-read"
         )
+        let updatedProfile = profile.with(avatar: uploadedURL)
+        _ = try await inboxReady.apiClient.updateProfile(inboxId: inboxId, with: updatedProfile.asUpdateRequest())
+
+        ImageCache.shared.setImage(resizedImage, for: uploadedURL)
 
         try await databaseWriter.write { db in
-            try profile.with(avatar: uploadedURL).save(db)
+            Logger.info("Updated avatar for profile: \(updatedProfile)")
+            try updatedProfile.save(db)
         }
     }
 }

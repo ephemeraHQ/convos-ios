@@ -1,19 +1,11 @@
 import SwiftUI
 
 struct JoinConversationView: View {
-    @Bindable var newConversationState: NewConversationState
-    let showsToolbar: Bool
-    @StateObject private var qrScannerDelegate: QRScannerDelegate = QRScannerDelegate()
+    @State private var qrScannerDelegate: QRScannerDelegate = QRScannerDelegate()
     @Environment(\.dismiss) var dismiss: DismissAction
-    let onScannedCode: () -> Void
+    let onScannedCode: (String) -> Void
 
-    init(
-        newConversationState: NewConversationState,
-        showsToolbar: Bool,
-        onScannedCode: @escaping () -> Void = {}
-    ) {
-        self.newConversationState = newConversationState
-        self.showsToolbar = showsToolbar
+    init(onScannedCode: @escaping (String) -> Void) {
         self.onScannedCode = onScannedCode
     }
 
@@ -53,7 +45,7 @@ struct JoinConversationView: View {
 
                         Button {
                             if let code = UIPasteboard.general.string {
-                                handleCode(code: code)
+                                onScannedCode(code)
                             }
                         } label: {
                             Text("Or paste a link")
@@ -72,38 +64,24 @@ struct JoinConversationView: View {
             }
             .ignoresSafeArea()
             .toolbar {
-                if showsToolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button(role: .close) {
-                            dismiss()
-                        }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(role: .close) {
+                        dismiss()
                     }
                 }
             }
         }
         .onChange(of: qrScannerDelegate.scannedCode) { _, newValue in
             if let code = newValue {
-                handleCode(code: code)
+                onScannedCode(code)
             }
         }
     }
 
-    @discardableResult
-    private func handleCode(code: String) -> Bool {
-        guard let result = Invite.parse(temporaryInviteString: code) else {
-            return false
-        }
-        Logger.info("Scanned code: \(result)")
-        newConversationState.joinConversation(
-            inviteId: result.inviteId,
-            inboxId: result.inboxId,
-            inviteCode: result.code
-        )
-        onScannedCode()
-        return true
+    private func handleCode(code: String) {
     }
 }
 
 #Preview {
-    JoinConversationView(newConversationState: .init(session: MockInboxesService()), showsToolbar: true)
+    JoinConversationView(onScannedCode: { _ in })
 }

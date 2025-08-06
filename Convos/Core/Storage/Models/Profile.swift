@@ -30,7 +30,7 @@ struct Profile: Codable, Identifiable, Hashable, ImageCacheable {
 
     // MARK: - ImageCacheable
     var imageCacheIdentifier: String {
-        "profile_\(inboxId)"
+        inboxId
     }
 }
 
