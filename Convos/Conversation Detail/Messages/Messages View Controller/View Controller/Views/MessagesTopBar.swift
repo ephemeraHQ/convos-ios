@@ -58,7 +58,7 @@ struct MessagesTopBar: View {
                             onDeleteConversion()
                             dismiss()
                         }
-                        
+
                         Button("Keep") {
                             dismiss()
                         }
@@ -67,9 +67,9 @@ struct MessagesTopBar: View {
                     .buttonBorderShape(.circle)
                     .buttonStyle(.glass)
                     .offset(x: -88.0 * progress)
-                    
+
                     Spacer()
-                    
+
                     Group {
                         switch trailingItem {
                         case .share:
@@ -96,7 +96,7 @@ struct MessagesTopBar: View {
                         progress = newValue == .conversationName ? 1.0 : 0.0
                     }
                 }
-                
+
                 ConversationInfoButton(
                     conversation: conversation,
                     placeholderName: conversationNamePlaceholder,
