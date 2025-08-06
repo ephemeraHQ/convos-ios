@@ -70,7 +70,7 @@ struct ConversationsView: View {
 
                 ToolbarItem(placement: .bottomBar) {
                     Button("Compose", systemImage: "plus") {
-                        newConversationViewModel = NewConversationViewModel(session: session)
+                        newConversationViewModel = .init(session: session)
                     }
                 }
                 .matchedTransitionSource(

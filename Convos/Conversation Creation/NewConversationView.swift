@@ -20,7 +20,7 @@ struct InviteShareLink: View {
 }
 
 struct NewConversationView: View {
-    @State var viewModel: NewConversationViewModel
+    let viewModel: NewConversationViewModel
     @State private var hasShownScannerOnAppear: Bool = false
     @State private var presentingJoinConversationSheet: Bool = false
 
@@ -54,6 +54,7 @@ struct NewConversationView: View {
             .background(.colorBackgroundPrimary)
             .sheet(isPresented: $presentingJoinConversationSheet) {
                 JoinConversationView { inviteCode in
+                    presentingJoinConversationSheet = false
                     viewModel.join(inviteCode: inviteCode)
                 }
             }
