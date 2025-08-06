@@ -6,7 +6,7 @@ struct ConversationsListEmptyCTA: View {
     let onJoinConvo: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: DesignConstants.Spacing.step4x) {
-            Text("Pop-up private conversations")
+            Text("Pop-up private convos")
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .foregroundStyle(.colorTextPrimary)
