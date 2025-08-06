@@ -28,7 +28,7 @@ struct QuickEditView: View {
             .truncationMode(.tail)
             .focused($focusState, equals: focused)
             .submitLabel(.done)
-            .frame(minWidth: 166.0, maxWidth: 180.0)
+            .frame(minWidth: 166.0)
             .frame(height: 52.0)
             .background(
                 Capsule()

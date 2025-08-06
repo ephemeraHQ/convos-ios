@@ -26,7 +26,7 @@ struct MessagesTopBar: View {
     let confirmDeletionBeforeDismissal: Bool
     @Environment(\.dismiss) var dismiss: DismissAction
 
-    @State private var progress: CGFloat = 0.0
+    @State private var showingToolbarButtons: Bool = true
     @State private var presentingDeleteConfirmation: Bool = false
 
     private var leadingItemImage: Image {
@@ -39,64 +39,74 @@ struct MessagesTopBar: View {
     }
 
     var body: some View {
-        Group {
+        HStack {
             ZStack {
                 HStack(spacing: 0.0) {
-                    Button {
-                        if confirmDeletionBeforeDismissal {
-                            presentingDeleteConfirmation = true
-                        } else {
-                            dismiss()
-                        }
-                    } label: {
-                        leadingItemImage
-                            .font(.system(size: 20.0))
-                            .padding(4.0)
-                    }
-                    .confirmationDialog("", isPresented: $presentingDeleteConfirmation) {
-                        Button("Delete", role: .destructive) {
-                            onDeleteConversion()
-                            dismiss()
-                        }
-                        
-                        Button("Keep") {
-                            dismiss()
-                        }
-                    }
-                    .frame(width: 44.0, height: 44.0)
-                    .buttonBorderShape(.circle)
-                    .buttonStyle(.glass)
-                    .offset(x: -88.0 * progress)
-                    
-                    Spacer()
-                    
-                    Group {
-                        switch trailingItem {
-                        case .share:
-                            InviteShareLink(invite: invite)
-                                .frame(width: 44.0, height: 44.0)
-                                .glassEffect(.regular.interactive())
-                        case .scan:
+                    if showingToolbarButtons {
+                        Group {
                             Button {
-                                onScanInviteCode()
+                                if confirmDeletionBeforeDismissal {
+                                    presentingDeleteConfirmation = true
+                                } else {
+                                    dismiss()
+                                }
                             } label: {
-                                Image(systemName: "qrcode.viewfinder")
+                                leadingItemImage
                                     .font(.system(size: 20.0))
                                     .padding(4.0)
+                            }
+                            .confirmationDialog("", isPresented: $presentingDeleteConfirmation) {
+                                Button("Delete", role: .destructive) {
+                                    onDeleteConversion()
+                                    dismiss()
+                                }
+
+                                Button("Keep") {
+                                    dismiss()
+                                }
                             }
                             .frame(width: 44.0, height: 44.0)
                             .buttonBorderShape(.circle)
                             .buttonStyle(.glass)
+                            .padding(.leading, DesignConstants.Spacing.step4x)
                         }
+                        .transition(AnyTransition.move(edge: .leading).combined(with: .opacity))
                     }
-                    .offset(x: 88.0 * progress)
+
+                    Spacer()
+
+                    if showingToolbarButtons {
+                        Group {
+                            Group {
+                                switch trailingItem {
+                                case .share:
+                                    InviteShareLink(invite: invite)
+                                        .frame(width: 44.0, height: 44.0)
+                                        .glassEffect(.regular.interactive())
+                                case .scan:
+                                    Button {
+                                        onScanInviteCode()
+                                    } label: {
+                                        Image(systemName: "qrcode.viewfinder")
+                                            .font(.system(size: 20.0))
+                                            .padding(4.0)
+                                    }
+                                    .frame(width: 44.0, height: 44.0)
+                                    .buttonBorderShape(.circle)
+                                    .buttonStyle(.glass)
+                                }
+                            }
+                            .padding(.trailing, DesignConstants.Spacing.step4x)
+                        }
+                        .transition(AnyTransition.move(edge: .trailing).combined(with: .opacity))
+                    }
                 }
                 .onChange(of: viewModelFocus) { _, newValue in
-                    withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
-                        progress = newValue == .conversationName ? 1.0 : 0.0
+                    withAnimation(.bouncy(duration: 0.4, extraBounce: 0.1)) {
+                        showingToolbarButtons = newValue != .conversationName
                     }
                 }
-                
+
                 ConversationInfoButton(
                     conversation: conversation,
                     placeholderName: conversationNamePlaceholder,
@@ -110,7 +120,6 @@ struct MessagesTopBar: View {
                     onConversationSettings: onConversationSettings
                 )
             }
-            .padding(.horizontal, DesignConstants.Spacing.step4x)
         }
     }
 }

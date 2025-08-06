@@ -69,18 +69,9 @@ struct MessagesInputView: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(DesignConstants.Spacing.stepX)
         }
-        .frame(maxWidth: .infinity, alignment: .bottom)
-        .fixedSize(horizontal: false, vertical: true)
-        .background(.clear)
-        .background(
-            GeometryReader { geometry in
-                Color.clear
-                    .preference(
-                        key: HeightPreferenceKey.self,
-                        value: geometry.size.height
-                    )
-            }
-        )
+//        .frame(maxWidth: .infinity, alignment: .bottom)
+//        .fixedSize(horizontal: false, vertical: true)
+//        .background(.clear)
     }
 }
 
