@@ -59,7 +59,6 @@ struct MessagesBottomBar: View {
         .padding(.horizontal, 10.0)
         .padding(.vertical, DesignConstants.Spacing.step2x)
         .onChange(of: viewModelFocus) { _, newValue in
-            Logger.info("MessagesBottomBar onChange fired - viewModelFocus changed to: \(String(describing: newValue))")
             withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
                 progress = newValue == .displayName ? 1.0 : 0.0
             }

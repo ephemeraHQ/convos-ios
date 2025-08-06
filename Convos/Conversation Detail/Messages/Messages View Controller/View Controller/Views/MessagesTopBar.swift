@@ -39,76 +39,78 @@ struct MessagesTopBar: View {
     }
 
     var body: some View {
-        ZStack {
-            HStack(spacing: 0.0) {
-                Button {
-                    if confirmDeletionBeforeDismissal {
-                        presentingDeleteConfirmation = true
-                    } else {
-                        dismiss()
-                    }
-                } label: {
-                    leadingItemImage
-                        .font(.system(size: 20.0))
-                        .padding(4.0)
-                }
-                .confirmationDialog("", isPresented: $presentingDeleteConfirmation) {
-                    Button("Delete", role: .destructive) {
-                        onDeleteConversion()
-                        dismiss()
-                    }
-
-                    Button("Keep") {
-                        dismiss()
-                    }
-                }
-                .frame(width: 44.0, height: 44.0)
-                .buttonBorderShape(.circle)
-                .buttonStyle(.glass)
-                .offset(x: -88.0 * progress)
-
-                Spacer()
-
-                Group {
-                    switch trailingItem {
-                    case .share:
-                        InviteShareLink(invite: invite)
-                            .frame(width: 44.0, height: 44.0)
-                            .glassEffect(.regular.interactive())
-                    case .scan:
-                        Button {
-                            onScanInviteCode()
-                        } label: {
-                            Image(systemName: "qrcode.viewfinder")
-                                .font(.system(size: 20.0))
-                                .padding(4.0)
+        Group {
+            ZStack {
+                HStack(spacing: 0.0) {
+                    Button {
+                        if confirmDeletionBeforeDismissal {
+                            presentingDeleteConfirmation = true
+                        } else {
+                            dismiss()
                         }
-                        .frame(width: 44.0, height: 44.0)
-                        .buttonBorderShape(.circle)
-                        .buttonStyle(.glass)
+                    } label: {
+                        leadingItemImage
+                            .font(.system(size: 20.0))
+                            .padding(4.0)
+                    }
+                    .confirmationDialog("", isPresented: $presentingDeleteConfirmation) {
+                        Button("Delete", role: .destructive) {
+                            onDeleteConversion()
+                            dismiss()
+                        }
+                        
+                        Button("Keep") {
+                            dismiss()
+                        }
+                    }
+                    .frame(width: 44.0, height: 44.0)
+                    .buttonBorderShape(.circle)
+                    .buttonStyle(.glass)
+                    .offset(x: -88.0 * progress)
+                    
+                    Spacer()
+                    
+                    Group {
+                        switch trailingItem {
+                        case .share:
+                            InviteShareLink(invite: invite)
+                                .frame(width: 44.0, height: 44.0)
+                                .glassEffect(.regular.interactive())
+                        case .scan:
+                            Button {
+                                onScanInviteCode()
+                            } label: {
+                                Image(systemName: "qrcode.viewfinder")
+                                    .font(.system(size: 20.0))
+                                    .padding(4.0)
+                            }
+                            .frame(width: 44.0, height: 44.0)
+                            .buttonBorderShape(.circle)
+                            .buttonStyle(.glass)
+                        }
+                    }
+                    .offset(x: 88.0 * progress)
+                }
+                .onChange(of: viewModelFocus) { _, newValue in
+                    withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
+                        progress = newValue == .conversationName ? 1.0 : 0.0
                     }
                 }
-                .offset(x: 88.0 * progress)
+                
+                ConversationInfoButton(
+                    conversation: conversation,
+                    placeholderName: conversationNamePlaceholder,
+                    untitledConversationPlaceholder: untitledConversationPlaceholder,
+                    conversationName: $conversationName,
+                    conversationImage: $conversationImage,
+                    focusState: $focusState,
+                    viewModelFocus: viewModelFocus,
+                    onConversationInfoTapped: onConversationInfoTap,
+                    onConversationNameEndedEditing: onConversationNameEndedEditing,
+                    onConversationSettings: onConversationSettings
+                )
             }
             .padding(.horizontal, DesignConstants.Spacing.step4x)
-            .onChange(of: viewModelFocus) { _, newValue in
-                withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
-                    progress = newValue == .conversationName ? 1.0 : 0.0
-                }
-            }
-
-            ConversationInfoButton(
-                conversation: conversation,
-                placeholderName: conversationNamePlaceholder,
-                untitledConversationPlaceholder: untitledConversationPlaceholder,
-                conversationName: $conversationName,
-                conversationImage: $conversationImage,
-                focusState: $focusState,
-                viewModelFocus: viewModelFocus,
-                onConversationInfoTapped: onConversationInfoTap,
-                onConversationNameEndedEditing: onConversationNameEndedEditing,
-                onConversationSettings: onConversationSettings
-            )
         }
     }
 }

@@ -40,6 +40,7 @@ struct NewConversationView: View {
                         },
                         onDeleteConversation: viewModel.deleteConversation,
                         confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
+                        messagesTopBarLeadingItem: .close,
                         messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
                     )
                 } else {

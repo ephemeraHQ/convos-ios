@@ -18,7 +18,7 @@ struct ConversationInfoButton: View {
         PrimarySecondaryContainerView(
             progress: progress,
             primaryProperties: .init(
-                cornerRadius: nil,
+                cornerRadius: 26.0,
                 padding: DesignConstants.Spacing.step2x,
                 fixedSizeHorizontal: false
             ),

@@ -19,6 +19,7 @@ struct ConversationView: View {
     let onScanInviteCode: () -> Void
     let onDeleteConversation: () -> Void
     let confirmDeletionBeforeDismissal: Bool
+    let messagesTopBarLeadingItem: MessagesTopBar.LeadingItem
     let messagesTopBarTrailingItem: MessagesTopBar.TrailingItem
 
     @FocusState private var focusState: MessagesViewInputFocus?
@@ -28,12 +29,14 @@ struct ConversationView: View {
         onScanInviteCode: @escaping () -> Void = {},
         onDeleteConversation: @escaping () -> Void = {},
         confirmDeletionBeforeDismissal: Bool = false,
+        messagesTopBarLeadingItem: MessagesTopBar.LeadingItem = .back,
         messagesTopBarTrailingItem: MessagesTopBar.TrailingItem = .share
     ) {
         self.viewModel = viewModel
         self.onScanInviteCode = onScanInviteCode
         self.onDeleteConversation = onDeleteConversation
         self.confirmDeletionBeforeDismissal = confirmDeletionBeforeDismissal
+        self.messagesTopBarLeadingItem = messagesTopBarLeadingItem
         self.messagesTopBarTrailingItem = messagesTopBarTrailingItem
     }
 
@@ -62,7 +65,7 @@ struct ConversationView: View {
             onProfileSettings: viewModel.onProfileSettings,
             onScanInviteCode: onScanInviteCode,
             onDeleteConversation: onDeleteConversation,
-            topBarLeadingItem: .back,
+            topBarLeadingItem: messagesTopBarLeadingItem,
             topBarTrailingItem: messagesTopBarTrailingItem,
             confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
         )

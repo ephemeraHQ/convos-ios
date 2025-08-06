@@ -41,7 +41,6 @@ struct MessagesView: View {
             )
             .ignoresSafeArea()
         }
-        .frame(maxHeight: .infinity)
         .safeAreaBar(edge: .top) {
             MessagesTopBar(
                 conversation: conversation,

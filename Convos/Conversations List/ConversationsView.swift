@@ -41,7 +41,7 @@ struct ConversationsView: View {
                         }
                         .padding(10)
                     }
-                    .glassEffect(.clear.tint(.white))
+                    .glassEffect(.regular.interactive())
                     .confirmationDialog("", isPresented: $presentingExplodeConfirmation) {
                         Button("Explode", role: .destructive) {
                             do {

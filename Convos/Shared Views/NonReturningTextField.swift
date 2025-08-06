@@ -16,6 +16,7 @@ struct NonReturningTextField: UIViewRepresentable {
         textField.placeholder = placeholderText
         textField.delegate = context.coordinator
         textField.returnKeyType = .done
+        textField.autocapitalizationType = .words
         return textField
     }
 

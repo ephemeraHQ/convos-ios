@@ -81,47 +81,45 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
     }
 
     var body: some View {
-        GlassEffectContainer {
+        ZStack {
             let widthDiff = (secondaryContentSize.width - primaryContentSize.width)
             let heightDiff = (secondaryContentSize.height - primaryContentSize.height)
 
             let rWidth = widthDiff * progress
             let rHeight = heightDiff * progress
 
-            ZStack {
-                secondaryContent
-                    .padding(padding)
-                    .compositingGroup()
-                    .scaleEffect(contentScale)
-                    .blur(radius: blurAmount * blurProgress)
-                    .opacity(secondaryContentOpacity)
-                    .onGeometryChange(for: CGSize.self) {
-                        $0.size
-                    } action: { newValue in
-                        secondaryContentSize = newValue
-                    }
-                    .fixedSize(horizontal: secondaryProperties.fixedSizeHorizontal, vertical: false)
-                    .frame(
-                        width: primaryContentSize.width + rWidth,
-                        height: primaryContentSize.height + rHeight
-                    )
+            secondaryContent
+                .padding(padding)
+                .compositingGroup()
+                .scaleEffect(contentScale)
+                .blur(radius: blurAmount * blurProgress)
+                .opacity(secondaryContentOpacity)
+                .onGeometryChange(for: CGSize.self) {
+                    $0.size
+                } action: { newValue in
+                    secondaryContentSize = newValue
+                }
+                .fixedSize(horizontal: secondaryProperties.fixedSizeHorizontal, vertical: false)
+                .frame(
+                    width: primaryContentSize.width + rWidth,
+                    height: primaryContentSize.height + rHeight
+                )
 
-                primaryContent
-                    .padding(padding)
-                    .compositingGroup()
-                    .blur(radius: blurAmount * blurProgress)
-                    .onGeometryChange(for: CGSize.self) {
-                        $0.size
-                    } action: { newValue in
-                        primaryContentSize = newValue
-                    }
-                    .opacity(primaryContentOpacity)
-                    .fixedSize(horizontal: primaryProperties.fixedSizeHorizontal, vertical: true)
-            }
-            .compositingGroup()
-            .clipShape(.rect(cornerRadius: cornerRadius))
-            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
+            primaryContent
+                .padding(padding)
+                .compositingGroup()
+                .blur(radius: blurAmount * blurProgress)
+                .onGeometryChange(for: CGSize.self) {
+                    $0.size
+                } action: { newValue in
+                    primaryContentSize = newValue
+                }
+                .opacity(primaryContentOpacity)
+                .fixedSize(horizontal: primaryProperties.fixedSizeHorizontal, vertical: true)
         }
+        .compositingGroup()
+        .clipShape(.rect(cornerRadius: cornerRadius))
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
         .scaleEffect(
             x: 1 + (blurProgress * 0.15),
             y: 1 - (blurProgress * 0.05)
