@@ -227,7 +227,7 @@ class ConversationViewModel {
 
 extension ConversationViewModel: KeyboardListenerDelegate {
     func keyboardDidHide(info: KeyboardInfo) {
-        focus = nil
+//        focus = nil
     }
 }
 

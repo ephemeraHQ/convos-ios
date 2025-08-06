@@ -1,4 +1,13 @@
 import SwiftUI
+import SwiftUIIntrospect
+
+private class TextFieldDelegate: NSObject, UITextFieldDelegate {
+    var action: (() -> Void)?
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        action?()
+        return false
+    }
+}
 
 struct QuickEditView: View {
     let placeholderText: String
@@ -9,16 +18,22 @@ struct QuickEditView: View {
     let onSubmit: () -> Void
     let onSettings: () -> Void
 
+    private let textFieldDelegate: TextFieldDelegate = TextFieldDelegate()
+
     var body: some View {
         HStack {
             ImagePickerButton(currentImage: $image)
                 .frame(width: 52.0, height: 52.0)
 
-            NonReturningTextField(
+            TextField(
                 placeholderText,
-                text: $text,
-                onReturn: onSubmit
+                text: $text
             )
+            .introspect(.textField, on: .iOS(.v26)) { textField in
+                textFieldDelegate.action = onSubmit
+                textField.delegate = textFieldDelegate
+            }
+            .focused($focusState, equals: focused)
             .padding(.horizontal, 16.0)
             .font(.system(size: 17.0))
             .tint(.colorTextPrimary)
@@ -26,7 +41,6 @@ struct QuickEditView: View {
             .multilineTextAlignment(.center)
             .textInputAutocapitalization(.words)
             .truncationMode(.tail)
-            .focused($focusState, equals: focused)
             .submitLabel(.done)
             .frame(minWidth: 166.0)
             .frame(height: 52.0)

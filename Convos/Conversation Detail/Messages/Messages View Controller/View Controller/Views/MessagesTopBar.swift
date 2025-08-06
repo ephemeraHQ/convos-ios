@@ -28,6 +28,8 @@ struct MessagesTopBar: View {
 
     @State private var showingToolbarButtons: Bool = true
     @State private var presentingDeleteConfirmation: Bool = false
+    @State private var isExpanded: Bool = false
+    @Namespace private var namespace: Namespace.ID
 
     private var leadingItemImage: Image {
         switch leadingItem {
@@ -42,7 +44,7 @@ struct MessagesTopBar: View {
         HStack {
             ZStack {
                 HStack(spacing: 0.0) {
-                    if showingToolbarButtons {
+                    if !isExpanded {
                         Group {
                             Button {
                                 if confirmDeletionBeforeDismissal {
@@ -75,7 +77,7 @@ struct MessagesTopBar: View {
 
                     Spacer()
 
-                    if showingToolbarButtons {
+                    if !isExpanded {
                         Group {
                             Group {
                                 switch trailingItem {
@@ -101,24 +103,48 @@ struct MessagesTopBar: View {
                         .transition(AnyTransition.move(edge: .trailing).combined(with: .opacity))
                     }
                 }
-                .onChange(of: viewModelFocus) { _, newValue in
-                    withAnimation(.bouncy(duration: 0.4, extraBounce: 0.1)) {
-                        showingToolbarButtons = newValue != .conversationName
+
+                GlassEffectContainer {
+                    ZStack {
+                        if !isExpanded {
+                            ConversationToolbarButton(
+                                conversation: conversation,
+                                conversationImage: $conversationImage,
+                                conversationName: conversationName,
+                                placeholderName: untitledConversationPlaceholder,
+                                action: onConversationInfoTap
+                            )
+                            .padding(DesignConstants.Spacing.step2x)
+                            .clipShape(.rect(cornerRadius: 26.0))
+                            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 26.0))
+                            .glassEffectID("conversationInfo", in: namespace)
+                            .glassEffectTransition(.matchedGeometry)
+                        }
+
+                        if isExpanded {
+                            QuickEditView(
+                                placeholderText: conversationName.isEmpty ? untitledConversationPlaceholder : conversationName,
+                                text: $conversationName,
+                                image: $conversationImage,
+                                focusState: $focusState,
+                                focused: .conversationName,
+                                onSubmit: onConversationNameEndedEditing,
+                                onSettings: onConversationSettings
+                            )
+                            .frame(maxWidth: 320.0)
+                            .padding(DesignConstants.Spacing.step6x)
+                            .clipShape(.rect(cornerRadius: 40.0))
+                            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 40.0))
+                            .glassEffectID("conversationEditor", in: namespace)
+                            .glassEffectTransition(.matchedGeometry)
+                        }
                     }
                 }
-
-                ConversationInfoButton(
-                    conversation: conversation,
-                    placeholderName: conversationNamePlaceholder,
-                    untitledConversationPlaceholder: untitledConversationPlaceholder,
-                    conversationName: $conversationName,
-                    conversationImage: $conversationImage,
-                    focusState: $focusState,
-                    viewModelFocus: viewModelFocus,
-                    onConversationInfoTapped: onConversationInfoTap,
-                    onConversationNameEndedEditing: onConversationNameEndedEditing,
-                    onConversationSettings: onConversationSettings
-                )
+            }
+            .onChange(of: viewModelFocus) { _, newValue in
+                withAnimation(.bouncy(duration: 0.4, extraBounce: 0.01)) {
+                    isExpanded = newValue == .conversationName
+                }
             }
         }
     }

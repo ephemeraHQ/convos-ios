@@ -72,9 +72,11 @@ struct ConversationView: View {
         .onAppear(perform: viewModel.onAppear)
         .onDisappear(perform: viewModel.onDisappear)
         .onChange(of: viewModel.focus) {
+            Logger.info("Changing focus state from ConversationViewModel to \(viewModel.focus) (view focus is: \(focusState))")
             focusState = viewModel.focus
         }
         .onChange(of: focusState) {
+            Logger.info("Changing focus state from ConversationView to \(focusState) (viewModel focus is: \(viewModel.focus))")
             viewModel.focus = focusState
         }
         .toolbarVisibility(.hidden, for: .navigationBar)

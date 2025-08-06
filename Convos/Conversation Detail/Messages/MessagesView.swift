@@ -39,7 +39,7 @@ struct MessagesView: View {
                 topBarHeight: topBarHeight,
                 bottomBarHeight: bottomBarHeight
             )
-            .ignoresSafeArea()
+            .ignoresSafeArea(edges: [.top, .bottom])
         }
         .safeAreaBar(edge: .top) {
             MessagesTopBar(
