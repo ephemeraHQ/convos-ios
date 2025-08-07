@@ -69,7 +69,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
     func createUser(_ requestBody: ConvosAPI.CreateUserRequest) async throws -> ConvosAPI.CreatedUserResponse {
         return ConvosAPI.CreatedUserResponse(
             id: "created_user_123",
-            turnkeyUserId: requestBody.turnkeyUserId,
+            userId: requestBody.userId,
             device: ConvosAPI.CreatedUserResponse.Device(
                 id: "device_1",
                 os: requestBody.device.os,

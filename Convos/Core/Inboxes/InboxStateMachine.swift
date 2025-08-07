@@ -405,7 +405,8 @@ actor InboxStateMachine {
         apiClient: any ConvosAPIClientProtocol
     ) async throws -> ConvosAPI.CreatedUserResponse {
         let requestBody: ConvosAPI.CreateUserRequest = .init(
-            turnkeyUserId: inbox.providerId,
+            userId: inbox.providerId,
+            userType: .onDevice,
             device: .current(),
             identity: .init(turnkeyAddress: inbox.signingKey.identity.identifier,
                             xmtpId: client.inboxId,
