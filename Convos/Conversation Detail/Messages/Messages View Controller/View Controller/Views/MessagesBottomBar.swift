@@ -24,8 +24,8 @@ struct MessagesBottomBar: View {
         PrimarySecondaryContainerView(
             progress: progress,
             primaryProperties: .init(
-                cornerRadius: 40.0,
-                padding: DesignConstants.Spacing.stepX,
+                cornerRadius: (MessagesInputView.defaultHeight + (DesignConstants.Spacing.step4x)) / 2.0,
+                padding: DesignConstants.Spacing.step2x,
                 fixedSizeHorizontal: false
             ),
             secondaryProperties: .init(
