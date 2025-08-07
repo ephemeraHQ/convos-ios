@@ -48,7 +48,7 @@ enum ConvosAPI {
         let profile: Profile
         struct Device: Encodable {
             let os: String
-            let name: String?
+            let identifier: String
         }
         struct Identity: Encodable {
             let turnkeyAddress: String?
@@ -136,7 +136,7 @@ enum ConvosAPI {
         struct Device: Decodable {
             let id: String
             let os: String
-            let name: String?
+            let identifier: String
         }
         struct Identity: Decodable {
             let id: String
@@ -172,14 +172,9 @@ enum ConvosAPI {
 
 extension ConvosAPI.CreateUserRequest.Device {
     static func current() -> Self {
-        #if targetEnvironment(macCatalyst)
-        let osString = "macos"
-        #else
-        let osString = "ios"
-        #endif
         return .init(
-            os: osString,
-            name: UIDevice.current.name
+            os: DeviceInfo.osString,
+            identifier: DeviceInfo.deviceIdentifier
         )
     }
 }
