@@ -11,6 +11,14 @@ setup: ## Setup dependencies and developer environment
 secrets: ## Generate Secrets.swift from .env
 	./Scripts/generate-secrets.sh
 
+.PHONY: secrets-local
+secrets-local: ## Generate Secrets.swift with auto-detected local IP
+	./Scripts/generate-secrets-local.sh
+
+.PHONY: ensure-secrets
+ensure-secrets: ## Ensure minimal Secrets.swift exists
+	./Scripts/generate-secrets-local.sh --ensure-only
+
 .PHONY: entitlements
 entitlements: ## Generate entitlements file from .env
 	./Scripts/generate_entitlements.sh
