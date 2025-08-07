@@ -65,3 +65,30 @@ struct MessagesBottomBar: View {
         }
     }
 }
+
+#Preview {
+    @Previewable @State var profile: Profile = .mock()
+    @Previewable @State var profileName: String = ""
+    @Previewable @State var messageText: String = ""
+    @Previewable @State var sendButtonEnabled: Bool = false
+    @Previewable @State var profileImage: UIImage?
+    @Previewable @FocusState var focusState: MessagesViewInputFocus?
+    @Previewable @State var viewModelFocus: MessagesViewInputFocus?
+    MessagesBottomBar(
+        profile: profile,
+        displayName: $profileName,
+        messageText: $messageText,
+        sendButtonEnabled: $sendButtonEnabled,
+        profileImage: $profileImage,
+        focusState: $focusState,
+        viewModelFocus: viewModelFocus,
+        onProfilePhotoTap: {
+            viewModelFocus = .displayName
+        },
+        onSendMessage: {},
+        onDisplayNameEndedEditing: {
+            viewModelFocus = .message
+        },
+        onProfileSettings: {}
+    )
+}
