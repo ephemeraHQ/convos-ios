@@ -59,7 +59,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
             identities: [
                 ConvosAPI.UserResponse.Identity(
                     id: "identity_1",
-                    turnkeyAddress: "0xMOCKADDRESS1",
+                    identityAddress: "0xMOCKADDRESS1",
                     xmtpId: "mock-xmtp-id"
                 )
             ]
@@ -77,7 +77,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
             ),
             identity: ConvosAPI.CreatedUserResponse.Identity(
                 id: "identity_1",
-                turnkeyAddress: requestBody.identity.turnkeyAddress,
+                identityAddress: requestBody.identity.identityAddress,
                 xmtpId: requestBody.identity.xmtpId
             ),
             profile: ConvosAPI.CreatedUserResponse.Profile(
@@ -152,7 +152,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
             description: "This is a mock profile.",
             avatar: nil,
             xmtpId: "mock-xmtp-id",
-            turnkeyAddress: "0xMOCKADDRESS1"
+            identityAddress: "0xMOCKADDRESS1"
         )
     }
 
@@ -165,7 +165,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
                 description: "This is a mock profile for \(id).",
                 avatar: nil,
                 xmtpId: "mock-xmtp-id-\(id)",
-                turnkeyAddress: "0xMOCKADDRESS\(id)"
+                identityAddress: "0xMOCKADDRESS\(id)"
             )
             result[id] = profile
         }
@@ -183,7 +183,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
                 description: "Profile matching query: \(query)",
                 avatar: nil,
                 xmtpId: "mock-xmtp-id-search1",
-                turnkeyAddress: "0xMOCKADDRESSSEARCH1"
+                identityAddress: "0xMOCKADDRESSSEARCH1"
             )
         ]
     }
