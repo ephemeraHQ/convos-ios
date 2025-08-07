@@ -42,10 +42,16 @@ enum ConvosAPI {
     }
 
     struct CreateUserRequest: Encodable {
-        let turnkeyUserId: String
+        let userId: String
+        let userType: UserType
         let device: Device
         let identity: Identity
         let profile: Profile
+
+        enum UserType: String, Encodable {
+            case onDevice
+            case turnkey
+        }
         struct Device: Encodable {
             let os: String
             let name: String?
@@ -130,7 +136,7 @@ enum ConvosAPI {
 
     struct CreatedUserResponse: Decodable {
         let id: String
-        let turnkeyUserId: String
+        let userId: String
         let device: Device
         let identity: Identity
         let profile: Profile
