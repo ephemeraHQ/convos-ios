@@ -105,6 +105,7 @@ class NewConversationViewModel: Identifiable {
                 }
 
                 if self.conversationViewModel == nil {
+                    Logger.info("ConversationViewModel is `nil`... creating a new one.")
                     self.conversationViewModel = try conversationViewModel(
                         for: addAccountResult,
                         from: draftConversationComposer

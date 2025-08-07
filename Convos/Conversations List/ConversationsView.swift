@@ -24,7 +24,6 @@ struct ConversationsView: View {
                 },
                 path: $path
             )
-            .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
