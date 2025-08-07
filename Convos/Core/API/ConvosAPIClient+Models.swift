@@ -48,7 +48,8 @@ enum ConvosAPI {
         let profile: Profile
         struct Device: Encodable {
             let os: String
-            let identifier: String
+            let name: String?
+            let id: String
         }
         struct Identity: Encodable {
             let turnkeyAddress: String?
@@ -136,7 +137,7 @@ enum ConvosAPI {
         struct Device: Decodable {
             let id: String
             let os: String
-            let identifier: String
+            let name: String?
         }
         struct Identity: Decodable {
             let id: String
@@ -174,7 +175,8 @@ extension ConvosAPI.CreateUserRequest.Device {
     static func current() -> Self {
         return .init(
             os: DeviceInfo.osString,
-            identifier: DeviceInfo.deviceIdentifier
+            name: nil,
+            id: DeviceInfo.deviceIdentifier
         )
     }
 }

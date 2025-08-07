@@ -73,7 +73,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
             device: ConvosAPI.CreatedUserResponse.Device(
                 id: "device_1",
                 os: requestBody.device.os,
-                identifier: requestBody.device.identifier
+                name: requestBody.device.name
             ),
             identity: ConvosAPI.CreatedUserResponse.Identity(
                 id: "identity_1",
