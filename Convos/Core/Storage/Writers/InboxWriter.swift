@@ -33,7 +33,7 @@ final class InboxWriter: InboxWriterProtocol {
             .init(
                 id: $0.id,
                 inboxId: inboxId,
-                walletAddress: $0.turnkeyAddress
+                walletAddress: $0.identityAddress
             )
         }
         try await databaseWriter.write { db in
@@ -70,7 +70,7 @@ final class InboxWriter: InboxWriterProtocol {
             .init(
                 id: user.identity.id,
                 inboxId: inboxId,
-                walletAddress: user.identity.turnkeyAddress
+                walletAddress: user.identity.identityAddress
             )
         ]
         let member: Member = .init(inboxId: inboxId)

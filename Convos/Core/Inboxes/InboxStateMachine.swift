@@ -408,7 +408,7 @@ actor InboxStateMachine {
             userId: inbox.providerId,
             userType: .onDevice,
             device: .current(),
-            identity: .init(turnkeyAddress: inbox.signingKey.identity.identifier,
+            identity: .init(identityAddress: inbox.signingKey.identity.identifier,
                             xmtpId: client.inboxId,
                             xmtpInstallationId: client.installationId),
             profile: .init(

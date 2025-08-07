@@ -36,7 +36,7 @@ enum ConvosAPI {
         let identities: [Identity]
         struct Identity: Decodable {
             let id: String
-            let turnkeyAddress: String?
+            let identityAddress: String?
             let xmtpId: String
         }
     }
@@ -58,7 +58,7 @@ enum ConvosAPI {
             let id: String
         }
         struct Identity: Encodable {
-            let turnkeyAddress: String?
+            let identityAddress: String?
             let xmtpId: String
             let xmtpInstallationId: String?
         }
@@ -147,7 +147,7 @@ enum ConvosAPI {
         }
         struct Identity: Decodable {
             let id: String
-            let turnkeyAddress: String?
+            let identityAddress: String?
             let xmtpId: String?
         }
         struct Profile: Decodable {
@@ -173,7 +173,7 @@ enum ConvosAPI {
         let description: String?
         let avatar: String?
         let xmtpId: String
-        let turnkeyAddress: String?
+        let identityAddress: String?
     }
 }
 
