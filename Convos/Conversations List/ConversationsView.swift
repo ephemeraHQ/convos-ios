@@ -27,37 +27,25 @@ struct ConversationsView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationSplitView {
             Group {
-                if viewModel.unpinnedConversations.isEmpty {
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ConversationsListEmptyCTA(
-                                onStartConvo: viewModel.onStartConvo,
-                                onJoinConvo: viewModel.onJoinConvo
-                            )
-                            .padding(DesignConstants.Spacing.step6x)
+                List(viewModel.unpinnedConversations, id: \.self, selection: $viewModel.selectedConversation) { conversation in
+                    ZStack {
+                        ConversationsListItem(conversation: conversation)
+                        let conversationViewModel = viewModel.conversationViewModel(for: conversation)
+                        NavigationLink(value: conversationViewModel) {
+                            EmptyView()
                         }
+                        .opacity(0.0) // zstack hides disclosure indicator
                     }
-                } else {
-                    List(viewModel.unpinnedConversations, id: \.self, selection: $viewModel.selectedConversation) { conversation in
-                        ZStack {
-                            ConversationsListItem(conversation: conversation)
-                            let conversationViewModel = viewModel.conversationViewModel(for: conversation)
-                            NavigationLink(value: conversationViewModel) {
-                                EmptyView()
-                            }
-                            .opacity(0.0) // zstack hides disclosure indicator
-                        }
-                        .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
-                        .listRowSeparator(.hidden)
-                    }
-                    .listStyle(.plain)
-                    .navigationDestination(item: $viewModel.selectedConversation) { conversationViewModel in
-                        ConversationView(viewModel: conversationViewModel)
-                    }
+                    .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .listRowSeparator(.hidden)
                 }
+                .listStyle(.plain)
             }
+            .background(.colorBackgroundPrimary)
+            .toolbarTitleDisplayMode(.inline)
+            .toolbar(removing: .sidebarToggle)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -111,19 +99,32 @@ struct ConversationsView: View {
                     in: namespace
                 )
             }
-            .fullScreenCover(item: $viewModel.newConversationViewModel) { viewModel in
-                NewConversationView(viewModel: viewModel)
-                    .background(.white)
-                    .interactiveDismissDisabled()
-                    .navigationTransition(
-                        .zoom(
-                            sourceID: "composer-transition-source",
-                            in: namespace
+        } detail: {
+            if let conversationViewModel = viewModel.selectedConversation {
+                ConversationView(viewModel: conversationViewModel)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ConversationsListEmptyCTA(
+                            onStartConvo: viewModel.onStartConvo,
+                            onJoinConvo: viewModel.onJoinConvo
                         )
-                    )
+                        .padding(DesignConstants.Spacing.step6x)
+                    }
+                }
             }
         }
-        .background(.colorBackgroundPrimary)
+        .fullScreenCover(item: $viewModel.newConversationViewModel) { viewModel in
+            NewConversationView(viewModel: viewModel)
+                .background(.white)
+                .interactiveDismissDisabled()
+                .navigationTransition(
+                    .zoom(
+                        sourceID: "composer-transition-source",
+                        in: namespace
+                    )
+                )
+        }
     }
 }
 
