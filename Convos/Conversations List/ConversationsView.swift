@@ -1,16 +1,11 @@
 import SwiftUI
 
-enum ConversationsRoute: Hashable {
-    case conversation(ConversationViewModel)
-}
-
 struct ConversationsView: View {
     let session: any SessionManagerProtocol
     @State var viewModel: ConversationsViewModel
 
     @Namespace private var namespace: Namespace.ID
     @State private var presentingExplodeConfirmation: Bool = false
-    @State private var path: [ConversationsRoute] = []
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     init(
@@ -32,7 +27,7 @@ struct ConversationsView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack {
             Group {
                 if viewModel.unpinnedConversations.isEmpty {
                     ScrollView {
@@ -133,7 +128,6 @@ struct ConversationsView: View {
 }
 
 #Preview {
-    @Previewable @State var path: [ConversationsRoute] = []
     let convos = ConvosClient.mock()
     ConversationsView(
         session: convos.session
