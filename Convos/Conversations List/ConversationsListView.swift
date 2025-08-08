@@ -44,11 +44,11 @@ struct ConversationsListView: View {
                     }
                 }
             }
-            .navigationDestination(for: ConversationsRoute.self) { route in
-                switch route {
-                case .conversation(let conversation):
-                    ConversationView(viewModel: viewModel.viewModel(for: conversation))
-                }
+        }
+        .navigationDestination(for: ConversationsRoute.self) { route in
+            switch route {
+            case .conversation(let conversation):
+                ConversationView(viewModel: viewModel.viewModel(for: conversation))
             }
         }
     }
@@ -64,10 +64,4 @@ struct ConversationsListView: View {
         onJoinConversation: {},
         path: $path
     )
-}
-
-#Preview {
-    ConversationsListEmptyCTA {
-    } onJoinConvo: {
-    }
 }
