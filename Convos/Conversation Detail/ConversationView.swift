@@ -15,7 +15,7 @@ struct SwipeBackGestureEnabler: UIViewControllerRepresentable {
 }
 
 struct ConversationView: View {
-    @State var viewModel: ConversationViewModel
+    @Bindable var viewModel: ConversationViewModel
     let onScanInviteCode: () -> Void
     let onDeleteConversation: () -> Void
     let confirmDeletionBeforeDismissal: Bool

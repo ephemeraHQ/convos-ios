@@ -1,29 +1,68 @@
 import SwiftUI
 
 enum ConversationsRoute: Hashable {
-    case conversation(Conversation)
+    case conversation(ConversationViewModel)
 }
 
 struct ConversationsView: View {
     let session: any SessionManagerProtocol
+    @State var viewModel: ConversationsViewModel
+
     @Namespace private var namespace: Namespace.ID
-    @State private var newConversationViewModel: NewConversationViewModel?
     @State private var presentingExplodeConfirmation: Bool = false
     @State private var path: [ConversationsRoute] = []
     @Environment(\.dismiss) private var dismiss: DismissAction
 
+    init(
+        session: any SessionManagerProtocol
+    ) {
+        self.session = session
+        let conversationsRepository = session.conversationsRepository(
+            for: .allowed
+        )
+        let conversationsCountRepository = session.conversationsCountRepo(
+            for: .all,
+            kinds: .groups
+        )
+        self.viewModel = ConversationsViewModel(
+            session: session,
+            conversationsRepository: conversationsRepository,
+            conversationsCountRepository: conversationsCountRepository
+        )
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
-            ConversationsListView(
-                session: session,
-                onNewConversation: {
-                    newConversationViewModel = .init(session: session)
-                },
-                onJoinConversation: {
-                    newConversationViewModel = .init(session: session, showScannerOnAppear: true)
-                },
-                path: $path
-            )
+            Group {
+                if viewModel.unpinnedConversations.isEmpty {
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ConversationsListEmptyCTA(
+                                onStartConvo: viewModel.onStartConvo,
+                                onJoinConvo: viewModel.onJoinConvo
+                            )
+                            .padding(DesignConstants.Spacing.step6x)
+                        }
+                    }
+                } else {
+                    List(viewModel.unpinnedConversations, id: \.self, selection: $viewModel.selectedConversation) { conversation in
+                        ZStack {
+                            ConversationsListItem(conversation: conversation)
+                            let conversationViewModel = viewModel.conversationViewModel(for: conversation)
+                            NavigationLink(value: conversationViewModel) {
+                                EmptyView()
+                            }
+                            .opacity(0.0) // zstack hides disclosure indicator
+                        }
+                        .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
+                        .listRowSeparator(.hidden)
+                    }
+                    .listStyle(.plain)
+                    .navigationDestination(item: $viewModel.selectedConversation) { conversationViewModel in
+                        ConversationView(viewModel: conversationViewModel)
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
@@ -69,7 +108,7 @@ struct ConversationsView: View {
 
                 ToolbarItem(placement: .bottomBar) {
                     Button("Compose", systemImage: "plus") {
-                        newConversationViewModel = .init(session: session)
+                        viewModel.onStartConvo()
                     }
                 }
                 .matchedTransitionSource(
@@ -77,7 +116,7 @@ struct ConversationsView: View {
                     in: namespace
                 )
             }
-            .fullScreenCover(item: $newConversationViewModel) { viewModel in
+            .fullScreenCover(item: $viewModel.newConversationViewModel) { viewModel in
                 NewConversationView(viewModel: viewModel)
                     .background(.white)
                     .interactiveDismissDisabled()

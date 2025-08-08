@@ -3,9 +3,12 @@ import Foundation
 import Observation
 
 @Observable
-final class ConversationsListViewModel {
+final class ConversationsViewModel {
     private(set) var conversations: [Conversation]
     private(set) var conversationsCount: Int = 0
+
+    var selectedConversation: ConversationViewModel?
+    var newConversationViewModel: NewConversationViewModel?
 
     var pinnedConversations: [Conversation] {
         conversations.filter { $0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
@@ -37,7 +40,15 @@ final class ConversationsListViewModel {
         observe()
     }
 
-    func viewModel(for conversation: Conversation) -> ConversationViewModel {
+    func onStartConvo() {
+        newConversationViewModel = .init(session: session)
+    }
+
+    func onJoinConvo() {
+        newConversationViewModel = .init(session: session, showScannerOnAppear: true)
+    }
+
+    func conversationViewModel(for conversation: Conversation) -> ConversationViewModel {
         let messagingService = session.messagingService(for: conversation.inboxId)
         return .init(
             conversation: conversation,
