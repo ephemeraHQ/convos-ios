@@ -12,6 +12,7 @@ struct ConvosApp: App {
     var body: some Scene {
         WindowGroup {
             ConversationsView(session: convos.session)
+                .withSafeAreaEnvironment()
         }
     }
 }

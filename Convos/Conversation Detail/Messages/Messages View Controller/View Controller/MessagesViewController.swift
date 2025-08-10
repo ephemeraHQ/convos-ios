@@ -101,7 +101,7 @@ final class MessagesViewController: UIViewController {
                 updateBottomInsetForBottomBarHeight()
             }
 
-            if bottomBarHeight > 0.0 && topBarHeight > 0.0 {
+            if bottomBarHeight > 0.0 {
                 currentInterfaceActions.options.remove(.determiningBarHeights)
             }
         }

@@ -79,3 +79,14 @@ final class ConversationsViewModel {
             .store(in: &cancellables)
     }
 }
+
+extension ConversationsViewModel {
+    static var mock: ConversationsViewModel {
+        let client = ConvosClient.mock()
+        return .init(
+            session: client.session,
+            conversationsRepository: client.session.conversationsRepository(for: .all),
+            conversationsCountRepository: client.session.conversationsCountRepo(for: .all, kinds: .groups)
+        )
+    }
+}

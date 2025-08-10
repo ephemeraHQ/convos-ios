@@ -41,30 +41,30 @@ struct MessagesView: View {
             )
             .ignoresSafeArea()
         }
-        .safeAreaBar(edge: .top) {
-            MessagesTopBar(
-                conversation: conversation,
-                invite: invite,
-                untitledConversationPlaceholder: untitledConversationPlaceholder,
-                conversationNamePlaceholder: conversationNamePlaceholder,
-                conversationName: $conversationName,
-                conversationImage: $conversationImage,
-                focusState: $focusState,
-                viewModelFocus: viewModelFocus,
-                onConversationInfoTap: onConversationInfoTap,
-                onConversationNameEndedEditing: onConversationNameEndedEditing,
-                onConversationSettings: onConversationSettings,
-                onScanInviteCode: onScanInviteCode,
-                onDeleteConversion: onDeleteConversation,
-                leadingItem: topBarLeadingItem,
-                trailingItem: topBarTrailingItem,
-                confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
-            )
-            .background(HeightReader())
-            .onPreferenceChange(HeightPreferenceKey.self) { height in
-                topBarHeight = height
-            }
-        }
+//        .safeAreaBar(edge: .top) {
+//            MessagesTopBar(
+//                conversation: conversation,
+//                invite: invite,
+//                untitledConversationPlaceholder: untitledConversationPlaceholder,
+//                conversationNamePlaceholder: conversationNamePlaceholder,
+//                conversationName: $conversationName,
+//                conversationImage: $conversationImage,
+//                focusState: $focusState,
+//                viewModelFocus: viewModelFocus,
+//                onConversationInfoTap: onConversationInfoTap,
+//                onConversationNameEndedEditing: onConversationNameEndedEditing,
+//                onConversationSettings: onConversationSettings,
+//                onScanInviteCode: onScanInviteCode,
+//                onDeleteConversion: onDeleteConversation,
+//                leadingItem: topBarLeadingItem,
+//                trailingItem: topBarTrailingItem,
+//                confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
+//            )
+//            .background(HeightReader())
+//            .onPreferenceChange(HeightPreferenceKey.self) { height in
+//                topBarHeight = height
+//            }
+//        }
         .safeAreaBar(edge: .bottom) {
             MessagesBottomBar(
                 profile: profile,

@@ -41,44 +41,44 @@ struct ConversationView: View {
     }
 
     var body: some View {
-        MessagesView(
-            conversation: viewModel.conversation,
-            messages: viewModel.messages,
-            invite: viewModel.invite,
-            profile: viewModel.profile,
-            untitledConversationPlaceholder: viewModel.untitledConversationPlaceholder,
-            conversationNamePlaceholder: viewModel.conversationNamePlaceholder,
-            conversationName: $viewModel.conversationName,
-            conversationImage: $viewModel.conversationImage,
-            displayName: $viewModel.displayName,
-            messageText: $viewModel.messageText,
-            sendButtonEnabled: $viewModel.sendButtonEnabled,
-            profileImage: $viewModel.profileImage,
-            focusState: $focusState,
-            viewModelFocus: viewModel.focus,
-            onConversationInfoTap: viewModel.onConversationInfoTap,
-            onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
-            onConversationSettings: viewModel.onConversationSettings,
-            onProfilePhotoTap: viewModel.onProfilePhotoTap,
-            onSendMessage: viewModel.onSendMessage,
-            onDisplayNameEndedEditing: viewModel.onDisplayNameEndedEditing,
-            onProfileSettings: viewModel.onProfileSettings,
-            onScanInviteCode: onScanInviteCode,
-            onDeleteConversation: onDeleteConversation,
-            topBarLeadingItem: messagesTopBarLeadingItem,
-            topBarTrailingItem: messagesTopBarTrailingItem,
-            confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
-        )
-        .onAppear(perform: viewModel.onAppear)
-        .onDisappear(perform: viewModel.onDisappear)
-        .onChange(of: viewModel.focus) {
-            focusState = viewModel.focus
+        ConversationInfoPresenter(viewModel: viewModel, focusState: $focusState) {
+            MessagesView(
+                conversation: viewModel.conversation,
+                messages: viewModel.messages,
+                invite: viewModel.invite,
+                profile: viewModel.profile,
+                untitledConversationPlaceholder: viewModel.untitledConversationPlaceholder,
+                conversationNamePlaceholder: viewModel.conversationNamePlaceholder,
+                conversationName: $viewModel.conversationName,
+                conversationImage: $viewModel.conversationImage,
+                displayName: $viewModel.displayName,
+                messageText: $viewModel.messageText,
+                sendButtonEnabled: $viewModel.sendButtonEnabled,
+                profileImage: $viewModel.profileImage,
+                focusState: $focusState,
+                viewModelFocus: viewModel.focus,
+                onConversationInfoTap: viewModel.onConversationInfoTap,
+                onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
+                onConversationSettings: viewModel.onConversationSettings,
+                onProfilePhotoTap: viewModel.onProfilePhotoTap,
+                onSendMessage: viewModel.onSendMessage,
+                onDisplayNameEndedEditing: viewModel.onDisplayNameEndedEditing,
+                onProfileSettings: viewModel.onProfileSettings,
+                onScanInviteCode: onScanInviteCode,
+                onDeleteConversation: onDeleteConversation,
+                topBarLeadingItem: messagesTopBarLeadingItem,
+                topBarTrailingItem: messagesTopBarTrailingItem,
+                confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
+            )
+            .onAppear(perform: viewModel.onAppear)
+            .onDisappear(perform: viewModel.onDisappear)
+            .onChange(of: viewModel.focus) {
+                focusState = viewModel.focus
+            }
+            .onChange(of: focusState) {
+                viewModel.focus = focusState
+            }
         }
-        .onChange(of: focusState) {
-            viewModel.focus = focusState
-        }
-        .toolbarVisibility(.hidden, for: .navigationBar)
-        .background(SwipeBackGestureEnabler())
     }
 }
 
