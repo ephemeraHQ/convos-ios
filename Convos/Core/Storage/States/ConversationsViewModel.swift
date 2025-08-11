@@ -3,11 +3,15 @@ import Foundation
 import Observation
 
 @Observable
-final class ConversationsViewModel {
+class SelectableConversationViewModelType {
+    var selectedConversation: ConversationViewModel?
+}
+
+@Observable
+final class ConversationsViewModel: SelectableConversationViewModelType {
     private(set) var conversations: [Conversation]
     private(set) var conversationsCount: Int = 0
 
-    var selectedConversation: ConversationViewModel?
     var newConversationViewModel: NewConversationViewModel?
 
     var pinnedConversations: [Conversation] {
@@ -37,6 +41,7 @@ final class ConversationsViewModel {
             Logger.error("Error fetching conversations: \(error)")
             self.conversations = []
         }
+        super.init()
         observe()
     }
 

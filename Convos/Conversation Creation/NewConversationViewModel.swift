@@ -2,7 +2,16 @@ import Combine
 import SwiftUI
 
 @Observable
-class NewConversationViewModel: Identifiable {
+class NewConversationViewModel: SelectableConversationViewModelType, Identifiable {
+    override var selectedConversation: ConversationViewModel? {
+        get {
+            conversationViewModel
+        }
+        set {
+            conversationViewModel = newValue
+        }
+    }
+
     // MARK: - Public
 
     let session: any SessionManagerProtocol
@@ -28,6 +37,7 @@ class NewConversationViewModel: Identifiable {
     init(session: any SessionManagerProtocol, showScannerOnAppear: Bool = false) {
         self.session = session
         self.showScannerOnAppear = showScannerOnAppear
+        super.init()
     }
 
     // MARK: - Actions
