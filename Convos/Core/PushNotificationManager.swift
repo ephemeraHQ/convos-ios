@@ -10,35 +10,14 @@ enum PushNotificationError: Error {
     case timeout
 }
 
-// Helper function for timeout operations
-func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
-    try await withThrowingTaskGroup(of: T.self) { group in
-        group.addTask {
-            try await operation()
-        }
-
-        group.addTask {
-            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            throw PushNotificationError.timeout
-        }
-
-        guard let result = try await group.next() else {
-            throw PushNotificationError.timeout
-        }
-
-        group.cancelAll()
-        return result
-    }
-}
-
-@MainActor
-class PushNotificationManager: NSObject, ObservableObject {
+@Observable
+class PushNotificationManager: NSObject {
     static let shared: PushNotificationManager = PushNotificationManager()
 
-    @Published var deviceToken: String?
-    @Published var isAuthorized: Bool = false
-    @Published var authorizationStatus: UNAuthorizationStatus = .notDetermined
-    @Published var registrationError: Error?
+    var deviceToken: String?
+    var isAuthorized: Bool = false
+    var authorizationStatus: UNAuthorizationStatus = .notDetermined
+    var registrationError: Error?
 
     private let notificationProcessor: NotificationProcessor
     private let convosClient: ConvosClient
@@ -112,7 +91,9 @@ class PushNotificationManager: NSObject, ObservableObject {
     // MARK: - Registration
 
     private func registerForRemoteNotifications() async {
-        UIApplication.shared.registerForRemoteNotifications()
+        await MainActor.run {
+            UIApplication.shared.registerForRemoteNotifications()
+        }
     }
 
     // MARK: - Device Token Handling
@@ -121,12 +102,12 @@ class PushNotificationManager: NSObject, ObservableObject {
         let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
         let token = tokenParts.joined()
 
-        Logger.info("🔔 [PushNotificationManager] ✅ Received device token from APNS: \(token)")
+        Logger.info("✅ Received device token from APNS: \(token)")
         self.deviceToken = token
 
         // Store token in shared storage
         notificationProcessor.storeDeviceToken(token)
-        Logger.info("🔔 [PushNotificationManager] ✅ Stored device token in shared storage")
+        Logger.info("✅ Stored device token in shared storage")
 
         Task {
             await updateDevicePushToken(token)
@@ -136,35 +117,36 @@ class PushNotificationManager: NSObject, ObservableObject {
     // MARK: - Manual Registration (for debugging)
 
     func manuallyRegisterCurrentToken() async {
-        Logger.info("🔔 [PushNotificationManager] Manual push token update requested")
+        Logger.info("Manual push token update requested")
 
         guard let currentToken = deviceToken else {
-            Logger.error("🔔 [PushNotificationManager] ❌ No device token available for manual update")
+            Logger.error("❌ No device token available for manual update")
             return
         }
 
-        Logger.info("🔔 [PushNotificationManager] Current device token: \(currentToken)")
+        Logger.info("Current device token: \(currentToken)")
         await updateDevicePushToken(currentToken)
     }
 
     func handleRegistrationError(_ error: Error) {
-        Logger.error("🔔 [PushNotificationManager] ❌ Failed to register for remote notifications: \(error)")
+        Logger.error("❌ Failed to register for remote notifications: \(error)")
         self.registrationError = error
     }
 
     // MARK: - Device Update
 
     private func updateDevicePushToken(_ token: String) async {
-        Logger.info("🔔 [PushNotificationManager] Updating device push token")
+        Logger.info("Updating device push token")
 
         do {
             guard isSessionReady() else {
-                    scheduleRetry(with: token)
+                scheduleRetry(with: token)
                 return
             }
+
             // Get current user and device info
             let userId = try await getCurrentUserId()
-            let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+            let deviceId = await UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
 
             // Since inboxReadyPublisher never emits (the original problem), we need to manually create
             // an authenticated API client using the stored JWT token that we know exists
@@ -172,7 +154,7 @@ class PushNotificationManager: NSObject, ObservableObject {
             // Get the first available inbox to extract inbox ID for JWT lookup
             let allInboxes = try convosClient.session.inboxesRepository.allInboxes()
             guard let firstInbox = allInboxes.first else {
-                Logger.error("🔔 [PushNotificationManager] ❌ No inboxes found - cannot get inbox ID")
+                Logger.error("❌ No inboxes found - cannot get inbox ID")
                 throw PushNotificationError.noActiveSession
             }
 
@@ -180,7 +162,7 @@ class PushNotificationManager: NSObject, ObservableObject {
             let keychainService = KeychainService<ConvosJWTKeychainItem>()
             guard let storedJWT = try? keychainService.retrieveString(.init(inboxId: firstInbox.inboxId)),
                   !storedJWT.isEmpty else {
-                Logger.error("🔔 [PushNotificationManager] No stored JWT token - cannot authenticate push token update")
+                Logger.error("No stored JWT token - cannot authenticate push token update")
                 throw PushNotificationError.noActiveSession
             }
 
@@ -190,7 +172,7 @@ class PushNotificationManager: NSObject, ObservableObject {
             // First, check if the current push token is already set correctly
             let environment = ConfigManager.shared.currentEnvironment
             guard let apiBaseURL = URL(string: environment.apiBaseURL) else {
-                Logger.error("🔔 [PushNotificationManager] Invalid API base URL")
+                Logger.error("Invalid API base URL")
                 throw PushNotificationError.noActiveSession
             }
 
@@ -213,7 +195,7 @@ class PushNotificationManager: NSObject, ObservableObject {
 
                     // Check if token and environment match
                     if currentDevice.pushToken == token && currentDevice.apnsEnv == currentApnsEnv {
-                        Logger.info("🔔 [PushNotificationManager] ✅ Push token already up to date, skipping update")
+                        Logger.info("✅ Push token already up to date, skipping update")
                         registrationError = nil
                         retryAttempt = 0
                         retryTask?.cancel()
@@ -235,7 +217,7 @@ class PushNotificationManager: NSObject, ObservableObject {
                 pushToken: token,
                 pushTokenType: ConvosAPI.DeviceUpdateRequest.DeviceUpdatePushTokenType.apns,
                 apnsEnv: environment.apnsEnvironment == .sandbox ?
-                    ConvosAPI.DeviceUpdateRequest.DeviceUpdateApnsEnvironment.sandbox :
+                ConvosAPI.DeviceUpdateRequest.DeviceUpdateApnsEnvironment.sandbox :
                     ConvosAPI.DeviceUpdateRequest.DeviceUpdateApnsEnvironment.production
             )
 
@@ -244,25 +226,13 @@ class PushNotificationManager: NSObject, ObservableObject {
             let (data, httpResponse) = try await URLSession.shared.data(for: request)
 
             guard let httpResponse = httpResponse as? HTTPURLResponse else {
-                Logger.error("🔔 [PushNotificationManager] Invalid HTTP response")
+                Logger.error("Invalid HTTP response")
                 throw PushNotificationError.registrationFailed("Invalid response")
             }
 
             guard 200...299 ~= httpResponse.statusCode else {
                 let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-                Logger.error("🔔 [PushNotificationManager] HTTP error \(httpResponse.statusCode): \(errorMessage)")
-
-                // Show error toast in DEBUG builds (matching ConvosAPIClient behavior)
-                #if DEBUG
-                Task { @MainActor in
-                    DebugErrorPresenter.shared.presentError(
-                        PushNotificationError.registrationFailed("HTTP \(httpResponse.statusCode): \(errorMessage)"),
-                        title: "Push Token Update Error (\(httpResponse.statusCode))",
-                        details: errorMessage
-                    )
-                }
-                #endif
-
+                Logger.error("HTTP error \(httpResponse.statusCode): \(errorMessage)")
                 throw PushNotificationError.registrationFailed("HTTP \(httpResponse.statusCode): \(errorMessage)")
             }
 
@@ -270,35 +240,23 @@ class PushNotificationManager: NSObject, ObservableObject {
             if !data.isEmpty {
                 do {
                     let response = try JSONDecoder().decode(ConvosAPI.DeviceUpdateResponse.self, from: data)
-                    Logger.info("🔔 [PushNotificationManager] ✅ Successfully updated device push token: \(response)")
+                    Logger.info("✅ Successfully updated device push token: \(response)")
                 } catch {
                     // Log the response body for debugging
                     let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode response"
-                    Logger.info("🔔 [PushNotificationManager] ✅ Successfully updated device push token (response parsing failed): \(responseString)")
-                    Logger.info("🔔 [PushNotificationManager] Response parsing error: \(error)")
+                    Logger.info("✅ Successfully updated device push token (response parsing failed): \(responseString)")
+                    Logger.info("Response parsing error: \(error)")
                 }
             } else {
-                Logger.info("🔔 [PushNotificationManager] ✅ Successfully updated device push token (empty response)")
+                Logger.info("✅ Successfully updated device push token (empty response)")
             }
             registrationError = nil
             retryAttempt = 0
             retryTask?.cancel()
             retryTask = nil
         } catch {
-            Logger.error("🔔 [PushNotificationManager] ❌ Failed to update device push token: \(error)")
+            Logger.error("Failed to update device push token: \(error)")
             registrationError = error
-
-            // Show debug error in DEBUG builds
-            #if DEBUG
-            Task { @MainActor in
-                DebugErrorPresenter.shared.presentError(
-                    error,
-                    title: "Push Token Update Failed",
-                    details: "Failed to update device push token with backend"
-                )
-            }
-            #endif
-
             scheduleRetry(with: token)
         }
     }
@@ -331,7 +289,7 @@ class PushNotificationManager: NSObject, ObservableObject {
         let allInboxes = try convosClient.session.inboxesRepository.allInboxes()
 
         guard let firstInbox = allInboxes.first else {
-            Logger.error("🔔 [PushNotificationManager] ❌ No inboxes found - cannot get user ID")
+            Logger.error("No inboxes found - cannot get user ID")
             throw PushNotificationError.noActiveSession
         }
 
@@ -342,7 +300,7 @@ class PushNotificationManager: NSObject, ObservableObject {
     // MARK: - Topic Subscription (for future use)
 
     func subscribeToTopic(_ topic: String) async {
-        print("Subscribing to topic: \(topic)")
+        Logger.debug("Subscribing to topic: \(topic)")
         notificationProcessor.addSubscribedTopic(topic)
 
         // @lourou: Notify backend about topic subscription
@@ -350,7 +308,7 @@ class PushNotificationManager: NSObject, ObservableObject {
     }
 
     func unsubscribeFromTopic(_ topic: String) async {
-        print("Unsubscribing from topic: \(topic)")
+        Logger.debug("Unsubscribing from topic: \(topic)")
         notificationProcessor.removeSubscribedTopic(topic)
 
         // @lourou: Notify backend about topic unsubscription
@@ -369,7 +327,7 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         let userInfo = notification.request.content.userInfo
-        print("Received notification in foreground: \(userInfo)")
+        Logger.debug("Received notification in foreground: \(userInfo)")
 
         // @lourou: Process the notification payload here if needed
         // You might want to decrypt XMTP messages or update local state
@@ -387,14 +345,9 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             didReceive response: UNNotificationResponse) async {
         let userInfo = response.notification.request.content.userInfo
-        print("User tapped notification: \(userInfo)")
-
-        // Process the notification tap
-        let userInfoCopy = userInfo
-        _ = await MainActor.run {
-            Task {
-                await self.handleNotificationTap(userInfoCopy)
-            }
+        Logger.debug("User tapped notification: \(userInfo)")
+        Task {
+            await self.handleNotificationTap(userInfo)
         }
     }
 
@@ -402,13 +355,13 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
     private func processIncomingNotification(_ userInfo: [AnyHashable: Any]) async {
         do {
             let payload = try notificationProcessor.processNotificationPayload(userInfo)
-            print("Processed notification payload: \(payload)")
+            Logger.debug("Processed notification payload: \(payload)")
 
             // @lourou: Handle the decrypted notification
             // This is where you'd decrypt XMTP messages, update UI, etc.
 
         } catch {
-            print("Failed to process notification payload: \(error)")
+            Logger.debug("Failed to process notification payload: \(error)")
         }
     }
 
@@ -427,9 +380,9 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
             // - Use a deep link handler
             // - Update a @Published property that your views observe
 
-            print("Should navigate to conversation: \(conversationId)")
+            Logger.debug("Should navigate to conversation: \(conversationId)")
         } catch {
-            print("Failed to handle notification tap: \(error)")
+            Logger.debug("Failed to handle notification tap: \(error)")
         }
     }
 }
@@ -455,7 +408,7 @@ class PushNotificationDelegate: NSObject, UIApplicationDelegate {
                      didReceiveRemoteNotification userInfo: [AnyHashable: Any],
                      fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
         // Handle remote notification
-        print("Received remote notification: \(userInfo)")
+        Logger.debug("Received remote notification: \(userInfo)")
 
         // Process the notification
         // @lourou: Add your notification handling logic here

@@ -350,39 +350,12 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 } else {
                     errorMessage = String(data: data, encoding: .utf8)
                 }
-
-                let error = APIError.badRequest(errorMessage)
-
-                #if DEBUG
-                Task { @MainActor in
-                    DebugErrorPresenter.shared.presentError(
-                        error,
-                        title: "API Error (400)",
-                        details: """
-                        URL: \(request.url?.absoluteString ?? "unknown")
-                        Method: \(request.httpMethod ?? "GET")
-                        Message: \(errorMessage ?? "No message")
-                        Response: \(data.prettyPrintedJSONString ?? String(data: data, encoding: .utf8) ?? "")
-                        """
-                    )
-                }
-                #endif
-                throw error
+                throw APIError.badRequest(errorMessage)
             case 401:
                 // Check if we've exceeded max retries
                 guard retryCount < maxRetryCount else {
                     Logger.error("Max retry count (\(maxRetryCount)) exceeded for request")
-                    let error = APIError.notAuthenticated
-                    #if DEBUG
-                    Task { @MainActor in
-                        DebugErrorPresenter.shared.presentError(
-                            error,
-                            title: "Authentication Failed",
-                            details: "Max retry count exceeded. Please re-login."
-                        )
-                    }
-                    #endif
-                    throw error
+                    throw APIError.notAuthenticated
                 }
 
                 // Try to re-authenticate and retry the request
@@ -398,64 +371,17 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                     return try await performRequest(newRequest, retryCount: retryCount + 1)
                 } catch {
                     Logger.error("Re-authentication failed: \(error.localizedDescription)")
-                    #if DEBUG
-                    Task { @MainActor in
-                        DebugErrorPresenter.shared.presentError(
-                            error,
-                            title: "Re-authentication Failed",
-                            details: error.localizedDescription
-                        )
-                    }
-                    #endif
                     throw APIError.notAuthenticated
                 }
             case 403:
-                let error = APIError.forbidden
-                #if DEBUG
-                Task { @MainActor in
-                    DebugErrorPresenter.shared.presentError(error, title: "Forbidden (403)")
-                }
-                #endif
-                throw error
+                throw APIError.forbidden
             case 404:
-                let error = APIError.notFound
-                #if DEBUG
-                Task { @MainActor in
-                    DebugErrorPresenter.shared.presentError(error, title: "Not Found (404)")
-                }
-                #endif
-                throw error
+                throw APIError.notFound
             default:
                 let errorMessage = String(data: data, encoding: .utf8)
-                let error = APIError.serverError(errorMessage)
-                #if DEBUG
-                Task { @MainActor in
-                    DebugErrorPresenter.shared.presentError(
-                        error,
-                        title: "Server Error (\(httpResponse.statusCode))",
-                        details: errorMessage ?? "No response body"
-                    )
-                }
-                #endif
-                throw error
+                throw APIError.serverError(errorMessage)
             }
         } catch {
-            // Catch network errors
-            #if DEBUG
-            if !(error is APIError) {
-                Task { @MainActor in
-                    DebugErrorPresenter.shared.presentError(
-                        error,
-                        title: "Network Error",
-                        details: """
-                        URL: \(request.url?.absoluteString ?? "unknown")
-                        Method: \(request.httpMethod ?? "GET")
-                        Error: \(error.localizedDescription)
-                        """
-                    )
-                }
-            }
-            #endif
             throw error
         }
     }

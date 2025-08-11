@@ -29,7 +29,9 @@ public enum Logger {
     }
 
     public class Default: LoggerProtocol {
-        public static let shared: LoggerProtocol = Default()
+        public static var shared: LoggerProtocol = {
+            Default(isProduction: ConfigManager.shared.currentEnvironment == .production)
+        }()
         public var minimumLogLevel: LogLevel = .info
         private let isProduction: Bool
         private let logFileURL: URL?
