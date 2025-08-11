@@ -39,7 +39,7 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
                 return .estimated(
                     CGSize(
                         width: messagesLayout.layoutFrame.width,
-                        height: messagesLayout.layoutFrame.width
+                        height: 316.0
                     )
                 )
             case .typingIndicator:
