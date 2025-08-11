@@ -17,7 +17,6 @@ struct DebugLogsView: View {
                             .id("logs")
                     }
                     .onChange(of: logs) {
-                        // Scroll to bottom when logs change
                         withAnimation(.easeOut(duration: 0.3)) {
                             proxy.scrollTo("logs", anchor: .bottom)
                         }
@@ -29,6 +28,8 @@ struct DebugLogsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(role: .destructive) {
+                    let logsFile = FileManager.default.temporaryDirectory.appendingPathComponent("convos-debug-info.txt")
+                    try? FileManager.default.removeItem(at: logsFile)
                     Logger.clearLogs {
                         refreshLogs()
                     }
@@ -84,6 +85,28 @@ struct DebugView: View {
         Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
     }
 
+    private var debugInfoFileURL: URL {
+        let logs = Logger.getLogs()
+
+        // Create debug info text
+        let debugInfo = """
+        Convos Debug Information
+
+        Bundle ID: \(bundleIdentifier)
+        Version: \(appVersion)
+        Environment: \(ConfigManager.shared.currentEnvironment)
+
+        Logs:
+        \(logs)
+        """
+
+        // Write to temporary file
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("convos-debug-info.txt")
+
+        try? debugInfo.write(to: tempURL, atomically: true, encoding: .utf8)
+        return tempURL
+    }
+
     var body: some View {
         NavigationStack {
             VStack {
@@ -93,7 +116,7 @@ struct DebugView: View {
                             NavigationLink {
                                 DebugLogsView()
                             } label: {
-                                Text("Logs")
+                                Text("View logs")
                             }
                         }
                     }
@@ -134,17 +157,12 @@ struct DebugView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    // share link
+                    ShareLink(item: debugInfoFileURL) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
                 }
             }
         }
-    }
-
-    private func generateTestLogs() {
-        Logger.debug("🧪 This is a debug test message")
-        Logger.info("🧪 This is an info test message")
-        Logger.warning("🧪 This is a warning test message")
-        Logger.error("🧪 This is an error test message")
     }
 }
 

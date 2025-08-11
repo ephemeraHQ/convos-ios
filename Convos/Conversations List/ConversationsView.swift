@@ -120,12 +120,12 @@ struct ConversationsView: View {
                         in: namespace
                     )
 
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Filter", systemImage: "line.3.horizontal.decrease") {
-                            //
-                        }
-                        .disabled(true)
-                    }
+//                    ToolbarItem(placement: .topBarTrailing) {
+//                        Button("Filter", systemImage: "line.3.horizontal.decrease") {
+//                            //
+//                        }
+//                        .disabled(true)
+//                    }
 
                     ToolbarItem(placement: .bottomBar) {
                         Spacer()
