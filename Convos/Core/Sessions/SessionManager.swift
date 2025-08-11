@@ -154,7 +154,7 @@ class SessionManager: SessionManagerProtocol {
         try authService.deleteAccount(with: providerId)
     }
 
-    func deleteAllAccounts() throws {        
+    func deleteAllAccounts() throws {
         try authService.deleteAll()
         try databaseWriter.write { db in
             try DBInbox.deleteAll(db)

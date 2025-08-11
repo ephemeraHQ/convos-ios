@@ -59,7 +59,6 @@ struct ConversationToolbarButton: View {
             }
             .compositingGroup()
         }
-        .buttonStyle(.glassProminent)
     }
 }
 

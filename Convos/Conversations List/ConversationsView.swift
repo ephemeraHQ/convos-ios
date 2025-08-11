@@ -8,6 +8,10 @@ struct ConversationsView: View {
     @State private var presentingExplodeConfirmation: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
 
+    @FocusState private var focusState: MessagesViewInputFocus?
+    @State private var sidebarWidth: CGFloat = 0.0
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
+
     init(
         session: any SessionManagerProtocol
     ) {
@@ -26,91 +30,113 @@ struct ConversationsView: View {
         )
     }
 
-    var body: some View {
-        NavigationSplitView {
-            Group {
-                List(viewModel.unpinnedConversations, id: \.self, selection: $viewModel.selectedConversation) { conversation in
-                    ZStack {
-                        ConversationsListItem(conversation: conversation)
-                        let conversationViewModel = viewModel.conversationViewModel(for: conversation)
-                        NavigationLink(value: conversationViewModel) {
-                            EmptyView()
-                        }
-                        .opacity(0.0) // zstack hides disclosure indicator
-                    }
-                    .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
-                    .listRowSeparator(.hidden)
-                }
-                .listStyle(.plain)
+    var emptyConversationsView: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ConversationsListEmptyCTA(
+                    onStartConvo: viewModel.onStartConvo,
+                    onJoinConvo: viewModel.onJoinConvo
+                )
+                .padding(DesignConstants.Spacing.step6x)
             }
-            .background(.colorBackgroundPrimary)
-            .toolbarTitleDisplayMode(.inline)
-            .toolbar(removing: .sidebarToggle)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        presentingExplodeConfirmation = true
-                    } label: {
-                        HStack(spacing: DesignConstants.Spacing.step2x) {
-                            Circle()
-                                .fill(.colorOrange)
-                                .frame(width: 24.0, height: 24.0)
+        }
+    }
 
-                            Text("Convos")
-                                .font(.system(size: 16.0, weight: .medium))
-                                .foregroundStyle(.colorTextPrimary)
+    var body: some View {
+        ConversationInfoPresenter(
+            viewModel: viewModel,
+            focusState: $focusState,
+            sidebarColumnWidth: $sidebarWidth,
+        ) {
+            NavigationSplitView {
+                Group {
+                    if viewModel.unpinnedConversations.isEmpty && horizontalSizeClass == .compact {
+                        emptyConversationsView
+                    } else {
+                        List(viewModel.unpinnedConversations, id: \.self, selection: $viewModel.selectedConversation) { conversation in
+                            ZStack {
+                                ConversationsListItem(conversation: conversation)
+                                let conversationViewModel = viewModel.conversationViewModel(for: conversation)
+                                NavigationLink(value: conversationViewModel) {
+                                    EmptyView()
+                                }
+                                .opacity(0.0) // zstack hides disclosure indicator
+                            }
+                            .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
+                            .listRowSeparator(.hidden)
                         }
-                        .padding(10)
+                        .listStyle(.plain)
                     }
-                    .glassEffect(.regular.interactive())
-                    .confirmationDialog("", isPresented: $presentingExplodeConfirmation) {
-                        Button("Explode", role: .destructive) {
-                            do {
-                                try session.deleteAllAccounts()
-                            } catch {
-                                Logger.error("Error deleting all accounts: \(error)")
+                }
+                .onGeometryChange(for: CGSize.self) {
+                    $0.size
+                } action: { newValue in
+                    sidebarWidth = newValue.width
+                }
+                .background(.colorBackgroundPrimary)
+                .toolbarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            presentingExplodeConfirmation = true
+                        } label: {
+                            HStack(spacing: DesignConstants.Spacing.step2x) {
+                                Circle()
+                                    .fill(.colorOrange)
+                                    .frame(width: 24.0, height: 24.0)
+
+                                Text("Convos")
+                                    .font(.system(size: 16.0, weight: .medium))
+                                    .foregroundStyle(.colorTextPrimary)
+                            }
+                            .padding(10)
+                        }
+                        .glassEffect(.regular.interactive())
+                        .confirmationDialog("", isPresented: $presentingExplodeConfirmation) {
+                            Button("Explode", role: .destructive) {
+                                do {
+                                    try session.deleteAllAccounts()
+                                } catch {
+                                    Logger.error("Error deleting all accounts: \(error)")
+                                }
+                            }
+
+                            Button("Cancel") {
+                                presentingExplodeConfirmation = false
                             }
                         }
+                    }
 
-                        Button("Cancel") {
-                            presentingExplodeConfirmation = false
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Filter", systemImage: "line.3.horizontal.decrease") {
+                            //
+                        }
+                        .disabled(true)
+                    }
+
+                    ToolbarItem(placement: .bottomBar) {
+                        Spacer()
+                    }
+
+                    ToolbarItem(placement: .bottomBar) {
+                        Button("Compose", systemImage: "plus") {
+                            viewModel.onStartConvo()
                         }
                     }
+                    .matchedTransitionSource(
+                        id: "composer-transition-source",
+                        in: namespace
+                    )
                 }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Filter", systemImage: "line.3.horizontal.decrease") {
-                        //
-                    }
-                    .disabled(true)
-                }
-
-                ToolbarItem(placement: .bottomBar) {
-                    Spacer()
-                }
-
-                ToolbarItem(placement: .bottomBar) {
-                    Button("Compose", systemImage: "plus") {
-                        viewModel.onStartConvo()
-                    }
-                }
-                .matchedTransitionSource(
-                    id: "composer-transition-source",
-                    in: namespace
-                )
-            }
-        } detail: {
-            if let conversationViewModel = viewModel.selectedConversation {
-                ConversationView(viewModel: conversationViewModel)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ConversationsListEmptyCTA(
-                            onStartConvo: viewModel.onStartConvo,
-                            onJoinConvo: viewModel.onJoinConvo
-                        )
-                        .padding(DesignConstants.Spacing.step6x)
-                    }
+                .toolbar(removing: .sidebarToggle)
+            } detail: {
+                if let conversationViewModel = viewModel.selectedConversation {
+                    ConversationView(
+                        viewModel: conversationViewModel,
+                        focusState: $focusState
+                    )
+                } else {
+                    emptyConversationsView
                 }
             }
         }

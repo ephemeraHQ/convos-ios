@@ -16,73 +16,83 @@ struct SwipeBackGestureEnabler: UIViewControllerRepresentable {
 
 struct ConversationView: View {
     @Bindable var viewModel: ConversationViewModel
+    @FocusState.Binding var focusState: MessagesViewInputFocus?
     let onScanInviteCode: () -> Void
     let onDeleteConversation: () -> Void
     let confirmDeletionBeforeDismissal: Bool
-    let messagesTopBarLeadingItem: MessagesTopBar.LeadingItem
-    let messagesTopBarTrailingItem: MessagesTopBar.TrailingItem
-
-    @FocusState private var focusState: MessagesViewInputFocus?
+    let messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem
 
     init(
         viewModel: ConversationViewModel,
+        focusState: FocusState<MessagesViewInputFocus?>.Binding,
         onScanInviteCode: @escaping () -> Void = {},
         onDeleteConversation: @escaping () -> Void = {},
         confirmDeletionBeforeDismissal: Bool = false,
-        messagesTopBarLeadingItem: MessagesTopBar.LeadingItem = .back,
-        messagesTopBarTrailingItem: MessagesTopBar.TrailingItem = .share
+        messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .share
     ) {
         self.viewModel = viewModel
+        self._focusState = focusState
         self.onScanInviteCode = onScanInviteCode
         self.onDeleteConversation = onDeleteConversation
         self.confirmDeletionBeforeDismissal = confirmDeletionBeforeDismissal
-        self.messagesTopBarLeadingItem = messagesTopBarLeadingItem
         self.messagesTopBarTrailingItem = messagesTopBarTrailingItem
     }
 
     var body: some View {
-        ConversationInfoPresenter(viewModel: viewModel, focusState: $focusState) {
-            MessagesView(
-                conversation: viewModel.conversation,
-                messages: viewModel.messages,
-                invite: viewModel.invite,
-                profile: viewModel.profile,
-                untitledConversationPlaceholder: viewModel.untitledConversationPlaceholder,
-                conversationNamePlaceholder: viewModel.conversationNamePlaceholder,
-                conversationName: $viewModel.conversationName,
-                conversationImage: $viewModel.conversationImage,
-                displayName: $viewModel.displayName,
-                messageText: $viewModel.messageText,
-                sendButtonEnabled: $viewModel.sendButtonEnabled,
-                profileImage: $viewModel.profileImage,
-                focusState: $focusState,
-                viewModelFocus: viewModel.focus,
-                onConversationInfoTap: viewModel.onConversationInfoTap,
-                onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
-                onConversationSettings: viewModel.onConversationSettings,
-                onProfilePhotoTap: viewModel.onProfilePhotoTap,
-                onSendMessage: viewModel.onSendMessage,
-                onDisplayNameEndedEditing: viewModel.onDisplayNameEndedEditing,
-                onProfileSettings: viewModel.onProfileSettings,
-                onScanInviteCode: onScanInviteCode,
-                onDeleteConversation: onDeleteConversation,
-                topBarLeadingItem: messagesTopBarLeadingItem,
-                topBarTrailingItem: messagesTopBarTrailingItem,
-                confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
-            )
-            .onAppear(perform: viewModel.onAppear)
-            .onDisappear(perform: viewModel.onDisappear)
-            .onChange(of: viewModel.focus) {
-                focusState = viewModel.focus
+        MessagesView(
+            conversation: viewModel.conversation,
+            messages: viewModel.messages,
+            invite: viewModel.invite,
+            profile: viewModel.profile,
+            untitledConversationPlaceholder: viewModel.untitledConversationPlaceholder,
+            conversationNamePlaceholder: viewModel.conversationNamePlaceholder,
+            conversationName: $viewModel.conversationName,
+            conversationImage: $viewModel.conversationImage,
+            displayName: $viewModel.displayName,
+            messageText: $viewModel.messageText,
+            sendButtonEnabled: $viewModel.sendButtonEnabled,
+            profileImage: $viewModel.profileImage,
+            focusState: $focusState,
+            viewModelFocus: viewModel.focus,
+            onConversationInfoTap: viewModel.onConversationInfoTap,
+            onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
+            onConversationSettings: viewModel.onConversationSettings,
+            onProfilePhotoTap: viewModel.onProfilePhotoTap,
+            onSendMessage: viewModel.onSendMessage,
+            onDisplayNameEndedEditing: viewModel.onDisplayNameEndedEditing,
+            onProfileSettings: viewModel.onProfileSettings,
+            onScanInviteCode: onScanInviteCode,
+            onDeleteConversation: onDeleteConversation,
+            confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
+        )
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                switch messagesTopBarTrailingItem {
+                case .share:
+                    InviteShareLink(invite: viewModel.invite)
+                case .scan:
+                    Button {
+                        onScanInviteCode()
+                    } label: {
+                        Image(systemName: "qrcode.viewfinder")
+                    }
+                    .buttonBorderShape(.circle)
+                }
             }
-            .onChange(of: focusState) {
-                viewModel.focus = focusState
-            }
+        }
+        .onAppear(perform: viewModel.onAppear)
+        .onDisappear(perform: viewModel.onDisappear)
+        .onChange(of: viewModel.focus) {
+            focusState = viewModel.focus
+        }
+        .onChange(of: focusState) {
+            viewModel.focus = focusState
         }
     }
 }
 
 #Preview {
     @Previewable @State var viewModel: ConversationViewModel = .mock
-    ConversationView(viewModel: viewModel)
+    @Previewable @FocusState var focusState: MessagesViewInputFocus?
+    ConversationView(viewModel: viewModel, focusState: $focusState)
 }

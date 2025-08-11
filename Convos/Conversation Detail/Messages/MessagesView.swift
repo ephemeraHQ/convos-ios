@@ -1,6 +1,10 @@
 import SwiftUI
 
 struct MessagesView: View {
+    enum TopBarTrailingItem {
+        case share, scan
+    }
+
     let conversation: Conversation
     let messages: [AnyMessage]
     let invite: Invite
@@ -24,8 +28,6 @@ struct MessagesView: View {
     let onProfileSettings: () -> Void
     let onScanInviteCode: () -> Void
     let onDeleteConversation: () -> Void
-    let topBarLeadingItem: MessagesTopBar.LeadingItem
-    let topBarTrailingItem: MessagesTopBar.TrailingItem
     let confirmDeletionBeforeDismissal: Bool
 
     @State private var topBarHeight: CGFloat = 0.0
@@ -41,30 +43,6 @@ struct MessagesView: View {
             )
             .ignoresSafeArea()
         }
-//        .safeAreaBar(edge: .top) {
-//            MessagesTopBar(
-//                conversation: conversation,
-//                invite: invite,
-//                untitledConversationPlaceholder: untitledConversationPlaceholder,
-//                conversationNamePlaceholder: conversationNamePlaceholder,
-//                conversationName: $conversationName,
-//                conversationImage: $conversationImage,
-//                focusState: $focusState,
-//                viewModelFocus: viewModelFocus,
-//                onConversationInfoTap: onConversationInfoTap,
-//                onConversationNameEndedEditing: onConversationNameEndedEditing,
-//                onConversationSettings: onConversationSettings,
-//                onScanInviteCode: onScanInviteCode,
-//                onDeleteConversion: onDeleteConversation,
-//                leadingItem: topBarLeadingItem,
-//                trailingItem: topBarTrailingItem,
-//                confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
-//            )
-//            .background(HeightReader())
-//            .onPreferenceChange(HeightPreferenceKey.self) { height in
-//                topBarHeight = height
-//            }
-//        }
         .safeAreaBar(edge: .bottom) {
             MessagesBottomBar(
                 profile: profile,

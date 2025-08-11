@@ -7,7 +7,7 @@ class NewConversationViewModel: Identifiable {
 
     let session: any SessionManagerProtocol
     var conversationViewModel: ConversationViewModel?
-    private(set) var messagesTopBarTrailingItem: MessagesTopBar.TrailingItem = .scan
+    private(set) var messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .scan
     private(set) var shouldConfirmDeletingConversation: Bool = true
     private(set) var showScannerOnAppear: Bool
 
