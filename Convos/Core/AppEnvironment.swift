@@ -108,4 +108,14 @@ enum AppEnvironment {
         }
         return groupUrl
     }
+
+    /// Whether debug error overlays should be shown in this environment
+    var shouldShowDebugErrors: Bool {
+        switch self {
+        case .local, .dev:
+            return true
+        case .tests, .production:
+            return false
+        }
+    }
 }
