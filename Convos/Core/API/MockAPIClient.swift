@@ -34,17 +34,26 @@ class MockBaseAPIClient: ConvosAPIBaseProtocol {
 }
 
 class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
-    func registerPushToken(_ request: PushTokenRegistrationRequest) async throws -> PushTokenRegistrationResponse {
-        // Mock successful registration for all installations
-        let mockResponses = request.installations.map { installation in
-            InstallationRegistrationResponse(
-                status: "registered",
-                xmtpInstallationId: installation.xmtpInstallationId,
-                validUntil: Int64(Date().addingTimeInterval(30 * 24 * 60 * 60).timeIntervalSince1970) // 30 days from now
-            )
-        }
+    func getDevice(userId: String, deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse {
+        return ConvosAPI.DeviceUpdateResponse(
+            id: deviceId,
+            pushToken: "existing-push-token",
+            pushTokenType: "apns",
+            apnsEnv: "sandbox",
+            updatedAt: Date().ISO8601Format(),
+            pushFailures: 0
+        )
+    }
 
-        return PushTokenRegistrationResponse(responses: mockResponses)
+    func updateDevicePushToken(userId: String, deviceId: String, pushToken: String) async throws -> ConvosAPI.DeviceUpdateResponse {
+        return ConvosAPI.DeviceUpdateResponse(
+            id: deviceId,
+            pushToken: pushToken,
+            pushTokenType: "apns",
+            apnsEnv: "sandbox",
+            updatedAt: Date().ISO8601Format(),
+            pushFailures: 0
+        )
     }
 
     func publicInviteDetails(_ inviteId: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {

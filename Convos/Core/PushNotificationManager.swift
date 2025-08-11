@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import UIKit
 import UserNotifications
@@ -41,6 +42,9 @@ class PushNotificationManager: NSObject, ObservableObject {
 
     private let notificationProcessor: NotificationProcessor
     private let convosClient: ConvosClient
+    private var cancellables: Set<AnyCancellable> = .init()
+    private var retryTask: Task<Void, Never>?
+    private var retryAttempt: Int = 0
 
     private override init() {
         // Get app group identifier from ConfigManager
@@ -52,6 +56,32 @@ class PushNotificationManager: NSObject, ObservableObject {
 
         Task {
             await checkAuthorizationStatus()
+        }
+
+        // Re-attempt registration when auth state becomes ready
+        convosClient.authState
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                guard let self else { return }
+                switch state {
+                case .authorized, .registered:
+                    if let token = self.deviceToken {
+                        Task { await self.updateDevicePushToken(token) }
+                    }
+                default:
+                    break
+                }
+            }
+            .store(in: &cancellables)
+
+        // Also try when app comes to foreground
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self, let token = self.deviceToken else { return }
+            Task { await self.updateDevicePushToken(token) }
         }
     }
 
@@ -96,36 +126,22 @@ class PushNotificationManager: NSObject, ObservableObject {
         Logger.info("🔔 [PushNotificationManager] ✅ Stored device token in shared storage")
 
         Task {
-            await registerDeviceTokenWithBackend(token)
+            await updateDevicePushToken(token)
         }
     }
 
     // MARK: - Manual Registration (for debugging)
 
     func manuallyRegisterCurrentToken() async {
-        Logger.info("🔔 [PushNotificationManager] Manual push token registration requested")
+        Logger.info("🔔 [PushNotificationManager] Manual push token update requested")
 
         guard let currentToken = deviceToken else {
-            Logger.error("🔔 [PushNotificationManager] ❌ No device token available for manual registration")
+            Logger.error("🔔 [PushNotificationManager] ❌ No device token available for manual update")
             return
         }
 
         Logger.info("🔔 [PushNotificationManager] Current device token: \(currentToken)")
-        await registerDeviceTokenWithBackend(currentToken)
-    }
-
-    // MARK: - Conversation-specific Registration
-
-    func registerPushTokenForNewConversation(inboxId: String) async {
-        Logger.info("🔔 [PushNotificationManager] Push token registration requested for new conversation with inboxId: \(inboxId)")
-
-        guard let currentToken = deviceToken else {
-            Logger.error("🔔 [PushNotificationManager] ❌ No device token available for conversation registration")
-            return
-        }
-
-        Logger.info("🔔 [PushNotificationManager] Registering push token for new conversation with token: \(currentToken)")
-        await registerPushTokenDirectly(currentToken, inboxId: inboxId)
+        await updateDevicePushToken(currentToken)
     }
 
     func handleRegistrationError(_ error: Error) {
@@ -133,195 +149,201 @@ class PushNotificationManager: NSObject, ObservableObject {
         self.registrationError = error
     }
 
-    // MARK: - Backend Registration
+    // MARK: - Device Update
 
-    private func registerPushTokenDirectly(_ token: String, inboxId: String) async {
-        Logger.info("🔔 [PushNotificationManager] Directly registering push token for inboxId: \(inboxId)")
+    private func updateDevicePushToken(_ token: String) async {
+        Logger.info("🔔 [PushNotificationManager] Updating device push token with backend")
         Logger.info("🔔 [PushNotificationManager] Token: \(token)")
 
         do {
+            guard isSessionReady() else {
+                Logger.info("🔔 [PushNotificationManager] Session not ready. Scheduling retry…")
+                scheduleRetry(with: token)
+                return
+            }
+            // Get current user and device info
+            let userId = try await getCurrentUserId()
             let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+
+            Logger.info("🔔 [PushNotificationManager] User ID: \(userId)")
             Logger.info("🔔 [PushNotificationManager] Device ID: \(deviceId)")
-            Logger.info("🔔 [PushNotificationManager] APNS Environment: \(ConfigManager.shared.currentEnvironment.apnsEnvironment)")
 
-            // Create installation info directly using the inbox ID
-            // We don't need the full XMTP client for this - just use a placeholder installation ID
-            let installationInfo = InstallationInfo(
-                identityId: inboxId,
-                xmtpInstallationId: "pending-\(inboxId.prefix(8))" // Temporary until client is ready
-            )
+            // Since inboxReadyPublisher never emits (the original problem), we need to manually create
+            // an authenticated API client using the stored JWT token that we know exists
+            Logger.info("🔔 [PushNotificationManager] Creating authenticated API client manually to bypass inbox ready issue...")
 
-            let request = PushTokenRegistrationRequest(
-                deviceId: deviceId,
-                pushToken: token,
-                pushTokenType: .apns,
-                apnsEnvironment: ConfigManager.shared.currentEnvironment.apnsEnvironment,
-                installations: [installationInfo]
-            )
-
-            Logger.info("🔔 [PushNotificationManager] Making direct API call to register push token...")
-            let response = try await convosClient.registerPushToken(request)
-            Logger.info("🔔 [PushNotificationManager] ✅ Successfully registered push token directly: \(response)")
-            registrationError = nil
-        } catch {
-            Logger.error("🔔 [PushNotificationManager] ❌ Failed to register push token directly: \(error)")
-            registrationError = error
-        }
-    }
-
-    private func registerDeviceTokenWithBackend(_ token: String, specificInboxId: String? = nil) async {
-        Logger.info("🔔 [PushNotificationManager] Starting push token registration with backend")
-        Logger.info("🔔 [PushNotificationManager] Token: \(token)")
-        if let specificInboxId = specificInboxId {
-            Logger.info("🔔 [PushNotificationManager] Using specific inboxId: \(specificInboxId)")
-        }
-
-        do {
-            // Since device is already registered, just register the push token
-            try await registerPushToken(token, specificInboxId: specificInboxId)
-
-            Logger.info("🔔 [PushNotificationManager] ✅ Successfully registered push token with backend")
-            registrationError = nil
-        } catch {
-            Logger.error("🔔 [PushNotificationManager] ❌ Failed to register push token with backend: \(error)")
-            registrationError = error
-        }
-    }
-
-    private func registerPushToken(_ token: String, specificInboxId: String? = nil) async throws {
-        Logger.info("🔔 [PushNotificationManager] Getting current user installations...")
-        if let specificInboxId = specificInboxId {
-            Logger.info("🔔 [PushNotificationManager] Using specific inboxId: \(specificInboxId)")
-        }
-
-        // Get current user's installations from the convos client
-        let installations = try await getCurrentUserInstallations(specificInboxId: specificInboxId)
-        Logger.info("🔔 [PushNotificationManager] Found \(installations.count) installations")
-
-        for (index, installation) in installations.enumerated() {
-            Logger.info("🔔 [PushNotificationManager] Installation \(index): identityId=\(installation.identityId), xmtpInstallationId=\(installation.xmtpInstallationId)")
-        }
-
-        guard !installations.isEmpty else {
-            Logger.error("🔔 [PushNotificationManager] ❌ No installations found - throwing noInstallations error")
-            throw PushNotificationError.noInstallations
-        }
-
-        let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
-        Logger.info("🔔 [PushNotificationManager] Device ID: \(deviceId)")
-        Logger.info("🔔 [PushNotificationManager] APNS Environment: \(ConfigManager.shared.currentEnvironment.apnsEnvironment)")
-
-        let request = PushTokenRegistrationRequest(
-            deviceId: deviceId,
-            pushToken: token,
-            pushTokenType: .apns,
-            apnsEnvironment: ConfigManager.shared.currentEnvironment.apnsEnvironment,
-            installations: installations
-        )
-
-        Logger.info("🔔 [PushNotificationManager] Making API call to register push token...")
-        do {
-            Logger.info("🔔 [PushNotificationManager] 🚀 About to call convosClient.registerPushToken...")
-            let response = try await convosClient.registerPushToken(request)
-            Logger.info("🔔 [PushNotificationManager] ✅ Push token registration response: \(response)")
-        } catch {
-            Logger.error("🔔 [PushNotificationManager] ❌ ConvosClient.registerPushToken failed: \(error)")
-            Logger.error("🔔 [PushNotificationManager] ❌ Error type: \(type(of: error))")
-            throw error
-        }
-    }
-
-    private func getCurrentUserInstallations(specificInboxId: String? = nil) async throws -> [InstallationInfo] {
-        Logger.info("🔔 [PushNotificationManager] Getting current user installations...")
-
-        let targetInboxId: String
-
-        if let specificInboxId = specificInboxId {
-            // Use the specific inbox ID provided
-            targetInboxId = specificInboxId
-            Logger.info("🔔 [PushNotificationManager] Using specified inbox: \(targetInboxId)")
-        } else {
-            // Fall back to first inbox
+            // Get the first available inbox to extract inbox ID for JWT lookup
             let allInboxes = try convosClient.session.inboxesRepository.allInboxes()
-            Logger.info("🔔 [PushNotificationManager] Found \(allInboxes.count) total inboxes")
-
             guard let firstInbox = allInboxes.first else {
-                Logger.error("🔔 [PushNotificationManager] ❌ No inboxes found - throwing noActiveSession error")
+                Logger.error("🔔 [PushNotificationManager] ❌ No inboxes found - cannot get inbox ID")
                 throw PushNotificationError.noActiveSession
             }
 
-            targetInboxId = firstInbox.inboxId
-            Logger.info("🔔 [PushNotificationManager] Using first inbox: \(targetInboxId)")
+            // Check if we have a stored JWT token for authentication
+            let keychainService = KeychainService<ConvosJWTKeychainItem>()
+            guard let storedJWT = try? keychainService.retrieveString(.init(inboxId: firstInbox.inboxId)),
+                  !storedJWT.isEmpty else {
+                Logger.error("🔔 [PushNotificationManager] No stored JWT token - cannot authenticate push token update")
+                throw PushNotificationError.noActiveSession
+            }
+
+            Logger.info("🔔 [PushNotificationManager] Found stored JWT token, checking current device state first...")
+
+            // Create the API client directly using the environment
+            let baseClient = ConvosAPIClientFactory.client(environment: ConfigManager.shared.currentEnvironment)
+
+            // First, check if the current push token is already set correctly
+            let environment = ConfigManager.shared.currentEnvironment
+            guard let apiBaseURL = URL(string: environment.apiBaseURL) else {
+                Logger.error("🔔 [PushNotificationManager] Invalid API base URL")
+                throw PushNotificationError.noActiveSession
+            }
+
+            // GET current device state
+            let getUrl = apiBaseURL.appendingPathComponent("v1/devices/\(userId)/\(deviceId)")
+            var getRequest = URLRequest(url: getUrl)
+            getRequest.httpMethod = "GET"
+            getRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            getRequest.setValue(storedJWT, forHTTPHeaderField: "X-Convos-AuthToken")
+
+            Logger.info("🔔 [PushNotificationManager] Checking current device state: \(getUrl.absoluteString)")
+
+            do {
+                let (getCurrentData, getCurrentResponse) = try await URLSession.shared.data(for: getRequest)
+                
+                if let getCurrentHttpResponse = getCurrentResponse as? HTTPURLResponse,
+                   200...299 ~= getCurrentHttpResponse.statusCode,
+                   !getCurrentData.isEmpty {
+                    
+                    let currentDevice = try JSONDecoder().decode(ConvosAPI.DeviceUpdateResponse.self, from: getCurrentData)
+                    
+                    Logger.info("🔔 [PushNotificationManager] Current device state: pushToken=\(currentDevice.pushToken ?? "nil"), apnsEnv=\(currentDevice.apnsEnv ?? "nil")")
+                    
+                    let currentApnsEnv = environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
+                    
+                    // Check if token and environment match
+                    if currentDevice.pushToken == token && currentDevice.apnsEnv == currentApnsEnv {
+                        Logger.info("🔔 [PushNotificationManager] ✅ Push token already up to date, skipping update")
+                        registrationError = nil
+                        retryAttempt = 0
+                        retryTask?.cancel()
+                        retryTask = nil
+                        return
+                    }
+                    
+                    Logger.info("🔔 [PushNotificationManager] Push token needs updating: current=\(currentDevice.pushToken ?? "nil") vs new=\(token), currentEnv=\(currentDevice.apnsEnv ?? "nil") vs newEnv=\(currentApnsEnv)")
+                } else {
+                    Logger.info("🔔 [PushNotificationManager] Could not get current device state, proceeding with update")
+                }
+            } catch {
+                Logger.info("🔔 [PushNotificationManager] Could not get current device state (\(error)), proceeding with update")
+            }
+
+            let url = apiBaseURL.appendingPathComponent("v1/devices/\(userId)/\(deviceId)")
+            var request = URLRequest(url: url)
+            request.httpMethod = "PATCH"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(storedJWT, forHTTPHeaderField: "X-Convos-AuthToken")
+
+            let updateRequest = ConvosAPI.DeviceUpdateRequest(
+                pushToken: token,
+                pushTokenType: ConvosAPI.DeviceUpdateRequest.DeviceUpdatePushTokenType.apns,
+                apnsEnv: environment.apnsEnvironment == .sandbox ?
+                    ConvosAPI.DeviceUpdateRequest.DeviceUpdateApnsEnvironment.sandbox :
+                    ConvosAPI.DeviceUpdateRequest.DeviceUpdateApnsEnvironment.production
+            )
+
+            request.httpBody = try JSONEncoder().encode(updateRequest)
+
+            Logger.info("🔔 [PushNotificationManager] Sending authenticated PATCH request to: \(url.absoluteString)")
+            Logger.info("🔔 [PushNotificationManager] Request body: \(request.httpBody?.prettyPrintedJSONString ?? "")")
+
+            let (data, httpResponse) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = httpResponse as? HTTPURLResponse else {
+                Logger.error("🔔 [PushNotificationManager] Invalid HTTP response")
+                throw PushNotificationError.registrationFailed("Invalid response")
+            }
+
+            Logger.info("🔔 [PushNotificationManager] HTTP response status: \(httpResponse.statusCode)")
+
+            guard 200...299 ~= httpResponse.statusCode else {
+                let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                Logger.error("🔔 [PushNotificationManager] HTTP error \(httpResponse.statusCode): \(errorMessage)")
+
+                // Show error toast in DEBUG builds (matching ConvosAPIClient behavior)
+                #if DEBUG
+                Task { @MainActor in
+                    DebugErrorPresenter.shared.presentError(
+                        PushNotificationError.registrationFailed("HTTP \(httpResponse.statusCode): \(errorMessage)"),
+                        title: "Push Token Update Error (\(httpResponse.statusCode))",
+                        details: errorMessage
+                    )
+                }
+                #endif
+
+                throw PushNotificationError.registrationFailed("HTTP \(httpResponse.statusCode): \(errorMessage)")
+            }
+
+            // Try to decode response, but don't fail if it's empty or missing expected fields
+            if !data.isEmpty {
+                do {
+                    let response = try JSONDecoder().decode(ConvosAPI.DeviceUpdateResponse.self, from: data)
+                    Logger.info("🔔 [PushNotificationManager] ✅ Successfully updated device push token: \(response)")
+                } catch {
+                    // Log the response body for debugging
+                    let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode response"
+                    Logger.info("🔔 [PushNotificationManager] ✅ Successfully updated device push token (response parsing failed): \(responseString)")
+                    Logger.info("🔔 [PushNotificationManager] Response parsing error: \(error)")
+                }
+            } else {
+                Logger.info("🔔 [PushNotificationManager] ✅ Successfully updated device push token (empty response)")
+            }
+            registrationError = nil
+            retryAttempt = 0
+            retryTask?.cancel()
+            retryTask = nil
+        } catch {
+            Logger.error("🔔 [PushNotificationManager] ❌ Failed to update device push token: \(error)")
+            registrationError = error
+            scheduleRetry(with: token)
         }
+    }
 
-        let messagingService = convosClient.session.messagingService(for: targetInboxId)
-        Logger.info("🔔 [PushNotificationManager] Got messaging service: \(type(of: messagingService))")
+    private func isSessionReady() -> Bool {
+        do {
+            let inboxes = try convosClient.session.inboxesRepository.allInboxes()
+            return !inboxes.isEmpty
+        } catch {
+            return false
+        }
+    }
 
-        guard let messagingService = messagingService as? MessagingService else {
-            Logger.error("🔔 [PushNotificationManager] ❌ Messaging service is not MessagingService type - throwing noActiveSession error")
+    private func scheduleRetry(with token: String) {
+        // Exponential backoff up to 5 minutes
+        let delaySeconds = min(pow(2.0, Double(retryAttempt)), 300.0)
+        retryAttempt = min(retryAttempt + 1, 10)
+
+        retryTask?.cancel()
+        retryTask = Task { [weak self] in
+            guard let self else { return }
+            let ns = UInt64(delaySeconds * 1_000_000_000)
+            try? await Task.sleep(nanoseconds: ns)
+            await self.updateDevicePushToken(token)
+        }
+    }
+
+    private func getCurrentUserId() async throws -> String {
+        // Get the first available inbox to extract user ID
+        let allInboxes = try convosClient.session.inboxesRepository.allInboxes()
+
+        guard let firstInbox = allInboxes.first else {
+            Logger.error("🔔 [PushNotificationManager] ❌ No inboxes found - cannot get user ID")
             throw PushNotificationError.noActiveSession
         }
 
-        Logger.info("🔔 [PushNotificationManager] Waiting for inbox to be ready...")
-        // Wait for the inbox to be ready to get the XMTP client with timeout
-        var inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
-
-        // Try multiple times with increasing timeout for newly created inboxes
-        var attempts = 0
-        let maxAttempts = 3
-        let baseTimeout: TimeInterval = 15
-
-        while attempts < maxAttempts {
-            attempts += 1
-            let currentTimeout = baseTimeout * Double(attempts) // 15s, 30s, 45s
-
-            Logger.info("🔔 [PushNotificationManager] Attempt \(attempts)/\(maxAttempts) - waiting up to \(currentTimeout)s for inbox to be ready...")
-
-            do {
-                let result = try await withTimeout(seconds: currentTimeout) {
-                    await inboxReadyIterator.next()
-                }
-                guard let readyResult = result else {
-                    Logger.error("🔔 [PushNotificationManager] ❌ Inbox ready publisher returned nil (attempt \(attempts))")
-                    if attempts < maxAttempts {
-                        Logger.info("🔔 [PushNotificationManager] 🔄 Retrying in 2 seconds...")
-                        try await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay
-                        continue
-                    }
-                    throw PushNotificationError.noActiveSession
-                }
-
-                Logger.info("🔔 [PushNotificationManager] ✅ Inbox ready after \(attempts) attempts!")
-                let xmtpClient = readyResult.client
-                Logger.info("🔔 [PushNotificationManager] XMTP Client inbox ID: \(xmtpClient.inboxId)")
-                Logger.info("🔔 [PushNotificationManager] XMTP Client installation ID: \(xmtpClient.installationId)")
-
-                // Create installation info from the XMTP client
-                let installationInfo = InstallationInfo(
-                    identityId: targetInboxId, // Use inbox ID as identity ID
-                    xmtpInstallationId: xmtpClient.installationId
-                )
-
-                Logger.info("🔔 [PushNotificationManager] ✅ Created installation info: identityId=\(installationInfo.identityId), xmtpInstallationId=\(installationInfo.xmtpInstallationId)")
-
-                return [installationInfo]
-            } catch {
-                Logger.error("🔔 [PushNotificationManager] ❌ Timeout waiting for inbox to be ready (attempt \(attempts)): \(error)")
-                if attempts < maxAttempts {
-                    Logger.info("🔔 [PushNotificationManager] 🔄 Retrying in 2 seconds...")
-                    try await Task.sleep(nanoseconds: 2_000_000_000) // 2 second delay
-                    // Get a fresh iterator for the next attempt
-                    inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
-                } else {
-                    Logger.error("🔔 [PushNotificationManager] ❌ Cannot register push token without ready inbox after \(maxAttempts) attempts")
-                    throw error
-                }
-            }
-        }
-
-        // This should never be reached, but just in case
-        Logger.error("🔔 [PushNotificationManager] ❌ Exhausted all attempts without success")
-        throw PushNotificationError.noActiveSession
+        // Use the provider ID as the user ID (this is what we send to backend)
+        return firstInbox.providerId
     }
 
     // MARK: - Topic Subscription (for future use)
@@ -331,7 +353,7 @@ class PushNotificationManager: NSObject, ObservableObject {
         notificationProcessor.addSubscribedTopic(topic)
 
         // @lourou: Notify backend about topic subscription
-        // This should tell your backend to start sending notifications for this topic
+        // This should tell the backend to start sending notifications for this topic
     }
 
     func unsubscribeFromTopic(_ topic: String) async {
@@ -339,7 +361,7 @@ class PushNotificationManager: NSObject, ObservableObject {
         notificationProcessor.removeSubscribedTopic(topic)
 
         // @lourou: Notify backend about topic unsubscription
-        // This should tell your backend to stop sending notifications for this topic
+        // This should tell the backend to stop sending notifications for this topic
     }
 
     func getSubscribedTopics() -> Set<String> {

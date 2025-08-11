@@ -150,15 +150,6 @@ struct DebugErrorOverlay: View {
                                 .padding(.vertical, 4)
                                 .background(Color.white.opacity(0.2))
                                 .cornerRadius(4)
-
-                                Button("Report") {
-                                    // Could open GitHub issue or send to logging service
-                                }
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.white.opacity(0.2))
-                                .cornerRadius(4)
                             }
                         }
                     }

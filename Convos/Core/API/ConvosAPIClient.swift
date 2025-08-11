@@ -70,7 +70,8 @@ protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
     ) async throws -> String
 
     // Push notifications
-    func registerPushToken(_ request: PushTokenRegistrationRequest) async throws -> PushTokenRegistrationResponse
+    func getDevice(userId: String, deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse
+    func updateDevicePushToken(userId: String, deviceId: String, pushToken: String) async throws -> ConvosAPI.DeviceUpdateResponse
 }
 
 internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
@@ -120,7 +121,7 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
             let result = try JSONDecoder().decode(ConvosAPI.CreateSubOrganizationResponse.self, from: data)
             return result
         } catch {
-            throw APIError.serverError(error)
+            throw APIError.serverError(error.localizedDescription)
         }
     }
 
@@ -326,47 +327,136 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     }
 
     private func performRequest<T: Decodable>(_ request: URLRequest, retryCount: Int = 0) async throws -> T {
-        let (data, response) = try await session.data(for: request)
+        do {
+            let (data, response) = try await session.data(for: request)
 
-        Logger.info("Received response: \(data.prettyPrintedJSONString ?? "nil data")")
+            Logger.info("Received response: \(data.prettyPrintedJSONString ?? "nil data")")
 
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        switch httpResponse.statusCode {
-        case 200...299:
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode(T.self, from: data)
-        case 401:
-            // Check if we've exceeded max retries
-            guard retryCount < maxRetryCount else {
-                Logger.error("Max retry count (\(maxRetryCount)) exceeded for request")
-                throw APIError.notAuthenticated
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.invalidResponse
             }
 
-            // Try to re-authenticate and retry the request
-            do {
-                Logger.info("Attempting re-authentication (attempt \(retryCount + 1) of \(maxRetryCount))")
-                _ = try await reAuthenticate()
-                // Create a new request with the fresh token
-                var newRequest = request
-                if let jwt = try keychainService.retrieveString(.init(inboxId: client.inboxId)) {
-                    newRequest.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
+            switch httpResponse.statusCode {
+            case 200...299:
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                return try decoder.decode(T.self, from: data)
+            case 400:
+                // Parse error message from response if available
+                let errorMessage: String?
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let message = json["message"] as? String {
+                    errorMessage = message
+                } else {
+                    errorMessage = String(data: data, encoding: .utf8)
                 }
-                // Retry the request with incremented retry count
-                return try await performRequest(newRequest, retryCount: retryCount + 1)
-            } catch {
-                Logger.error("Re-authentication failed: \(error.localizedDescription)")
-                throw APIError.notAuthenticated
+
+                let error = APIError.badRequest(errorMessage)
+
+                #if DEBUG
+                Task { @MainActor in
+                    DebugErrorPresenter.shared.presentError(
+                        error,
+                        title: "API Error (400)",
+                        details: """
+                        URL: \(request.url?.absoluteString ?? "unknown")
+                        Method: \(request.httpMethod ?? "GET")
+                        Message: \(errorMessage ?? "No message")
+                        Response: \(data.prettyPrintedJSONString ?? String(data: data, encoding: .utf8) ?? "")
+                        """
+                    )
+                }
+                #endif
+                throw error
+            case 401:
+                // Check if we've exceeded max retries
+                guard retryCount < maxRetryCount else {
+                    Logger.error("Max retry count (\(maxRetryCount)) exceeded for request")
+                    let error = APIError.notAuthenticated
+                    #if DEBUG
+                    Task { @MainActor in
+                        DebugErrorPresenter.shared.presentError(
+                            error,
+                            title: "Authentication Failed",
+                            details: "Max retry count exceeded. Please re-login."
+                        )
+                    }
+                    #endif
+                    throw error
+                }
+
+                // Try to re-authenticate and retry the request
+                do {
+                    Logger.info("Attempting re-authentication (attempt \(retryCount + 1) of \(maxRetryCount))")
+                    _ = try await reAuthenticate()
+                    // Create a new request with the fresh token
+                    var newRequest = request
+                    if let jwt = try keychainService.retrieveString(.init(inboxId: client.inboxId)) {
+                        newRequest.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
+                    }
+                    // Retry the request with incremented retry count
+                    return try await performRequest(newRequest, retryCount: retryCount + 1)
+                } catch {
+                    Logger.error("Re-authentication failed: \(error.localizedDescription)")
+                    #if DEBUG
+                    Task { @MainActor in
+                        DebugErrorPresenter.shared.presentError(
+                            error,
+                            title: "Re-authentication Failed",
+                            details: error.localizedDescription
+                        )
+                    }
+                    #endif
+                    throw APIError.notAuthenticated
+                }
+            case 403:
+                let error = APIError.forbidden
+                #if DEBUG
+                Task { @MainActor in
+                    DebugErrorPresenter.shared.presentError(error, title: "Forbidden (403)")
+                }
+                #endif
+                throw error
+            case 404:
+                let error = APIError.notFound
+                #if DEBUG
+                Task { @MainActor in
+                    DebugErrorPresenter.shared.presentError(error, title: "Not Found (404)")
+                }
+                #endif
+                throw error
+            default:
+                let errorMessage = String(data: data, encoding: .utf8)
+                let error = APIError.serverError(errorMessage)
+                #if DEBUG
+                Task { @MainActor in
+                    DebugErrorPresenter.shared.presentError(
+                        error,
+                        title: "Server Error (\(httpResponse.statusCode))",
+                        details: errorMessage ?? "No response body"
+                    )
+                }
+                #endif
+                throw error
             }
-        case 403:
-            throw APIError.forbidden
-        case 404:
-            throw APIError.notFound
-        default:
-            throw APIError.serverError(nil)
+        } catch {
+            // Catch network errors
+            #if DEBUG
+            if !(error is APIError) {
+                Task { @MainActor in
+                    DebugErrorPresenter.shared.presentError(
+                        error,
+                        title: "Network Error",
+                        details: """
+                        URL: \(request.url?.absoluteString ?? "unknown")
+                        Method: \(request.httpMethod ?? "GET")
+                        Error: \(error.localizedDescription)
+                        """
+                    )
+                }
+            }
+            #endif
+            throw error
         }
     }
 
@@ -467,54 +557,41 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         return uploadedURL
     }
 
-    // MARK: - Push Notifications
+    // MARK: - Device Management
 
-    func registerPushToken(_ request: PushTokenRegistrationRequest) async throws -> PushTokenRegistrationResponse {
-        var urlRequest = try authenticatedRequest(for: "v1/notifications/register", method: "POST")
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.httpBody = try JSONEncoder().encode(request)
+    func getDevice(userId: String, deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse {
+        let request = try authenticatedRequest(
+            for: "v1/devices/\(userId)/\(deviceId)",
+            method: "GET"
+        )
 
-        Logger.info("🔔 [ConvosAPIClient] Making push token registration request to: \(urlRequest.url?.absoluteString ?? "nil")")
-        Logger.info("🔔 [ConvosAPIClient] Request headers: \(urlRequest.allHTTPHeaderFields ?? [:])")
-        Logger.info("🔔 [ConvosAPIClient] Request body: \(urlRequest.httpBody?.prettyPrintedJSONString ?? "nil")")
+        return try await performRequest(request)
+    }
 
-        // Use raw URLSession to get detailed logging like other API calls
-        let (data, response) = try await session.data(for: urlRequest)
+    func updateDevicePushToken(userId: String, deviceId: String, pushToken: String) async throws -> ConvosAPI.DeviceUpdateResponse {
+        // Use authenticatedRequest to properly set auth headers
+        var request = try authenticatedRequest(
+            for: "v1/devices/\(userId)/\(deviceId)",
+            method: "PATCH"
+        )
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        Logger.info("🔔 [ConvosAPIClient] Received response: \(data.prettyPrintedJSONString ?? "nil data")")
+        let updateRequest = ConvosAPI.DeviceUpdateRequest(
+            pushToken: pushToken,
+            pushTokenType: ConvosAPI.DeviceUpdateRequest.DeviceUpdatePushTokenType.apns,
+            apnsEnv: ConfigManager.shared.currentEnvironment.apnsEnvironment == .sandbox ?
+                ConvosAPI.DeviceUpdateRequest.DeviceUpdateApnsEnvironment.sandbox :
+                ConvosAPI.DeviceUpdateRequest.DeviceUpdateApnsEnvironment.production
+        )
 
-        guard let httpResponse = response as? HTTPURLResponse else {
-            Logger.error("🔔 [ConvosAPIClient] Invalid response type")
-            throw APIError.invalidResponse
-        }
+        request.httpBody = try JSONEncoder().encode(updateRequest)
 
-        Logger.info("🔔 [ConvosAPIClient] HTTP Status Code: \(httpResponse.statusCode)")
-        Logger.info("🔔 [ConvosAPIClient] Response headers: \(httpResponse.allHeaderFields)")
+        Logger.info("🔔 [PushNotifications] Sending PATCH request to: \(request.url?.absoluteString ?? "unknown")")
+        Logger.info("🔔 [PushNotifications] Request body: \(request.httpBody?.prettyPrintedJSONString ?? "")")
+        Logger.info("🔔 [PushNotifications] Headers: \(request.allHTTPHeaderFields ?? [:])")
 
-        switch httpResponse.statusCode {
-        case 200...299:
-            let decoder = JSONDecoder()
-            let registrationResponse = try decoder.decode([InstallationRegistrationResponse].self, from: data)
-            Logger.info("🔔 [ConvosAPIClient] ✅ Successfully registered push token. Registrations: \(registrationResponse.count)")
-            return PushTokenRegistrationResponse(responses: registrationResponse)
-
-        case 401:
-            Logger.error("🔔 [ConvosAPIClient] Authentication failed (401) when registering push token")
-            throw APIError.authenticationFailed
-
-        case 403:
-            Logger.error("🔔 [ConvosAPIClient] Forbidden (403) when registering push token")
-            throw APIError.forbidden
-
-        case 404:
-            Logger.error("🔔 [ConvosAPIClient] Not found (404) when registering push token")
-            throw APIError.notFound
-
-        default:
-            Logger.error("🔔 [ConvosAPIClient] Failed to register push token. Status: \(httpResponse.statusCode)")
-            Logger.error("🔔 [ConvosAPIClient] Error response body: \(data.prettyPrintedJSONString ?? "nil")")
-            throw APIError.serverError(nil)
-        }
+        // Use performRequest to handle auth and retries properly
+        return try await performRequest(request)
     }
 }
 
@@ -524,9 +601,10 @@ enum APIError: Error {
     case invalidURL
     case authenticationFailed
     case notAuthenticated
+    case badRequest(String?)
     case forbidden
     case notFound
     case invalidResponse
     case invalidRequest
-    case serverError(Error?)
+    case serverError(String?)
 }

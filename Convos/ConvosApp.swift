@@ -22,6 +22,7 @@ struct ConvosApp: App {
             .onAppear {
                 setupPushNotifications()
             }
+            .withDebugErrorHandling()
         }
     }
 

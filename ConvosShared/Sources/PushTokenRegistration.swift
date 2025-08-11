@@ -90,3 +90,36 @@ public struct DeviceRegistrationResponse: Codable {
         self.status = status
     }
 }
+
+// MARK: - Device Update Models (New API)
+
+public struct DeviceUpdateRequest: Codable {
+    public let pushToken: String
+    public let pushTokenType: DeviceUpdatePushTokenType
+    public let apnsEnv: DeviceUpdateApnsEnvironment
+
+    public enum DeviceUpdatePushTokenType: String, Codable {
+        case apns
+    }
+
+    public enum DeviceUpdateApnsEnvironment: String, Codable {
+        case sandbox
+        case production
+    }
+
+    public init(pushToken: String, pushTokenType: DeviceUpdatePushTokenType = .apns, apnsEnv: DeviceUpdateApnsEnvironment) {
+        self.pushToken = pushToken
+        self.pushTokenType = pushTokenType
+        self.apnsEnv = apnsEnv
+    }
+}
+
+public struct DeviceUpdateResponse: Codable {
+    public let deviceId: String
+    public let status: String
+
+    public init(deviceId: String, status: String) {
+        self.deviceId = deviceId
+        self.status = status
+    }
+}
