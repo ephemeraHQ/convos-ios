@@ -33,15 +33,15 @@ public enum Logger {
         public var minimumLogLevel: LogLevel = .info
         private let isProduction: Bool
         private let logFileURL: URL?
-        private let fileQueue = DispatchQueue(label: "com.convos.logger.file", qos: .utility)
+        private let fileQueue: DispatchQueue = DispatchQueue(label: "com.convos.logger.file", qos: .utility)
         private let maxLogFileSize: Int64 = 10 * 1024 * 1024 // 10MB
 
         public init(isProduction: Bool = false) {
             self.isProduction = isProduction
 
-            if !isProduction {
+            if !isProduction,
+               let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                 // Create logs directory in app's documents folder
-                let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
                 let logsDirectory = documentsPath.appendingPathComponent("Logs")
 
                 do {
