@@ -43,7 +43,7 @@ struct QuickEditView: View {
             .textInputAutocapitalization(.words)
             .truncationMode(.tail)
             .submitLabel(.done)
-            .frame(minWidth: 166.0, maxWidth: 180.0)
+            .frame(minWidth: 166.0)
             .frame(height: 52.0)
             .background(
                 Capsule()

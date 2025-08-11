@@ -13,15 +13,6 @@ class InviteCell: UICollectionViewCell {
         }
         .margins(.vertical, 0.0)
     }
-
-    override func preferredLayoutAttributesFitting(
-        _ layoutAttributes: UICollectionViewLayoutAttributes
-    ) -> UICollectionViewLayoutAttributes {
-        let targetSize = CGSize(width: layoutAttributes.size.width,
-                                height: layoutAttributes.size.width)
-        layoutAttributes.size.height = targetSize.height
-        return layoutAttributes
-    }
 }
 
 struct InviteView: View {

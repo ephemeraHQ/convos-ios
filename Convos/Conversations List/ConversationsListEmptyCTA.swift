@@ -34,3 +34,9 @@ struct ConversationsListEmptyCTA: View {
         .cornerRadius(32.0)
     }
 }
+
+#Preview {
+    ConversationsListEmptyCTA {
+    } onJoinConvo: {
+    }
+}

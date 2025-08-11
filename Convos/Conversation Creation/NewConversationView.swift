@@ -12,7 +12,6 @@ struct InviteShareLink: View {
             )
         ) {
             Image(systemName: "square.and.arrow.up")
-                .font(.system(size: 20.0))
                 .foregroundStyle(.colorTextPrimary)
         }
         .disabled(inviteString.isEmpty)
@@ -23,44 +22,77 @@ struct NewConversationView: View {
     let viewModel: NewConversationViewModel
     @State private var hasShownScannerOnAppear: Bool = false
     @State private var presentingJoinConversationSheet: Bool = false
+    @State private var presentingDeleteConfirmation: Bool = false
+    @State private var sidebarWidth: CGFloat = 0.0
+
+    @FocusState private var focusState: MessagesViewInputFocus?
+
+    @Environment(\.dismiss) private var dismiss: DismissAction
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if viewModel.showScannerOnAppear && !hasShownScannerOnAppear {
+        ConversationInfoPresenter(
+            viewModel: viewModel,
+            focusState: $focusState,
+            sidebarColumnWidth: $sidebarWidth,
+        ) {
+            NavigationStack {
+                Group {
+                    if viewModel.showScannerOnAppear && !hasShownScannerOnAppear {
+                        JoinConversationView { inviteCode in
+                            hasShownScannerOnAppear = true
+                            viewModel.join(inviteCode: inviteCode)
+                        }
+                    } else if let conversationViewModel = viewModel.conversationViewModel {
+                        ConversationView(
+                            viewModel: conversationViewModel,
+                            focusState: $focusState,
+                            onScanInviteCode: {
+                                presentingJoinConversationSheet = true
+                            },
+                            onDeleteConversation: viewModel.deleteConversation,
+                            confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
+                            messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
+                        )
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button(role: .close) {
+                                    if viewModel.shouldConfirmDeletingConversation {
+                                        presentingDeleteConfirmation = true
+                                    } else {
+                                        dismiss()
+                                    }
+                                }
+                                .confirmationDialog("", isPresented: $presentingDeleteConfirmation) {
+                                    Button("Delete", role: .destructive) {
+                                        viewModel.deleteConversation()
+                                        dismiss()
+                                    }
+
+                                    Button("Keep") {
+                                        dismiss()
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        VStack(alignment: .center) {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
+                        }
+                    }
+                }
+                .background(.colorBackgroundPrimary)
+                .sheet(isPresented: $presentingJoinConversationSheet) {
                     JoinConversationView { inviteCode in
-                        hasShownScannerOnAppear = true
+                        presentingJoinConversationSheet = false
                         viewModel.join(inviteCode: inviteCode)
                     }
-                } else if let conversationViewModel = viewModel.conversationViewModel {
-                    ConversationView(
-                        viewModel: conversationViewModel,
-                        onScanInviteCode: {
-                            presentingJoinConversationSheet = true
-                        },
-                        onDeleteConversation: viewModel.deleteConversation,
-                        confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
-                        messagesTopBarLeadingItem: .close,
-                        messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
-                    )
-                } else {
-                    VStack(alignment: .center) {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
+                }
+                .onAppear {
+                    if !viewModel.showScannerOnAppear {
+                        viewModel.newConversation()
                     }
-                }
-            }
-            .background(.colorBackgroundPrimary)
-            .sheet(isPresented: $presentingJoinConversationSheet) {
-                JoinConversationView { inviteCode in
-                    presentingJoinConversationSheet = false
-                    viewModel.join(inviteCode: inviteCode)
-                }
-            }
-            .onAppear {
-                if !viewModel.showScannerOnAppear {
-                    viewModel.newConversation()
                 }
             }
         }

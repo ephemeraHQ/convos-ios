@@ -2,12 +2,21 @@ import Combine
 import SwiftUI
 
 @Observable
-class NewConversationViewModel: Identifiable {
+class NewConversationViewModel: SelectableConversationViewModelType, Identifiable {
+    override var selectedConversation: ConversationViewModel? {
+        get {
+            conversationViewModel
+        }
+        set {
+            conversationViewModel = newValue
+        }
+    }
+
     // MARK: - Public
 
     let session: any SessionManagerProtocol
     var conversationViewModel: ConversationViewModel?
-    private(set) var messagesTopBarTrailingItem: MessagesTopBar.TrailingItem = .scan
+    private(set) var messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .scan
     private(set) var shouldConfirmDeletingConversation: Bool = true
     private(set) var showScannerOnAppear: Bool
 
@@ -28,6 +37,7 @@ class NewConversationViewModel: Identifiable {
     init(session: any SessionManagerProtocol, showScannerOnAppear: Bool = false) {
         self.session = session
         self.showScannerOnAppear = showScannerOnAppear
+        super.init()
     }
 
     // MARK: - Actions
@@ -105,6 +115,7 @@ class NewConversationViewModel: Identifiable {
                 }
 
                 if self.conversationViewModel == nil {
+                    Logger.info("ConversationViewModel is `nil`... creating a new one.")
                     self.conversationViewModel = try conversationViewModel(
                         for: addAccountResult,
                         from: draftConversationComposer

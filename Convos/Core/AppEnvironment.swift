@@ -5,7 +5,7 @@ public enum ApnsEnvironment: String, Codable {
     case production
 }
 
-enum AppEnvironment {
+enum AppEnvironment: String, RawRepresentable {
     case local, tests, dev, production
 
     var apiBaseURL: String {

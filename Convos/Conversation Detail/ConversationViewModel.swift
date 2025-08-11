@@ -225,6 +225,16 @@ class ConversationViewModel {
     }
 }
 
+extension ConversationViewModel: Hashable {
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(conversation)
+    }
+
+    static func == (lhs: ConversationViewModel, rhs: ConversationViewModel) -> Bool {
+        return lhs.conversation == rhs.conversation
+    }
+}
+
 extension ConversationViewModel: KeyboardListenerDelegate {
     func keyboardDidHide(info: KeyboardInfo) {
         focus = nil

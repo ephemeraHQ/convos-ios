@@ -10,19 +10,22 @@ struct ConvosApp: App {
 
     init() {
         SDKConfiguration.configureSDKs()
+
+        // Initialize Logger with correct production flag
+        let isProduction = ConfigManager.shared.currentEnvironment == .production
+        _ = Logger.Default(isProduction: isProduction)
+
+        Logger.info("🚀 App starting with environment: \(ConfigManager.shared.currentEnvironment)")
     }
 
     var body: some Scene {
         WindowGroup {
-            RootView(
-                convos: convos,
-                analyticsService: analyticsService
-            )
+            ConversationsView(session: convos.session)
+            .withSafeAreaEnvironment()
             .environmentObject(pushNotificationManager)
             .onAppear {
                 setupPushNotifications()
             }
-            .withDebugErrorHandling()
         }
     }
 

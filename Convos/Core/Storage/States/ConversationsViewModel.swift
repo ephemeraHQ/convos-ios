@@ -3,9 +3,16 @@ import Foundation
 import Observation
 
 @Observable
-final class ConversationsListViewModel {
+class SelectableConversationViewModelType {
+    var selectedConversation: ConversationViewModel?
+}
+
+@Observable
+final class ConversationsViewModel: SelectableConversationViewModelType {
     private(set) var conversations: [Conversation]
     private(set) var conversationsCount: Int = 0
+
+    var newConversationViewModel: NewConversationViewModel?
 
     var pinnedConversations: [Conversation] {
         conversations.filter { $0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
@@ -34,10 +41,19 @@ final class ConversationsListViewModel {
             Logger.error("Error fetching conversations: \(error)")
             self.conversations = []
         }
+        super.init()
         observe()
     }
 
-    func viewModel(for conversation: Conversation) -> ConversationViewModel {
+    func onStartConvo() {
+        newConversationViewModel = .init(session: session)
+    }
+
+    func onJoinConvo() {
+        newConversationViewModel = .init(session: session, showScannerOnAppear: true)
+    }
+
+    func conversationViewModel(for conversation: Conversation) -> ConversationViewModel {
         let messagingService = session.messagingService(for: conversation.inboxId)
         return .init(
             conversation: conversation,
@@ -66,5 +82,16 @@ final class ConversationsListViewModel {
                 self?.conversations = conversations
             }
             .store(in: &cancellables)
+    }
+}
+
+extension ConversationsViewModel {
+    static var mock: ConversationsViewModel {
+        let client = ConvosClient.mock()
+        return .init(
+            session: client.session,
+            conversationsRepository: client.session.conversationsRepository(for: .all),
+            conversationsCountRepository: client.session.conversationsCountRepo(for: .all, kinds: .groups)
+        )
     }
 }
