@@ -571,10 +571,13 @@ extension MessagesViewController: KeyboardListenerDelegate {
     }
 
     private func calculateNewBottomInset(for info: KeyboardInfo) -> CGFloat {
-        let keyboardFrame = collectionView.window?.convert(info.frameEnd, to: view)
+        guard let keyboardFrame = collectionView.window?.convert(info.frameEnd, to: view),
+              !keyboardFrame.isEmpty else {
+            return bottomBarHeight
+        }
         let keyboardInset = (bottomBarHeight + collectionView.frame.minY +
                      collectionView.frame.size.height -
-                     (keyboardFrame?.minY ?? 0) - collectionView.safeAreaInsets.bottom)
+                     keyboardFrame.minY - collectionView.safeAreaInsets.bottom)
         let inset = max(keyboardInset, bottomBarHeight)
         Logger.info("Calculated new bottom inset: \(inset) (keyboard: \(keyboardInset), bottomBar: \(bottomBarHeight))")
         return inset
