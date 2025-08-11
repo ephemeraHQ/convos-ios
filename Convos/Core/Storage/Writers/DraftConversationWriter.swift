@@ -19,7 +19,8 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
              failedFindingConversation,
              missingCurrentUser,
              missingProfileForRemoving,
-             modifyingMembersOnExistingConversation
+             modifyingMembersOnExistingConversation,
+             inboxReadyTimeout
     }
 
     private enum DraftConversationWriterState: Equatable {
@@ -183,6 +184,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         // wait for response
         streamConversationsTask = Task {
             do {
+                Logger.info("Started streaming conversations for inboxId: \(client.inboxId)")
                 for try await conversation in await client.conversationsProvider.stream(
                     type: .groups,
                     onClose: {
@@ -196,6 +198,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                         do {
                             Logger.info("Fetching invite details...")
                             let response = try await apiClient.publicInviteDetails(inviteId)
+                            Logger.info("Received invite details: \(response)")
                             try await inviteWriter.store(
                                 invite: response,
                                 conversationId: conversation.id,

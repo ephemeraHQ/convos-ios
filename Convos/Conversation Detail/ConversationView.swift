@@ -15,28 +15,26 @@ struct SwipeBackGestureEnabler: UIViewControllerRepresentable {
 }
 
 struct ConversationView: View {
-    @State var viewModel: ConversationViewModel
+    @Bindable var viewModel: ConversationViewModel
+    @FocusState.Binding var focusState: MessagesViewInputFocus?
     let onScanInviteCode: () -> Void
     let onDeleteConversation: () -> Void
     let confirmDeletionBeforeDismissal: Bool
-    let messagesTopBarLeadingItem: MessagesTopBar.LeadingItem
-    let messagesTopBarTrailingItem: MessagesTopBar.TrailingItem
-
-    @FocusState private var focusState: MessagesViewInputFocus?
+    let messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem
 
     init(
         viewModel: ConversationViewModel,
+        focusState: FocusState<MessagesViewInputFocus?>.Binding,
         onScanInviteCode: @escaping () -> Void = {},
         onDeleteConversation: @escaping () -> Void = {},
         confirmDeletionBeforeDismissal: Bool = false,
-        messagesTopBarLeadingItem: MessagesTopBar.LeadingItem = .back,
-        messagesTopBarTrailingItem: MessagesTopBar.TrailingItem = .share
+        messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .share
     ) {
         self.viewModel = viewModel
+        self._focusState = focusState
         self.onScanInviteCode = onScanInviteCode
         self.onDeleteConversation = onDeleteConversation
         self.confirmDeletionBeforeDismissal = confirmDeletionBeforeDismissal
-        self.messagesTopBarLeadingItem = messagesTopBarLeadingItem
         self.messagesTopBarTrailingItem = messagesTopBarTrailingItem
     }
 
@@ -65,26 +63,36 @@ struct ConversationView: View {
             onProfileSettings: viewModel.onProfileSettings,
             onScanInviteCode: onScanInviteCode,
             onDeleteConversation: onDeleteConversation,
-            topBarLeadingItem: messagesTopBarLeadingItem,
-            topBarTrailingItem: messagesTopBarTrailingItem,
             confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
         )
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                switch messagesTopBarTrailingItem {
+                case .share:
+                    InviteShareLink(invite: viewModel.invite)
+                case .scan:
+                    Button {
+                        onScanInviteCode()
+                    } label: {
+                        Image(systemName: "qrcode.viewfinder")
+                    }
+                    .buttonBorderShape(.circle)
+                }
+            }
+        }
         .onAppear(perform: viewModel.onAppear)
         .onDisappear(perform: viewModel.onDisappear)
         .onChange(of: viewModel.focus) {
-            Logger.info("Changing focus from viewModel to focusState: \(viewModel.focus)")
             focusState = viewModel.focus
         }
         .onChange(of: focusState) {
-            Logger.info("Changing focus from focusState to viewModel: \(focusState)")
             viewModel.focus = focusState
         }
-        .toolbarVisibility(.hidden, for: .navigationBar)
-        .background(SwipeBackGestureEnabler())
     }
 }
 
 #Preview {
     @Previewable @State var viewModel: ConversationViewModel = .mock
-    ConversationView(viewModel: viewModel)
+    @Previewable @FocusState var focusState: MessagesViewInputFocus?
+    ConversationView(viewModel: viewModel, focusState: $focusState)
 }

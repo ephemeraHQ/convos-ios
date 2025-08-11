@@ -57,8 +57,8 @@ struct JoinConversationView: View {
                         }
                         .glassEffect(.regular, in: Capsule())
                         .padding(.horizontal, DesignConstants.Spacing.step6x)
+                        .padding(.bottom, DesignConstants.Spacing.step6x)
                     }
-                    .padding(.bottom, 100.0)
                 }
                 .compositingGroup()
             }

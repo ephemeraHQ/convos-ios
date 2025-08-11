@@ -35,27 +35,30 @@ struct ConversationToolbarButton: View {
     }
 
     var body: some View {
-        HStack(spacing: 0.0) {
-            ConversationAvatarView(conversation: conversation)
-                .frame(width: 36.0, height: 36.0)
+        Button {
+            action()
+        } label: {
+            HStack(spacing: 0.0) {
+                ConversationAvatarView(conversation: conversation)
+                    .frame(width: 36.0, height: 36.0)
 
-            VStack(alignment: .leading, spacing: 0.0) {
-                Text(title)
-                    .lineLimit(1)
-                    .frame(maxWidth: 180.0)
-                    .font(.system(size: 16.0, weight: .medium))
-                    .truncationMode(.tail)
-                    .foregroundStyle(.colorTextPrimary)
-                    .fixedSize()
-                Text(subtitle)
-                    .lineLimit(1)
-                    .font(.system(size: 12.0, weight: .regular))
-                    .foregroundStyle(.colorTextSecondary)
+                VStack(alignment: .leading, spacing: 0.0) {
+                    Text(title)
+                        .lineLimit(1)
+                        .frame(maxWidth: 180.0)
+                        .font(.system(size: 16.0, weight: .medium))
+                        .truncationMode(.tail)
+                        .foregroundStyle(.colorTextPrimary)
+                        .fixedSize()
+                    Text(subtitle)
+                        .lineLimit(1)
+                        .font(.system(size: 12.0, weight: .regular))
+                        .foregroundStyle(.colorTextSecondary)
+                }
+                .padding(.horizontal, DesignConstants.Spacing.step2x)
             }
-            .padding(.horizontal, DesignConstants.Spacing.step2x)
+            .compositingGroup()
         }
-        .onTapGesture(perform: action)
-        .compositingGroup()
     }
 }
 
