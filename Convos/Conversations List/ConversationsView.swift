@@ -6,6 +6,7 @@ struct ConversationsView: View {
 
     @Namespace private var namespace: Namespace.ID
     @State private var presentingExplodeConfirmation: Bool = false
+    @State private var presentingDebugView: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     @FocusState private var focusState: MessagesViewInputFocus?
@@ -108,6 +109,18 @@ struct ConversationsView: View {
                     }
 
                     ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            presentingDebugView = true
+                        } label: {
+                            Image(systemName: "ladybug.fill")
+                        }
+                    }
+                    .matchedTransitionSource(
+                        id: "debug-view-transition-source",
+                        in: namespace
+                    )
+
+                    ToolbarItem(placement: .topBarTrailing) {
                         Button("Filter", systemImage: "line.3.horizontal.decrease") {
                             //
                         }
@@ -139,6 +152,15 @@ struct ConversationsView: View {
                     emptyConversationsView
                 }
             }
+        }
+        .sheet(isPresented: $presentingDebugView) {
+            DebugView()
+                .navigationTransition(
+                    .zoom(
+                        sourceID: "debug-view-transition-source",
+                        in: namespace
+                    )
+                )
         }
         .fullScreenCover(item: $viewModel.newConversationViewModel) { viewModel in
             NewConversationView(viewModel: viewModel)
