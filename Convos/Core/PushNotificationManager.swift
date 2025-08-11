@@ -80,8 +80,11 @@ class PushNotificationManager: NSObject, ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            guard let self, let token = self.deviceToken else { return }
-            Task { await self.updateDevicePushToken(token) }
+            guard let self else { return }
+            Task { @MainActor in
+                guard let token = self.deviceToken else { return }
+                await self.updateDevicePushToken(token)
+            }
         }
     }
 
@@ -109,7 +112,7 @@ class PushNotificationManager: NSObject, ObservableObject {
     // MARK: - Registration
 
     private func registerForRemoteNotifications() async {
-        await UIApplication.shared.registerForRemoteNotifications()
+        UIApplication.shared.registerForRemoteNotifications()
     }
 
     // MARK: - Device Token Handling
@@ -182,7 +185,7 @@ class PushNotificationManager: NSObject, ObservableObject {
             }
 
             // Create the API client directly using the environment
-            let baseClient = ConvosAPIClientFactory.client(environment: ConfigManager.shared.currentEnvironment)
+            _ = ConvosAPIClientFactory.client(environment: ConfigManager.shared.currentEnvironment)
 
             // First, check if the current push token is already set correctly
             let environment = ConfigManager.shared.currentEnvironment
@@ -377,7 +380,7 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         }
 
         // Show notification even when app is in foreground
-        return [.alert, .badge, .sound]
+        return [.banner, .badge, .sound]
     }
 
     // Handle notification tap
@@ -387,9 +390,10 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         print("User tapped notification: \(userInfo)")
 
         // Process the notification tap
-        await MainActor.run {
+        let userInfoCopy = userInfo
+        _ = await MainActor.run {
             Task {
-                await self.handleNotificationTap(userInfo)
+                await self.handleNotificationTap(userInfoCopy)
             }
         }
     }
