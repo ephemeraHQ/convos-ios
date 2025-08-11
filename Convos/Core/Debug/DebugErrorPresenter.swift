@@ -119,7 +119,8 @@ struct DebugErrorOverlay: View {
 
                         Spacer()
 
-                        Button(action: { presenter.dismiss() }) {
+                        let action = { presenter.dismiss() }
+                        Button(action: action) {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(.white.opacity(0.7))
                         }
@@ -182,6 +183,7 @@ struct ShakeDebugConsole: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .background(ShakeDetectingView())
             .onReceive(NotificationCenter.default.publisher(for: .deviceDidShake)) { _ in
                 #if DEBUG
                 if ConfigManager.shared.currentEnvironment.shouldShowDebugErrors {
@@ -192,6 +194,32 @@ struct ShakeDebugConsole: ViewModifier {
             .sheet(isPresented: $showingDebugConsole) {
                 DebugConsoleView()
             }
+    }
+}
+
+struct ShakeDetectingView: UIViewRepresentable {
+    func makeUIView(context: Context) -> ShakeDetectingUIView {
+        ShakeDetectingUIView()
+    }
+
+    func updateUIView(_ uiView: ShakeDetectingUIView, context: Context) {}
+}
+
+class ShakeDetectingUIView: UIView {
+    override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
+        super.motionEnded(motion, with: event)
+        if motion == .motionShake {
+            NotificationCenter.default.post(name: .deviceDidShake, object: nil)
+        }
+    }
+
+    override var canBecomeFirstResponder: Bool {
+        return true
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        becomeFirstResponder()
     }
 }
 
@@ -258,14 +286,6 @@ struct DebugConsoleView: View {
 
 extension Notification.Name {
     static let deviceDidShake: Notification.Name = Notification.Name("deviceDidShake")
-}
-
-extension UIWindow {
-    open override func motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
-        if motion == .motionShake {
-            NotificationCenter.default.post(name: .deviceDidShake, object: nil)
-        }
-    }
 }
 
 // MARK: - View Extension

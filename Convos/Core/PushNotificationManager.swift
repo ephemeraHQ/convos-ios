@@ -152,25 +152,19 @@ class PushNotificationManager: NSObject, ObservableObject {
     // MARK: - Device Update
 
     private func updateDevicePushToken(_ token: String) async {
-        Logger.info("🔔 [PushNotificationManager] Updating device push token with backend")
-        Logger.info("🔔 [PushNotificationManager] Token: \(token)")
+        Logger.info("🔔 [PushNotificationManager] Updating device push token")
 
         do {
             guard isSessionReady() else {
-                Logger.info("🔔 [PushNotificationManager] Session not ready. Scheduling retry…")
-                scheduleRetry(with: token)
+                    scheduleRetry(with: token)
                 return
             }
             // Get current user and device info
             let userId = try await getCurrentUserId()
             let deviceId = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
 
-            Logger.info("🔔 [PushNotificationManager] User ID: \(userId)")
-            Logger.info("🔔 [PushNotificationManager] Device ID: \(deviceId)")
-
             // Since inboxReadyPublisher never emits (the original problem), we need to manually create
             // an authenticated API client using the stored JWT token that we know exists
-            Logger.info("🔔 [PushNotificationManager] Creating authenticated API client manually to bypass inbox ready issue...")
 
             // Get the first available inbox to extract inbox ID for JWT lookup
             let allInboxes = try convosClient.session.inboxesRepository.allInboxes()
@@ -186,8 +180,6 @@ class PushNotificationManager: NSObject, ObservableObject {
                 Logger.error("🔔 [PushNotificationManager] No stored JWT token - cannot authenticate push token update")
                 throw PushNotificationError.noActiveSession
             }
-
-            Logger.info("🔔 [PushNotificationManager] Found stored JWT token, checking current device state first...")
 
             // Create the API client directly using the environment
             let baseClient = ConvosAPIClientFactory.client(environment: ConfigManager.shared.currentEnvironment)
@@ -206,21 +198,16 @@ class PushNotificationManager: NSObject, ObservableObject {
             getRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
             getRequest.setValue(storedJWT, forHTTPHeaderField: "X-Convos-AuthToken")
 
-            Logger.info("🔔 [PushNotificationManager] Checking current device state: \(getUrl.absoluteString)")
-
             do {
                 let (getCurrentData, getCurrentResponse) = try await URLSession.shared.data(for: getRequest)
-                
+
                 if let getCurrentHttpResponse = getCurrentResponse as? HTTPURLResponse,
                    200...299 ~= getCurrentHttpResponse.statusCode,
                    !getCurrentData.isEmpty {
-                    
                     let currentDevice = try JSONDecoder().decode(ConvosAPI.DeviceUpdateResponse.self, from: getCurrentData)
-                    
-                    Logger.info("🔔 [PushNotificationManager] Current device state: pushToken=\(currentDevice.pushToken ?? "nil"), apnsEnv=\(currentDevice.apnsEnv ?? "nil")")
-                    
+
                     let currentApnsEnv = environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
-                    
+
                     // Check if token and environment match
                     if currentDevice.pushToken == token && currentDevice.apnsEnv == currentApnsEnv {
                         Logger.info("🔔 [PushNotificationManager] ✅ Push token already up to date, skipping update")
@@ -230,13 +217,9 @@ class PushNotificationManager: NSObject, ObservableObject {
                         retryTask = nil
                         return
                     }
-                    
-                    Logger.info("🔔 [PushNotificationManager] Push token needs updating: current=\(currentDevice.pushToken ?? "nil") vs new=\(token), currentEnv=\(currentDevice.apnsEnv ?? "nil") vs newEnv=\(currentApnsEnv)")
-                } else {
-                    Logger.info("🔔 [PushNotificationManager] Could not get current device state, proceeding with update")
                 }
             } catch {
-                Logger.info("🔔 [PushNotificationManager] Could not get current device state (\(error)), proceeding with update")
+                // Continue with update if we can't get current state
             }
 
             let url = apiBaseURL.appendingPathComponent("v1/devices/\(userId)/\(deviceId)")
@@ -255,17 +238,12 @@ class PushNotificationManager: NSObject, ObservableObject {
 
             request.httpBody = try JSONEncoder().encode(updateRequest)
 
-            Logger.info("🔔 [PushNotificationManager] Sending authenticated PATCH request to: \(url.absoluteString)")
-            Logger.info("🔔 [PushNotificationManager] Request body: \(request.httpBody?.prettyPrintedJSONString ?? "")")
-
             let (data, httpResponse) = try await URLSession.shared.data(for: request)
 
             guard let httpResponse = httpResponse as? HTTPURLResponse else {
                 Logger.error("🔔 [PushNotificationManager] Invalid HTTP response")
                 throw PushNotificationError.registrationFailed("Invalid response")
             }
-
-            Logger.info("🔔 [PushNotificationManager] HTTP response status: \(httpResponse.statusCode)")
 
             guard 200...299 ~= httpResponse.statusCode else {
                 let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
@@ -306,6 +284,18 @@ class PushNotificationManager: NSObject, ObservableObject {
         } catch {
             Logger.error("🔔 [PushNotificationManager] ❌ Failed to update device push token: \(error)")
             registrationError = error
+
+            // Show debug error in DEBUG builds
+            #if DEBUG
+            Task { @MainActor in
+                DebugErrorPresenter.shared.presentError(
+                    error,
+                    title: "Push Token Update Failed",
+                    details: "Failed to update device push token with backend"
+                )
+            }
+            #endif
+
             scheduleRetry(with: token)
         }
     }
