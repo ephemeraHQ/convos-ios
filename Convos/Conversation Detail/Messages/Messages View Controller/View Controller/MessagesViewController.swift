@@ -86,7 +86,7 @@ final class MessagesViewController: UIViewController {
         didSet {
             // @jarodl fix this
 //            if topBarHeight != oldValue {
-//                updateCollectionViewInsets(to: topBarHeight)
+                updateCollectionViewInsets(to: topBarHeight)
 //            }
 //
 //            if bottomBarHeight > 0.0 && topBarHeight > 0.0 {

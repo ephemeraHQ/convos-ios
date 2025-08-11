@@ -60,6 +60,7 @@ struct MessagesInputView: View {
             .frame(width: sendButtonSize, height: sendButtonSize, alignment: .bottomLeading)
             .disabled(!sendButtonEnabled)
         }
+        .padding(DesignConstants.Spacing.step2x)
         .frame(maxWidth: .infinity, alignment: .bottom)
         .fixedSize(horizontal: false, vertical: true)
     }
