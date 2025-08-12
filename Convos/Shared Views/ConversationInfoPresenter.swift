@@ -8,6 +8,7 @@ struct ConversationInfoPresenter<Content: View>: View {
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
     @Environment(\.safeAreaInsets) private var safeAreaInsets: EdgeInsets
+    @Namespace private var namespace: Namespace.ID
 
     var body: some View {
         ZStack {
@@ -28,6 +29,19 @@ struct ConversationInfoPresenter<Content: View>: View {
                             onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
                             onConversationSettings: viewModel.onConversationSettings
                         )
+                        .matchedTransitionSource(
+                            id: "convo-info-transition-source",
+                            in: namespace
+                        )
+                        .sheet(isPresented: $viewModel.presentingConversationSettings) {
+                            ConversationInfoView(viewModel: viewModel)
+                                .navigationTransition(
+                                    .zoom(
+                                        sourceID: "convo-info-transition-source",
+                                        in: namespace
+                                    )
+                                )
+                        }
                         .padding(.top, safeAreaInsets.top)
                         .padding(.leading, horizontalSizeClass != .compact ? sidebarColumnWidth : 0.0)
                         .transition(.asymmetric(

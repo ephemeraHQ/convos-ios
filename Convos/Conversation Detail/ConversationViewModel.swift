@@ -36,8 +36,11 @@ class ConversationViewModel {
     }
     var untitledConversationPlaceholder: String = "Untitled"
     var conversationNamePlaceholder: String = "Name"
+    var conversationDescriptionPlaceholder: String = "Description"
+    var joinEnabled: Bool = true
     var displayName: String = ""
     var conversationName: String = ""
+    var conversationDescription: String = ""
     var conversationImage: UIImage?
     var messageText: String = "" {
         didSet {
@@ -49,6 +52,7 @@ class ConversationViewModel {
     /// we manage focus in the view model along with @FocusState in the view
     /// since programatically changing @FocusState doesn't always propagate to child views
     var focus: MessagesViewInputFocus?
+    var presentingConversationSettings: Bool = false
 
     // MARK: - Init
 
@@ -136,7 +140,11 @@ class ConversationViewModel {
     }
 
     func onConversationNameEndedEditing() {
-        focus = .message
+        onConversationNameEndedEditing(nextFocus: .message)
+    }
+
+    func onConversationNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
+        focus = nextFocus
 
         if conversationName != conversation.name {
             Task { [metadataWriter] in
@@ -168,6 +176,13 @@ class ConversationViewModel {
     }
 
     func onConversationSettings() {
+        presentingConversationSettings = true
+        focus = nil
+    }
+
+    func onConversationSettingsDismissed() {
+        onConversationNameEndedEditing(nextFocus: nil)
+        presentingConversationSettings = false
     }
 
     func onProfilePhotoTap() {
@@ -187,7 +202,11 @@ class ConversationViewModel {
     }
 
     func onDisplayNameEndedEditing() {
-        focus = .message
+        onDisplayNameEndedEditing(nextFocus: .message)
+    }
+
+    private func onDisplayNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
+        focus = nextFocus
 
         if profile.name != displayName {
             Task { [myProfileWriter] in
