@@ -148,108 +148,38 @@ class PushNotificationManager: NSObject {
             let userId = try await getCurrentUserId()
             let deviceId = await UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
 
-            // Since inboxReadyPublisher never emits (the original problem), we need to manually create
-            // an authenticated API client using the stored JWT token that we know exists
-
-            // Get the first available inbox to extract inbox ID for JWT lookup
+            // Resolve first inbox and await its ready state to access the authenticated API client
             let allInboxes = try convosClient.session.inboxesRepository.allInboxes()
             guard let firstInbox = allInboxes.first else {
                 Logger.error("❌ No inboxes found - cannot get inbox ID")
                 throw PushNotificationError.noActiveSession
             }
 
-            // Check if we have a stored JWT token for authentication
-            let keychainService = KeychainService<ConvosJWTKeychainItem>()
-            guard let storedJWT = try? keychainService.retrieveString(.init(inboxId: firstInbox.inboxId)),
-                  !storedJWT.isEmpty else {
-                Logger.error("No stored JWT token - cannot authenticate push token update")
-                throw PushNotificationError.noActiveSession
-            }
-
-            // Create the API client directly using the environment
-            _ = ConvosAPIClientFactory.client(environment: ConfigManager.shared.currentEnvironment)
+            // Obtain the authenticated API client from the messaging service (reuses authenticatedRequest under the hood)
+            let inboxReady = try await awaitInboxReady(inboxId: firstInbox.inboxId, timeout: 5.0)
+            let apiClient = inboxReady.apiClient
 
             // First, check if the current push token is already set correctly
             let environment = ConfigManager.shared.currentEnvironment
-            guard let apiBaseURL = URL(string: environment.apiBaseURL) else {
-                Logger.error("Invalid API base URL")
-                throw PushNotificationError.noActiveSession
-            }
-
-            // GET current device state
-            let getUrl = apiBaseURL.appendingPathComponent("v1/devices/\(userId)/\(deviceId)")
-            var getRequest = URLRequest(url: getUrl)
-            getRequest.httpMethod = "GET"
-            getRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            getRequest.setValue(storedJWT, forHTTPHeaderField: "X-Convos-AuthToken")
+            let expectedApnsEnv = environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
 
             do {
-                let (getCurrentData, getCurrentResponse) = try await URLSession.shared.data(for: getRequest)
-
-                if let getCurrentHttpResponse = getCurrentResponse as? HTTPURLResponse,
-                   200...299 ~= getCurrentHttpResponse.statusCode,
-                   !getCurrentData.isEmpty {
-                    let currentDevice = try JSONDecoder().decode(ConvosAPI.DeviceUpdateResponse.self, from: getCurrentData)
-
-                    let currentApnsEnv = environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
-
-                    // Check if token and environment match
-                    if currentDevice.pushToken == token && currentDevice.apnsEnv == currentApnsEnv {
-                        Logger.info("✅ Push token already up to date, skipping update")
-                        registrationError = nil
-                        retryAttempt = 0
-                        retryTask?.cancel()
-                        retryTask = nil
-                        return
-                    }
+                let currentDevice = try await apiClient.getDevice(userId: userId, deviceId: deviceId)
+                if currentDevice.pushToken == token && currentDevice.apnsEnv == expectedApnsEnv {
+                    Logger.info("✅ Push token already up to date, skipping update")
+                    registrationError = nil
+                    retryAttempt = 0
+                    retryTask?.cancel()
+                    retryTask = nil
+                    return
                 }
             } catch {
                 // Continue with update if we can't get current state
             }
 
-            let url = apiBaseURL.appendingPathComponent("v1/devices/\(userId)/\(deviceId)")
-            var request = URLRequest(url: url)
-            request.httpMethod = "PATCH"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.setValue(storedJWT, forHTTPHeaderField: "X-Convos-AuthToken")
-
-            let updateRequest = ConvosAPI.DeviceUpdateRequest(
-                pushToken: token,
-                pushTokenType: ConvosAPI.DeviceUpdateRequest.DeviceUpdatePushTokenType.apns,
-                apnsEnv: environment.apnsEnvironment == .sandbox ?
-                ConvosAPI.DeviceUpdateRequest.DeviceUpdateApnsEnvironment.sandbox :
-                    ConvosAPI.DeviceUpdateRequest.DeviceUpdateApnsEnvironment.production
-            )
-
-            request.httpBody = try JSONEncoder().encode(updateRequest)
-
-            let (data, httpResponse) = try await URLSession.shared.data(for: request)
-
-            guard let httpResponse = httpResponse as? HTTPURLResponse else {
-                Logger.error("Invalid HTTP response")
-                throw PushNotificationError.registrationFailed("Invalid response")
-            }
-
-            guard 200...299 ~= httpResponse.statusCode else {
-                let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-                Logger.error("HTTP error \(httpResponse.statusCode): \(errorMessage)")
-                throw PushNotificationError.registrationFailed("HTTP \(httpResponse.statusCode): \(errorMessage)")
-            }
-
-            // Try to decode response, but don't fail if it's empty or missing expected fields
-            if !data.isEmpty {
-                do {
-                    let response = try JSONDecoder().decode(ConvosAPI.DeviceUpdateResponse.self, from: data)
-                    Logger.info("✅ Successfully updated device push token: \(response)")
-                } catch {
-                    // Log the response body for debugging
-                    let responseString = String(data: data, encoding: .utf8) ?? "Unable to decode response"
-                    Logger.info("✅ Successfully updated device push token (response parsing failed): \(responseString)")
-                    Logger.info("Response parsing error: \(error)")
-                }
-            } else {
-                Logger.info("✅ Successfully updated device push token (empty response)")
-            }
+            // Update device push token via authenticated API client
+            let response = try await apiClient.updateDevicePushToken(userId: userId, deviceId: deviceId, pushToken: token)
+            Logger.info("✅ Successfully updated device push token: \(response)")
             registrationError = nil
             retryAttempt = 0
             retryTask?.cancel()
@@ -295,6 +225,35 @@ class PushNotificationManager: NSObject {
 
         // Use the provider ID as the user ID (this is what we send to backend)
         return firstInbox.providerId
+    }
+
+    // Wait for the messaging service to emit an inbox-ready result so we can access the authenticated API client
+    private func awaitInboxReady(inboxId: String, timeout: TimeInterval = 5.0) async throws -> InboxReadyResult {
+        let service = convosClient.session.messagingService(for: inboxId)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            var didResume: Bool = false
+            var cancellable: AnyCancellable?
+
+            func resume(_ result: Result<InboxReadyResult, Error>) {
+                guard !didResume else { return }
+                didResume = true
+                cancellable?.cancel()
+                continuation.resume(with: result)
+            }
+
+            cancellable = service.inboxReadyPublisher
+                .sink { ready in
+                    resume(.success(ready))
+                }
+
+            Task { [weak self] in
+                guard self != nil else { return }
+                let ns = UInt64(timeout * 1_000_000_000)
+                try? await Task.sleep(nanoseconds: ns)
+                resume(.failure(PushNotificationError.timeout))
+            }
+        }
     }
 
     // MARK: - Topic Subscription (for future use)
