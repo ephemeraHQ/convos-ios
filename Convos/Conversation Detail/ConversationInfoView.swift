@@ -1,32 +1,11 @@
-import Combine
 import SwiftUI
-
-struct MembersListView: View {
-    @Bindable var viewModel: ConversationViewModel
-
-    var body: some View {
-        List {
-            Section {
-                ForEach(viewModel.conversation.members, id: \.id) { member in
-                    HStack {
-                        ProfileAvatarView(profile: member.profile)
-                            .frame(width: DesignConstants.ImageSizes.mediumAvatar, height: DesignConstants.ImageSizes.mediumAvatar)
-
-                        Text(member.profile.displayName)
-                            .font(.body)
-                    }
-                }
-            }
-        }
-    }
-}
 
 struct ConversationInfoView: View {
     @Bindable var viewModel: ConversationViewModel
 
     @Environment(\.dismiss) private var dismiss: DismissAction
 
-    private let maxMembersToShow: Int = 6
+    private let maxMembersToShow: Int = 2
     private var displayedMembers: [ConversationMember] {
         let sortedMembers = viewModel.conversation.members.sortedByRole()
         return Array(sortedMembers.prefix(maxMembersToShow))
@@ -103,18 +82,22 @@ struct ConversationInfoView: View {
                             .foregroundStyle(.colorTextSecondary)
                     } else {
                         ForEach(displayedMembers, id: \.id) { member in
-                            HStack {
-                                ProfileAvatarView(profile: member.profile)
-                                    .frame(width: DesignConstants.ImageSizes.mediumAvatar, height: DesignConstants.ImageSizes.mediumAvatar)
+                            NavigationLink {
+                                ConversationMemberView(viewModel: viewModel, member: member)
+                            } label: {
+                                HStack {
+                                    ProfileAvatarView(profile: member.profile)
+                                        .frame(width: DesignConstants.ImageSizes.mediumAvatar, height: DesignConstants.ImageSizes.mediumAvatar)
 
-                                Text(member.profile.displayName)
-                                    .font(.body)
+                                    Text(member.profile.displayName)
+                                        .font(.body)
+                                }
                             }
                         }
 
                         if showViewAllMembers {
                             NavigationLink {
-                                MembersListView(viewModel: viewModel)
+                                ConversationMembersListView(viewModel: viewModel)
                             } label: {
                                 Text("View all")
                                     .foregroundStyle(.colorTextPrimary)
