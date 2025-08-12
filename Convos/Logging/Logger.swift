@@ -39,8 +39,8 @@ public enum Logger {
         private let maxLogFileSize: Int64 = 10 * 1024 * 1024 // 10MB
         private let maxLogLines: Int = 1000 // Maximum lines to return for performance
         private var logBuffer: [String] = []
-        private let bufferQueue = DispatchQueue(label: "com.convos.logger.buffer", qos: .utility)
-        private let bufferMaxSize = 100 // Keep last 100 log entries in memory
+        private let bufferQueue: DispatchQueue = DispatchQueue(label: "com.convos.logger.buffer", qos: .utility)
+        private let bufferMaxSize: Int = 100 // Keep last 100 log entries in memory
 
         public init(isProduction: Bool = false) {
             self.isProduction = isProduction
@@ -132,7 +132,7 @@ public enum Logger {
         public func getLogs() -> String {
             // First try to return from buffer for immediate response
             let bufferLogs = bufferQueue.sync {
-                return logBuffer.joined(separator: "\n")
+                logBuffer.joined(separator: "\n")
             }
 
             // If buffer has content, return it immediately
@@ -155,7 +155,7 @@ public enum Logger {
             readQueue.async {
                 // First try buffer for immediate response
                 let bufferLogs = self.bufferQueue.sync {
-                    return self.logBuffer.joined(separator: "\n")
+                    self.logBuffer.joined(separator: "\n")
                 }
 
                 // If buffer has recent logs, return them immediately
