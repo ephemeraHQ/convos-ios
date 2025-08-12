@@ -18,4 +18,13 @@ struct NotificationConstants {
         static let maxRetries: Int = 3
         static let retryDelay: TimeInterval = 1.0
     }
+
+    // App-level in-process notifications
+    struct AppNotifications {
+        static let pushTokenDidChange: String = "convosPushTokenDidChange"
+    }
+}
+
+extension Notification.Name {
+    static let convosPushTokenDidChange = Notification.Name(NotificationConstants.AppNotifications.pushTokenDidChange)
 }

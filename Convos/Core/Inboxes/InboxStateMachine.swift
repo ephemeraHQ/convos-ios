@@ -1,5 +1,7 @@
 import Combine
 import Foundation
+import UIKit
+import UserNotifications
 import XMTPiOS
 
 private extension AppEnvironment {
@@ -177,6 +179,9 @@ actor InboxStateMachine {
             dbEncryptionKey: inbox.databaseKey,
             dbDirectory: environment.defaultDatabasesDirectory
         )
+
+        // Observe app foreground events to retry push token update when ready
+        registerForegroundObserver()
     }
 
     // MARK: - Public
@@ -281,6 +286,12 @@ actor InboxStateMachine {
         _state = .authorizing
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
+        // Attempt to register for remote notifications to obtain APNS token ASAP
+        await registerForRemoteNotificationsAlways()
+        // Request notification authorization and register once we have a client and api ready path
+        await requestAndRegisterForNotificationsIfNeeded()
+        // If we already have an APNS token, update it now that we're authorized
+        await updateStoredAPNSTokenIfPresent(client: client, apiClient: apiClient)
         do {
             try await refreshUserAndProfile(client: client, apiClient: apiClient)
         } catch {
@@ -314,6 +325,22 @@ actor InboxStateMachine {
         _state = .ready(.init(inbox: inbox, client: client, apiClient: apiClient))
         syncingManager.start(with: client, apiClient: apiClient)
         inviteJoinRequestsManager.start(with: client, apiClient: apiClient)
+        Task { [weak self] in
+            guard let self else { return }
+            await self.updateIfReady()
+        }
+        // Observe future token changes
+        NotificationCenter.default.addObserver(
+            forName: .convosPushTokenDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            Task { [weak self] in
+                guard let self else { return }
+                await self.updateIfReady()
+            }
+        }
     }
 
     private func handleDelete(inboxId: String) async throws {
@@ -456,5 +483,94 @@ actor InboxStateMachine {
 
         let random = UUID().uuidString.prefix(10).lowercased()
         return "\(baseUsername)\(random)"
+    }
+}
+
+// MARK: - Push Token Update
+
+extension InboxStateMachine {
+    nonisolated private func registerForegroundObserver() {
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            Task { [weak self] in
+                guard let self else { return }
+                await self.handleForegroundForPushTokenUpdate()
+            }
+        }
+    }
+
+    private func currentDeviceId() async -> String {
+        await MainActor.run { DeviceInfo.deviceIdentifier }
+    }
+
+    private func expectedApnsEnvString() -> String {
+        environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
+    }
+
+    private func storedDeviceToken() -> String? {
+        NotificationProcessor.shared.getStoredDeviceToken()
+    }
+
+    private func userIdForCurrentInbox() -> String { inbox.providerId }
+
+    private func updateStoredAPNSTokenIfPresent(
+        client: any XMTPClientProvider,
+        apiClient: any ConvosAPIClientProtocol
+    ) async {
+        guard let token = storedDeviceToken() else { return }
+        let userId = userIdForCurrentInbox()
+        let deviceId = await currentDeviceId()
+        let expectedEnv = expectedApnsEnvString()
+
+        do {
+            let current = try await apiClient.getDevice(userId: userId, deviceId: deviceId)
+            if current.pushToken == token && current.apnsEnv == expectedEnv { return }
+        } catch {
+            // proceed to attempt update
+        }
+
+        do {
+            _ = try await apiClient.updateDevicePushToken(userId: userId, deviceId: deviceId, pushToken: token)
+        } catch {
+            Logger.error("Failed to update APNS token from InboxStateMachine: \(error)")
+        }
+    }
+
+    nonisolated private func handleForegroundForPushTokenUpdate() async {
+        // Hop back to the actor to read state and call the actor-isolated updater
+        await self.updateIfReady()
+    }
+
+    private func updateIfReady() async {
+        guard case let .ready(result) = _state else { return }
+        // If the system prompt hasn't been shown yet, request now (app is foregrounding)
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        if settings.authorizationStatus == .notDetermined {
+            await requestAndRegisterForNotificationsIfNeeded()
+        }
+        await updateStoredAPNSTokenIfPresent(client: result.client, apiClient: result.apiClient)
+    }
+
+    private func requestAndRegisterForNotificationsIfNeeded() async {
+        do {
+            let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
+            if granted {
+                await MainActor.run { UIApplication.shared.registerForRemoteNotifications() }
+            }
+        } catch {
+            Logger.warning("Notification authorization failed: \(error)")
+        }
+    }
+
+    // Always call registerForRemoteNotifications to get a device token even if alerts aren't authorized yet.
+    // This allows silent/background capabilities and ensures we have a token to send to backend.
+    private func registerForRemoteNotificationsAlways() async {
+        await MainActor.run {
+            UIApplication.shared.registerForRemoteNotifications()
+        }
     }
 }

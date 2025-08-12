@@ -24,22 +24,6 @@ struct ConvosApp: App {
             ConversationsView(session: convos.session)
                 .withSafeAreaEnvironment()
                 .environment(pushNotificationManager)
-                .onAppear {
-                    setupPushNotifications()
-                }
-        }
-    }
-
-    private func setupPushNotifications() {
-        Task {
-            do {
-                try await pushNotificationManager.requestAuthorization()
-
-                // Also try to register existing token if we have one and user sessions are ready
-                await pushNotificationManager.manuallyRegisterCurrentToken()
-            } catch {
-                Logger.error("Failed to request push notification authorization: \(error)")
-            }
         }
     }
 }
