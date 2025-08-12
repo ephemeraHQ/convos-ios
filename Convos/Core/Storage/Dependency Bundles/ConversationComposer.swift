@@ -6,7 +6,7 @@ protocol DraftConversationComposerProtocol {
     var draftConversationRepository: any DraftConversationRepositoryProtocol { get }
     var conversationConsentWriter: any ConversationConsentWriterProtocol { get }
     var conversationLocalStateWriter: any ConversationLocalStateWriterProtocol { get }
-    var conversationMetadataWriter: any GroupMetadataWriterProtocol { get }
+    var conversationMetadataWriter: any ConversationMetadataWriterProtocol { get }
 }
 
 struct DraftConversationComposer: DraftConversationComposerProtocol {
@@ -15,7 +15,7 @@ struct DraftConversationComposer: DraftConversationComposerProtocol {
     let draftConversationRepository: any DraftConversationRepositoryProtocol
     let conversationConsentWriter: any ConversationConsentWriterProtocol
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol
-    let conversationMetadataWriter: any GroupMetadataWriterProtocol
+    let conversationMetadataWriter: any ConversationMetadataWriterProtocol
 }
 
 struct MockDraftConversationComposer: DraftConversationComposerProtocol {
@@ -24,5 +24,5 @@ struct MockDraftConversationComposer: DraftConversationComposerProtocol {
     let draftConversationRepository: any DraftConversationRepositoryProtocol = MockDraftConversationRepository()
     let conversationConsentWriter: any ConversationConsentWriterProtocol = MockConversationConsentWriter()
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol = MockConversationLocalStateWriter()
-    let conversationMetadataWriter: any GroupMetadataWriterProtocol = MockGroupMetadataWriter()
+    let conversationMetadataWriter: any ConversationMetadataWriterProtocol = MockGroupMetadataWriter()
 }

@@ -6,7 +6,7 @@ protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
     var draftConversationId: String { get }
     var conversationId: String { get }
     var conversationIdPublisher: AnyPublisher<String, Never> { get }
-    var conversationMetadataWriter: any GroupMetadataWriterProtocol { get }
+    var conversationMetadataWriter: any ConversationMetadataWriterProtocol { get }
 
     func createConversationWhenInboxReady()
     func joinConversationWhenInboxReady(inviteId: String, inviterInboxId: String, inviteCode: String)
@@ -42,7 +42,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     private let isSendingValue: CurrentValueSubject<Bool, Never> = .init(false)
     private let sentMessageSubject: PassthroughSubject<String, Never> = .init()
     private let inviteWriter: any InviteWriterProtocol
-    let conversationMetadataWriter: any GroupMetadataWriterProtocol
+    let conversationMetadataWriter: any ConversationMetadataWriterProtocol
 
     var isSendingPublisher: AnyPublisher<Bool, Never> {
         isSendingValue.eraseToAnyPublisher()
@@ -84,7 +84,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         self.conversationIdSubject = .init(draftConversationId)
         self.draftConversationId = draftConversationId
         self.inviteWriter = InviteWriter(databaseWriter: databaseWriter)
-        self.conversationMetadataWriter = GroupMetadataWriter(
+        self.conversationMetadataWriter = ConversationMetadataWriter(
             inboxReadyValue: inboxReadyValue,
             databaseWriter: databaseWriter
         )

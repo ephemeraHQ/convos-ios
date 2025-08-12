@@ -2,7 +2,7 @@ import Combine
 import Foundation
 
 class MockDraftConversationWriter: DraftConversationWriterProtocol {
-    var conversationMetadataWriter: any GroupMetadataWriterProtocol {
+    var conversationMetadataWriter: any ConversationMetadataWriterProtocol {
         MockGroupMetadataWriter()
     }
 

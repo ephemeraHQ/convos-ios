@@ -55,13 +55,20 @@ struct ConversationsView: View {
                         emptyConversationsView
                     } else {
                         List(viewModel.unpinnedConversations, id: \.self, selection: $viewModel.selectedConversation) { conversation in
+                            let conversationViewModel = viewModel.conversationViewModel(for: conversation)
                             ZStack {
                                 ConversationsListItem(conversation: conversation)
-                                let conversationViewModel = viewModel.conversationViewModel(for: conversation)
                                 NavigationLink(value: conversationViewModel) {
                                     EmptyView()
                                 }
                                 .opacity(0.0) // zstack hides disclosure indicator
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    conversationViewModel.leaveConvo()
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
                             }
                             .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
                             .listRowSeparator(.hidden)
@@ -148,8 +155,10 @@ struct ConversationsView: View {
                         viewModel: conversationViewModel,
                         focusState: $focusState
                     )
-                } else {
+                } else if horizontalSizeClass != .compact {
                     emptyConversationsView
+                } else {
+                    EmptyView()
                 }
             }
         }

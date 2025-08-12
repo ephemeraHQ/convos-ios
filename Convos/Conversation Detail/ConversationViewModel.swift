@@ -6,6 +6,7 @@ import UIKit
 class ConversationViewModel {
     // MARK: - Private
 
+    private let session: any SessionManagerProtocol
     private let myProfileWriter: any MyProfileWriterProtocol
     private let myProfileRepository: any MyProfileRepositoryProtocol
     private let conversationRepository: any ConversationRepositoryProtocol
@@ -13,7 +14,7 @@ class ConversationViewModel {
     private let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     private let consentWriter: any ConversationConsentWriterProtocol
     private let localStateWriter: any ConversationLocalStateWriterProtocol
-    private let metadataWriter: any GroupMetadataWriterProtocol
+    private let metadataWriter: any ConversationMetadataWriterProtocol
     private let inviteRepository: any InviteRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = []
     private var loadProfileImageTask: Task<Void, Never>?
@@ -58,6 +59,7 @@ class ConversationViewModel {
 
     init(
         conversation: Conversation,
+        session: any SessionManagerProtocol,
         myProfileWriter: any MyProfileWriterProtocol,
         myProfileRepository: any MyProfileRepositoryProtocol,
         conversationRepository: any ConversationRepositoryProtocol,
@@ -65,10 +67,11 @@ class ConversationViewModel {
         outgoingMessageWriter: any OutgoingMessageWriterProtocol,
         consentWriter: any ConversationConsentWriterProtocol,
         localStateWriter: any ConversationLocalStateWriterProtocol,
-        metadataWriter: any GroupMetadataWriterProtocol,
+        metadataWriter: any ConversationMetadataWriterProtocol,
         inviteRepository: any InviteRepositoryProtocol
     ) {
         self.conversation = conversation
+        self.session = session
         self.myProfileWriter = myProfileWriter
         self.myProfileRepository = myProfileRepository
         self.conversationRepository = conversationRepository
@@ -242,6 +245,38 @@ class ConversationViewModel {
     func onDisappear() {
         markConversationAsRead()
     }
+
+    func remove(member: ConversationMember) {
+        Task {
+            do {
+                try await metadataWriter.removeGroupMembers(groupId: conversation.id, memberInboxIds: [member.profile.inboxId])
+            } catch {
+                Logger.error("Error removing member: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func leaveConvo() {
+        do {
+            try session.deleteAccount(inboxId: conversation.inboxId)
+        } catch {
+            Logger.error("Error leaving convo: \(error.localizedDescription)")
+        }
+    }
+
+    func explodeConvo() {
+        Task {
+            do {
+                try await metadataWriter.removeGroupMembers(
+                    groupId: conversation.id,
+                    memberInboxIds: conversation.members.map { $0.profile.inboxId }
+                )
+                try session.deleteAccount(inboxId: conversation.inboxId)
+            } catch {
+                Logger.error("Error exploding convo: \(error.localizedDescription)")
+            }
+        }
+    }
 }
 
 extension ConversationViewModel: Hashable {
@@ -265,6 +300,7 @@ extension ConversationViewModel {
         let messaging = MockMessagingService()
         return .init(
             conversation: .mock(),
+            session: MockInboxesService(),
             myProfileWriter: MockMyProfileWriter(),
             myProfileRepository: messaging,
             conversationRepository: MockConversationRepository(),

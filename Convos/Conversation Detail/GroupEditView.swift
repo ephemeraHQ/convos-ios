@@ -3,13 +3,13 @@ import SwiftUI
 
 struct GroupEditView: View {
     let conversation: Conversation
-    let groupMetadataWriter: any GroupMetadataWriterProtocol
+    let groupMetadataWriter: any ConversationMetadataWriterProtocol
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     @State private var editState: GroupEditState
     @FocusState private var isDescriptionFocused: Bool
 
-    init(conversation: Conversation, groupMetadataWriter: any GroupMetadataWriterProtocol) {
+    init(conversation: Conversation, groupMetadataWriter: any ConversationMetadataWriterProtocol) {
         self.conversation = conversation
         self.groupMetadataWriter = groupMetadataWriter
         self._editState = State(initialValue: GroupEditState(

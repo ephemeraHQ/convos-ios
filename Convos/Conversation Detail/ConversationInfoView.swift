@@ -4,6 +4,7 @@ struct ConversationInfoView: View {
     @Bindable var viewModel: ConversationViewModel
 
     @Environment(\.dismiss) private var dismiss: DismissAction
+    @State private var showingExplodeConfirmation: Bool = false
 
     private let maxMembersToShow: Int = 2
     private var displayedMembers: [ConversationMember] {
@@ -120,9 +121,20 @@ struct ConversationInfoView: View {
 
                 Section {
                     Button {
+                        showingExplodeConfirmation = true
                     } label: {
                         Text("Explode now")
                             .foregroundStyle(.colorCaution)
+                    }
+                    .confirmationDialog("", isPresented: $showingExplodeConfirmation) {
+                        Button("Explode", role: .destructive) {
+                            viewModel.explodeConvo()
+                            dismiss()
+                        }
+
+                        Button("Cancel") {
+                            showingExplodeConfirmation = false
+                        }
                     }
                 } footer: {
                     Text("Irrecoverably delete the convo for everyone")

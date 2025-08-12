@@ -9,6 +9,7 @@ typealias AnyClientProviderPublisher = AnyPublisher<AnyClientProvider, Never>
 
 enum SessionManagerError: Error {
     case missingOperationForAddedInbox
+    case inboxNotFound
 }
 
 class SessionManager: SessionManagerProtocol {
@@ -147,7 +148,21 @@ class SessionManager: SessionManagerProtocol {
         )
     }
 
-    func deleteAccount(with providerId: String) throws {
+    func deleteAccount(inboxId: String) throws {
+        let inbox: DBInbox? = try databaseReader.read { db in
+            try DBInbox.fetchOne(db, key: inboxId)
+        }
+        guard let inbox else {
+            throw SessionManagerError.inboxNotFound
+        }
+        try deleteAccount(providerId: inbox.providerId)
+        try databaseWriter.write { db in
+            try DBInbox.fetchOne(db, key: inboxId)?.delete(db)
+            try DBConversation.filter(DBConversation.Columns.inboxId == inboxId).deleteAll(db)
+        }
+    }
+
+    func deleteAccount(providerId: String) throws {
         if let operation = operationsByProviderId[providerId] {
             operation.deleteAndStop()
         }

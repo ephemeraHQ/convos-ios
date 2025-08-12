@@ -13,7 +13,10 @@ class MockInboxesService: SessionManagerProtocol {
         .init(providerId: "", messagingService: MockMessagingService())
     }
 
-    func deleteAccount(with providerId: String) throws {
+    func deleteAccount(inboxId: String) throws {
+    }
+
+    func deleteAccount(providerId: String) throws {
     }
 
     func deleteAllAccounts() throws {

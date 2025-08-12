@@ -80,7 +80,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         conversationViewModel = nil
         Task {
             guard let addAccountResult else { return }
-            try session.deleteAccount(with: addAccountResult.providerId)
+            try session.deleteAccount(providerId: addAccountResult.providerId)
             self.addAccountResult = nil
         }
     }
@@ -168,6 +168,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         )
         let viewModel: ConversationViewModel = .init(
             conversation: draftConversation,
+            session: session,
             myProfileWriter: draftConversationComposer.myProfileWriter,
             myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
             conversationRepository: draftConversationComposer.draftConversationRepository,

@@ -34,6 +34,7 @@ struct ConversationMemberView: View {
             if !member.isCurrentUser {
                 Section {
                     Button {
+                        viewModel.leaveConvo()
                     } label: {
                         Text("Block")
                             .foregroundStyle(.colorCaution)
@@ -45,6 +46,7 @@ struct ConversationMemberView: View {
 
                 Section {
                     Button {
+                        viewModel.remove(member: member)
                     } label: {
                         Text("Remove")
                             .foregroundStyle(.colorTextSecondary)

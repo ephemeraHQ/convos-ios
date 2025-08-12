@@ -9,7 +9,13 @@ class SelectableConversationViewModelType {
 
 @Observable
 final class ConversationsViewModel: SelectableConversationViewModelType {
-    private(set) var conversations: [Conversation]
+    private(set) var conversations: [Conversation] {
+        didSet {
+            if let selectedConversation, !conversations.contains(where: { $0.id == selectedConversation.conversation.id }) {
+                self.selectedConversation = nil
+            }
+        }
+    }
     private(set) var conversationsCount: Int = 0
 
     var newConversationViewModel: NewConversationViewModel?
@@ -57,6 +63,7 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
         let messagingService = session.messagingService(for: conversation.inboxId)
         return .init(
             conversation: conversation,
+            session: session,
             myProfileWriter: messagingService.myProfileWriter(),
             myProfileRepository: messagingService.myProfileRepository(),
             conversationRepository: messagingService.conversationRepository(for: conversation.id),
