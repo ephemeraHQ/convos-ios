@@ -512,10 +512,6 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
         request.httpBody = try JSONEncoder().encode(updateRequest)
 
-        Logger.info("🔔 [PushNotifications] Sending PATCH request to: \(request.url?.absoluteString ?? "unknown")")
-        Logger.info("🔔 [PushNotifications] Request body: \(request.httpBody?.prettyPrintedJSONString ?? "")")
-        Logger.info("🔔 [PushNotifications] Headers: \(request.allHTTPHeaderFields ?? [:])")
-
         // Use performRequest to handle auth and retries properly
         return try await performRequest(request)
     }
