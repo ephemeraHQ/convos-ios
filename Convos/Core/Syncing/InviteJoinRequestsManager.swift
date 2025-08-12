@@ -26,9 +26,10 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                apiClient: any ConvosAPIClientProtocol) {
         streamMessagesTask = Task {
             do {
+                Logger.info("Started streaming messages...")
                 for try await message in await client.conversationsProvider
                     .streamAllMessages(
-                        type: .all,
+                        type: .dms,
                         consentStates: [.unknown],
                         onClose: {
                             Logger.warning("Closing streamAllMessages...")
