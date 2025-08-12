@@ -139,8 +139,11 @@ class NotificationProcessor {
     // MARK: - Conversation ID from Topic
 
     func getConversationIdFromTopic(_ topic: String) -> String {
-        // XMTP topics have a specific format, extract conversation ID
-        // This is a simplified version - adjust based on your actual topic format
+        // Example: /xmtp/mls/1/g-<conversationId>/proto -> <conversationId>
+        let parts = topic.split(separator: "/")
+        if let segment = parts.first(where: { $0.hasPrefix("g-") }) {
+            return String(segment.dropFirst(2))
+        }
         return topic
     }
 }
