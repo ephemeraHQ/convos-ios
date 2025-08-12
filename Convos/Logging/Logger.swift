@@ -25,6 +25,7 @@ public enum Logger {
         func log(_ message: String, level: LogLevel, file: String, function: String, line: Int)
         var minimumLogLevel: LogLevel { get set }
         func getLogs() -> String
+        func getLogsAsync(completion: @escaping (String) -> Void)
         func clearLogs(completion: (() -> Void)?)
     }
 
@@ -34,7 +35,12 @@ public enum Logger {
         private let isProduction: Bool
         private let logFileURL: URL?
         private let fileQueue: DispatchQueue = DispatchQueue(label: "com.convos.logger.file", qos: .utility)
+        private let readQueue: DispatchQueue = DispatchQueue(label: "com.convos.logger.read", qos: .utility)
         private let maxLogFileSize: Int64 = 10 * 1024 * 1024 // 10MB
+        private let maxLogLines: Int = 1000 // Maximum lines to return for performance
+        private var logBuffer: [String] = []
+        private let bufferQueue = DispatchQueue(label: "com.convos.logger.buffer", qos: .utility)
+        private let bufferMaxSize = 100 // Keep last 100 log entries in memory
 
         public init(isProduction: Bool = false) {
             self.isProduction = isProduction
@@ -78,6 +84,14 @@ public enum Logger {
             print(logMessage)
             #endif
 
+            // Add to buffer for quick access
+            bufferQueue.async {
+                self.logBuffer.append(logMessage)
+                if self.logBuffer.count > self.bufferMaxSize {
+                    self.logBuffer.removeFirst()
+                }
+            }
+
             // Write to file if not in production
             if !isProduction, let logFileURL = logFileURL {
                 fileQueue.async {
@@ -116,6 +130,17 @@ public enum Logger {
         }
 
         public func getLogs() -> String {
+            // First try to return from buffer for immediate response
+            let bufferLogs = bufferQueue.sync {
+                return logBuffer.joined(separator: "\n")
+            }
+
+            // If buffer has content, return it immediately
+            if !bufferLogs.isEmpty {
+                return bufferLogs
+            }
+
+            // Fallback to file reading (synchronous but should be rare)
             guard let logFileURL = logFileURL else { return "No log file available" }
 
             do {
@@ -126,8 +151,42 @@ public enum Logger {
             }
         }
 
+        public func getLogsAsync(completion: @escaping (String) -> Void) {
+            readQueue.async {
+                // First try buffer for immediate response
+                let bufferLogs = self.bufferQueue.sync {
+                    return self.logBuffer.joined(separator: "\n")
+                }
+
+                // If buffer has recent logs, return them immediately
+                if !bufferLogs.isEmpty {
+                    completion(bufferLogs)
+                    return
+                }
+
+                // Otherwise read from file
+                guard let logFileURL = self.logFileURL else {
+                    completion("No log file available")
+                    return
+                }
+
+                do {
+                    let logContent = try String(contentsOf: logFileURL, encoding: .utf8)
+                    let result = logContent.isEmpty ? "No logs available" : logContent
+                    completion(result)
+                } catch {
+                    completion("Failed to read logs: \(error.localizedDescription)")
+                }
+            }
+        }
+
         public func clearLogs(completion: (() -> Void)? = nil) {
             guard let logFileURL = logFileURL else { return }
+
+            // Clear buffer immediately
+            bufferQueue.async {
+                self.logBuffer.removeAll()
+            }
 
             fileQueue.async {
                 do {
@@ -160,6 +219,10 @@ public extension Logger {
 
     static func getLogs() -> String {
         return Self.Default.shared.getLogs()
+    }
+
+    static func getLogsAsync(completion: @escaping (String) -> Void) {
+        Self.Default.shared.getLogsAsync(completion: completion)
     }
 
     static func clearLogs(completion: (() -> Void)? = nil) {

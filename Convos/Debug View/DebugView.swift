@@ -25,6 +25,7 @@ struct DebugLogsView: View {
             }
         }
         .navigationTitle("Logs")
+        .toolbarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(role: .destructive) {
@@ -48,7 +49,7 @@ struct DebugLogsView: View {
     }
 
     private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             refreshLogs()
         }
     }
@@ -60,10 +61,9 @@ struct DebugLogsView: View {
 
     private func refreshLogs() {
         isRefreshing = true
-        DispatchQueue.global(qos: .userInitiated).async {
-            let logContent = Logger.getLogs()
+        Logger.getLogsAsync { logs in
             DispatchQueue.main.async {
-                self.logs = logContent
+                self.logs = logs
                 self.isRefreshing = false
             }
         }
