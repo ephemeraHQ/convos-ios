@@ -1,6 +1,8 @@
 import Foundation
 import UserNotifications
 
+// TO DO: This is a placeholder for the actual notification processor.
+
 class NotificationProcessor {
     static let shared: NotificationProcessor = NotificationProcessor(appGroupIdentifier: ConfigManager.shared.currentEnvironment.appGroupIdentifier)
 

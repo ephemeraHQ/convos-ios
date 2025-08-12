@@ -1,6 +1,4 @@
 import UserNotifications
-// @lourou: Import ConvosShared framework when added to project
-// import ConvosShared
 
 class NotificationService: UNNotificationServiceExtension {
     var contentHandler: ((UNNotificationContent) -> Void)?
