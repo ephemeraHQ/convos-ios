@@ -42,10 +42,10 @@ struct MessagesInputView: View {
                 .font(.system(size: 16.0))
                 .foregroundStyle(.colorTextPrimary)
                 .tint(.colorTextPrimary)
-                .frame(maxWidth: .infinity, minHeight: Self.defaultHeight, alignment: .center)
+                .frame(minHeight: Self.defaultHeight, alignment: .center)
                 .padding(.horizontal, DesignConstants.Spacing.step3x)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .frame(maxHeight: .infinity, alignment: .center)
 
             Button {
                 onSendMessage()
@@ -60,9 +60,8 @@ struct MessagesInputView: View {
             .frame(width: sendButtonSize, height: sendButtonSize, alignment: .bottomLeading)
             .disabled(!sendButtonEnabled)
         }
-        .padding(DesignConstants.Spacing.step2x)
-        .frame(maxWidth: .infinity, alignment: .bottom)
-        .fixedSize(horizontal: false, vertical: true)
+//        .padding(DesignConstants.Spacing.step2x)
+        .frame(alignment: .bottom)
     }
 }
 
