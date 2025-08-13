@@ -367,7 +367,7 @@ actor InboxStateMachine {
 
         // Unregister the installation (all topics) when requested (single-inbox delete uses handleDelete)
         unregisterInstallationObserver = NotificationCenter.default.addObserver(
-            forName: .convosUnregisterInstallationRequested,
+            forName: .convosUnregisterAllInboxesRequested,
             object: nil,
             queue: .main
         ) { [weak self] _ in
@@ -590,7 +590,7 @@ extension InboxStateMachine {
 
     private func unsubscribeIfReady(conversationId: String) async {
         guard case let .ready(result) = _state else { return }
-        let topic = NotificationProcessor.groupTopic(for: conversationId)
+        let topic = conversationId.xmtpGroupTopicFormat
         do {
             try await result.apiClient.unsubscribeFromTopics(installationId: result.client.installationId, topics: [topic])
             Logger.info("Unsubscribed from topic: \(topic)")

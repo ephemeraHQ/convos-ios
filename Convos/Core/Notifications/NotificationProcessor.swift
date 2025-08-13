@@ -150,8 +150,4 @@ class NotificationProcessor {
     }
 
     // MARK: - Topic Builders
-
-    static func groupTopic(for conversationId: String) -> String {
-        "/xmtp/mls/1/g-\(conversationId)/proto"
-    }
 }

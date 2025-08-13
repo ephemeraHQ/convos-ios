@@ -108,7 +108,7 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
         }
 
         // Request unregister the installation (backend will drop all topics for this install)
-        NotificationCenter.default.post(name: .convosUnregisterInstallationRequested, object: nil)
+        NotificationCenter.default.post(name: .convosUnregisterAllInboxesRequested, object: nil)
 
         let errors = await errorCollector.errors
         if !errors.isEmpty {
