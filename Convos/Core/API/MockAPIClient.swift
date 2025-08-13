@@ -45,17 +45,6 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         )
     }
 
-    func updateDevicePushToken(userId: String, deviceId: String, pushToken: String) async throws -> ConvosAPI.DeviceUpdateResponse {
-        return ConvosAPI.DeviceUpdateResponse(
-            id: deviceId,
-            pushToken: pushToken,
-            pushTokenType: "apns",
-            apnsEnv: "sandbox",
-            updatedAt: Date().ISO8601Format(),
-            pushFailures: 0
-        )
-    }
-
     func publicInviteDetails(_ inviteId: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
         .init(id: "invite_123", name: "My Invite", description: "My fun group chat", imageUrl: nil, inviteLinkURL: "http://convos.org/invite/123456")
     }
