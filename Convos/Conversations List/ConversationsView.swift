@@ -7,6 +7,7 @@ struct ConversationsView: View {
     @Namespace private var namespace: Namespace.ID
     @State private var presentingExplodeConfirmation: Bool = false
     @State private var presentingDebugView: Bool = false
+    @State private var presentingAppSettings: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     @FocusState private var focusState: MessagesViewInputFocus?
@@ -85,54 +86,25 @@ struct ConversationsView: View {
                 .toolbarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            presentingExplodeConfirmation = true
-                        } label: {
-                            HStack(spacing: DesignConstants.Spacing.step2x) {
-                                Circle()
-                                    .fill(.colorOrange)
-                                    .frame(width: 24.0, height: 24.0)
-
-                                Text("Convos")
-                                    .font(.system(size: 16.0, weight: .medium))
-                                    .foregroundStyle(.colorTextPrimary)
-                            }
-                            .padding(10)
-                        }
-                        .glassEffect(.regular.interactive())
-                        .confirmationDialog("", isPresented: $presentingExplodeConfirmation) {
-                            Button("Explode", role: .destructive) {
-                                do {
-                                    try session.deleteAllAccounts()
-                                } catch {
-                                    Logger.error("Error deleting all accounts: \(error)")
-                                }
-                            }
-
-                            Button("Cancel") {
-                                presentingExplodeConfirmation = false
-                            }
-                        }
-                    }
-
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            presentingDebugView = true
-                        } label: {
-                            Image(systemName: "ladybug.fill")
+                        ConvosToolbarButton(padding: false) {
+                            presentingAppSettings = true
                         }
                     }
                     .matchedTransitionSource(
-                        id: "debug-view-transition-source",
+                        id: "app-settings-transition-source",
                         in: namespace
                     )
 
-//                    ToolbarItem(placement: .topBarTrailing) {
-//                        Button("Filter", systemImage: "line.3.horizontal.decrease") {
-//                            //
-//                        }
-//                        .disabled(true)
-//                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Filter", systemImage: "line.3.horizontal.decrease") {
+                            //
+                        }
+                        .disabled(true)
+                    }
+                    .matchedTransitionSource(
+                        id: "filter-view-transition-source",
+                        in: namespace
+                    )
 
                     ToolbarItem(placement: .bottomBar) {
                         Spacer()
@@ -162,11 +134,11 @@ struct ConversationsView: View {
                 }
             }
         }
-        .sheet(isPresented: $presentingDebugView) {
-            DebugView()
+        .sheet(isPresented: $presentingAppSettings) {
+            AppSettingsView(viewModel: viewModel)
                 .navigationTransition(
                     .zoom(
-                        sourceID: "debug-view-transition-source",
+                        sourceID: "app-settings-transition-source",
                         in: namespace
                     )
                 )

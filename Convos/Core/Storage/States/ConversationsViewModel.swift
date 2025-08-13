@@ -59,6 +59,14 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
         newConversationViewModel = .init(session: session, showScannerOnAppear: true)
     }
 
+    func deleteAllAccounts() {
+        do {
+            try session.deleteAllAccounts()
+        } catch {
+            Logger.error("Error deleting all accounts: \(error)")
+        }
+    }
+
     func conversationViewModel(for conversation: Conversation) -> ConversationViewModel {
         let messagingService = session.messagingService(for: conversation.inboxId)
         return .init(

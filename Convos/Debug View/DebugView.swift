@@ -71,8 +71,7 @@ struct DebugLogsView: View {
     }
 }
 
-struct DebugView: View {
-    @Environment(\.dismiss) private var dismiss: DismissAction
+struct DebugViewSection: View {
     @State private var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
     @State private var notificationAuthGranted: Bool = false
     @State private var lastDeviceToken: String = NotificationProcessor.shared.getStoredDeviceToken() ?? "<none>"
@@ -112,99 +111,85 @@ struct DebugView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack {
-                List {
-                    Section {
-                        HStack {
-                            NavigationLink {
-                                DebugLogsView()
-                            } label: {
-                                Text("View logs")
-                            }
+        Group {
+            Section(header: Text("Push Notifications")) {
+                HStack {
+                    Text("Auth Status")
+                    Spacer()
+                    Text(statusText(notificationAuthStatus))
+                        .foregroundStyle(.colorTextSecondary)
+                }
+                HStack {
+                    Text("Authorized")
+                    Spacer()
+                    Text(notificationAuthGranted ? "Yes" : "No")
+                        .foregroundStyle(.colorTextSecondary)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Device Token")
+                    HStack(spacing: 8) {
+                        ScrollView(.horizontal, showsIndicators: true) {
+                            Text(lastDeviceToken)
+                                .font(.system(.footnote, design: .monospaced))
+                                .foregroundStyle(.colorTextSecondary)
+                                .textSelection(.enabled)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                         }
+                        Button {
+                            UIPasteboard.general.string = lastDeviceToken
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                        }
+                        .buttonStyle(.borderless)
                     }
-
-                    Section(header: Text("Push Notifications")) {
-                        HStack {
-                            Text("Auth Status")
-                            Spacer()
-                            Text(statusText(notificationAuthStatus))
-                                .foregroundStyle(.colorTextSecondary)
-                        }
-                        HStack {
-                            Text("Authorized")
-                            Spacer()
-                            Text(notificationAuthGranted ? "Yes" : "No")
-                                .foregroundStyle(.colorTextSecondary)
-                        }
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Device Token")
-                            HStack(spacing: 8) {
-                                ScrollView(.horizontal, showsIndicators: true) {
-                                    Text(lastDeviceToken)
-                                        .font(.system(.footnote, design: .monospaced))
-                                        .foregroundStyle(.colorTextSecondary)
-                                        .textSelection(.enabled)
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                }
-                                Button {
-                                    UIPasteboard.general.string = lastDeviceToken
-                                } label: {
-                                    Image(systemName: "doc.on.doc")
-                                }
-                                .buttonStyle(.borderless)
-                            }
-                        }
-                        HStack {
-                            Button("Request Now") {
-                                Task { await requestNotificationsNow() }
-                            }
-                            .disabled(notificationAuthGranted)
-                            .opacity(notificationAuthGranted ? 0.5 : 1.0)
-                        }
+                }
+                HStack {
+                    Button("Request Now") {
+                        Task { await requestNotificationsNow() }
                     }
-
-                    Section {
-                        HStack {
-                            Text("Bundle ID")
-
-                            Spacer()
-                            Text(bundleIdentifier)
-                                .foregroundStyle(.colorTextSecondary)
-                        }
-                        HStack {
-                            Text("Version")
-
-                            Spacer()
-                            Text(appVersion)
-                                .foregroundStyle(.colorTextSecondary)
-                        }
-
-                        HStack {
-                            Text("Environment")
-
-                            Spacer()
-                            Text(ConfigManager.shared.currentEnvironment.rawValue.capitalized)
-                                .foregroundStyle(.colorTextSecondary)
-                        }
-                    }
+                    .disabled(notificationAuthGranted)
+                    .opacity(notificationAuthGranted ? 0.5 : 1.0)
                 }
             }
-            .navigationTitle("Debug")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(role: .close) {
-                        dismiss()
+
+            Section("Debug") {
+                ShareLink(item: debugInfoFileURL) {
+                    HStack {
+                        Text("Share logs")
+                        Spacer()
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .foregroundStyle(.colorTextPrimary)
+                }
+
+                HStack {
+                    NavigationLink {
+                        DebugLogsView()
+                    } label: {
+                        Text("View logs")
                     }
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    ShareLink(item: debugInfoFileURL) {
-                        Image(systemName: "square.and.arrow.up")
-                    }
+                HStack {
+                    Text("Bundle ID")
+                    Spacer()
+                    Text(bundleIdentifier)
+                        .foregroundStyle(.colorTextSecondary)
+                }
+
+                HStack {
+                    Text("Version")
+                    Spacer()
+                    Text(appVersion)
+                        .foregroundStyle(.colorTextSecondary)
+                }
+
+                HStack {
+                    Text("Environment")
+                    Spacer()
+                    Text(ConfigManager.shared.currentEnvironment.rawValue.capitalized)
+                        .foregroundStyle(.colorTextSecondary)
                 }
             }
         }
@@ -215,12 +200,14 @@ struct DebugView: View {
 }
 
 #Preview {
-    DebugView()
+    List {
+        DebugViewSection()
+    }
 }
 
 // MARK: - Push helpers
 
-extension DebugView {
+extension DebugViewSection {
     private func statusText(_ status: UNAuthorizationStatus) -> String {
         switch status {
         case .notDetermined: return "notDetermined"
