@@ -45,7 +45,6 @@ struct ConversationMemberView: View {
                     .confirmationDialog("", isPresented: $presentingBlockConfirmation) {
                         Button("Block and leave", role: .destructive) {
                             viewModel.leaveConvo()
-                            dismiss()
                         }
 
                         Button(role: .cancel) {

@@ -45,6 +45,10 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
         observe()
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: .leftConversationNotification, object: nil)
+    }
+
     func onStartConvo() {
         newConversationViewModel = .init(session: session)
     }
@@ -79,6 +83,19 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
     }
 
     private func observe() {
+        NotificationCenter.default
+            .addObserver(forName: .leftConversationNotification, object: nil, queue: .main) { [weak self] notification in
+                guard let self else { return }
+                guard let conversationId: String = notification.userInfo?["conversationId"] as? String else {
+                    return
+                }
+                if selectedConversation?.conversation.id == conversationId {
+                    selectedConversation = nil
+                }
+                if newConversationViewModel?.selectedConversation?.conversation.id == conversationId {
+                    newConversationViewModel = nil
+                }
+            }
         conversationsCountRepository.conversationsCount
             .receive(on: DispatchQueue.main)
             .sink { [weak self] conversationsCount in

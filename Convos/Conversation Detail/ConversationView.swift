@@ -22,6 +22,8 @@ struct ConversationView: View {
     let confirmDeletionBeforeDismissal: Bool
     let messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem
 
+    @Environment(\.dismiss) private var dismiss: DismissAction
+
     init(
         viewModel: ConversationViewModel,
         focusState: FocusState<MessagesViewInputFocus?>.Binding,

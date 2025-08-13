@@ -2,6 +2,10 @@ import Combine
 import Observation
 import UIKit
 
+extension Notification.Name {
+    static let leftConversationNotification: Notification.Name = Notification.Name("LeftConversationNotification")
+}
+
 @Observable
 class ConversationViewModel {
     // MARK: - Private
@@ -263,6 +267,12 @@ class ConversationViewModel {
     func leaveConvo() {
         do {
             try session.deleteAccount(inboxId: conversation.inboxId)
+            presentingConversationSettings = false
+            NotificationCenter.default.post(
+                name: .leftConversationNotification,
+                object: nil,
+                userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
+            )
         } catch {
             Logger.error("Error leaving convo: \(error.localizedDescription)")
         }
@@ -270,6 +280,13 @@ class ConversationViewModel {
 
     func explodeConvo() {
         guard canRemoveMembers else { return }
+
+        NotificationCenter.default.post(
+            name: .leftConversationNotification,
+            object: nil,
+            userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
+        )
+
         Task {
             do {
                 let memberIdsToRemove = conversation.members
@@ -280,6 +297,7 @@ class ConversationViewModel {
                     memberInboxIds: memberIdsToRemove
                 )
                 try session.deleteAccount(inboxId: conversation.inboxId)
+                presentingConversationSettings = false
             } catch {
                 Logger.error("Error exploding convo: \(error.localizedDescription)")
             }

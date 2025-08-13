@@ -7,8 +7,6 @@ struct AddAccountResultType {
 }
 
 protocol SessionManagerProtocol {
-    var inboxesRepository: any InboxesRepositoryProtocol { get }
-
     var authState: AnyPublisher<AuthServiceState, Never> { get }
 
     func prepare() throws

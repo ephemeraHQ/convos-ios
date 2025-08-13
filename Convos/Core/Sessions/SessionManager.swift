@@ -14,7 +14,6 @@ enum SessionManagerError: Error {
 
 class SessionManager: SessionManagerProtocol {
     let authState: AnyPublisher<AuthServiceState, Never>
-    let inboxesRepository: any InboxesRepositoryProtocol
     private let currentSessionRepository: any CurrentSessionRepositoryProtocol
     private let inboxOperationsPublisher: CurrentValueSubject<[any AuthorizeInboxOperationProtocol], Never> = .init([])
     private var cancellables: Set<AnyCancellable> = []
@@ -33,13 +32,13 @@ class SessionManager: SessionManagerProtocol {
          environment: AppEnvironment) {
         self.databaseWriter = databaseWriter
         self.databaseReader = databaseReader
-        self.inboxesRepository = InboxesRepository(databaseReader: databaseReader)
         self.authService = authService
         self.environment = environment
         let currentSessionRepository = CurrentSessionRepository(dbReader: databaseReader)
         self.currentSessionRepository = currentSessionRepository
         self.authState = authService.authStatePublisher
             .eraseToAnyPublisher()
+        observe()
         authState
             .sink { [weak self] authState in
                 do {
@@ -49,6 +48,10 @@ class SessionManager: SessionManagerProtocol {
                 }
             }
             .store(in: &cancellables)
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: .leftConversationNotification, object: nil)
     }
 
     // MARK: - Private Methods
@@ -76,13 +79,16 @@ class SessionManager: SessionManagerProtocol {
         displayName: String? = nil
     ) throws {
         // @jarodl revisit how we're responding to auth state changes
-        //        let incomingProviderIds = Set(inboxes.map { $0.providerId })
-//        let providerIdsToRemove = operationsByProviderId.keys.filter { !incomingProviderIds.contains($0) }
-//        for providerId in providerIdsToRemove {
-//            if let operation = operationsByProviderId.removeValue(forKey: providerId) {
-//                operation.stop()
-//            }
-//        }
+        if !forRegistration {
+            let incomingProviderIds = Set(inboxes.map { $0.providerId })
+            let providerIdsToRemove = operationsByProviderId.keys.filter { !incomingProviderIds.contains($0) }
+            for providerId in providerIdsToRemove {
+                Logger.info("Stopping inbox operation for provider: \(providerId)")
+                if let operation = operationsByProviderId.removeValue(forKey: providerId) {
+                    operation.stop()
+                }
+            }
+        }
 
         // Create or update operations for inboxes
         for inbox in inboxes {
@@ -121,6 +127,26 @@ class SessionManager: SessionManagerProtocol {
         inboxOperationsPublisher.send([])
     }
 
+    private func observe() {
+        NotificationCenter.default
+            .addObserver(forName: .leftConversationNotification, object: nil, queue: .main) { [weak self] notification in
+                guard let self else { return }
+                guard let inboxId: String = notification.userInfo?["inboxId"] as? String else {
+                    return
+                }
+                do {
+                    try deleteAccount(inboxId: inboxId)
+                } catch {
+                    Logger
+                        .error(
+                            "Error deleting account from left conversation notification: \(error.localizedDescription)"
+                        )
+                }
+            }
+    }
+
+    // MARK: Public
+
     func prepare() throws {
         try authService.prepare()
     }
@@ -156,10 +182,6 @@ class SessionManager: SessionManagerProtocol {
             throw SessionManagerError.inboxNotFound
         }
         try deleteAccount(providerId: inbox.providerId)
-        try databaseWriter.write { db in
-            try DBInbox.fetchOne(db, key: inboxId)?.delete(db)
-            try DBConversation.filter(DBConversation.Columns.inboxId == inboxId).deleteAll(db)
-        }
     }
 
     func deleteAccount(providerId: String) throws {

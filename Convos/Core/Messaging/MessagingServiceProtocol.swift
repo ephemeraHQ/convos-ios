@@ -2,8 +2,6 @@ import Combine
 import Foundation
 
 protocol MessagingServiceProtocol {
-    var inboxReadyPublisher: InboxReadyResultPublisher { get }
-
     func myProfileRepository() -> any MyProfileRepositoryProtocol
     func myProfileWriter() -> any MyProfileWriterProtocol
 

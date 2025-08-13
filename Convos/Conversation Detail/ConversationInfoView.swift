@@ -6,7 +6,7 @@ struct ConversationInfoView: View {
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showingExplodeConfirmation: Bool = false
 
-    private let maxMembersToShow: Int = 2
+    private let maxMembersToShow: Int = 6
     private var displayedMembers: [ConversationMember] {
         let sortedMembers = viewModel.conversation.members.sortedByRole()
         return Array(sortedMembers.prefix(maxMembersToShow))
@@ -128,9 +128,7 @@ struct ConversationInfoView: View {
                                 .foregroundStyle(.colorCaution)
                         }
                         .confirmationDialog("", isPresented: $showingExplodeConfirmation) {
-                            Button("Explode", role: .destructive) {
-                                viewModel.explodeConvo()
-                                dismiss()
+                            Button("Explode", role: .destructive) {                           viewModel.explodeConvo()
                             }
 
                             Button("Cancel") {

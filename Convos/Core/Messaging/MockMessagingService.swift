@@ -319,6 +319,12 @@ extension MockMessagingService: XMTPClientProvider {
 
     func update(consent: Consent, for conversationId: String) async throws {
     }
+
+    func deleteLocalDatabase() throws {
+    }
+
+    func revokeInstallations(signingKey: any SigningKey, installationIds: [String]) async throws {
+    }
 }
 
 extension MockMessagingService: MessageSender {
