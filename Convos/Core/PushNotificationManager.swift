@@ -58,36 +58,10 @@ class PushNotificationManager: NSObject {
     }
 
     // MARK: - Manual Registration
-    // Intentionally removed: token updates are handled by InboxStateMachine when ready/foreground
 
     func handleRegistrationError(_ error: Error) {
         Logger.error("❌ Failed to register for remote notifications: \(error)")
         self.registrationError = error
-    }
-
-    // MARK: - Device Update
-    // Device token updates are handled by InboxStateMachine when session is ready and on foreground
-
-    // MARK: - Topic Subscription (for future use)
-
-    func subscribeToTopic(_ topic: String) async {
-        Logger.debug("Subscribing to topic: \(topic)")
-        notificationProcessor.addSubscribedTopic(topic)
-
-        // @lourou: Notify backend about topic subscription
-        // This should tell the backend to start sending notifications for this topic
-    }
-
-    func unsubscribeFromTopic(_ topic: String) async {
-        Logger.debug("Unsubscribing from topic: \(topic)")
-        notificationProcessor.removeSubscribedTopic(topic)
-
-        // @lourou: Notify backend about topic unsubscription
-        // This should tell the backend to stop sending notifications for this topic
-    }
-
-    func getSubscribedTopics() -> Set<String> {
-        return notificationProcessor.getSubscribedTopics()
     }
 }
 

@@ -290,11 +290,8 @@ actor InboxStateMachine {
         // Attempt to register for remote notifications to obtain APNS token ASAP
         await registerForRemoteNotificationsAlways()
 
-        // Request notification authorization and register once we have a client and api ready path
-        await requestAndRegisterForNotificationsIfNeeded()
-
-        // If we already have an APNS token, update it now that we're authorized
-        await updateStoredAPNSTokenIfPresent(client: client, apiClient: apiClient)
+        // Request system notification authorization (APNS registration is handled separately)
+        await requestNotificationAuthorizationIfNeeded()
 
         // Register backend notifications mapping (deviceId + token + identity + installation)
         await registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
@@ -537,29 +534,6 @@ extension InboxStateMachine {
 
     private func userIdForCurrentInbox() -> String { inbox.providerId }
 
-    private func updateStoredAPNSTokenIfPresent(
-        client: any XMTPClientProvider,
-        apiClient: any ConvosAPIClientProtocol
-    ) async {
-        guard let token = storedDeviceToken() else { return }
-        let userId = userIdForCurrentInbox()
-        let deviceId = await currentDeviceId()
-        let expectedEnv = expectedApnsEnvString()
-
-        do {
-            let current = try await apiClient.getDevice(userId: userId, deviceId: deviceId)
-            if current.pushToken == token && current.apnsEnv == expectedEnv { return }
-        } catch {
-            // proceed to attempt update
-        }
-
-        do {
-            _ = try await apiClient.updateDevicePushToken(userId: userId, deviceId: deviceId, pushToken: token)
-        } catch {
-            Logger.error("Failed to update APNS token from InboxStateMachine: \(error)")
-        }
-    }
-
     nonisolated private func handleForegroundForPushTokenUpdate() async {
         // Hop back to the actor to read state and call the actor-isolated updater
         await self.updateIfReady()
@@ -570,9 +544,8 @@ extension InboxStateMachine {
         // If the system prompt hasn't been shown yet, request now (app is foregrounding)
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         if settings.authorizationStatus == .notDetermined {
-            await requestAndRegisterForNotificationsIfNeeded()
+            await requestNotificationAuthorizationIfNeeded()
         }
-        await updateStoredAPNSTokenIfPresent(client: result.client, apiClient: result.apiClient)
         await registerForNotificationsIfNeeded(client: result.client, apiClient: result.apiClient)
     }
 
@@ -603,12 +576,11 @@ extension InboxStateMachine {
         }
     }
 
-    private func requestAndRegisterForNotificationsIfNeeded() async {
+    private func requestNotificationAuthorizationIfNeeded() async {
         do {
             let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
-            if granted {
-                await MainActor.run { UIApplication.shared.registerForRemoteNotifications() }
-            }
+            // APNS registration is performed via registerForRemoteNotificationsAlways()
+            _ = granted
         } catch {
             Logger.warning("Notification authorization failed: \(error)")
         }
