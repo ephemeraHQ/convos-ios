@@ -534,6 +534,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         struct Installation: Encodable { let identityId: String; let xmtpInstallationId: String }
+
         struct Body: Encodable {
             let deviceId: String
             let pushToken: String

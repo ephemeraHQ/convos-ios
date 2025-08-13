@@ -579,8 +579,7 @@ extension InboxStateMachine {
     private func registerForNotificationsIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
         guard let token = NotificationProcessor.shared.getStoredDeviceToken(), !token.isEmpty else { return }
         let deviceId = await currentDeviceId()
-        // Use providerId as identity id; this is the userId we send to backend
-        let identityId = inbox.providerId
+        let identityId = client.inboxId
         let installationId = client.installationId
         do {
             try await apiClient.registerForNotifications(deviceId: deviceId,
