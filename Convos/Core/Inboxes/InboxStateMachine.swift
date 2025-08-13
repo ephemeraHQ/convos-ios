@@ -113,6 +113,10 @@ actor InboxStateMachine {
     private var currentTask: Task<Void, Never>?
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
+    private var pushTokenObserver: NSObjectProtocol?
+    private var conversationUnsubscribeObserver: NSObjectProtocol?
+    private var unregisterInstallationObserver: NSObjectProtocol?
+    private var willEnterForegroundObserver: NSObjectProtocol?
 
     // MARK: - Nonisolated
 
@@ -181,7 +185,9 @@ actor InboxStateMachine {
         )
 
         // Observe app foreground events to retry push token update when ready
-        registerForegroundObserver()
+        Task { [weak self] in
+            await self?.registerForegroundObserver()
+        }
     }
 
     // MARK: - Public
@@ -334,7 +340,7 @@ actor InboxStateMachine {
             await self.updateIfReady()
         }
         // Observe future token changes
-        NotificationCenter.default.addObserver(
+        pushTokenObserver = NotificationCenter.default.addObserver(
             forName: .convosPushTokenDidChange,
             object: nil,
             queue: .main
@@ -347,7 +353,7 @@ actor InboxStateMachine {
         }
 
         // Observe conversation unsubscribe requests and propagate to backend
-        NotificationCenter.default.addObserver(
+        conversationUnsubscribeObserver = NotificationCenter.default.addObserver(
             forName: .convosConversationUnsubscribeRequested,
             object: nil,
             queue: .main
@@ -360,7 +366,7 @@ actor InboxStateMachine {
         }
 
         // Unregister the installation (all topics) when requested (single-inbox delete uses handleDelete)
-        NotificationCenter.default.addObserver(
+        unregisterInstallationObserver = NotificationCenter.default.addObserver(
             forName: .convosUnregisterInstallationRequested,
             object: nil,
             queue: .main
@@ -384,6 +390,7 @@ actor InboxStateMachine {
 
     private func handleStop() throws {
         _state = .stopping
+        removeObservers()
         _state = .uninitialized
     }
 
@@ -522,8 +529,8 @@ actor InboxStateMachine {
 // MARK: - Push Token Update
 
 extension InboxStateMachine {
-    nonisolated private func registerForegroundObserver() {
-        NotificationCenter.default.addObserver(
+    private func registerForegroundObserver() {
+        willEnterForegroundObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.willEnterForegroundNotification,
             object: nil,
             queue: .main
@@ -618,5 +625,16 @@ extension InboxStateMachine {
         await MainActor.run {
             UIApplication.shared.registerForRemoteNotifications()
         }
+    }
+
+    private func removeObservers() {
+        if let pushTokenObserver { NotificationCenter.default.removeObserver(pushTokenObserver) }
+        if let conversationUnsubscribeObserver { NotificationCenter.default.removeObserver(conversationUnsubscribeObserver) }
+        if let unregisterInstallationObserver { NotificationCenter.default.removeObserver(unregisterInstallationObserver) }
+        if let willEnterForegroundObserver { NotificationCenter.default.removeObserver(willEnterForegroundObserver) }
+        pushTokenObserver = nil
+        conversationUnsubscribeObserver = nil
+        unregisterInstallationObserver = nil
+        willEnterForegroundObserver = nil
     }
 }
