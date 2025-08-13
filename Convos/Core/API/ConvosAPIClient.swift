@@ -71,9 +71,6 @@ protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
 
     // Push notifications
     func getDevice(userId: String, deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse
-    func updateDevicePushToken(userId: String, deviceId: String, pushToken: String) async throws -> ConvosAPI.DeviceUpdateResponse
-
-    // Notifications registration and topic subscriptions
     func registerForNotifications(deviceId: String,
                                   pushToken: String,
                                   identityId: String,
@@ -503,28 +500,6 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         return try await performRequest(request)
     }
 
-    func updateDevicePushToken(userId: String, deviceId: String, pushToken: String) async throws -> ConvosAPI.DeviceUpdateResponse {
-        // Use authenticatedRequest to properly set auth headers
-        var request = try authenticatedRequest(
-            for: "v1/devices/\(userId)/\(deviceId)",
-            method: "PATCH"
-        )
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let updateRequest = ConvosAPI.DeviceUpdateRequest(
-            pushToken: pushToken,
-            pushTokenType: ConvosAPI.DeviceUpdateRequest.DeviceUpdatePushTokenType.apns,
-            apnsEnv: ConfigManager.shared.currentEnvironment.apnsEnvironment == .sandbox ?
-                ConvosAPI.DeviceUpdateRequest.DeviceUpdateApnsEnvironment.sandbox :
-                ConvosAPI.DeviceUpdateRequest.DeviceUpdateApnsEnvironment.production
-        )
-
-        request.httpBody = try JSONEncoder().encode(updateRequest)
-
-        // Use performRequest to handle auth and retries properly
-        return try await performRequest(request)
-    }
-
     // MARK: - Notifications Registration & Subscriptions
 
     func registerForNotifications(deviceId: String,
@@ -540,12 +515,15 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             let deviceId: String
             let pushToken: String
             let pushTokenType: String
+            let apnsEnv: String
             let installations: [Installation]
         }
 
+        let apnsEnv = ConfigManager.shared.currentEnvironment.apnsEnvironment == .sandbox ? "sandbox" : "production"
         let body = Body(deviceId: deviceId,
                         pushToken: pushToken,
                         pushTokenType: "apns",
+                        apnsEnv: apnsEnv,
                         installations: [.init(identityId: identityId, xmtpInstallationId: xmtpInstallationId)])
         request.httpBody = try JSONEncoder().encode(body)
 
