@@ -48,6 +48,9 @@ class ConversationViewModel {
             sendButtonEnabled = !messageText.isEmpty
         }
     }
+    var canRemoveMembers: Bool {
+        conversation.creator.isCurrentUser
+    }
     var sendButtonEnabled: Bool = false
     var profileImage: UIImage?
     /// we manage focus in the view model along with @FocusState in the view
@@ -247,6 +250,7 @@ class ConversationViewModel {
     }
 
     func remove(member: ConversationMember) {
+        guard canRemoveMembers else { return }
         Task {
             do {
                 try await metadataWriter.removeGroupMembers(groupId: conversation.id, memberInboxIds: [member.profile.inboxId])
@@ -265,11 +269,15 @@ class ConversationViewModel {
     }
 
     func explodeConvo() {
+        guard canRemoveMembers else { return }
         Task {
             do {
+                let memberIdsToRemove = conversation.members
+                    .filter { !$0.isCurrentUser } // @jarodl fix when we have self removal
+                    .map { $0.profile.inboxId }
                 try await metadataWriter.removeGroupMembers(
                     groupId: conversation.id,
-                    memberInboxIds: conversation.members.map { $0.profile.inboxId }
+                    memberInboxIds: memberIdsToRemove
                 )
                 try session.deleteAccount(inboxId: conversation.inboxId)
             } catch {

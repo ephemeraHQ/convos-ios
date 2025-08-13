@@ -119,26 +119,28 @@ struct ConversationInfoView: View {
                         .foregroundStyle(.colorTextSecondary)
                 }
 
-                Section {
-                    Button {
-                        showingExplodeConfirmation = true
-                    } label: {
-                        Text("Explode now")
-                            .foregroundStyle(.colorCaution)
-                    }
-                    .confirmationDialog("", isPresented: $showingExplodeConfirmation) {
-                        Button("Explode", role: .destructive) {
-                            viewModel.explodeConvo()
-                            dismiss()
+                if viewModel.canRemoveMembers {
+                    Section {
+                        Button {
+                            showingExplodeConfirmation = true
+                        } label: {
+                            Text("Explode now")
+                                .foregroundStyle(.colorCaution)
                         }
+                        .confirmationDialog("", isPresented: $showingExplodeConfirmation) {
+                            Button("Explode", role: .destructive) {
+                                viewModel.explodeConvo()
+                                dismiss()
+                            }
 
-                        Button("Cancel") {
-                            showingExplodeConfirmation = false
+                            Button("Cancel") {
+                                showingExplodeConfirmation = false
+                            }
                         }
+                    } footer: {
+                        Text("Irrecoverably delete the convo for everyone")
+                            .foregroundStyle(.colorTextSecondary)
                     }
-                } footer: {
-                    Text("Irrecoverably delete the convo for everyone")
-                        .foregroundStyle(.colorTextSecondary)
                 }
             }
             .toolbarTitleDisplayMode(.inline)
