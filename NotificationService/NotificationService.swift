@@ -23,7 +23,6 @@ class NotificationService: UNNotificationServiceExtension {
 
             if let notificationType = userInfo["notificationType"] as? String {
                 switch notificationType {
-
                 case "Protocol":
                     // Expect notificationData dict with contentTopic and encryptedMessage
                     if let data = userInfo["notificationData"] as? [String: Any] {
