@@ -218,6 +218,15 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                                                                             clientConversationId: conversationId)
                     Logger.info("Created conversation in database: \(dbConversation)")
                     self.state = .existing(id: conversation.id)
+
+                    // Subscribe to push topic upon join
+                    let topic = "/xmtp/mls/1/g-\(conversation.id)/proto"
+                    do {
+                        try await apiClient.subscribeToTopics(installationId: client.installationId, topics: [topic])
+                        Logger.info("Subscribed to push topic after join: \(topic)")
+                    } catch {
+                        Logger.error("Failed subscribing to topic after join \(topic): \(error)")
+                    }
                     streamConversationsTask?.cancel()
                 }
             } catch {
@@ -295,6 +304,15 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                                                     messageWriter: messageWriter)
         _ = try await conversationWriter.store(conversation: createdConversation,
                                                clientConversationId: conversationId)
+
+        // Subscribe to push topic for this conversation
+        let topic = "/xmtp/mls/1/g-\(externalConversationId)/proto"
+        do {
+            try await apiClient.subscribeToTopics(installationId: client.installationId, topics: [topic])
+            Logger.info("Subscribed to push topic: \(topic)")
+        } catch {
+            Logger.error("Failed subscribing to topic \(topic): \(error)")
+        }
 
         let response = try await apiClient.createInvite(
             .init(

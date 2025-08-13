@@ -56,6 +56,12 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
         }
 
         try await client.update(consent: .denied, for: conversation.id)
+        // Fire unsubscribe request for push notifications
+        NotificationCenter.default.post(
+            name: .convosConversationUnsubscribeRequested,
+            object: nil,
+            userInfo: ["conversationId": conversation.id]
+        )
         try await databaseWriter.write { db in
             if let localConversation = try DBConversation
                 .filter(DBConversation.Columns.id == conversation.id)

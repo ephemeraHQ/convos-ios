@@ -22,9 +22,11 @@ struct NotificationConstants {
     // App-level in-process notifications
     struct AppNotifications {
         static let pushTokenDidChange: String = "convosPushTokenDidChange"
+        static let conversationUnsubscribeRequested: String = "convosConversationUnsubscribeRequested"
     }
 }
 
 extension Notification.Name {
     static let convosPushTokenDidChange: Notification.Name = Notification.Name(NotificationConstants.AppNotifications.pushTokenDidChange)
+    static let convosConversationUnsubscribeRequested: Notification.Name = Notification.Name(NotificationConstants.AppNotifications.conversationUnsubscribeRequested)
 }

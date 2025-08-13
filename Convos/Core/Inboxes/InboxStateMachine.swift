@@ -286,12 +286,19 @@ actor InboxStateMachine {
         _state = .authorizing
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
+
         // Attempt to register for remote notifications to obtain APNS token ASAP
         await registerForRemoteNotificationsAlways()
+
         // Request notification authorization and register once we have a client and api ready path
         await requestAndRegisterForNotificationsIfNeeded()
+
         // If we already have an APNS token, update it now that we're authorized
         await updateStoredAPNSTokenIfPresent(client: client, apiClient: apiClient)
+
+        // Register backend notifications mapping (deviceId + token + identity + installation)
+        await registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
+
         do {
             try await refreshUserAndProfile(client: client, apiClient: apiClient)
         } catch {
@@ -339,6 +346,19 @@ actor InboxStateMachine {
             Task { [weak self] in
                 guard let self else { return }
                 await self.updateIfReady()
+            }
+        }
+
+        // Observe conversation unsubscribe requests and propagate to backend
+        NotificationCenter.default.addObserver(
+            forName: .convosConversationUnsubscribeRequested,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            guard let conversationId = note.userInfo?["conversationId"] as? String else { return }
+            Task { [weak self] in
+                guard let self else { return }
+                await self.unsubscribeIfReady(conversationId: conversationId)
             }
         }
     }
@@ -553,6 +573,35 @@ extension InboxStateMachine {
             await requestAndRegisterForNotificationsIfNeeded()
         }
         await updateStoredAPNSTokenIfPresent(client: result.client, apiClient: result.apiClient)
+        await registerForNotificationsIfNeeded(client: result.client, apiClient: result.apiClient)
+    }
+
+    private func registerForNotificationsIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
+        guard let token = NotificationProcessor.shared.getStoredDeviceToken(), !token.isEmpty else { return }
+        let deviceId = await currentDeviceId()
+        // Use providerId as identity id; this is the userId we send to backend
+        let identityId = inbox.providerId
+        let installationId = client.installationId
+        do {
+            try await apiClient.registerForNotifications(deviceId: deviceId,
+                                                         pushToken: token,
+                                                         identityId: identityId,
+                                                         xmtpInstallationId: installationId)
+            Logger.info("Registered notifications mapping for deviceId=\(deviceId), installationId=\(installationId)")
+        } catch {
+            Logger.error("Failed to register notifications mapping: \(error)")
+        }
+    }
+
+    private func unsubscribeIfReady(conversationId: String) async {
+        guard case let .ready(result) = _state else { return }
+        let topic = "/xmtp/mls/1/g-\(conversationId)/proto"
+        do {
+            try await result.apiClient.unsubscribeFromTopics(installationId: result.client.installationId, topics: [topic])
+            Logger.info("Unsubscribed from topic: \(topic)")
+        } catch {
+            Logger.error("Failed to unsubscribe from topic \(topic): \(error)")
+        }
     }
 
     private func requestAndRegisterForNotificationsIfNeeded() async {

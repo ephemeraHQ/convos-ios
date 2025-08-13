@@ -72,6 +72,14 @@ protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
     // Push notifications
     func getDevice(userId: String, deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse
     func updateDevicePushToken(userId: String, deviceId: String, pushToken: String) async throws -> ConvosAPI.DeviceUpdateResponse
+
+    // Notifications registration and topic subscriptions
+    func registerForNotifications(deviceId: String,
+                                  pushToken: String,
+                                  identityId: String,
+                                  xmtpInstallationId: String) async throws
+    func subscribeToTopics(installationId: String, topics: [String]) async throws
+    func unsubscribeFromTopics(installationId: String, topics: [String]) async throws
 }
 
 internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
@@ -514,6 +522,57 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
         // Use performRequest to handle auth and retries properly
         return try await performRequest(request)
+    }
+
+    // MARK: - Notifications Registration & Subscriptions
+
+    func registerForNotifications(deviceId: String,
+                                  pushToken: String,
+                                  identityId: String,
+                                  xmtpInstallationId: String) async throws {
+        var request = try authenticatedRequest(for: "v1/notifications/register", method: "POST")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        struct Installation: Encodable { let identityId: String; let xmtpInstallationId: String }
+        struct Body: Encodable {
+            let deviceId: String
+            let pushToken: String
+            let pushTokenType: String
+            let installations: [Installation]
+        }
+
+        let body = Body(deviceId: deviceId,
+                        pushToken: pushToken,
+                        pushTokenType: "apns",
+                        installations: [.init(identityId: identityId, xmtpInstallationId: xmtpInstallationId)])
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
+            throw APIError.serverError("Failed notifications/register: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
+        }
+    }
+
+    func subscribeToTopics(installationId: String, topics: [String]) async throws {
+        var request = try authenticatedRequest(for: "v1/notifications/subscribe", method: "POST")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        struct Body: Encodable { let installationId: String; let topics: [String] }
+        request.httpBody = try JSONEncoder().encode(Body(installationId: installationId, topics: topics))
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
+            throw APIError.serverError("Failed notifications/subscribe: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
+        }
+    }
+
+    func unsubscribeFromTopics(installationId: String, topics: [String]) async throws {
+        var request = try authenticatedRequest(for: "v1/notifications/unsubscribe", method: "POST")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        struct Body: Encodable { let installationId: String; let topics: [String] }
+        request.httpBody = try JSONEncoder().encode(Body(installationId: installationId, topics: topics))
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
+            throw APIError.serverError("Failed notifications/unsubscribe: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
+        }
     }
 }
 

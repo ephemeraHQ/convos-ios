@@ -228,4 +228,17 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         try await afterUpload(uploadedURL)
         return uploadedURL
     }
+
+    // MARK: - Notifications mocks
+    func registerForNotifications(deviceId: String, pushToken: String, identityId: String, xmtpInstallationId: String) async throws {
+        // no-op in mock
+    }
+
+    func subscribeToTopics(installationId: String, topics: [String]) async throws {
+        // no-op in mock
+    }
+
+    func unsubscribeFromTopics(installationId: String, topics: [String]) async throws {
+        // no-op in mock
+    }
 }
