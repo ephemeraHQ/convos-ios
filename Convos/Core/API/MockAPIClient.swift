@@ -241,4 +241,8 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
     func unsubscribeFromTopics(installationId: String, topics: [String]) async throws {
         // no-op in mock
     }
+
+    func unregisterInstallation(xmtpInstallationId: String) async throws {
+        // no-op in mock
+    }
 }

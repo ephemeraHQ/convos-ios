@@ -23,10 +23,12 @@ struct NotificationConstants {
     struct AppNotifications {
         static let pushTokenDidChange: String = "convosPushTokenDidChange"
         static let conversationUnsubscribeRequested: String = "convosConversationUnsubscribeRequested"
+        static let unregisterInstallationRequested: String = "convosUnregisterInstallationRequested"
     }
 }
 
 extension Notification.Name {
     static let convosPushTokenDidChange: Notification.Name = Notification.Name(NotificationConstants.AppNotifications.pushTokenDidChange)
     static let convosConversationUnsubscribeRequested: Notification.Name = Notification.Name(NotificationConstants.AppNotifications.conversationUnsubscribeRequested)
+    static let convosUnregisterInstallationRequested: Notification.Name = Notification.Name(NotificationConstants.AppNotifications.unregisterInstallationRequested)
 }

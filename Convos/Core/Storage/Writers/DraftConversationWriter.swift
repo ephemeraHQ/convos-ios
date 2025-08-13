@@ -220,7 +220,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                     self.state = .existing(id: conversation.id)
 
                     // Subscribe to push topic upon join
-                    let topic = "/xmtp/mls/1/g-\(conversation.id)/proto"
+                    let topic = NotificationProcessor.groupTopic(for: conversation.id)
                     do {
                         try await apiClient.subscribeToTopics(installationId: client.installationId, topics: [topic])
                         Logger.info("Subscribed to push topic after join: \(topic)")
@@ -306,7 +306,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                                                clientConversationId: conversationId)
 
         // Subscribe to push topic for this conversation
-        let topic = "/xmtp/mls/1/g-\(externalConversationId)/proto"
+        let topic = NotificationProcessor.groupTopic(for: externalConversationId)
         do {
             try await apiClient.subscribeToTopics(installationId: client.installationId, topics: [topic])
             Logger.info("Subscribed to push topic: \(topic)")

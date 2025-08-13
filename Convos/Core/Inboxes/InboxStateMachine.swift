@@ -358,9 +358,25 @@ actor InboxStateMachine {
                 await self.unsubscribeIfReady(conversationId: conversationId)
             }
         }
+
+        // Unregister the installation when exploding/deleting all conversations for this inbox
+        NotificationCenter.default.addObserver(
+            forName: .convosUnregisterInstallationRequested,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { [weak self] in
+                guard let self else { return }
+                await self.unregisterInstallationIfReady()
+            }
+        }
     }
 
     private func handleDelete(inboxId: String) async throws {
+        // Ensure backend unregister occurs while we're still authorized/ready
+        if case .ready = _state {
+            await unregisterInstallationIfReady()
+        }
         _state = .deleting
         try await inboxWriter.deleteInbox(inboxId: inboxId)
         enqueueAction(.stop)
@@ -567,12 +583,22 @@ extension InboxStateMachine {
 
     private func unsubscribeIfReady(conversationId: String) async {
         guard case let .ready(result) = _state else { return }
-        let topic = "/xmtp/mls/1/g-\(conversationId)/proto"
+        let topic = NotificationProcessor.groupTopic(for: conversationId)
         do {
             try await result.apiClient.unsubscribeFromTopics(installationId: result.client.installationId, topics: [topic])
             Logger.info("Unsubscribed from topic: \(topic)")
         } catch {
             Logger.error("Failed to unsubscribe from topic \(topic): \(error)")
+        }
+    }
+
+    private func unregisterInstallationIfReady() async {
+        guard case let .ready(result) = _state else { return }
+        do {
+            try await result.apiClient.unregisterInstallation(xmtpInstallationId: result.client.installationId)
+            Logger.info("Unregistered installation: \(result.client.installationId)")
+        } catch {
+            Logger.error("Failed to unregister installation: \(error)")
         }
     }
 

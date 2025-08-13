@@ -99,6 +99,8 @@ final class InboxWriter: InboxWriterProtocol {
 
     func deleteInbox(inboxId: String) async throws {
         try await databaseWriter.write { db in
+            // Request backend unregister for this installation (will drop all topics server-side)
+            NotificationCenter.default.post(name: .convosUnregisterInstallationRequested, object: nil)
             guard let inbox = try DBInbox.fetchOne(db, id: inboxId) else {
                 Logger.error("Inbox not found, skipping delete")
                 return

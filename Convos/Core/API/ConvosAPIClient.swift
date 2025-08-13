@@ -80,6 +80,7 @@ protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
                                   xmtpInstallationId: String) async throws
     func subscribeToTopics(installationId: String, topics: [String]) async throws
     func unsubscribeFromTopics(installationId: String, topics: [String]) async throws
+    func unregisterInstallation(xmtpInstallationId: String) async throws
 }
 
 internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
@@ -573,6 +574,15 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         let (_, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
             throw APIError.serverError("Failed notifications/unsubscribe: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
+        }
+    }
+
+    func unregisterInstallation(xmtpInstallationId: String) async throws {
+        let path = "v1/notifications/unregister/\(xmtpInstallationId)"
+        let request = try authenticatedRequest(for: path, method: "DELETE")
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
+            throw APIError.serverError("Failed DELETE notifications/unregister: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
         }
     }
 }
