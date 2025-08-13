@@ -359,7 +359,7 @@ actor InboxStateMachine {
             }
         }
 
-        // Unregister the installation when exploding/deleting all conversations for this inbox
+        // Unregister the installation (all topics) when requested (single-inbox delete uses handleDelete)
         NotificationCenter.default.addObserver(
             forName: .convosUnregisterInstallationRequested,
             object: nil,
