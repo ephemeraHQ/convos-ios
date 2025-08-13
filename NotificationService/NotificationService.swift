@@ -9,51 +9,48 @@ class NotificationService: UNNotificationServiceExtension {
         self.contentHandler = contentHandler
         bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
 
+        NSLog("🔔 NSE Activating: didReceive")
+
         if let bestAttemptContent = bestAttemptContent {
             // Parse the notification payload
             let userInfo = request.content.userInfo
 
-            // @lourou: Use shared helpers when framework is set up
-            // let payload = PushNotificationHelpers.NotificationPayload(from: userInfo)
-            // let updatedContent = PushNotificationHelpers.buildNotificationContent(from: payload)
+            // Log the raw payload received by the NSE (visible in Console.app)
+            logNSEPayload(userInfo)
 
-            // For now, handle notification modification directly
-            if let conversationId = userInfo["conversation_id"] as? String {
-                bestAttemptContent.threadIdentifier = conversationId
-            }
+            let inboxId = userInfo["inboxId"] as? String
+            if let inboxId { NSLog("NSE: inboxId=%@", inboxId) }
 
-            // Handle different notification types
-            if let notificationType = userInfo["type"] as? String {
+            if let notificationType = userInfo["notificationType"] as? String {
                 switch notificationType {
-                case "message":
-                    // Process message notification
-                    if let senderName = userInfo["sender_name"] as? String,
-                       let messageContent = userInfo["message_content"] as? String {
-                        bestAttemptContent.title = senderName
-                        bestAttemptContent.body = messageContent
+
+                case "Protocol":
+                    // Expect notificationData dict with contentTopic and encryptedMessage
+                    if let data = userInfo["notificationData"] as? [String: Any] {
+                        let contentTopic = data["contentTopic"] as? String
+                        if let topic = contentTopic {
+                            let conversationId = conversationIdFromTopic(topic)
+                            bestAttemptContent.threadIdentifier = conversationId
+
+                            // Set a simple body if none present
+                            if bestAttemptContent.body.isEmpty { bestAttemptContent.body = "New message" }
+                        }
+                        // Keep title/body if backend provided; extension does not decrypt
+                        NSLog("NSE Protocol: topic=%@", contentTopic ?? "nil")
                     }
 
-                case "group_invite":
-                    // Process group invitation
-                    if let senderName = userInfo["sender_name"] as? String {
-                        bestAttemptContent.title = "Group Invitation"
-                        bestAttemptContent.body = "\(senderName) invited you to a group"
-                    }
-
-                case "reaction":
-                    // Process reaction notification
-                    if let senderName = userInfo["sender_name"] as? String {
-                        bestAttemptContent.title = "New Reaction"
-                        bestAttemptContent.body = "\(senderName) reacted to your message"
-                    }
+                case "InviteJoinRequest":
+                    // Expect inviteId; render a friendly alert
+                    let inviteId = userInfo["inviteId"] as? String
+                    bestAttemptContent.title = "Group Invitation"
+                    if let inviteId { bestAttemptContent.body = "You were invited (\(inviteId))" }
+                    // Thread by inbox if available so invites group in notification center
+                    if let inboxId { bestAttemptContent.threadIdentifier = "invites-\(inboxId)" }
 
                 default:
                     break
                 }
             }
-
-            // @lourou: Download and attach media if needed
-            // This is where you'd download images/videos and attach them to the notification
 
             contentHandler(bestAttemptContent)
         }
@@ -64,7 +61,30 @@ class NotificationService: UNNotificationServiceExtension {
         // Use this as an opportunity to deliver your "best attempt" at modified content,
         // otherwise the original push payload will be used.
         if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
+            NSLog("NSE timeWillExpire - delivering best attempt content")
             contentHandler(bestAttemptContent)
         }
+    }
+
+    // MARK: - Logging
+    private func logNSEPayload(_ userInfo: [AnyHashable: Any]) {
+        // Try to serialize to JSON for readability; fall back to dictionary description
+        if JSONSerialization.isValidJSONObject(userInfo),
+           let data = try? JSONSerialization.data(withJSONObject: userInfo, options: [.prettyPrinted]),
+           let json = String(data: data, encoding: .utf8) {
+            NSLog("NSE received push payload:\n%@", json)
+        } else {
+            NSLog("NSE received push payload (non-JSON): %@", String(describing: userInfo))
+        }
+    }
+
+    // MARK: - Helpers
+    private func conversationIdFromTopic(_ topic: String) -> String {
+        // Example: /xmtp/mls/1/g-<conversationId>/proto -> <conversationId>
+        let parts = topic.split(separator: "/")
+        if let segment = parts.first(where: { $0.hasPrefix("g-") }) {
+            return String(segment.dropFirst(2))
+        }
+        return topic
     }
 }
