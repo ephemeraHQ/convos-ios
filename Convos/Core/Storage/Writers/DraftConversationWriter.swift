@@ -339,7 +339,8 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                 description: nil,
                 imageUrl: nil,
                 maxUses: nil,
-                expiresAt: nil
+                expiresAt: nil,
+                autoApprove: true,
             )
         )
         let invite = try await inviteWriter.store(invite: response, inboxId: client.inboxId)
