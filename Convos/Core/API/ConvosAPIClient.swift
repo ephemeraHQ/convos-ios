@@ -44,9 +44,10 @@ protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
     func createUser(_ requestBody: ConvosAPI.CreateUserRequest) async throws -> ConvosAPI.CreatedUserResponse
     func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse
 
-    func createInvite(_ requestBody: ConvosAPI.CreateInviteRequest) async throws -> ConvosAPI.InviteDetailsResponse
+    func createInvite(_ requestBody: ConvosAPI.CreateInviteCode) async throws -> ConvosAPI.InviteDetailsResponse
     func inviteDetails(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsResponse
     func publicInviteDetails(_ inviteId: String) async throws -> ConvosAPI.PublicInviteDetailsResponse
+    func requestToJoin(_ inviteId: String) async throws -> ConvosAPI.RequestToJoinResponse
 
     func updateProfile(
         inboxId: String,
@@ -268,7 +269,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
     // MARK: - Invites
 
-    func createInvite(_ requestBody: ConvosAPI.CreateInviteRequest) async throws -> ConvosAPI.InviteDetailsResponse {
+    func createInvite(_ requestBody: ConvosAPI.CreateInviteCode) async throws -> ConvosAPI.InviteDetailsResponse {
         var request = try authenticatedRequest(for: "v1/invites", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         Logger.info("Sending create invite request with body: \(requestBody)")
@@ -281,6 +282,14 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         let request = try authenticatedRequest(for: "v1/invites/\(inviteId)")
         let invite: ConvosAPI.InviteDetailsResponse = try await performRequest(request)
         return invite
+    }
+
+    func requestToJoin(_ inviteId: String) async throws -> ConvosAPI.RequestToJoinResponse {
+        var request = try authenticatedRequest(for: "v1/invites/request", method: "POST")
+        let body: [String: Any] = ["inviteId": inviteId]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        return try await performRequest(request)
     }
 
     // MARK: - Profiles

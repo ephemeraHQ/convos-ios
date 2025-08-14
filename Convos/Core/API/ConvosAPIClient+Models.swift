@@ -70,7 +70,7 @@ enum ConvosAPI {
         }
     }
 
-    struct CreateInviteRequest: Encodable {
+    struct CreateInviteCode: Encodable {
         let groupId: String
         let name: String?
         let description: String?
@@ -79,6 +79,14 @@ enum ConvosAPI {
         let expiresAt: Date?
         let autoApprove: Bool = false
         let notificationTargets: [String] = []
+    }
+
+    // Deprecated: Request body no longer needed; request uses inviteId only
+
+    struct RequestToJoinResponse: Decodable {
+        let id: String
+        let inviteId: String
+        let createdAt: String
     }
 
     struct UpdateProfileRequest: Encodable {
