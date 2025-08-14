@@ -169,7 +169,7 @@ class ConversationViewModel {
     func onConversationNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
         focus = nextFocus
 
-        if conversationName != conversation.name {
+        if conversationName != (conversation.name ?? "") {
             Task { [weak self] in
                 guard let self else { return }
                 do {
@@ -234,7 +234,7 @@ class ConversationViewModel {
     private func onDisplayNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
         focus = nextFocus
 
-        if profile.name != displayName {
+        if (profile.name ?? "") != displayName {
             Task { [weak self] in
                 guard let self else { return }
                 do {
