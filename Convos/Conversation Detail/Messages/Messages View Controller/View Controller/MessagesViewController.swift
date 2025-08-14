@@ -464,6 +464,10 @@ extension MessagesViewController {
 // MARK: - UIScrollViewDelegate & UICollectionViewDelegate
 
 extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        Logger.info("Did select item at \(indexPath)")
+    }
+
     func scrollViewShouldScrollToTop(_ scrollView: UIScrollView) -> Bool {
         guard scrollView.contentSize.height > 0,
               !currentInterfaceActions.options.contains(.scrollingToTop),

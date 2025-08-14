@@ -91,6 +91,8 @@ class ConversationViewModel {
 
         Logger.info("🔄 created for conversation: \(conversation.id)")
         fetchLatest()
+        self.displayName = profile.name ?? ""
+        self.conversationName = conversation.name ?? ""
         observe()
 
         KeyboardListener.shared.add(delegate: self)
