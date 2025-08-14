@@ -7,13 +7,12 @@ struct AddAccountResultType {
 }
 
 protocol SessionManagerProtocol {
-    var inboxesRepository: any InboxesRepositoryProtocol { get }
-
     var authState: AnyPublisher<AuthServiceState, Never> { get }
 
     func prepare() throws
     func addAccount() throws -> AddAccountResultType
-    func deleteAccount(with providerId: String) throws
+    func deleteAccount(inboxId: String) throws
+    func deleteAccount(providerId: String) throws
     func deleteAllAccounts() throws
     func messagingService(for inboxId: String) -> AnyMessagingService
     func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol

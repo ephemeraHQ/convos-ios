@@ -24,6 +24,7 @@ struct MessagesView: View {
     let onConversationSettings: () -> Void
     let onProfilePhotoTap: () -> Void
     let onSendMessage: () -> Void
+    let onTapMessage: (AnyMessage) -> Void
     let onDisplayNameEndedEditing: () -> Void
     let onProfileSettings: () -> Void
     let onScanInviteCode: () -> Void
@@ -38,6 +39,7 @@ struct MessagesView: View {
                 conversationId: conversation.id,
                 messages: messages,
                 invite: invite,
+                onTapMessage: onTapMessage,
                 topBarHeight: topBarHeight,
                 bottomBarHeight: bottomBarHeight
             )

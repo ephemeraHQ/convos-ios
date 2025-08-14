@@ -88,7 +88,7 @@ class MockMessagingService: MessagingServiceProtocol {
         MockConversationLocalStateWriter()
     }
 
-    func groupMetadataWriter() -> any GroupMetadataWriterProtocol {
+    func groupMetadataWriter() -> any ConversationMetadataWriterProtocol {
         MockGroupMetadataWriter()
     }
 
@@ -319,6 +319,12 @@ extension MockMessagingService: XMTPClientProvider {
 
     func update(consent: Consent, for conversationId: String) async throws {
     }
+
+    func deleteLocalDatabase() throws {
+    }
+
+    func revokeInstallations(signingKey: any SigningKey, installationIds: [String]) async throws {
+    }
 }
 
 extension MockMessagingService: MessageSender {
@@ -490,7 +496,7 @@ class MockConversationLocalStateWriter: ConversationLocalStateWriterProtocol {
 }
 
 // Add mock implementations for group functionality
-class MockGroupMetadataWriter: GroupMetadataWriterProtocol {
+class MockGroupMetadataWriter: ConversationMetadataWriterProtocol {
     func updateGroupName(groupId: String, name: String) async throws {}
     func updateGroupDescription(groupId: String, description: String) async throws {}
     func updateGroupImageUrl(groupId: String, imageURL: String) async throws {}
@@ -517,15 +523,12 @@ class MockGroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
     }
 
     func removeSuperAdmin(memberInboxId: String, from groupId: String) async throws {
-        // @lourou
     }
 
     func addMembers(inboxIds: [String], to groupId: String) async throws {
-        // @lourou
     }
 
     func removeMembers(inboxIds: [String], from groupId: String) async throws {
-        // @lourou
     }
 
     func getGroupPermissions(for groupId: String) async throws -> GroupPermissionPolicySet {

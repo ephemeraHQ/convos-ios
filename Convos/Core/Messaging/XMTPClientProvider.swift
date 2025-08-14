@@ -62,6 +62,10 @@ protocol XMTPClientProvider: AnyObject {
     func conversation(with id: String) async throws -> XMTPiOS.Conversation?
     func inboxId(for ethereumAddress: String) async throws -> String?
     func update(consent: Consent, for conversationId: String) async throws
+    func revokeInstallations(
+        signingKey: SigningKey, installationIds: [String]
+    ) async throws
+    func deleteLocalDatabase() throws
 }
 
 enum XMTPClientProviderError: Error {

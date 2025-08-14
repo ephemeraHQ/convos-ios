@@ -2,8 +2,6 @@ import Combine
 import Foundation
 
 protocol MessagingServiceProtocol {
-    var inboxReadyPublisher: InboxReadyResultPublisher { get }
-
     func myProfileRepository() -> any MyProfileRepositoryProtocol
     func myProfileWriter() -> any MyProfileWriterProtocol
 
@@ -23,7 +21,7 @@ protocol MessagingServiceProtocol {
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol
 
-    func groupMetadataWriter() -> any GroupMetadataWriterProtocol
+    func groupMetadataWriter() -> any ConversationMetadataWriterProtocol
     func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol
 
     func uploadImage(data: Data, filename: String) async throws -> String

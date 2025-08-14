@@ -7,6 +7,7 @@ struct ConversationsView: View {
     @Namespace private var namespace: Namespace.ID
     @State private var presentingExplodeConfirmation: Bool = false
     @State private var presentingDebugView: Bool = false
+    @State private var presentingAppSettings: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     @FocusState private var focusState: MessagesViewInputFocus?
@@ -57,11 +58,17 @@ struct ConversationsView: View {
                         List(viewModel.unpinnedConversations, id: \.self, selection: $viewModel.selectedConversation) { conversation in
                             ZStack {
                                 ConversationsListItem(conversation: conversation)
-                                let conversationViewModel = viewModel.conversationViewModel(for: conversation)
-                                NavigationLink(value: conversationViewModel) {
+                                NavigationLink(value: conversation) {
                                     EmptyView()
                                 }
                                 .opacity(0.0) // zstack hides disclosure indicator
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    viewModel.leave(conversation: conversation)
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
                             }
                             .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
                             .listRowSeparator(.hidden)
@@ -78,54 +85,25 @@ struct ConversationsView: View {
                 .toolbarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            presentingExplodeConfirmation = true
-                        } label: {
-                            HStack(spacing: DesignConstants.Spacing.step2x) {
-                                Circle()
-                                    .fill(.colorOrange)
-                                    .frame(width: 24.0, height: 24.0)
-
-                                Text("Convos")
-                                    .font(.system(size: 16.0, weight: .medium))
-                                    .foregroundStyle(.colorTextPrimary)
-                            }
-                            .padding(10)
-                        }
-                        .glassEffect(.regular.interactive())
-                        .confirmationDialog("", isPresented: $presentingExplodeConfirmation) {
-                            Button("Explode", role: .destructive) {
-                                do {
-                                    try session.deleteAllAccounts()
-                                } catch {
-                                    Logger.error("Error deleting all accounts: \(error)")
-                                }
-                            }
-
-                            Button("Cancel") {
-                                presentingExplodeConfirmation = false
-                            }
-                        }
-                    }
-
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            presentingDebugView = true
-                        } label: {
-                            Image(systemName: "ladybug.fill")
+                        ConvosToolbarButton(padding: false) {
+                            presentingAppSettings = true
                         }
                     }
                     .matchedTransitionSource(
-                        id: "debug-view-transition-source",
+                        id: "app-settings-transition-source",
                         in: namespace
                     )
 
-//                    ToolbarItem(placement: .topBarTrailing) {
-//                        Button("Filter", systemImage: "line.3.horizontal.decrease") {
-//                            //
-//                        }
-//                        .disabled(true)
-//                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Filter", systemImage: "line.3.horizontal.decrease") {
+                            //
+                        }
+                        .disabled(true)
+                    }
+                    .matchedTransitionSource(
+                        id: "filter-view-transition-source",
+                        in: namespace
+                    )
 
                     ToolbarItem(placement: .bottomBar) {
                         Spacer()
@@ -143,21 +121,23 @@ struct ConversationsView: View {
                 }
                 .toolbar(removing: .sidebarToggle)
             } detail: {
-                if let conversationViewModel = viewModel.selectedConversation {
+                if let conversationViewModel = viewModel.selectedConversationViewModel {
                     ConversationView(
                         viewModel: conversationViewModel,
                         focusState: $focusState
                     )
-                } else {
+                } else if horizontalSizeClass != .compact {
                     emptyConversationsView
+                } else {
+                    EmptyView()
                 }
             }
         }
-        .sheet(isPresented: $presentingDebugView) {
-            DebugView()
+        .sheet(isPresented: $presentingAppSettings) {
+            AppSettingsView(viewModel: viewModel)
                 .navigationTransition(
                     .zoom(
-                        sourceID: "debug-view-transition-source",
+                        sourceID: "app-settings-transition-source",
                         in: namespace
                     )
                 )

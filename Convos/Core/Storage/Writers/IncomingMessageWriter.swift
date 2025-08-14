@@ -27,6 +27,18 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
             try? senderProfile.insert(db)
             let message = try message.dbRepresentation()
 
+            // @jarodl temporary, this should happen somewhere else more explicitly
+            let wasRemovedFromConversation = message.update?.removedInboxIds.contains(conversation.inboxId) ?? false
+            guard !wasRemovedFromConversation else {
+                Logger.info("Removed from conversation, skipping message store and deleting conversation...")
+                NotificationCenter.default.post(
+                    name: .leftConversationNotification,
+                    object: nil,
+                    userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
+                )
+                return
+            }
+
             Logger.info("Storing incoming message \(message.id) localId \(message.clientMessageId)")
             // see if this message has a local version
             if let localMessage = try DBMessage

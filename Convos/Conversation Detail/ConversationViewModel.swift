@@ -2,10 +2,15 @@ import Combine
 import Observation
 import UIKit
 
+extension Notification.Name {
+    static let leftConversationNotification: Notification.Name = Notification.Name("LeftConversationNotification")
+}
+
 @Observable
 class ConversationViewModel {
     // MARK: - Private
 
+    private let session: any SessionManagerProtocol
     private let myProfileWriter: any MyProfileWriterProtocol
     private let myProfileRepository: any MyProfileRepositoryProtocol
     private let conversationRepository: any ConversationRepositoryProtocol
@@ -13,7 +18,7 @@ class ConversationViewModel {
     private let outgoingMessageWriter: any OutgoingMessageWriterProtocol
     private let consentWriter: any ConversationConsentWriterProtocol
     private let localStateWriter: any ConversationLocalStateWriterProtocol
-    private let metadataWriter: any GroupMetadataWriterProtocol
+    private let metadataWriter: any ConversationMetadataWriterProtocol
     private let inviteRepository: any InviteRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = []
     private var loadProfileImageTask: Task<Void, Never>?
@@ -30,30 +35,38 @@ class ConversationViewModel {
     var invite: Invite = .empty
     var profile: Profile {
         didSet {
-            Logger.info("Updated profile: \(profile)")
             displayName = profile.name ?? ""
         }
     }
     var untitledConversationPlaceholder: String = "Untitled"
     var conversationNamePlaceholder: String = "Name"
+    var conversationDescriptionPlaceholder: String = "Description"
+    var joinEnabled: Bool = true
     var displayName: String = ""
     var conversationName: String = ""
+    var conversationDescription: String = ""
     var conversationImage: UIImage?
     var messageText: String = "" {
         didSet {
             sendButtonEnabled = !messageText.isEmpty
         }
     }
+    var canRemoveMembers: Bool {
+        conversation.creator.isCurrentUser
+    }
     var sendButtonEnabled: Bool = false
     var profileImage: UIImage?
     /// we manage focus in the view model along with @FocusState in the view
     /// since programatically changing @FocusState doesn't always propagate to child views
     var focus: MessagesViewInputFocus?
+    var presentingConversationSettings: Bool = false
+    var presentingProfileForMember: ConversationMember?
 
     // MARK: - Init
 
     init(
         conversation: Conversation,
+        session: any SessionManagerProtocol,
         myProfileWriter: any MyProfileWriterProtocol,
         myProfileRepository: any MyProfileRepositoryProtocol,
         conversationRepository: any ConversationRepositoryProtocol,
@@ -61,10 +74,11 @@ class ConversationViewModel {
         outgoingMessageWriter: any OutgoingMessageWriterProtocol,
         consentWriter: any ConversationConsentWriterProtocol,
         localStateWriter: any ConversationLocalStateWriterProtocol,
-        metadataWriter: any GroupMetadataWriterProtocol,
+        metadataWriter: any ConversationMetadataWriterProtocol,
         inviteRepository: any InviteRepositoryProtocol
     ) {
         self.conversation = conversation
+        self.session = session
         self.myProfileWriter = myProfileWriter
         self.myProfileRepository = myProfileRepository
         self.conversationRepository = conversationRepository
@@ -76,13 +90,20 @@ class ConversationViewModel {
         self.inviteRepository = inviteRepository
         self.profile = .empty(inboxId: conversation.inboxId)
 
+        Logger.info("🔄 created for conversation: \(conversation.id)")
         fetchLatest()
+        self.displayName = profile.name ?? ""
+        self.conversationName = conversation.name ?? ""
         observe()
 
         KeyboardListener.shared.add(delegate: self)
     }
 
     deinit {
+        Logger.info("🗑️ deallocated for conversation: \(conversation.id)")
+        cancellables.removeAll()
+        loadProfileImageTask?.cancel()
+        loadConversationImageTask?.cancel()
         KeyboardListener.shared.remove(delegate: self)
     }
 
@@ -101,28 +122,37 @@ class ConversationViewModel {
     private func observe() {
         myProfileRepository.myProfilePublisher
             .receive(on: DispatchQueue.main)
-            .assign(to: \.profile, on: self)
+            .sink { [weak self] profile in
+                self?.profile = profile
+            }
             .store(in: &cancellables)
         messagesRepository.messagesPublisher
             .receive(on: DispatchQueue.main)
-            .assign(to: \.messages, on: self)
+            .sink { [weak self] messages in
+                self?.messages = messages
+            }
             .store(in: &cancellables)
         inviteRepository.invitePublisher
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
-            .assign(to: \.invite, on: self)
+            .sink { [weak self] invite in
+                self?.invite = invite
+            }
             .store(in: &cancellables)
         conversationRepository.conversationPublisher
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
-            .assign(to: \.conversation, on: self)
+            .sink { [weak self] conversation in
+                self?.conversation = conversation
+            }
             .store(in: &cancellables)
     }
 
     private func markConversationAsRead() {
-        Task { [localStateWriter] in
+        Task { [weak self, localStateWriter] in
+            guard let self else { return }
             do {
-                try await localStateWriter.setUnread(false, for: conversation.id)
+                try await localStateWriter.setUnread(false, for: self.conversation.id)
             } catch {
                 Logger.error("Error marking conversation as read: \(error.localizedDescription)")
             }
@@ -136,10 +166,15 @@ class ConversationViewModel {
     }
 
     func onConversationNameEndedEditing() {
-        focus = .message
+        onConversationNameEndedEditing(nextFocus: .message)
+    }
 
-        if conversationName != conversation.name {
-            Task { [metadataWriter] in
+    func onConversationNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
+        focus = nextFocus
+
+        if conversationName != (conversation.name ?? "") {
+            Task { [weak self] in
+                guard let self else { return }
                 do {
                     try await metadataWriter.updateGroupName(
                         groupId: conversation.id,
@@ -154,7 +189,8 @@ class ConversationViewModel {
         if let conversationImage = conversationImage {
             ImageCache.shared.setImage(conversationImage, for: conversation)
 
-            Task { [metadataWriter] in
+            Task { [weak self] in
+                guard let self else { return }
                 do {
                     try await metadataWriter.updateGroupImage(
                         conversation: conversation,
@@ -168,6 +204,13 @@ class ConversationViewModel {
     }
 
     func onConversationSettings() {
+        presentingConversationSettings = true
+        focus = nil
+    }
+
+    func onConversationSettingsDismissed() {
+        onConversationNameEndedEditing(nextFocus: nil)
+        presentingConversationSettings = false
     }
 
     func onProfilePhotoTap() {
@@ -177,7 +220,8 @@ class ConversationViewModel {
     func onSendMessage() {
         let prevMessageText = messageText
         messageText = ""
-        Task { [outgoingMessageWriter] in
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 try await outgoingMessageWriter.send(text: prevMessageText)
             } catch {
@@ -186,11 +230,20 @@ class ConversationViewModel {
         }
     }
 
-    func onDisplayNameEndedEditing() {
-        focus = .message
+    func onTapMessage(_ message: AnyMessage) {
+        presentingProfileForMember = message.base.sender
+    }
 
-        if profile.name != displayName {
-            Task { [myProfileWriter] in
+    func onDisplayNameEndedEditing() {
+        onDisplayNameEndedEditing(nextFocus: .message)
+    }
+
+    private func onDisplayNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
+        focus = nextFocus
+
+        if (profile.name ?? "") != displayName {
+            Task { [weak self] in
+                guard let self else { return }
                 do {
                     try await myProfileWriter.update(displayName: displayName)
                 } catch {
@@ -203,7 +256,8 @@ class ConversationViewModel {
         if let profileImage {
             ImageCache.shared.setImage(profileImage, for: profile)
 
-            Task { [myProfileWriter] in
+            Task { [weak self] in
+                guard let self else { return }
                 do {
                     try await myProfileWriter.update(avatar: profileImage)
                 } catch {
@@ -223,6 +277,59 @@ class ConversationViewModel {
     func onDisappear() {
         markConversationAsRead()
     }
+
+    func remove(member: ConversationMember) {
+        guard canRemoveMembers else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await metadataWriter.removeGroupMembers(groupId: conversation.id, memberInboxIds: [member.profile.inboxId])
+            } catch {
+                Logger.error("Error removing member: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func leaveConvo() {
+        do {
+            try session.deleteAccount(inboxId: conversation.inboxId)
+            presentingConversationSettings = false
+            NotificationCenter.default.post(
+                name: .leftConversationNotification,
+                object: nil,
+                userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
+            )
+        } catch {
+            Logger.error("Error leaving convo: \(error.localizedDescription)")
+        }
+    }
+
+    func explodeConvo() {
+        guard canRemoveMembers else { return }
+
+        NotificationCenter.default.post(
+            name: .leftConversationNotification,
+            object: nil,
+            userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
+        )
+
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let memberIdsToRemove = conversation.members
+                    .filter { !$0.isCurrentUser } // @jarodl fix when we have self removal
+                    .map { $0.profile.inboxId }
+                try await metadataWriter.removeGroupMembers(
+                    groupId: conversation.id,
+                    memberInboxIds: memberIdsToRemove
+                )
+                try session.deleteAccount(inboxId: conversation.inboxId)
+                presentingConversationSettings = false
+            } catch {
+                Logger.error("Error exploding convo: \(error.localizedDescription)")
+            }
+        }
+    }
 }
 
 extension ConversationViewModel: Hashable {
@@ -231,7 +338,7 @@ extension ConversationViewModel: Hashable {
     }
 
     static func == (lhs: ConversationViewModel, rhs: ConversationViewModel) -> Bool {
-        return lhs.conversation == rhs.conversation
+        return lhs.conversation.id == rhs.conversation.id
     }
 }
 
@@ -246,6 +353,7 @@ extension ConversationViewModel {
         let messaging = MockMessagingService()
         return .init(
             conversation: .mock(),
+            session: MockInboxesService(),
             myProfileWriter: MockMyProfileWriter(),
             myProfileRepository: messaging,
             conversationRepository: MockConversationRepository(),

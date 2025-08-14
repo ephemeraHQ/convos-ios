@@ -22,6 +22,8 @@ struct ConversationView: View {
     let confirmDeletionBeforeDismissal: Bool
     let messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem
 
+    @Environment(\.dismiss) private var dismiss: DismissAction
+
     init(
         viewModel: ConversationViewModel,
         focusState: FocusState<MessagesViewInputFocus?>.Binding,
@@ -59,6 +61,7 @@ struct ConversationView: View {
             onConversationSettings: viewModel.onConversationSettings,
             onProfilePhotoTap: viewModel.onProfilePhotoTap,
             onSendMessage: viewModel.onSendMessage,
+            onTapMessage: viewModel.onTapMessage(_:),
             onDisplayNameEndedEditing: viewModel.onDisplayNameEndedEditing,
             onProfileSettings: viewModel.onProfileSettings,
             onScanInviteCode: onScanInviteCode,
@@ -78,6 +81,18 @@ struct ConversationView: View {
                     }
                     .buttonBorderShape(.circle)
                 }
+            }
+        }
+        .sheet(item: $viewModel.presentingProfileForMember) { member in
+            NavigationStack {
+                ConversationMemberView(viewModel: viewModel, member: member)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button(role: .cancel) {
+                                viewModel.presentingProfileForMember = nil
+                            }
+                        }
+                    }
             }
         }
         .onAppear(perform: viewModel.onAppear)

@@ -6,7 +6,7 @@ protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
     var draftConversationId: String { get }
     var conversationId: String { get }
     var conversationIdPublisher: AnyPublisher<String, Never> { get }
-    var conversationMetadataWriter: any GroupMetadataWriterProtocol { get }
+    var conversationMetadataWriter: any ConversationMetadataWriterProtocol { get }
 
     func createConversationWhenInboxReady()
     func joinConversationWhenInboxReady(inviteId: String, inviterInboxId: String, inviteCode: String)
@@ -42,7 +42,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     private let isSendingValue: CurrentValueSubject<Bool, Never> = .init(false)
     private let sentMessageSubject: PassthroughSubject<String, Never> = .init()
     private let inviteWriter: any InviteWriterProtocol
-    let conversationMetadataWriter: any GroupMetadataWriterProtocol
+    let conversationMetadataWriter: any ConversationMetadataWriterProtocol
 
     var isSendingPublisher: AnyPublisher<Bool, Never> {
         isSendingValue.eraseToAnyPublisher()
@@ -84,10 +84,23 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         self.conversationIdSubject = .init(draftConversationId)
         self.draftConversationId = draftConversationId
         self.inviteWriter = InviteWriter(databaseWriter: databaseWriter)
-        self.conversationMetadataWriter = GroupMetadataWriter(
+        self.conversationMetadataWriter = ConversationMetadataWriter(
             inboxReadyValue: inboxReadyValue,
             databaseWriter: databaseWriter
         )
+    }
+
+    deinit {
+        cleanup()
+    }
+
+    func cleanup() {
+        clientPublisherCancellable?.cancel()
+        createConversationTask?.cancel()
+        joinConversationTask?.cancel()
+        publishConversationTask?.cancel()
+        streamConversationsTask?.cancel()
+        inboxReadyValue.dispose()
     }
 
     func createConversationWhenInboxReady() {
@@ -100,7 +113,8 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             .eraseToAnyPublisher()
             .sink { [weak self] inboxReady in
                 guard let self else { return }
-                self.createConversationTask = Task {
+                self.createConversationTask = Task { [weak self] in
+                    guard let self else { return }
                     do {
                         try await self.createExternalConversation(
                             client: inboxReady.client,
@@ -124,7 +138,8 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             .sink { [weak self] inboxReady in
                 guard let self else { return }
                 Logger.info("Inbox ready, joining conversation...")
-                self.joinConversationTask = Task {
+                self.joinConversationTask = Task { [weak self] in
+                    guard let self else { return }
                     do {
                         try await self.joinConversation(
                             inviteId: inviteId,
@@ -182,7 +197,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         }
 
         // wait for response
-        streamConversationsTask = Task {
+        streamConversationsTask = Task { [weak self] in
             do {
                 Logger.info("Started streaming conversations for inboxId: \(client.inboxId)")
                 for try await conversation in await client.conversationsProvider.stream(
@@ -191,9 +206,12 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                         Logger.warning("Closing conversations stream for inboxId: \(client.inboxId)...")
                     }
                 ) where try await conversation.members().contains(where: { $0.inboxId == inviterInboxId }) {
+                    guard let self else { return }
+
                     try await conversation.updateConsentState(state: .allowed)
 
-                    Task {
+                    Task { [weak self] in
+                        guard let self else { return }
                         // fetch invite details and save to the DB so the QR code shows when/if we join
                         do {
                             Logger.info("Fetching invite details...")

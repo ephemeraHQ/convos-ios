@@ -4,12 +4,12 @@ import GRDB
 import XMTPiOS
 
 final class MessagingService: MessagingServiceProtocol {
-    let inboxReadyPublisher: InboxReadyResultPublisher
     private let inboxReadyValue: PublisherValue<InboxReadyResult>
     private var clientPublisher: AnyClientProviderPublisher {
-        inboxReadyPublisher.map(\.client).eraseToAnyPublisher()
+        inboxReadyValue.publisher
+            .compactMap { $0?.client }
+            .eraseToAnyPublisher()
     }
-    private let clientValue: PublisherValue<AnyClientProvider>
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
     private var cancellables: Set<AnyCancellable> = []
@@ -17,14 +17,18 @@ final class MessagingService: MessagingServiceProtocol {
     init(inboxReadyPublisher: InboxReadyResultPublisher,
          databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader) {
-        self.clientValue = .init(
-            initial: nil,
-            upstream: inboxReadyPublisher.map(\.client).eraseToAnyPublisher()
-        )
         self.inboxReadyValue = .init(initial: nil, upstream: inboxReadyPublisher)
-        self.inboxReadyPublisher = inboxReadyPublisher
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
+    }
+
+    deinit {
+        cleanup()
+    }
+
+    func cleanup() {
+        cancellables.removeAll()
+        inboxReadyValue.dispose()
     }
 
     // MARK: Invites
@@ -87,7 +91,7 @@ final class MessagingService: MessagingServiceProtocol {
 
     func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
         ConversationConsentWriter(
-            client: clientValue.value,
+            client: inboxReadyValue.value?.client,
             clientPublisher: clientPublisher,
             databaseWriter: databaseWriter
         )
@@ -105,7 +109,7 @@ final class MessagingService: MessagingServiceProtocol {
     }
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
-        OutgoingMessageWriter(client: clientValue.value,
+        OutgoingMessageWriter(client: inboxReadyValue.value?.client,
                               clientPublisher: clientPublisher,
                               databaseWriter: databaseWriter,
                               conversationId: conversationId)
@@ -113,13 +117,15 @@ final class MessagingService: MessagingServiceProtocol {
 
     // MARK: - Group Management
 
-    func groupMetadataWriter() -> any GroupMetadataWriterProtocol {
-        GroupMetadataWriter(inboxReadyValue: inboxReadyValue,
-                            databaseWriter: databaseWriter)
+    func groupMetadataWriter() -> any ConversationMetadataWriterProtocol {
+        ConversationMetadataWriter(
+            inboxReadyValue: inboxReadyValue,
+            databaseWriter: databaseWriter
+        )
     }
 
     func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
-        GroupPermissionsRepository(client: clientValue.value,
+        GroupPermissionsRepository(client: inboxReadyValue.value?.client,
                                    clientPublisher: clientPublisher,
                                    databaseReader: databaseReader)
     }

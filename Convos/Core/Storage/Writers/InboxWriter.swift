@@ -106,7 +106,6 @@ final class InboxWriter: InboxWriterProtocol {
             let conversations = DBConversation.filter(DBConversation.Columns.inboxId == inboxId)
             try inbox.delete(db)
             try conversations.deleteAll(db)
-            Logger.info("Successfully deleted inbox \(inbox.inboxId)")
         }
     }
 }

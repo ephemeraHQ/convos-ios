@@ -9,14 +9,15 @@ typealias AnyClientProviderPublisher = AnyPublisher<AnyClientProvider, Never>
 
 enum SessionManagerError: Error {
     case missingOperationForAddedInbox
+    case inboxNotFound
 }
 
 class SessionManager: SessionManagerProtocol {
     let authState: AnyPublisher<AuthServiceState, Never>
-    let inboxesRepository: any InboxesRepositoryProtocol
     private let currentSessionRepository: any CurrentSessionRepositoryProtocol
     private let inboxOperationsPublisher: CurrentValueSubject<[any AuthorizeInboxOperationProtocol], Never> = .init([])
     private var cancellables: Set<AnyCancellable> = []
+    private var leftConversationObserver: Any?
 
     // Dictionary to track operations by provider ID to prevent duplicates
     private var operationsByProviderId: [String: any AuthorizeInboxOperationProtocol] = [:]
@@ -32,13 +33,13 @@ class SessionManager: SessionManagerProtocol {
          environment: AppEnvironment) {
         self.databaseWriter = databaseWriter
         self.databaseReader = databaseReader
-        self.inboxesRepository = InboxesRepository(databaseReader: databaseReader)
         self.authService = authService
         self.environment = environment
         let currentSessionRepository = CurrentSessionRepository(dbReader: databaseReader)
         self.currentSessionRepository = currentSessionRepository
         self.authState = authService.authStatePublisher
             .eraseToAnyPublisher()
+        observe()
         authState
             .sink { [weak self] authState in
                 do {
@@ -48,6 +49,18 @@ class SessionManager: SessionManagerProtocol {
                 }
             }
             .store(in: &cancellables)
+    }
+
+    deinit {
+        if let leftConversationObserver {
+            NotificationCenter.default.removeObserver(leftConversationObserver)
+        }
+        cleanup()
+    }
+
+    func cleanup() {
+        cancellables.removeAll()
+        clearAllOperations()
     }
 
     // MARK: - Private Methods
@@ -75,13 +88,16 @@ class SessionManager: SessionManagerProtocol {
         displayName: String? = nil
     ) throws {
         // @jarodl revisit how we're responding to auth state changes
-        //        let incomingProviderIds = Set(inboxes.map { $0.providerId })
-//        let providerIdsToRemove = operationsByProviderId.keys.filter { !incomingProviderIds.contains($0) }
-//        for providerId in providerIdsToRemove {
-//            if let operation = operationsByProviderId.removeValue(forKey: providerId) {
-//                operation.stop()
-//            }
-//        }
+        if !forRegistration {
+            let incomingProviderIds = Set(inboxes.map { $0.providerId })
+            let providerIdsToRemove = operationsByProviderId.keys.filter { !incomingProviderIds.contains($0) }
+            for providerId in providerIdsToRemove {
+                Logger.info("Stopping inbox operation for provider: \(providerId)")
+                if let operation = operationsByProviderId.removeValue(forKey: providerId) {
+                    operation.stop()
+                }
+            }
+        }
 
         // Create or update operations for inboxes
         for inbox in inboxes {
@@ -120,6 +136,26 @@ class SessionManager: SessionManagerProtocol {
         inboxOperationsPublisher.send([])
     }
 
+    private func observe() {
+        leftConversationObserver = NotificationCenter.default
+            .addObserver(forName: .leftConversationNotification, object: nil, queue: .main) { [weak self] notification in
+                guard let self else { return }
+                guard let inboxId: String = notification.userInfo?["inboxId"] as? String else {
+                    return
+                }
+                do {
+                    try deleteAccount(inboxId: inboxId)
+                } catch {
+                    Logger
+                        .error(
+                            "Error deleting account from left conversation notification: \(error.localizedDescription)"
+                        )
+                }
+            }
+    }
+
+    // MARK: Public
+
     func prepare() throws {
         try authService.prepare()
     }
@@ -147,7 +183,17 @@ class SessionManager: SessionManagerProtocol {
         )
     }
 
-    func deleteAccount(with providerId: String) throws {
+    func deleteAccount(inboxId: String) throws {
+        let inbox: DBInbox? = try databaseReader.read { db in
+            try DBInbox.fetchOne(db, key: inboxId)
+        }
+        guard let inbox else {
+            throw SessionManagerError.inboxNotFound
+        }
+        try deleteAccount(providerId: inbox.providerId)
+    }
+
+    func deleteAccount(providerId: String) throws {
         if let operation = operationsByProviderId[providerId] {
             operation.deleteAndStop()
         }

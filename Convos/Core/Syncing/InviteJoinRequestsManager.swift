@@ -22,22 +22,29 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                                                      messageWriter: messageWriter)
     }
 
+    deinit {
+        streamMessagesTask?.cancel()
+        streamMessagesTask = nil
+    }
+
     func start(with client: AnyClientProvider,
                apiClient: any ConvosAPIClientProtocol) {
-        streamMessagesTask = Task {
+        streamMessagesTask = Task { [weak self, client] in
             do {
+                Logger.info("Started streaming messages...")
                 for try await message in await client.conversationsProvider
                     .streamAllMessages(
-                        type: .all,
+                        type: .dms,
                         consentStates: [.unknown],
                         onClose: {
                             Logger.warning("Closing streamAllMessages...")
                         }
                     ) {
+                    guard let self else { return }
                     do {
                         let dbMessage = try message.dbRepresentation()
                         guard let inviteCode = dbMessage.text else {
-                            return
+                            continue
                         }
                         let dbConversation: DBConversation? = try await databaseReader.read { db in
                             guard let invite = try DBInvite
@@ -56,14 +63,14 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                         }
 
                         guard let dbConversation else {
-                            return
+                            continue
                         }
 
                         guard let conversation = try await client.conversationsProvider.findConversation(
                             conversationId: dbConversation.id
                         ) else {
                             Logger.warning("Conversation not found on XMTP")
-                            return
+                            continue
                         }
 
                         switch conversation {

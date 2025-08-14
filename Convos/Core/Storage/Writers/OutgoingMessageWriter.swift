@@ -42,6 +42,14 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
         self.conversationId = conversationId
     }
 
+    deinit {
+        cleanup()
+    }
+
+    func cleanup() {
+        clientValue.dispose()
+    }
+
     func send(text: String) async throws {
         guard let client = clientValue.value else {
             throw InboxStateError.inboxNotReady

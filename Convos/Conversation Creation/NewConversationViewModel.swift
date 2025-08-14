@@ -3,7 +3,7 @@ import SwiftUI
 
 @Observable
 class NewConversationViewModel: SelectableConversationViewModelType, Identifiable {
-    override var selectedConversation: ConversationViewModel? {
+    override var selectedConversationViewModel: ConversationViewModel? {
         get {
             conversationViewModel
         }
@@ -40,12 +40,21 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         super.init()
     }
 
+    deinit {
+        Logger.info("🧹 deinit")
+        cancellables.removeAll()
+        newConversationTask?.cancel()
+        joinConversationTask?.cancel()
+        conversationViewModel = nil
+    }
+
     // MARK: - Actions
 
     func newConversation() {
         guard addAccountResult == nil else { return }
         newConversationTask?.cancel()
-        newConversationTask = Task {
+        newConversationTask = Task { [weak self] in
+            guard let self else { return }
             do {
                 let addAccountResult = try session.addAccount()
                 self.addAccountResult = addAccountResult
@@ -75,12 +84,14 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
     }
 
     func deleteConversation() {
+        Logger.info("🗑️ Deleting conversation in NewConversationViewModel")
         newConversationTask?.cancel()
         draftConversationComposer = nil
         conversationViewModel = nil
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             guard let addAccountResult else { return }
-            try session.deleteAccount(with: addAccountResult.providerId)
+            try session.deleteAccount(providerId: addAccountResult.providerId)
             self.addAccountResult = nil
         }
     }
@@ -89,7 +100,8 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
 
     private func joinConversation(inviteId: String, inboxId: String, inviteCode: String) {
         joinConversationTask?.cancel()
-        joinConversationTask = Task {
+        joinConversationTask = Task { [weak self] in
+            guard let self else { return }
             do {
                 if self.addAccountResult == nil {
                     Logger.info("No account found, creating one while joining conversation...")
@@ -168,6 +180,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         )
         let viewModel: ConversationViewModel = .init(
             conversation: draftConversation,
+            session: session,
             myProfileWriter: draftConversationComposer.myProfileWriter,
             myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
             conversationRepository: draftConversationComposer.draftConversationRepository,

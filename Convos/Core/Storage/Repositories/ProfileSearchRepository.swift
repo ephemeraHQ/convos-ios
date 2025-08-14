@@ -42,6 +42,14 @@ class ProfileSearchRepository: ProfileSearchRepositoryProtocol {
         self.inboxReadyValue = .init(initial: inboxReady, upstream: inboxReadyPublisher)
     }
 
+    deinit {
+        cleanup()
+    }
+
+    func cleanup() {
+        inboxReadyValue.dispose()
+    }
+
     func search(using query: String) async throws -> [ProfileSearchResult] {
         guard let result = inboxReadyValue.value else {
             throw InboxStateError.inboxNotReady

@@ -6,7 +6,7 @@ import XMTPiOS
 
 // MARK: - Group Metadata Writer Protocol
 
-protocol GroupMetadataWriterProtocol {
+protocol ConversationMetadataWriterProtocol {
     func updateGroupName(groupId: String, name: String) async throws
     func updateGroupDescription(groupId: String, description: String) async throws
     func updateGroupImageUrl(groupId: String, imageURL: String) async throws
@@ -21,7 +21,7 @@ protocol GroupMetadataWriterProtocol {
 
 // MARK: - Group Metadata Writer Implementation
 
-final class GroupMetadataWriter: GroupMetadataWriterProtocol {
+final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     private let inboxReadyValue: PublisherValue<InboxReadyResult>
     private let databaseWriter: any DatabaseWriter
 
@@ -29,6 +29,14 @@ final class GroupMetadataWriter: GroupMetadataWriterProtocol {
          databaseWriter: any DatabaseWriter) {
         self.inboxReadyValue = inboxReadyValue
         self.databaseWriter = databaseWriter
+    }
+
+    deinit {
+        cleanup()
+    }
+
+    func cleanup() {
+        inboxReadyValue.dispose()
     }
 
     // MARK: - Group Metadata Updates

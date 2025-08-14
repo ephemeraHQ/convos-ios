@@ -4,15 +4,25 @@ import Observation
 
 @Observable
 class SelectableConversationViewModelType {
-    var selectedConversation: ConversationViewModel?
+    var selectedConversationViewModel: ConversationViewModel?
 }
 
 @Observable
 final class ConversationsViewModel: SelectableConversationViewModelType {
-    private(set) var conversations: [Conversation]
-    private(set) var conversationsCount: Int = 0
+    // MARK: - Public
 
+    var selectedConversation: Conversation? {
+        didSet {
+            if let selectedConversation {
+                selectedConversationViewModel = conversationViewModel(for: selectedConversation)
+            } else {
+                selectedConversationViewModel = nil
+            }
+        }
+    }
     var newConversationViewModel: NewConversationViewModel?
+    private(set) var conversations: [Conversation] = []
+    private(set) var conversationsCount: Int = 0
 
     var pinnedConversations: [Conversation] {
         conversations.filter { $0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
@@ -21,10 +31,13 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
         conversations.filter { !$0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
     }
 
+    // MARK: - Private
+
     private let session: any SessionManagerProtocol
     private let conversationsRepository: any ConversationsRepositoryProtocol
     private let conversationsCountRepository: any ConversationsCountRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = .init()
+    private var leftConversationObserver: Any?
 
     init(
         session: any SessionManagerProtocol,
@@ -45,6 +58,13 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
         observe()
     }
 
+    deinit {
+        if let leftConversationObserver {
+            NotificationCenter.default.removeObserver(leftConversationObserver)
+        }
+        cancellables.removeAll()
+    }
+
     func onStartConvo() {
         newConversationViewModel = .init(session: session)
     }
@@ -53,10 +73,32 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
         newConversationViewModel = .init(session: session, showScannerOnAppear: true)
     }
 
+    func deleteAllAccounts() {
+        do {
+            try session.deleteAllAccounts()
+        } catch {
+            Logger.error("Error deleting all accounts: \(error)")
+        }
+    }
+
+    func leave(conversation: Conversation) {
+        do {
+            try session.deleteAccount(inboxId: conversation.inboxId)
+            NotificationCenter.default.post(
+                name: .leftConversationNotification,
+                object: nil,
+                userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
+            )
+        } catch {
+            Logger.error("Error leaving convo: \(error.localizedDescription)")
+        }
+    }
+
     func conversationViewModel(for conversation: Conversation) -> ConversationViewModel {
         let messagingService = session.messagingService(for: conversation.inboxId)
         return .init(
             conversation: conversation,
+            session: session,
             myProfileWriter: messagingService.myProfileWriter(),
             myProfileRepository: messagingService.myProfileRepository(),
             conversationRepository: messagingService.conversationRepository(for: conversation.id),
@@ -70,6 +112,20 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
     }
 
     private func observe() {
+        leftConversationObserver = NotificationCenter.default
+            .addObserver(forName: .leftConversationNotification, object: nil, queue: .main) { [weak self] notification in
+                guard let self else { return }
+                guard let conversationId: String = notification.userInfo?["conversationId"] as? String else {
+                    return
+                }
+                Logger.info("📢 Left conversation notification received for conversation: \(conversationId)")
+                if selectedConversation?.id == conversationId {
+                    selectedConversation = nil
+                }
+                if newConversationViewModel?.selectedConversationViewModel?.conversation.id == conversationId {
+                    newConversationViewModel = nil
+                }
+            }
         conversationsCountRepository.conversationsCount
             .receive(on: DispatchQueue.main)
             .sink { [weak self] conversationsCount in

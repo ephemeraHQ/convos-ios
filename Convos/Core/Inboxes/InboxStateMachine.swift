@@ -245,8 +245,8 @@ actor InboxStateMachine {
                 (.registering, let .authorized(result)):
                 try handleAuthorized(client: result.client, apiClient: result.apiClient)
             case (let .ready(result), .delete):
-                try await handleDelete(inboxId: result.client.inboxId)
-            case (.ready, .stop), (.error, .stop):
+                try await handleDelete(client: result.client)
+            case (.ready, .stop), (.error, .stop), (.deleting, .stop):
                 try handleStop()
             case (.uninitialized, .stop):
                 break
@@ -378,17 +378,25 @@ actor InboxStateMachine {
         }
     }
 
-    private func handleDelete(inboxId: String) async throws {
+    private func handleDelete(client: any XMTPClientProvider) async throws {
+        Logger.info("Deleting inbox '\(client.inboxId)'...")
+
         // Ensure backend unregister occurs while we're still authorized/ready
         if case .ready = _state {
             await unregisterInstallationIfReady()
         }
+
         _state = .deleting
-        try await inboxWriter.deleteInbox(inboxId: inboxId)
+        syncingManager.stop()
+        inviteJoinRequestsManager.stop()
+        try client.deleteLocalDatabase()
+        try await inboxWriter.deleteInbox(inboxId: client.inboxId)
+        Logger.info("Successfully deleted inbox \(client.inboxId)")
         enqueueAction(.stop)
     }
 
     private func handleStop() throws {
+        Logger.info("Stopping inbox with providerId '\(inbox.providerId)'...")
         _state = .stopping
         removeObservers()
         _state = .uninitialized

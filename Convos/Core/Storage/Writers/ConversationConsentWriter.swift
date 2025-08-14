@@ -19,16 +19,26 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
         }
     }
 
-    private let databaseWriter: any DatabaseWriter
+    private let client: AnyClientProvider?
     private let clientPublisher: AnyClientProviderPublisher
     private let clientValue: PublisherValue<AnyClientProvider>
+    private let databaseWriter: any DatabaseWriter
 
     init(client: AnyClientProvider?,
          clientPublisher: AnyClientProviderPublisher,
          databaseWriter: any DatabaseWriter) {
-        self.clientValue = .init(initial: client, upstream: clientPublisher)
+        self.client = client
         self.clientPublisher = clientPublisher
+        self.clientValue = .init(initial: client, upstream: clientPublisher)
         self.databaseWriter = databaseWriter
+    }
+
+    deinit {
+        cleanup()
+    }
+
+    func cleanup() {
+        clientValue.dispose()
     }
 
     func join(conversation: Conversation) async throws {
