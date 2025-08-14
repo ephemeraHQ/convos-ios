@@ -52,6 +52,12 @@ class SessionManager: SessionManagerProtocol {
 
     deinit {
         NotificationCenter.default.removeObserver(self, name: .leftConversationNotification, object: nil)
+        cleanup()
+    }
+
+    func cleanup() {
+        cancellables.removeAll()
+        clearAllOperations()
     }
 
     // MARK: - Private Methods

@@ -19,6 +19,14 @@ class MyProfileWriter: MyProfileWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
+    deinit {
+        cleanup()
+    }
+
+    func cleanup() {
+        inboxReadyValue.dispose()
+    }
+
     func update(displayName: String) async throws {
         guard let inboxReady = inboxReadyValue.value else {
             return

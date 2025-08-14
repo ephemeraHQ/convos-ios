@@ -22,9 +22,14 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                                                      messageWriter: messageWriter)
     }
 
+    deinit {
+        streamMessagesTask?.cancel()
+        streamMessagesTask = nil
+    }
+
     func start(with client: AnyClientProvider,
                apiClient: any ConvosAPIClientProtocol) {
-        streamMessagesTask = Task {
+        streamMessagesTask = Task { [weak self, client] in
             do {
                 Logger.info("Started streaming messages...")
                 for try await message in await client.conversationsProvider
@@ -35,6 +40,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                             Logger.warning("Closing streamAllMessages...")
                         }
                     ) {
+                    guard let self else { return }
                     do {
                         let dbMessage = try message.dbRepresentation()
                         guard let inviteCode = dbMessage.text else {

@@ -388,10 +388,7 @@ actor InboxStateMachine {
 
         _state = .deleting
         syncingManager.stop()
-        try await client.revokeInstallations(
-            signingKey: inbox.signingKey,
-            installationIds: [client.installationId]
-        )
+        inviteJoinRequestsManager.stop()
         try client.deleteLocalDatabase()
         try await inboxWriter.deleteInbox(inboxId: client.inboxId)
         Logger.info("Successfully deleted inbox \(client.inboxId)")

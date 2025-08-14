@@ -31,6 +31,14 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
+    deinit {
+        cleanup()
+    }
+
+    func cleanup() {
+        inboxReadyValue.dispose()
+    }
+
     // MARK: - Group Metadata Updates
 
     func updateGroupName(groupId: String, name: String) async throws {

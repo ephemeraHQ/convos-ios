@@ -32,8 +32,9 @@ final class SyncingManager: SyncingManagerProtocol {
     }
 
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
-        listConversationsTask = Task {
+        listConversationsTask = Task { [weak self, consentStates] in
             do {
+                guard let self else { return }
                 do {
                     _ = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
                 } catch {
@@ -50,9 +51,10 @@ final class SyncingManager: SyncingManagerProtocol {
                 for chunk in conversations.chunked(into: maxConcurrentTasks) {
                     try await withThrowingTaskGroup(of: Void.self) { group in
                         for conversation in chunk {
-                            group.addTask {
+                            group.addTask { [weak self] in
+                                guard let self else { return }
                                 if case .group = conversation {
-                                    try await self.conversationWriter.store(conversation: conversation)
+                                    try await conversationWriter.store(conversation: conversation)
                                 } else {
                                     Logger.info("Listed DM, ignoring...")
                                 }
@@ -65,7 +67,7 @@ final class SyncingManager: SyncingManagerProtocol {
                 Logger.error("Error syncing conversations: \(error)")
             }
         }
-        streamMessagesTask = Task {
+        streamMessagesTask = Task { [weak self, consentStates] in
             do {
                 for try await message in await client.conversationsProvider
                     .streamAllMessages(
@@ -75,6 +77,7 @@ final class SyncingManager: SyncingManagerProtocol {
                             Logger.warning("Closing messages stream for inboxId: \(client.inboxId)...")
                         }
                     ) {
+                    guard let self else { return }
                     guard let conversation = try await client.conversationsProvider.findConversation(
                         conversationId: message.conversationId
                     ) else {
@@ -92,7 +95,7 @@ final class SyncingManager: SyncingManagerProtocol {
                 Logger.error("Error streaming all messages: \(error)")
             }
         }
-        streamConversationsTask = Task {
+        streamConversationsTask = Task { [weak self] in
             do {
                 for try await conversation in await client.conversationsProvider.stream(
                     type: .groups,
@@ -100,6 +103,7 @@ final class SyncingManager: SyncingManagerProtocol {
                         Logger.warning("Closing conversations stream for inboxId: \(client.inboxId)...")
                     }
                 ) {
+                    guard let self else { return }
                     syncMemberProfiles(apiClient: apiClient, for: [conversation])
                     Logger.info("Syncing conversation with id: \(conversation.id)")
                     try await conversationWriter.store(conversation: conversation)
@@ -143,7 +147,8 @@ final class SyncingManager: SyncingManagerProtocol {
         apiClient: any ConvosAPIClientProtocol,
         for conversations: [XMTPiOS.Conversation]
     ) {
-        let syncProfilesTask = Task {
+        let syncProfilesTask = Task { [weak self] in
+            guard let self else { return }
             do {
                 let allMemberIds = try await withThrowingTaskGroup(
                     of: [XMTPiOS.Member].self,
@@ -162,7 +167,8 @@ final class SyncingManager: SyncingManagerProtocol {
                 }
                 let maxMembersPerChunk = 100
                 for chunk in allMemberIds.chunked(into: maxMembersPerChunk) {
-                    let chunkTask = Task {
+                    let chunkTask = Task { [weak self] in
+                        guard let self else { return }
                         do {
                             let batchProfiles = try await apiClient.getProfiles(for: chunk)
                             let profiles = Array(batchProfiles.profiles.values)

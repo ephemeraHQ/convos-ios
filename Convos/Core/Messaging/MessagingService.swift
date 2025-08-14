@@ -22,6 +22,15 @@ final class MessagingService: MessagingServiceProtocol {
         self.databaseWriter = databaseWriter
     }
 
+    deinit {
+        cleanup()
+    }
+
+    func cleanup() {
+        cancellables.removeAll()
+        inboxReadyValue.dispose()
+    }
+
     // MARK: Invites
 
     func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {

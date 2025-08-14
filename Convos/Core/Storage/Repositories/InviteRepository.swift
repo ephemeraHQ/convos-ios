@@ -7,11 +7,15 @@ protocol InviteRepositoryProtocol {
 }
 
 class InviteRepository: InviteRepositoryProtocol {
-    lazy var invitePublisher: AnyPublisher<Invite?, Never> = {
-        conversationIdPublisher
+    let invitePublisher: AnyPublisher<Invite?, Never>
+
+    init(databaseReader: any DatabaseReader,
+         conversationId: String,
+         conversationIdPublisher: AnyPublisher<String, Never>) {
+        self.invitePublisher = conversationIdPublisher
             .map { [databaseReader] conversationId in
                 ValueObservation
-                    .tracking { [weak self] db in
+                    .tracking { db in
                         try DBInvite
                             .filter(DBInvite.Columns.conversationId == conversationId)
                             .fetchOne(db)?
@@ -23,15 +27,5 @@ class InviteRepository: InviteRepositoryProtocol {
             }
             .switchToLatest()
             .eraseToAnyPublisher()
-    }()
-
-    private let databaseReader: any DatabaseReader
-    private let conversationIdPublisher: AnyPublisher<String, Never>
-
-    init(databaseReader: any DatabaseReader,
-         conversationId: String,
-         conversationIdPublisher: AnyPublisher<String, Never>) {
-        self.databaseReader = databaseReader
-        self.conversationIdPublisher = conversationIdPublisher
     }
 }

@@ -35,7 +35,6 @@ class ConversationViewModel {
     var invite: Invite = .empty
     var profile: Profile {
         didSet {
-            Logger.info("Updated profile: \(profile)")
             displayName = profile.name ?? ""
         }
     }
@@ -90,6 +89,7 @@ class ConversationViewModel {
         self.inviteRepository = inviteRepository
         self.profile = .empty(inboxId: conversation.inboxId)
 
+        Logger.info("🔄 created for conversation: \(conversation.id)")
         fetchLatest()
         observe()
 
@@ -97,6 +97,15 @@ class ConversationViewModel {
     }
 
     deinit {
+        Logger.info("🗑️ deallocated for conversation: \(conversation.id)")
+        cleanup()
+    }
+
+    func cleanup() {
+        Logger.info("🧹 cleanup for conversation: \(conversation.id)")
+        cancellables.removeAll()
+        loadProfileImageTask?.cancel()
+        loadConversationImageTask?.cancel()
         KeyboardListener.shared.remove(delegate: self)
     }
 
@@ -115,28 +124,37 @@ class ConversationViewModel {
     private func observe() {
         myProfileRepository.myProfilePublisher
             .receive(on: DispatchQueue.main)
-            .assign(to: \.profile, on: self)
+            .sink { [weak self] profile in
+                self?.profile = profile
+            }
             .store(in: &cancellables)
         messagesRepository.messagesPublisher
             .receive(on: DispatchQueue.main)
-            .assign(to: \.messages, on: self)
+            .sink { [weak self] messages in
+                self?.messages = messages
+            }
             .store(in: &cancellables)
         inviteRepository.invitePublisher
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
-            .assign(to: \.invite, on: self)
+            .sink { [weak self] invite in
+                self?.invite = invite
+            }
             .store(in: &cancellables)
         conversationRepository.conversationPublisher
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
-            .assign(to: \.conversation, on: self)
+            .sink { [weak self] conversation in
+                self?.conversation = conversation
+            }
             .store(in: &cancellables)
     }
 
     private func markConversationAsRead() {
-        Task { [localStateWriter] in
+        Task { [weak self, localStateWriter] in
+            guard let self else { return }
             do {
-                try await localStateWriter.setUnread(false, for: conversation.id)
+                try await localStateWriter.setUnread(false, for: self.conversation.id)
             } catch {
                 Logger.error("Error marking conversation as read: \(error.localizedDescription)")
             }
@@ -157,7 +175,8 @@ class ConversationViewModel {
         focus = nextFocus
 
         if conversationName != conversation.name {
-            Task { [metadataWriter] in
+            Task { [weak self] in
+                guard let self else { return }
                 do {
                     try await metadataWriter.updateGroupName(
                         groupId: conversation.id,
@@ -172,7 +191,8 @@ class ConversationViewModel {
         if let conversationImage = conversationImage {
             ImageCache.shared.setImage(conversationImage, for: conversation)
 
-            Task { [metadataWriter] in
+            Task { [weak self] in
+                guard let self else { return }
                 do {
                     try await metadataWriter.updateGroupImage(
                         conversation: conversation,
@@ -202,7 +222,8 @@ class ConversationViewModel {
     func onSendMessage() {
         let prevMessageText = messageText
         messageText = ""
-        Task { [outgoingMessageWriter] in
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 try await outgoingMessageWriter.send(text: prevMessageText)
             } catch {
@@ -219,7 +240,8 @@ class ConversationViewModel {
         focus = nextFocus
 
         if profile.name != displayName {
-            Task { [myProfileWriter] in
+            Task { [weak self] in
+                guard let self else { return }
                 do {
                     try await myProfileWriter.update(displayName: displayName)
                 } catch {
@@ -232,7 +254,8 @@ class ConversationViewModel {
         if let profileImage {
             ImageCache.shared.setImage(profileImage, for: profile)
 
-            Task { [myProfileWriter] in
+            Task { [weak self] in
+                guard let self else { return }
                 do {
                     try await myProfileWriter.update(avatar: profileImage)
                 } catch {
@@ -255,7 +278,8 @@ class ConversationViewModel {
 
     func remove(member: ConversationMember) {
         guard canRemoveMembers else { return }
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 try await metadataWriter.removeGroupMembers(groupId: conversation.id, memberInboxIds: [member.profile.inboxId])
             } catch {
@@ -287,7 +311,8 @@ class ConversationViewModel {
             userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
         )
 
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 let memberIdsToRemove = conversation.members
                     .filter { !$0.isCurrentUser } // @jarodl fix when we have self removal

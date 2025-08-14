@@ -3,6 +3,7 @@ import Combine
 final class PublisherValue<T> {
     private let subject: CurrentValueSubject<T?, Never>
     private var cancellable: AnyCancellable?
+    private var isDisposed: Bool = false
 
     var value: T? {
         subject.value
@@ -20,7 +21,14 @@ final class PublisherValue<T> {
     }
 
     deinit {
+        dispose()
+    }
+
+    func dispose() {
+        guard !isDisposed else { return }
+        isDisposed = true
         cancellable?.cancel()
         cancellable = nil
+        subject.send(completion: .finished)
     }
 }

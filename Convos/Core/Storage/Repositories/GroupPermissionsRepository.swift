@@ -115,14 +115,26 @@ struct GroupMemberInfo {
 // MARK: - Group Permissions Repository Implementation
 
 final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
+    private let client: AnyClientProvider?
+    private let clientPublisher: AnyClientProviderPublisher
     private let clientValue: PublisherValue<AnyClientProvider>
     private let databaseReader: any DatabaseReader
 
     init(client: AnyClientProvider?,
          clientPublisher: AnyClientProviderPublisher,
          databaseReader: any DatabaseReader) {
+        self.client = client
+        self.clientPublisher = clientPublisher
         self.clientValue = .init(initial: client, upstream: clientPublisher)
         self.databaseReader = databaseReader
+    }
+
+    deinit {
+        cleanup()
+    }
+
+    func cleanup() {
+        clientValue.dispose()
     }
 
     // MARK: - Public Methods

@@ -9,10 +9,11 @@ class SelectableConversationViewModelType {
 
 @Observable
 final class ConversationsViewModel: SelectableConversationViewModelType {
-    private(set) var conversations: [Conversation]
-    private(set) var conversationsCount: Int = 0
+    // MARK: - Public
 
     var newConversationViewModel: NewConversationViewModel?
+    private(set) var conversations: [Conversation] = []
+    private(set) var conversationsCount: Int = 0
 
     var pinnedConversations: [Conversation] {
         conversations.filter { $0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
@@ -20,6 +21,8 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
     var unpinnedConversations: [Conversation] {
         conversations.filter { !$0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
     }
+
+    // MARK: - Private
 
     private let session: any SessionManagerProtocol
     private let conversationsRepository: any ConversationsRepositoryProtocol
@@ -47,6 +50,7 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
 
     deinit {
         NotificationCenter.default.removeObserver(self, name: .leftConversationNotification, object: nil)
+        cancellables.removeAll()
     }
 
     func onStartConvo() {
@@ -89,6 +93,7 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
                 guard let conversationId: String = notification.userInfo?["conversationId"] as? String else {
                     return
                 }
+                Logger.info("📢 Left conversation notification received for conversation: \(conversationId)")
                 if selectedConversation?.conversation.id == conversationId {
                     selectedConversation = nil
                 }
