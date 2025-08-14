@@ -24,7 +24,7 @@ class InviteWriter: InviteWriterProtocol {
             usesCount: 0,
             status: .active, // @jarodl do we want this to come back from the public API endpoint?
             createdAt: Date(),
-            inboxId: inboxId
+            autoApprove: true
         )
         try await databaseWriter.write { db in
             try dbInvite.save(db)
@@ -41,7 +41,7 @@ class InviteWriter: InviteWriterProtocol {
             usesCount: invite.usesCount,
             status: invite.status.inviteStatus,
             createdAt: invite.createdAt,
-            inboxId: inboxId
+            autoApprove: invite.autoApprove
         )
         try await databaseWriter.write { db in
             try dbInvite.save(db)

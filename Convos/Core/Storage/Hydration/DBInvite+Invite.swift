@@ -10,7 +10,7 @@ extension DBInvite {
             createdAt: createdAt,
             maxUses: maxUses,
             usesCount: usesCount,
-            inboxId: inboxId
+            autoApprove: autoApprove
         )
     }
 }

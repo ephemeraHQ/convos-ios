@@ -45,8 +45,8 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         )
     }
 
-    func publicInviteDetails(_ inviteId: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
-        .init(id: "invite_123", name: "My Invite", description: "My fun group chat", imageUrl: nil, inviteLinkURL: "http://convos.org/invite/123456")
+    func publicInviteDetails(_ code: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
+        .init(id: "invite_123", name: "My Invite", description: "My fun group chat", imageUrl: nil, inviteLinkURL: "http://convos.org/join/123456")
     }
 
     var identifier: String {
@@ -100,7 +100,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         )
     }
 
-    func createInvite(_ requestBody: ConvosAPI.CreateInviteRequest) async throws -> ConvosAPI.InviteDetailsResponse {
+    func createInvite(_ requestBody: ConvosAPI.CreateInviteCode) async throws -> ConvosAPI.InviteDetailsResponse {
         return ConvosAPI
             .InviteDetailsResponse(
                 id: "created_invite_123",
@@ -114,7 +114,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
                 autoApprove: false,
                 groupId: "my_group_123",
                 createdAt: Date(),
-                inviteLinkURL: "http://convos.org/invite/my_group_123"
+                inviteLinkURL: "http://convos.org/join/my_group_123"
             )
     }
 
@@ -132,7 +132,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
                 autoApprove: false,
                 groupId: "my_group_123",
                 createdAt: Date(),
-                inviteLinkURL: "http://convos.org/invite/my_group_123"
+                inviteLinkURL: "http://convos.org/join/my_group_123"
             )
     }
 
@@ -197,6 +197,10 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
                 identityAddress: "0xMOCKADDRESSSEARCH1"
             )
         ]
+    }
+
+    func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse {
+        .init(id: UUID().uuidString, inviteId: inviteCode, createdAt: Date().ISO8601Format())
     }
 
     func uploadAttachment(

@@ -70,7 +70,7 @@ extension Invite {
             createdAt: .distantFuture,
             maxUses: 0,
             usesCount: 0,
-            inboxId: ""
+            autoApprove: false
         )
     }
 
@@ -78,12 +78,12 @@ extension Invite {
         .init(
             code: "invite_code_123",
             conversationId: "conversation_123",
-            inviteUrlString: "http://convos.org/invite/invite_code_123",
+            inviteUrlString: "http://convos.org/join/invite_code_123",
             status: .active,
             createdAt: Date(),
             maxUses: 0,
             usesCount: 0,
-            inboxId: "0x123456"
+            autoApprove: false
         )
     }
 }

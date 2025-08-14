@@ -6,8 +6,7 @@ class MockDraftConversationWriter: DraftConversationWriterProtocol {
         MockGroupMetadataWriter()
     }
 
-    func joinConversationWhenInboxReady(inviteId: String, inviterInboxId: String, inviteCode: String) {
-    }
+    func requestToJoinWhenInboxReady(inviteCode: String) {}
 
     var isSendingPublisher: AnyPublisher<Bool, Never> {
         Just(false).eraseToAnyPublisher()

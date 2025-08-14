@@ -22,7 +22,7 @@ struct InviteView: View {
         VStack {
             Group {
                 QRCodeView(
-                    identifier: invite.temporaryInviteString, // invite.inviteUrlString, @jarodl temporary
+                    identifier: invite.inviteUrlString,
                     backgroundColor: .colorFillMinimal
                 )
                 .frame(maxWidth: 220, maxHeight: 220)

@@ -79,7 +79,6 @@ extension SharedDatabaseMigrator {
                 t.column("imageURLString", .text)
 
                 t.uniqueKey(["id", "inboxId"])
-//                t.primaryKey(["id", "inboxId"])
             }
 
             try db.create(table: "memberProfile") { t in
@@ -110,7 +109,9 @@ extension SharedDatabaseMigrator {
                     .notNull()
                 t.column("createdAt", .datetime)
                     .notNull()
-                t.column("inboxId", .text).notNull() // @jarodl temporary
+                t.column("autoApprove", .boolean)
+                    .notNull()
+                    .defaults(to: false)
             }
 
             try db.create(table: "conversation_members") { t in

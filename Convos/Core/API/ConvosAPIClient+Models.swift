@@ -77,11 +77,9 @@ enum ConvosAPI {
         let imageUrl: String?
         let maxUses: Int?
         let expiresAt: Date?
-        let autoApprove: Bool = false
-        let notificationTargets: [String] = []
+        let autoApprove: Bool
+        let notificationTargets: [String]
     }
-
-    // Deprecated: Request body no longer needed; request uses inviteId only
 
     struct RequestToJoinResponse: Decodable {
         let id: String

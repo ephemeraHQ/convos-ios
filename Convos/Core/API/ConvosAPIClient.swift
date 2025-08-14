@@ -45,9 +45,9 @@ protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
     func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse
 
     func createInvite(_ requestBody: ConvosAPI.CreateInviteCode) async throws -> ConvosAPI.InviteDetailsResponse
-    func inviteDetails(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsResponse
-    func publicInviteDetails(_ inviteId: String) async throws -> ConvosAPI.PublicInviteDetailsResponse
-    func requestToJoin(_ inviteId: String) async throws -> ConvosAPI.RequestToJoinResponse
+    func inviteDetails(_ code: String) async throws -> ConvosAPI.InviteDetailsResponse
+    func publicInviteDetails(_ code: String) async throws -> ConvosAPI.PublicInviteDetailsResponse
+    func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse
 
     func updateProfile(
         inboxId: String,
@@ -132,8 +132,8 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
         }
     }
 
-    func publicInviteDetails(_ inviteId: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
-        let request = try request(for: "v1/invites/public/\(inviteId)")
+    func publicInviteDetails(_ code: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
+        let request = try request(for: "v1/invites/public/\(code)")
         let invite: ConvosAPI.PublicInviteDetailsResponse = try await performRequest(request)
         return invite
     }
@@ -278,15 +278,15 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         return try await performRequest(request)
     }
 
-    func inviteDetails(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsResponse {
-        let request = try authenticatedRequest(for: "v1/invites/\(inviteId)")
+    func inviteDetails(_ code: String) async throws -> ConvosAPI.InviteDetailsResponse {
+        let request = try authenticatedRequest(for: "v1/invites/\(code)")
         let invite: ConvosAPI.InviteDetailsResponse = try await performRequest(request)
         return invite
     }
 
-    func requestToJoin(_ inviteId: String) async throws -> ConvosAPI.RequestToJoinResponse {
+    func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse {
         var request = try authenticatedRequest(for: "v1/invites/request", method: "POST")
-        let body: [String: Any] = ["inviteId": inviteId]
+        let body: [String: Any] = ["inviteId": inviteCode]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         return try await performRequest(request)
