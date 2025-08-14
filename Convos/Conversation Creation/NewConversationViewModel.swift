@@ -41,18 +41,10 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
     }
 
     deinit {
-        cleanup()
-    }
-
-    func cleanup() {
-        Logger.info("🧹 cleanup")
+        Logger.info("🧹 deinit")
         cancellables.removeAll()
         newConversationTask?.cancel()
         joinConversationTask?.cancel()
-        if let conversationId = conversationViewModel?.conversation.id {
-            Logger.info("🧹 Cleaning up conversationViewModel for conversation: \(conversationId)")
-            conversationViewModel?.cleanup()
-        }
         conversationViewModel = nil
     }
 
@@ -95,10 +87,6 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         Logger.info("🗑️ Deleting conversation in NewConversationViewModel")
         newConversationTask?.cancel()
         draftConversationComposer = nil
-        if let conversationId = conversationViewModel?.conversation.id {
-            Logger.info("🧹 Cleaning up conversationViewModel for conversation: \(conversationId)")
-            conversationViewModel?.cleanup()
-        }
         conversationViewModel = nil
         Task { [weak self] in
             guard let self else { return }

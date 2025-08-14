@@ -98,11 +98,6 @@ class ConversationViewModel {
 
     deinit {
         Logger.info("🗑️ deallocated for conversation: \(conversation.id)")
-        cleanup()
-    }
-
-    func cleanup() {
-        Logger.info("🧹 cleanup for conversation: \(conversation.id)")
         cancellables.removeAll()
         loadProfileImageTask?.cancel()
         loadConversationImageTask?.cancel()
@@ -336,7 +331,7 @@ extension ConversationViewModel: Hashable {
     }
 
     static func == (lhs: ConversationViewModel, rhs: ConversationViewModel) -> Bool {
-        return lhs.conversation == rhs.conversation
+        return lhs.conversation.id == rhs.conversation.id
     }
 }
 
