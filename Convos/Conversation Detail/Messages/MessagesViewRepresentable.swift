@@ -4,6 +4,7 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
     let conversationId: String
     let messages: [AnyMessage]
     let invite: Invite
+    let onTapMessage: (AnyMessage) -> Void
     let topBarHeight: CGFloat
     let bottomBarHeight: CGFloat
 
@@ -11,17 +12,14 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
         let messagesViewController = MessagesViewController()
         messagesViewController.topBarHeight = topBarHeight
         messagesViewController.bottomBarHeight = bottomBarHeight
-//        messagesViewController.state = .init(
-//            conversationId: conversationId,
-//            messages: messages,
-//            invite: invite
-//        )
+        messagesViewController.onTapMessage = onTapMessage
         return messagesViewController
     }
 
     func updateUIViewController(_ messagesViewController: MessagesViewController, context: Context) {
         messagesViewController.topBarHeight = topBarHeight
         messagesViewController.bottomBarHeight = bottomBarHeight
+        messagesViewController.onTapMessage = onTapMessage
         messagesViewController.state = .init(
             conversationId: conversationId,
             messages: messages,
@@ -41,6 +39,7 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
         conversationId: conversationId,
         messages: messages,
         invite: invite,
+        onTapMessage: { _ in },
         topBarHeight: topBarHeight,
         bottomBarHeight: bottomBarHeight
     )

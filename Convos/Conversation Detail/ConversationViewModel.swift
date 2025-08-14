@@ -60,6 +60,7 @@ class ConversationViewModel {
     /// since programatically changing @FocusState doesn't always propagate to child views
     var focus: MessagesViewInputFocus?
     var presentingConversationSettings: Bool = false
+    var presentingProfileForMember: ConversationMember?
 
     // MARK: - Init
 
@@ -227,6 +228,10 @@ class ConversationViewModel {
                 Logger.error("Error sending message: \(error)")
             }
         }
+    }
+
+    func onTapMessage(_ message: AnyMessage) {
+        presentingProfileForMember = message.base.sender
     }
 
     func onDisplayNameEndedEditing() {

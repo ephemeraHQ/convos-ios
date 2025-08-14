@@ -122,6 +122,8 @@ final class MessagesViewController: UIViewController {
         super.init(nibName: nil, bundle: nil)
     }
 
+    var onTapMessage: ((AnyMessage) -> Void)?
+
     deinit {
         KeyboardListener.shared.remove(delegate: self)
     }
@@ -465,7 +467,10 @@ extension MessagesViewController {
 
 extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        Logger.info("Did select item at \(indexPath)")
+        let cell = dataSource.sections[indexPath.section].cells[indexPath.item]
+        if case .message(let message, _) = cell {
+            onTapMessage?(message)
+        }
     }
 
     func scrollViewShouldScrollToTop(_ scrollView: UIScrollView) -> Bool {
