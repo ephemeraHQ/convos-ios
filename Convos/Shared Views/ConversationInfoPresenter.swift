@@ -15,7 +15,7 @@ struct ConversationInfoPresenter<Content: View>: View {
             content()
 
             VStack {
-                if let selectedConversation = viewModel.selectedConversation {
+                if let selectedConversation = viewModel.selectedConversationViewModel {
                     @Bindable var viewModel = selectedConversation
                         ConversationInfoButton(
                             conversation: viewModel.conversation,
@@ -52,7 +52,7 @@ struct ConversationInfoPresenter<Content: View>: View {
 
                 Spacer()
             }
-            .animation(.bouncy(duration: 0.4, extraBounce: 0.15), value: viewModel.selectedConversation != nil)
+            .animation(.bouncy(duration: 0.4, extraBounce: 0.15), value: viewModel.selectedConversationViewModel != nil)
             .ignoresSafeArea()
             .allowsHitTesting(true)
             .zIndex(1000)

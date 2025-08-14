@@ -56,17 +56,16 @@ struct ConversationsView: View {
                         emptyConversationsView
                     } else {
                         List(viewModel.unpinnedConversations, id: \.self, selection: $viewModel.selectedConversation) { conversation in
-                            let conversationViewModel = viewModel.conversationViewModel(for: conversation)
                             ZStack {
                                 ConversationsListItem(conversation: conversation)
-                                NavigationLink(value: conversationViewModel) {
+                                NavigationLink(value: conversation) {
                                     EmptyView()
                                 }
                                 .opacity(0.0) // zstack hides disclosure indicator
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button(role: .destructive) {
-                                    conversationViewModel.leaveConvo()
+                                    viewModel.leave(conversation: conversation)
                                 } label: {
                                     Image(systemName: "trash")
                                 }
@@ -122,7 +121,7 @@ struct ConversationsView: View {
                 }
                 .toolbar(removing: .sidebarToggle)
             } detail: {
-                if let conversationViewModel = viewModel.selectedConversation {
+                if let conversationViewModel = viewModel.selectedConversationViewModel {
                     ConversationView(
                         viewModel: conversationViewModel,
                         focusState: $focusState

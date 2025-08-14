@@ -4,13 +4,22 @@ import Observation
 
 @Observable
 class SelectableConversationViewModelType {
-    var selectedConversation: ConversationViewModel?
+    var selectedConversationViewModel: ConversationViewModel?
 }
 
 @Observable
 final class ConversationsViewModel: SelectableConversationViewModelType {
     // MARK: - Public
 
+    var selectedConversation: Conversation? {
+        didSet {
+            if let selectedConversation {
+                selectedConversationViewModel = conversationViewModel(for: selectedConversation)
+            } else {
+                selectedConversationViewModel = nil
+            }
+        }
+    }
     var newConversationViewModel: NewConversationViewModel?
     private(set) var conversations: [Conversation] = []
     private(set) var conversationsCount: Int = 0
@@ -69,6 +78,19 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
         }
     }
 
+    func leave(conversation: Conversation) {
+        do {
+            try session.deleteAccount(inboxId: conversation.inboxId)
+            NotificationCenter.default.post(
+                name: .leftConversationNotification,
+                object: nil,
+                userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
+            )
+        } catch {
+            Logger.error("Error leaving convo: \(error.localizedDescription)")
+        }
+    }
+
     func conversationViewModel(for conversation: Conversation) -> ConversationViewModel {
         let messagingService = session.messagingService(for: conversation.inboxId)
         return .init(
@@ -94,10 +116,10 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
                     return
                 }
                 Logger.info("📢 Left conversation notification received for conversation: \(conversationId)")
-                if selectedConversation?.conversation.id == conversationId {
+                if selectedConversation?.id == conversationId {
                     selectedConversation = nil
                 }
-                if newConversationViewModel?.selectedConversation?.conversation.id == conversationId {
+                if newConversationViewModel?.selectedConversationViewModel?.conversation.id == conversationId {
                     newConversationViewModel = nil
                 }
             }

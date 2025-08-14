@@ -3,7 +3,7 @@ import SwiftUI
 
 @Observable
 class NewConversationViewModel: SelectableConversationViewModelType, Identifiable {
-    override var selectedConversation: ConversationViewModel? {
+    override var selectedConversationViewModel: ConversationViewModel? {
         get {
             conversationViewModel
         }
