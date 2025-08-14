@@ -44,7 +44,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                     do {
                         let dbMessage = try message.dbRepresentation()
                         guard let inviteCode = dbMessage.text else {
-                            return
+                            continue
                         }
                         let dbConversation: DBConversation? = try await databaseReader.read { db in
                             guard let invite = try DBInvite
@@ -63,14 +63,14 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                         }
 
                         guard let dbConversation else {
-                            return
+                            continue
                         }
 
                         guard let conversation = try await client.conversationsProvider.findConversation(
                             conversationId: dbConversation.id
                         ) else {
                             Logger.warning("Conversation not found on XMTP")
-                            return
+                            continue
                         }
 
                         switch conversation {
