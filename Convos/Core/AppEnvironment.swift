@@ -1,5 +1,10 @@
 import Foundation
 
+public enum ApnsEnvironment: String, Codable {
+    case sandbox
+    case production
+}
+
 enum AppEnvironment: String, RawRepresentable {
     case local, tests, dev, production
 
@@ -62,6 +67,16 @@ enum AppEnvironment: String, RawRepresentable {
         guard self == .local else { return nil }
         let value = Secrets.XMTP_CUSTOM_HOST
         return value.isEmpty ? nil : value
+    }
+
+    var apnsEnvironment: ApnsEnvironment {
+        // Check if this is a debug build (built locally with Xcode)
+        #if DEBUG
+        return .sandbox
+        #else
+        // Release builds (distributed via TestFlight/App Store) use production
+        return .production
+        #endif
     }
 
     var defaultDatabasesDirectoryURL: URL {

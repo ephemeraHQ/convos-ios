@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct DebugLogsView: View {
     @State private var logs: String = ""
@@ -72,6 +73,9 @@ struct DebugLogsView: View {
 
 struct DebugView: View {
     @Environment(\.dismiss) private var dismiss: DismissAction
+    @State private var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
+    @State private var notificationAuthGranted: Bool = false
+    @State private var lastDeviceToken: String = NotificationProcessor.shared.getStoredDeviceToken() ?? "<none>"
 
     private var bundleIdentifier: String {
         Bundle.main.bundleIdentifier ?? "Unknown"
@@ -121,6 +125,47 @@ struct DebugView: View {
                         }
                     }
 
+                    Section(header: Text("Push Notifications")) {
+                        HStack {
+                            Text("Auth Status")
+                            Spacer()
+                            Text(statusText(notificationAuthStatus))
+                                .foregroundStyle(.colorTextSecondary)
+                        }
+                        HStack {
+                            Text("Authorized")
+                            Spacer()
+                            Text(notificationAuthGranted ? "Yes" : "No")
+                                .foregroundStyle(.colorTextSecondary)
+                        }
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Device Token")
+                            HStack(spacing: 8) {
+                                ScrollView(.horizontal, showsIndicators: true) {
+                                    Text(lastDeviceToken)
+                                        .font(.system(.footnote, design: .monospaced))
+                                        .foregroundStyle(.colorTextSecondary)
+                                        .textSelection(.enabled)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                }
+                                Button {
+                                    UIPasteboard.general.string = lastDeviceToken
+                                } label: {
+                                    Image(systemName: "doc.on.doc")
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
+                        HStack {
+                            Button("Request Now") {
+                                Task { await requestNotificationsNow() }
+                            }
+                            .disabled(notificationAuthGranted)
+                            .opacity(notificationAuthGranted ? 0.5 : 1.0)
+                        }
+                    }
+
                     Section {
                         HStack {
                             Text("Bundle ID")
@@ -163,9 +208,46 @@ struct DebugView: View {
                 }
             }
         }
+        .task {
+            await refreshNotificationStatus()
+        }
     }
 }
 
 #Preview {
     DebugView()
+}
+
+// MARK: - Push helpers
+
+extension DebugView {
+    private func statusText(_ status: UNAuthorizationStatus) -> String {
+        switch status {
+        case .notDetermined: return "notDetermined"
+        case .denied: return "denied"
+        case .authorized: return "authorized"
+        case .provisional: return "provisional"
+        case .ephemeral: return "ephemeral"
+        @unknown default: return "unknown"
+        }
+    }
+
+    private func refreshNotificationStatus() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        notificationAuthStatus = settings.authorizationStatus
+        notificationAuthGranted = settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
+        lastDeviceToken = NotificationProcessor.shared.getStoredDeviceToken() ?? "<none>"
+    }
+
+    private func requestNotificationsNow() async {
+        do {
+            let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
+            if granted {
+                await MainActor.run { UIApplication.shared.registerForRemoteNotifications() }
+            }
+            await refreshNotificationStatus()
+        } catch {
+            Logger.error("Debug push request failed: \(error)")
+        }
+    }
 }

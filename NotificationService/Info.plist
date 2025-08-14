@@ -9,5 +9,9 @@
 		<key>NSExtensionPrincipalClass</key>
 		<string>$(PRODUCT_MODULE_NAME).NotificationService</string>
 	</dict>
+	<key>APP_GROUP_IDENTIFIER</key>
+	<string>$(APP_GROUP_IDENTIFIER)</string>
+	<key>MAIN_BUNDLE_ID</key>
+	<string>$(MAIN_BUNDLE_ID)</string>
 </dict>
 </plist>

@@ -34,6 +34,17 @@ class MockBaseAPIClient: ConvosAPIBaseProtocol {
 }
 
 class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
+    func getDevice(userId: String, deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse {
+        return ConvosAPI.DeviceUpdateResponse(
+            id: deviceId,
+            pushToken: "existing-push-token",
+            pushTokenType: "apns",
+            apnsEnv: "sandbox",
+            updatedAt: Date().ISO8601Format(),
+            pushFailures: 0
+        )
+    }
+
     func publicInviteDetails(_ inviteId: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
         .init(id: "invite_123", name: "My Invite", description: "My fun group chat", imageUrl: nil, inviteLinkURL: "http://convos.org/invite/123456")
     }
@@ -205,5 +216,22 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         let uploadedURL = "https://mock-api.example.com/uploads/\(filename)"
         try await afterUpload(uploadedURL)
         return uploadedURL
+    }
+
+    // MARK: - Notifications mocks
+    func registerForNotifications(deviceId: String, pushToken: String, identityId: String, xmtpInstallationId: String) async throws {
+        // no-op in mock
+    }
+
+    func subscribeToTopics(installationId: String, topics: [String]) async throws {
+        // no-op in mock
+    }
+
+    func unsubscribeFromTopics(installationId: String, topics: [String]) async throws {
+        // no-op in mock
+    }
+
+    func unregisterInstallation(xmtpInstallationId: String) async throws {
+        // no-op in mock
     }
 }

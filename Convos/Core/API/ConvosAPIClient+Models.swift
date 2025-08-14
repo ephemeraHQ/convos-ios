@@ -175,6 +175,40 @@ enum ConvosAPI {
         let xmtpId: String
         let identityAddress: String?
     }
+
+    // MARK: - Device Update Models
+
+    struct DeviceUpdateRequest: Codable {
+        let pushToken: String
+        let pushTokenType: DeviceUpdatePushTokenType
+        let apnsEnv: DeviceUpdateApnsEnvironment
+
+        enum DeviceUpdatePushTokenType: String, Codable {
+            case apns
+        }
+
+        enum DeviceUpdateApnsEnvironment: String, Codable {
+            case sandbox
+            case production
+        }
+
+        init(pushToken: String,
+             pushTokenType: DeviceUpdatePushTokenType = .apns,
+             apnsEnv: DeviceUpdateApnsEnvironment) {
+            self.pushToken = pushToken
+            self.pushTokenType = pushTokenType
+            self.apnsEnv = apnsEnv
+        }
+    }
+
+    struct DeviceUpdateResponse: Codable {
+        let id: String
+        let pushToken: String?
+        let pushTokenType: String
+        let apnsEnv: String?
+        let updatedAt: String
+        let pushFailures: Int
+    }
 }
 
 extension ConvosAPI.CreateUserRequest.Device {

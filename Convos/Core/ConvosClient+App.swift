@@ -15,6 +15,7 @@ extension ConvosClient {
         )
         return .init(authService: localAuthService,
                      sessionManager: sessionManager,
-                     databaseManager: databaseManager)
+                     databaseManager: databaseManager,
+                     environment: environment)
     }
 }

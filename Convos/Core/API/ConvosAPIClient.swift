@@ -68,6 +68,16 @@ protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
         filename: String,
         afterUpload: @escaping (String) async throws -> Void
     ) async throws -> String
+
+    // Push notifications
+    func getDevice(userId: String, deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse
+    func registerForNotifications(deviceId: String,
+                                  pushToken: String,
+                                  identityId: String,
+                                  xmtpInstallationId: String) async throws
+    func subscribeToTopics(installationId: String, topics: [String]) async throws
+    func unsubscribeFromTopics(installationId: String, topics: [String]) async throws
+    func unregisterInstallation(xmtpInstallationId: String) async throws
 }
 
 internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
@@ -117,7 +127,7 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
             let result = try JSONDecoder().decode(ConvosAPI.CreateSubOrganizationResponse.self, from: data)
             return result
         } catch {
-            throw APIError.serverError(error)
+            throw APIError.serverError(error.localizedDescription)
         }
     }
 
@@ -323,47 +333,62 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     }
 
     private func performRequest<T: Decodable>(_ request: URLRequest, retryCount: Int = 0) async throws -> T {
-        let (data, response) = try await session.data(for: request)
+        do {
+            let (data, response) = try await session.data(for: request)
 
-        Logger.info("Received response: \(data.prettyPrintedJSONString ?? "nil data")")
+            Logger.info("Received response: \(data.prettyPrintedJSONString ?? "nil data")")
 
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        switch httpResponse.statusCode {
-        case 200...299:
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode(T.self, from: data)
-        case 401:
-            // Check if we've exceeded max retries
-            guard retryCount < maxRetryCount else {
-                Logger.error("Max retry count (\(maxRetryCount)) exceeded for request")
-                throw APIError.notAuthenticated
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.invalidResponse
             }
 
-            // Try to re-authenticate and retry the request
-            do {
-                Logger.info("Attempting re-authentication (attempt \(retryCount + 1) of \(maxRetryCount))")
-                _ = try await reAuthenticate()
-                // Create a new request with the fresh token
-                var newRequest = request
-                if let jwt = try keychainService.retrieveString(.init(inboxId: client.inboxId)) {
-                    newRequest.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
+            switch httpResponse.statusCode {
+            case 200...299:
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                return try decoder.decode(T.self, from: data)
+            case 400:
+                // Parse error message from response if available
+                let errorMessage: String?
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let message = json["message"] as? String {
+                    errorMessage = message
+                } else {
+                    errorMessage = String(data: data, encoding: .utf8)
                 }
-                // Retry the request with incremented retry count
-                return try await performRequest(newRequest, retryCount: retryCount + 1)
-            } catch {
-                Logger.error("Re-authentication failed: \(error.localizedDescription)")
-                throw APIError.notAuthenticated
+                throw APIError.badRequest(errorMessage)
+            case 401:
+                // Check if we've exceeded max retries
+                guard retryCount < maxRetryCount else {
+                    Logger.error("Max retry count (\(maxRetryCount)) exceeded for request")
+                    throw APIError.notAuthenticated
+                }
+
+                // Try to re-authenticate and retry the request
+                do {
+                    Logger.info("Attempting re-authentication (attempt \(retryCount + 1) of \(maxRetryCount))")
+                    _ = try await reAuthenticate()
+                    // Create a new request with the fresh token
+                    var newRequest = request
+                    if let jwt = try keychainService.retrieveString(.init(inboxId: client.inboxId)) {
+                        newRequest.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
+                    }
+                    // Retry the request with incremented retry count
+                    return try await performRequest(newRequest, retryCount: retryCount + 1)
+                } catch {
+                    Logger.error("Re-authentication failed: \(error.localizedDescription)")
+                    throw APIError.notAuthenticated
+                }
+            case 403:
+                throw APIError.forbidden
+            case 404:
+                throw APIError.notFound
+            default:
+                let errorMessage = String(data: data, encoding: .utf8)
+                throw APIError.serverError(errorMessage)
             }
-        case 403:
-            throw APIError.forbidden
-        case 404:
-            throw APIError.notFound
-        default:
-            throw APIError.serverError(nil)
+        } catch {
+            throw error
         }
     }
 
@@ -463,6 +488,81 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
         return uploadedURL
     }
+
+    // MARK: - Device Management
+
+    func getDevice(userId: String, deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse {
+        let request = try authenticatedRequest(
+            for: "v1/devices/\(userId)/\(deviceId)",
+            method: "GET"
+        )
+
+        return try await performRequest(request)
+    }
+
+    // MARK: - Notifications Registration & Subscriptions
+
+    func registerForNotifications(deviceId: String,
+                                  pushToken: String,
+                                  identityId: String,
+                                  xmtpInstallationId: String) async throws {
+        var request = try authenticatedRequest(for: "v1/notifications/register", method: "POST")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        struct Installation: Encodable { let identityId: String; let xmtpInstallationId: String }
+
+        struct Body: Encodable {
+            let deviceId: String
+            let pushToken: String
+            let pushTokenType: String
+            let apnsEnv: String
+            let installations: [Installation]
+        }
+
+        let apnsEnv = ConfigManager.shared.currentEnvironment.apnsEnvironment == .sandbox ? "sandbox" : "production"
+        let body = Body(deviceId: deviceId,
+                        pushToken: pushToken,
+                        pushTokenType: "apns",
+                        apnsEnv: apnsEnv,
+                        installations: [.init(identityId: identityId, xmtpInstallationId: xmtpInstallationId)])
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
+            throw APIError.serverError("Failed notifications/register: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
+        }
+    }
+
+    func subscribeToTopics(installationId: String, topics: [String]) async throws {
+        var request = try authenticatedRequest(for: "v1/notifications/subscribe", method: "POST")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        struct Body: Encodable { let installationId: String; let topics: [String] }
+        request.httpBody = try JSONEncoder().encode(Body(installationId: installationId, topics: topics))
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
+            throw APIError.serverError("Failed notifications/subscribe: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
+        }
+    }
+
+    func unsubscribeFromTopics(installationId: String, topics: [String]) async throws {
+        var request = try authenticatedRequest(for: "v1/notifications/unsubscribe", method: "POST")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        struct Body: Encodable { let installationId: String; let topics: [String] }
+        request.httpBody = try JSONEncoder().encode(Body(installationId: installationId, topics: topics))
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
+            throw APIError.serverError("Failed notifications/unsubscribe: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
+        }
+    }
+
+    func unregisterInstallation(xmtpInstallationId: String) async throws {
+        let path = "v1/notifications/unregister/\(xmtpInstallationId)"
+        let request = try authenticatedRequest(for: path, method: "DELETE")
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
+            throw APIError.serverError("Failed DELETE notifications/unregister: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
+        }
+    }
 }
 
 // MARK: - Error Handling
@@ -471,9 +571,10 @@ enum APIError: Error {
     case invalidURL
     case authenticationFailed
     case notAuthenticated
+    case badRequest(String?)
     case forbidden
     case notFound
     case invalidResponse
     case invalidRequest
-    case serverError(Error?)
+    case serverError(String?)
 }

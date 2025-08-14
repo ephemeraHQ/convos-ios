@@ -56,6 +56,12 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
         }
 
         try await client.update(consent: .denied, for: conversation.id)
+        // Fire unsubscribe request for push notifications
+        NotificationCenter.default.post(
+            name: .convosConversationUnsubscribeRequested,
+            object: nil,
+            userInfo: ["conversationId": conversation.id]
+        )
         try await databaseWriter.write { db in
             if let localConversation = try DBConversation
                 .filter(DBConversation.Columns.id == conversation.id)
@@ -100,6 +106,9 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
             }
             await group.waitForAll()
         }
+
+        // Request unregister the installation (backend will drop all topics for this install)
+        NotificationCenter.default.post(name: .convosUnregisterAllInboxesRequested, object: nil)
 
         let errors = await errorCollector.errors
         if !errors.isEmpty {

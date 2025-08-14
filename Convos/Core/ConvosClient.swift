@@ -6,6 +6,7 @@ final class ConvosClient {
     private let authService: any LocalAuthServiceProtocol
     private let sessionManager: any SessionManagerProtocol
     private let databaseManager: any DatabaseManagerProtocol
+    private let environment: AppEnvironment
 
     var databaseWriter: any DatabaseWriter {
         databaseManager.dbWriter
@@ -31,7 +32,8 @@ final class ConvosClient {
         )
         return .init(authService: authService,
                      sessionManager: sessionManager,
-                     databaseManager: databaseManager)
+                     databaseManager: databaseManager,
+                     environment: .tests)
     }
 
     static func mock() -> ConvosClient {
@@ -40,15 +42,18 @@ final class ConvosClient {
         let sessionManager = MockInboxesService()
         return .init(authService: authService,
                      sessionManager: sessionManager,
-                     databaseManager: databaseManager)
+                     databaseManager: databaseManager,
+                     environment: .tests)
     }
 
     internal init(authService: any LocalAuthServiceProtocol,
                   sessionManager: any SessionManagerProtocol,
-                  databaseManager: any DatabaseManagerProtocol) {
+                  databaseManager: any DatabaseManagerProtocol,
+                  environment: AppEnvironment) {
         self.authService = authService
         self.sessionManager = sessionManager
         self.databaseManager = databaseManager
+        self.environment = environment
     }
 
     var authState: AnyPublisher<AuthServiceState, Never> {
