@@ -19,10 +19,10 @@
 		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
-		D85B9B9F2DD26BC400831D58 /* (null) in Embed Frameworks */ = {isa = PBXBuildFile; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = D8B5A9032DC272BD006003A4 /* XMTPiOS */; };
+		DAC68BEE2E4E577A008E5F83 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = DAC68BED2E4E577A008E5F83 /* GRDB-dynamic */; };
+		DAC68BEF2E4E577A008E5F83 /* GRDB-dynamic in Embed Frameworks */ = {isa = PBXBuildFile; productRef = DAC68BED2E4E577A008E5F83 /* GRDB-dynamic */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		DAD3FA1D2E4E39EB005EB910 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = DAD3FA1C2E4E39EB005EB910 /* XMTPiOS */; };
-		DAD3FA1F2E4E39F5005EB910 /* GRDBSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = DAD3FA1E2E4E39F5005EB910 /* GRDBSQLite */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,6 +103,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+				DAC68BEF2E4E577A008E5F83 /* GRDB-dynamic in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -113,7 +114,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				D85B9B9F2DD26BC400831D58 /* (null) in Embed Frameworks */,
 				7A349CA62DD7017B00E526A3 /* GRDB-dynamic in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
@@ -377,7 +377,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				DAD3FA1D2E4E39EB005EB910 /* XMTPiOS in Frameworks */,
-				DAD3FA1F2E4E39F5005EB910 /* GRDBSQLite in Frameworks */,
+				DAC68BEE2E4E577A008E5F83 /* GRDB-dynamic in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1732,15 +1732,15 @@
 			package = D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */;
 			productName = XMTPiOS;
 		};
+		DAC68BED2E4E577A008E5F83 /* GRDB-dynamic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = "GRDB-dynamic";
+		};
 		DAD3FA1C2E4E39EB005EB910 /* XMTPiOS */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */;
 			productName = XMTPiOS;
-		};
-		DAD3FA1E2E4E39F5005EB910 /* GRDBSQLite */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
-			productName = GRDBSQLite;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
