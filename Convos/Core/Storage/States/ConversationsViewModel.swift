@@ -37,6 +37,7 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
     private let conversationsRepository: any ConversationsRepositoryProtocol
     private let conversationsCountRepository: any ConversationsCountRepositoryProtocol
     private var cancellables: Set<AnyCancellable> = .init()
+    private var leftConversationObserver: Any?
 
     init(
         session: any SessionManagerProtocol,
@@ -58,7 +59,9 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self, name: .leftConversationNotification, object: nil)
+        if let leftConversationObserver {
+            NotificationCenter.default.removeObserver(leftConversationObserver)
+        }
         cancellables.removeAll()
     }
 
@@ -109,7 +112,7 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
     }
 
     private func observe() {
-        NotificationCenter.default
+        leftConversationObserver = NotificationCenter.default
             .addObserver(forName: .leftConversationNotification, object: nil, queue: .main) { [weak self] notification in
                 guard let self else { return }
                 guard let conversationId: String = notification.userInfo?["conversationId"] as? String else {

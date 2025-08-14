@@ -17,6 +17,7 @@ class SessionManager: SessionManagerProtocol {
     private let currentSessionRepository: any CurrentSessionRepositoryProtocol
     private let inboxOperationsPublisher: CurrentValueSubject<[any AuthorizeInboxOperationProtocol], Never> = .init([])
     private var cancellables: Set<AnyCancellable> = []
+    private var leftConversationObserver: Any?
 
     // Dictionary to track operations by provider ID to prevent duplicates
     private var operationsByProviderId: [String: any AuthorizeInboxOperationProtocol] = [:]
@@ -51,7 +52,9 @@ class SessionManager: SessionManagerProtocol {
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self, name: .leftConversationNotification, object: nil)
+        if let leftConversationObserver {
+            NotificationCenter.default.removeObserver(leftConversationObserver)
+        }
         cleanup()
     }
 
@@ -134,7 +137,7 @@ class SessionManager: SessionManagerProtocol {
     }
 
     private func observe() {
-        NotificationCenter.default
+        leftConversationObserver = NotificationCenter.default
             .addObserver(forName: .leftConversationNotification, object: nil, queue: .main) { [weak self] notification in
                 guard let self else { return }
                 guard let inboxId: String = notification.userInfo?["inboxId"] as? String else {
