@@ -39,10 +39,37 @@ class NotificationService: UNNotificationServiceExtension {
                     }
 
                 case "InviteJoinRequest":
-                    // Expect inviteId; render a friendly alert
-                    let inviteId = userInfo["inviteId"] as? String
+                    // Expect notificationData with requester.profile.username, inviteCode.name, autoApprove
                     bestAttemptContent.title = "Group Invitation"
-                    if let inviteId { bestAttemptContent.body = "You were invited (\(inviteId))" }
+
+                    var displayName = "Someone"
+                    var groupName = "your group"
+
+                    if let data = userInfo["notificationData"] as? [String: Any] {
+                        if let requester = data["requester"] as? [String: Any],
+                        let profile = requester["profile"] as? [String: Any],
+                        let username = profile["username"] as? String,
+                        !username.isEmpty {
+                            displayName = username
+                        }
+
+                        if let inviteCode = data["inviteCode"] as? [String: Any],
+                        let name = inviteCode["name"] as? String,
+                        !name.isEmpty {
+                            groupName = name
+                        }
+
+                        let autoApprove = data["autoApprove"] as? Bool ?? false
+                        if autoApprove {
+                            bestAttemptContent.body = "\(displayName) joined \(groupName)"
+                        } else {
+                            bestAttemptContent.body = "\(displayName) requested to join \(groupName)"
+                        }
+                    } else {
+                        // Fallback copy if payload does not include expected fields
+                        bestAttemptContent.body = "Someone requested to join your group"
+                    }
+
                     // Thread by inbox if available so invites group in notification center
                     if let inboxId { bestAttemptContent.threadIdentifier = "invites-\(inboxId)" }
 
