@@ -152,7 +152,7 @@ struct AppSettingsView: View {
     }
 
     private func sendFeedback() {
-        let email = "offtherecord@ephemerahq.com"
+        let email = "convos@ephemerahq.com"
         let subject = "Convos Feedback"
         let mailtoString = "mailto:\(email)?subject=\(subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? subject)"
 
