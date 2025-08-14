@@ -96,6 +96,7 @@ struct AppSettingsView: View {
                     .foregroundStyle(.colorTextPrimary)
 
                     Button {
+                        sendFeedback()
                     } label: {
                         Text("Send feedback")
                     }
@@ -147,6 +148,16 @@ struct AppSettingsView: View {
                         .disabled(true)
                 }
             }
+        }
+    }
+
+    private func sendFeedback() {
+        let email = "offtherecord@ephemerahq.com"
+        let subject = "Convos Feedback"
+        let mailtoString = "mailto:\(email)?subject=\(subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? subject)"
+
+        if let mailtoURL = URL(string: mailtoString) {
+            openURL(mailtoURL)
         }
     }
 }
