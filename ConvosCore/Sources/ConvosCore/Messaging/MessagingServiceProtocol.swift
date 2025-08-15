@@ -1,7 +1,7 @@
 import Combine
 import Foundation
 
-protocol MessagingServiceProtocol {
+public protocol MessagingServiceProtocol {
     func myProfileRepository() -> any MyProfileRepositoryProtocol
     func myProfileWriter() -> any MyProfileWriterProtocol
 

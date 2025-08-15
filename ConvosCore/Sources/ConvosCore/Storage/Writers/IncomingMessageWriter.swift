@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 import XMTPiOS
 
-protocol IncomingMessageWriterProtocol {
+public protocol IncomingMessageWriterProtocol {
     func store(message: XMTPiOS.DecodedMessage,
                for conversation: DBConversation) async throws
 }
@@ -14,7 +14,7 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    func store(message: DecodedMessage,
+    public func store(message: DecodedMessage,
                for conversation: DBConversation) async throws {
         try await databaseWriter.write { db in
             let sender = Member(inboxId: message.senderInboxId)

@@ -3,11 +3,11 @@ import Foundation
 import UIKit
 import XMTPiOS
 
-class MockMessagingService: MessagingServiceProtocol {
-    let currentUser: ConversationMember = .mock()
-    let allUsers: [ConversationMember]
-    let _conversations: [Conversation]
-    var inboxReadyPublisher: InboxReadyResultPublisher {
+public class MockMessagingService: MessagingServiceProtocol {
+    public let currentUser: ConversationMember = .mock()
+    public let allUsers: [ConversationMember]
+    public let _conversations: [Conversation]
+    public var inboxReadyPublisher: InboxReadyResultPublisher {
         Empty().eraseToAnyPublisher()
     }
 
@@ -18,7 +18,7 @@ class MockMessagingService: MessagingServiceProtocol {
     private var messagesSubject: CurrentValueSubject<[AnyMessage], Never>
     private var messageTimer: Timer?
 
-    init() {
+    public init() {
         let users = Self.randomUsers()
         allUsers = users
         _conversations = Self.randomConversations(with: users)
@@ -34,74 +34,74 @@ class MockMessagingService: MessagingServiceProtocol {
 
     // MARK: - Protocol Conformance
 
-    func myProfileWriter() -> any MyProfileWriterProtocol {
+    public func myProfileWriter() -> any MyProfileWriterProtocol {
         self
     }
 
-    func myProfileRepository() -> any MyProfileRepositoryProtocol {
+    public func myProfileRepository() -> any MyProfileRepositoryProtocol {
         self
     }
 
-    func draftConversationComposer() -> any DraftConversationComposerProtocol {
+    public func draftConversationComposer() -> any DraftConversationComposerProtocol {
         MockDraftConversationComposer()
     }
 
-    var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
+    public var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
         Just(self).eraseToAnyPublisher()
     }
 
-    func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
+    public func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
         self
     }
 
-    func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
+    public func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
         self
     }
 
-    func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
+    public func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
         if let found = _conversations.first(where: { $0.id == conversationId }) {
             currentConversation = found
         }
         return self
     }
 
-    func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
+    public func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
         self
     }
 
-    func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
+    public func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
         if let found = _conversations.first(where: { $0.id == conversationId }) {
             currentConversation = found
         }
         return self
     }
 
-    func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {
+    public func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {
         self
     }
 
-    func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
+    public func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
         self
     }
 
-    func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol {
+    public func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol {
         MockConversationLocalStateWriter()
     }
 
-    func groupMetadataWriter() -> any ConversationMetadataWriterProtocol {
+    public func groupMetadataWriter() -> any ConversationMetadataWriterProtocol {
         MockGroupMetadataWriter()
     }
 
-    func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
+    public func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
         MockGroupPermissionsRepository()
     }
 
-    func uploadImage(data: Data, filename: String) async throws -> String {
+    public func uploadImage(data: Data, filename: String) async throws -> String {
         // Return a mock URL for testing
         return "https://example.com/uploads/\(filename)"
     }
 
-    func uploadImageAndExecute(
+    public func uploadImageAndExecute(
         data: Data,
         filename: String,
         afterUpload: @escaping (String) async throws -> Void
@@ -113,84 +113,88 @@ class MockMessagingService: MessagingServiceProtocol {
 }
 
 extension MockMessagingService: InviteRepositoryProtocol {
-    var invitePublisher: AnyPublisher<Invite?, Never> {
+    public var invitePublisher: AnyPublisher<Invite?, Never> {
         Just(.mock()).eraseToAnyPublisher()
     }
 }
 
 extension MockMessagingService: MyProfileWriterProtocol {
-    func update(displayName: String) {
+    public func update(displayName: String) {
     }
 
-    func update(avatar: UIImage?) async throws {
+    public func update(avatar: UIImage?) async throws {
     }
 }
 
 extension MockMessagingService: MyProfileRepositoryProtocol {
-    var myProfilePublisher: AnyPublisher<Profile, Never> {
+    public var myProfilePublisher: AnyPublisher<Profile, Never> {
         Just(currentUser.profile).eraseToAnyPublisher()
     }
 
-    func fetch(inboxId: String) throws -> Profile {
+    public func fetch(inboxId: String) throws -> Profile {
         .mock()
     }
 }
 
 extension MockMessagingService: ConversationsRepositoryProtocol {
-    var conversationsPublisher: AnyPublisher<[Conversation], Never> {
+    public var conversationsPublisher: AnyPublisher<[Conversation], Never> {
         Just(_conversations).eraseToAnyPublisher()
     }
 
-    func fetchAll() throws -> [Conversation] {
+    public func fetchAll() throws -> [Conversation] {
         _conversations
     }
 }
 
 extension MockMessagingService: ConversationsCountRepositoryProtocol {
-    var conversationsCount: AnyPublisher<Int, Never> {
+    public var conversationsCount: AnyPublisher<Int, Never> {
         Just(1).eraseToAnyPublisher()
     }
 
-    func fetchCount() throws -> Int {
+    public func fetchCount() throws -> Int {
         1
     }
 }
 
 extension MockMessagingService: ConversationConsentWriterProtocol {
-    func join(conversation: Conversation) async throws {
+    public func join(conversation: Conversation) async throws {
     }
 
-    func delete(conversation: Conversation) async throws {
+    public func delete(conversation: Conversation) async throws {
     }
 
-    func deleteAll() async throws {
+    public func deleteAll() async throws {
     }
 }
 
 extension MockMessagingService: ConversationRepositoryProtocol {
-    var conversationId: String {
+    public var conversationId: String {
         conversation?.id ?? ""
     }
 
-    var conversation: Conversation? {
+    public var conversation: Conversation? {
         _conversations.randomElement()
     }
 
-    var conversationPublisher: AnyPublisher<Conversation?, Never> {
+    public var conversationPublisher: AnyPublisher<Conversation?, Never> {
         Just(conversation).eraseToAnyPublisher()
     }
 
-    func fetchConversation() throws -> Conversation? {
+    public func fetchConversation() throws -> Conversation? {
         conversation
     }
 }
 
 extension MockMessagingService: MessagesRepositoryProtocol {
-    func fetchAll() throws -> [AnyMessage] {
+    public var messagesPublisher: AnyPublisher<[AnyMessage], Never> {
+        messagesSubject.eraseToAnyPublisher()
+    }
+    
+    public func fetchAll() throws -> [AnyMessage] {
         messages
     }
 
-    var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> {
+    public var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> {
         let conversationId = currentConversation?.id ?? ""
         return messagesSubject
             .map { (conversationId, $0) }
@@ -199,38 +203,38 @@ extension MockMessagingService: MessagesRepositoryProtocol {
 }
 
 extension MockMessagingService: OutgoingMessageWriterProtocol {
-    var isSendingPublisher: AnyPublisher<Bool, Never> {
+    public var isSendingPublisher: AnyPublisher<Bool, Never> {
         Just(false).eraseToAnyPublisher()
     }
 
-    var sentMessage: AnyPublisher<String, Never> {
+    public var sentMessage: AnyPublisher<String, Never> {
         Just("").eraseToAnyPublisher()
     }
 
-    func send(text: String) async throws {
+    public func send(text: String) async throws {
         _ = try await prepare(text: text)
         try await publish()
     }
 }
 
 extension MockMessagingService: ConversationSender {
-    var id: String {
+    public var id: String {
         "conversationId"
     }
 
-    func add(members inboxIds: [String]) async throws {
+    public func add(members inboxIds: [String]) async throws {
     }
 
-    func remove(members inboxIds: [String]) async throws {
+    public func remove(members inboxIds: [String]) async throws {
     }
 }
 
 actor MockConversations: ConversationsProvider {
-    func listGroups(createdAfter: Date?, createdBefore: Date?, limit: Int?, consentStates: [ConsentState]?) throws -> [XMTPiOS.Group] {
+    public func listGroups(createdAfter: Date?, createdBefore: Date?, limit: Int?, consentStates: [ConsentState]?) throws -> [XMTPiOS.Group] {
         []
     }
 
-    func list(
+    public func list(
         createdAfter: Date?,
         createdBefore: Date?,
         limit: Int?,
@@ -239,7 +243,7 @@ actor MockConversations: ConversationsProvider {
         []
     }
 
-    func stream(
+    public func stream(
         type: XMTPiOS.ConversationFilterType,
         onClose: (() -> Void)?
     ) -> AsyncThrowingStream<XMTPiOS.Conversation, any Error> {
@@ -247,15 +251,15 @@ actor MockConversations: ConversationsProvider {
         }
     }
 
-    func syncAllConversations(consentStates: [XMTPiOS.ConsentState]?) async throws -> UInt32 {
+    public func syncAllConversations(consentStates: [XMTPiOS.ConsentState]?) async throws -> UInt32 {
         0
     }
 
-    func findConversation(conversationId: String) async throws -> XMTPiOS.Conversation? {
+    public func findConversation(conversationId: String) async throws -> XMTPiOS.Conversation? {
         nil
     }
 
-    func streamAllMessages(
+    public func streamAllMessages(
         type: ConversationFilterType,
         consentStates: [ConsentState]?,
         onClose: (() -> Void)?
@@ -266,69 +270,69 @@ actor MockConversations: ConversationsProvider {
 }
 
 extension MockMessagingService: XMTPClientProvider {
-    var installationId: String {
+    public var installationId: String {
         ""
     }
 
-    var inboxId: String {
+    public var inboxId: String {
         ""
     }
 
-    func signWithInstallationKey(message: String) throws -> Data {
+    public func signWithInstallationKey(message: String) throws -> Data {
         Data()
     }
 
-    func canMessage(identity: String) async throws -> Bool {
+    public func canMessage(identity: String) async throws -> Bool {
         true
     }
 
-    func canMessage(identities: [String]) async throws -> [String: Bool] {
+    public func canMessage(identities: [String]) async throws -> [String: Bool] {
         return Dictionary(uniqueKeysWithValues: identities.map { ($0, true) })
     }
 
-    func prepareConversation() async throws -> ConversationSender {
+    public func prepareConversation() async throws -> ConversationSender {
         self
     }
 
-    func newConversation(with memberInboxIds: [String],
+    public func newConversation(with memberInboxIds: [String],
                          name: String,
                          description: String,
                          imageUrl: String) async throws -> String {
         return UUID().uuidString
     }
 
-    func newConversation(with memberInboxId: String) async throws -> String {
+    public func newConversation(with memberInboxId: String) async throws -> String {
         return UUID().uuidString
     }
 
-    func conversation(with id: String) async throws -> XMTPiOS.Conversation? {
+    public func conversation(with id: String) async throws -> XMTPiOS.Conversation? {
         nil
     }
 
-    var conversationsProvider: ConversationsProvider {
+    public var conversationsProvider: ConversationsProvider {
         MockConversations()
     }
 
-    func messageSender(for conversationId: String) async throws -> (any MessageSender)? {
+    public func messageSender(for conversationId: String) async throws -> (any MessageSender)? {
         self
     }
 
-    func inboxId(for ethereumAddress: String) async throws -> String? {
+    public func inboxId(for ethereumAddress: String) async throws -> String? {
         nil
     }
 
-    func update(consent: Consent, for conversationId: String) async throws {
+    public func update(consent: Consent, for conversationId: String) async throws {
     }
 
-    func deleteLocalDatabase() throws {
+    public func deleteLocalDatabase() throws {
     }
 
-    func revokeInstallations(signingKey: any SigningKey, installationIds: [String]) async throws {
+    public func revokeInstallations(signingKey: any SigningKey, installationIds: [String]) async throws {
     }
 }
 
 extension MockMessagingService: MessageSender {
-    func prepare(text: String) async throws -> String {
+    public func prepare(text: String) async throws -> String {
         guard let conversation = currentConversation else { return "" }
         let message: AnyMessage = .message(
             .init(id: UUID().uuidString,
@@ -345,7 +349,7 @@ extension MockMessagingService: MessageSender {
         return message.base.id
     }
 
-    func publish() async throws {
+    public func publish() async throws {
         messages.append(contentsOf: unpublishedMessages)
         unpublishedMessages.removeAll()
         messagesSubject.send(messages)
@@ -489,64 +493,66 @@ extension MockMessagingService {
 }
 
 // Add a mock implementation for ConversationLocalStateWriterProtocol
-class MockConversationLocalStateWriter: ConversationLocalStateWriterProtocol {
-    func setUnread(_ isUnread: Bool, for conversationId: String) async throws {}
-    func setPinned(_ isPinned: Bool, for conversationId: String) async throws {}
-    func setMuted(_ isMuted: Bool, for conversationId: String) async throws {}
+public class MockConversationLocalStateWriter: ConversationLocalStateWriterProtocol {
+    public init() {}
+    public func setUnread(_ isUnread: Bool, for conversationId: String) async throws {}
+    public func setPinned(_ isPinned: Bool, for conversationId: String) async throws {}
+    public func setMuted(_ isMuted: Bool, for conversationId: String) async throws {}
 }
 
 // Add mock implementations for group functionality
-class MockGroupMetadataWriter: ConversationMetadataWriterProtocol {
-    func updateGroupName(groupId: String, name: String) async throws {}
-    func updateGroupDescription(groupId: String, description: String) async throws {}
-    func updateGroupImageUrl(groupId: String, imageURL: String) async throws {}
-    func addGroupMembers(groupId: String, memberInboxIds: [String]) async throws {}
-    func removeGroupMembers(groupId: String, memberInboxIds: [String]) async throws {}
-    func promoteToAdmin(groupId: String, memberInboxId: String) async throws {}
-    func demoteFromAdmin(groupId: String, memberInboxId: String) async throws {}
-    func promoteToSuperAdmin(groupId: String, memberInboxId: String) async throws {}
-    func demoteFromSuperAdmin(groupId: String, memberInboxId: String) async throws {}
-    func updateGroupImage(conversation: Conversation, image: UIImage) async throws {}
+public class MockGroupMetadataWriter: ConversationMetadataWriterProtocol {
+    public init() {}
+    public func updateGroupName(groupId: String, name: String) async throws {}
+    public func updateGroupDescription(groupId: String, description: String) async throws {}
+    public func updateGroupImageUrl(groupId: String, imageURL: String) async throws {}
+    public func addGroupMembers(groupId: String, memberInboxIds: [String]) async throws {}
+    public func removeGroupMembers(groupId: String, memberInboxIds: [String]) async throws {}
+    public func promoteToAdmin(groupId: String, memberInboxId: String) async throws {}
+    public func demoteFromAdmin(groupId: String, memberInboxId: String) async throws {}
+    public func promoteToSuperAdmin(groupId: String, memberInboxId: String) async throws {}
+    public func demoteFromSuperAdmin(groupId: String, memberInboxId: String) async throws {}
+    public func updateGroupImage(conversation: Conversation, image: UIImage) async throws {}
 }
 
 class MockGroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
-    func addAdmin(memberInboxId: String, to groupId: String) async throws {
+    public func addAdmin(memberInboxId: String, to groupId: String) async throws {
         // @lourou
     }
 
-    func removeAdmin(memberInboxId: String, from groupId: String) async throws {
+    public func removeAdmin(memberInboxId: String, from groupId: String) async throws {
         // @lourou
     }
 
-    func addSuperAdmin(memberInboxId: String, to groupId: String) async throws {
+    public func addSuperAdmin(memberInboxId: String, to groupId: String) async throws {
         // @lourou
     }
 
-    func removeSuperAdmin(memberInboxId: String, from groupId: String) async throws {
+    public func removeSuperAdmin(memberInboxId: String, from groupId: String) async throws {
     }
 
-    func addMembers(inboxIds: [String], to groupId: String) async throws {
+    public func addMembers(inboxIds: [String], to groupId: String) async throws {
     }
 
-    func removeMembers(inboxIds: [String], from groupId: String) async throws {
+    public func removeMembers(inboxIds: [String], from groupId: String) async throws {
     }
 
-    func getGroupPermissions(for groupId: String) async throws -> GroupPermissionPolicySet {
+    public func getGroupPermissions(for groupId: String) async throws -> GroupPermissionPolicySet {
         return GroupPermissionPolicySet.defaultPolicy
     }
 
-    func getMemberRole(memberInboxId: String, in groupId: String) async throws -> MemberRole {
+    public func getMemberRole(memberInboxId: String, in groupId: String) async throws -> MemberRole {
         return .member
     }
 
-    func canPerformAction(
+    public func canPerformAction(
         memberInboxId: String,
         action: GroupPermissionAction,
         in groupId: String) async throws -> Bool {
         return true
     }
 
-    func getGroupMembers(for groupId: String) async throws -> [GroupMemberInfo] {
+    public func getGroupMembers(for groupId: String) async throws -> [GroupMemberInfo] {
         return []
     }
 }

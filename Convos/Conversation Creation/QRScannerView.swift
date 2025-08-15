@@ -1,4 +1,5 @@
 import AVFoundation
+import ConvosCore
 import SwiftUI
 
 // MARK: - QR Scanner Delegate

@@ -11,6 +11,19 @@ public enum AppEnvironment {
     case dev(config: ConvosConfiguration)
     case production(config: ConvosConfiguration)
 
+    public var name: String {
+        switch self {
+            case .local:
+            return "local"
+        case .dev:
+            return "dev"
+        case .production:
+            return "production"
+        case .tests:
+            return "tests"
+        }
+    }
+
     /// Create an environment with custom configuration
     public static func configured(_ config: ConvosConfiguration, type: EnvironmentType) -> AppEnvironment {
         switch type {
@@ -67,7 +80,7 @@ public enum AppEnvironment {
         }
     }
 
-    var relyingPartyIdentifier: String {
+    public var relyingPartyIdentifier: String {
         switch self {
         case .local(let config):
             return config.relyingPartyIdentifier

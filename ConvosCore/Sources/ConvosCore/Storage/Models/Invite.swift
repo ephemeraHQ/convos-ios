@@ -1,21 +1,36 @@
 import Foundation
 
-struct ParsedInvite {
-    let inviteId: String
-    let inboxId: String
-    let code: String
+public struct ParsedInvite {
+    public let inviteId: String
+    public let inboxId: String
+    public let code: String
 }
 
-struct Invite: Codable, Hashable, Identifiable, Equatable {
-    var id: String {
+public struct Invite: Codable, Hashable, Identifiable, Equatable {
+    public var id: String {
         code
     }
-    let code: String
-    let conversationId: String
-    let inviteUrlString: String
-    let status: InviteStatus
-    let createdAt: Date
-    let maxUses: Int?
-    let usesCount: Int
-    let autoApprove: Bool
+    public let code: String
+    public let conversationId: String
+    public let inviteUrlString: String
+    public let status: InviteStatus
+    public let createdAt: Date
+    public let maxUses: Int?
+    public let usesCount: Int
+    public let autoApprove: Bool
+}
+
+public extension Invite {
+    static var empty: Self {
+        .init(
+            code: "",
+            conversationId: "",
+            inviteUrlString: "",
+            status: .active,
+            createdAt: .distantFuture,
+            maxUses: 0,
+            usesCount: 0,
+            autoApprove: false
+        )
+    }
 }

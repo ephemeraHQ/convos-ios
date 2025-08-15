@@ -2,17 +2,17 @@ import Combine
 import Foundation
 
 class MockMessagesRepository: MessagesRepositoryProtocol {
-    let conversation: Conversation
+    public let conversation: Conversation
 
     init(conversation: Conversation) {
         self.conversation = conversation
     }
 
-    func fetchAll() throws -> [AnyMessage] {
+    public func fetchAll() throws -> [AnyMessage] {
         return []
     }
 
-    var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> {
+    public var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> {
         Just((conversation.id, [])).eraseToAnyPublisher()
     }
 }

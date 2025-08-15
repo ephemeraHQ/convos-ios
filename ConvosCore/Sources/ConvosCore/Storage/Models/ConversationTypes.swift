@@ -3,11 +3,11 @@ import GRDB
 
 // MARK: - ConversationKind
 
-enum ConversationKind: String, Codable, Hashable, SQLExpressible, CaseIterable {
+public enum ConversationKind: String, Codable, Hashable, SQLExpressible, CaseIterable {
     case group, dm
 }
 
-extension Array where Element == ConversationKind {
+public extension Array where Element == ConversationKind {
     static var all: [ConversationKind] {
         ConversationKind.allCases
     }
@@ -23,11 +23,11 @@ extension Array where Element == ConversationKind {
 
 // MARK: - Consent
 
-enum Consent: String, Codable, Hashable, SQLExpressible, CaseIterable {
+public enum Consent: String, Codable, Hashable, SQLExpressible, CaseIterable {
     case allowed, denied, unknown
 }
 
-extension Array where Element == Consent {
+public extension Array where Element == Consent {
     static var all: [Consent] {
         Consent.allCases
     }
@@ -47,10 +47,10 @@ extension Array where Element == Consent {
 
 // MARK: - MemberRole
 
-enum MemberRole: String, Codable, Hashable, CaseIterable {
+public enum MemberRole: String, Codable, Hashable, CaseIterable {
     case member, admin, superAdmin = "super_admin"
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .member:
             return ""
@@ -61,7 +61,7 @@ enum MemberRole: String, Codable, Hashable, CaseIterable {
         }
     }
 
-    var priority: Int {
+    public var priority: Int {
         switch self {
         case .superAdmin: return 1
         case .admin: return 2

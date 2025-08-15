@@ -20,6 +20,6 @@ struct Session: Codable, FetchableRecord, PersistableRecord, TableRecord, Identi
     )
 }
 
-struct CurrentSession: Codable, Hashable {
+public struct CurrentSession: Codable, Hashable {
     let inboxes: [Inbox]
 }

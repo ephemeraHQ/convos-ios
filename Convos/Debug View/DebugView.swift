@@ -1,3 +1,4 @@
+import ConvosCore
 import SwiftUI
 import UIKit
 
@@ -188,7 +189,7 @@ struct DebugViewSection: View {
                 HStack {
                     Text("Environment")
                     Spacer()
-                    Text(ConfigManager.shared.currentEnvironment.rawValue.capitalized)
+                    Text(ConfigManager.shared.currentEnvironment.name.capitalized)
                         .foregroundStyle(.colorTextSecondary)
                 }
             }

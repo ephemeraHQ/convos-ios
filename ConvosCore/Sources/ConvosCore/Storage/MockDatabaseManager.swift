@@ -5,17 +5,17 @@ class MockDatabaseManager: DatabaseManagerProtocol {
     static let shared: MockDatabaseManager = MockDatabaseManager()
     static let previews: MockDatabaseManager = MockDatabaseManager(migrate: false)
 
-    let dbPool: DatabaseQueue
+    public let dbPool: DatabaseQueue
 
-    var dbWriter: DatabaseWriter {
+    public var dbWriter: DatabaseWriter {
         dbPool as DatabaseWriter
     }
 
-    var dbReader: DatabaseReader {
+    public var dbReader: DatabaseReader {
         dbPool as DatabaseReader
     }
 
-    func erase() throws {
+    public func erase() throws {
         try dbPool.erase()
         try SharedDatabaseMigrator.shared.migrate(database: dbPool)
     }

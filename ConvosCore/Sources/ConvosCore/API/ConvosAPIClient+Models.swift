@@ -1,8 +1,8 @@
 import Foundation
 import UIKit
 
-enum ConvosAPI {
-    enum AuthenticatorTransport: String, Codable {
+public enum ConvosAPI {
+    public enum AuthenticatorTransport: String, Codable {
         case ble = "AUTHENTICATOR_TRANSPORT_BLE"
         case transportInternal = "AUTHENTICATOR_TRANSPORT_INTERNAL"
         case nfc = "AUTHENTICATOR_TRANSPORT_NFC"
@@ -10,90 +10,90 @@ enum ConvosAPI {
         case hybrid = "AUTHENTICATOR_TRANSPORT_HYBRID"
     }
 
-    struct PasskeyAttestation: Codable {
-        let credentialId: String
-        let clientDataJson: String
-        let attestationObject: String
-        let transports: [AuthenticatorTransport]
+    public struct PasskeyAttestation: Codable {
+        public let credentialId: String
+        public let clientDataJson: String
+        public let attestationObject: String
+        public let transports: [AuthenticatorTransport]
     }
 
-    struct Passkey: Codable {
-        let challenge: String
-        let attestation: PasskeyAttestation
+    public struct Passkey: Codable {
+        public let challenge: String
+        public let attestation: PasskeyAttestation
     }
 
-    struct FetchJwtResponse: Codable {
-        let token: String
+    public struct FetchJwtResponse: Codable {
+        public let token: String
     }
 
-    struct CreateSubOrganizationResponse: Codable {
-        let subOrgId: String
-        let walletAddress: String
+    public struct CreateSubOrganizationResponse: Codable {
+        public let subOrgId: String
+        public let walletAddress: String
     }
 
-    struct UserResponse: Decodable {
-        let id: String
-        let identities: [Identity]
-        struct Identity: Decodable {
-            let id: String
-            let identityAddress: String?
-            let xmtpId: String
+    public struct UserResponse: Decodable {
+        public let id: String
+        public let identities: [Identity]
+        public struct Identity: Decodable {
+            public let id: String
+            public let identityAddress: String?
+            public let xmtpId: String
         }
     }
 
-    struct CreateUserRequest: Encodable {
-        let userId: String
-        let userType: UserType
-        let device: Device
-        let identity: Identity
-        let profile: Profile
+    public struct CreateUserRequest: Encodable {
+        public let userId: String
+        public let userType: UserType
+        public let device: Device
+        public let identity: Identity
+        public let profile: Profile
 
-        enum UserType: String, Encodable {
+        public enum UserType: String, Encodable {
             case onDevice
             case turnkey
         }
-        struct Device: Encodable {
-            let os: String
-            let name: String?
-            let id: String
+        public struct Device: Encodable {
+            public let os: String
+            public let name: String?
+            public let id: String
         }
-        struct Identity: Encodable {
-            let identityAddress: String?
-            let xmtpId: String
-            let xmtpInstallationId: String?
+        public struct Identity: Encodable {
+            public let identityAddress: String?
+            public let xmtpId: String
+            public let xmtpInstallationId: String?
         }
-        struct Profile: Encodable {
-            let name: String?
-            let username: String?
-            let description: String?
-            let avatar: String?
+        public struct Profile: Encodable {
+            public let name: String?
+            public let username: String?
+            public let description: String?
+            public let avatar: String?
         }
     }
 
-    struct CreateInviteCode: Encodable {
-        let groupId: String
-        let name: String?
-        let description: String?
-        let imageUrl: String?
-        let maxUses: Int?
-        let expiresAt: Date?
-        let autoApprove: Bool
-        let notificationTargets: [String]
+    public struct CreateInviteCode: Encodable {
+        public let groupId: String
+        public let name: String?
+        public let description: String?
+        public let imageUrl: String?
+        public let maxUses: Int?
+        public let expiresAt: Date?
+        public let autoApprove: Bool
+        public let notificationTargets: [String]
     }
 
-    struct RequestToJoinResponse: Decodable {
-        let id: String
-        let inviteId: String
-        let createdAt: String
+    public struct RequestToJoinResponse: Decodable {
+        public let id: String
+        public let inviteId: String
+        public let createdAt: String
     }
 
-    struct UpdateProfileRequest: Encodable {
-        let name: String?
-        let username: String?
-        let description: String?
-        let avatar: String?
+    public struct UpdateProfileRequest: Encodable {
+        public let name: String?
+        public let username: String?
+        public let description: String?
+        public let avatar: String?
 
-        init(name: String? = nil, username: String? = nil, description: String? = nil, avatar: String? = nil) {
+        public init(name: String? = nil, username: String? = nil, description: String? = nil, avatar: String? = nil) {
             self.name = name
             self.username = username
             self.description = description
@@ -101,85 +101,85 @@ enum ConvosAPI {
         }
     }
 
-    struct UpdateProfileResponse: Decodable {
-        let id: String
-        let name: String?
-        let username: String?
-        let description: String?
-        let avatar: String?
-        let createdAt: String
-        let updatedAt: String
+    public struct UpdateProfileResponse: Decodable {
+        public let id: String
+        public let name: String?
+        public let username: String?
+        public let description: String?
+        public let avatar: String?
+        public let createdAt: String
+        public let updatedAt: String
     }
 
-    enum InviteCodeStatus: String, Decodable {
+    public enum InviteCodeStatus: String, Decodable {
         case active = "ACTIVE",
              expired = "EXPIRED",
              disabled = "DISABLED"
     }
 
-    struct InviteDetailsResponse: Decodable {
-        let id: String
-        let name: String?
-        let description: String?
-        let imageUrl: String?
-        let maxUses: Int?
-        let usesCount: Int
-        let status: InviteCodeStatus
-        let expiresAt: Date?
-        let autoApprove: Bool
-        let groupId: String
-        let createdAt: Date
-        let inviteLinkURL: String
+    public struct InviteDetailsResponse: Decodable {
+        public let id: String
+        public let name: String?
+        public let description: String?
+        public let imageUrl: String?
+        public let maxUses: Int?
+        public let usesCount: Int
+        public let status: InviteCodeStatus
+        public let expiresAt: Date?
+        public let autoApprove: Bool
+        public let groupId: String
+        public let createdAt: Date
+        public let inviteLinkURL: String
     }
 
-    struct PublicInviteDetailsResponse: Decodable {
-        let id: String
-        let name: String?
-        let description: String?
-        let imageUrl: String?
-        let inviteLinkURL: String
+    public struct PublicInviteDetailsResponse: Decodable {
+        public let id: String
+        public let name: String?
+        public let description: String?
+        public let imageUrl: String?
+        public let inviteLinkURL: String
     }
 
-    struct CreatedUserResponse: Decodable {
-        let id: String
-        let userId: String
-        let device: Device
-        let identity: Identity
-        let profile: Profile
-        struct Device: Decodable {
-            let id: String
-            let os: String
-            let name: String?
+    public struct CreatedUserResponse: Decodable {
+        public let id: String
+        public let userId: String
+        public let device: Device
+        public let identity: Identity
+        public let profile: Profile
+        public struct Device: Decodable {
+            public let id: String
+            public let os: String
+            public let name: String?
         }
-        struct Identity: Decodable {
-            let id: String
-            let identityAddress: String?
-            let xmtpId: String?
+        public struct Identity: Decodable {
+            public let id: String
+            public let identityAddress: String?
+            public let xmtpId: String?
         }
-        struct Profile: Decodable {
-            let id: String
-            let name: String?
-            let description: String?
-            let avatar: String?
+        public struct Profile: Decodable {
+            public let id: String
+            public let name: String?
+            public let description: String?
+            public let avatar: String?
         }
     }
 
-    struct UsernameCheckResponse: Decodable {
-        let taken: Bool
+    public struct UsernameCheckResponse: Decodable {
+        public let taken: Bool
     }
 
-    struct BatchProfilesResponse: Decodable {
-        let profiles: [String: ProfileResponse]
+    public struct BatchProfilesResponse: Decodable {
+        public let profiles: [String: ProfileResponse]
     }
 
-    struct ProfileResponse: Decodable {
-        let id: String
-        let name: String?
-        let username: String?
-        let description: String?
-        let avatar: String?
-        let xmtpId: String
-        let identityAddress: String?
+    public struct ProfileResponse: Decodable {
+        public let id: String
+        public let name: String?
+        public let username: String?
+        public let description: String?
+        public let avatar: String?
+        public let xmtpId: String
+        public let identityAddress: String?
     }
 
     // MARK: - Device Update Models
@@ -207,13 +207,13 @@ enum ConvosAPI {
         }
     }
 
-    struct DeviceUpdateResponse: Codable {
-        let id: String
-        let pushToken: String?
-        let pushTokenType: String
-        let apnsEnv: String?
-        let updatedAt: String
-        let pushFailures: Int
+    public struct DeviceUpdateResponse: Codable {
+        public let id: String
+        public let pushToken: String?
+        public let pushTokenType: String
+        public let apnsEnv: String?
+        public let updatedAt: String
+        public let pushFailures: Int
     }
 }
 

@@ -3,8 +3,8 @@ import UserNotifications
 
 // TO DO: This is a placeholder for the actual notification processor.
 
-class NotificationProcessor {
-    nonisolated(unsafe) public static var shared: NotificationProcessor!
+public class NotificationProcessor {
+    public static var shared: NotificationProcessor!
 
     /// Configure the shared instance with the app group identifier
     public static func configure(appGroupIdentifier: String) {
@@ -74,12 +74,12 @@ class NotificationProcessor {
 
     // MARK: - Device Token Management
 
-    func storeDeviceToken(_ token: String) {
+    public func storeDeviceToken(_ token: String) {
         appGroupDefaults?.set(token, forKey: NotificationConstants.StorageKeys.deviceToken)
         appGroupDefaults?.set(Date(), forKey: NotificationConstants.StorageKeys.lastRegistrationDate)
     }
 
-    func getStoredDeviceToken() -> String? {
+    public func getStoredDeviceToken() -> String? {
         return appGroupDefaults?.string(forKey: NotificationConstants.StorageKeys.deviceToken)
     }
 

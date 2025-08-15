@@ -1,12 +1,12 @@
 import Combine
 import Foundation
 
-struct AddAccountResultType {
-    var providerId: String
-    var messagingService: AnyMessagingService
+public struct AddAccountResultType {
+    public let providerId: String
+    public let messagingService: AnyMessagingService
 }
 
-protocol SessionManagerProtocol {
+public protocol SessionManagerProtocol {
     var authState: AnyPublisher<AuthServiceState, Never> { get }
 
     func prepare() throws

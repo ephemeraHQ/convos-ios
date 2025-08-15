@@ -1,3 +1,4 @@
+import ConvosCore
 import UIKit
 
 final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {

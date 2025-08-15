@@ -1,19 +1,19 @@
 import Foundation
 import GRDB
 
-enum MessageStatus: String, Hashable, Codable {
+public enum MessageStatus: String, Hashable, Codable {
     case unpublished, published, failed, unknown
 }
 
-enum MessageSource: String, Hashable, Codable {
+public enum MessageSource: String, Hashable, Codable {
     case incoming, outgoing
 
-    var isIncoming: Bool {
+    public var isIncoming: Bool {
         self == .incoming
     }
 }
 
-enum DBMessageType: String, Codable {
+public enum DBMessageType: String, Codable {
     case original,
          reply,
          reaction

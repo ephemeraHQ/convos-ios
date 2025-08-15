@@ -1,25 +1,25 @@
 import Foundation
 import GRDB
 
-struct Profile: Codable, Identifiable, Hashable {
-    var id: String { inboxId }
-    let inboxId: String
-    let name: String?
-    let username: String?
-    let avatar: String?
+public struct Profile: Codable, Identifiable, Hashable {
+    public var id: String { inboxId }
+    public let inboxId: String
+    public let name: String?
+    public let username: String?
+    public let avatar: String?
 
-    var avatarURL: URL? {
+    public var avatarURL: URL? {
         guard let avatar, let url = URL(string: avatar) else {
             return nil
         }
         return url
     }
 
-    var displayName: String {
+    public var displayName: String {
         name ?? "Someone"
     }
 
-    static func empty(inboxId: String = "") -> Profile {
+    public static func empty(inboxId: String = "") -> Profile {
         .init(
             inboxId: inboxId,
             name: nil,
@@ -31,7 +31,7 @@ struct Profile: Codable, Identifiable, Hashable {
 
 // MARK: - Array Extensions
 
-extension Array where Element == Profile {
+public extension Array where Element == Profile {
     var formattedNamesString: String {
         let displayNames = self.map { $0.displayName }
             .filter { !$0.isEmpty }

@@ -2,11 +2,11 @@ import Combine
 import Foundation
 
 class MockInboxesRepository: InboxesRepositoryProtocol {
-    var inboxesPublisher: AnyPublisher<[Inbox], Never> {
+    public var inboxesPublisher: AnyPublisher<[Inbox], Never> {
         Just((try? allInboxes()) ?? []).eraseToAnyPublisher()
     }
 
-    func allInboxes() throws -> [Inbox] {
+    public func allInboxes() throws -> [Inbox] {
         [
             .init(
                 inboxId: UUID().uuidString,
@@ -21,7 +21,7 @@ class MockInboxesRepository: InboxesRepositoryProtocol {
 }
 
 extension Profile {
-    static func mock(name: String = "Somebody") -> Profile {
+    public static func mock(name: String = "Somebody") -> Profile {
         .init(
             inboxId: UUID().uuidString,
             name: name,

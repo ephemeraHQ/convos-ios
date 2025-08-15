@@ -1,3 +1,4 @@
+import ConvosCore
 import UIKit
 
 // swiftlint:disable force_cast

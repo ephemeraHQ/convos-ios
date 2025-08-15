@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import GRDB
 
-protocol DraftConversationRepositoryProtocol: ConversationRepositoryProtocol {
+public protocol DraftConversationRepositoryProtocol: ConversationRepositoryProtocol {
     var messagesRepository: any MessagesRepositoryProtocol { get }
     var inviteRepository: any InviteRepositoryProtocol { get }
 }

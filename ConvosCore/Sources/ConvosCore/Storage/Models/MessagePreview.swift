@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - MessagePreview
 
-struct MessagePreview: Codable, Equatable, Hashable {
-    let text: String
-    let createdAt: Date
+public struct MessagePreview: Codable, Equatable, Hashable {
+    public let text: String
+    public let createdAt: Date
 }

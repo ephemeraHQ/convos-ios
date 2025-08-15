@@ -26,14 +26,14 @@ final class MessagingService: MessagingServiceProtocol {
         cleanup()
     }
 
-    func cleanup() {
+    public func cleanup() {
         cancellables.removeAll()
         inboxReadyValue.dispose()
     }
 
     // MARK: Invites
 
-    func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {
+    public func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {
         InviteRepository(
             databaseReader: databaseReader,
             conversationId: conversationId,
@@ -43,17 +43,17 @@ final class MessagingService: MessagingServiceProtocol {
 
     // MARK: My Profile
 
-    func myProfileRepository() -> any MyProfileRepositoryProtocol {
+    public func myProfileRepository() -> any MyProfileRepositoryProtocol {
         MyProfileRepository(inboxReadyValue: inboxReadyValue, databaseReader: databaseReader)
     }
 
-    func myProfileWriter() -> any MyProfileWriterProtocol {
+    public func myProfileWriter() -> any MyProfileWriterProtocol {
         MyProfileWriter(inboxReadyValue: inboxReadyValue, databaseWriter: databaseWriter)
     }
 
     // MARK: New Conversation
 
-    func draftConversationComposer() -> any DraftConversationComposerProtocol {
+    public func draftConversationComposer() -> any DraftConversationComposerProtocol {
         let clientConversationId: String = DBConversation.generateDraftConversationId()
         let draftConversationWriter = DraftConversationWriter(
             inboxReadyValue: inboxReadyValue,
@@ -76,20 +76,20 @@ final class MessagingService: MessagingServiceProtocol {
 
     // MARK: Conversations
 
-    func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
+    public func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
         ConversationsRepository(dbReader: databaseReader, consent: consent)
     }
 
-    func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
+    public func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
         ConversationsCountRepository(databaseReader: databaseReader, consent: consent, kinds: kinds)
     }
 
-    func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
+    public func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
         ConversationRepository(conversationId: conversationId,
                                dbReader: databaseReader)
     }
 
-    func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
+    public func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
         ConversationConsentWriter(
             client: inboxReadyValue.value?.client,
             clientPublisher: clientPublisher,
@@ -97,18 +97,18 @@ final class MessagingService: MessagingServiceProtocol {
         )
     }
 
-    func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol {
+    public func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol {
         ConversationLocalStateWriter(databaseWriter: databaseWriter)
     }
 
     // MARK: Getting/Sending Messages
 
-    func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
+    public func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
         MessagesRepository(dbReader: databaseReader,
                            conversationId: conversationId)
     }
 
-    func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
+    public func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
         OutgoingMessageWriter(client: inboxReadyValue.value?.client,
                               clientPublisher: clientPublisher,
                               databaseWriter: databaseWriter,
@@ -117,20 +117,20 @@ final class MessagingService: MessagingServiceProtocol {
 
     // MARK: - Group Management
 
-    func groupMetadataWriter() -> any ConversationMetadataWriterProtocol {
+    public func groupMetadataWriter() -> any ConversationMetadataWriterProtocol {
         ConversationMetadataWriter(
             inboxReadyValue: inboxReadyValue,
             databaseWriter: databaseWriter
         )
     }
 
-    func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
+    public func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
         GroupPermissionsRepository(client: inboxReadyValue.value?.client,
                                    clientPublisher: clientPublisher,
                                    databaseReader: databaseReader)
     }
 
-    func uploadImage(data: Data, filename: String) async throws -> String {
+    public func uploadImage(data: Data, filename: String) async throws -> String {
         guard let inboxReady = inboxReadyValue.value else {
             throw InboxStateError.inboxNotReady
         }
@@ -143,7 +143,7 @@ final class MessagingService: MessagingServiceProtocol {
         )
     }
 
-    func uploadImageAndExecute(
+    public func uploadImageAndExecute(
         data: Data,
         filename: String,
         afterUpload: @escaping (String) async throws -> Void

@@ -2,14 +2,14 @@ import Foundation
 
 // MARK: - ConversationMember
 
-struct ConversationMember: Codable, Hashable, Identifiable {
-    var id: String { profile.id }
-    let profile: Profile
-    let role: MemberRole
-    let isCurrentUser: Bool
+public struct ConversationMember: Codable, Hashable, Identifiable {
+    public var id: String { profile.id }
+    public let profile: Profile
+    public let role: MemberRole
+    public let isCurrentUser: Bool
 }
 
-extension Array where Element == ConversationMember {
+public extension Array where Element == ConversationMember {
     var formattedNamesString: String {
         map { $0.profile }.formattedNamesString
     }

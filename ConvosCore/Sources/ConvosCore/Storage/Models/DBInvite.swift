@@ -3,7 +3,7 @@ import GRDB
 
 // MARK: - DBInvite
 
-enum InviteStatus: String, Codable {
+public enum InviteStatus: String, Codable {
     case active, expired, disabled
 }
 

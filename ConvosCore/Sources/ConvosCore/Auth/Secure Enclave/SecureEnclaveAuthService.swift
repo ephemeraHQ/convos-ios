@@ -2,23 +2,25 @@ import Combine
 import Foundation
 import XMTPiOS
 
-class SecureEnclaveAuthService: LocalAuthServiceProtocol {
+public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
     private let identityStore: SecureEnclaveIdentityStore = .init()
     private let authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
-    var state: AuthServiceState {
+    public init() {}
+
+    public var state: AuthServiceState {
         authStateSubject.value
     }
 
-    var authStatePublisher: AnyPublisher<AuthServiceState, Never> {
+    public var authStatePublisher: AnyPublisher<AuthServiceState, Never> {
         authStateSubject.eraseToAnyPublisher()
     }
 
-    func prepare() throws {
+    public func prepare() throws {
         try refreshAuthState()
     }
 
-    func register(displayName: String? = nil) throws -> any AuthServiceRegisteredResultType {
+    public func register(displayName: String? = nil) throws -> any AuthServiceRegisteredResultType {
         let inboxType: InboxType = .ephemeral
         let identity = try identityStore.save(type: inboxType)
         let result = AuthServiceRegisteredResult(
@@ -35,12 +37,12 @@ class SecureEnclaveAuthService: LocalAuthServiceProtocol {
         return result
     }
 
-    func deleteAccount(with providerId: String) throws {
+    public func deleteAccount(with providerId: String) throws {
         try identityStore.delete(for: providerId)
         try refreshAuthState()
     }
 
-    func deleteAll() throws {
+    public func deleteAll() throws {
         let identities = try identityStore.loadAll()
         try identities.forEach { try identityStore.delete(for: $0.id) }
         try refreshAuthState()

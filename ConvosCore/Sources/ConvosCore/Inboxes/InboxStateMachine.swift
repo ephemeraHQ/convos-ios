@@ -65,15 +65,15 @@ enum InboxStateError: Error {
     case inboxNotReady
 }
 
-typealias InboxReadyResultPublisher = AnyPublisher<InboxReadyResult, Never>
+public typealias InboxReadyResultPublisher = AnyPublisher<InboxReadyResult, Never>
 
-struct InboxReadyResult {
-    let inbox: any AuthServiceInboxType
-    let client: any XMTPClientProvider
-    let apiClient: any ConvosAPIClientProtocol
+public struct InboxReadyResult {
+    public let inbox: any AuthServiceInboxType
+    public let client: any XMTPClientProvider
+    public let apiClient: any ConvosAPIClientProtocol
 }
 
-actor InboxStateMachine {
+public actor InboxStateMachine {
     enum Action {
         case authorize,
              register(String?),
@@ -97,7 +97,7 @@ actor InboxStateMachine {
 
     // MARK: -
 
-    let inbox: any AuthServiceInboxType
+    internal let inbox: any AuthServiceInboxType
     private let inboxWriter: any InboxWriterProtocol
     private let environment: AppEnvironment
     private let clientOptions: ClientOptions

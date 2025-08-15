@@ -2,14 +2,14 @@ import Combine
 import Foundation
 import GRDB
 
-extension Notification.Name {
+public extension Notification.Name {
     static let leftConversationNotification: Notification.Name = Notification.Name("LeftConversationNotification")
 }
 
-typealias AnyMessagingService = any MessagingServiceProtocol
-typealias AnyMessagingServicePublisher = AnyPublisher<AnyMessagingService, Never>
-typealias AnyClientProvider = any XMTPClientProvider
-typealias AnyClientProviderPublisher = AnyPublisher<AnyClientProvider, Never>
+public typealias AnyMessagingService = any MessagingServiceProtocol
+public typealias AnyMessagingServicePublisher = AnyPublisher<AnyMessagingService, Never>
+public typealias AnyClientProvider = any XMTPClientProvider
+public typealias AnyClientProviderPublisher = AnyPublisher<AnyClientProvider, Never>
 
 enum SessionManagerError: Error {
     case missingOperationForAddedInbox
@@ -17,7 +17,7 @@ enum SessionManagerError: Error {
 }
 
 class SessionManager: SessionManagerProtocol {
-    let authState: AnyPublisher<AuthServiceState, Never>
+    public let authState: AnyPublisher<AuthServiceState, Never>
     private let currentSessionRepository: any CurrentSessionRepositoryProtocol
     private let inboxOperationsPublisher: CurrentValueSubject<[any AuthorizeInboxOperationProtocol], Never> = .init([])
     private var cancellables: Set<AnyCancellable> = []
@@ -62,7 +62,7 @@ class SessionManager: SessionManagerProtocol {
         cleanup()
     }
 
-    func cleanup() {
+    public func cleanup() {
         cancellables.removeAll()
         clearAllOperations()
     }
@@ -160,11 +160,11 @@ class SessionManager: SessionManagerProtocol {
 
     // MARK: Public
 
-    func prepare() throws {
+    public func prepare() throws {
         try authService.prepare()
     }
 
-    func addAccount() throws -> AddAccountResultType {
+    public func addAccount() throws -> AddAccountResultType {
         let authResult = try authService.register(displayName: nil)
         Logger.info("Added account: \(authResult)")
         let matchingInboxReadyPublisher = inboxOperationsPublisher
@@ -187,7 +187,7 @@ class SessionManager: SessionManagerProtocol {
         )
     }
 
-    func deleteAccount(inboxId: String) throws {
+    public func deleteAccount(inboxId: String) throws {
         let inbox: DBInbox? = try databaseReader.read { db in
             try DBInbox.fetchOne(db, key: inboxId)
         }
@@ -197,14 +197,14 @@ class SessionManager: SessionManagerProtocol {
         try deleteAccount(providerId: inbox.providerId)
     }
 
-    func deleteAccount(providerId: String) throws {
+    public func deleteAccount(providerId: String) throws {
         if let operation = operationsByProviderId[providerId] {
             operation.deleteAndStop()
         }
         try authService.deleteAccount(with: providerId)
     }
 
-    func deleteAllAccounts() throws {
+    public func deleteAllAccounts() throws {
         // Ask all ready inbox state machines to unregister their installation before teardown
         NotificationCenter.default.post(name: .convosUnregisterAllInboxesRequested, object: nil)
 
@@ -270,7 +270,7 @@ class SessionManager: SessionManagerProtocol {
 
     // MARK: Messaging
 
-    func messagingService(for inboxId: String) -> AnyMessagingService {
+    public func messagingService(for inboxId: String) -> AnyMessagingService {
         let matchingInboxReadyPublisher = inboxOperationsPublisher
             .flatMap { operations in
                 Publishers.MergeMany(
@@ -290,11 +290,11 @@ class SessionManager: SessionManagerProtocol {
 
     // MARK: Displaying All Conversations
 
-    func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
+    public func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
         ConversationsRepository(dbReader: databaseReader, consent: consent)
     }
 
-    func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
+    public func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
         ConversationsCountRepository(databaseReader: databaseReader, consent: consent, kinds: kinds)
     }
 }

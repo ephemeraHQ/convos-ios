@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import GRDB
 
-protocol ConversationsCountRepositoryProtocol {
+public protocol ConversationsCountRepositoryProtocol {
     var conversationsCount: AnyPublisher<Int, Never> { get }
     func fetchCount() throws -> Int
 }

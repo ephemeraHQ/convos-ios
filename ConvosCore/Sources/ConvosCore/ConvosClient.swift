@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import GRDB
 
-final class ConvosClient {
+public final class ConvosClient {
     private let authService: any LocalAuthServiceProtocol
     private let sessionManager: any SessionManagerProtocol
     private let databaseManager: any DatabaseManagerProtocol
@@ -16,11 +16,11 @@ final class ConvosClient {
         databaseManager.dbReader
     }
 
-    var session: any SessionManagerProtocol {
+    public var session: any SessionManagerProtocol {
         sessionManager
     }
 
-    static func testClient(
+    public static func testClient(
         authService: any LocalAuthServiceProtocol = SecureEnclaveAuthService()
     ) -> ConvosClient {
         let databaseManager = MockDatabaseManager.shared
@@ -36,7 +36,7 @@ final class ConvosClient {
                      environment: .tests)
     }
 
-    static func mock() -> ConvosClient {
+    public static func mock() -> ConvosClient {
         let authService = MockAuthService()
         let databaseManager = MockDatabaseManager.previews
         let sessionManager = MockInboxesService()
@@ -56,11 +56,11 @@ final class ConvosClient {
         self.environment = environment
     }
 
-    var authState: AnyPublisher<AuthServiceState, Never> {
+    public var authState: AnyPublisher<AuthServiceState, Never> {
         sessionManager.authState
     }
 
-    func prepare() throws {
+    public func prepare() throws {
         try sessionManager.prepare()
     }
 }

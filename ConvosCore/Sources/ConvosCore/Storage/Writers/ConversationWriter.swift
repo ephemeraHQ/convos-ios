@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 import XMTPiOS
 
-protocol ConversationWriterProtocol {
+public protocol ConversationWriterProtocol {
     @discardableResult
     func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation
     func store(conversation: XMTPiOS.Conversation,
@@ -19,11 +19,11 @@ class ConversationWriter: ConversationWriterProtocol {
         self.messageWriter = messageWriter
     }
 
-    func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation {
+    public func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation {
         return try await _store(conversation: conversation)
     }
 
-    func store(conversation: XMTPiOS.Conversation, clientConversationId: String) async throws -> DBConversation {
+    public func store(conversation: XMTPiOS.Conversation, clientConversationId: String) async throws -> DBConversation {
         return try await _store(conversation: conversation, clientConversationId: clientConversationId)
     }
 

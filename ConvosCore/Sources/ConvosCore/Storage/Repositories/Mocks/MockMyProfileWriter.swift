@@ -1,10 +1,12 @@
 import Foundation
 import UIKit
 
-class MockMyProfileWriter: MyProfileWriterProtocol {
-    func update(displayName: String) {
+public class MockMyProfileWriter: MyProfileWriterProtocol {
+    public init() {}
+
+    public func update(displayName: String) {
     }
 
-    func update(avatar: UIImage?) async throws {
+    public func update(avatar: UIImage?) async throws {
     }
 }

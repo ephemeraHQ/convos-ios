@@ -3,10 +3,10 @@ import GRDB
 
 // MARK: - DBConversation
 
-struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
-    static var databaseTableName: String = "conversation"
+public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
+    public static var databaseTableName: String = "conversation"
 
-    enum Columns {
+    public enum Columns {
         static let id: Column = Column(CodingKeys.id)
         static let inboxId: Column = Column(CodingKeys.inboxId)
         static let clientConversationId: Column = Column(CodingKeys.clientConversationId)
@@ -19,16 +19,16 @@ struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable
         static let imageURLString: Column = Column(CodingKeys.imageURLString)
     }
 
-    let id: String
-    let inboxId: String
-    let clientConversationId: String // used for conversation drafts
-    let creatorId: String
-    let kind: ConversationKind
-    let consent: Consent
-    let createdAt: Date
-    let name: String?
-    let description: String?
-    let imageURLString: String?
+    public let id: String
+    public let inboxId: String
+    public let clientConversationId: String // used for conversation drafts
+    public let creatorId: String
+    public let kind: ConversationKind
+    public let consent: Consent
+    public let createdAt: Date
+    public let name: String?
+    public let description: String?
+    public let imageURLString: String?
 
     static let creatorForeignKey: ForeignKey = ForeignKey(
         [Columns.creatorId],

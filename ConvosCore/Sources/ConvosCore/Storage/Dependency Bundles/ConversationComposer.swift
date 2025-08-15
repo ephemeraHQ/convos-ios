@@ -1,6 +1,6 @@
 import Foundation
 
-protocol DraftConversationComposerProtocol {
+public protocol DraftConversationComposerProtocol {
     var myProfileWriter: any MyProfileWriterProtocol { get }
     var draftConversationWriter: any DraftConversationWriterProtocol { get }
     var draftConversationRepository: any DraftConversationRepositoryProtocol { get }

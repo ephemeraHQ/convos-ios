@@ -1,15 +1,17 @@
 import Combine
 import Foundation
 
-class MockOutgoingMessageWriter: OutgoingMessageWriterProtocol {
-    var isSendingPublisher: AnyPublisher<Bool, Never> {
+public class MockOutgoingMessageWriter: OutgoingMessageWriterProtocol {
+    public init() {}
+
+    public var isSendingPublisher: AnyPublisher<Bool, Never> {
         Just(false).eraseToAnyPublisher()
     }
 
-    var sentMessage: AnyPublisher<String, Never> {
+    public var sentMessage: AnyPublisher<String, Never> {
         Just("").eraseToAnyPublisher()
     }
 
-    func send(text: String) async throws {
+    public func send(text: String) async throws {
     }
 }

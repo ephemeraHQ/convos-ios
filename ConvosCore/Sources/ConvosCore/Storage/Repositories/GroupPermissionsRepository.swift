@@ -5,7 +5,7 @@ import XMTPiOS
 
 // MARK: - Group Permissions Repository Protocol
 
-protocol GroupPermissionsRepositoryProtocol {
+public protocol GroupPermissionsRepositoryProtocol {
     func getGroupPermissions(for groupId: String) async throws -> GroupPermissionPolicySet
     func getMemberRole(memberInboxId: String, in groupId: String) async throws -> MemberRole
     func canPerformAction(memberInboxId: String, action: GroupPermissionAction, in groupId: String) async throws -> Bool
@@ -20,7 +20,7 @@ protocol GroupPermissionsRepositoryProtocol {
 
 // MARK: - Group Permission Types
 
-enum GroupPermissionAction: String, CaseIterable {
+public enum GroupPermissionAction: String, CaseIterable {
     case addMember = "add_member_policy"
     case removeMember = "remove_member_policy"
     case addAdmin = "add_admin_policy"
@@ -31,7 +31,7 @@ enum GroupPermissionAction: String, CaseIterable {
     case updateMessageDisappearing = "update_group_pinned_frame_url_policy"
 }
 
-enum GroupPermissionLevel: String {
+public enum GroupPermissionLevel: String {
     case allow
     case deny
     case admin
@@ -39,7 +39,7 @@ enum GroupPermissionLevel: String {
     case unknown
 }
 
-struct GroupPermissionPolicySet {
+public struct GroupPermissionPolicySet {
     let addMemberPolicy: GroupPermissionLevel
     let removeMemberPolicy: GroupPermissionLevel
     let addAdminPolicy: GroupPermissionLevel
@@ -105,7 +105,7 @@ struct GroupPermissionPolicySet {
     )
 }
 
-struct GroupMemberInfo {
+public struct GroupMemberInfo {
     let inboxId: String
     let role: MemberRole
     let consent: Consent

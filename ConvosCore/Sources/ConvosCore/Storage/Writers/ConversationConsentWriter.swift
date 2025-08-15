@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-protocol ConversationConsentWriterProtocol {
+public protocol ConversationConsentWriterProtocol {
     func join(conversation: Conversation) async throws
     func delete(conversation: Conversation) async throws
     func deleteAll() async throws

@@ -2,7 +2,7 @@ import Combine
 import Foundation
 
 extension Conversation {
-    static func mock(
+    public static func mock(
         id: String = UUID().uuidString,
         creator: ConversationMember = .mock(),
         date: Date = Date(),
@@ -36,7 +36,8 @@ extension Conversation {
             invite: nil
         )
     }
-    static func empty(id: String = "") -> Self {
+
+    public static func empty(id: String = "") -> Self {
         .init(
             id: id,
             inboxId: "",
@@ -61,20 +62,7 @@ extension Conversation {
 }
 
 extension Invite {
-    static var empty: Self {
-        .init(
-            code: "",
-            conversationId: "",
-            inviteUrlString: "",
-            status: .active,
-            createdAt: .distantFuture,
-            maxUses: 0,
-            usesCount: 0,
-            autoApprove: false
-        )
-    }
-
-    static func mock() -> Self {
+    public static func mock() -> Self {
         .init(
             code: "invite_code_123",
             conversationId: "conversation_123",
@@ -100,7 +88,7 @@ class MockConversationsRepository: ConversationsRepositoryProtocol {
         Just(conversations).eraseToAnyPublisher()
     }()
 
-    func fetchAll() throws -> [Conversation] {
+    public func fetchAll() throws -> [Conversation] {
         conversations
     }
 }

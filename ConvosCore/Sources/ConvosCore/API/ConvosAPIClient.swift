@@ -1,6 +1,6 @@
 import Foundation
 
-protocol ConvosAPIBaseProtocol {
+public protocol ConvosAPIBaseProtocol {
     // turnkey specific
     func createSubOrganization(
         ephemeralPublicKey: String,
@@ -33,7 +33,7 @@ enum ConvosAPIClientFactory: ConvosAPIClientFactoryType {
     }
 }
 
-protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
+public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
     var identifier: String { get }
 
     func authenticate(inboxId: String,

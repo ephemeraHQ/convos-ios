@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 import UIKit
 
-protocol MyProfileWriterProtocol {
+public protocol MyProfileWriterProtocol {
     func update(displayName: String) async throws
     func update(avatar: UIImage?) async throws
 }

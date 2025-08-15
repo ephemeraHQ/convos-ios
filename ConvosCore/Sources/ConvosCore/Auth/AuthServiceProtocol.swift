@@ -2,16 +2,16 @@ import Combine
 import Foundation
 import XMTPiOS
 
-protocol AuthServiceRegisteredResultType: AuthServiceResultType {
+public protocol AuthServiceRegisteredResultType: AuthServiceResultType {
     var displayName: String? { get }
     var inbox: any AuthServiceInboxType { get }
 }
 
-protocol AuthServiceResultType {
+public protocol AuthServiceResultType {
     var inboxes: [any AuthServiceInboxType] { get }
 }
 
-protocol AuthServiceInboxType {
+public protocol AuthServiceInboxType {
     var type: InboxType { get }
     var provider: InboxProvider { get }
     var providerId: String { get }
@@ -19,25 +19,25 @@ protocol AuthServiceInboxType {
     var databaseKey: Data { get }
 }
 
-struct AuthServiceRegisteredResult: AuthServiceRegisteredResultType {
-    let displayName: String?
-    let inbox: any AuthServiceInboxType
-    var inboxes: [any AuthServiceInboxType] { [inbox] }
+public struct AuthServiceRegisteredResult: AuthServiceRegisteredResultType {
+    public let displayName: String?
+    public let inbox: any AuthServiceInboxType
+    public var inboxes: [any AuthServiceInboxType] { [inbox] }
 }
 
-struct AuthServiceResult: AuthServiceResultType {
-    var inboxes: [any AuthServiceInboxType]
+public struct AuthServiceResult: AuthServiceResultType {
+    public var inboxes: [any AuthServiceInboxType]
 }
 
-struct AuthServiceInbox: AuthServiceInboxType {
-    let type: InboxType
-    let provider: InboxProvider
-    let providerId: String
-    let signingKey: any XMTPiOS.SigningKey
-    let databaseKey: Data
+public struct AuthServiceInbox: AuthServiceInboxType {
+    public let type: InboxType
+    public let provider: InboxProvider
+    public let providerId: String
+    public let signingKey: any XMTPiOS.SigningKey
+    public let databaseKey: Data
 }
 
-enum AuthServiceState {
+public enum AuthServiceState {
     case unknown,
          notReady,
          registered(AuthServiceRegisteredResultType),
@@ -64,14 +64,14 @@ enum AuthServiceState {
     }
 }
 
-protocol BaseAuthServiceProtocol {
+public protocol BaseAuthServiceProtocol {
     var state: AuthServiceState { get }
     var authStatePublisher: AnyPublisher<AuthServiceState, Never> { get }
 
     func prepare() throws
 }
 
-protocol AuthServiceProtocol: BaseAuthServiceProtocol {
+public protocol AuthServiceProtocol: BaseAuthServiceProtocol {
     var accountsService: (any AuthAccountsServiceProtocol)? { get }
 
     func signIn() async throws
@@ -79,7 +79,7 @@ protocol AuthServiceProtocol: BaseAuthServiceProtocol {
     func signOut() async throws
 }
 
-protocol LocalAuthServiceProtocol: BaseAuthServiceProtocol {
+public protocol LocalAuthServiceProtocol: BaseAuthServiceProtocol {
     func register(displayName: String?) throws -> any AuthServiceRegisteredResultType
     func deleteAccount(with providerId: String) throws
     func deleteAll() throws

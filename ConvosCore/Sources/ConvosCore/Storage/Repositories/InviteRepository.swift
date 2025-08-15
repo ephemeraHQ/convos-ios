@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import GRDB
 
-protocol InviteRepositoryProtocol {
+public protocol InviteRepositoryProtocol {
     var invitePublisher: AnyPublisher<Invite?, Never> { get }
 }
 

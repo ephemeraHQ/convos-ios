@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import GRDB
 
-protocol InboxesRepositoryProtocol {
+public protocol InboxesRepositoryProtocol {
     var inboxesPublisher: AnyPublisher<[Inbox], Never> { get }
 
     func allInboxes() throws -> [Inbox]

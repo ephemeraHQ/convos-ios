@@ -1,21 +1,21 @@
 import Foundation
 import GRDB
 
-protocol DatabaseManagerProtocol {
+public protocol DatabaseManagerProtocol {
     var dbWriter: DatabaseWriter { get }
     var dbReader: DatabaseReader { get }
 }
 
-final class DatabaseManager: DatabaseManagerProtocol {
-    static let shared: DatabaseManager = DatabaseManager()
+public final class DatabaseManager: DatabaseManagerProtocol {
+    public static let shared: DatabaseManager = DatabaseManager()
 
-    let dbPool: DatabasePool
+    public let dbPool: DatabasePool
 
-    var dbWriter: DatabaseWriter {
+    public var dbWriter: DatabaseWriter {
         dbPool as DatabaseWriter
     }
 
-    var dbReader: DatabaseReader {
+    public var dbReader: DatabaseReader {
         dbPool as DatabaseReader
     }
 

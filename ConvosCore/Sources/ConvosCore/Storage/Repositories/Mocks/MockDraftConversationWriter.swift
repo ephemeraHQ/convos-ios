@@ -2,37 +2,37 @@ import Combine
 import Foundation
 
 class MockDraftConversationWriter: DraftConversationWriterProtocol {
-    var conversationMetadataWriter: any ConversationMetadataWriterProtocol {
+    public var conversationMetadataWriter: any ConversationMetadataWriterProtocol {
         MockGroupMetadataWriter()
     }
 
-    func requestToJoinWhenInboxReady(inviteCode: String) {}
+    public func requestToJoinWhenInboxReady(inviteCode: String) {}
 
-    var isSendingPublisher: AnyPublisher<Bool, Never> {
+    public var isSendingPublisher: AnyPublisher<Bool, Never> {
         Just(false).eraseToAnyPublisher()
     }
 
-    var sentMessage: AnyPublisher<String, Never> {
+    public var sentMessage: AnyPublisher<String, Never> {
         Just("").eraseToAnyPublisher()
     }
 
-    var draftConversationId: String = ""
+    public var draftConversationId: String = ""
 
-    var conversationId: String {
+    public var conversationId: String {
         UUID().uuidString
     }
 
-    var conversationIdPublisher: AnyPublisher<String, Never> { Just(conversationId).eraseToAnyPublisher() }
+    public var conversationIdPublisher: AnyPublisher<String, Never> { Just(conversationId).eraseToAnyPublisher() }
 
-    func add(profile: MemberProfile) async throws {
+    public func add(profile: MemberProfile) async throws {
     }
 
-    func remove(profile: MemberProfile) async throws {
+    public func remove(profile: MemberProfile) async throws {
     }
 
-    func send(text: String) async throws {
+    public func send(text: String) async throws {
     }
 
-    func createConversationWhenInboxReady() {
+    public func createConversationWhenInboxReady() {
     }
 }

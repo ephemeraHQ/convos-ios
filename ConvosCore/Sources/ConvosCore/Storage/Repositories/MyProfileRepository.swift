@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import GRDB
 
-protocol MyProfileRepositoryProtocol {
+public protocol MyProfileRepositoryProtocol {
     var myProfilePublisher: AnyPublisher<Profile, Never> { get }
 
     func fetch(inboxId: String) throws -> Profile

@@ -3,7 +3,7 @@ import Foundation
 import GRDB
 import XMTPiOS
 
-protocol OutgoingMessageWriterProtocol {
+public protocol OutgoingMessageWriterProtocol {
     var isSendingPublisher: AnyPublisher<Bool, Never> { get }
     var sentMessage: AnyPublisher<String, Never> { get }
     func send(text: String) async throws

@@ -1,21 +1,21 @@
 import Foundation
 
-struct ConversationUpdate: Hashable, Codable {
-    struct MetadataChange: Hashable, Codable {
-        enum Field: String, Codable {
+public struct ConversationUpdate: Hashable, Codable {
+    public struct MetadataChange: Hashable, Codable {
+        public enum Field: String, Codable {
             case name = "group_name", image = "group_image_url_square", unknown
         }
-        let field: Field
-        let oldValue: String?
-        let newValue: String?
+        public let field: Field
+        public let oldValue: String?
+        public let newValue: String?
     }
 
-    let creator: Profile
-    let addedMembers: [Profile]
-    let removedMembers: [Profile]
-    let metadataChanges: [MetadataChange]
+    public let creator: Profile
+    public let addedMembers: [Profile]
+    public let removedMembers: [Profile]
+    public let metadataChanges: [MetadataChange]
 
-    var summary: String {
+    public var summary: String {
         if !addedMembers.isEmpty && !removedMembers.isEmpty {
             "\(creator.displayName) added and removed members from the convo"
         } else if !addedMembers.isEmpty {

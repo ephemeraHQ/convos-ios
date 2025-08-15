@@ -18,14 +18,14 @@ enum MockAPIError: Error {
 }
 
 class MockBaseAPIClient: ConvosAPIBaseProtocol {
-    func createSubOrganization(
+    public func createSubOrganization(
         ephemeralPublicKey: String,
         passkey: ConvosAPI.Passkey
     ) async throws -> ConvosAPI.CreateSubOrganizationResponse {
         .init(subOrgId: UUID().uuidString, walletAddress: UUID().uuidString)
     }
 
-    func request(for path: String, method: String, queryParameters: [String: String]?) throws -> URLRequest {
+    public func request(for path: String, method: String, queryParameters: [String: String]?) throws -> URLRequest {
         guard let url = URL(string: "http://example.com") else {
             throw MockAPIError.invalidURL
         }
@@ -34,7 +34,7 @@ class MockBaseAPIClient: ConvosAPIBaseProtocol {
 }
 
 class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
-    func getDevice(userId: String, deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse {
+    public func getDevice(userId: String, deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse {
         return ConvosAPI.DeviceUpdateResponse(
             id: deviceId,
             pushToken: "existing-push-token",
@@ -45,26 +45,26 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         )
     }
 
-    func publicInviteDetails(_ code: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
+    public func publicInviteDetails(_ code: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
         .init(id: "invite_123", name: "My Invite", description: "My fun group chat", imageUrl: nil, inviteLinkURL: "http://convos.org/join/123456")
     }
 
-    var identifier: String {
+    public var identifier: String {
         "\(client.inboxId)\(client.installationId)"
     }
 
-    let client: any XMTPClientProvider
+    public let client: any XMTPClientProvider
 
     init(client: any XMTPClientProvider) {
         self.client = client
         super.init()
     }
 
-    func authenticate(inboxId: String, installationId: String, signature: String) async throws -> String {
+    public func authenticate(inboxId: String, installationId: String, signature: String) async throws -> String {
         return "mock-jwt-token"
     }
 
-    func getUser() async throws -> ConvosAPI.UserResponse {
+    public func getUser() async throws -> ConvosAPI.UserResponse {
         return ConvosAPI.UserResponse(
             id: "user_123",
             identities: [
@@ -77,7 +77,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         )
     }
 
-    func createUser(_ requestBody: ConvosAPI.CreateUserRequest) async throws -> ConvosAPI.CreatedUserResponse {
+    public func createUser(_ requestBody: ConvosAPI.CreateUserRequest) async throws -> ConvosAPI.CreatedUserResponse {
         return ConvosAPI.CreatedUserResponse(
             id: "created_user_123",
             userId: requestBody.userId,
@@ -100,7 +100,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         )
     }
 
-    func createInvite(_ requestBody: ConvosAPI.CreateInviteCode) async throws -> ConvosAPI.InviteDetailsResponse {
+    public func createInvite(_ requestBody: ConvosAPI.CreateInviteCode) async throws -> ConvosAPI.InviteDetailsResponse {
         return ConvosAPI
             .InviteDetailsResponse(
                 id: "created_invite_123",
@@ -118,7 +118,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
             )
     }
 
-    func inviteDetails(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsResponse {
+    public func inviteDetails(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsResponse {
         return ConvosAPI
             .InviteDetailsResponse(
                 id: "created_invite_123",
@@ -136,11 +136,11 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
             )
     }
 
-    func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse {
+    public func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse {
         return ConvosAPI.UsernameCheckResponse(taken: username == "takenusername")
     }
 
-    func updateProfile(
+    public func updateProfile(
         inboxId: String,
         with requestBody: ConvosAPI.UpdateProfileRequest
     ) async throws -> ConvosAPI.UpdateProfileResponse {
@@ -155,7 +155,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         )
     }
 
-    func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse {
+    public func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse {
         return ConvosAPI.ProfileResponse(
             id: inboxId,
             name: "Mock User",
@@ -167,7 +167,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         )
     }
 
-    func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse {
+    public func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse {
         let profilesById: [String: ConvosAPI.ProfileResponse] = inboxIds.reduce(into: [:]) { result, id in
             let profile = ConvosAPI.ProfileResponse(
                 id: id,
@@ -185,7 +185,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         )
     }
 
-    func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse] {
+    public func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse] {
         return [
             ConvosAPI.ProfileResponse(
                 id: "search_1",
@@ -199,11 +199,11 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         ]
     }
 
-    func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse {
+    public func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse {
         .init(id: UUID().uuidString, inviteId: inviteCode, createdAt: Date().ISO8601Format())
     }
 
-    func uploadAttachment(
+    public func uploadAttachment(
         data: Data,
         filename: String,
         contentType: String,
@@ -212,7 +212,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         return "https://mock-api.example.com/uploads/\(filename)"
     }
 
-    func uploadAttachmentAndExecute(
+    public func uploadAttachmentAndExecute(
         data: Data,
         filename: String,
         afterUpload: @escaping (String) async throws -> Void
@@ -223,19 +223,19 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
     }
 
     // MARK: - Notifications mocks
-    func registerForNotifications(deviceId: String, pushToken: String, identityId: String, xmtpInstallationId: String) async throws {
+    public func registerForNotifications(deviceId: String, pushToken: String, identityId: String, xmtpInstallationId: String) async throws {
         // no-op in mock
     }
 
-    func subscribeToTopics(installationId: String, topics: [String]) async throws {
+    public func subscribeToTopics(installationId: String, topics: [String]) async throws {
         // no-op in mock
     }
 
-    func unsubscribeFromTopics(installationId: String, topics: [String]) async throws {
+    public func unsubscribeFromTopics(installationId: String, topics: [String]) async throws {
         // no-op in mock
     }
 
-    func unregisterInstallation(xmtpInstallationId: String) async throws {
+    public func unregisterInstallation(xmtpInstallationId: String) async throws {
         // no-op in mock
     }
 }

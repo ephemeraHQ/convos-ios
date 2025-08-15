@@ -3,32 +3,32 @@ import GRDB
 
 // MARK: - Conversation
 
-struct Conversation: Codable, Hashable, Identifiable {
-    let id: String
-    let inboxId: String
-    let creator: ConversationMember
-    let createdAt: Date
-    let consent: Consent
-    let kind: ConversationKind
-    let name: String?
-    let description: String?
-    let members: [ConversationMember]
-    let otherMember: ConversationMember?
-    let messages: [Message]
-    let isPinned: Bool
-    let isUnread: Bool
-    let isMuted: Bool
-    let lastMessage: MessagePreview?
-    let imageURL: URL?
-    let isDraft: Bool
-    let invite: Invite?
+public struct Conversation: Codable, Hashable, Identifiable {
+    public let id: String
+    public let inboxId: String
+    public let creator: ConversationMember
+    public let createdAt: Date
+    public let consent: Consent
+    public let kind: ConversationKind
+    public let name: String?
+    public let description: String?
+    public let members: [ConversationMember]
+    public let otherMember: ConversationMember?
+    public let messages: [Message]
+    public let isPinned: Bool
+    public let isUnread: Bool
+    public let isMuted: Bool
+    public let lastMessage: MessagePreview?
+    public let imageURL: URL?
+    public let isDraft: Bool
+    public let invite: Invite?
 
-    var membersWithoutCurrent: [ConversationMember] {
+    public var membersWithoutCurrent: [ConversationMember] {
         members.filter { !$0.isCurrentUser }
     }
 }
 
-extension Conversation {
+public extension Conversation {
     var displayName: String {
         guard let name, !name.isEmpty else {
             return "Untitled"

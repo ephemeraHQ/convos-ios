@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-protocol ConversationLocalStateWriterProtocol {
+public protocol ConversationLocalStateWriterProtocol {
     func setUnread(_ isUnread: Bool, for conversationId: String) async throws
     func setPinned(_ isPinned: Bool, for conversationId: String) async throws
     func setMuted(_ isMuted: Bool, for conversationId: String) async throws

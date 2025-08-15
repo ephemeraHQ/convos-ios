@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import GRDB
 
-protocol ConversationsRepositoryProtocol {
+public protocol ConversationsRepositoryProtocol {
     var conversationsPublisher: AnyPublisher<[Conversation], Never> { get }
     func fetchAll() throws -> [Conversation]
 }

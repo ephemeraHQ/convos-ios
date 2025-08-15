@@ -2,9 +2,9 @@ import Combine
 import Foundation
 import GRDB
 
-typealias ConversationMessages = (conversationId: String, messages: [AnyMessage])
+public typealias ConversationMessages = (conversationId: String, messages: [AnyMessage])
 
-protocol MessagesRepositoryProtocol {
+public protocol MessagesRepositoryProtocol {
     var messagesPublisher: AnyPublisher<[AnyMessage], Never> { get }
     var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> { get }
 

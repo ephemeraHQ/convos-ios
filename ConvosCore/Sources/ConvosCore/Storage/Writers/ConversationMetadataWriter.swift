@@ -6,7 +6,7 @@ import XMTPiOS
 
 // MARK: - Group Metadata Writer Protocol
 
-protocol ConversationMetadataWriterProtocol {
+public protocol ConversationMetadataWriterProtocol {
     func updateGroupName(groupId: String, name: String) async throws
     func updateGroupDescription(groupId: String, description: String) async throws
     func updateGroupImageUrl(groupId: String, imageURL: String) async throws

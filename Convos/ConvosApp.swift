@@ -1,12 +1,12 @@
-import SwiftUI
 import ConvosCore
+import SwiftUI
 
 @main
 struct ConvosApp: App {
     let convos: ConvosClient = .client(environment: ConfigManager.shared.currentEnvironment)
 
     @UIApplicationDelegateAdaptor(PushNotificationDelegate.self) var pushDelegate: PushNotificationDelegate
-    @State private var pushNotificationManager: PushNotificationManager = .init()
+    @State private var pushNotificationManager: PushNotificationManager = .shared
 
     init() {
         // Configure Logger based on environment

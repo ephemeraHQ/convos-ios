@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import GRDB
 
-protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
+public protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
     var draftConversationId: String { get }
     var conversationId: String { get }
     var conversationIdPublisher: AnyPublisher<String, Never> { get }

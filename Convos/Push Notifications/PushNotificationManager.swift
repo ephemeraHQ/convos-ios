@@ -10,7 +10,7 @@ class PushNotificationManager: NSObject {
 
     private let notificationProcessor: NotificationProcessor
 
-    override private init() {
+    private override init() {
         // Get app group identifier from ConfigManager
         let appGroupId = ConfigManager.shared.currentEnvironment.appGroupIdentifier
         self.notificationProcessor = NotificationProcessor(appGroupIdentifier: appGroupId)

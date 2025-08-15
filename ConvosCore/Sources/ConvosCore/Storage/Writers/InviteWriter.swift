@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-protocol InviteWriterProtocol {
+public protocol InviteWriterProtocol {
     @discardableResult
     func store(invite: ConvosAPI.PublicInviteDetailsResponse, conversationId: String, inboxId: String) async throws -> Invite
     @discardableResult

@@ -1,12 +1,12 @@
 import Foundation
 import XMTPiOS
 
-protocol MessageSender {
+public protocol MessageSender {
     func prepare(text: String) async throws -> String
     func publish() async throws
 }
 
-protocol ConversationSender {
+public protocol ConversationSender {
     var id: String { get }
     func add(members inboxIds: [String]) async throws
     func remove(members inboxIds: [String]) async throws
@@ -14,7 +14,7 @@ protocol ConversationSender {
     func publish() async throws
 }
 
-protocol ConversationsProvider: Actor {
+public protocol ConversationsProvider: Actor {
     func listGroups(
         createdAfter: Date?,
         createdBefore: Date?,
@@ -45,7 +45,7 @@ protocol ConversationsProvider: Actor {
     ) -> AsyncThrowingStream<XMTPiOS.DecodedMessage, Error>
 }
 
-protocol XMTPClientProvider: AnyObject {
+public protocol XMTPClientProvider: AnyObject {
     var installationId: String { get }
     var inboxId: String { get }
     var conversationsProvider: ConversationsProvider { get }
@@ -73,19 +73,19 @@ enum XMTPClientProviderError: Error {
 }
 
 extension XMTPiOS.Group: ConversationSender {
-    func add(members inboxIds: [String]) async throws {
+    public func add(members inboxIds: [String]) async throws {
         _ = try await addMembers(inboxIds: inboxIds)
     }
 
-    func remove(members inboxIds: [String]) async throws {
+    public func remove(members inboxIds: [String]) async throws {
         _ = try await removeMembers(inboxIds: inboxIds)
     }
 
-    func prepare(text: String) async throws -> String {
+    public func prepare(text: String) async throws -> String {
         return try await prepareMessage(content: text)
     }
 
-    func publish() async throws {
+    public func publish() async throws {
         try await publishMessages()
     }
 }
@@ -94,32 +94,32 @@ extension XMTPiOS.Conversations: ConversationsProvider {
 }
 
 extension XMTPiOS.Client: XMTPClientProvider {
-    var conversationsProvider: any ConversationsProvider {
+    public var conversationsProvider: any ConversationsProvider {
         conversations
     }
 
-    var installationId: String {
+    public var installationId: String {
         installationID
     }
 
-    var inboxId: String {
+    public var inboxId: String {
         inboxID
     }
 
-    func canMessage(identity: String) async throws -> Bool {
+    public func canMessage(identity: String) async throws -> Bool {
         return try await canMessage(
             identity: PublicIdentity(kind: .ethereum, identifier: identity)
         )
     }
 
-    func prepareConversation() async throws -> ConversationSender {
+    public func prepareConversation() async throws -> ConversationSender {
         return try await conversations.newGroupOptimistic()
     }
 
-    func newConversation(with memberInboxIds: [String],
-                         name: String,
-                         description: String,
-                         imageUrl: String) async throws -> String {
+    public func newConversation(with memberInboxIds: [String],
+                                name: String,
+                                description: String,
+                                imageUrl: String) async throws -> String {
         let group = try await conversations.newGroup(
             with: memberInboxIds,
             name: name,
@@ -129,7 +129,7 @@ extension XMTPiOS.Client: XMTPClientProvider {
         return group.id
     }
 
-    func newConversation(with memberInboxId: String) async throws -> String {
+    public func newConversation(with memberInboxId: String) async throws -> String {
         let group = try await conversations.newConversation(
             with: memberInboxId,
             disappearingMessageSettings: nil
@@ -137,11 +137,11 @@ extension XMTPiOS.Client: XMTPClientProvider {
         return group.id
     }
 
-    func conversation(with id: String) async throws -> XMTPiOS.Conversation? {
+    public func conversation(with id: String) async throws -> XMTPiOS.Conversation? {
         return try await conversations.findConversation(conversationId: id)
     }
 
-    func canMessage(identities: [String]) async throws -> [String: Bool] {
+    public func canMessage(identities: [String]) async throws -> [String: Bool] {
         return try await canMessage(
             identities: identities.map {
                 PublicIdentity(kind: .ethereum, identifier: $0)
@@ -149,15 +149,15 @@ extension XMTPiOS.Client: XMTPClientProvider {
         )
     }
 
-    func messageSender(for conversationId: String) async throws -> (any MessageSender)? {
+    public func messageSender(for conversationId: String) async throws -> (any MessageSender)? {
         return try await conversations.findConversation(conversationId: conversationId)
     }
 
-    func inboxId(for ethereumAddress: String) async throws -> String? {
+    public func inboxId(for ethereumAddress: String) async throws -> String? {
         return try await inboxIdFromIdentity(identity: .init(kind: .ethereum, identifier: ethereumAddress))
     }
 
-    func update(consent: Consent, for conversationId: String) async throws {
+    public func update(consent: Consent, for conversationId: String) async throws {
         guard let foundConversation = try await self.conversation(with: conversationId) else {
             throw XMTPClientProviderError.conversationNotFound(id: conversationId)
         }
@@ -166,11 +166,11 @@ extension XMTPiOS.Client: XMTPClientProvider {
 }
 
 extension XMTPiOS.Conversation: MessageSender {
-    func prepare(text: String) async throws -> String {
+    public func prepare(text: String) async throws -> String {
         return try await prepareMessage(content: text)
     }
 
-    func publish() async throws {
+    public func publish() async throws {
         try await publishMessages()
     }
 }

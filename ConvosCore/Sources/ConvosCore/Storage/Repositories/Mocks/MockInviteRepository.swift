@@ -1,8 +1,9 @@
 import Combine
 import Foundation
 
-class MockInviteRepository: InviteRepositoryProtocol {
-    var invitePublisher: AnyPublisher<Invite?, Never> {
+public class MockInviteRepository: InviteRepositoryProtocol {
+    public init() {}
+    public var invitePublisher: AnyPublisher<Invite?, Never> {
         Just(.mock()).eraseToAnyPublisher()
     }
 }

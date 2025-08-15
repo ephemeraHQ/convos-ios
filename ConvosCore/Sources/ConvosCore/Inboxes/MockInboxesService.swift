@@ -1,61 +1,64 @@
 import Combine
 import Foundation
 
-class MockInboxesService: SessionManagerProtocol {
-    var authState: AnyPublisher<AuthServiceState, Never> {
+public class MockInboxesService: SessionManagerProtocol {
+    public init() {
+    }
+
+    public var authState: AnyPublisher<AuthServiceState, Never> {
         Just(AuthServiceState.unknown).eraseToAnyPublisher()
     }
 
-    func prepare() throws {
+    public func prepare() throws {
     }
 
-    func addAccount() throws -> AddAccountResultType {
+    public func addAccount() throws -> AddAccountResultType {
         .init(providerId: "", messagingService: MockMessagingService())
     }
 
-    func deleteAccount(inboxId: String) throws {
+    public func deleteAccount(inboxId: String) throws {
     }
 
-    func deleteAccount(providerId: String) throws {
+    public func deleteAccount(providerId: String) throws {
     }
 
-    func deleteAllAccounts() throws {
+    public func deleteAllAccounts() throws {
     }
 
-    var inboxesRepository: any InboxesRepositoryProtocol {
+    public var inboxesRepository: any InboxesRepositoryProtocol {
         self
     }
 
-    func messagingService(for inboxId: String) -> AnyMessagingService {
+    public func messagingService(for inboxId: String) -> AnyMessagingService {
         MockMessagingService()
     }
 
-    func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
+    public func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
         MockConversationsRepository()
     }
 
-    func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
+    public func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
         self
     }
 }
 
 extension MockInboxesService: ConversationsCountRepositoryProtocol {
-    var conversationsCount: AnyPublisher<Int, Never> {
+    public var conversationsCount: AnyPublisher<Int, Never> {
         Just(1).eraseToAnyPublisher()
     }
 
-    func fetchCount() throws -> Int {
+    public func fetchCount() throws -> Int {
         1
     }
 }
 
 extension MockInboxesService: InboxesRepositoryProtocol {
-    var inboxesPublisher: AnyPublisher<[Inbox], Never> {
+    public var inboxesPublisher: AnyPublisher<[Inbox], Never> {
         Just((try? allInboxes()) ?? [])
             .eraseToAnyPublisher()
     }
 
-    func allInboxes() throws -> [Inbox] {
+    public func allInboxes() throws -> [Inbox] {
         [
             Inbox(
                 inboxId: "1",

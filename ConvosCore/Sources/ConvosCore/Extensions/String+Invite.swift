@@ -1,6 +1,6 @@
 import Foundation
 
-extension String {
+public extension String {
     // Extracts the invite code from a Convos join URL of the form: https://domain/join/{code}
     var inviteCodeFromJoinURL: String? {
         guard let url = URL(string: self),

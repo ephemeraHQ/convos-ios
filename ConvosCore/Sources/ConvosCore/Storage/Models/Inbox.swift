@@ -1,6 +1,6 @@
 import Foundation
 
-extension Inbox {
+public extension Inbox {
     static func mock(type: InboxType = .standard) -> Self {
         .init(
             inboxId: UUID().uuidString,
@@ -13,24 +13,24 @@ extension Inbox {
     }
 }
 
-struct Inbox: Codable, Identifiable, Hashable {
-    var id: String { inboxId }
-    let inboxId: String
-    let identities: [Identity]
-    let profile: Profile
-    let type: InboxType
-    let provider: InboxProvider
-    let providerId: String
+public struct Inbox: Codable, Identifiable, Hashable {
+    public var id: String { inboxId }
+    public let inboxId: String
+    public let identities: [Identity]
+    public let profile: Profile
+    public let type: InboxType
+    public let provider: InboxProvider
+    public let providerId: String
 }
 
-enum InboxType: String, Codable {
+public enum InboxType: String, Codable {
     case standard, ephemeral
 }
 
-enum InboxProvider: Codable, Hashable {
+public enum InboxProvider: Codable, Hashable {
     case local, external(InboxExternalProvider)
 }
 
-enum InboxExternalProvider: String, Codable {
+public enum InboxExternalProvider: String, Codable {
     case turnkey, passkey
 }
