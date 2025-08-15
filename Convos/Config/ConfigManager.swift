@@ -1,4 +1,5 @@
 import Foundation
+import ConvosCore
 
 /// Simple config loader that overrides AppEnvironment values per build
 final class ConfigManager {
@@ -22,9 +23,34 @@ final class ConfigManager {
         }
 
         switch envString {
-        case "local": return .local
-        case "dev": return .dev
-        case "production": return .production
+        case "local":
+            let config = ConvosConfiguration(
+                apiBaseURL: backendURLOverride ?? Secrets.CONVOS_API_BASE_URL,
+                appGroupIdentifier: appGroupOverride ?? "group.org.convos.ios-local",
+                relyingPartyIdentifier: relyingPartyOverride ?? "local.convos.org",
+                xmtpEndpoint: Secrets.XMTP_CUSTOM_HOST.isEmpty ? nil : Secrets.XMTP_CUSTOM_HOST,
+                appCheckToken: Secrets.FIREBASE_APP_CHECK_TOKEN
+            )
+            return .local(config: config)
+
+        case "dev":
+            let config = ConvosConfiguration(
+                apiBaseURL: backendURLOverride ?? "https://api.convos-otr-dev.convos-api.xyz/api/",
+                appGroupIdentifier: appGroupOverride ?? "group.org.convos.ios-preview",
+                relyingPartyIdentifier: relyingPartyOverride ?? "otr-preview.convos.org",
+                appCheckToken: Secrets.FIREBASE_APP_CHECK_TOKEN
+            )
+            return .dev(config: config)
+
+        case "production":
+            let config = ConvosConfiguration(
+                apiBaseURL: backendURLOverride ?? "https://api.convos-otr-prod.convos-api.xyz/api/",
+                appGroupIdentifier: appGroupOverride ?? "group.org.convos.ios",
+                relyingPartyIdentifier: relyingPartyOverride ?? "convos.org",
+                appCheckToken: Secrets.FIREBASE_APP_CHECK_TOKEN
+            )
+            return .production(config: config)
+
         default:
             fatalError("Invalid environment '\(envString)' in config.json")
         }

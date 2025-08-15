@@ -21,6 +21,10 @@ protocol ConversationMetadataWriterProtocol {
 
 // MARK: - Group Metadata Writer Implementation
 
+enum ConversationMetadataWriterError: Error {
+    case failedImageCompression
+}
+
 final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     private let inboxReadyValue: PublisherValue<InboxReadyResult>
     private let databaseWriter: any DatabaseWriter
@@ -96,10 +100,10 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             throw InboxStateError.inboxNotReady
         }
 
-        let resizedImage = ImageCompression.resizeForCache(image)
+//        let resizedImage = ImageCompression.resizeForCache(image)
 
-        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
-            throw ImagePickerImageError.importFailed
+        guard let compressedImageData = image.jpegData(compressionQuality: 0.8) else {
+            throw ConversationMetadataWriterError.failedImageCompression
         }
 
         let filename = "group-image-\(UUID().uuidString).jpg"
@@ -110,7 +114,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
         ) { uploadedURL in
             do {
                 try await self.updateGroupImageUrl(groupId: conversation.id, imageURL: uploadedURL)
-                ImageCache.shared.setImage(resizedImage, for: conversation)
+//                ImageCache.shared.setImage(resizedImage, for: conversation)
             } catch {
                 Logger.error("Failed updating group image URL: \(error.localizedDescription)")
             }

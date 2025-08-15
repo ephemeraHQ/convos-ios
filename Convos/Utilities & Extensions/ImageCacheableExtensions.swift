@@ -1,8 +1,13 @@
 import ConvosCore
 
 extension Profile: ImageCacheable {
-    // MARK: - ImageCacheable
     var imageCacheIdentifier: String {
         inboxId
+    }
+}
+
+extension Conversation: ImageCacheable {
+    var imageCacheIdentifier: String {
+        id
     }
 }

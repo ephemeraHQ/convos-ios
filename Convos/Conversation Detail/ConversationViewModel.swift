@@ -1,10 +1,7 @@
 import Combine
+import ConvosCore
 import Observation
 import UIKit
-
-extension Notification.Name {
-    static let leftConversationNotification: Notification.Name = Notification.Name("LeftConversationNotification")
-}
 
 @Observable
 class ConversationViewModel {

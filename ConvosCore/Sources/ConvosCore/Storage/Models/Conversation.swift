@@ -3,7 +3,7 @@ import GRDB
 
 // MARK: - Conversation
 
-struct Conversation: Codable, Hashable, Identifiable, ImageCacheable {
+struct Conversation: Codable, Hashable, Identifiable {
     let id: String
     let inboxId: String
     let creator: ConversationMember
@@ -25,11 +25,6 @@ struct Conversation: Codable, Hashable, Identifiable, ImageCacheable {
 
     var membersWithoutCurrent: [ConversationMember] {
         members.filter { !$0.isCurrentUser }
-    }
-
-    // MARK: - ImageCacheable
-    var imageCacheIdentifier: String {
-        id
     }
 }
 

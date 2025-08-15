@@ -4,19 +4,17 @@ import UserNotifications
 // TO DO: This is a placeholder for the actual notification processor.
 
 class NotificationProcessor {
-    nonisolated(unsafe) static let shared: NotificationProcessor = NotificationProcessor(
-        appGroupIdentifier: ConfigManager.shared.currentEnvironment.appGroupIdentifier
-    )
+    nonisolated(unsafe) public static var shared: NotificationProcessor!
+
+    /// Configure the shared instance with the app group identifier
+    public static func configure(appGroupIdentifier: String) {
+        shared = NotificationProcessor(appGroupIdentifier: appGroupIdentifier)
+    }
 
     private let appGroupIdentifier: String
 
-    init(appGroupIdentifier: String) {
+    public init(appGroupIdentifier: String) {
         self.appGroupIdentifier = appGroupIdentifier
-    }
-
-    private convenience init() {
-        // For backward compatibility - should not be used directly
-        fatalError("Use init(appGroupIdentifier:) instead")
     }
 
     private var appGroupDefaults: UserDefaults? {

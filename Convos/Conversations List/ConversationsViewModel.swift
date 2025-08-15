@@ -1,7 +1,7 @@
 import Combine
+import ConvosCore
 import Foundation
 import Observation
-import ConvosCore
 
 @Observable
 class SelectableConversationViewModelType {

@@ -27,11 +27,7 @@ let package = Package(
                 .product(name: "GRDB", package: "GRDB.swift")
             ],
             swiftSettings: [
-                .enableUpcomingFeature("DisableOutwardActorInference"),
-                .enableUpcomingFeature("GlobalActorIsolatedTypesUsability"),
-                .enableUpcomingFeature("InferIsolatedConformances"),
-                .enableUpcomingFeature("InferSendableFromCaptures"),
-                .enableUpcomingFeature("NonisolatedNonsendingByDefault")
+                .swiftLanguageMode(.v5)
             ]
         ),
         .testTarget(

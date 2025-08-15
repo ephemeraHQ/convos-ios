@@ -7,6 +7,10 @@ protocol MyProfileWriterProtocol {
     func update(avatar: UIImage?) async throws
 }
 
+enum MyProfileWriterError: Error {
+    case imageCompressionFailed
+}
+
 class MyProfileWriter: MyProfileWriterProtocol {
     private let inboxReadyValue: PublisherValue<InboxReadyResult>
     private let databaseWriter: any DatabaseWriter
@@ -70,17 +74,17 @@ class MyProfileWriter: MyProfileWriterProtocol {
 
         guard let avatarImage = avatar else {
             // remove avatar image URL
-            ImageCache.shared.removeImage(for: profile.hydrateProfile())
+//            ImageCache.shared.removeImage(for: profile.hydrateProfile())
             _ = try await inboxReady.apiClient.updateProfile(inboxId: inboxId, with: profile.asUpdateRequest())
             return
         }
 
-        ImageCache.shared.setImage(avatarImage, for: profile.hydrateProfile())
+//        ImageCache.shared.setImage(avatarImage, for: profile.hydrateProfile())
 
-        let resizedImage = ImageCompression.resizeForCache(avatarImage)
+//        let resizedImage = ImageCompression.resizeForCache(avatarImage)
 
-        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
-            throw ImagePickerImageError.importFailed
+        guard let compressedImageData = avatarImage.jpegData(compressionQuality: 0.8) else {
+            throw MyProfileWriterError.imageCompressionFailed
         }
 
         let uploadedURL = try await inboxReady.apiClient.uploadAttachment(
@@ -92,7 +96,7 @@ class MyProfileWriter: MyProfileWriterProtocol {
         let updatedProfile = profile.with(avatar: uploadedURL)
         _ = try await inboxReady.apiClient.updateProfile(inboxId: inboxId, with: updatedProfile.asUpdateRequest())
 
-        ImageCache.shared.setImage(resizedImage, for: uploadedURL)
+//        ImageCache.shared.setImage(resizedImage, for: uploadedURL)
 
         try await databaseWriter.write { db in
             Logger.info("Updated avatar for profile: \(updatedProfile)")

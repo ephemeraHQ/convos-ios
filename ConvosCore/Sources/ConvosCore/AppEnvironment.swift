@@ -5,68 +5,92 @@ public enum ApnsEnvironment: String, Codable {
     case production
 }
 
-enum AppEnvironment: String, RawRepresentable {
-    case local, tests, dev, production
+public enum AppEnvironment {
+    case local(config: ConvosConfiguration)
+    case tests
+    case dev(config: ConvosConfiguration)
+    case production(config: ConvosConfiguration)
 
-    var apiBaseURL: String {
-        // Check environment variable first (highest priority)
-        if self == .local, !Secrets.CONVOS_API_BASE_URL.isEmpty {
-            Logger.info("🌐 Using API URL from environment: \(Secrets.CONVOS_API_BASE_URL)")
-            return Secrets.CONVOS_API_BASE_URL
-        }
-
-        // Then check ConfigManager
-        if let configURL = ConfigManager.shared.backendURLOverride {
-            Logger.info("🌐 Using API URL from ConfigManager: \(configURL)")
-            return configURL
-        }
-
-        // Fall back to environment-specific defaults
-        let defaultURL: String
-        switch self {
-        case .local, .tests:
-            defaultURL = "http://localhost:4000/api/"
+    /// Create an environment with custom configuration
+    public static func configured(_ config: ConvosConfiguration, type: EnvironmentType) -> AppEnvironment {
+        switch type {
+        case .local:
+            return .local(config: config)
         case .dev:
-            defaultURL = "https://api.convos-otr-dev.convos-api.xyz/api/"
+            return .dev(config: config)
         case .production:
-            defaultURL = "https://api.convos-otr-prod.convos-api.xyz/api/"
+            return .production(config: config)
+        case .tests:
+            return .tests
         }
-        Logger.info("🌐 Using default API URL for \(self): \(defaultURL)")
-        return defaultURL
     }
 
-    var appGroupIdentifier: String {
-        // Check ConfigManager override
-        if let configGroupId = ConfigManager.shared.appGroupOverride {
-            return configGroupId
-        }
+    public enum EnvironmentType {
+        case local, dev, production, tests
+    }
 
-        // Fall back to environment-specific defaults
+    var appCheckToken: String {
         switch self {
-        case .local: return "group.org.convos.ios-local"
-        case .tests, .dev: return "group.org.convos.ios-preview"
-        case .production: return "group.org.convos.ios"
+        case .local(config: let config), .dev(config: let config), .production(config: let config):
+            return config.appCheckToken
+        case .tests:
+            return "test-token"
+        }
+    }
+
+    var apiBaseURL: String {
+        switch self {
+        case .local(let config):
+            Logger.info("🌐 Using API URL from local config: \(config.apiBaseURL)")
+            return config.apiBaseURL
+        case .tests:
+            return "http://localhost:4000/api/"
+        case .dev(let config):
+            Logger.info("🌐 Using API URL from dev config: \(config.apiBaseURL)")
+            return config.apiBaseURL
+        case .production(let config):
+            Logger.info("🌐 Using API URL from production config: \(config.apiBaseURL)")
+            return config.apiBaseURL
+        }
+    }
+
+    public var appGroupIdentifier: String {
+        switch self {
+        case .local(let config):
+            return config.appGroupIdentifier
+        case .tests:
+            return "group.org.convos.ios-local"
+        case .dev(let config):
+            return config.appGroupIdentifier
+        case .production(let config):
+            return config.appGroupIdentifier
         }
     }
 
     var relyingPartyIdentifier: String {
-        // Check ConfigManager override
-        if let configRpId = ConfigManager.shared.relyingPartyOverride {
-            return configRpId
-        }
-
-        // Fall back to environment-specific defaults
         switch self {
-        case .local, .tests: return "local.convos.org"
-        case .dev: return "otr-preview.convos.org"
-        case .production: return "convos.org"
+        case .local(let config):
+            return config.relyingPartyIdentifier
+        case .tests:
+            return "local.convos.org"
+        case .dev(let config):
+            return config.relyingPartyIdentifier
+        case .production(let config):
+            return config.relyingPartyIdentifier
         }
     }
 
     var xmtpEndpoint: String? {
-        guard self == .local else { return nil }
-        let value = Secrets.XMTP_CUSTOM_HOST
-        return value.isEmpty ? nil : value
+        switch self {
+        case .local(let config):
+            return config.xmtpEndpoint
+        case .tests:
+            return nil
+        case .dev(let config):
+            return config.xmtpEndpoint
+        case .production(let config):
+            return config.xmtpEndpoint
+        }
     }
 
     var apnsEnvironment: ApnsEnvironment {
@@ -79,8 +103,17 @@ enum AppEnvironment: String, RawRepresentable {
         #endif
     }
 
+    private var isTestingEnvironment: Bool {
+        switch self {
+        case .tests:
+            true
+        default:
+            false
+        }
+    }
+
     var defaultDatabasesDirectoryURL: URL {
-        guard self != .tests else {
+        guard !isTestingEnvironment else {
             return FileManager.default.temporaryDirectory
         }
 
@@ -97,7 +130,7 @@ enum AppEnvironment: String, RawRepresentable {
     }
 
     var reactNativeDatabaseDirectory: URL {
-        guard self != .tests else {
+        guard !isTestingEnvironment else {
             return FileManager.default.temporaryDirectory
         }
 

@@ -1,19 +1,20 @@
+import ConvosCore
 import Foundation
 import UIKit
 import UserNotifications
 
 @Observable
 class PushNotificationManager: NSObject {
-    static let shared: PushNotificationManager = PushNotificationManager()
-
-    var deviceToken: String?
+    static let shared: PushNotificationManager = .init()
+    private(set) var deviceToken: String?
 
     private let notificationProcessor: NotificationProcessor
 
-    private override init() {
+    override private init() {
         // Get app group identifier from ConfigManager
         let appGroupId = ConfigManager.shared.currentEnvironment.appGroupIdentifier
         self.notificationProcessor = NotificationProcessor(appGroupIdentifier: appGroupId)
+
         super.init()
 
         // Set notification center delegate early so foreground notifications are handled

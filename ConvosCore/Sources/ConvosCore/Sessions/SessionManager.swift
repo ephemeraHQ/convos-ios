@@ -2,6 +2,10 @@ import Combine
 import Foundation
 import GRDB
 
+extension Notification.Name {
+    static let leftConversationNotification: Notification.Name = Notification.Name("LeftConversationNotification")
+}
+
 typealias AnyMessagingService = any MessagingServiceProtocol
 typealias AnyMessagingServicePublisher = AnyPublisher<AnyMessagingService, Never>
 typealias AnyClientProvider = any XMTPClientProvider
@@ -216,7 +220,6 @@ class SessionManager: SessionManagerProtocol {
         }
 
         // Get the app group container URL
-        let environment = ConfigManager.shared.currentEnvironment
         let appGroupId = environment.appGroupIdentifier
         guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
             Logger.error("Failed to get container URL for app group: \(appGroupId)")

@@ -84,6 +84,7 @@ protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
 internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
     internal let baseURL: URL
     internal let session: URLSession
+    internal let environment: AppEnvironment
 
     fileprivate init(environment: AppEnvironment) {
         guard let apiBaseURL = URL(string: environment.apiBaseURL) else {
@@ -91,6 +92,7 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
         }
         self.baseURL = apiBaseURL
         self.session = URLSession(configuration: .default)
+        self.environment = environment
     }
 
     func createSubOrganization(
@@ -101,7 +103,7 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue(Secrets.FIREBASE_APP_CHECK_TOKEN, forHTTPHeaderField: "X-Firebase-AppCheck")
+        request.setValue(environment.appCheckToken, forHTTPHeaderField: "X-Firebase-AppCheck")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let requestBody: [String: Any] = [
@@ -202,7 +204,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     private func reAuthenticate() async throws -> String {
         let installationId = client.installationId
         let inboxId = client.inboxId
-        let firebaseAppCheckToken = Secrets.FIREBASE_APP_CHECK_TOKEN
+        let firebaseAppCheckToken = environment.appCheckToken
         let signatureData = try client.signWithInstallationKey(message: firebaseAppCheckToken)
         let signature = signatureData.hexEncodedString()
 
@@ -225,7 +227,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         request.setValue(installationId, forHTTPHeaderField: "X-XMTP-InstallationId")
         request.setValue(inboxId, forHTTPHeaderField: "X-XMTP-InboxId")
         request.setValue("0x\(signature)", forHTTPHeaderField: "X-XMTP-Signature")
-        request.setValue(Secrets.FIREBASE_APP_CHECK_TOKEN, forHTTPHeaderField: "X-Firebase-AppCheck")
+        request.setValue(environment.appCheckToken, forHTTPHeaderField: "X-Firebase-AppCheck")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let (data, response) = try await session.data(for: request)
@@ -528,7 +530,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             let installations: [Installation]
         }
 
-        let apnsEnv = ConfigManager.shared.currentEnvironment.apnsEnvironment == .sandbox ? "sandbox" : "production"
+        let apnsEnv = environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
         let body = Body(deviceId: deviceId,
                         pushToken: pushToken,
                         pushTokenType: "apns",

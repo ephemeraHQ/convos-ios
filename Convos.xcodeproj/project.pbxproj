@@ -127,9 +127,7 @@
 		7ACA8BD52DE180B800848799 /* Exceptions for "Convos" folder in "ConvosTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"_Archive/Convos Client/Auth/Migrations/ReactNativeMigration.swift",
 				"_Archive/Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
-				"_Archive/Utilities/EthereumAddress+Validation.swift",
 			);
 			target = 7ACA8BA22DE16DE200848799 /* ConvosTests */;
 		};
@@ -150,25 +148,6 @@
 		D8A2B6A32DA4BA4C00EF8577 /* Exceptions for "Convos" folder in "Convos" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"_Archive/Contact Cards/ContactCard.swift",
-				"_Archive/Contact Cards/ContactCardDetailView.swift",
-				"_Archive/Contact Cards/ContactCardsView.swift",
-				"_Archive/Contact Cards/ContactCardView.swift",
-				"_Archive/Conversation Detail/CustomToolbarView.swift",
-				"_Archive/Conversations List/Composer/ComposerProfileChipView.swift",
-				"_Archive/Conversations List/Composer/ConversationComposerContentView.swift",
-				"_Archive/Conversations List/Composer/ConversationComposerProfilesField.swift",
-				"_Archive/Conversations List/Composer/ConversationsComposerView.swift",
-				"_Archive/Conversations List/ConversationsListNavigationBar.swift",
-				"_Archive/Conversations List/ConversationsRequestsItemView.swift",
-				"_Archive/Conversations List/DropdownMenu.swift",
-				"_Archive/Conversations List/PinnedConversationsGrid.swift",
-				"_Archive/Conversations List/ProfileView.swift",
-				"_Archive/Conversations List/Security Line/DeniedConversationsListItem.swift",
-				"_Archive/Conversations List/Security Line/JoinConversationInputView.swift",
-				"_Archive/Conversations List/Security Line/SecurityLineListItem.swift",
-				"_Archive/Conversations List/Security Line/SecurityLineView.swift",
-				"_Archive/Convos Client/Auth/Migrations/ReactNativeMigration.swift",
 				"_Archive/Convos Client/Auth/Passkey/AsyncAuthorizationController.swift",
 				"_Archive/Convos Client/Auth/Passkey/PasskeyAuthError.swift",
 				"_Archive/Convos Client/Auth/Passkey/PasskeyAuthService.swift",
@@ -179,16 +158,7 @@
 				"_Archive/Convos Client/Auth/Turnkey/TurnkeyAuthService.swift",
 				"_Archive/Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
 				"_Archive/Convos Client/Auth/Turnkey/TurnkeyPresentationAnchorProvider.swift",
-				"_Archive/Onboarding/Contact Card/ContactCardAvatarView.swift",
-				"_Archive/Onboarding/Contact Card/ContactCardCreateView.swift",
-				"_Archive/Onboarding/Contact Card/ContactCardEditView.swift",
-				"_Archive/Onboarding/Contact Card/ContactCardsState.swift",
-				_Archive/Onboarding/OnboardingMigratingView.swift,
-				_Archive/Onboarding/OnboardingView.swift,
-				_Archive/Onboarding/OnboardingViewModel.swift,
-				"_Archive/Utilities/EthereumAddress+Validation.swift",
 				"Conversation Detail/AddMemberView.swift",
-				"Conversation Detail/GroupEditView.swift",
 				"Design System/Animation/DraggableSpringyView.swift",
 				"Design System/Components/LabeledTextField.swift",
 				Info.plist,
