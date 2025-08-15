@@ -31,7 +31,7 @@ public enum Logger {
     }
 
     public class Default: LoggerProtocol {
-        public static var shared: LoggerProtocol = {
+        nonisolated(unsafe) public static var shared: LoggerProtocol = {
             Default(isProduction: ConfigManager.shared.currentEnvironment == .production)
         }()
         public var minimumLogLevel: LogLevel = .info

@@ -4,7 +4,9 @@ import UserNotifications
 // TO DO: This is a placeholder for the actual notification processor.
 
 class NotificationProcessor {
-    static let shared: NotificationProcessor = NotificationProcessor(appGroupIdentifier: ConfigManager.shared.currentEnvironment.appGroupIdentifier)
+    nonisolated(unsafe) static let shared: NotificationProcessor = NotificationProcessor(
+        appGroupIdentifier: ConfigManager.shared.currentEnvironment.appGroupIdentifier
+    )
 
     private let appGroupIdentifier: String
 

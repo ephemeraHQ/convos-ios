@@ -7,20 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7A349B6E2DD6FF5400E526A3 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */; };
-		7A349CA62DD7017B00E526A3 /* GRDB-dynamic in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		7A5D3E962E43B82400DA9B83 /* SwiftUIIntrospect in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5D3E952E43B82400DA9B83 /* SwiftUIIntrospect */; };
-		7ACA83B22DDD19B200848799 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA83B12DDD19B200848799 /* OrderedCollections */; };
-		7ACA8BC82DE17FF800848799 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA8BC72DE17FF800848799 /* GRDB-dynamic */; };
-		7ACA8BCC2DE1800500848799 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA8BCB2DE1800500848799 /* XMTPiOS */; };
-		7ACA8BCD2DE1806900848799 /* GRDB-dynamic in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA8BC72DE17FF800848799 /* GRDB-dynamic */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		7AD545902E4EA8BE00500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD5458F2E4EA8BE00500ADF /* ConvosCore */; };
+		7AD545922E4EA8D200500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545912E4EA8D200500ADF /* ConvosCore */; };
+		7AD545942E4EA8F300500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545932E4EA8F300500ADF /* ConvosCore */; };
 		7ADC0C902E2977820053978A /* ConvosAppClip.app in Embed App Clips */ = {isa = PBXBuildFile; fileRef = 7ADC0C6E2E2977800053978A /* ConvosAppClip.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = D8B5A9032DC272BD006003A4 /* XMTPiOS */; };
-		DAC68BEE2E4E577A008E5F83 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = DAC68BED2E4E577A008E5F83 /* GRDB-dynamic */; };
-		DAC68BEF2E4E577A008E5F83 /* GRDB-dynamic in Embed Frameworks */ = {isa = PBXBuildFile; productRef = DAC68BED2E4E577A008E5F83 /* GRDB-dynamic */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		DAD3FA1D2E4E39EB005EB910 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = DAD3FA1C2E4E39EB005EB910 /* XMTPiOS */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -68,7 +61,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				7ACA8BCD2DE1806900848799 /* GRDB-dynamic in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -101,7 +93,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				DAC68BEF2E4E577A008E5F83 /* GRDB-dynamic in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -112,7 +103,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				7A349CA62DD7017B00E526A3 /* GRDB-dynamic in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -123,6 +113,7 @@
 		7A1C3C512DB6F75000B723C0 /* Convos.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Convos.xcodeproj; sourceTree = "<group>"; };
 		7A7BB1322DB6FF8E009B8BBF /* Convos.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Convos.xcodeproj; sourceTree = "<group>"; };
 		7ACA8BA32DE16DE200848799 /* ConvosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConvosTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7AD5458D2E4EA89400500ADF /* ConvosCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = ConvosCore; sourceTree = "<group>"; };
 		7ADC0C6E2E2977800053978A /* ConvosAppClip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ConvosAppClip.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7ADC0C7C2E2977810053978A /* ConvosAppClipTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConvosAppClipTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7ADC0C862E2977810053978A /* ConvosAppClipUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConvosAppClipUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -139,90 +130,6 @@
 				"_Archive/Convos Client/Auth/Migrations/ReactNativeMigration.swift",
 				"_Archive/Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
 				"_Archive/Utilities/EthereumAddress+Validation.swift",
-				Core/API/ConvosAPIClient.swift,
-				"Core/API/ConvosAPIClient+Models.swift",
-				Core/API/MockAPIClient.swift,
-				Core/AppEnvironment.swift,
-				Core/Auth/AuthAccountServiceProtocol.swift,
-				Core/Auth/AuthServiceProtocol.swift,
-				Core/Auth/KeychainService.swift,
-				Core/Auth/MockAuthService.swift,
-				"Core/Auth/Secure Enclave/SecureEnclaveAuthService.swift",
-				"Core/Auth/Secure Enclave/SecureEnclaveIdentityStore.swift",
-				Core/ConvosClient.swift,
-				Core/Inboxes/AuthorizeInboxOperation.swift,
-				Core/Inboxes/InboxStateMachine.swift,
-				Core/Inboxes/MockInboxesService.swift,
-				Core/Messaging/MessagingService.swift,
-				Core/Messaging/MessagingServiceProtocol.swift,
-				Core/Messaging/MockMessagingService.swift,
-				Core/Messaging/XMTPClientProvider.swift,
-				"Core/Mock Data Helpers/TextGenerator.swift",
-				Core/Sessions/SessionManager.swift,
-				Core/Sessions/SessionManagerProtocol.swift,
-				Core/Shared/ConvosKeychainItem.swift,
-				"Core/Shared/Data+Hex.swift",
-				"Core/Shared/Data+JsonString.swift",
-				Core/Storage/DatabaseManager.swift,
-				"Core/Storage/Dependency Bundles/ConversationComposer.swift",
-				"Core/Storage/Hydration/DBConversationDetails+Conversation.swift",
-				"Core/Storage/Hydration/DBInboxDetails+Inbox.swift",
-				"Core/Storage/Hydration/DBInvite+Invite.swift",
-				"Core/Storage/Hydration/DBMessage+MessagePreview.swift",
-				"Core/Storage/Hydration/DBProfile+Profile.swift",
-				Core/Storage/MockDatabaseManager.swift,
-				Core/Storage/Models/Conversation.swift,
-				"Core/Storage/Models/Database+CurrentSession.swift",
-				Core/Storage/Models/Identity.swift,
-				Core/Storage/Models/Inbox.swift,
-				Core/Storage/Models/Member.swift,
-				Core/Storage/Models/Message.swift,
-				Core/Storage/Models/Profile.swift,
-				Core/Storage/Models/Session.swift,
-				Core/Storage/Repositories/ConversationRepository.swift,
-				Core/Storage/Repositories/ConversationsCountRepository.swift,
-				Core/Storage/Repositories/ConversationsRepository.swift,
-				Core/Storage/Repositories/CurrentSessionRepository.swift,
-				"Core/Storage/Repositories/DB XMTP Representations/Consent+ConsentState.swift",
-				Core/Storage/Repositories/DraftConversationRepository.swift,
-				Core/Storage/Repositories/GroupPermissionsRepository.swift,
-				Core/Storage/Repositories/InboxesRepository.swift,
-				Core/Storage/Repositories/InviteRepository.swift,
-				Core/Storage/Repositories/MessagesRepository.swift,
-				Core/Storage/Repositories/Mocks/MockConversationConsentWriter.swift,
-				Core/Storage/Repositories/Mocks/MockConversationRepository.swift,
-				Core/Storage/Repositories/Mocks/MockConversationsRepository.swift,
-				Core/Storage/Repositories/Mocks/MockDraftConversationWriter.swift,
-				Core/Storage/Repositories/Mocks/MockInboxesRepository.swift,
-				Core/Storage/Repositories/Mocks/MockInviteRepository.swift,
-				Core/Storage/Repositories/Mocks/MockMessagesRepository.swift,
-				Core/Storage/Repositories/Mocks/MockMyProfileWriter.swift,
-				Core/Storage/Repositories/Mocks/MockOutgoingMessageWriter.swift,
-				Core/Storage/Repositories/Mocks/MockProfileSearchRepository.swift,
-				Core/Storage/Repositories/Mocks/MockSyncingManager.swift,
-				Core/Storage/Repositories/Mocks/MockUserRepository.swift,
-				Core/Storage/Repositories/MyProfileRepository.swift,
-				Core/Storage/Repositories/ProfileSearchRepository.swift,
-				Core/Storage/SharedDatabaseMigrator.swift,
-				Core/Storage/States/DraftConversationState.swift,
-				Core/Storage/Writers/ConversationConsentWriter.swift,
-				Core/Storage/Writers/ConversationLocalStateWriter.swift,
-				Core/Storage/Writers/ConversationMetadataWriter.swift,
-				Core/Storage/Writers/ConversationWriter.swift,
-				Core/Storage/Writers/DraftConversationWriter.swift,
-				Core/Storage/Writers/InboxWriter.swift,
-				Core/Storage/Writers/IncomingMessageWriter.swift,
-				Core/Storage/Writers/InviteWriter.swift,
-				Core/Storage/Writers/MemberProfileWriter.swift,
-				Core/Storage/Writers/MyProfileWriter.swift,
-				Core/Storage/Writers/OutgoingMessageWriter.swift,
-				"Core/Storage/XMTP DB Representations/DecodedMessage+DBRepresentation.swift",
-				"Core/Storage/XMTP DB Representations/MessageDeliveryStatus+DBRepresentation.swift",
-				"Core/Storage/XMTP DB Representations/Reaction+DBRepresentation.swift",
-				Core/Syncing/InviteJoinRequestsManager.swift,
-				Core/Syncing/SyncingManager.swift,
-				Logging/Logger.swift,
-				"Utilities & Extensions/Combine+Extensions.swift",
 			);
 			target = 7ACA8BA22DE16DE200848799 /* ConvosTests */;
 		};
@@ -282,9 +189,6 @@
 				"_Archive/Utilities/EthereumAddress+Validation.swift",
 				"Conversation Detail/AddMemberView.swift",
 				"Conversation Detail/GroupEditView.swift",
-				Core/Storage/Repositories/Mocks/MockProfileSearchRepository.swift,
-				Core/Storage/Repositories/ProfileSearchRepository.swift,
-				Core/Storage/States/DraftConversationState.swift,
 				"Design System/Animation/DraggableSpringyView.swift",
 				"Design System/Components/LabeledTextField.swift",
 				Info.plist,
@@ -344,8 +248,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7ACA8BC82DE17FF800848799 /* GRDB-dynamic in Frameworks */,
-				7ACA8BCC2DE1800500848799 /* XMTPiOS in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -353,6 +255,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7AD545942E4EA8F300500ADF /* ConvosCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -374,8 +277,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DAD3FA1D2E4E39EB005EB910 /* XMTPiOS in Frameworks */,
-				DAC68BEE2E4E577A008E5F83 /* GRDB-dynamic in Frameworks */,
+				7AD545922E4EA8D200500ADF /* ConvosCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -384,10 +286,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				7A5D3E962E43B82400DA9B83 /* SwiftUIIntrospect in Frameworks */,
-				7ACA83B22DDD19B200848799 /* OrderedCollections in Frameworks */,
+				7AD545902E4EA8BE00500ADF /* ConvosCore in Frameworks */,
 				D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */,
-				D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */,
-				7A349B6E2DD6FF5400E526A3 /* GRDB-dynamic in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -418,6 +318,7 @@
 		D8A2B6882DA4BA4B00EF8577 = {
 			isa = PBXGroup;
 			children = (
+				7AD5458D2E4EA89400500ADF /* ConvosCore */,
 				D8477AD42DCBA52F00E31E54 /* .env */,
 				D8477AD52DCBA52F00E31E54 /* .env.example */,
 				D8A2B6932DA4BA4B00EF8577 /* Convos */,
@@ -466,8 +367,6 @@
 			);
 			name = ConvosTests;
 			packageProductDependencies = (
-				7ACA8BC72DE17FF800848799 /* GRDB-dynamic */,
-				7ACA8BCB2DE1800500848799 /* XMTPiOS */,
 			);
 			productName = ConvosTests;
 			productReference = 7ACA8BA32DE16DE200848799 /* ConvosTests.xctest */;
@@ -490,6 +389,7 @@
 			);
 			name = ConvosAppClip;
 			packageProductDependencies = (
+				7AD545932E4EA8F300500ADF /* ConvosCore */,
 			);
 			productName = ConvosAppClip;
 			productReference = 7ADC0C6E2E2977800053978A /* ConvosAppClip.app */;
@@ -587,11 +487,9 @@
 			);
 			name = Convos;
 			packageProductDependencies = (
-				D8B5A9032DC272BD006003A4 /* XMTPiOS */,
 				D8084BA82DC9193A00E708B0 /* DifferenceKit */,
-				7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */,
-				7ACA83B12DDD19B200848799 /* OrderedCollections */,
 				7A5D3E952E43B82400DA9B83 /* SwiftUIIntrospect */,
+				7AD5458F2E4EA8BE00500ADF /* ConvosCore */,
 			);
 			productName = Convos;
 			productReference = D8A2B6912DA4BA4B00EF8577 /* Convos.app */;
@@ -640,11 +538,9 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
-				D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */,
 				D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */,
-				7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
-				7ACA83B02DDD19B200848799 /* XCRemoteSwiftPackageReference "swift-collections" */,
 				7A5D3E942E43B82400DA9B83 /* XCRemoteSwiftPackageReference "swiftui-introspect" */,
+				7AD5458E2E4EA8BE00500ADF /* XCLocalSwiftPackageReference "ConvosCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
@@ -1601,29 +1497,20 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/groue/GRDB.swift.git";
-			requirement = {
-				kind = exactVersion;
-				version = 7.5.0;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		7AD5458E2E4EA8BE00500ADF /* XCLocalSwiftPackageReference "ConvosCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ConvosCore;
 		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
 		7A5D3E942E43B82400DA9B83 /* XCRemoteSwiftPackageReference "swiftui-introspect" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/siteline/swiftui-introspect.git";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = "1.4.0-beta.4";
-			};
-		};
-		7ACA83B02DDD19B200848799 /* XCRemoteSwiftPackageReference "swift-collections" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-collections.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.0;
 			};
 		};
 		D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */ = {
@@ -1642,41 +1529,25 @@
 				minimumVersion = 0.59.1;
 			};
 		};
-		D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/xmtp/xmtp-ios.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 4.3.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
-			productName = "GRDB-dynamic";
-		};
 		7A5D3E952E43B82400DA9B83 /* SwiftUIIntrospect */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7A5D3E942E43B82400DA9B83 /* XCRemoteSwiftPackageReference "swiftui-introspect" */;
 			productName = SwiftUIIntrospect;
 		};
-		7ACA83B12DDD19B200848799 /* OrderedCollections */ = {
+		7AD5458F2E4EA8BE00500ADF /* ConvosCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7ACA83B02DDD19B200848799 /* XCRemoteSwiftPackageReference "swift-collections" */;
-			productName = OrderedCollections;
+			productName = ConvosCore;
 		};
-		7ACA8BC72DE17FF800848799 /* GRDB-dynamic */ = {
+		7AD545912E4EA8D200500ADF /* ConvosCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
-			productName = "GRDB-dynamic";
+			productName = ConvosCore;
 		};
-		7ACA8BCB2DE1800500848799 /* XMTPiOS */ = {
+		7AD545932E4EA8F300500ADF /* ConvosCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */;
-			productName = XMTPiOS;
+			productName = ConvosCore;
 		};
 		D8084BA82DC9193A00E708B0 /* DifferenceKit */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -1692,21 +1563,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
 			productName = "plugin:SwiftLintBuildToolPlugin";
-		};
-		D8B5A9032DC272BD006003A4 /* XMTPiOS */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */;
-			productName = XMTPiOS;
-		};
-		DAC68BED2E4E577A008E5F83 /* GRDB-dynamic */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
-			productName = "GRDB-dynamic";
-		};
-		DAD3FA1C2E4E39EB005EB910 /* XMTPiOS */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */;
-			productName = XMTPiOS;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
