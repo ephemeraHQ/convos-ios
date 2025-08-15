@@ -69,28 +69,28 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     func authorize() {
         task?.cancel()
-        task = Task {
+        task = Task { [stateMachine] in
             await stateMachine.authorize()
         }
     }
 
     func register(displayName: String?) {
         task?.cancel()
-        task = Task {
+        task = Task { [stateMachine] in
             await stateMachine.register(displayName: displayName)
         }
     }
 
     func deleteAndStop() {
         task?.cancel()
-        task = Task {
+        task = Task { [stateMachine] in
             await stateMachine.deleteAndStop()
         }
     }
 
     func stop() {
         task?.cancel()
-        task = Task {
+        task = Task { [stateMachine] in
             await stateMachine.stop()
         }
     }

@@ -25,6 +25,13 @@ let package = Package(
             dependencies: [
                 .product(name: "XMTPiOS", package: "xmtp-ios"),
                 .product(name: "GRDB", package: "GRDB.swift")
+            ],
+            swiftSettings: [
+                .enableUpcomingFeature("DisableOutwardActorInference"),
+                .enableUpcomingFeature("GlobalActorIsolatedTypesUsability"),
+                .enableUpcomingFeature("InferIsolatedConformances"),
+                .enableUpcomingFeature("InferSendableFromCaptures"),
+                .enableUpcomingFeature("NonisolatedNonsendingByDefault")
             ]
         ),
         .testTarget(

@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-struct Profile: Codable, Identifiable, Hashable, ImageCacheable {
+struct Profile: Codable, Identifiable, Hashable {
     var id: String { inboxId }
     let inboxId: String
     let name: String?
@@ -26,11 +26,6 @@ struct Profile: Codable, Identifiable, Hashable, ImageCacheable {
             username: nil,
             avatar: nil
         )
-    }
-
-    // MARK: - ImageCacheable
-    var imageCacheIdentifier: String {
-        inboxId
     }
 }
 
