@@ -136,6 +136,7 @@ custom_rules:
     severity: warning
 
 excluded:
+  - ConvosCore/.build
   - ConvosTests
   - ConvosTests/Helpers
   - ConvosAppClipTests
