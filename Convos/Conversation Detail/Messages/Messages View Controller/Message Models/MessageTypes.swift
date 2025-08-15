@@ -14,7 +14,7 @@ struct DateGroup: Hashable {
     }
 }
 
-extension ConversationUpdate: Differentiable {
+extension ConversationUpdate: @retroactive Differentiable {
     public var differenceIdentifier: Int {
         hashValue
     }
@@ -34,7 +34,7 @@ extension DateGroup: Differentiable {
     }
 }
 
-extension Invite: Differentiable {
+extension Invite: @retroactive Differentiable {
     public var differenceIdentifier: Int {
         hashValue
     }
@@ -71,7 +71,7 @@ enum ImageSource: Hashable {
     }
 }
 
-extension AnyMessage: Differentiable {
+extension AnyMessage: @retroactive Differentiable {
     public var differenceIdentifier: Int {
         base.id.hashValue
     }
