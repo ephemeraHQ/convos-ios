@@ -22,7 +22,7 @@ class InviteWriter: InviteWriterProtocol {
             inviteUrlString: invite.inviteLinkURL,
             maxUses: nil,
             usesCount: 0,
-            status: .active, // @jarodl do we want this to come back from the public API endpoint?
+            status: .active,
             createdAt: Date(),
             autoApprove: true
         )
