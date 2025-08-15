@@ -4,13 +4,6 @@ import UserNotifications
 // TO DO: This is a placeholder for the actual notification processor.
 
 public class NotificationProcessor {
-    public static var shared: NotificationProcessor!
-
-    /// Configure the shared instance with the app group identifier
-    public static func configure(appGroupIdentifier: String) {
-        shared = NotificationProcessor(appGroupIdentifier: appGroupIdentifier)
-    }
-
     private let appGroupIdentifier: String
 
     public init(appGroupIdentifier: String) {

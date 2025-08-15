@@ -18,9 +18,6 @@ struct ConvosApp: App {
             Logger.Default.configureForProduction(false)
         }
 
-        // Configure NotificationProcessor with app group
-        NotificationProcessor.configure(appGroupIdentifier: environment.appGroupIdentifier)
-
         Logger.info("🚀 App starting with environment: \(environment)")
 
         do {

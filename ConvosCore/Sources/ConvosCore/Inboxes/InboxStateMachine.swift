@@ -560,7 +560,7 @@ extension InboxStateMachine {
     }
 
     private func storedDeviceToken() -> String? {
-        NotificationProcessor.shared.getStoredDeviceToken()
+        NotificationProcessor(appGroupIdentifier: environment.appGroupIdentifier).getStoredDeviceToken()
     }
 
     private func userIdForCurrentInbox() -> String { inbox.providerId }
@@ -581,7 +581,8 @@ extension InboxStateMachine {
     }
 
     private func registerForNotificationsIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
-        guard let token = NotificationProcessor.shared.getStoredDeviceToken(), !token.isEmpty else { return }
+        let notifProcessor = NotificationProcessor(appGroupIdentifier: environment.appGroupIdentifier)
+        guard let token = notifProcessor.getStoredDeviceToken(), !token.isEmpty else { return }
         let deviceId = await currentDeviceId()
         let identityId = client.inboxId
         let installationId = client.installationId
