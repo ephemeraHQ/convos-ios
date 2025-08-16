@@ -2,11 +2,11 @@ import Combine
 import Foundation
 
 class MockInboxesRepository: InboxesRepositoryProtocol {
-    public var inboxesPublisher: AnyPublisher<[Inbox], Never> {
+    var inboxesPublisher: AnyPublisher<[Inbox], Never> {
         Just((try? allInboxes()) ?? []).eraseToAnyPublisher()
     }
 
-    public func allInboxes() throws -> [Inbox] {
+    func allInboxes() throws -> [Inbox] {
         [
             .init(
                 inboxId: UUID().uuidString,

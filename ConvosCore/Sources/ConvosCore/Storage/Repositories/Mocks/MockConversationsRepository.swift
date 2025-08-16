@@ -88,7 +88,7 @@ class MockConversationsRepository: ConversationsRepositoryProtocol {
         Just(conversations).eraseToAnyPublisher()
     }()
 
-    public func fetchAll() throws -> [Conversation] {
+    func fetchAll() throws -> [Conversation] {
         conversations
     }
 }

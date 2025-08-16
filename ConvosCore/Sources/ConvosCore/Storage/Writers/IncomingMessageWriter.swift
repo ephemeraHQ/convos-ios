@@ -14,7 +14,7 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    public func store(message: DecodedMessage,
+    func store(message: DecodedMessage,
                for conversation: DBConversation) async throws {
         try await databaseWriter.write { db in
             let sender = Member(inboxId: message.senderInboxId)

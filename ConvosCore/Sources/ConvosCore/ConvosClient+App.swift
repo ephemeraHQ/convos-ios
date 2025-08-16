@@ -3,7 +3,7 @@ import Foundation
 // App specific methods not needed in our tests target
 extension ConvosClient {
     public static func client(databaseManager: any DatabaseManagerProtocol = DatabaseManager.shared,
-                       environment: AppEnvironment) -> ConvosClient {
+                              environment: AppEnvironment) -> ConvosClient {
         let localAuthService = SecureEnclaveAuthService()
         let databaseWriter = databaseManager.dbWriter
         let databaseReader = databaseManager.dbReader

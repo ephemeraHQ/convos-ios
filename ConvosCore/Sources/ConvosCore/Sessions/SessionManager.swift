@@ -17,7 +17,7 @@ enum SessionManagerError: Error {
 }
 
 class SessionManager: SessionManagerProtocol {
-    public let authState: AnyPublisher<AuthServiceState, Never>
+    let authState: AnyPublisher<AuthServiceState, Never>
     private let currentSessionRepository: any CurrentSessionRepositoryProtocol
     private let inboxOperationsPublisher: CurrentValueSubject<[any AuthorizeInboxOperationProtocol], Never> = .init([])
     private var cancellables: Set<AnyCancellable> = []
@@ -62,7 +62,7 @@ class SessionManager: SessionManagerProtocol {
         cleanup()
     }
 
-    public func cleanup() {
+    func cleanup() {
         cancellables.removeAll()
         clearAllOperations()
     }
@@ -160,11 +160,11 @@ class SessionManager: SessionManagerProtocol {
 
     // MARK: Public
 
-    public func prepare() throws {
+    func prepare() throws {
         try authService.prepare()
     }
 
-    public func addAccount() throws -> AddAccountResultType {
+    func addAccount() throws -> AddAccountResultType {
         let authResult = try authService.register(displayName: nil)
         Logger.info("Added account: \(authResult)")
         let matchingInboxReadyPublisher = inboxOperationsPublisher
@@ -187,7 +187,7 @@ class SessionManager: SessionManagerProtocol {
         )
     }
 
-    public func deleteAccount(inboxId: String) throws {
+    func deleteAccount(inboxId: String) throws {
         let inbox: DBInbox? = try databaseReader.read { db in
             try DBInbox.fetchOne(db, key: inboxId)
         }
@@ -197,14 +197,14 @@ class SessionManager: SessionManagerProtocol {
         try deleteAccount(providerId: inbox.providerId)
     }
 
-    public func deleteAccount(providerId: String) throws {
+    func deleteAccount(providerId: String) throws {
         if let operation = operationsByProviderId[providerId] {
             operation.deleteAndStop()
         }
         try authService.deleteAccount(with: providerId)
     }
 
-    public func deleteAllAccounts() throws {
+    func deleteAllAccounts() throws {
         // Ask all ready inbox state machines to unregister their installation before teardown
         NotificationCenter.default.post(name: .convosUnregisterAllInboxesRequested, object: nil)
 
@@ -270,7 +270,7 @@ class SessionManager: SessionManagerProtocol {
 
     // MARK: Messaging
 
-    public func messagingService(for inboxId: String) -> AnyMessagingService {
+    func messagingService(for inboxId: String) -> AnyMessagingService {
         let matchingInboxReadyPublisher = inboxOperationsPublisher
             .flatMap { operations in
                 Publishers.MergeMany(
@@ -290,11 +290,11 @@ class SessionManager: SessionManagerProtocol {
 
     // MARK: Displaying All Conversations
 
-    public func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
+    func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
         ConversationsRepository(dbReader: databaseReader, consent: consent)
     }
 
-    public func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
+    func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
         ConversationsCountRepository(databaseReader: databaseReader, consent: consent, kinds: kinds)
     }
 }

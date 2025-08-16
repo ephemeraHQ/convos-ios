@@ -23,7 +23,7 @@ final class InboxWriter: InboxWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    public func storeInbox(inboxId: String,
+    func storeInbox(inboxId: String,
                     type: InboxType,
                     provider: InboxProvider,
                     providerId: String,
@@ -61,7 +61,7 @@ final class InboxWriter: InboxWriterProtocol {
         }
     }
 
-    public func storeInbox(inboxId: String,
+    func storeInbox(inboxId: String,
                     user: ConvosAPI.CreatedUserResponse,
                     type: InboxType,
                     provider: InboxProvider,
@@ -97,7 +97,7 @@ final class InboxWriter: InboxWriterProtocol {
         }
     }
 
-    public func deleteInbox(inboxId: String) async throws {
+    func deleteInbox(inboxId: String) async throws {
         try await databaseWriter.write { db in
             guard let inbox = try DBInbox.fetchOne(db, id: inboxId) else {
                 Logger.error("Inbox not found, skipping delete")

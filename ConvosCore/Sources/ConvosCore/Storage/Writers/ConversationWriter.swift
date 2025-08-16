@@ -19,11 +19,11 @@ class ConversationWriter: ConversationWriterProtocol {
         self.messageWriter = messageWriter
     }
 
-    public func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation {
+    func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation {
         return try await _store(conversation: conversation)
     }
 
-    public func store(conversation: XMTPiOS.Conversation, clientConversationId: String) async throws -> DBConversation {
+    func store(conversation: XMTPiOS.Conversation, clientConversationId: String) async throws -> DBConversation {
         return try await _store(conversation: conversation, clientConversationId: clientConversationId)
     }
 

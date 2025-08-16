@@ -189,7 +189,7 @@ extension MockMessagingService: MessagesRepositoryProtocol {
     public var messagesPublisher: AnyPublisher<[AnyMessage], Never> {
         messagesSubject.eraseToAnyPublisher()
     }
-    
+
     public func fetchAll() throws -> [AnyMessage] {
         messages
     }
@@ -230,11 +230,11 @@ extension MockMessagingService: ConversationSender {
 }
 
 actor MockConversations: ConversationsProvider {
-    public func listGroups(createdAfter: Date?, createdBefore: Date?, limit: Int?, consentStates: [ConsentState]?) throws -> [XMTPiOS.Group] {
+    func listGroups(createdAfter: Date?, createdBefore: Date?, limit: Int?, consentStates: [ConsentState]?) throws -> [XMTPiOS.Group] {
         []
     }
 
-    public func list(
+    func list(
         createdAfter: Date?,
         createdBefore: Date?,
         limit: Int?,
@@ -243,7 +243,7 @@ actor MockConversations: ConversationsProvider {
         []
     }
 
-    public func stream(
+    func stream(
         type: XMTPiOS.ConversationFilterType,
         onClose: (() -> Void)?
     ) -> AsyncThrowingStream<XMTPiOS.Conversation, any Error> {
@@ -251,15 +251,15 @@ actor MockConversations: ConversationsProvider {
         }
     }
 
-    public func syncAllConversations(consentStates: [XMTPiOS.ConsentState]?) async throws -> UInt32 {
+    func syncAllConversations(consentStates: [XMTPiOS.ConsentState]?) async throws -> UInt32 {
         0
     }
 
-    public func findConversation(conversationId: String) async throws -> XMTPiOS.Conversation? {
+    func findConversation(conversationId: String) async throws -> XMTPiOS.Conversation? {
         nil
     }
 
-    public func streamAllMessages(
+    func streamAllMessages(
         type: ConversationFilterType,
         consentStates: [ConsentState]?,
         onClose: (() -> Void)?
@@ -295,9 +295,9 @@ extension MockMessagingService: XMTPClientProvider {
     }
 
     public func newConversation(with memberInboxIds: [String],
-                         name: String,
-                         description: String,
-                         imageUrl: String) async throws -> String {
+                                name: String,
+                                description: String,
+                                imageUrl: String) async throws -> String {
         return UUID().uuidString
     }
 
@@ -516,43 +516,43 @@ public class MockGroupMetadataWriter: ConversationMetadataWriterProtocol {
 }
 
 class MockGroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
-    public func addAdmin(memberInboxId: String, to groupId: String) async throws {
+    func addAdmin(memberInboxId: String, to groupId: String) async throws {
         // @lourou
     }
 
-    public func removeAdmin(memberInboxId: String, from groupId: String) async throws {
+    func removeAdmin(memberInboxId: String, from groupId: String) async throws {
         // @lourou
     }
 
-    public func addSuperAdmin(memberInboxId: String, to groupId: String) async throws {
+    func addSuperAdmin(memberInboxId: String, to groupId: String) async throws {
         // @lourou
     }
 
-    public func removeSuperAdmin(memberInboxId: String, from groupId: String) async throws {
+    func removeSuperAdmin(memberInboxId: String, from groupId: String) async throws {
     }
 
-    public func addMembers(inboxIds: [String], to groupId: String) async throws {
+    func addMembers(inboxIds: [String], to groupId: String) async throws {
     }
 
-    public func removeMembers(inboxIds: [String], from groupId: String) async throws {
+    func removeMembers(inboxIds: [String], from groupId: String) async throws {
     }
 
-    public func getGroupPermissions(for groupId: String) async throws -> GroupPermissionPolicySet {
+    func getGroupPermissions(for groupId: String) async throws -> GroupPermissionPolicySet {
         return GroupPermissionPolicySet.defaultPolicy
     }
 
-    public func getMemberRole(memberInboxId: String, in groupId: String) async throws -> MemberRole {
+    func getMemberRole(memberInboxId: String, in groupId: String) async throws -> MemberRole {
         return .member
     }
 
-    public func canPerformAction(
+    func canPerformAction(
         memberInboxId: String,
         action: GroupPermissionAction,
         in groupId: String) async throws -> Bool {
         return true
     }
 
-    public func getGroupMembers(for groupId: String) async throws -> [GroupMemberInfo] {
+    func getGroupMembers(for groupId: String) async throws -> [GroupMemberInfo] {
         return []
     }
 }

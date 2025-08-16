@@ -13,7 +13,7 @@ public enum AppEnvironment {
 
     public var name: String {
         switch self {
-            case .local:
+        case .local:
             return "local"
         case .dev:
             return "dev"

@@ -17,7 +17,7 @@ extension PrivateKey {
 }
 
 struct MockAuthResult: AuthServiceResultType, AuthServiceRegisteredResultType, Codable {
-    public var inbox: any AuthServiceInboxType {
+    var inbox: any AuthServiceInboxType {
         AuthServiceInbox(
             type: .ephemeral,
             provider: .local,
@@ -27,31 +27,31 @@ struct MockAuthResult: AuthServiceResultType, AuthServiceRegisteredResultType, C
         )
     }
 
-    public var profile: Profile
-    public var id: String
-    public let privateKey: PrivateKey!
+    var profile: Profile
+    var id: String
+    let privateKey: PrivateKey!
 
-    public var inboxes: [any AuthServiceInboxType] {
+    var inboxes: [any AuthServiceInboxType] {
         [inbox]
     }
 
-    public var displayName: String? {
+    var displayName: String? {
         profile.name
     }
 
-    public var signingKey: any SigningKey {
+    var signingKey: any SigningKey {
         privateKey
     }
 
-    public var databaseKey: Data {
+    var databaseKey: Data {
         Data((0..<32).map { _ in UInt8.random(in: UInt8.min...UInt8.max) })
     }
 
-    public var chainId: Int64? {
+    var chainId: Int64? {
         nil
     }
 
-    public var walletAddress: String? {
+    var walletAddress: String? {
         privateKey.walletAddress
     }
 
@@ -74,14 +74,14 @@ struct MockAuthResult: AuthServiceResultType, AuthServiceRegisteredResultType, C
         self.privateKey = try PrivateKey(privateKeyData)
     }
 
-    public func encode(to encoder: any Encoder) throws {
+    func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(profile.name, forKey: .name)
         try container.encode(privateKey.secp256K1.bytes, forKey: .privateKeyData)
     }
 
-    public func sign(message: String) async throws -> Data? {
+    func sign(message: String) async throws -> Data? {
         return try await privateKey.sign(message).rawData
     }
 }
@@ -95,7 +95,7 @@ class MockAuthService: LocalAuthServiceProtocol {
         }
     }
 
-    public var accountsService: (any AuthAccountsServiceProtocol)? {
+    var accountsService: (any AuthAccountsServiceProtocol)? {
         nil
     }
 
@@ -103,15 +103,15 @@ class MockAuthService: LocalAuthServiceProtocol {
     private let keychain: KeychainService<MockKeychainItem> = .init()
     private var _currentUser: MockAuthResult?
 
-    public var currentUser: MockAuthResult? {
+    var currentUser: MockAuthResult? {
         _currentUser
     }
 
-    public var state: AuthServiceState {
+    var state: AuthServiceState {
         authStateSubject.value
     }
 
-    public var authStatePublisher: AnyPublisher<AuthServiceState, Never> {
+    var authStatePublisher: AnyPublisher<AuthServiceState, Never> {
         return authStateSubject.eraseToAnyPublisher()
     }
 
@@ -122,10 +122,10 @@ class MockAuthService: LocalAuthServiceProtocol {
         authStateSubject.send(.unauthorized)
     }
 
-    public func prepare() throws {
+    func prepare() throws {
     }
 
-    public func signIn() async throws {
+    func signIn() async throws {
         guard let mockUser = try getCurrentUser() else {
             return
         }
@@ -133,7 +133,7 @@ class MockAuthService: LocalAuthServiceProtocol {
         authStateSubject.send(.authorized(mockUser))
     }
 
-    public func register(displayName: String) async throws {
+    func register(displayName: String) async throws {
         let mockAuthResult = MockAuthResult(name: displayName)
         if persist {
             let encoder = JSONEncoder()
@@ -144,7 +144,7 @@ class MockAuthService: LocalAuthServiceProtocol {
         authStateSubject.send(.registered(mockAuthResult))
     }
 
-    public func register(displayName: String?) throws -> any AuthServiceRegisteredResultType {
+    func register(displayName: String?) throws -> any AuthServiceRegisteredResultType {
         let mockAuthResult = MockAuthResult(name: displayName ?? "")
         if persist {
             let encoder = JSONEncoder()
@@ -156,17 +156,17 @@ class MockAuthService: LocalAuthServiceProtocol {
         return mockAuthResult
     }
 
-    public func deleteAll() throws {
+    func deleteAll() throws {
         try keychain.delete(.mockUser)
         _currentUser = nil
     }
 
-    public func deleteAccount(with providerId: String) throws {
+    func deleteAccount(with providerId: String) throws {
         try keychain.delete(.mockUser)
         _currentUser = nil
     }
 
-    public func signOut() async throws {
+    func signOut() async throws {
         if persist {
             try keychain.delete(.mockUser)
         }
