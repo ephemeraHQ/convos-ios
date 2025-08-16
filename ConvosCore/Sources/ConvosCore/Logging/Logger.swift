@@ -166,8 +166,14 @@ public enum Logger {
             let timestamp = ISO8601DateFormatter().string(from: Date())
             let logMessage = "\(level.emoji) [\(timestamp)] [\(level)] [\(fileName):\(line)] \(function): \(message)"
 
+            // Use both compilation condition and runtime check for maximum compatibility
             #if DEBUG
             print(logMessage)
+            #else
+            // Runtime check for debug mode when compilation condition isn't available
+            if !isProduction {
+                print(logMessage)
+            }
             #endif
 
             // Add to buffer for quick access

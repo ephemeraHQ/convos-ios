@@ -28,7 +28,8 @@ let package = Package(
                 .product(name: "GRDB", package: "GRDB.swift")
             ],
             swiftSettings: [
-                .swiftLanguageMode(.v5)
+                .swiftLanguageMode(.v5),
+                .define("DEBUG", .when(configuration: .debug))
             ],
             plugins: [
                 .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")
