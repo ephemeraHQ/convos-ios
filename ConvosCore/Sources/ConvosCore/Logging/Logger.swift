@@ -35,12 +35,13 @@ public enum Logger {
 
         public var minimumLogLevel: LogLevel = .info
         private var isProduction: Bool = false
-        private let logFileURL: URL?
+        private var logFileURL: URL?
 
         /// Configure the logger for production mode
         public static func configureForProduction(_ isProduction: Bool) {
             if let defaultLogger = shared as? Default {
                 defaultLogger.isProduction = isProduction
+                defaultLogger.prepare()
             }
         }
         private let fileQueue: DispatchQueue = DispatchQueue(label: "com.convos.logger.file", qos: .utility)
@@ -58,9 +59,13 @@ public enum Logger {
         private var lastFileSizeCheck: Date = Date()
         private let fileSizeCheckInterval: TimeInterval = 30 // Check file size every 30 seconds
 
-        public init() {
-            // isProduction will be set via configureForProduction
+        public init() {}
 
+        deinit {
+            closeFileHandle()
+        }
+
+        private func prepare() {
             if !isProduction,
                let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                 // Create logs directory in app's documents folder
@@ -78,10 +83,6 @@ public enum Logger {
             } else {
                 self.logFileURL = nil
             }
-        }
-
-        deinit {
-            closeFileHandle()
         }
 
         private func initializeFileHandle() {
