@@ -96,6 +96,8 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
              failedSavingDatabaseKey,
              failedSavingInboxType,
              failedSavingInboxId,
+             failedSavingProviderId,
+             failedLoadingProviderId,
              failedGeneratingDatabaseKey,
              failedGeneratingPrivateKey,
              failedSavingPrivateKey,
@@ -406,6 +408,51 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         }
 
         return inboxId
+    }
+
+    func save(providerId: String, for inboxId: String) throws {
+        guard let providerIdData = providerId.data(using: .utf8) else {
+            throw SecureEnclaveUserStoreError.failedSavingProviderId
+        }
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "providerId.\(inboxId)",
+            kSecAttrService as String: keychainService,
+            kSecValueData as String: providerIdData,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        ]
+
+        SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
+
+        let status = SecItemAdd(query as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw SecureEnclaveUserStoreError.failedSavingProviderId
+        }
+    }
+
+    func loadProviderId(for inboxId: String) throws -> String {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "providerId.\(inboxId)",
+            kSecAttrService as String: keychainService,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        ]
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        guard status == errSecSuccess, let data = item as? Data else {
+            throw SecureEnclaveUserStoreError.failedLoadingProviderId
+        }
+
+        guard let providerId = String(data: data, encoding: .utf8) else {
+            throw SecureEnclaveUserStoreError.failedLoadingProviderId
+        }
+
+        return providerId
     }
 
     private func saveInboxType(type: InboxType, for identityId: String) throws {
