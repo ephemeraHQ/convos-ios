@@ -56,6 +56,20 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
         return try identityStore.loadInboxId(for: providerId)
     }
 
+    public func inbox(for inboxId: String) throws -> (any AuthServiceInboxType)? {
+        let providerId = try identityStore.loadProviderId(for: inboxId)
+        guard let identity = try identityStore.load(for: providerId) else {
+            return nil
+        }
+        return AuthServiceInbox(
+            type: identity.type,
+            provider: .local,
+            providerId: identity.id,
+            signingKey: identity.privateKey,
+            databaseKey: identity.databaseKey
+        )
+    }
+
     // MARK: - Private Helpers
 
     private func refreshAuthState() throws {

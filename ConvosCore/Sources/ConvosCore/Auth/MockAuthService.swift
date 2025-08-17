@@ -87,6 +87,10 @@ struct MockAuthResult: AuthServiceResultType, AuthServiceRegisteredResultType, C
 }
 
 class MockAuthService: LocalAuthServiceProtocol {
+    func inbox(for inboxId: String) throws -> (any AuthServiceInboxType)? {
+        nil
+    }
+
     enum MockKeychainItem: String, KeychainItemProtocol {
         case mockUser
 
