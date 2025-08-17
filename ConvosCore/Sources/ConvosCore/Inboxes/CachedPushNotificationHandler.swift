@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import GRDB
 
-/// Example usage of SingleInboxAuthProcessor for push notifications with caching
+/// Example usage of SingleInboxAuthProcessor with PushNotificationPayload
 public class CachedPushNotificationHandler {
     private var processors: [String: SingleInboxAuthProcessor] = [:]
     private var cancellables: Set<AnyCancellable> = []
@@ -24,35 +24,42 @@ public class CachedPushNotificationHandler {
         self.environment = environment
     }
 
-    /// Handles a push notification by processing the inbox and executing work
-    /// - Parameter notificationData: The push notification payload
-    public func handlePushNotification(notificationData: [AnyHashable: Any]) {
-        guard let inboxId = notificationData["inboxId"] as? String else {
+    /// Handles a push notification using the structured payload
+    /// - Parameter userInfo: The raw notification userInfo dictionary
+    public func handlePushNotification(userInfo: [AnyHashable: Any]) {
+        let payload = PushNotificationPayload(userInfo: userInfo)
+
+        guard payload.isValid else {
+            Logger.error("Invalid push notification payload: \(payload)")
+            return
+        }
+
+        guard let inboxId = payload.inboxId else {
             Logger.error("Push notification missing inboxId")
             return
         }
 
-        Logger.info("Processing push notification for inbox: \(inboxId)")
+        Logger.info("Processing push notification for inbox: \(inboxId), type: \(payload.notificationType?.displayName ?? "unknown")")
 
         // Get or create processor for this inbox
         let processor = getOrCreateProcessor(for: inboxId)
 
         // Use the push notification specific method
-        processor.processPushNotification(notificationData: notificationData)
-        .sink(
-            receiveCompletion: { completion in
-                switch completion {
-                case .finished:
-                    Logger.info("Push notification processing completed")
-                case .failure(let error):
-                    Logger.error("Push notification processing failed: \(error)")
+        processor.processPushNotification(payload: payload)
+            .sink(
+                receiveCompletion: { completion in
+                    switch completion {
+                    case .finished:
+                        Logger.info("Push notification processing completed")
+                    case .failure(let error):
+                        Logger.error("Push notification processing failed: \(error)")
+                    }
+                },
+                receiveValue: { _ in
+                    Logger.info("Push notification processed successfully")
                 }
-            },
-            receiveValue: { _ in
-                Logger.info("Push notification processed successfully")
-            }
-        )
-        .store(in: &cancellables)
+            )
+            .store(in: &cancellables)
     }
 
     /// Schedules custom work for a specific inbox
@@ -126,54 +133,53 @@ public class CachedPushNotificationHandler {
 
  // In your NotificationServiceExtension
  let pushHandler = CachedPushNotificationHandler(
-     authService: secureEnclaveAuthService,
-     databaseReader: databaseManager.dbReader,
-     databaseWriter: databaseManager.dbWriter,
-     environment: environment
+ authService: secureEnclaveAuthService,
+ databaseReader: databaseManager.dbReader,
+ databaseWriter: databaseManager.dbWriter,
+ environment: environment
  )
 
- // Handle multiple push notifications for the same inbox efficiently
+ // Handle push notification with structured payload
  func didReceive(_ request: UNNotificationRequest, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
-     let userInfo = request.content.userInfo
+ let userInfo = request.content.userInfo
+ let payload = PushNotificationPayload(userInfo: userInfo)
 
-     // This will reuse the cached inbox if already authorized
-     pushHandler.handlePushNotification(notificationData: userInfo)
-
-     // Schedule additional work for the same inbox
-     if let inboxId = userInfo["inboxId"] as? String {
-         pushHandler.scheduleCustomWork(for: inboxId) { inboxReadyResult in
-             // Additional work when inbox is ready
-             let client = inboxReadyResult.client
-             let apiClient = inboxReadyResult.apiClient
-
-             // Do something with the ready inbox
-             try await apiClient.someEndpoint()
-             return "Custom result"
-         }
-         .sink(
-             receiveCompletion: { completion in
-                 // Handle completion
-             },
-             receiveValue: { result in
-                 // Handle result
-             }
-         )
-         .store(in: &cancellables)
-     }
-
-     contentHandler(request.content)
+ // Use the structured payload for display
+ if let threadId = payload.threadIdentifier {
+ request.content.threadIdentifier = threadId
  }
 
- // Check if inbox is ready before scheduling work
- if pushHandler.isInboxReady(inboxId: "some-inbox-id") {
-     // Inbox is already cached, work will execute immediately
-     pushHandler.scheduleCustomWork(for: "some-inbox-id") { inboxReadyResult in
-         // This will execute immediately since inbox is cached
-         return "Immediate result"
-     }
-     .sink { result in
-         // Handle immediate result
-     }
-     .store(in: &cancellables)
+ if let title = payload.displayTitle {
+ request.content.title = title
+ }
+
+ if let body = payload.displayBody {
+ request.content.body = body
+ }
+
+ // Process the notification
+ pushHandler.handlePushNotification(userInfo: userInfo)
+
+ contentHandler(request.content)
+ }
+
+ // Example of how the payload makes notification handling cleaner:
+ func processNotificationPayload(_ payload: PushNotificationPayload) {
+ switch payload.notificationType {
+ case .protocolMessage:
+ if let conversationId = payload.notificationData?.protocolData?.conversationId {
+ Logger.info("Processing protocol message for conversation: \(conversationId)")
+ }
+
+ case .inviteJoinRequest:
+ if let inviteData = payload.notificationData?.inviteData {
+ let requesterName = inviteData.requester?.profile?.displayNameOrUsername ?? "Someone"
+ let groupName = inviteData.inviteCode?.displayName ?? "your group"
+ Logger.info("\(requesterName) \(inviteData.autoApprove ? "joined" : "requested to join") \(groupName)")
+ }
+
+ case .none:
+ Logger.warning("Unknown notification type")
+ }
  }
  */

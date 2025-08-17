@@ -5,61 +5,108 @@ import Foundation
 public extension SingleInboxAuthProcessor {
     /// Processes a push notification by scheduling work when the inbox is ready
     /// - Parameters:
-    ///   - notificationData: The notification payload data
+    ///   - payload: The decoded push notification payload
     ///   - timeout: Timeout duration for inbox authorization (default: 30 seconds)
     /// - Returns: A publisher that emits when processing is complete
     func processPushNotification(
-        notificationData: [AnyHashable: Any],
+        payload: PushNotificationPayload,
         timeout: TimeInterval = 30
     ) -> AnyPublisher<Void, Error> {
         return scheduleWork(timeout: timeout) { inboxReadyResult in
             try await self.handlePushNotification(
                 inboxReadyResult: inboxReadyResult,
-                notificationData: notificationData
+                payload: payload
             )
         }
+    }
+
+    /// Processes a push notification using raw userInfo dictionary
+    /// - Parameters:
+    ///   - userInfo: The raw notification userInfo dictionary
+    ///   - timeout: Timeout duration for inbox authorization (default: 30 seconds)
+    /// - Returns: A publisher that emits when processing is complete
+    func processPushNotification(
+        userInfo: [AnyHashable: Any],
+        timeout: TimeInterval = 30
+    ) -> AnyPublisher<Void, Error> {
+        let payload = PushNotificationPayload(userInfo: userInfo)
+        return processPushNotification(payload: payload, timeout: timeout)
     }
 
     /// Handles the actual push notification processing when inbox is ready
     /// - Parameters:
     ///   - inboxReadyResult: The ready inbox with client and API client
-    ///   - notificationData: The notification payload data
+    ///   - payload: The decoded push notification payload
     private func handlePushNotification(
         inboxReadyResult: InboxReadyResult,
-        notificationData: [AnyHashable: Any]
+        payload: PushNotificationPayload
     ) async throws {
         let client = inboxReadyResult.client
         let apiClient = inboxReadyResult.apiClient
 
-        // Example: Decode and store XMTP message
-        if let messageData = notificationData["message"] as? [String: Any] {
-            try await decodeAndStoreMessage(
-                messageData: messageData,
-                client: client
+        switch payload.notificationType {
+        case .protocolMessage:
+            try await handleProtocolMessage(
+                payload: payload,
+                client: client,
+                apiClient: apiClient
             )
+        case .inviteJoinRequest:
+            try await handleInviteJoinRequest(
+                payload: payload,
+                client: client,
+                apiClient: apiClient
+            )
+        case .none:
+            Logger.warning("Unknown notification type for payload: \(payload)")
+        }
+    }
+
+    /// Handles protocol message notifications
+    private func handleProtocolMessage(
+        payload: PushNotificationPayload,
+        client: any XMTPClientProvider,
+        apiClient: any ConvosAPIClientProtocol
+    ) async throws {
+        guard let protocolData = payload.notificationData?.protocolData else {
+            Logger.error("Missing protocol data in notification payload")
+            return
         }
 
-        // Example: Call API endpoint
-        if let apiAction = notificationData["apiAction"] as? String {
-            try await performAPIAction(
-                action: apiAction,
-                apiClient: apiClient,
-                notificationData: notificationData
-            )
+        if let contentTopic = protocolData.contentTopic {
+            Logger.info("Processing protocol message for topic: \(contentTopic)")
+            // TODO: Implement message decoding and storage
+            // try await decodeAndStoreMessage(contentTopic: contentTopic, client: client)
         }
+    }
+
+    /// Handles invite join request notifications
+    private func handleInviteJoinRequest(
+        payload: PushNotificationPayload,
+        client: any XMTPClientProvider,
+        apiClient: any ConvosAPIClientProtocol
+    ) async throws {
+        guard let inviteData = payload.notificationData?.inviteData else {
+            Logger.error("Missing invite data in notification payload")
+            return
+        }
+
+        Logger.info("Processing invite join request: autoApprove=\(inviteData.autoApprove)")
+        // TODO: Implement invite processing logic
+        // try await processInviteJoinRequest(inviteData: inviteData, apiClient: apiClient)
     }
 
     /// Decodes and stores an XMTP message from push notification data
     /// - Parameters:
-    ///   - messageData: The message data from the notification
+    ///   - contentTopic: The XMTP content topic
     ///   - client: The XMTP client
     private func decodeAndStoreMessage(
-        messageData: [String: Any],
+        contentTopic: String,
         client: any XMTPClientProvider
     ) async throws {
         // Implementation would decode the message and store it in the database
         // This is a placeholder for the actual implementation
-        Logger.info("Processing XMTP message from push notification")
+        Logger.info("Processing XMTP message for topic: \(contentTopic)")
 
         // Example implementation:
         // 1. Decode the message from the notification payload
@@ -67,29 +114,21 @@ public extension SingleInboxAuthProcessor {
         // 3. Update conversation metadata if needed
     }
 
-    /// Performs API actions based on push notification data
+    /// Processes invite join request data
     /// - Parameters:
-    ///   - action: The API action to perform
+    ///   - inviteData: The invite join request data
     ///   - apiClient: The API client
-    ///   - notificationData: The notification payload data
-    private func performAPIAction(
-        action: String,
-        apiClient: any ConvosAPIClientProtocol,
-        notificationData: [AnyHashable: Any]
+    private func processInviteJoinRequest(
+        inviteData: InviteJoinRequestData,
+        apiClient: any ConvosAPIClientProtocol
     ) async throws {
-        // Implementation would call the appropriate API endpoint
+        // Implementation would process the invite join request
         // This is a placeholder for the actual implementation
-        Logger.info("Performing API action: \(action)")
+        Logger.info("Processing invite join request: \(inviteData)")
 
         // Example implementation:
-        // switch action {
-        // case "markAsRead":
-        //     let conversationId = notificationData["conversationId"] as? String
-        //     try await apiClient.markConversationAsRead(conversationId: conversationId)
-        // case "updateProfile":
-        //     // Handle profile updates
-        // default:
-        //     throw SingleInboxAuthProcessorError.unknownAPIAction(action)
-        // }
+        // 1. Validate the invite data
+        // 2. Call appropriate API endpoints
+        // 3. Update local database
     }
 }

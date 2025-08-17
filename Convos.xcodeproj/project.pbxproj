@@ -124,7 +124,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		7A50ADDC2E52501200A1C0E8 /* Exceptions for "Convos" folder in "NotificationService" target */ = {
+		7A50ADDF2E526C0500A1C0E8 /* Exceptions for "Convos" folder in "NotificationService" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Config/ConfigManager.swift,
@@ -213,7 +213,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				D8A2B6A32DA4BA4C00EF8577 /* Exceptions for "Convos" folder in "Convos" target */,
-				7A50ADDC2E52501200A1C0E8 /* Exceptions for "Convos" folder in "NotificationService" target */,
+				7A50ADDF2E526C0500A1C0E8 /* Exceptions for "Convos" folder in "NotificationService" target */,
 				7ACA8BD52DE180B800848799 /* Exceptions for "Convos" folder in "ConvosTests" target */,
 			);
 			path = Convos;
