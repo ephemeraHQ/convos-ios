@@ -174,6 +174,13 @@ class MockAuthService: LocalAuthServiceProtocol {
         authStateSubject.send(.unauthorized)
     }
 
+    func save(inboxId: String, for providerId: String) throws {
+    }
+
+    func inboxId(for providerId: String) throws -> String {
+        return UUID().uuidString
+    }
+
     private func getCurrentUser() throws -> MockAuthResult? {
         guard persist else { return nil }
         guard let mockUserData = try keychain.retrieveData(.mockUser) else {

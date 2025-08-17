@@ -33,6 +33,7 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     init(
         inbox: any AuthServiceInboxType,
+        authService: any LocalAuthServiceProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment
@@ -42,6 +43,7 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         stateMachine = InboxStateMachine(
             inbox: inbox,
             inboxWriter: inboxWriter,
+            authService: authService,
             syncingManager: SyncingManager(databaseWriter: databaseWriter),
             inviteJoinRequestsManager: InviteJoinRequestsManager(
                 databaseReader: databaseReader,

@@ -91,14 +91,18 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
              failedRetrievingInboxType,
              failedDeletingDatabaseKey,
              failedDeletingPrivateKey,
+             failedDeletingInboxType,
+             failedDeletingInboxId,
              failedSavingDatabaseKey,
              failedSavingInboxType,
+             failedSavingInboxId,
              failedGeneratingDatabaseKey,
              failedGeneratingPrivateKey,
              failedSavingPrivateKey,
              failedLoadingPrivateKey,
              failedSavingIdentitiesList,
              failedLoadingIdentitiesList,
+             failedLoadingInboxId,
              rollbackFailed
     }
 
@@ -188,7 +192,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     }
 
     func delete(for identityId: String) throws {
-        // Delete in reverse order of creation
+        try deleteInboxId(for: identityId)
         try removeIdentityIdFromList(identityId)
         try deleteInboxType(for: identityId)
         try deleteDatabaseKey(for: identityId)
@@ -254,6 +258,10 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrService as String: keychainService
         ]
         SecItemDelete(query as CFDictionary)
+        let status = SecItemAdd(query as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw SecureEnclaveUserStoreError.failedDeletingPrivateKey
+        }
     }
 
     private func deleteDatabaseKey(for identityId: String) throws {
@@ -263,6 +271,10 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrService as String: keychainService
         ]
         SecItemDelete(query as CFDictionary)
+        let status = SecItemAdd(query as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw SecureEnclaveUserStoreError.failedDeletingDatabaseKey
+        }
     }
 
     private func deleteInboxType(for identityId: String) throws {
@@ -272,6 +284,10 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrService as String: keychainService
         ]
         SecItemDelete(query as CFDictionary)
+        let status = SecItemAdd(query as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw SecureEnclaveUserStoreError.failedDeletingInboxType
+        }
     }
 
     private func loadIdentitiesList() throws -> [String] {
@@ -328,6 +344,68 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         var identitiesList = try loadIdentitiesList()
         identitiesList.removeAll { $0 == identityId }
         try saveIdentitiesList(identitiesList)
+    }
+
+    private func deleteInboxId(for identityId: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "\(identityId.lowercased()).inboxId",
+            kSecAttrService as String: keychainService
+        ]
+        SecItemDelete(query as CFDictionary)
+
+        let status = SecItemAdd(query as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw SecureEnclaveUserStoreError.failedDeletingInboxId
+        }
+    }
+
+    func save(inboxId: String, for identityId: String) throws {
+        let identifier = identityId.lowercased()
+
+        guard let inboxIdData = inboxId.data(using: .utf8) else {
+            throw SecureEnclaveUserStoreError.failedSavingInboxId
+        }
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "\(identifier).inboxId",
+            kSecAttrService as String: keychainService,
+            kSecValueData as String: inboxIdData,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        ]
+
+        SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
+
+        let status = SecItemAdd(query as CFDictionary, nil)
+        guard status == errSecSuccess else {
+            throw SecureEnclaveUserStoreError.failedSavingInboxId
+        }
+    }
+
+    func loadInboxId(for identityId: String) throws -> String {
+        let identifier = identityId.lowercased()
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "\(identifier).inboxId",
+            kSecAttrService as String: keychainService,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        ]
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        guard status == errSecSuccess, let data = item as? Data else {
+            throw SecureEnclaveUserStoreError.failedLoadingInboxId
+        }
+
+        guard let inboxId = String(data: data, encoding: .utf8) else {
+            throw SecureEnclaveUserStoreError.failedLoadingInboxId
+        }
+
+        return inboxId
     }
 
     private func saveInboxType(type: InboxType, for identityId: String) throws {

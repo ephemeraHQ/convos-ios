@@ -111,6 +111,7 @@ class SessionManager: SessionManagerProtocol {
             if operationsByProviderId[providerId] == nil {
                 let operation = AuthorizeInboxOperation(
                     inbox: inbox,
+                    authService: authService,
                     databaseReader: databaseReader,
                     databaseWriter: databaseWriter,
                     environment: environment

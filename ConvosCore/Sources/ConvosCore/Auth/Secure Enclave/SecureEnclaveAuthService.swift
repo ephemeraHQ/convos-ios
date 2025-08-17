@@ -48,6 +48,14 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
         try refreshAuthState()
     }
 
+    public func save(inboxId: String, for providerId: String) throws {
+        try identityStore.save(inboxId: inboxId, for: providerId)
+    }
+
+    public func inboxId(for providerId: String) throws -> String {
+        return try identityStore.loadInboxId(for: providerId)
+    }
+
     // MARK: - Private Helpers
 
     private func refreshAuthState() throws {

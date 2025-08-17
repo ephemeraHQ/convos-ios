@@ -151,7 +151,7 @@ class ConversationViewModel {
             do {
                 try await localStateWriter.setUnread(false, for: self.conversation.id)
             } catch {
-                Logger.error("Error marking conversation as read: \(error.localizedDescription)")
+                Logger.warning("Failed marking conversation as read: \(error.localizedDescription)")
             }
         }
     }

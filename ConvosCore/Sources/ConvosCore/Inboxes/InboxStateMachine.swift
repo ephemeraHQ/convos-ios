@@ -99,6 +99,7 @@ public actor InboxStateMachine {
 
     internal let inbox: any AuthServiceInboxType
     private let inboxWriter: any InboxWriterProtocol
+    private let authService: any LocalAuthServiceProtocol
     private let environment: AppEnvironment
     private let clientOptions: ClientOptions
     private let syncingManager: any SyncingManagerProtocol
@@ -141,12 +142,14 @@ public actor InboxStateMachine {
     init(
         inbox: any AuthServiceInboxType,
         inboxWriter: any InboxWriterProtocol,
+        authService: any LocalAuthServiceProtocol,
         syncingManager: any SyncingManagerProtocol,
         inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol,
         environment: AppEnvironment
     ) {
         self.inbox = inbox
         self.inboxWriter = inboxWriter
+        self.authService = authService
         self.syncingManager = syncingManager
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
@@ -290,6 +293,7 @@ public actor InboxStateMachine {
 
     private func handleClientInitialized(_ client: any XMTPClientProvider) async throws {
         _state = .authorizing
+
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
 
@@ -408,7 +412,7 @@ public actor InboxStateMachine {
                                   options: ClientOptions) async throws -> any XMTPClientProvider {
         Logger.info("Creating XMTP client...")
         let client = try await Client.create(account: signingKey, options: options)
-        cacheInboxId(inboxId: client.inboxID, for: signingKey.identity)
+        try authService.save(inboxId: client.inboxID, for: inbox.providerId)
         Logger.info("XMTP Client created.")
         return client
     }
@@ -419,7 +423,7 @@ public actor InboxStateMachine {
         let client = try await Client.build(
             publicIdentity: identity,
             options: options,
-            inboxId: cachedInboxId(for: identity)
+            inboxId: try? authService.inboxId(for: inbox.providerId)
         )
         Logger.info("XMTP Client built.")
         return client
@@ -460,16 +464,6 @@ public actor InboxStateMachine {
             user: await user,
             profile: await profile
         )
-    }
-
-    // MARK: - InboxId Cache
-
-    private func cachedInboxId(for identity: PublicIdentity) -> String? {
-        UserDefaults.standard.string(forKey: "cachedInboxId-\(identity.identifier)")
-    }
-
-    private func cacheInboxId(inboxId: String, for identity: PublicIdentity) {
-        UserDefaults.standard.set(inboxId, forKey: "cachedInboxId-\(identity.identifier)")
     }
 
     // MARK: - User Creation
