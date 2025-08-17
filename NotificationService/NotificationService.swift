@@ -1,7 +1,6 @@
+import ConvosCore
 import Foundation
-import GRDB
 import UserNotifications
-import XMTPiOS
 
 class NotificationService: UNNotificationServiceExtension {
     var contentHandler: ((UNNotificationContent) -> Void)?
@@ -12,7 +11,7 @@ class NotificationService: UNNotificationServiceExtension {
         self.contentHandler = contentHandler
         bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
 
-        NSLog("🔔 NSE Activating: didReceive")
+        Logger.info("🔔 NSE Activating: didReceive")
 
         if let bestAttemptContent = bestAttemptContent {
             // Parse the notification payload
@@ -22,7 +21,9 @@ class NotificationService: UNNotificationServiceExtension {
             logNSEPayload(userInfo)
 
             let inboxId = userInfo["inboxId"] as? String
-            if let inboxId { NSLog("NSE: inboxId=%@", inboxId) }
+            if let inboxId {
+                Logger.info("NSE: inboxId=\(inboxId)")
+            }
 
             if let notificationType = userInfo["notificationType"] as? String {
                 switch notificationType {
@@ -30,8 +31,8 @@ class NotificationService: UNNotificationServiceExtension {
                     // Expect notificationData dict with contentTopic and encryptedMessage
                     if let data = userInfo["notificationData"] as? [String: Any] {
                         let contentTopic = data["contentTopic"] as? String
-                        if let topic = contentTopic {
-                            let conversationId = conversationIdFromTopic(topic)
+                        if let topic = contentTopic,
+                           let conversationId = topic.conversationIdFromXMTPGroupTopic {
                             bestAttemptContent.threadIdentifier = conversationId
 
                             // Set a simple body if none present
@@ -101,19 +102,12 @@ class NotificationService: UNNotificationServiceExtension {
         if JSONSerialization.isValidJSONObject(userInfo),
            let data = try? JSONSerialization.data(withJSONObject: userInfo, options: [.prettyPrinted]),
            let json = String(data: data, encoding: .utf8) {
-            NSLog("NSE received push payload:\n%@", json)
+            Logger.info("NSE received push payload:\n\(json)")
         } else {
-            NSLog("NSE received push payload (non-JSON): %@", String(describing: userInfo))
+            Logger
+                .info(
+                    "NSE received push payload (non-JSON): \(String(describing: userInfo))"
+                )
         }
-    }
-
-    // MARK: - Helpers
-    private func conversationIdFromTopic(_ topic: String) -> String {
-        // Example: /xmtp/mls/1/g-<conversationId>/proto -> <conversationId>
-        let parts = topic.split(separator: "/")
-        if let segment = parts.first(where: { $0.hasPrefix("g-") }) {
-            return String(segment.dropFirst(2))
-        }
-        return topic
     }
 }
