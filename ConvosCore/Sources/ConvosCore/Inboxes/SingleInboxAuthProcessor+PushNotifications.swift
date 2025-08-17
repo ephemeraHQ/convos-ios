@@ -3,18 +3,16 @@ import Foundation
 
 /// Extension providing push notification specific functionality for SingleInboxAuthProcessor
 public extension SingleInboxAuthProcessor {
-    /// Processes a push notification by inbox ID
+    /// Processes a push notification by scheduling work when the inbox is ready
     /// - Parameters:
-    ///   - inboxId: The inbox ID from the push notification
     ///   - notificationData: The notification payload data
     ///   - timeout: Timeout duration for inbox authorization (default: 30 seconds)
     /// - Returns: A publisher that emits when processing is complete
     func processPushNotification(
-        inboxId: String,
         notificationData: [AnyHashable: Any],
         timeout: TimeInterval = 30
     ) -> AnyPublisher<Void, Error> {
-        return processInbox(inboxId: inboxId, timeout: timeout) { inboxReadyResult in
+        return scheduleWork(timeout: timeout) { inboxReadyResult in
             try await self.handlePushNotification(
                 inboxReadyResult: inboxReadyResult,
                 notificationData: notificationData
@@ -91,7 +89,7 @@ public extension SingleInboxAuthProcessor {
         // case "updateProfile":
         //     // Handle profile updates
         // default:
-                 //     throw SingleInboxAuthProcessorError.unknownAPIAction(action)
+        //     throw SingleInboxAuthProcessorError.unknownAPIAction(action)
         // }
     }
 }

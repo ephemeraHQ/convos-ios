@@ -3,8 +3,9 @@ import Foundation
 import GRDB
 
 /// A processor that handles single inbox operations for scenarios like push notifications.
-/// It fetches a single inbox, authorizes it, and executes work when ready.
+/// It fetches a single inbox, authorizes it, and caches the result for multiple work items.
 public class SingleInboxAuthProcessor {
+    private let inboxId: String
     private let authService: any LocalAuthServiceProtocol
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
@@ -12,13 +13,19 @@ public class SingleInboxAuthProcessor {
 
     private var operation: AuthorizeInboxOperation?
     private var cancellables: Set<AnyCancellable> = []
+    private var pendingWork: [(InboxReadyResult) async throws -> Void] = []
+    private var cachedResult: InboxReadyResult?
+    private var isAuthorizing: Bool = false
+    private var authorizationError: Error?
 
     public init(
+        inboxId: String,
         authService: any LocalAuthServiceProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment
     ) {
+        self.inboxId = inboxId
         self.authService = authService
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
@@ -29,85 +36,77 @@ public class SingleInboxAuthProcessor {
         cleanup()
     }
 
-    /// Processes a single inbox by ID and executes work when ready
+    /// Schedules work to be performed when the inbox is ready
     /// - Parameters:
-    ///   - inboxId: The inbox ID to process
     ///   - timeout: Timeout duration for inbox authorization (default: 30 seconds)
     ///   - work: The work to execute when the inbox is ready
-    /// - Returns: A publisher that emits the result of the work
-    public func processInbox<T>(
-        inboxId: String,
+    /// - Returns: A publisher that emits when the work is complete
+    public func scheduleWork<T>(
         timeout: TimeInterval = 30,
         work: @escaping (InboxReadyResult) async throws -> T
     ) -> AnyPublisher<T, Error> {
-        cleanup()
-
         return Future<T, Error> { [weak self] promise in
-                            guard let self = self else {
-                    promise(.failure(SingleInboxAuthProcessorError.processorDeallocated))
-                    return
-                }
+            guard let self = self else {
+                promise(.failure(SingleInboxAuthProcessorError.processorDeallocated))
+                return
+            }
 
-            do {
-                // Fetch the inbox from auth service
-                guard let inbox = try self.authService.inbox(for: inboxId) else {
-                    promise(.failure(SingleInboxAuthProcessorError.inboxNotFound(inboxId)))
-                    return
-                }
-
-                // Create and start the operation
-                self.operation = AuthorizeInboxOperation(
-                    inbox: inbox,
-                    authService: self.authService,
-                    databaseReader: self.databaseReader,
-                    databaseWriter: self.databaseWriter,
-                    environment: self.environment
-                )
-
-                // Set up timeout timer
-                let timeoutTimer = Timer.publish(every: timeout, on: .main, in: .common)
-                    .autoconnect()
-                    .first()
-                    .sink { _ in
-                        promise(.failure(SingleInboxAuthProcessorError.timeout(inboxId)))
+            // If we have a cached result, execute work immediately
+            if let cachedResult = self.cachedResult {
+                Task {
+                    do {
+                        let result = try await work(cachedResult)
+                        promise(.success(result))
+                    } catch {
+                        promise(.failure(error))
                     }
+                }
+                return
+            }
 
-                // Subscribe to the ready publisher
-                self.operation?.inboxReadyPublisher
-                    .first()
-                    .sink(
-                        receiveCompletion: { completion in
-                            switch completion {
-                            case .finished:
-                                timeoutTimer.cancel()
-                            case .failure(let error):
-                                timeoutTimer.cancel()
-                                promise(.failure(error))
-                            }
-                        },
-                        receiveValue: { inboxReadyResult in
-                            timeoutTimer.cancel()
-                            Task {
-                                do {
-                                    let result = try await work(inboxReadyResult)
-                                    promise(.success(result))
-                                } catch {
-                                    promise(.failure(error))
-                                }
-                            }
-                        }
-                    )
-                    .store(in: &self.cancellables)
-
-                timeoutTimer.store(in: &self.cancellables)
-
-                // Start authorization
-                self.operation?.authorize()
-            } catch {
+            // If there was a previous authorization error, fail immediately
+            if let error = self.authorizationError {
                 promise(.failure(error))
+                return
+            }
+
+            // If already authorizing, queue the work
+            if self.isAuthorizing {
+                self.pendingWork.append { inboxReadyResult in
+                    let result = try await work(inboxReadyResult)
+                    promise(.success(result))
+                }
+                return
+            }
+
+            // Start authorization process
+            self.startAuthorization(timeout: timeout) { result in
+                switch result {
+                case .success(let inboxReadyResult):
+                    Task {
+                        do {
+                            let workResult = try await work(inboxReadyResult)
+                            promise(.success(workResult))
+                        } catch {
+                            promise(.failure(error))
+                        }
+                    }
+                case .failure(let error):
+                    promise(.failure(error))
+                }
             }
         }
         .eraseToAnyPublisher()
+    }
+
+    /// Checks if the inbox is currently ready (cached)
+    public var isReady: Bool {
+        return cachedResult != nil
+    }
+
+    /// Gets the cached inbox ready result if available
+    public var readyResult: InboxReadyResult? {
+        return cachedResult
     }
 
     /// Stops the current operation and cleans up resources
@@ -115,10 +114,123 @@ public class SingleInboxAuthProcessor {
         cleanup()
     }
 
+    // MARK: - Private Methods
+
+    private func startAuthorization(
+        timeout: TimeInterval,
+        completion: @escaping (Result<InboxReadyResult, Error>) -> Void
+    ) {
+        guard !isAuthorizing else {
+            // Already authorizing, queue the completion
+            pendingWork.append { inboxReadyResult in
+                completion(.success(inboxReadyResult))
+            }
+            return
+        }
+
+        isAuthorizing = true
+        authorizationError = nil
+
+        do {
+            // Fetch the inbox from auth service
+            guard let inbox = try authService.inbox(for: inboxId) else {
+                let error = SingleInboxAuthProcessorError.inboxNotFound(inboxId)
+                authorizationError = error
+                isAuthorizing = false
+                completion(.failure(error))
+                return
+            }
+
+            // Create and start the operation
+            operation = AuthorizeInboxOperation(
+                inbox: inbox,
+                authService: authService,
+                databaseReader: databaseReader,
+                databaseWriter: databaseWriter,
+                environment: environment
+            )
+
+            // Set up timeout timer
+            let timeoutTimer = Timer.publish(every: timeout, on: .main, in: .common)
+                .autoconnect()
+                .first()
+                .sink { [weak self] _ in
+                    guard let self = self else { return }
+                    let error = SingleInboxAuthProcessorError.timeout(self.inboxId)
+                    self.authorizationError = error
+                    self.isAuthorizing = false
+                    self.cleanup()
+                    completion(.failure(error))
+                }
+
+            // Subscribe to the ready publisher
+            operation?.inboxReadyPublisher
+                .first()
+                .sink(
+                    receiveCompletion: { [weak self] publisherCompletion in
+                        guard let self = self else { return }
+                        timeoutTimer.cancel()
+                        switch publisherCompletion {
+                        case .finished:
+                            break
+                        case .failure(let error):
+                            self.authorizationError = error
+                            self.isAuthorizing = false
+                            self.cleanup()
+                            completion(.failure(error))
+                        }
+                    },
+                    receiveValue: { [weak self] inboxReadyResult in
+                        guard let self = self else { return }
+                        timeoutTimer.cancel()
+
+                        // Cache the result
+                        self.cachedResult = inboxReadyResult
+                        self.isAuthorizing = false
+
+                        // Execute the completion
+                        completion(.success(inboxReadyResult))
+
+                        // Execute any pending work
+                        self.executePendingWork(inboxReadyResult: inboxReadyResult)
+                    }
+                )
+                .store(in: &cancellables)
+
+            timeoutTimer.store(in: &cancellables)
+
+            // Start authorization
+            operation?.authorize()
+        } catch {
+            authorizationError = error
+            isAuthorizing = false
+            completion(.failure(error))
+        }
+    }
+
+    private func executePendingWork(inboxReadyResult: InboxReadyResult) {
+        let workToExecute = pendingWork
+        pendingWork.removeAll()
+
+        for work in workToExecute {
+            Task {
+                do {
+                    try await work(inboxReadyResult)
+                } catch {
+                    Logger.error("Error executing pending work: \(error)")
+                }
+            }
+        }
+    }
+
     private func cleanup() {
         operation?.stop()
         operation = nil
         cancellables.removeAll()
+        pendingWork.removeAll()
+        cachedResult = nil
+        isAuthorizing = false
+        authorizationError = nil
     }
 }
 

@@ -2,6 +2,17 @@ import Foundation
 
 // App specific methods not needed in our tests target
 extension ConvosClient {
+    public static func pushHandler(
+        databaseManager: any DatabaseManagerProtocol = DatabaseManager.shared,
+        environment: AppEnvironment
+    ) -> CachedPushNotificationHandler {
+        .init(authService: SecureEnclaveAuthService(),
+              databaseReader: databaseManager.dbReader,
+              databaseWriter: databaseManager.dbWriter,
+              environment: environment
+        )
+    }
+
     public static func client(databaseManager: any DatabaseManagerProtocol = DatabaseManager.shared,
                               environment: AppEnvironment) -> ConvosClient {
         let localAuthService = SecureEnclaveAuthService()

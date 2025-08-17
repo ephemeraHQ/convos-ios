@@ -3,8 +3,18 @@ import Foundation
 import UserNotifications
 
 class NotificationService: UNNotificationServiceExtension {
+    let pushHandler: CachedPushNotificationHandler
     var contentHandler: ((UNNotificationContent) -> Void)?
     var bestAttemptContent: UNMutableNotificationContent?
+
+    init(
+        contentHandler: ((UNNotificationContent) -> Void)? = nil,
+        bestAttemptContent: UNMutableNotificationContent? = nil
+    ) {
+        self.pushHandler = ConvosClient.pushHandler(environment: ConfigManager.shared.currentEnvironment)
+        self.contentHandler = contentHandler
+        self.bestAttemptContent = bestAttemptContent
+    }
 
     override func didReceive(_ request: UNNotificationRequest,
                              withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
