@@ -24,10 +24,11 @@ final class ConfigManager {
 
         switch envString {
         case "local":
+            // For local, use Secrets for API URL if not overridden in config
             let config = ConvosConfiguration(
                 apiBaseURL: backendURLOverride ?? Secrets.CONVOS_API_BASE_URL,
-                appGroupIdentifier: appGroupOverride ?? "group.org.convos.ios-local",
-                relyingPartyIdentifier: relyingPartyOverride ?? "local.convos.org",
+                appGroupIdentifier: appGroupIdentifier,
+                relyingPartyIdentifier: relyingPartyIdentifier,
                 xmtpEndpoint: Secrets.XMTP_CUSTOM_HOST.isEmpty ? nil : Secrets.XMTP_CUSTOM_HOST,
                 appCheckToken: Secrets.FIREBASE_APP_CHECK_TOKEN
             )
@@ -35,18 +36,18 @@ final class ConfigManager {
 
         case "dev":
             let config = ConvosConfiguration(
-                apiBaseURL: backendURLOverride ?? "https://api.convos-otr-dev.convos-api.xyz/api/",
-                appGroupIdentifier: appGroupOverride ?? "group.org.convos.ios-preview",
-                relyingPartyIdentifier: relyingPartyOverride ?? "otr-preview.convos.org",
+                apiBaseURL: apiBaseURL,
+                appGroupIdentifier: appGroupIdentifier,
+                relyingPartyIdentifier: relyingPartyIdentifier,
                 appCheckToken: Secrets.FIREBASE_APP_CHECK_TOKEN
             )
             return .dev(config: config)
 
         case "production":
             let config = ConvosConfiguration(
-                apiBaseURL: backendURLOverride ?? "https://api.convos-otr-prod.convos-api.xyz/api/",
-                appGroupIdentifier: appGroupOverride ?? "group.org.convos.ios",
-                relyingPartyIdentifier: relyingPartyOverride ?? "convos.org",
+                apiBaseURL: apiBaseURL,
+                appGroupIdentifier: appGroupIdentifier,
+                relyingPartyIdentifier: relyingPartyIdentifier,
                 appCheckToken: Secrets.FIREBASE_APP_CHECK_TOKEN
             )
             return .production(config: config)
@@ -56,23 +57,40 @@ final class ConfigManager {
         }
     }
 
-    /// Override backend URL if specified in config
+    /// API base URL from config (optional for local, required for dev/prod)
+    var apiBaseURL: String {
+        guard let url = config["backendUrl"] as? String else {
+            fatalError("Missing 'backendUrl' in config.json")
+        }
+        return url
+    }
+    
+    /// Backend URL if specified in config
     var backendURLOverride: String? {
         config["backendUrl"] as? String
     }
 
-    /// Override bundle identifier if specified
-    var bundleIdOverride: String? {
-        config["bundleId"] as? String
+    /// Bundle identifier from config
+    var bundleIdentifier: String {
+        guard let id = config["bundleId"] as? String else {
+            fatalError("Missing 'bundleId' in config.json")
+        }
+        return id
     }
 
-    /// Override app group identifier if specified
-    var appGroupOverride: String? {
-        config["appGroupIdentifier"] as? String
+    /// App group identifier from config
+    var appGroupIdentifier: String {
+        guard let id = config["appGroupIdentifier"] as? String else {
+            fatalError("Missing 'appGroupIdentifier' in config.json")
+        }
+        return id
     }
 
-    /// Override relying party identifier if specified
-    var relyingPartyOverride: String? {
-        config["relyingPartyIdentifier"] as? String
+    /// Relying party identifier from config
+    var relyingPartyIdentifier: String {
+        guard let id = config["relyingPartyIdentifier"] as? String else {
+            fatalError("Missing 'relyingPartyIdentifier' in config.json")
+        }
+        return id
     }
 }

@@ -29,7 +29,10 @@ let package = Package(
             ],
             swiftSettings: [
                 .swiftLanguageMode(.v5),
-                .define("DEBUG", .when(configuration: .debug))
+                .define("DEBUG", .when(configuration: .debug)),
+                // Define XCODE_BUILD for non-release configurations (Local, Dev)
+                // This helps distinguish Xcode builds from CI/Archive builds
+                .define("XCODE_BUILD", .when(configuration: .debug))
             ],
             plugins: [
                 .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")

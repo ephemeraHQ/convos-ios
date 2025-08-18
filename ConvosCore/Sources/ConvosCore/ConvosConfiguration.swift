@@ -1,6 +1,13 @@
 import Foundation
 
 /// Configuration values passed from the host app to ConvosCore
+/// 
+/// This is a pure data container - all configuration values must be provided
+/// by the host application. The host app is responsible for reading these
+/// values from its configuration files (config.json, Secrets, etc.)
+/// 
+/// ConvosCore does not have any hardcoded configuration values to ensure
+/// that all environments are properly configured through the host app.
 public struct ConvosConfiguration {
     public let apiBaseURL: String
     public let appGroupIdentifier: String
@@ -21,53 +28,20 @@ public struct ConvosConfiguration {
         self.xmtpEndpoint = xmtpEndpoint
         self.appCheckToken = appCheckToken
     }
+}
 
-    /// Convenience initializer for common environments
-    public static func local(
-        apiBaseURL: String = "http://localhost:4000/api/",
-        appGroupIdentifier: String = "group.org.convos.ios-local",
-        relyingPartyIdentifier: String = "local.convos.org",
-        xmtpEndpoint: String? = nil,
-        appCheckToken: String,
-    ) -> ConvosConfiguration {
+// MARK: - Test Helpers
+#if DEBUG
+extension ConvosConfiguration {
+    /// Test configuration - only available in DEBUG builds for unit tests
+    public static var testConfig: ConvosConfiguration {
         ConvosConfiguration(
-            apiBaseURL: apiBaseURL,
-            appGroupIdentifier: appGroupIdentifier,
-            relyingPartyIdentifier: relyingPartyIdentifier,
-            xmtpEndpoint: xmtpEndpoint,
-            appCheckToken: appCheckToken
-        )
-    }
-
-    public static func dev(
-        apiBaseURL: String = "https://api.convos-otr-dev.convos-api.xyz/api/",
-        appGroupIdentifier: String = "group.org.convos.ios-preview",
-        relyingPartyIdentifier: String = "otr-preview.convos.org",
-        xmtpEndpoint: String? = nil,
-        appCheckToken: String,
-    ) -> ConvosConfiguration {
-        ConvosConfiguration(
-            apiBaseURL: apiBaseURL,
-            appGroupIdentifier: appGroupIdentifier,
-            relyingPartyIdentifier: relyingPartyIdentifier,
-            xmtpEndpoint: xmtpEndpoint,
-            appCheckToken: appCheckToken
-        )
-    }
-
-    public static func production(
-        apiBaseURL: String = "https://api.convos-otr-prod.convos-api.xyz/api/",
-        appGroupIdentifier: String = "group.org.convos.ios",
-        relyingPartyIdentifier: String = "convos.org",
-        xmtpEndpoint: String? = nil,
-        appCheckToken: String
-    ) -> ConvosConfiguration {
-        ConvosConfiguration(
-            apiBaseURL: apiBaseURL,
-            appGroupIdentifier: appGroupIdentifier,
-            relyingPartyIdentifier: relyingPartyIdentifier,
-            xmtpEndpoint: xmtpEndpoint,
-            appCheckToken: appCheckToken
+            apiBaseURL: "http://localhost:4000/api/",
+            appGroupIdentifier: "group.org.convos.ios-test",
+            relyingPartyIdentifier: "test.convos.org",
+            xmtpEndpoint: nil,
+            appCheckToken: "test-token"
         )
     }
 }
+#endif

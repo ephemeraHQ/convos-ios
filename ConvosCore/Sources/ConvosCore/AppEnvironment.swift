@@ -107,12 +107,27 @@ public enum AppEnvironment {
     }
 
     var apnsEnvironment: ApnsEnvironment {
-        // Check if this is a debug build (built locally with Xcode)
-        #if DEBUG
+        // APNS environment detection strategy:
+        // 1. Check if running in simulator (always sandbox)
+        // 2. Check if code signing indicates App Store/TestFlight
+        // 3. Default based on environment type
+        
+        #if targetEnvironment(simulator)
+        Logger.info("📱 Simulator detected - using sandbox APNS")
         return .sandbox
         #else
-        // Release builds (distributed via TestFlight/App Store) use production
-        return .production
+        // Check if this is a TestFlight/App Store build by looking for the receipt
+        let isTestFlight = Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        let isAppStore = Bundle.main.appStoreReceiptURL?.lastPathComponent == "receipt"
+        
+        if isTestFlight || isAppStore {
+            Logger.info("🚀 TestFlight/App Store build detected - using production APNS")
+            return .production
+        } else {
+            // Local Xcode builds to device
+            Logger.info("🔧 Local device build detected - using sandbox APNS")
+            return .sandbox
+        }
         #endif
     }
 
