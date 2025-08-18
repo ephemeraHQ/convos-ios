@@ -2,7 +2,6 @@ import Foundation
 
 /// Shared environment detection that works for both main app and extensions
 public extension AppEnvironment {
-
     /// Creates an environment based on the current bundle and build configuration
     /// This can be used by both the main app and notification extension
     static func detected() -> AppEnvironment {
@@ -42,18 +41,17 @@ public extension AppEnvironment {
             "group.org.convos.ios"
         ]
 
-        for appGroup in appGroups {
-            if FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup) != nil {
-                switch appGroup {
-                case "group.org.convos.ios-local":
-                    return createLocalEnvironment()
-                case "group.org.convos.ios-preview":
-                    return createDevEnvironment()
-                case "group.org.convos.ios":
-                    return createProductionEnvironment()
-                default:
-                    break
-                }
+        for appGroup in appGroups where
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup) != nil {
+            switch appGroup {
+            case "group.org.convos.ios-local":
+                return createLocalEnvironment()
+            case "group.org.convos.ios-preview":
+                return createDevEnvironment()
+            case "group.org.convos.ios":
+                return createProductionEnvironment()
+            default:
+                break
             }
         }
 

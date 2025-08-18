@@ -75,7 +75,6 @@ public extension SingleInboxAuthProcessor {
 
         if let contentTopic = protocolData.contentTopic {
             Logger.info("Processing protocol message for topic: \(contentTopic)")
-            // TODO: Implement message decoding and storage
             // try await decodeAndStoreMessage(contentTopic: contentTopic, client: client)
         }
     }
@@ -92,7 +91,6 @@ public extension SingleInboxAuthProcessor {
         }
 
         Logger.info("Processing invite join request: autoApprove=\(inviteData.autoApprove)")
-        // TODO: Implement invite processing logic
         // try await processInviteJoinRequest(inviteData: inviteData, apiClient: apiClient)
     }
 

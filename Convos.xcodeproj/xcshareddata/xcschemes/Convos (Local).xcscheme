@@ -3,7 +3,6 @@
    LastUpgradeVersion = "2600"
    version = "1.7">
    <BuildAction
-      buildConfiguration = "Local"
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
       buildArchitectures = "Automatic">
