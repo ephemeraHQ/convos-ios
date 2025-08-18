@@ -294,6 +294,8 @@ public actor InboxStateMachine {
     private func handleClientInitialized(_ client: any XMTPClientProvider) async throws {
         _state = .authorizing
 
+        try authService.save(inboxId: client.inboxId, for: inbox.providerId)
+
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
 
@@ -412,7 +414,6 @@ public actor InboxStateMachine {
                                   options: ClientOptions) async throws -> any XMTPClientProvider {
         Logger.info("Creating XMTP client...")
         let client = try await Client.create(account: signingKey, options: options)
-        try authService.save(inboxId: client.inboxID, for: inbox.providerId)
         Logger.info("XMTP Client created.")
         return client
     }
