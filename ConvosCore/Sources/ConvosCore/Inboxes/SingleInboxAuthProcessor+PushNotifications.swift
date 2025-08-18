@@ -105,11 +105,6 @@ public extension SingleInboxAuthProcessor {
         // Implementation would decode the message and store it in the database
         // This is a placeholder for the actual implementation
         Logger.info("Processing XMTP message for topic: \(contentTopic)")
-
-        // Example implementation:
-        // 1. Decode the message from the notification payload
-        // 2. Store it in the local database using the databaseWriter
-        // 3. Update conversation metadata if needed
     }
 
     /// Processes invite join request data
@@ -123,10 +118,5 @@ public extension SingleInboxAuthProcessor {
         // Implementation would process the invite join request
         // This is a placeholder for the actual implementation
         Logger.info("Processing invite join request: \(inviteData)")
-
-        // Example implementation:
-        // 1. Validate the invite data
-        // 2. Call appropriate API endpoints
-        // 3. Update local database
     }
 }

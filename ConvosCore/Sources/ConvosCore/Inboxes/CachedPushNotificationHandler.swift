@@ -2,7 +2,6 @@ import Combine
 import Foundation
 import GRDB
 
-/// Example usage of SingleInboxAuthProcessor with PushNotificationPayload
 public class CachedPushNotificationHandler {
     private var processors: [String: SingleInboxAuthProcessor] = [:]
     private var cancellables: Set<AnyCancellable> = []
@@ -125,61 +124,3 @@ public class CachedPushNotificationHandler {
         return processor
     }
 }
-
-// MARK: - Example Usage
-
-/*
- Example usage in your notification extension:
-
- // In your NotificationServiceExtension
- let pushHandler = CachedPushNotificationHandler(
- authService: secureEnclaveAuthService,
- databaseReader: databaseManager.dbReader,
- databaseWriter: databaseManager.dbWriter,
- environment: environment
- )
-
- // Handle push notification with structured payload
- func didReceive(_ request: UNNotificationRequest, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
- let userInfo = request.content.userInfo
- let payload = PushNotificationPayload(userInfo: userInfo)
-
- // Use the structured payload for display
- if let threadId = payload.threadIdentifier {
- request.content.threadIdentifier = threadId
- }
-
- if let title = payload.displayTitle {
- request.content.title = title
- }
-
- if let body = payload.displayBody {
- request.content.body = body
- }
-
- // Process the notification
- pushHandler.handlePushNotification(userInfo: userInfo)
-
- contentHandler(request.content)
- }
-
- // Example of how the payload makes notification handling cleaner:
- func processNotificationPayload(_ payload: PushNotificationPayload) {
- switch payload.notificationType {
- case .protocolMessage:
- if let conversationId = payload.notificationData?.protocolData?.conversationId {
- Logger.info("Processing protocol message for conversation: \(conversationId)")
- }
-
- case .inviteJoinRequest:
- if let inviteData = payload.notificationData?.inviteData {
- let requesterName = inviteData.requester?.profile?.displayNameOrUsername ?? "Someone"
- let groupName = inviteData.inviteCode?.displayName ?? "your group"
- Logger.info("\(requesterName) \(inviteData.autoApprove ? "joined" : "requested to join") \(groupName)")
- }
-
- case .none:
- Logger.warning("Unknown notification type")
- }
- }
- */
