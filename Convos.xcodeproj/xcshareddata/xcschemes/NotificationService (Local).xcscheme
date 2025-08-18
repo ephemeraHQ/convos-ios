@@ -57,8 +57,12 @@
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES"
       launchAutomaticallySubstyle = "2">
-      <BuildableProductRunnable
-         runnableDebuggingMode = "0">
+      <RemoteRunnable
+         runnableDebuggingMode = "1"
+         BundleIdentifier = "org.convos.ios-local"
+         RemotePath = "/Users/jarod/Library/Developer/CoreSimulator/Devices/4E91EF80-B176-42CB-A3B5-F8FBCE2EED63/data/Containers/Bundle/Application/B79C7950-68C1-409E-9DCE-AED0B9235B94/Convos.app">
+      </RemoteRunnable>
+      <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "D8A2B6902DA4BA4B00EF8577"
@@ -66,7 +70,7 @@
             BlueprintName = "Convos"
             ReferencedContainer = "container:Convos.xcodeproj">
          </BuildableReference>
-      </BuildableProductRunnable>
+      </MacroExpansion>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
