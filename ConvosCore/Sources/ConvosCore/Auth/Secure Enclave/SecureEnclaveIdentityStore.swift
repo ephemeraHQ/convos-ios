@@ -93,6 +93,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
              failedDeletingPrivateKey,
              failedDeletingInboxType,
              failedDeletingInboxId,
+             failedDeletingProviderId,
              failedSavingDatabaseKey,
              failedSavingInboxType,
              failedSavingInboxId,
@@ -194,6 +195,9 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     }
 
     func delete(for identityId: String) throws {
+        if let inboxId = try? loadInboxId(for: identityId) {
+            try deleteProviderId(for: inboxId)
+        }
         try deleteInboxId(for: identityId)
         try removeIdentityIdFromList(identityId)
         try deleteInboxType(for: identityId)
@@ -259,8 +263,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccount as String: "\(identityId).privateKey",
             kSecAttrService as String: keychainService
         ]
-        SecItemDelete(query as CFDictionary)
-        let status = SecItemAdd(query as CFDictionary, nil)
+        let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedDeletingPrivateKey
         }
@@ -272,8 +275,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccount as String: identityId.lowercased(),
             kSecAttrService as String: keychainService
         ]
-        SecItemDelete(query as CFDictionary)
-        let status = SecItemAdd(query as CFDictionary, nil)
+        let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedDeletingDatabaseKey
         }
@@ -285,8 +287,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccount as String: "\(identityId.lowercased()).inboxType",
             kSecAttrService as String: keychainService
         ]
-        SecItemDelete(query as CFDictionary)
-        let status = SecItemAdd(query as CFDictionary, nil)
+        let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedDeletingInboxType
         }
@@ -354,9 +355,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccount as String: "\(identityId.lowercased()).inboxId",
             kSecAttrService as String: keychainService
         ]
-        SecItemDelete(query as CFDictionary)
-
-        let status = SecItemAdd(query as CFDictionary, nil)
+        let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedDeletingInboxId
         }
@@ -408,6 +407,20 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         }
 
         return inboxId
+    }
+
+    func deleteProviderId(for inboxId: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "providerId.\(inboxId)",
+            kSecAttrService as String: keychainService,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        ]
+
+        let status = SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
+        guard status == errSecSuccess else {
+            throw SecureEnclaveUserStoreError.failedDeletingProviderId
+        }
     }
 
     func save(providerId: String, for inboxId: String) throws {
