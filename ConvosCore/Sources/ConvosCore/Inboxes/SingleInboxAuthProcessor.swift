@@ -96,6 +96,7 @@ public class SingleInboxAuthProcessor {
                 }
             }
         }
+        .handleEvents(receiveCancel: { [weak self] in self?.cleanup() })
         .eraseToAnyPublisher()
     }
 
