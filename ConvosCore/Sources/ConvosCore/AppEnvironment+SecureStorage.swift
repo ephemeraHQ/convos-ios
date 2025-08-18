@@ -3,7 +3,6 @@ import Security
 
 /// Secure storage for environment configuration using iOS Keychain
 public extension AppEnvironment {
-
     /// Stores the current environment configuration securely in the Keychain
     func storeSecureConfiguration() {
         let sharedConfig = SharedAppConfiguration(environment: self)
@@ -30,9 +29,9 @@ public extension AppEnvironment {
         let status = SecItemAdd(keychainQuery as CFDictionary, nil)
 
         if status == errSecSuccess {
-            Logger.info("✅ Environment configuration stored securely in Keychain")
+            Logger.info("Environment configuration stored securely in Keychain")
         } else {
-            Logger.error("❌ Failed to store environment configuration in Keychain: \(status)")
+            Logger.error("Failed to store environment configuration in Keychain: \(status)")
         }
     }
 
@@ -53,10 +52,10 @@ public extension AppEnvironment {
         if status == errSecSuccess,
            let data = result as? Data,
            let sharedConfig = try? JSONDecoder().decode(SharedAppConfiguration.self, from: data) {
-            Logger.info("✅ Environment configuration retrieved from Keychain")
+            Logger.info("Environment configuration retrieved from Keychain")
             return sharedConfig.toAppEnvironment()
         } else if status != errSecItemNotFound {
-            Logger.error("❌ Failed to retrieve environment configuration from Keychain: \(status)")
+            Logger.error("Failed to retrieve environment configuration from Keychain: \(status)")
         }
 
         return nil
@@ -92,7 +91,7 @@ public extension AppEnvironment {
             if status == errSecSuccess,
                let data = result as? Data,
                let sharedConfig = try? JSONDecoder().decode(SharedAppConfiguration.self, from: data) {
-                Logger.info("✅ Environment configuration retrieved from Keychain with app group: \(appGroup)")
+                Logger.info("Environment configuration retrieved from Keychain with app group: \(appGroup)")
                 return sharedConfig.toAppEnvironment()
             }
         }

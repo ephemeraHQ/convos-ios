@@ -27,19 +27,19 @@ class PushNotificationManager: NSObject {
         let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
         let token = tokenParts.joined()
 
-        Logger.info("✅ Received device token from APNS: \(token)")
+        Logger.info("Received device token from APNS: \(token)")
         self.deviceToken = token
 
         // Store token in shared storage
         notificationProcessor.storeDeviceToken(token)
-        Logger.info("✅ Stored device token in shared storage")
+        Logger.info("Stored device token in shared storage")
 
         // Notify listeners that token changed so session-ready components can push it to backend
         NotificationCenter.default.post(name: .convosPushTokenDidChange, object: nil)
     }
 
     func handleRegistrationError(_ error: Error) {
-        Logger.error("❌ Failed to register for remote notifications: \(error)")
+        Logger.error("Failed to register for remote notifications: \(error)")
     }
 }
 
