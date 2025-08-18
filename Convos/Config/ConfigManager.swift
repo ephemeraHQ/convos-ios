@@ -64,7 +64,7 @@ final class ConfigManager {
         }
         return url
     }
-    
+
     /// Backend URL if specified in config
     var backendURLOverride: String? {
         config["backendUrl"] as? String
