@@ -531,6 +531,8 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         }
 
         let apnsEnv = environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
+        Logger.info("📱 Registering push token with APNS environment: \(apnsEnv) (raw enum: \(environment.apnsEnvironment))")
+
         let body = Body(deviceId: deviceId,
                         pushToken: pushToken,
                         pushTokenType: "apns",

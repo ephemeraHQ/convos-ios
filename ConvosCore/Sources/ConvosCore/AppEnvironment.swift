@@ -107,12 +107,24 @@ public enum AppEnvironment {
     }
 
     var apnsEnvironment: ApnsEnvironment {
-        // Check if this is a debug build (built locally with Xcode)
-        #if DEBUG
+        #if targetEnvironment(simulator)
+        Logger.info("📱 Simulator detected - using sandbox APNS")
         return .sandbox
         #else
-        // Release builds (distributed via TestFlight/App Store) use production
-        return .production
+        switch self {
+        case .local:
+            Logger.info("Local environment - using sandbox APNS")
+            return .sandbox
+        case .tests:
+            Logger.info("Tests environment - using sandbox APNS")
+            return .sandbox
+        case .dev:
+            Logger.info("Dev environment - using production APNS")
+            return .production
+        case .production:
+            Logger.info("Production environment - using production APNS")
+            return .production
+        }
         #endif
     }
 
