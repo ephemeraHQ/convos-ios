@@ -451,7 +451,6 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrService as String: keychainService,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
         var item: CFTypeRef?
