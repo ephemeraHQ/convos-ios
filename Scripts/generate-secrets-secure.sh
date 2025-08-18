@@ -51,7 +51,7 @@ if [[ ${#missing_secrets[@]} -gt 0 ]]; then
 fi
 
 # Create directory if needed
-mkdir -p "Config"
+mkdir -p "Convos/Config"
 
 # Generate Secrets.swift WITHOUT exposing values in logs
 cat >"$SECRETS_FILE" <<EOF
