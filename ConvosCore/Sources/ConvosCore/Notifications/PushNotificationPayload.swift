@@ -92,14 +92,20 @@ public struct InviteJoinRequestData {
 }
 
 public struct RequesterData {
+    public let id: String?
+    public let xmtpId: String?
     public let profile: ProfileData?
 
     public init(dictionary: [String: Any]?) {
         guard let dict = dictionary else {
+            self.id = nil
+            self.xmtpId = nil
             self.profile = nil
             return
         }
 
+        self.id = dict["id"] as? String
+        self.xmtpId = dict["xmtpId"] as? String
         self.profile = ProfileData(dictionary: dict["profile"] as? [String: Any])
     }
 }
@@ -130,16 +136,20 @@ public struct ProfileData {
 public struct InviteCodeData {
     public let name: String?
     public let code: String?
+    public let groupId: String?
 
     public init(dictionary: [String: Any]?) {
         guard let dict = dictionary else {
             self.name = nil
             self.code = nil
+            self.groupId = nil
             return
         }
 
         self.name = dict["name"] as? String
-        self.code = dict["code"] as? String
+        // The invite code is stored in the "id" field, not "code"
+        self.code = dict["id"] as? String
+        self.groupId = dict["groupId"] as? String
     }
 
     public var displayName: String {

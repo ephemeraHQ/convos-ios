@@ -2,6 +2,31 @@ import Combine
 import Foundation
 import GRDB
 
+// MARK: - Combine Async Extension
+extension Publisher {
+    func async() async throws -> Output {
+        try await withCheckedThrowingContinuation { continuation in
+            var cancellable: AnyCancellable?
+            cancellable = self
+                .sink(
+                    receiveCompletion: { completion in
+                        switch completion {
+                        case .finished:
+                            break
+                        case .failure(let error):
+                            continuation.resume(throwing: error)
+                        }
+                        cancellable?.cancel()
+                    },
+                    receiveValue: { value in
+                        continuation.resume(returning: value)
+                        cancellable?.cancel()
+                    }
+                )
+        }
+    }
+}
+
 public class CachedPushNotificationHandler {
     private var processors: [String: SingleInboxAuthProcessor] = [:]
     private var cancellables: Set<AnyCancellable> = []
@@ -10,22 +35,26 @@ public class CachedPushNotificationHandler {
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
     private let environment: AppEnvironment
+    private let isNotificationServiceExtension: Bool
 
     public init(
         authService: any LocalAuthServiceProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        isNotificationServiceExtension: Bool = false
     ) {
         self.authService = authService
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
         self.environment = environment
+        self.isNotificationServiceExtension = isNotificationServiceExtension
     }
 
     /// Handles a push notification using the structured payload
     /// - Parameter userInfo: The raw notification userInfo dictionary
     public func handlePushNotification(userInfo: [AnyHashable: Any]) {
+        Logger.info("🔍 RAW USERINFO: \(userInfo)")
         let payload = PushNotificationPayload(userInfo: userInfo)
 
         guard payload.isValid else {
@@ -39,6 +68,7 @@ public class CachedPushNotificationHandler {
         }
 
         Logger.info("Processing push notification for inbox: \(inboxId), type: \(payload.notificationType?.displayName ?? "unknown")")
+        Logger.info("🔍 PARSED PAYLOAD: notificationType=\(payload.notificationType?.rawValue ?? "nil"), hasNotificationData=\(payload.notificationData != nil)")
 
         // Get or create processor for this inbox
         let processor = getOrCreateProcessor(for: inboxId)
@@ -59,6 +89,38 @@ public class CachedPushNotificationHandler {
                 }
             )
             .store(in: &cancellables)
+    }
+
+    /// Handles a push notification asynchronously and waits for completion
+    /// - Parameter userInfo: The raw notification userInfo dictionary
+    /// - Returns: Async completion when processing is done
+    public func handlePushNotificationAsync(userInfo: [AnyHashable: Any]) async {
+        Logger.info("🔍 RAW USERINFO: \(userInfo)")
+        let payload = PushNotificationPayload(userInfo: userInfo)
+
+        guard payload.isValid else {
+            Logger.error("Invalid push notification payload: \(payload)")
+            return
+        }
+
+        guard let inboxId = payload.inboxId else {
+            Logger.error("Push notification missing inboxId")
+            return
+        }
+
+        Logger.info("Processing push notification for inbox: \(inboxId), type: \(payload.notificationType?.displayName ?? "unknown")")
+        Logger.info("🔍 PARSED PAYLOAD: notificationType=\(payload.notificationType?.rawValue ?? "nil"), hasNotificationData=\(payload.notificationData != nil)")
+
+        // Get or create processor for this inbox
+        let processor = getOrCreateProcessor(for: inboxId)
+
+        // Use async/await to wait for completion
+        do {
+            _ = try await processor.processPushNotification(payload: payload).async()
+            Logger.info("Push notification processed successfully")
+        } catch {
+            Logger.error("Push notification processing failed: \(error)")
+        }
     }
 
     /// Schedules custom work for a specific inbox
@@ -117,7 +179,8 @@ public class CachedPushNotificationHandler {
             authService: authService,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
-            environment: environment
+            environment: environment,
+            isNotificationServiceExtension: isNotificationServiceExtension
         )
 
         processors[inboxId] = processor

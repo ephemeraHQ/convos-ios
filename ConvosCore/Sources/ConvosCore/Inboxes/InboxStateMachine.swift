@@ -139,13 +139,16 @@ public actor InboxStateMachine {
 
     // MARK: - Init
 
+    private let isNotificationServiceExtension: Bool
+
     init(
         inbox: any AuthServiceInboxType,
         inboxWriter: any InboxWriterProtocol,
         authService: any LocalAuthServiceProtocol,
         syncingManager: any SyncingManagerProtocol,
         inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        isNotificationServiceExtension: Bool = false
     ) {
         self.inbox = inbox
         self.inboxWriter = inboxWriter
@@ -153,6 +156,7 @@ public actor InboxStateMachine {
         self.syncingManager = syncingManager
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
+        self.isNotificationServiceExtension = isNotificationServiceExtension
 
         // Set custom XMTP host if provided
         Logger.info("🔧 XMTP Configuration:")
@@ -299,20 +303,28 @@ public actor InboxStateMachine {
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
 
-        // Attempt to register for remote notifications to obtain APNS token ASAP
-        await registerForRemoteNotificationsAlways()
+        if isNotificationServiceExtension {
+            Logger.info("🚀 NSE Mode: Lightweight initialization - skipping push registration and profile refresh")
+        } else {
+            // Main app: perform full initialization including push notification operations
+            Logger.info("🔧 Main App Mode: Full initialization with push notifications")
 
-        // Request system notification authorization (APNS registration is handled separately)
-        await requestNotificationAuthorizationIfNeeded()
+            // Attempt to register for remote notifications to obtain APNS token ASAP
+            await registerForRemoteNotificationsAlways()
 
-        // Register backend notifications mapping (deviceId + token + identity + installation)
-        await registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
+            // Request system notification authorization (APNS registration is handled separately)
+            await requestNotificationAuthorizationIfNeeded()
 
-        do {
-            try await refreshUserAndProfile(client: client, apiClient: apiClient)
-        } catch {
-            Logger.error("Error refreshing user and profile: \(error.localizedDescription)")
+            // Register backend notifications mapping (deviceId + token + identity + installation)
+            await registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
+
+            do {
+                try await refreshUserAndProfile(client: client, apiClient: apiClient)
+            } catch {
+                Logger.error("Error refreshing user and profile: \(error.localizedDescription)")
+            }
         }
+
         enqueueAction(.authorized(.init(inbox: inbox, client: client, apiClient: apiClient)))
     }
 

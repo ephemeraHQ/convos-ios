@@ -34,7 +34,8 @@ public struct NotificationExtensionEnvironment {
             authService: createAuthService(),
             databaseReader: databaseManager.dbReader,
             databaseWriter: databaseManager.dbWriter,
-            environment: environment
+            environment: environment,
+            isNotificationServiceExtension: true
         )
     }
 }

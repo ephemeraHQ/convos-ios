@@ -7,8 +7,8 @@ import GRDB
 public class SingleInboxAuthProcessor {
     private let inboxId: String
     private let authService: any LocalAuthServiceProtocol
-    private let databaseReader: any DatabaseReader
-    private let databaseWriter: any DatabaseWriter
+    internal let databaseReader: any DatabaseReader
+    internal let databaseWriter: any DatabaseWriter
     private let environment: AppEnvironment
 
     private var operation: AuthorizeInboxOperation?
@@ -18,18 +18,22 @@ public class SingleInboxAuthProcessor {
     private var isAuthorizing: Bool = false
     private var authorizationError: Error?
 
+    private let isNotificationServiceExtension: Bool
+
     public init(
         inboxId: String,
         authService: any LocalAuthServiceProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        isNotificationServiceExtension: Bool = false
     ) {
         self.inboxId = inboxId
         self.authService = authService
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
         self.environment = environment
+        self.isNotificationServiceExtension = isNotificationServiceExtension
     }
 
     deinit {
@@ -73,8 +77,12 @@ public class SingleInboxAuthProcessor {
             // If already authorizing, queue the work
             if self.isAuthorizing {
                 self.pendingWork.append { inboxReadyResult in
-                    let result = try await work(inboxReadyResult)
-                    promise(.success(result))
+                    do {
+                        let result = try await work(inboxReadyResult)
+                        promise(.success(result))
+                    } catch {
+                        promise(.failure(error))
+                    }
                 }
                 return
             }
@@ -148,7 +156,8 @@ public class SingleInboxAuthProcessor {
                 authService: authService,
                 databaseReader: databaseReader,
                 databaseWriter: databaseWriter,
-                environment: environment
+                environment: environment,
+                isNotificationServiceExtension: isNotificationServiceExtension
             )
 
             // Set up timeout timer

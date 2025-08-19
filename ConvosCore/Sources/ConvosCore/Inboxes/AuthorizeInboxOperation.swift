@@ -36,7 +36,8 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         authService: any LocalAuthServiceProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        isNotificationServiceExtension: Bool = false
     ) {
         self.inbox = inbox
         let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
@@ -49,7 +50,8 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
                 databaseReader: databaseReader,
                 databaseWriter: databaseWriter
             ),
-            environment: environment
+            environment: environment,
+            isNotificationServiceExtension: isNotificationServiceExtension
         )
         inboxReadyPublisher = stateMachine
             .statePublisher

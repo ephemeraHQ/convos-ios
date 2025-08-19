@@ -3,17 +3,41 @@ import UserNotifications
 
 class NotificationService: UNNotificationServiceExtension {
     private var pushHandler: CachedPushNotificationHandler?
+    private var contentHandler: ((UNNotificationContent) -> Void)?
+    private var bestAttemptContent: UNMutableNotificationContent?
 
     override func didReceive(
         _ request: UNNotificationRequest,
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
     ) {
+        self.contentHandler = contentHandler
+        bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
+
         pushHandler = NotificationExtensionEnvironment.createPushNotificationHandler()
-        pushHandler?.handlePushNotification(userInfo: request.content.userInfo)
-        contentHandler(request.content)
+
+        // Handle the push notification asynchronously and wait for completion
+        Task {
+            await handlePushNotificationAsync(userInfo: request.content.userInfo)
+        }
     }
 
     override func serviceExtensionTimeWillExpire() {
+        // Called just before the extension will be terminated by the system
         pushHandler?.cleanup()
+
+        // Deliver the best attempt content
+        if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
+            contentHandler(bestAttemptContent)
+        }
+    }
+
+    private func handlePushNotificationAsync(userInfo: [AnyHashable: Any]) async {
+        // Use the async version that waits for completion
+        await pushHandler?.handlePushNotificationAsync(userInfo: userInfo)
+
+        // Processing complete - deliver the notification
+        if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
+            contentHandler(bestAttemptContent)
+        }
     }
 }
