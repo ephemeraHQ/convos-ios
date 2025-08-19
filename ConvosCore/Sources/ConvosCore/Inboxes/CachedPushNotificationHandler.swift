@@ -7,18 +7,27 @@ extension Publisher {
     func async() async throws -> Output {
         try await withCheckedThrowingContinuation { continuation in
             var cancellable: AnyCancellable?
+            var hasResumed = false
+
             cancellable = self
                 .sink(
                     receiveCompletion: { completion in
+                        guard !hasResumed else { return }
+                        hasResumed = true
+
                         switch completion {
                         case .finished:
-                            break
+                            // Publisher completed without emitting a value
+                            continuation.resume(throwing: CancellationError())
                         case .failure(let error):
                             continuation.resume(throwing: error)
                         }
                         cancellable?.cancel()
                     },
                     receiveValue: { value in
+                        guard !hasResumed else { return }
+                        hasResumed = true
+
                         continuation.resume(returning: value)
                         cancellable?.cancel()
                     }
