@@ -5,6 +5,7 @@ class NotificationService: UNNotificationServiceExtension {
     private var pushHandler: CachedPushNotificationHandler?
     private var contentHandler: ((UNNotificationContent) -> Void)?
     private var bestAttemptContent: UNMutableNotificationContent?
+    private var pendingTask: Task<Void, Never>?
 
     override func didReceive(
         _ request: UNNotificationRequest,
@@ -16,13 +17,17 @@ class NotificationService: UNNotificationServiceExtension {
         pushHandler = NotificationExtensionEnvironment.createPushNotificationHandler()
 
         // Handle the push notification asynchronously and wait for completion
-        Task {
+        pendingTask = Task {
             await handlePushNotificationAsync(userInfo: request.content.userInfo)
         }
     }
 
     override func serviceExtensionTimeWillExpire() {
         // Called just before the extension will be terminated by the system
+        // Cancel any ongoing async work to prevent multiple contentHandler calls
+        pendingTask?.cancel()
+        pendingTask = nil
+
         pushHandler?.cleanup()
 
         // Deliver the best attempt content
@@ -37,6 +42,11 @@ class NotificationService: UNNotificationServiceExtension {
 
         // Use the async version that waits for completion
         await pushHandler?.handlePushNotificationAsync(userInfo: userInfo)
+
+        // Check if the task was cancelled before calling contentHandler
+        guard !Task.isCancelled else {
+            return
+        }
 
         // Processing complete - deliver the notification
         if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
