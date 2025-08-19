@@ -35,6 +35,8 @@ extension XMTPiOS.DecodedMessage {
             components = try handleRemoteAttachmentContent()
         case ContentTypeGroupUpdated:
             components = try handleGroupUpdatedContent()
+        case ContentTypeExplodeSettings:
+            components = try handleExplodeSettingsContent()
         default:
             throw DecodedMessageDBRepresentationError.unsupportedContentType
         }
@@ -185,6 +187,32 @@ extension XMTPiOS.DecodedMessage {
                     )
                 }
         )
+        return DBMessageComponents(
+            messageType: .original,
+            contentType: .update,
+            sourceMessageId: nil,
+            emoji: nil,
+            attachmentUrls: [],
+            text: nil,
+            update: update
+        )
+    }
+
+    private func handleExplodeSettingsContent() throws -> DBMessageComponents {
+        let content = try content() as Any
+        guard let explodeSettings = content as? ExplodeSettings else {
+            throw DecodedMessageDBRepresentationError.mismatchedContentType
+        }
+
+        Logger.info("Received explode settings: \(explodeSettings)")
+        // TODO: Create an update that represents the conversation expiration
+        let update = DBMessage.Update(
+            initiatedByInboxId: senderInboxId,
+            addedInboxIds: [],
+            removedInboxIds: [],
+            metadataChanges: []
+        )
+
         return DBMessageComponents(
             messageType: .original,
             contentType: .update,

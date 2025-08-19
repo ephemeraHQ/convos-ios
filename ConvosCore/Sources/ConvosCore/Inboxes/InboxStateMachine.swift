@@ -181,7 +181,8 @@ public actor InboxStateMachine {
                 ReactionCodec(),
                 AttachmentCodec(),
                 RemoteAttachmentCodec(),
-                GroupUpdatedCodec()
+                GroupUpdatedCodec(),
+                ExplodeSettingsCodec()
             ],
             dbEncryptionKey: inbox.databaseKey,
             dbDirectory: environment.defaultDatabasesDirectory
