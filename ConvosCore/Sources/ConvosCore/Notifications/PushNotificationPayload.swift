@@ -111,44 +111,46 @@ public struct RequesterData {
 }
 
 public struct ProfileData {
+    public let name: String?
     public let username: String?
-    public let displayName: String?
+    public let description: String?
     public let avatar: String?
 
     public init(dictionary: [String: Any]?) {
         guard let dict = dictionary else {
+            self.name = nil
             self.username = nil
-            self.displayName = nil
+            self.description = nil
             self.avatar = nil
             return
         }
 
+        self.name = dict["name"] as? String
         self.username = dict["username"] as? String
-        self.displayName = dict["displayName"] as? String
+        self.description = dict["description"] as? String
         self.avatar = dict["avatar"] as? String
     }
 
     public var displayNameOrUsername: String {
-        return displayName ?? username ?? "Someone"
+        return name ?? username ?? "Someone"
     }
 }
 
 public struct InviteCodeData {
+    public let id: String?
     public let name: String?
-    public let code: String?
     public let groupId: String?
 
     public init(dictionary: [String: Any]?) {
         guard let dict = dictionary else {
+            self.id = nil
             self.name = nil
-            self.code = nil
             self.groupId = nil
             return
         }
 
+        self.id = dict["id"] as? String
         self.name = dict["name"] as? String
-        // The invite code is stored in the "id" field, not "code"
-        self.code = dict["id"] as? String
         self.groupId = dict["groupId"] as? String
     }
 

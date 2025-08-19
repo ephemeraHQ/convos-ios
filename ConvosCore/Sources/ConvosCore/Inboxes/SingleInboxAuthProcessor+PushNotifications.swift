@@ -115,17 +115,12 @@ public extension SingleInboxAuthProcessor {
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol
     ) async throws {
-        guard let inviteCode = inviteData.inviteCode?.code else {
-            Logger.error("Missing invite code in invite join request")
-            return
-        }
-
         guard let requesterInboxId = inviteData.requester?.xmtpId else {
             Logger.error("Missing requester inbox ID in invite data")
             return
         }
 
-        Logger.info("Processing invite join request for code: \(inviteCode), group: \(inviteData.inviteCode?.groupId ?? "unknown"), requester: \(requesterInboxId)")
+        Logger.info("Processing invite join request for group: \(inviteData.inviteCode?.groupId ?? "unknown"), requester: \(requesterInboxId)")
 
         // Check if auto-approve is enabled
         if !inviteData.autoApprove {

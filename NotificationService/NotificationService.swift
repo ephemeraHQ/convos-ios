@@ -44,32 +44,18 @@ class NotificationService: UNNotificationServiceExtension {
         }
     }
 
-    private func updateNotificationContent(userInfo: [AnyHashable: Any]) {
+        private func updateNotificationContent(userInfo: [AnyHashable: Any]) {
         guard let bestAttemptContent = bestAttemptContent else { return }
 
         let payload = PushNotificationPayload(userInfo: userInfo)
 
-        // Only update for invite join requests
-        guard payload.notificationType == .inviteJoinRequest,
-              let inviteData = payload.notificationData?.inviteData else {
-            return
+        // Use the centralized display logic from PushNotificationPayload
+        if let displayTitle = payload.displayTitle {
+            bestAttemptContent.title = displayTitle
         }
 
-        // Get the requester name
-        let requesterName = inviteData.requester?.profile?.displayNameOrUsername ?? "Someone"
-
-        // Get the group name
-        let groupName = inviteData.inviteCode?.displayName ?? "your group"
-
-        // Create the appropriate message based on auto-approve status
-        let message: String
-        if inviteData.autoApprove {
-            message = "\(requesterName) joined \(groupName)"
-        } else {
-            message = "\(requesterName) requested to join \(groupName)"
+        if let displayBody = payload.displayBody {
+            bestAttemptContent.body = displayBody
         }
-
-        // Update the notification content
-        bestAttemptContent.body = message
     }
 }
