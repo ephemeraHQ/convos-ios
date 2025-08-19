@@ -205,7 +205,7 @@ extension XMTPiOS.DecodedMessage {
         }
 
         Logger.info("Received explode settings: \(explodeSettings)")
-        // TODO: Create an update that represents the conversation expiration
+        // @jarod Create an update that represents the conversation expiration
         let update = DBMessage.Update(
             initiatedByInboxId: senderInboxId,
             addedInboxIds: [],
