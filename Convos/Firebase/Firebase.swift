@@ -12,5 +12,13 @@ enum FirebaseSetup {
         }
 
         FirebaseApp.configure(options: options)
+        // Verification logs using Firebase SDK
+        if let app = FirebaseApp.app() {
+            let projectId = app.options.projectID ?? "unknown"
+            let appId = app.options.googleAppID
+            Logger.info("✅ Firebase configured. projectId=\(projectId), appId=\(appId)")
+        } else {
+            Logger.error("❌ Firebase is not configured")
+        }
     }
 }
