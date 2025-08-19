@@ -45,6 +45,8 @@ extension SecureEnclaveKeyStore {
 
         if let accessGroup = keychainAccessGroup {
             query[kSecAttrAccessGroup as String] = accessGroup
+        } else {
+            Logger.warning("⚠️ No keychain access group configured for database key storage")
         }
         let status = SecItemAdd(query as CFDictionary, nil)
         if status == errSecDuplicateItem {
@@ -77,6 +79,8 @@ extension SecureEnclaveKeyStore {
 
         if let accessGroup = keychainAccessGroup {
             query[kSecAttrAccessGroup as String] = accessGroup
+        } else {
+            Logger.warning("⚠️ No keychain access group configured for database key loading")
         }
 
         var item: CFTypeRef?
@@ -115,11 +119,13 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
 
     private let identitiesListKey: String = "com.convos.ios.SecureEnclaveIdentityStore.identitiesList"
 
-    /// Helper method to add keychain access group to a query if configured
-    private func addAccessGroupIfNeeded(to query: inout [String: Any]) {
-        if let accessGroup = keychainAccessGroup {
-            query[kSecAttrAccessGroup as String] = accessGroup
+    /// Adds keychain access group to a query. Access groups are required for proper data sharing.
+    private func addAccessGroup(to query: inout [String: Any]) {
+        guard let accessGroup = keychainAccessGroup else {
+            Logger.warning("⚠️ No keychain access group configured - this may cause data sharing issues between app and extensions")
+            return
         }
+        query[kSecAttrAccessGroup as String] = accessGroup
     }
 
     enum SecureEnclaveUserStoreError: Error {
@@ -304,7 +310,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccount as String: "\(identityId).privateKey",
             kSecAttrService as String: keychainService
         ]
-        addAccessGroupIfNeeded(to: &query)
+        addAccessGroup(to: &query)
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedDeletingPrivateKey
@@ -317,7 +323,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccount as String: identityId.lowercased(),
             kSecAttrService as String: keychainService
         ]
-        addAccessGroupIfNeeded(to: &query)
+        addAccessGroup(to: &query)
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedDeletingDatabaseKey
@@ -330,7 +336,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccount as String: "\(identityId.lowercased()).inboxType",
             kSecAttrService as String: keychainService
         ]
-        addAccessGroupIfNeeded(to: &query)
+        addAccessGroup(to: &query)
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedDeletingInboxType
@@ -346,7 +352,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
 
-        addAccessGroupIfNeeded(to: &query)
+        addAccessGroup(to: &query)
 
         var item: CFTypeRef?
         var status = SecItemCopyMatching(query as CFDictionary, &item)
@@ -386,7 +392,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecValueData as String: data
         ]
 
-        addAccessGroupIfNeeded(to: &query)
+        addAccessGroup(to: &query)
 
         SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
 
@@ -416,7 +422,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccount as String: "\(identityId.lowercased()).inboxId",
             kSecAttrService as String: keychainService
         ]
-        addAccessGroupIfNeeded(to: &query)
+        addAccessGroup(to: &query)
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedDeletingInboxId
@@ -438,7 +444,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
-        addAccessGroupIfNeeded(to: &query)
+        addAccessGroup(to: &query)
 
         SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
 
@@ -459,7 +465,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
-        addAccessGroupIfNeeded(to: &query)
+        addAccessGroup(to: &query)
 
         var item: CFTypeRef?
         var status = SecItemCopyMatching(query as CFDictionary, &item)
@@ -496,7 +502,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrService as String: keychainService,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
-        addAccessGroupIfNeeded(to: &query)
+        addAccessGroup(to: &query)
 
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
@@ -525,7 +531,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
-        addAccessGroupIfNeeded(to: &query)
+        addAccessGroup(to: &query)
 
         SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
 
@@ -554,7 +560,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
 
-        addAccessGroupIfNeeded(to: &query)
+        addAccessGroup(to: &query)
 
         var item: CFTypeRef?
         var status = SecItemCopyMatching(query as CFDictionary, &item)

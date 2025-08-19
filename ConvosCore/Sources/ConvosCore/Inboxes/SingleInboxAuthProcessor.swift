@@ -146,6 +146,7 @@ public class SingleInboxAuthProcessor {
                 let error = SingleInboxAuthProcessorError.inboxNotFound(inboxId)
                 authorizationError = error
                 isAuthorizing = false
+                failPendingWork(with: error)
                 completion(.failure(error))
                 return
             }
@@ -169,6 +170,7 @@ public class SingleInboxAuthProcessor {
                     let error = SingleInboxAuthProcessorError.timeout(self.inboxId)
                     self.authorizationError = error
                     self.isAuthorizing = false
+                    self.failPendingWork(with: error)
                     self.cleanup()
                     completion(.failure(error))
                 }
@@ -186,6 +188,7 @@ public class SingleInboxAuthProcessor {
                         case .failure(let error):
                             self.authorizationError = error
                             self.isAuthorizing = false
+                            self.failPendingWork(with: error)
                             self.cleanup()
                             completion(.failure(error))
                         }
@@ -214,6 +217,7 @@ public class SingleInboxAuthProcessor {
         } catch {
             authorizationError = error
             isAuthorizing = false
+            failPendingWork(with: error)
             completion(.failure(error))
         }
     }
@@ -231,6 +235,16 @@ public class SingleInboxAuthProcessor {
                 }
             }
         }
+    }
+
+    private func failPendingWork(with error: Error) {
+        // Note: pendingWork closures expect InboxReadyResult, but we have an error.
+        // Since the work closures are designed to handle success cases and throw errors,
+        // we can't call them with an error directly. Instead, we just clear the queue
+        // since the promises in scheduleWork will be failed via their respective completion handlers.
+        let count = pendingWork.count
+        pendingWork.removeAll()
+        Logger.info("Cleared \(count) pending work items due to error: \(error)")
     }
 
     private func cleanup() {
