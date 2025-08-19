@@ -103,7 +103,7 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue(environment.appCheckToken, forHTTPHeaderField: "X-Firebase-AppCheck")
+        // TODO : if we re-enable Turnkey, might need to enable AppCheck for this endpoint?
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let requestBody: [String: Any] = [

@@ -51,6 +51,24 @@ public enum AppEnvironment {
         }
     }
 
+    public var firebaseConfigURL: URL? {
+        let resource: String
+        switch self {
+        case .local(_), .tests:
+            resource = "GoogleService-Info.Local"
+        case .dev(_):
+            resource = "GoogleService-Info.Dev"
+        case .production(_):
+            resource = "GoogleService-Info.Prod"
+        }
+
+        if let url = Bundle.main.url(forResource: resource, withExtension: "plist") {
+            return url
+        }
+
+        return nil
+    }
+
     var apiBaseURL: String {
         switch self {
         case .local(let config):

@@ -56,18 +56,3 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         return [.banner, .badge, .sound]
     }
 }
-
-// MARK: - UIApplication Delegate Adapter
-
-@MainActor
-class PushNotificationDelegate: NSObject, UIApplicationDelegate {
-    func application(_ application: UIApplication,
-                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        PushNotificationManager.shared.handleDeviceToken(deviceToken)
-    }
-
-    func application(_ application: UIApplication,
-                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        PushNotificationManager.shared.handleRegistrationError(error)
-    }
-}

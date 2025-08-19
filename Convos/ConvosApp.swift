@@ -5,7 +5,7 @@ import SwiftUI
 struct ConvosApp: App {
     let convos: ConvosClient = .client(environment: ConfigManager.shared.currentEnvironment)
 
-    @UIApplicationDelegateAdaptor(PushNotificationDelegate.self) var pushDelegate: PushNotificationDelegate
+    @UIApplicationDelegateAdaptor(ConvosAppDelegate.self) var appDelegate: ConvosAppDelegate
     @State private var pushNotificationManager: PushNotificationManager = .shared
 
     init() {
@@ -33,5 +33,26 @@ struct ConvosApp: App {
                 .withSafeAreaEnvironment()
                 .environment(pushNotificationManager)
         }
+    }
+}
+
+// MARK: - UIApplication Delegate Adapter
+
+@MainActor
+class ConvosAppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication,
+                       didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        FirebaseSetup.configure()
+
+        return true
+    }
+    func application(_ application: UIApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        PushNotificationManager.shared.handleDeviceToken(deviceToken)
+    }
+
+    func application(_ application: UIApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        PushNotificationManager.shared.handleRegistrationError(error)
     }
 }
