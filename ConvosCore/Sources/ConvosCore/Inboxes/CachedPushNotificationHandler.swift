@@ -10,11 +10,14 @@ extension Publisher {
                 try await withCheckedThrowingContinuation { continuation in
                     var cancellable: AnyCancellable?
                     var hasResumed = false
+                    let lock = NSLock()
 
                     cancellable = self.sink(
                         receiveCompletion: { completion in
-                            guard !hasResumed else { return }
+                            lock.lock()
+                            guard !hasResumed else { lock.unlock(); return }
                             hasResumed = true
+                            lock.unlock()
 
                             switch completion {
                             case .finished:
@@ -26,8 +29,10 @@ extension Publisher {
                             cancellable?.cancel()
                         },
                         receiveValue: { value in
-                            guard !hasResumed else { return }
+                            lock.lock()
+                            guard !hasResumed else { lock.unlock(); return }
                             hasResumed = true
+                            lock.unlock()
 
                             continuation.resume(returning: value)
                             cancellable?.cancel()
@@ -36,9 +41,16 @@ extension Publisher {
 
                     // Handle immediate task cancellation
                     if Task.isCancelled {
+                        lock.lock()
+                        let shouldResume = !hasResumed
                         hasResumed = true
-                        cancellable?.cancel()
-                        continuation.resume(throwing: CancellationError())
+                        lock.unlock()
+                        if shouldResume {
+                            cancellable?.cancel()
+                            continuation.resume(throwing: CancellationError())
+                        } else {
+                            cancellable?.cancel()
+                        }
                     }
                 }
             },
