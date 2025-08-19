@@ -84,21 +84,7 @@ extension SecureEnclaveKeyStore {
         }
 
         var item: CFTypeRef?
-        var status = SecItemCopyMatching(query as CFDictionary, &item)
-
-        // If not found with access group, try without access group for backward compatibility
-        if status == errSecItemNotFound && keychainAccessGroup != nil {
-            let fallbackQuery: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrAccount as String: identifier,
-                kSecAttrService as String: keychainService,
-                kSecReturnData as String: true,
-                kSecMatchLimit as String: kSecMatchLimitOne,
-                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
-            ]
-            // Don't add access group for fallback
-            status = SecItemCopyMatching(fallbackQuery as CFDictionary, &item)
-        }
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
 
         guard status != errSecItemNotFound else { return nil }
         guard status == errSecSuccess, let data = item as? Data else {
@@ -355,20 +341,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         addAccessGroup(to: &query)
 
         var item: CFTypeRef?
-        var status = SecItemCopyMatching(query as CFDictionary, &item)
-
-        // If not found with access group, try without access group for backward compatibility
-        if status == errSecItemNotFound && keychainAccessGroup != nil {
-            let fallbackQuery: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrAccount as String: identitiesListKey,
-                kSecAttrService as String: keychainService,
-                kSecReturnData as String: true,
-                kSecMatchLimit as String: kSecMatchLimitOne
-            ]
-            // Don't add access group for fallback
-            status = SecItemCopyMatching(fallbackQuery as CFDictionary, &item)
-        }
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
 
         guard status != errSecItemNotFound else { return [] }
         guard status == errSecSuccess, let data = item as? Data else {
@@ -468,21 +441,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         addAccessGroup(to: &query)
 
         var item: CFTypeRef?
-        var status = SecItemCopyMatching(query as CFDictionary, &item)
-
-        // If not found with access group, try without access group for backward compatibility
-        if status == errSecItemNotFound && keychainAccessGroup != nil {
-            let fallbackQuery: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrAccount as String: "\(identifier).inboxId",
-                kSecAttrService as String: keychainService,
-                kSecReturnData as String: true,
-                kSecMatchLimit as String: kSecMatchLimitOne,
-                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
-            ]
-            // Don't add access group for fallback
-            status = SecItemCopyMatching(fallbackQuery as CFDictionary, &item)
-        }
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
 
         guard status == errSecSuccess, let data = item as? Data else {
             throw SecureEnclaveUserStoreError.failedLoadingInboxId
@@ -563,24 +522,9 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         addAccessGroup(to: &query)
 
         var item: CFTypeRef?
-        var status = SecItemCopyMatching(query as CFDictionary, &item)
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
 
         Logger.info("First query status: \(status)")
-
-        // If not found with access group, try without access group for backward compatibility
-        if status == errSecItemNotFound && keychainAccessGroup != nil {
-            Logger.info("Trying fallback query without access group")
-            let fallbackQuery: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrAccount as String: "providerId.\(inboxId)",
-                kSecAttrService as String: keychainService,
-                kSecReturnData as String: true,
-                kSecMatchLimit as String: kSecMatchLimitOne,
-            ]
-            // Don't add access group for fallback
-            status = SecItemCopyMatching(fallbackQuery as CFDictionary, &item)
-            Logger.info("Fallback query status: \(status)")
-        }
 
         guard status == errSecSuccess, let data = item as? Data else {
             Logger.error("Failed to load provider ID. Status: \(status)")
@@ -600,13 +544,15 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         let identifier = identityId.lowercased()
         let typeData = try JSONEncoder().encode(type)
 
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "\(identifier).inboxType",
             kSecAttrService as String: keychainService,
             kSecValueData as String: typeData,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
+
+        addAccessGroup(to: &query)
 
         SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
 
@@ -618,7 +564,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
 
     private func loadInboxType(for identityId: String) throws -> InboxType {
         let identifier = identityId.lowercased()
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "\(identifier).inboxType",
             kSecAttrService as String: keychainService,
@@ -626,6 +572,8 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecMatchLimit as String: kSecMatchLimitOne,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
+
+        addAccessGroup(to: &query)
 
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
