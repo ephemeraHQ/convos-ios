@@ -15,7 +15,10 @@ public extension SingleInboxAuthProcessor {
         timeout: TimeInterval = 30
     ) -> AnyPublisher<Void, Error> {
         Logger.info("🚀 SingleInboxAuthProcessor: processPushNotification called for type: \(payload.notificationType?.rawValue ?? "nil")")
-        return scheduleWork(timeout: timeout) { inboxReadyResult in
+        return scheduleWork(timeout: timeout) { [weak self] inboxReadyResult in
+            guard let self = self else {
+                throw SingleInboxAuthProcessorError.processorDeallocated
+            }
             Logger.info("🎯 SingleInboxAuthProcessor: Inbox ready, calling handlePushNotification")
             try await self.handlePushNotification(
                 inboxReadyResult: inboxReadyResult,
