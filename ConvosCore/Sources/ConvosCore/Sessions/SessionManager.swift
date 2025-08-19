@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 import GRDB
+import UserNotifications
 
 public extension Notification.Name {
     static let leftConversationNotification: Notification.Name = Notification.Name("LeftConversationNotification")
@@ -148,6 +149,14 @@ class SessionManager: SessionManagerProtocol {
                 guard let inboxId: String = notification.userInfo?["inboxId"] as? String else {
                     return
                 }
+
+                // Schedule explosion notification if conversationId is provided
+                if let conversationId: String = notification.userInfo?["conversationId"] as? String {
+                    Task {
+                        await self.scheduleExplosionNotification(inboxId: inboxId, conversationId: conversationId)
+                    }
+                }
+
                 do {
                     try deleteAccount(inboxId: inboxId)
                 } catch {
@@ -157,6 +166,84 @@ class SessionManager: SessionManagerProtocol {
                         )
                 }
             }
+    }
+
+    // MARK: - Local Notification
+
+    private func scheduleExplosionNotification(inboxId: String, conversationId: String) async {
+        do {
+            // Fetch conversation details
+            let conversation = try await fetchConversationDetails(inboxId: inboxId, conversationId: conversationId)
+
+            // Create notification content
+            let content = UNMutableNotificationContent()
+            content.title = "💥 \(conversation.displayName) 💥"
+            content.body = "A convo exploded"
+            content.sound = .default
+            content.userInfo = [
+                "inboxId": inboxId,
+                "conversationId": conversationId,
+                "notificationType": "explosion"
+            ]
+
+            // Add conversation image if available
+            if let imageURL = conversation.imageURL {
+                // For local notifications, we need to ensure the image is accessible
+                // If it's a local file URL, we can use it directly
+                // If it's a remote URL, we might need to download it first
+                if imageURL.isFileURL {
+                    // Local file URL - can be used directly
+                    do {
+                        let attachment = try UNNotificationAttachment(
+                            identifier: UUID().uuidString,
+                            url: imageURL,
+                            options: nil
+                        )
+                        content.attachments = [attachment]
+                    } catch {
+                        Logger.warning("Failed to create notification attachment from local file: \(error)")
+                    }
+                } else {
+                    // Remote URL - for now, we'll skip the attachment
+                    // In a production app, you might want to download and cache the image
+                    Logger.info("Skipping remote image attachment for explosion notification: \(imageURL)")
+                }
+            }
+
+            // Create notification request
+            let request = UNNotificationRequest(
+                identifier: "explosion-\(conversationId)",
+                content: content,
+                trigger: nil // Immediate trigger
+            )
+
+            // Schedule the notification
+            try await UNUserNotificationCenter.current().add(request)
+            Logger.info("Scheduled explosion notification for conversation: \(conversationId)")
+
+        } catch {
+            Logger.error("Failed to schedule explosion notification: \(error)")
+        }
+    }
+
+    private func fetchConversationDetails(inboxId: String, conversationId: String) async throws -> Conversation {
+        return try await withCheckedThrowingContinuation { continuation in
+            // Create a temporary conversation repository to fetch the conversation
+            let conversationRepository = ConversationRepository(
+                conversationId: conversationId,
+                dbReader: databaseReader
+            )
+
+            do {
+                if let conversation = try conversationRepository.fetchConversation() {
+                    continuation.resume(returning: conversation)
+                } else {
+                    continuation.resume(throwing: SessionManagerError.inboxNotFound)
+                }
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
     }
 
     // MARK: Public

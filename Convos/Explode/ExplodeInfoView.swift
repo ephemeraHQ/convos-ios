@@ -54,5 +54,21 @@ struct ExplodeInfoView: View {
 }
 
 #Preview {
-    ExplodeInfoView()
+    @Previewable @State var presentingExplodeInfo: Bool = false
+    @Previewable @State var explodeInfoSheetHeight: CGFloat = 0.0
+    VStack {
+        Button {
+            presentingExplodeInfo.toggle()
+        } label: {
+            Text("Toggle")
+        }
+    }
+    .sheet(isPresented: $presentingExplodeInfo) {
+        ExplodeInfoView()
+            .fixedSize(horizontal: false, vertical: true)
+            .readHeight { sheetHeight in
+                explodeInfoSheetHeight = sheetHeight
+            }
+            .presentationDetents([.height(explodeInfoSheetHeight)])
+    }
 }

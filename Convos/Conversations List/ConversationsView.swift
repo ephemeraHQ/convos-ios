@@ -13,6 +13,7 @@ struct ConversationsView: View {
 
     @FocusState private var focusState: MessagesViewInputFocus?
     @State private var sidebarWidth: CGFloat = 0.0
+    @State private var explodeInfoSheetHeight: CGFloat = 0.0
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
 
     init(
@@ -153,6 +154,14 @@ struct ConversationsView: View {
                         in: namespace
                     )
                 )
+        }
+        .sheet(isPresented: $viewModel.presentingExplodeInfo) {
+            ExplodeInfoView()
+                .fixedSize(horizontal: false, vertical: true)
+                .readHeight { sheetHeight in
+                    explodeInfoSheetHeight = sheetHeight
+                }
+                .presentationDetents([.height(explodeInfoSheetHeight)])
         }
     }
 }
