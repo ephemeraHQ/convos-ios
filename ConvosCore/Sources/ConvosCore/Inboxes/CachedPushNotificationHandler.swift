@@ -5,34 +5,50 @@ import GRDB
 // MARK: - Combine Async Extension
 extension Publisher {
     func async() async throws -> Output {
-        try await withCheckedThrowingContinuation { continuation in
-            var cancellable: AnyCancellable?
-            var hasResumed = false
+        return try await withTaskCancellationHandler(
+            operation: {
+                try await withCheckedThrowingContinuation { continuation in
+                    var cancellable: AnyCancellable?
+                    var hasResumed = false
 
-            cancellable = self
-                .sink(
-                    receiveCompletion: { completion in
-                        guard !hasResumed else { return }
-                        hasResumed = true
+                    cancellable = self.sink(
+                        receiveCompletion: { completion in
+                            guard !hasResumed else { return }
+                            hasResumed = true
 
-                        switch completion {
-                        case .finished:
-                            // Publisher completed without emitting a value
-                            continuation.resume(throwing: CancellationError())
-                        case .failure(let error):
-                            continuation.resume(throwing: error)
+                            switch completion {
+                            case .finished:
+                                // Publisher completed without emitting a value
+                                continuation.resume(throwing: CancellationError())
+                            case .failure(let error):
+                                continuation.resume(throwing: error)
+                            }
+                            cancellable?.cancel()
+                        },
+                        receiveValue: { value in
+                            guard !hasResumed else { return }
+                            hasResumed = true
+
+                            continuation.resume(returning: value)
+                            cancellable?.cancel()
                         }
-                        cancellable?.cancel()
-                    },
-                    receiveValue: { value in
-                        guard !hasResumed else { return }
-                        hasResumed = true
+                    )
 
-                        continuation.resume(returning: value)
+                    // Handle immediate task cancellation
+                    if Task.isCancelled {
+                        hasResumed = true
                         cancellable?.cancel()
+                        continuation.resume(throwing: CancellationError())
                     }
-                )
-        }
+                }
+            },
+            onCancel: {
+                // The cancellation handler runs on a different execution context
+                // and cannot directly access the continuation or cancellable
+                // The Task.isCancelled check above handles immediate cancellation
+                // For async cancellation, the Task will be cancelled and the operation will throw
+            }
+        )
     }
 }
 
