@@ -88,7 +88,7 @@ extension SecureEnclaveKeyStore {
 
         // If not found with access group, try without access group for backward compatibility
         if status == errSecItemNotFound && keychainAccessGroup != nil {
-            var fallbackQuery: [String: Any] = [
+            let fallbackQuery: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrAccount as String: identifier,
                 kSecAttrService as String: keychainService,
@@ -359,7 +359,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
 
         // If not found with access group, try without access group for backward compatibility
         if status == errSecItemNotFound && keychainAccessGroup != nil {
-            var fallbackQuery: [String: Any] = [
+            let fallbackQuery: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrAccount as String: identitiesListKey,
                 kSecAttrService as String: keychainService,
@@ -454,7 +454,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         }
     }
 
-        func loadInboxId(for identityId: String) throws -> String {
+    func loadInboxId(for identityId: String) throws -> String {
         let identifier = identityId.lowercased()
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -472,7 +472,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
 
         // If not found with access group, try without access group for backward compatibility
         if status == errSecItemNotFound && keychainAccessGroup != nil {
-            var fallbackQuery: [String: Any] = [
+            let fallbackQuery: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrAccount as String: "\(identifier).inboxId",
                 kSecAttrService as String: keychainService,
@@ -570,7 +570,7 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         // If not found with access group, try without access group for backward compatibility
         if status == errSecItemNotFound && keychainAccessGroup != nil {
             Logger.info("Trying fallback query without access group")
-            var fallbackQuery: [String: Any] = [
+            let fallbackQuery: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrAccount as String: "providerId.\(inboxId)",
                 kSecAttrService as String: keychainService,
@@ -636,56 +636,6 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
 
         return try JSONDecoder().decode(InboxType.self, from: data)
     }
-
-    // MARK: - Debug/Development Methods
-
-        /// Debug method to list all provider ID mappings in the keychain
-    func debugListAllProviderIdMappings() {
-        Logger.info("🔍 LISTING ALL PROVIDER ID MAPPINGS")
-
-        // Query for all items with the providerId prefix
-        let accessGroupsToTry = [keychainAccessGroup, nil]
-
-        for accessGroup in accessGroupsToTry {
-            var query: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrService as String: keychainService,
-                kSecReturnAttributes as String: true,
-                kSecReturnData as String: true,
-                kSecMatchLimit as String: kSecMatchLimitAll
-            ]
-
-            if let accessGroup = accessGroup {
-                query[kSecAttrAccessGroup as String] = accessGroup
-                Logger.info("Searching with access group: \(accessGroup)")
-            } else {
-                Logger.info("Searching without access group")
-            }
-
-            var result: CFTypeRef?
-            let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-            if status == errSecSuccess, let items = result as? [[String: Any]] {
-                Logger.info("Found \(items.count) keychain items")
-                for item in items {
-                    if let account = item[kSecAttrAccount as String] as? String,
-                       account.hasPrefix("providerId."),
-                       let data = item[kSecValueData as String] as? Data,
-                       let providerId = String(data: data, encoding: .utf8) {
-                        let inboxId = String(account.dropFirst("providerId.".count))
-                        Logger.info("  \(inboxId) → \(providerId)")
-                    } else if let account = item[kSecAttrAccount as String] as? String {
-                        Logger.info("  Non-providerId item: \(account)")
-                    }
-                }
-            } else {
-                Logger.info("Query failed with status: \(status)")
-            }
-        }
-
-        Logger.info("🔍 END PROVIDER ID MAPPINGS LIST")
-    }
-
     /// WARNING: This will delete ALL keychain data for this service. Use only for debugging/development.
     /// Call this method temporarily to clear keychain data when testing keychain access group changes.
     func debugWipeAllKeychainData() {

@@ -101,32 +101,6 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
 
     // MARK: - Debug/Development Methods
 
-    /// Debug method to list all provider ID mappings
-    public func debugListAllProviderIdMappings() {
-        identityStore.debugListAllProviderIdMappings()
-    }
-
-    /// Debug method to re-save provider ID mappings for existing identities
-    public func debugReSaveProviderIdMappings() {
-        Logger.info("🔄 Re-saving provider ID mappings for existing identities")
-        do {
-            let identities = try identityStore.loadAll()
-            for identity in identities {
-                // We need to find the inbox ID for this provider ID
-                // Let's look for {providerId}.inboxId entries
-                do {
-                    let inboxId = try identityStore.loadInboxId(for: identity.id)
-                    Logger.info("Re-saving mapping: \(inboxId) → \(identity.id)")
-                    try saveProviderIdMapping(providerId: identity.id, for: inboxId)
-                } catch {
-                    Logger.error("Failed to re-save mapping for provider \(identity.id): \(error)")
-                }
-            }
-        } catch {
-            Logger.error("Failed to load identities: \(error)")
-        }
-    }
-
     /// WARNING: This will delete ALL keychain data. Use only for debugging/development.
     /// Call this method temporarily to clear keychain data when testing keychain access group changes.
     public func debugWipeAllKeychainData() {
