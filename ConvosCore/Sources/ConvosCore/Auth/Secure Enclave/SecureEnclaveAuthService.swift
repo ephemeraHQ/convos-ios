@@ -3,10 +3,12 @@ import Foundation
 import XMTPiOS
 
 public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
-    private let identityStore: SecureEnclaveIdentityStore = .init()
+    private let identityStore: SecureEnclaveIdentityStore
     private let authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
-    public init() {}
+    public init(accessGroup: String? = nil) {
+        self.identityStore = SecureEnclaveIdentityStore(accessGroup: accessGroup)
+    }
 
     public var state: AuthServiceState {
         authStateSubject.value
@@ -91,5 +93,13 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
 
         let result = AuthServiceResult(inboxes: inboxes)
         authStateSubject.send(.authorized(result))
+    }
+
+    // MARK: - Debug/Development Methods
+
+    /// WARNING: This will delete ALL keychain data. Use only for debugging/development.
+    /// Call this method temporarily to clear keychain data when testing keychain access group changes.
+    public func debugWipeAllKeychainData() {
+        identityStore.debugWipeAllKeychainData()
     }
 }

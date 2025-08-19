@@ -4,7 +4,7 @@ import Foundation
 extension ConvosClient {
     public static func client(databaseManager: any DatabaseManagerProtocol = DatabaseManager.shared,
                               environment: AppEnvironment) -> ConvosClient {
-        let localAuthService = SecureEnclaveAuthService()
+        let localAuthService = SecureEnclaveAuthService(accessGroup: environment.keychainAccessGroup)
         let databaseWriter = databaseManager.dbWriter
         let databaseReader = databaseManager.dbReader
         let sessionManager = SessionManager(

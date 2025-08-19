@@ -80,6 +80,32 @@ public enum AppEnvironment {
         }
     }
 
+        public var keychainGroupIdentifier: String {
+        // The keychain access group needs the team prefix
+        let teamPrefix = "FY4NZR34Z3."
+        let bundleIdentifier: String
+
+        switch self {
+        case .local:
+            bundleIdentifier = "org.convos.ios-local"
+        case .tests:
+            bundleIdentifier = "org.convos.ios-local"
+        case .dev:
+            bundleIdentifier = "org.convos.ios-preview"
+        case .production:
+            bundleIdentifier = "org.convos.ios"
+        }
+
+        return teamPrefix + bundleIdentifier
+    }
+
+    public var keychainAccessGroup: String {
+        // Use the app group identifier with team prefix for keychain sharing
+        // This matches $(AppIdentifierPrefix)$(APP_GROUP_IDENTIFIER) in entitlements
+        let teamPrefix = "FY4NZR34Z3."
+        return teamPrefix + appGroupIdentifier
+    }
+
     public var relyingPartyIdentifier: String {
         switch self {
         case .local(let config):

@@ -20,6 +20,14 @@ struct ConvosApp: App {
 
         Logger.info("🚀 App starting with environment: \(environment)")
 
+        // TEMPORARY: Wipe keychain data to fix access group migration
+        // Remove this after testing!
+        #if DEBUG
+        // Logger.warning("🚨 TEMPORARY: Wiping keychain data for testing")
+        // let authService = SecureEnclaveAuthService(accessGroup: environment.keychainAccessGroup)
+        // authService.debugWipeAllKeychainData()
+        #endif
+
         do {
             try convos.prepare()
         } catch {

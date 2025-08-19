@@ -16,6 +16,7 @@ protocol SecureEnclaveKeyStore {
     func loadDatabaseKey(for identifier: String) throws -> Data?
 
     var keychainService: String { get }
+    var keychainAccessGroup: String? { get }
 }
 
 enum SecureEnclaveKeyStoreError: Error {
@@ -34,13 +35,17 @@ extension SecureEnclaveKeyStore {
 
     func saveDatabaseKey(_ databaseKey: Data, for identifier: String) throws -> Data {
         let identifier = identifier.lowercased()
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: identifier,
             kSecAttrService as String: keychainService,
             kSecValueData as String: databaseKey,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
+
+        if let accessGroup = keychainAccessGroup {
+            query[kSecAttrAccessGroup as String] = accessGroup
+        }
         let status = SecItemAdd(query as CFDictionary, nil)
         if status == errSecDuplicateItem {
             Logger.info("Database key found for identifier: \(identifier), overwriting...")
@@ -59,9 +64,9 @@ extension SecureEnclaveKeyStore {
         return databaseKey
     }
 
-    func loadDatabaseKey(for identifier: String) throws -> Data? {
+        func loadDatabaseKey(for identifier: String) throws -> Data? {
         let identifier = identifier.lowercased()
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: identifier,
             kSecAttrService as String: keychainService,
@@ -70,8 +75,26 @@ extension SecureEnclaveKeyStore {
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
+        if let accessGroup = keychainAccessGroup {
+            query[kSecAttrAccessGroup as String] = accessGroup
+        }
+
         var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        var status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        // If not found with access group, try without access group for backward compatibility
+        if status == errSecItemNotFound && keychainAccessGroup != nil {
+            var fallbackQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrAccount as String: identifier,
+                kSecAttrService as String: keychainService,
+                kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne,
+                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+            ]
+            // Don't add access group for fallback
+            status = SecItemCopyMatching(fallbackQuery as CFDictionary, &item)
+        }
 
         guard status != errSecItemNotFound else { return nil }
         guard status == errSecSuccess, let data = item as? Data else {
@@ -84,7 +107,20 @@ extension SecureEnclaveKeyStore {
 
 final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     internal let keychainService: String = "com.convos.ios.SecureEnclaveIdentityStore"
+    internal let keychainAccessGroup: String?
+
+    init(accessGroup: String? = nil) {
+        self.keychainAccessGroup = accessGroup
+    }
+
     private let identitiesListKey: String = "com.convos.ios.SecureEnclaveIdentityStore.identitiesList"
+
+    /// Helper method to add keychain access group to a query if configured
+    private func addAccessGroupIfNeeded(to query: inout [String: Any]) {
+        if let accessGroup = keychainAccessGroup {
+            query[kSecAttrAccessGroup as String] = accessGroup
+        }
+    }
 
     enum SecureEnclaveUserStoreError: Error {
         case failedRetrievingDatabaseKey,
@@ -293,8 +329,8 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         }
     }
 
-    private func loadIdentitiesList() throws -> [String] {
-        let query: [String: Any] = [
+        private func loadIdentitiesList() throws -> [String] {
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: identitiesListKey,
             kSecAttrService as String: keychainService,
@@ -302,8 +338,23 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
 
+        addAccessGroupIfNeeded(to: &query)
+
         var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        var status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        // If not found with access group, try without access group for backward compatibility
+        if status == errSecItemNotFound && keychainAccessGroup != nil {
+            var fallbackQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrAccount as String: identitiesListKey,
+                kSecAttrService as String: keychainService,
+                kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne
+            ]
+            // Don't add access group for fallback
+            status = SecItemCopyMatching(fallbackQuery as CFDictionary, &item)
+        }
 
         guard status != errSecItemNotFound else { return [] }
         guard status == errSecSuccess, let data = item as? Data else {
@@ -320,12 +371,14 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     private func saveIdentitiesList(_ identitiesList: [String]) throws {
         let data = try JSONEncoder().encode(identitiesList)
 
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: identitiesListKey,
             kSecAttrService as String: keychainService,
             kSecValueData as String: data
         ]
+
+        addAccessGroupIfNeeded(to: &query)
 
         SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
 
@@ -368,13 +421,15 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             throw SecureEnclaveUserStoreError.failedSavingInboxId
         }
 
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "\(identifier).inboxId",
             kSecAttrService as String: keychainService,
             kSecValueData as String: inboxIdData,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
+
+        addAccessGroupIfNeeded(to: &query)
 
         SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
 
@@ -384,9 +439,9 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         }
     }
 
-    func loadInboxId(for identityId: String) throws -> String {
+        func loadInboxId(for identityId: String) throws -> String {
         let identifier = identityId.lowercased()
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "\(identifier).inboxId",
             kSecAttrService as String: keychainService,
@@ -395,8 +450,24 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
 
+        addAccessGroupIfNeeded(to: &query)
+
         var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        var status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        // If not found with access group, try without access group for backward compatibility
+        if status == errSecItemNotFound && keychainAccessGroup != nil {
+            var fallbackQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrAccount as String: "\(identifier).inboxId",
+                kSecAttrService as String: keychainService,
+                kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne,
+                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+            ]
+            // Don't add access group for fallback
+            status = SecItemCopyMatching(fallbackQuery as CFDictionary, &item)
+        }
 
         guard status == errSecSuccess, let data = item as? Data else {
             throw SecureEnclaveUserStoreError.failedLoadingInboxId
@@ -428,13 +499,15 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
             throw SecureEnclaveUserStoreError.failedSavingProviderId
         }
 
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "providerId.\(inboxId)",
             kSecAttrService as String: keychainService,
             kSecValueData as String: providerIdData,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
+
+        addAccessGroupIfNeeded(to: &query)
 
         SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
 
@@ -445,13 +518,15 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     }
 
     func loadProviderId(for inboxId: String) throws -> String {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "providerId.\(inboxId)",
             kSecAttrService as String: keychainService,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
+
+        addAccessGroupIfNeeded(to: &query)
 
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
@@ -506,5 +581,50 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         }
 
         return try JSONDecoder().decode(InboxType.self, from: data)
+    }
+
+    // MARK: - Debug/Development Methods
+
+    /// WARNING: This will delete ALL keychain data for this service. Use only for debugging/development.
+    /// Call this method temporarily to clear keychain data when testing keychain access group changes.
+        func debugWipeAllKeychainData() {
+        Logger.warning("🚨 WIPING ALL KEYCHAIN DATA FOR SERVICE: \(keychainService)")
+        if let accessGroup = keychainAccessGroup {
+            Logger.info("Configured keychain access group: \(accessGroup)")
+        } else {
+            Logger.info("No keychain access group configured")
+        }
+
+        // Delete all items for this service (with and without access groups)
+        let servicesToClear = [keychainService]
+        let accessGroupsToClear = [keychainAccessGroup, nil] // Try both with and without access group
+
+        for service in servicesToClear {
+            for accessGroup in accessGroupsToClear {
+                var query: [String: Any] = [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: service
+                ]
+
+                if let accessGroup = accessGroup {
+                    query[kSecAttrAccessGroup as String] = accessGroup
+                    Logger.info("Deleting keychain items for service: \(service) with access group: \(accessGroup)")
+                } else {
+                    Logger.info("Deleting keychain items for service: \(service) without access group")
+                }
+
+                let status = SecItemDelete(query as CFDictionary)
+                switch status {
+                case errSecSuccess:
+                    Logger.info("✅ Successfully deleted keychain items")
+                case errSecItemNotFound:
+                    Logger.info("ℹ️ No keychain items found to delete")
+                default:
+                    Logger.warning("⚠️ Failed to delete keychain items: \(status)")
+                }
+            }
+        }
+
+        Logger.warning("🚨 KEYCHAIN WIPE COMPLETE")
     }
 }

@@ -20,7 +20,9 @@ public struct NotificationExtensionEnvironment {
 
     /// Creates an auth service with the correct environment for the notification extension
     public static func createAuthService() -> SecureEnclaveAuthService {
-        return SecureEnclaveAuthService()
+        let environment = getEnvironment()
+        // Use the keychain group identifier as the keychain access group (with team prefix added by system)
+        return SecureEnclaveAuthService(accessGroup: environment.keychainAccessGroup)
     }
 
     /// Creates a cached push notification handler with the correct environment
