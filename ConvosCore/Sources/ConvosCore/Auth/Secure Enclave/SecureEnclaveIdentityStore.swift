@@ -231,8 +231,13 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     }
 
     func delete(for identityId: String) throws {
+        // Attempt to delete provider ID mapping, but don't fail entire cleanup if this fails
         if let inboxId = try? loadInboxId(for: identityId) {
-            try deleteProviderId(for: inboxId)
+            do {
+                try deleteProviderId(for: inboxId)
+            } catch {
+                Logger.error("Failed to delete provider ID for inbox \(inboxId): \(error). Continuing with cleanup...")
+            }
         }
         try deleteInboxId(for: identityId)
         try removeIdentityIdFromList(identityId)
@@ -294,11 +299,12 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     }
 
     private func deletePrivateKey(for identityId: String) throws {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "\(identityId).privateKey",
             kSecAttrService as String: keychainService
         ]
+        addAccessGroupIfNeeded(to: &query)
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedDeletingPrivateKey
@@ -306,11 +312,12 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     }
 
     private func deleteDatabaseKey(for identityId: String) throws {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: identityId.lowercased(),
             kSecAttrService as String: keychainService
         ]
+        addAccessGroupIfNeeded(to: &query)
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedDeletingDatabaseKey
@@ -318,11 +325,12 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     }
 
     private func deleteInboxType(for identityId: String) throws {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "\(identityId.lowercased()).inboxType",
             kSecAttrService as String: keychainService
         ]
+        addAccessGroupIfNeeded(to: &query)
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedDeletingInboxType
@@ -403,11 +411,12 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     }
 
     private func deleteInboxId(for identityId: String) throws {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "\(identityId.lowercased()).inboxId",
             kSecAttrService as String: keychainService
         ]
+        addAccessGroupIfNeeded(to: &query)
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedDeletingInboxId
@@ -481,14 +490,15 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
     }
 
     func deleteProviderId(for inboxId: String) throws {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "providerId.\(inboxId)",
             kSecAttrService as String: keychainService,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
         ]
+        addAccessGroupIfNeeded(to: &query)
 
-        let status = SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
+        let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess else {
             throw SecureEnclaveUserStoreError.failedDeletingProviderId
         }
