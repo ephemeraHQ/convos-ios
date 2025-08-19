@@ -1,6 +1,13 @@
 import ConvosCore
+import FirebaseAppCheck
 import FirebaseCore
 import Foundation
+
+final class AppAttestFactory: NSObject, AppCheckProviderFactory {
+    func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
+        AppAttestProvider(app: app)
+    }
+}
 
 enum FirebaseSetup {
     static func configure() {
@@ -10,7 +17,7 @@ enum FirebaseSetup {
             Logger.error("Failed to locate or parse Firebase options plist for environment: \(environment.name)")
             return
         }
-
+        AppCheck.setAppCheckProviderFactory(AppAttestFactory())
         FirebaseApp.configure(options: options)
         // Verification logs using Firebase SDK
         if let app = FirebaseApp.app() {
