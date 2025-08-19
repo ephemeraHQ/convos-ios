@@ -294,7 +294,7 @@ public actor InboxStateMachine {
     private func handleClientInitialized(_ client: any XMTPClientProvider) async throws {
         _state = .authorizing
 
-        try authService.save(inboxId: client.inboxId, for: inbox.providerId)
+        try authService.saveProviderIdMapping(providerId: inbox.providerId, for: client.inboxId)
 
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
@@ -334,6 +334,10 @@ public actor InboxStateMachine {
             provider: inbox.provider,
             providerId: inbox.providerId
         )
+
+        // Save provider ID mapping for push notifications
+        try authService.saveProviderIdMapping(providerId: inbox.providerId, for: client.inboxId)
+
         enqueueAction(.authorized(.init(inbox: inbox, client: client, apiClient: apiClient)))
     }
 

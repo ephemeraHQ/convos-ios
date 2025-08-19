@@ -181,6 +181,9 @@ class MockAuthService: LocalAuthServiceProtocol {
     func save(inboxId: String, for providerId: String) throws {
     }
 
+    func saveProviderIdMapping(providerId: String, for inboxId: String) throws {
+    }
+
     func inboxId(for providerId: String) throws -> String {
         return UUID().uuidString
     }

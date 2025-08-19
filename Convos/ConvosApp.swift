@@ -20,12 +20,22 @@ struct ConvosApp: App {
 
         Logger.info("🚀 App starting with environment: \(environment)")
 
-        // TEMPORARY: Wipe keychain data to fix access group migration
-        // Remove this after testing!
+        // TEMPORARY: Debug keychain mappings and re-save missing ones
         #if DEBUG
         // Logger.warning("🚨 TEMPORARY: Wiping keychain data for testing")
         // let authService = SecureEnclaveAuthService(accessGroup: environment.keychainAccessGroup)
+
+        Logger.info("🔍 TEMPORARY: Listing keychain provider ID mappings")
+        let authService = SecureEnclaveAuthService(accessGroup: environment.keychainAccessGroup)
         // authService.debugWipeAllKeychainData()
+
+        authService.debugListAllProviderIdMappings()
+
+        Logger.info("🔄 TEMPORARY: Re-saving provider ID mappings")
+        authService.debugReSaveProviderIdMappings()
+
+        Logger.info("🔍 TEMPORARY: Listing keychain mappings after re-save")
+        authService.debugListAllProviderIdMappings()
         #endif
 
         do {

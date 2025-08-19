@@ -494,8 +494,16 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         }
     }
 
-    func save(providerId: String, for inboxId: String) throws {
+        func save(providerId: String, for inboxId: String) throws {
+        Logger.info("💾 Saving provider ID mapping: \(inboxId) → \(providerId)")
+        if let accessGroup = keychainAccessGroup {
+            Logger.info("Using keychain access group: \(accessGroup)")
+        } else {
+            Logger.info("No keychain access group configured")
+        }
+
         guard let providerIdData = providerId.data(using: .utf8) else {
+            Logger.error("Failed to encode provider ID data")
             throw SecureEnclaveUserStoreError.failedSavingProviderId
         }
 
@@ -512,12 +520,22 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         SecItemDelete(query as CFDictionary) // Delete first to avoid duplicates
 
         let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else {
+        if status == errSecSuccess {
+            Logger.info("✅ Successfully saved provider ID mapping")
+        } else {
+            Logger.error("❌ Failed to save provider ID mapping. Status: \(status)")
             throw SecureEnclaveUserStoreError.failedSavingProviderId
         }
     }
 
     func loadProviderId(for inboxId: String) throws -> String {
+        Logger.info("Loading provider ID for inbox: \(inboxId)")
+        if let accessGroup = keychainAccessGroup {
+            Logger.info("Using keychain access group: \(accessGroup)")
+        } else {
+            Logger.info("No keychain access group configured")
+        }
+
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "providerId.\(inboxId)",
@@ -529,16 +547,36 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
         addAccessGroupIfNeeded(to: &query)
 
         var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        var status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        Logger.info("First query status: \(status)")
+
+        // If not found with access group, try without access group for backward compatibility
+        if status == errSecItemNotFound && keychainAccessGroup != nil {
+            Logger.info("Trying fallback query without access group")
+            var fallbackQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrAccount as String: "providerId.\(inboxId)",
+                kSecAttrService as String: keychainService,
+                kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne,
+            ]
+            // Don't add access group for fallback
+            status = SecItemCopyMatching(fallbackQuery as CFDictionary, &item)
+            Logger.info("Fallback query status: \(status)")
+        }
 
         guard status == errSecSuccess, let data = item as? Data else {
+            Logger.error("Failed to load provider ID. Status: \(status)")
             throw SecureEnclaveUserStoreError.failedLoadingProviderId
         }
 
         guard let providerId = String(data: data, encoding: .utf8) else {
+            Logger.error("Failed to decode provider ID data")
             throw SecureEnclaveUserStoreError.failedLoadingProviderId
         }
 
+        Logger.info("Successfully loaded provider ID: \(providerId)")
         return providerId
     }
 
@@ -585,9 +623,56 @@ final class SecureEnclaveIdentityStore: SecureEnclaveKeyStore {
 
     // MARK: - Debug/Development Methods
 
+        /// Debug method to list all provider ID mappings in the keychain
+    func debugListAllProviderIdMappings() {
+        Logger.info("🔍 LISTING ALL PROVIDER ID MAPPINGS")
+
+        // Query for all items with the providerId prefix
+        let accessGroupsToTry = [keychainAccessGroup, nil]
+
+        for accessGroup in accessGroupsToTry {
+            var query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: keychainService,
+                kSecReturnAttributes as String: true,
+                kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitAll
+            ]
+
+            if let accessGroup = accessGroup {
+                query[kSecAttrAccessGroup as String] = accessGroup
+                Logger.info("Searching with access group: \(accessGroup)")
+            } else {
+                Logger.info("Searching without access group")
+            }
+
+            var result: CFTypeRef?
+            let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+            if status == errSecSuccess, let items = result as? [[String: Any]] {
+                Logger.info("Found \(items.count) keychain items")
+                for item in items {
+                    if let account = item[kSecAttrAccount as String] as? String,
+                       account.hasPrefix("providerId."),
+                       let data = item[kSecValueData as String] as? Data,
+                       let providerId = String(data: data, encoding: .utf8) {
+                        let inboxId = String(account.dropFirst("providerId.".count))
+                        Logger.info("  \(inboxId) → \(providerId)")
+                    } else if let account = item[kSecAttrAccount as String] as? String {
+                        Logger.info("  Non-providerId item: \(account)")
+                    }
+                }
+            } else {
+                Logger.info("Query failed with status: \(status)")
+            }
+        }
+
+        Logger.info("🔍 END PROVIDER ID MAPPINGS LIST")
+    }
+
     /// WARNING: This will delete ALL keychain data for this service. Use only for debugging/development.
     /// Call this method temporarily to clear keychain data when testing keychain access group changes.
-        func debugWipeAllKeychainData() {
+    func debugWipeAllKeychainData() {
         Logger.warning("🚨 WIPING ALL KEYCHAIN DATA FOR SERVICE: \(keychainService)")
         if let accessGroup = keychainAccessGroup {
             Logger.info("Configured keychain access group: \(accessGroup)")
