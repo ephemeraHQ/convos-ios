@@ -36,12 +36,14 @@ public extension AppEnvironment {
     }
 
     /// Retrieves stored environment configuration securely from the Keychain
-    static func retrieveSecureConfiguration() -> AppEnvironment? {
+    /// - Parameter accessGroup: The keychain access group to use (required for proper data sharing)
+    static func retrieveSecureConfiguration(accessGroup: String) -> AppEnvironment? {
         // Try to retrieve from Keychain
         let keychainQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "SharedAppConfiguration",
             kSecAttrService as String: "ConvosEnvironment",
+            kSecAttrAccessGroup as String: accessGroup,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
@@ -56,44 +58,6 @@ public extension AppEnvironment {
             return sharedConfig.toAppEnvironment()
         } else if status != errSecItemNotFound {
             Logger.error("Failed to retrieve environment configuration from Keychain: \(status)")
-        }
-
-        return nil
-    }
-
-    /// Retrieves stored environment configuration with app group fallback
-    static func retrieveSecureConfigurationWithFallback() -> AppEnvironment? {
-        // First try the current app's Keychain
-        if let environment = retrieveSecureConfiguration() {
-            return environment
-        }
-
-        // Try different app groups for extensions
-        let appGroups = [
-            "group.org.convos.ios-local",
-            "group.org.convos.ios-preview",
-            "group.org.convos.ios"
-        ]
-
-        for appGroup in appGroups {
-            let keychainQuery: [String: Any] = [
-                kSecClass as String: kSecClassGenericPassword,
-                kSecAttrAccount as String: "SharedAppConfiguration",
-                kSecAttrService as String: "ConvosEnvironment",
-                kSecAttrAccessGroup as String: appGroup,
-                kSecReturnData as String: true,
-                kSecMatchLimit as String: kSecMatchLimitOne
-            ]
-
-            var result: AnyObject?
-            let status = SecItemCopyMatching(keychainQuery as CFDictionary, &result)
-
-            if status == errSecSuccess,
-               let data = result as? Data,
-               let sharedConfig = try? JSONDecoder().decode(SharedAppConfiguration.self, from: data) {
-                Logger.info("Environment configuration retrieved from Keychain with app group: \(appGroup)")
-                return sharedConfig.toAppEnvironment()
-            }
         }
 
         return nil

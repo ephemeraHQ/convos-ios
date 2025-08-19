@@ -2,20 +2,21 @@ import Foundation
 
 /// Helper for notification extensions to get the correct environment configuration
 public struct NotificationExtensionEnvironment {
-    /// Gets the appropriate environment for the notification extension
-    /// This will try to retrieve the configuration stored by the main app,
-    /// or fall back to auto-detection based on bundle identifier and app groups
+    /// Gets the environment configuration stored by the main app
+    /// The NSE expects the main app to have stored its configuration in the shared keychain
     public static func getEnvironment() -> AppEnvironment {
-        // First, try to get the configuration stored securely by the main app
-        if let storedEnvironment = AppEnvironment.retrieveSecureConfigurationWithFallback() {
-            Logger.info("Notification extension using stored environment: \(storedEnvironment.name)")
-            return storedEnvironment
+        // Detect the environment to determine the correct access group
+        let detectedEnvironment = AppEnvironment.detected()
+
+        // Retrieve the configuration stored by the main app
+        guard let storedEnvironment = AppEnvironment.retrieveSecureConfiguration(accessGroup: detectedEnvironment.appGroupIdentifier) else {
+            Logger.warning("⚠️ No stored environment configuration found - main app should store config before NSE runs")
+            Logger.info("Notification extension using detected environment: \(detectedEnvironment.name)")
+            return detectedEnvironment
         }
 
-        // Fall back to auto-detection
-        let detectedEnvironment = AppEnvironment.detected()
-        Logger.info("Notification extension using detected environment: \(detectedEnvironment.name)")
-        return detectedEnvironment
+        Logger.info("Notification extension using stored environment: \(storedEnvironment.name)")
+        return storedEnvironment
     }
 
     /// Creates an auth service with the correct environment for the notification extension
