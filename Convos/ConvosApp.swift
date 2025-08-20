@@ -19,7 +19,6 @@ struct ConvosApp: App {
         }
 
         Logger.info("🚀 App starting with environment: \(environment)")
-
         do {
             try convos.prepare()
         } catch {

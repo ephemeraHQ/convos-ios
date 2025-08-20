@@ -15,16 +15,16 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "D8A2B6902DA4BA4B00EF8577"
-               BuildableName = "Convos.app"
-               BlueprintName = "Convos"
+               BlueprintIdentifier = "7AC599302E5592F900D65D07"
+               BuildableName = "KeychainIdentityStoreExample.app"
+               BlueprintName = "KeychainIdentityStoreExample"
                ReferencedContainer = "container:Convos.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
-      buildConfiguration = "Debug"
+      buildConfiguration = "Release"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
@@ -35,16 +35,27 @@
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "7ACA8BA22DE16DE200848799"
-               BuildableName = "ConvosTests.xctest"
-               BlueprintName = "ConvosTests"
+               BlueprintIdentifier = "7AC5993C2E5592FA00D65D07"
+               BuildableName = "KeychainIdentityStoreExampleTests.xctest"
+               BlueprintName = "KeychainIdentityStoreExampleTests"
+               ReferencedContainer = "container:Convos.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "7AC599462E5592FA00D65D07"
+               BuildableName = "KeychainIdentityStoreExampleUITests.xctest"
+               BlueprintName = "KeychainIdentityStoreExampleUITests"
                ReferencedContainer = "container:Convos.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Local"
+      buildConfiguration = "Dev"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
@@ -57,19 +68,12 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D8A2B6902DA4BA4B00EF8577"
-            BuildableName = "Convos.app"
-            BlueprintName = "Convos"
+            BlueprintIdentifier = "7AC599302E5592F900D65D07"
+            BuildableName = "KeychainIdentityStoreExample.app"
+            BlueprintName = "KeychainIdentityStoreExample"
             ReferencedContainer = "container:Convos.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <EnvironmentVariables>
-         <EnvironmentVariable
-            key = "CFNETWORK_DIAGNOSTICS"
-            value = "3"
-            isEnabled = "YES">
-         </EnvironmentVariable>
-      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -81,15 +85,15 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "D8A2B6902DA4BA4B00EF8577"
-            BuildableName = "Convos.app"
-            BlueprintName = "Convos"
+            BlueprintIdentifier = "7AC599302E5592F900D65D07"
+            BuildableName = "KeychainIdentityStoreExample.app"
+            BlueprintName = "KeychainIdentityStoreExample"
             ReferencedContainer = "container:Convos.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
    <AnalyzeAction
-      buildConfiguration = "Debug">
+      buildConfiguration = "Release">
    </AnalyzeAction>
    <ArchiveAction
       buildConfiguration = "Release"

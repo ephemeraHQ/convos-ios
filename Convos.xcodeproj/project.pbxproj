@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		7A5D3E962E43B82400DA9B83 /* SwiftUIIntrospect in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5D3E952E43B82400DA9B83 /* SwiftUIIntrospect */; };
+		7AC59AB12E56228200D65D07 /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AC59AB02E56228200D65D07 /* ConvosCore */; };
 		7AD545902E4EA8BE00500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD5458F2E4EA8BE00500ADF /* ConvosCore */; };
 		7AD545922E4EA8D200500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545912E4EA8D200500ADF /* ConvosCore */; };
 		7AD545942E4EA8F300500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545932E4EA8F300500ADF /* ConvosCore */; };
@@ -17,6 +18,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		7AC5993E2E5592FA00D65D07 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D8A2B6892DA4BA4B00EF8577 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7AC599302E5592F900D65D07;
+			remoteInfo = KeychainIdentityStoreExample;
+		};
 		7ACA8BA72DE16DE200848799 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D8A2B6892DA4BA4B00EF8577 /* Project object */;
@@ -112,6 +120,8 @@
 /* Begin PBXFileReference section */
 		7A1C3C512DB6F75000B723C0 /* Convos.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Convos.xcodeproj; sourceTree = "<group>"; };
 		7A7BB1322DB6FF8E009B8BBF /* Convos.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Convos.xcodeproj; sourceTree = "<group>"; };
+		7AC599312E5592F900D65D07 /* KeychainIdentityStoreExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KeychainIdentityStoreExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7AC5993D2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeychainIdentityStoreExampleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7ACA8BA32DE16DE200848799 /* ConvosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConvosTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7AD5458D2E4EA89400500ADF /* ConvosCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = ConvosCore; sourceTree = "<group>"; };
 		7ADC0C6E2E2977800053978A /* ConvosAppClip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ConvosAppClip.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -171,6 +181,16 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		7AC599322E5592F900D65D07 /* KeychainIdentityStoreExample */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KeychainIdentityStoreExample;
+			sourceTree = "<group>";
+		};
+		7AC599402E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KeychainIdentityStoreExampleTests;
+			sourceTree = "<group>";
+		};
 		7ACA8BA42DE16DE200848799 /* ConvosTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ConvosTests;
@@ -214,6 +234,21 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7AC5992E2E5592F900D65D07 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7AC5993A2E5592FA00D65D07 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7AC59AB12E56228200D65D07 /* ConvosCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7ACA8BA02DE16DE200848799 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -297,6 +332,8 @@
 				7ADC0C6F2E2977800053978A /* ConvosAppClip */,
 				7ADC0C7F2E2977810053978A /* ConvosAppClipTests */,
 				7ADC0C892E2977810053978A /* ConvosAppClipUITests */,
+				7AC599322E5592F900D65D07 /* KeychainIdentityStoreExample */,
+				7AC599402E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */,
 				7ACA8BC42DE17F2E00848799 /* Frameworks */,
 				D8A2B6922DA4BA4B00EF8577 /* Products */,
 			);
@@ -311,6 +348,8 @@
 				7ADC0C6E2E2977800053978A /* ConvosAppClip.app */,
 				7ADC0C7C2E2977810053978A /* ConvosAppClipTests.xctest */,
 				7ADC0C862E2977810053978A /* ConvosAppClipUITests.xctest */,
+				7AC599312E5592F900D65D07 /* KeychainIdentityStoreExample.app */,
+				7AC5993D2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -318,6 +357,53 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		7AC599302E5592F900D65D07 /* KeychainIdentityStoreExample */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7AC599582E5592FA00D65D07 /* Build configuration list for PBXNativeTarget "KeychainIdentityStoreExample" */;
+			buildPhases = (
+				7AC5992D2E5592F900D65D07 /* Sources */,
+				7AC5992E2E5592F900D65D07 /* Frameworks */,
+				7AC5992F2E5592F900D65D07 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				7AC599322E5592F900D65D07 /* KeychainIdentityStoreExample */,
+			);
+			name = KeychainIdentityStoreExample;
+			packageProductDependencies = (
+				7AC5995B2E5593C300D65D07 /* ConvosCore */,
+			);
+			productName = KeychainIdentityStoreExample;
+			productReference = 7AC599312E5592F900D65D07 /* KeychainIdentityStoreExample.app */;
+			productType = "com.apple.product-type.application";
+		};
+		7AC5993C2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7AC599592E5592FA00D65D07 /* Build configuration list for PBXNativeTarget "KeychainIdentityStoreExampleTests" */;
+			buildPhases = (
+				7AC599392E5592FA00D65D07 /* Sources */,
+				7AC5993A2E5592FA00D65D07 /* Frameworks */,
+				7AC5993B2E5592FA00D65D07 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7AC5993F2E5592FA00D65D07 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				7AC599402E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */,
+			);
+			name = KeychainIdentityStoreExampleTests;
+			packageProductDependencies = (
+				7AC59AB02E56228200D65D07 /* ConvosCore */,
+			);
+			productName = KeychainIdentityStoreExampleTests;
+			productReference = 7AC5993D2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		7ACA8BA22DE16DE200848799 /* ConvosTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7ACA8BA92DE16DE200848799 /* Build configuration list for PBXNativeTarget "ConvosTests" */;
@@ -415,6 +501,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D808503D2DC94F4C00E708B0 /* Build configuration list for PBXNativeTarget "NotificationService" */;
 			buildPhases = (
+				DA06CC472E537505006BFFBA /* Copy Environment Config */,
 				D80850302DC94F4C00E708B0 /* Sources */,
 				D80850312DC94F4C00E708B0 /* Frameworks */,
 				D80850322DC94F4C00E708B0 /* Resources */,
@@ -475,6 +562,13 @@
 				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					7AC599302E5592F900D65D07 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					7AC5993C2E5592FA00D65D07 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 7AC599302E5592F900D65D07;
+					};
 					7ACA8BA22DE16DE200848799 = {
 						CreatedOnToolsVersion = 16.3;
 					};
@@ -510,7 +604,6 @@
 				D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
 				D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */,
 				7A5D3E942E43B82400DA9B83 /* XCRemoteSwiftPackageReference "swiftui-introspect" */,
-				7AD5458E2E4EA8BE00500ADF /* XCLocalSwiftPackageReference "ConvosCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
@@ -533,11 +626,27 @@
 				7ADC0C6D2E2977800053978A /* ConvosAppClip */,
 				7ADC0C7B2E2977810053978A /* ConvosAppClipTests */,
 				7ADC0C852E2977810053978A /* ConvosAppClipUITests */,
+				7AC599302E5592F900D65D07 /* KeychainIdentityStoreExample */,
+				7AC5993C2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		7AC5992F2E5592F900D65D07 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7AC5993B2E5592FA00D65D07 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7ACA8BA12DE16DE200848799 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -583,6 +692,27 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		DA06CC472E537505006BFFBA /* Copy Environment Config */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Convos/Config/$(CONFIG_FILE)",
+				"$(SRCROOT)/.env",
+			);
+			name = "Copy Environment Config";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/config.json",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#!/bin/bash\nset -e\n\n# Part 1: Generate Secrets.swift for Local builds only (App target only)\nif [ \"$TARGET_NAME\" = \"Convos\" ] && [ \"$CONFIGURATION\" = \"Local\" ]; then\n    echo \"🏠 Local build detected - generating secrets with auto-detected IP\"\n    \n    SECRETS_FILE=\"${SRCROOT}/Convos/Config/Secrets.swift\"\n    \n    # Get the first routable IPv4 address (excluding link-local/APIPA addresses)\n    # First try to get a public IP (not in private ranges)\n    LOCAL_IP=$(ifconfig | grep -E \"inet [0-9]+\" | grep -v \"127\\.\" | grep -v \"169\\.254\\.\" | grep -v \"10\\.\" | grep -v \"172\\.1[6-9]\\.\" | grep -v \"172\\.2[0-9]\\.\" | grep -v \"172\\.3[0-1]\\.\" | grep -v \"192\\.168\\.\" | head -1 | awk '{print $2}')\n    # If no public IP, get the first private network IP (but not link-local)\n    if [ -z \"$LOCAL_IP\" ]; then\n        LOCAL_IP=$(ifconfig | grep -E \"inet [0-9]+\" | grep -v \"127\\.\" | grep -v \"169\\.254\\.\" | head -1 | awk '{print $2}')\n    fi\n    \n    if [ -z \"$LOCAL_IP\" ]; then\n        echo \"❌ Could not detect local IP address\"\n        exit 1\n    fi\n    \n    echo \"✅ Detected local IP\"\n    \n    # Create directory if needed\n    mkdir -p \"${SRCROOT}/Convos/Config\"\n    \n    # Start generating Secrets.swift\n    cat > \"$SECRETS_FILE\" << 'HEADER_EOF'\nimport Foundation\n\n// WARNING:\n// This code is generated by the build phase for Local development.\n// Do not edit this file directly. Your changes will be lost on next build.\n// Git does not track this file.\n// For Local builds, the IP addresses are auto-detected from your network interfaces.\n// For other environments, edit the .env file and run ./Scripts/generate-secrets.sh\n\n// swiftlint:disable all\n\n/// Secrets are generated automatically for Local development\nenum Secrets {\nHEADER_EOF\n\n    # Check if .env has custom values first, otherwise auto-detect\n    CONVOS_API_BASE_URL=\"\"\n    XMTP_CUSTOM_HOST=\"\"\n    \n    if [ -f \"${SRCROOT}/.env\" ]; then\n        # Check for uncommented values in .env\n        CONVOS_API_BASE_URL=$(grep -v '^#' \"${SRCROOT}/.env\" | grep '^CONVOS_API_BASE_URL=' | cut -d'=' -f2- | sed -e 's/^\"//' -e 's/\"$//' || true)\n        XMTP_CUSTOM_HOST=$(grep -v '^#' \"${SRCROOT}/.env\" | grep '^XMTP_CUSTOM_HOST=' | cut -d'=' -f2- | sed -e 's/^\"//' -e 's/\"$//' || true)\n    fi\n\n    # Use .env values if present, otherwise auto-detect\n    if [ -n \"$CONVOS_API_BASE_URL\" ]; then\n        echo \"🔧 Using CONVOS_API_BASE_URL from .env\"\n        echo \"    static let CONVOS_API_BASE_URL = \\\"$CONVOS_API_BASE_URL\\\"\" >> \"$SECRETS_FILE\"\n    else\n        echo \"🔍 Auto-detecting CONVOS_API_BASE_URL\"\n        echo \"    static let CONVOS_API_BASE_URL = \\\"http://$LOCAL_IP:4000/api\\\"\" >> \"$SECRETS_FILE\"\n    fi\n\n    if [ -n \"$XMTP_CUSTOM_HOST\" ]; then\n        echo \"🔧 Using XMTP_CUSTOM_HOST from .env\"\n        echo \"    static let XMTP_CUSTOM_HOST = \\\"$XMTP_CUSTOM_HOST\\\"\" >> \"$SECRETS_FILE\"\n    else\n        echo \"🔍 Auto-detecting XMTP_CUSTOM_HOST\"\n        echo \"    static let XMTP_CUSTOM_HOST = \\\"$LOCAL_IP\\\"\" >> \"$SECRETS_FILE\"\n    fi\n    \n    # Add other secrets from .env if available\n    if [ -f \"${SRCROOT}/.env\" ]; then\n        echo \"📋 Adding additional secrets from .env file...\"\n        \n        # Process .env file: skip comments, empty lines, and IP-related keys (since we handled them above), then format as Swift\n        sed -n '/^[^#]/p' \"${SRCROOT}/.env\" | grep '=' | grep -v '^CONVOS_API_BASE_URL' | grep -v '^XMTP_CUSTOM_HOST' | sed 's/^\\([^=]*\\)=\\(.*\\)$/    static let \\1 = \"\\2\"/' | sed 's/\"\"\\(.*\\)\"\"/\"\\1\"/' >> \"$SECRETS_FILE\"\n    fi\n    \n    # Close the enum\n    cat >> \"$SECRETS_FILE\" << 'FOOTER_EOF'\n}\n\n// swiftlint:enable all\nFOOTER_EOF\n    \n    echo \"🏁 Generated Secrets.swift with auto-detected IP\"\nfi\n\n# Part 2: Copy config file (existing functionality)\nCONFIG_SOURCE=\"${SRCROOT}/Convos/Config/${CONFIG_FILE}\"\nCONFIG_DEST=\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}/config.json\"\n\nif [ ! -f \"$CONFIG_SOURCE\" ]; then\n    echo \"error: Config file not found: $CONFIG_SOURCE (CONFIG_FILE=$CONFIG_FILE)\"\n    exit 1\nfi\n\necho \"📋 Copying $CONFIG_FILE to app bundle\"\ncp \"$CONFIG_SOURCE\" \"$CONFIG_DEST\"\necho \"✅ Config copied successfully\"\n";
+		};
 		DAFC98F62E37C4E700991094 /* Copy Environment Config */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -603,11 +733,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "#!/bin/bash\nset -e\n\n# Part 1: Generate Secrets.swift for Local builds only\nif [ \"$CONFIGURATION\" = \"Local\" ]; then\n    echo \"🏠 Local build detected - generating secrets with auto-detected IP\"\n    \n    SECRETS_FILE=\"${SRCROOT}/Convos/Config/Secrets.swift\"\n    \n    # Get the first non-internal IPv4 address\n    LOCAL_IP=$(ifconfig | grep -E \"inet [0-9]+\" | grep -v \"127.0.0.1\" | head -1 | awk '{print $2}')\n    \n    if [ -z \"$LOCAL_IP\" ]; then\n        echo \"❌ Could not detect local IP address\"\n        exit 1\n    fi\n    \n    echo \"✅ Detected local IP\"\n    \n    # Create directory if needed\n    mkdir -p \"${SRCROOT}/Convos/Config\"\n    \n    # Start generating Secrets.swift\n    cat > \"$SECRETS_FILE\" << 'HEADER_EOF'\nimport Foundation\n\n// WARNING:\n// This code is generated by the build phase for Local development.\n// Do not edit this file directly. Your changes will be lost on next build.\n// Git does not track this file.\n// For Local builds, the IP addresses are auto-detected from your network interfaces.\n// For other environments, edit the .env file and run ./Scripts/generate-secrets.sh\n\n// swiftlint:disable all\n\n/// Secrets are generated automatically for Local development\nenum Secrets {\nHEADER_EOF\n\n    # Check if .env has custom values first, otherwise auto-detect\n    CONVOS_API_BASE_URL=\"\"\n    XMTP_CUSTOM_HOST=\"\"\n    \n    if [ -f \"${SRCROOT}/.env\" ]; then\n        # Check for uncommented values in .env\n        CONVOS_API_BASE_URL=$(grep -v '^#' \"${SRCROOT}/.env\" | grep '^CONVOS_API_BASE_URL=' | cut -d'=' -f2- | sed -e 's/^\"//' -e 's/\"$//' || true)\n        XMTP_CUSTOM_HOST=$(grep -v '^#' \"${SRCROOT}/.env\" | grep '^XMTP_CUSTOM_HOST=' | cut -d'=' -f2- | sed -e 's/^\"//' -e 's/\"$//' || true)\n    fi\n\n    # Use .env values if present, otherwise auto-detect\n    if [ -n \"$CONVOS_API_BASE_URL\" ]; then\n        echo \"🔧 Using CONVOS_API_BASE_URL from .env\"\n        echo \"    static let CONVOS_API_BASE_URL = \\\"$CONVOS_API_BASE_URL\\\"\" >> \"$SECRETS_FILE\"\n    else\n        echo \"🔍 Auto-detecting CONVOS_API_BASE_URL\"\n        echo \"    static let CONVOS_API_BASE_URL = \\\"http://$LOCAL_IP:4000/api\\\"\" >> \"$SECRETS_FILE\"\n    fi\n\n    if [ -n \"$XMTP_CUSTOM_HOST\" ]; then\n        echo \"🔧 Using XMTP_CUSTOM_HOST from .env\"\n        echo \"    static let XMTP_CUSTOM_HOST = \\\"$XMTP_CUSTOM_HOST\\\"\" >> \"$SECRETS_FILE\"\n    else\n        echo \"🔍 Auto-detecting XMTP_CUSTOM_HOST\"\n        echo \"    static let XMTP_CUSTOM_HOST = \\\"$LOCAL_IP\\\"\" >> \"$SECRETS_FILE\"\n    fi\n    \n    # Add other secrets from .env if available\n    if [ -f \"${SRCROOT}/.env\" ]; then\n        echo \"📋 Adding additional secrets from .env file...\"\n        \n        # Process .env file: skip comments, empty lines, and IP-related keys (since we handled them above), then format as Swift\n        sed -n '/^[^#]/p' \"${SRCROOT}/.env\" | grep '=' | grep -v '^CONVOS_API_BASE_URL' | grep -v '^XMTP_CUSTOM_HOST' | sed 's/^\\([^=]*\\)=\\(.*\\)$/    static let \\1 = \"\\2\"/' | sed 's/\"\"\\(.*\\)\"\"/\"\\1\"/' >> \"$SECRETS_FILE\"\n    fi\n    \n    # Close the enum\n    cat >> \"$SECRETS_FILE\" << 'FOOTER_EOF'\n}\n\n// swiftlint:enable all\nFOOTER_EOF\n    \n    echo \"🏁 Generated Secrets.swift with auto-detected IP\"\nfi\n\n# Part 2: Copy config file (existing functionality)\nCONFIG_SOURCE=\"${SRCROOT}/Convos/Config/${CONFIG_FILE}\"\nCONFIG_DEST=\"${CODESIGNING_FOLDER_PATH}/config.json\"\n\nif [ ! -f \"$CONFIG_SOURCE\" ]; then\n    echo \"error: Config file not found: $CONFIG_SOURCE (CONFIG_FILE=$CONFIG_FILE)\"\n    exit 1\nfi\n\necho \"📋 Copying $CONFIG_FILE to app bundle\"\ncp \"$CONFIG_SOURCE\" \"$CONFIG_DEST\"\necho \"✅ Config copied successfully\"\n";
+			shellScript = "#!/bin/bash\nset -e\n\n# Part 1: Generate Secrets.swift for Local builds only (App target only)\nif [ \"$TARGET_NAME\" = \"Convos\" ] && [ \"$CONFIGURATION\" = \"Local\" ]; then\n    echo \"🏠 Local build detected - generating secrets with auto-detected IP\"\n    \n    SECRETS_FILE=\"${SRCROOT}/Convos/Config/Secrets.swift\"\n    \n    # Get the first routable IPv4 address (excluding link-local/APIPA addresses)\n    # First try to get a public IP (not in private ranges)\n    LOCAL_IP=$(ifconfig | grep -E \"inet [0-9]+\" | grep -v \"127\\.\" | grep -v \"169\\.254\\.\" | grep -v \"10\\.\" | grep -v \"172\\.1[6-9]\\.\" | grep -v \"172\\.2[0-9]\\.\" | grep -v \"172\\.3[0-1]\\.\" | grep -v \"192\\.168\\.\" | head -1 | awk '{print $2}')\n    # If no public IP, get the first private network IP (but not link-local)\n    if [ -z \"$LOCAL_IP\" ]; then\n        LOCAL_IP=$(ifconfig | grep -E \"inet [0-9]+\" | grep -v \"127\\.\" | grep -v \"169\\.254\\.\" | head -1 | awk '{print $2}')\n    fi\n    \n    if [ -z \"$LOCAL_IP\" ]; then\n        echo \"❌ Could not detect local IP address\"\n        exit 1\n    fi\n    \n    echo \"✅ Detected local IP\"\n    \n    # Create directory if needed\n    mkdir -p \"${SRCROOT}/Convos/Config\"\n    \n    # Start generating Secrets.swift\n    cat > \"$SECRETS_FILE\" << 'HEADER_EOF'\nimport Foundation\n\n// WARNING:\n// This code is generated by the build phase for Local development.\n// Do not edit this file directly. Your changes will be lost on next build.\n// Git does not track this file.\n// For Local builds, the IP addresses are auto-detected from your network interfaces.\n// For other environments, edit the .env file and run ./Scripts/generate-secrets.sh\n\n// swiftlint:disable all\n\n/// Secrets are generated automatically for Local development\nenum Secrets {\nHEADER_EOF\n\n    # Check if .env has custom values first, otherwise auto-detect\n    CONVOS_API_BASE_URL=\"\"\n    XMTP_CUSTOM_HOST=\"\"\n    \n    if [ -f \"${SRCROOT}/.env\" ]; then\n        # Check for uncommented values in .env\n        CONVOS_API_BASE_URL=$(grep -v '^#' \"${SRCROOT}/.env\" | grep '^CONVOS_API_BASE_URL=' | cut -d'=' -f2- | sed -e 's/^\"//' -e 's/\"$//' || true)\n        XMTP_CUSTOM_HOST=$(grep -v '^#' \"${SRCROOT}/.env\" | grep '^XMTP_CUSTOM_HOST=' | cut -d'=' -f2- | sed -e 's/^\"//' -e 's/\"$//' || true)\n    fi\n\n    # Use .env values if present, otherwise auto-detect\n    if [ -n \"$CONVOS_API_BASE_URL\" ]; then\n        echo \"🔧 Using CONVOS_API_BASE_URL from .env\"\n        echo \"    static let CONVOS_API_BASE_URL = \\\"$CONVOS_API_BASE_URL\\\"\" >> \"$SECRETS_FILE\"\n    else\n        echo \"🔍 Auto-detecting CONVOS_API_BASE_URL\"\n        echo \"    static let CONVOS_API_BASE_URL = \\\"http://$LOCAL_IP:4000/api\\\"\" >> \"$SECRETS_FILE\"\n    fi\n\n    if [ -n \"$XMTP_CUSTOM_HOST\" ]; then\n        echo \"🔧 Using XMTP_CUSTOM_HOST from .env\"\n        echo \"    static let XMTP_CUSTOM_HOST = \\\"$XMTP_CUSTOM_HOST\\\"\" >> \"$SECRETS_FILE\"\n    else\n        echo \"🔍 Auto-detecting XMTP_CUSTOM_HOST\"\n        echo \"    static let XMTP_CUSTOM_HOST = \\\"$LOCAL_IP\\\"\" >> \"$SECRETS_FILE\"\n    fi\n    \n    # Add other secrets from .env if available\n    if [ -f \"${SRCROOT}/.env\" ]; then\n        echo \"📋 Adding additional secrets from .env file...\"\n        \n        # Process .env file: skip comments, empty lines, and IP-related keys (since we handled them above), then format as Swift\n        sed -n '/^[^#]/p' \"${SRCROOT}/.env\" | grep '=' | grep -v '^CONVOS_API_BASE_URL' | grep -v '^XMTP_CUSTOM_HOST' | sed 's/^\\([^=]*\\)=\\(.*\\)$/    static let \\1 = \"\\2\"/' | sed 's/\"\"\\(.*\\)\"\"/\"\\1\"/' >> \"$SECRETS_FILE\"\n    fi\n    \n    # Close the enum\n    cat >> \"$SECRETS_FILE\" << 'FOOTER_EOF'\n}\n\n// swiftlint:enable all\nFOOTER_EOF\n    \n    echo \"🏁 Generated Secrets.swift with auto-detected IP\"\nfi\n\n# Part 2: Copy config file (existing functionality)\nCONFIG_SOURCE=\"${SRCROOT}/Convos/Config/${CONFIG_FILE}\"\nCONFIG_DEST=\"${CODESIGNING_FOLDER_PATH}/config.json\"\n\nif [ ! -f \"$CONFIG_SOURCE\" ]; then\n    echo \"error: Config file not found: $CONFIG_SOURCE (CONFIG_FILE=$CONFIG_FILE)\"\n    exit 1\nfi\n\necho \"📋 Copying $CONFIG_FILE to app bundle\"\ncp \"$CONFIG_SOURCE\" \"$CONFIG_DEST\"\necho \"✅ Config copied successfully\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		7AC5992D2E5592F900D65D07 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7AC599392E5592FA00D65D07 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7ACA8B9F2DE16DE200848799 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -653,6 +797,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		7AC5993F2E5592FA00D65D07 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7AC599302E5592F900D65D07 /* KeychainIdentityStoreExample */;
+			targetProxy = 7AC5993E2E5592FA00D65D07 /* PBXContainerItemProxy */;
+		};
 		7ACA8BA82DE16DE200848799 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = D8A2B6902DA4BA4B00EF8577 /* Convos */;
@@ -689,6 +838,295 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		7AC5994F2E5592FA00D65D07 /* Dev */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = KeychainIdentityStoreExample/KeychainIdentityStoreExample.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = org.convos.KeychainIdentityStoreExample;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Dev;
+		};
+		7AC599502E5592FA00D65D07 /* Local */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = KeychainIdentityStoreExample/KeychainIdentityStoreExample.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.convos.KeychainIdentityStoreExample;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Local;
+		};
+		7AC599512E5592FA00D65D07 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = KeychainIdentityStoreExample/KeychainIdentityStoreExample.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.convos.KeychainIdentityStoreExample;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7AC599522E5592FA00D65D07 /* Dev */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = org.convos.KeychainIdentityStoreExampleTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KeychainIdentityStoreExample.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/KeychainIdentityStoreExample";
+			};
+			name = Dev;
+		};
+		7AC599532E5592FA00D65D07 /* Local */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.convos.KeychainIdentityStoreExampleTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KeychainIdentityStoreExample.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/KeychainIdentityStoreExample";
+			};
+			name = Local;
+		};
+		7AC599542E5592FA00D65D07 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.convos.KeychainIdentityStoreExampleTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KeychainIdentityStoreExample.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/KeychainIdentityStoreExample";
+			};
+			name = Release;
+		};
 		7ACA8BAA2DE16DE200848799 /* Dev */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
@@ -1401,6 +1839,26 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		7AC599582E5592FA00D65D07 /* Build configuration list for PBXNativeTarget "KeychainIdentityStoreExample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7AC5994F2E5592FA00D65D07 /* Dev */,
+				7AC599502E5592FA00D65D07 /* Local */,
+				7AC599512E5592FA00D65D07 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7AC599592E5592FA00D65D07 /* Build configuration list for PBXNativeTarget "KeychainIdentityStoreExampleTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7AC599522E5592FA00D65D07 /* Dev */,
+				7AC599532E5592FA00D65D07 /* Local */,
+				7AC599542E5592FA00D65D07 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		7ACA8BA92DE16DE200848799 /* Build configuration list for PBXNativeTarget "ConvosTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1473,13 +1931,6 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		7AD5458E2E4EA8BE00500ADF /* XCLocalSwiftPackageReference "ConvosCore" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ConvosCore;
-		};
-/* End XCLocalSwiftPackageReference section */
-
 /* Begin XCRemoteSwiftPackageReference section */
 		7A5D3E942E43B82400DA9B83 /* XCRemoteSwiftPackageReference "swiftui-introspect" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -1512,6 +1963,14 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7A5D3E942E43B82400DA9B83 /* XCRemoteSwiftPackageReference "swiftui-introspect" */;
 			productName = SwiftUIIntrospect;
+		};
+		7AC5995B2E5593C300D65D07 /* ConvosCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ConvosCore;
+		};
+		7AC59AB02E56228200D65D07 /* ConvosCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ConvosCore;
 		};
 		7AD5458F2E4EA8BE00500ADF /* ConvosCore */ = {
 			isa = XCSwiftPackageProductDependency;

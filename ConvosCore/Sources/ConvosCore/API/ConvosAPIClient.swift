@@ -45,9 +45,10 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
     func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse
 
     func createInvite(_ requestBody: ConvosAPI.CreateInviteCode) async throws -> ConvosAPI.InviteDetailsResponse
-    func inviteDetails(_ code: String) async throws -> ConvosAPI.InviteDetailsResponse
+    func inviteDetails(_ inviteCode: String) async throws -> ConvosAPI.InviteDetailsResponse
     func publicInviteDetails(_ code: String) async throws -> ConvosAPI.PublicInviteDetailsResponse
     func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse
+    func deleteRequestToJoin(_ requestId: String) async throws -> ConvosAPI.DeleteRequestToJoinResponse
 
     func updateProfile(
         inboxId: String,
@@ -294,6 +295,11 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         return try await performRequest(request)
     }
 
+    func deleteRequestToJoin(_ requestId: String) async throws -> ConvosAPI.DeleteRequestToJoinResponse {
+        let request = try authenticatedRequest(for: "v1/invites/requests/\(requestId)", method: "DELETE")
+        return try await performRequest(request)
+    }
+
     // MARK: - Profiles
 
     func updateProfile(
@@ -531,7 +537,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         }
 
         let apnsEnv = environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
-        Logger.info("📱 Registering push token with APNS environment: \(apnsEnv) (raw enum: \(environment.apnsEnvironment))")
+        Logger.info("Registering push token with APNS environment: \(apnsEnv) (raw enum: \(environment.apnsEnvironment))")
 
         let body = Body(deviceId: deviceId,
                         pushToken: pushToken,

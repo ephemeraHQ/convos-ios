@@ -1,5 +1,4 @@
 import Foundation
-import UIKit
 
 public enum ConvosAPI {
     public enum AuthenticatorTransport: String, Codable {
@@ -83,8 +82,13 @@ public enum ConvosAPI {
 
     public struct RequestToJoinResponse: Decodable {
         public let id: String
-        public let inviteId: String
+        public let invite: InviteDetailsResponse
         public let createdAt: String
+    }
+
+    public struct DeleteRequestToJoinResponse: Decodable {
+        public let id: String
+        public let deleted: Bool
     }
 
     public struct UpdateProfileRequest: Encodable {

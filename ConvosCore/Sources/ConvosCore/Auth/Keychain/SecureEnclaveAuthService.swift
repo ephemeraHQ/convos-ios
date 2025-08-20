@@ -3,10 +3,12 @@ import Foundation
 import XMTPiOS
 
 public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
-    private let identityStore: SecureEnclaveIdentityStore = .init()
+    private let identityStore: KeychainIdentityStore
     private let authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
-    public init() {}
+    public init(accessGroup: String) {
+        self.identityStore = KeychainIdentityStore(accessGroup: accessGroup)
+    }
 
     public var state: AuthServiceState {
         authStateSubject.value
@@ -21,12 +23,11 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
     }
 
     public func register(displayName: String? = nil) throws -> any AuthServiceRegisteredResultType {
-        let inboxType: InboxType = .ephemeral
-        let identity = try identityStore.save(type: inboxType)
+        let identity = try identityStore.save()
         let result = AuthServiceRegisteredResult(
             displayName: displayName,
             inbox: AuthServiceInbox(
-                type: inboxType,
+                type: .ephemeral,
                 provider: .local,
                 providerId: identity.id,
                 signingKey: identity.privateKey,
@@ -43,9 +44,31 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
     }
 
     public func deleteAll() throws {
-        let identities = try identityStore.loadAll()
-        try identities.forEach { try identityStore.delete(for: $0.id) }
+        try identityStore.deleteAll()
         try refreshAuthState()
+    }
+
+    public func save(inboxId: String, for providerId: String) throws {
+        try identityStore.save(inboxId: inboxId, for: providerId)
+        try identityStore.save(providerId: providerId, for: inboxId)
+    }
+
+    public func inboxId(for providerId: String) throws -> String {
+        return try identityStore.loadInboxId(for: providerId)
+    }
+
+    public func inbox(for inboxId: String) throws -> (any AuthServiceInboxType)? {
+        let providerId = try identityStore.loadProviderId(for: inboxId)
+        guard let identity = try identityStore.load(for: providerId) else {
+            return nil
+        }
+        return AuthServiceInbox(
+            type: .ephemeral,
+            provider: .local,
+            providerId: identity.id,
+            signingKey: identity.privateKey,
+            databaseKey: identity.databaseKey
+        )
     }
 
     // MARK: - Private Helpers
@@ -59,7 +82,7 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
 
         let inboxes: [AuthServiceInbox] = identities.map { identity in
             AuthServiceInbox(
-                type: identity.type,
+                type: .ephemeral,
                 provider: .local,
                 providerId: identity.id,
                 signingKey: identity.privateKey,

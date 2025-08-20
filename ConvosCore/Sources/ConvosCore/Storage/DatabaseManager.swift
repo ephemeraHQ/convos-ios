@@ -29,12 +29,24 @@ public final class DatabaseManager: DatabaseManagerProtocol {
 
     private static func makeDatabasePool() throws -> DatabasePool {
         let fileManager = FileManager.default
-        let dbURL = try fileManager
+        // Use the shared App Group container so the main app and NSE share the same DB
+        let environment = AppEnvironment.detected()
+        let groupDirURL = environment.defaultDatabasesDirectoryURL
+        let dbURL = groupDirURL.appendingPathComponent("convos.sqlite")
+
+        // Ensure the App Group directory exists
+        try fileManager.createDirectory(at: groupDirURL, withIntermediateDirectories: true)
+
+        // Migrate legacy DB from Application Support → App Group on first run (if needed)
+        let legacyURL = try fileManager
             .url(for: .applicationSupportDirectory,
                  in: .userDomainMask,
                  appropriateFor: nil,
                  create: true)
             .appendingPathComponent("convos.sqlite")
+        if !fileManager.fileExists(atPath: dbURL.path), fileManager.fileExists(atPath: legacyURL.path) {
+            try fileManager.copyItem(at: legacyURL, to: dbURL)
+        }
 
         var config = Configuration()
         config.label = "ConvosDB"

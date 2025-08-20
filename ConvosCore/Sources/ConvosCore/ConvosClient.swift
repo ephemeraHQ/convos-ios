@@ -21,7 +21,7 @@ public final class ConvosClient {
     }
 
     public static func testClient(
-        authService: any LocalAuthServiceProtocol = SecureEnclaveAuthService()
+        authService: any LocalAuthServiceProtocol = SecureEnclaveAuthService(accessGroup: "test.group")
     ) -> ConvosClient {
         let databaseManager = MockDatabaseManager.shared
         let sessionManager = SessionManager(

@@ -87,6 +87,10 @@ struct MockAuthResult: AuthServiceResultType, AuthServiceRegisteredResultType, C
 }
 
 class MockAuthService: LocalAuthServiceProtocol {
+    func inbox(for inboxId: String) throws -> (any AuthServiceInboxType)? {
+        nil
+    }
+
     enum MockKeychainItem: String, KeychainItemProtocol {
         case mockUser
 
@@ -172,6 +176,16 @@ class MockAuthService: LocalAuthServiceProtocol {
         }
         _currentUser = nil
         authStateSubject.send(.unauthorized)
+    }
+
+    func save(inboxId: String, for providerId: String) throws {
+    }
+
+    func saveProviderIdMapping(providerId: String, for inboxId: String) throws {
+    }
+
+    func inboxId(for providerId: String) throws -> String {
+        return UUID().uuidString
     }
 
     private func getCurrentUser() throws -> MockAuthResult? {

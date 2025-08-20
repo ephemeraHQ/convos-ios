@@ -27,19 +27,19 @@ class PushNotificationManager: NSObject {
         let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
         let token = tokenParts.joined()
 
-        Logger.info("✅ Received device token from APNS: \(token)")
+        Logger.info("Received device token from APNS: \(token)")
         self.deviceToken = token
 
         // Store token in shared storage
         notificationProcessor.storeDeviceToken(token)
-        Logger.info("✅ Stored device token in shared storage")
+        Logger.info("Stored device token in shared storage")
 
         // Notify listeners that token changed so session-ready components can push it to backend
         NotificationCenter.default.post(name: .convosPushTokenDidChange, object: nil)
     }
 
     func handleRegistrationError(_ error: Error) {
-        Logger.error("❌ Failed to register for remote notifications: \(error)")
+        Logger.error("Failed to register for remote notifications: \(error)")
     }
 }
 
@@ -54,6 +54,31 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
 
         // Show notification even when app is in foreground
         return [.banner, .badge, .sound]
+    }
+
+    // Handle notification taps
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                            didReceive response: UNNotificationResponse) async {
+        let userInfo = response.notification.request.content.userInfo
+        Logger.debug("Notification tapped: \(userInfo)")
+
+        // Check if this is an explosion notification
+        if let notificationType = userInfo["notificationType"] as? String,
+           notificationType == "explosion",
+           let inboxId = userInfo["inboxId"] as? String,
+           let conversationId = userInfo["conversationId"] as? String {
+            await MainActor.run {
+                NotificationCenter.default.post(
+                    name: .explosionNotificationTapped,
+                    object: nil,
+                    userInfo: [
+                        "inboxId": inboxId,
+                        "conversationId": conversationId,
+                        "notificationType": notificationType
+                    ]
+                )
+            }
+        }
     }
 }
 

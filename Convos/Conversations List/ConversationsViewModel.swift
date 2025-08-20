@@ -22,6 +22,7 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
         }
     }
     var newConversationViewModel: NewConversationViewModel?
+    var presentingExplodeInfo: Bool = false
     private(set) var conversations: [Conversation] = []
     private(set) var conversationsCount: Int = 0
 
@@ -127,6 +128,16 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
                     newConversationViewModel = nil
                 }
             }
+
+        // Observe explosion notification taps
+        NotificationCenter.default
+            .publisher(for: .explosionNotificationTapped)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.presentingExplodeInfo = true
+            }
+            .store(in: &cancellables)
+
         conversationsCountRepository.conversationsCount
             .receive(on: DispatchQueue.main)
             .sink { [weak self] conversationsCount in

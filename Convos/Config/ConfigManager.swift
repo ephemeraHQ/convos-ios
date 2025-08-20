@@ -22,6 +22,8 @@ final class ConfigManager {
             fatalError("Missing 'environment' key in config.json")
         }
 
+        let environment: AppEnvironment
+
         switch envString {
         case "local":
             // For local, use Secrets for API URL if not overridden in config
@@ -32,7 +34,7 @@ final class ConfigManager {
                 xmtpEndpoint: Secrets.XMTP_CUSTOM_HOST.isEmpty ? nil : Secrets.XMTP_CUSTOM_HOST,
                 appCheckToken: Secrets.FIREBASE_APP_CHECK_TOKEN
             )
-            return .local(config: config)
+            environment = .local(config: config)
 
         case "dev":
             let config = ConvosConfiguration(
@@ -41,7 +43,7 @@ final class ConfigManager {
                 relyingPartyIdentifier: relyingPartyIdentifier,
                 appCheckToken: Secrets.FIREBASE_APP_CHECK_TOKEN
             )
-            return .dev(config: config)
+            environment = .dev(config: config)
 
         case "production":
             let config = ConvosConfiguration(
@@ -50,11 +52,16 @@ final class ConfigManager {
                 relyingPartyIdentifier: relyingPartyIdentifier,
                 appCheckToken: Secrets.FIREBASE_APP_CHECK_TOKEN
             )
-            return .production(config: config)
+            environment = .production(config: config)
 
         default:
             fatalError("Invalid environment '\(envString)' in config.json")
         }
+
+        // Store the environment configuration securely for the notification extension
+        environment.storeSecureConfiguration()
+
+        return environment
     }
 
     /// API base URL from config (optional for local, required for dev/prod)

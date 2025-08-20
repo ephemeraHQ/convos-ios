@@ -2,15 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>aps-environment</key>
-	<string>$(APNS_ENVIRONMENT)</string>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>$(APP_GROUP_IDENTIFIER)</string>
+		<string>group.org.convos.KeychainIdentityStoreExample</string>
 	</array>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)$(APP_GROUP_IDENTIFIER)</string>
+		<string>$(AppIdentifierPrefix)org.convos.KeychainIdentityStoreExample</string>
+		<string>$(AppIdentifierPrefix)group.org.convos.KeychainIdentityStoreExample</string>
 	</array>
 </dict>
 </plist>

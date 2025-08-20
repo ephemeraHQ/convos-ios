@@ -99,6 +99,7 @@ public actor InboxStateMachine {
 
     internal let inbox: any AuthServiceInboxType
     private let inboxWriter: any InboxWriterProtocol
+    private let authService: any LocalAuthServiceProtocol
     private let environment: AppEnvironment
     private let clientOptions: ClientOptions
     private let syncingManager: any SyncingManagerProtocol
@@ -138,18 +139,24 @@ public actor InboxStateMachine {
 
     // MARK: - Init
 
+    private let isNotificationServiceExtension: Bool
+
     init(
         inbox: any AuthServiceInboxType,
         inboxWriter: any InboxWriterProtocol,
+        authService: any LocalAuthServiceProtocol,
         syncingManager: any SyncingManagerProtocol,
         inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        isNotificationServiceExtension: Bool = false
     ) {
         self.inbox = inbox
         self.inboxWriter = inboxWriter
+        self.authService = authService
         self.syncingManager = syncingManager
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
+        self.isNotificationServiceExtension = isNotificationServiceExtension
 
         // Set custom XMTP host if provided
         Logger.info("🔧 XMTP Configuration:")
@@ -178,7 +185,8 @@ public actor InboxStateMachine {
                 ReactionCodec(),
                 AttachmentCodec(),
                 RemoteAttachmentCodec(),
-                GroupUpdatedCodec()
+                GroupUpdatedCodec(),
+                ExplodeSettingsCodec()
             ],
             dbEncryptionKey: inbox.databaseKey,
             dbDirectory: environment.defaultDatabasesDirectory
@@ -290,23 +298,34 @@ public actor InboxStateMachine {
 
     private func handleClientInitialized(_ client: any XMTPClientProvider) async throws {
         _state = .authorizing
+
+        try authService.save(inboxId: client.inboxId, for: inbox.providerId)
+
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
 
-        // Attempt to register for remote notifications to obtain APNS token ASAP
-        await registerForRemoteNotificationsAlways()
+        if isNotificationServiceExtension {
+            Logger.info("🚀 NSE Mode: Lightweight initialization - skipping push registration and profile refresh")
+        } else {
+            // Main app: perform full initialization including push notification operations
+            Logger.info("🔧 Main App Mode: Full initialization with push notifications")
 
-        // Request system notification authorization (APNS registration is handled separately)
-        await requestNotificationAuthorizationIfNeeded()
+            // Attempt to register for remote notifications to obtain APNS token ASAP
+            await registerForRemoteNotificationsAlways()
 
-        // Register backend notifications mapping (deviceId + token + identity + installation)
-        await registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
+            // Request system notification authorization (APNS registration is handled separately)
+            await requestNotificationAuthorizationIfNeeded()
 
-        do {
-            try await refreshUserAndProfile(client: client, apiClient: apiClient)
-        } catch {
-            Logger.error("Error refreshing user and profile: \(error.localizedDescription)")
+            // Register backend notifications mapping (deviceId + token + identity + installation)
+            await registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
+
+            do {
+                try await refreshUserAndProfile(client: client, apiClient: apiClient)
+            } catch {
+                Logger.error("Error refreshing user and profile: \(error.localizedDescription)")
+            }
         }
+
         enqueueAction(.authorized(.init(inbox: inbox, client: client, apiClient: apiClient)))
     }
 
@@ -328,6 +347,10 @@ public actor InboxStateMachine {
             provider: inbox.provider,
             providerId: inbox.providerId
         )
+
+        // Save provider ID mapping for push notifications
+        try authService.save(inboxId: client.inboxId, for: inbox.providerId)
+
         enqueueAction(.authorized(.init(inbox: inbox, client: client, apiClient: apiClient)))
     }
 
@@ -408,7 +431,6 @@ public actor InboxStateMachine {
                                   options: ClientOptions) async throws -> any XMTPClientProvider {
         Logger.info("Creating XMTP client...")
         let client = try await Client.create(account: signingKey, options: options)
-        cacheInboxId(inboxId: client.inboxID, for: signingKey.identity)
         Logger.info("XMTP Client created.")
         return client
     }
@@ -419,7 +441,7 @@ public actor InboxStateMachine {
         let client = try await Client.build(
             publicIdentity: identity,
             options: options,
-            inboxId: cachedInboxId(for: identity)
+            inboxId: try? authService.inboxId(for: inbox.providerId)
         )
         Logger.info("XMTP Client built.")
         return client
@@ -460,16 +482,6 @@ public actor InboxStateMachine {
             user: await user,
             profile: await profile
         )
-    }
-
-    // MARK: - InboxId Cache
-
-    private func cachedInboxId(for identity: PublicIdentity) -> String? {
-        UserDefaults.standard.string(forKey: "cachedInboxId-\(identity.identifier)")
-    }
-
-    private func cacheInboxId(inboxId: String, for identity: PublicIdentity) {
-        UserDefaults.standard.set(inboxId, forKey: "cachedInboxId-\(identity.identifier)")
     }
 
     // MARK: - User Creation
