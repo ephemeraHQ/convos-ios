@@ -3,11 +3,11 @@ import Foundation
 import XMTPiOS
 
 public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
-    private let identityStore: SecureEnclaveIdentityStore
+    private let identityStore: KeychainIdentityStore
     private let authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
-    public init(accessGroup: String? = nil) {
-        self.identityStore = SecureEnclaveIdentityStore(accessGroup: accessGroup)
+    public init(accessGroup: String) {
+        self.identityStore = KeychainIdentityStore(accessGroup: accessGroup)
     }
 
     public var state: AuthServiceState {
@@ -23,12 +23,11 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
     }
 
     public func register(displayName: String? = nil) throws -> any AuthServiceRegisteredResultType {
-        let inboxType: InboxType = .ephemeral
-        let identity = try identityStore.save(type: inboxType)
+        let identity = try identityStore.save()
         let result = AuthServiceRegisteredResult(
             displayName: displayName,
             inbox: AuthServiceInbox(
-                type: inboxType,
+                type: .ephemeral,
                 provider: .local,
                 providerId: identity.id,
                 signingKey: identity.privateKey,
@@ -50,11 +49,8 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
         try refreshAuthState()
     }
 
-        public func save(inboxId: String, for providerId: String) throws {
+    public func save(inboxId: String, for providerId: String) throws {
         try identityStore.save(inboxId: inboxId, for: providerId)
-    }
-
-    public func saveProviderIdMapping(providerId: String, for inboxId: String) throws {
         try identityStore.save(providerId: providerId, for: inboxId)
     }
 
@@ -68,7 +64,7 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
             return nil
         }
         return AuthServiceInbox(
-            type: identity.type,
+            type: .ephemeral,
             provider: .local,
             providerId: identity.id,
             signingKey: identity.privateKey,
@@ -87,7 +83,7 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
 
         let inboxes: [AuthServiceInbox] = identities.map { identity in
             AuthServiceInbox(
-                type: identity.type,
+                type: .ephemeral,
                 provider: .local,
                 providerId: identity.id,
                 signingKey: identity.privateKey,
@@ -103,7 +99,7 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
 
     /// WARNING: This will delete ALL keychain data. Use only for debugging/development.
     /// Call this method temporarily to clear keychain data when testing keychain access group changes.
-    public func debugWipeAllKeychainData() {
-        identityStore.debugWipeAllKeychainData()
+    public func debugWipeAllKeychainData() throws {
+        try identityStore.deleteAll()
     }
 }
