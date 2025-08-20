@@ -188,25 +188,28 @@ class SessionManager: SessionManagerProtocol {
 
             // Add conversation image if available
             if let imageURL = conversation.imageURL {
-                // For local notifications, we need to ensure the image is accessible
-                // If it's a local file URL, we can use it directly
-                // If it's a remote URL, we might need to download it first
-                if imageURL.isFileURL {
-                    // Local file URL - can be used directly
-                    do {
-                        let attachment = try UNNotificationAttachment(
-                            identifier: UUID().uuidString,
-                            url: imageURL,
-                            options: nil
-                        )
-                        content.attachments = [attachment]
-                    } catch {
-                        Logger.warning("Failed to create notification attachment from local file: \(error)")
-                    }
-                } else {
-                    // Remote URL - for now, we'll skip the attachment
-                    // In a production app, you might want to download and cache the image
-                    Logger.info("Skipping remote image attachment for explosion notification: \(imageURL)")
+                // Download the image temporarily for the notification attachment
+                do {
+                    let (data, _) = try await URLSession.shared.data(from: imageURL)
+
+                    // Create a temporary file for the image
+                    let tempDirectory = FileManager.default.temporaryDirectory
+                    let tempFileName = "explosion-\(conversationId)-\(UUID().uuidString).jpg"
+                    let tempFileURL = tempDirectory.appendingPathComponent(tempFileName)
+
+                    try data.write(to: tempFileURL)
+
+                    // Create notification attachment
+                    let attachment = try UNNotificationAttachment(
+                        identifier: UUID().uuidString,
+                        url: tempFileURL,
+                        options: nil
+                    )
+                    content.attachments = [attachment]
+
+                    Logger.info("Successfully added conversation image to explosion notification")
+                } catch {
+                    Logger.warning("Failed to download or create notification attachment: \(error)")
                 }
             }
 
@@ -220,7 +223,6 @@ class SessionManager: SessionManagerProtocol {
             // Schedule the notification
             try await UNUserNotificationCenter.current().add(request)
             Logger.info("Scheduled explosion notification for conversation: \(conversationId)")
-
         } catch {
             Logger.error("Failed to schedule explosion notification: \(error)")
         }

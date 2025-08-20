@@ -49,7 +49,7 @@ struct ExplodeInfoView: View {
             }
             .padding(.top, DesignConstants.Spacing.step4x)
         }
-        .padding(DesignConstants.Spacing.step10x)
+        .padding([.leading, .top, .trailing], DesignConstants.Spacing.step10x)
     }
 }
 
