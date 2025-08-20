@@ -52,9 +52,6 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
 
     public func save(inboxId: String, for providerId: String) throws {
         try identityStore.save(inboxId: inboxId, for: providerId)
-    }
-
-    public func saveProviderIdMapping(providerId: String, for inboxId: String) throws {
         try identityStore.save(providerId: providerId, for: inboxId)
     }
 
