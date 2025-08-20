@@ -86,6 +86,11 @@ public enum ConvosAPI {
         public let createdAt: String
     }
 
+    public struct DeleteRequestToJoinResponse: Decodable {
+        public let id: String
+        public let deleted: Bool
+    }
+
     public struct UpdateProfileRequest: Encodable {
         public let name: String?
         public let username: String?

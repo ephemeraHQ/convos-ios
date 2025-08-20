@@ -164,6 +164,20 @@ public extension SingleInboxAuthProcessor {
             Logger.info("Adding \(requesterInboxId) to group \(group.id)...")
             _ = try await group.addMembers(inboxIds: [requesterInboxId])
 
+            // Delete the request from the backend (cleanup after successful processing)
+            if let requestId = inviteData.requestId, !requestId.isEmpty {
+                do {
+                    Logger.info("Deleting processed join request: \(requestId)")
+                    _ = try await apiClient.deleteRequestToJoin(requestId)
+                    Logger.info("Successfully deleted join request: \(requestId)")
+                } catch {
+                    Logger.error("Failed to delete join request \(requestId): \(error.localizedDescription)")
+                    // Don't throw here - the member was successfully added, deletion is cleanup
+                }
+            } else {
+                Logger.warning("No request ID provided in invite data, skipping backend cleanup")
+            }
+
             // Store the updated conversation
             Logger.info("Storing updated conversation with id: \(xmtpConversation.id)")
             let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)

@@ -220,6 +220,13 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         )
     }
 
+    func deleteRequestToJoin(_ requestId: String) async throws -> ConvosAPI.DeleteRequestToJoinResponse {
+        .init(
+            id: requestId,
+            deleted: true
+        )
+    }
+
     func uploadAttachment(
         data: Data,
         filename: String,
