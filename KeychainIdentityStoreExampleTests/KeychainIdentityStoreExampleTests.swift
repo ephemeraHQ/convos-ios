@@ -1,15 +1,14 @@
+import ConvosCore
 import Foundation
 import Testing
-import ConvosCore
 
 /// Test suite for KeychainIdentityStore
 @Suite(.serialized) class KeychainIdentityStoreExampleTests {
-
     // MARK: - Test Properties
 
     private let keychainStore: KeychainIdentityStore
-    private let testAccessGroup = "FY4NZR34Z3.org.convos.KeychainIdentityStoreExample"
-    private let testService = "org.convos.KeychainIdentityStoreExample.service"
+    private let testAccessGroup: String = "FY4NZR34Z3.org.convos.KeychainIdentityStoreExample"
+    private let testService: String = "org.convos.KeychainIdentityStoreExample.service"
 
     init() throws {
         keychainStore = KeychainIdentityStore(accessGroup: testAccessGroup, service: testService)
@@ -74,7 +73,7 @@ import ConvosCore
         let allIdentities = try keychainStore.loadAll()
 
         // Then
-        #expect(allIdentities.count == 0)
+        #expect(allIdentities.isEmpty)
     }
 
     @Test func testDeleteIdentity() async throws {
@@ -210,7 +209,7 @@ import ConvosCore
         let identities = try await withThrowingTaskGroup(of: KeychainIdentity.self) { group in
             for _ in 0..<numberOfIdentities {
                 group.addTask {
-                    return try self.keychainStore.save()
+                    try self.keychainStore.save()
                 }
             }
 
@@ -320,7 +319,7 @@ import ConvosCore
         try keychainStore.delete(for: identity2.id)
 
         // Then
-        #expect(try keychainStore.loadAll().count == 0)
+        #expect(try keychainStore.loadAll().isEmpty)
 
         // Provider IDs should also be cleaned up
         do {
@@ -361,7 +360,7 @@ import ConvosCore
         try keychainStore.deleteAll()
 
         // Then - All identities should be gone
-        #expect(try keychainStore.loadAll().count == 0)
+        #expect(try keychainStore.loadAll().isEmpty)
 
         // Individual identities should not be loadable
         #expect(try keychainStore.load(for: identity1.id) == nil)
@@ -387,10 +386,10 @@ import ConvosCore
 
     @Test func testDeleteAllWhenEmpty() async throws {
         // Given - Empty keychain store
-        #expect(try keychainStore.loadAll().count == 0)
+        #expect(try keychainStore.loadAll().isEmpty)
 
         // When & Then - Should not throw when deleting all from empty store
         try keychainStore.deleteAll()
-        #expect(try keychainStore.loadAll().count == 0)
+        #expect(try keychainStore.loadAll().isEmpty)
     }
 }
