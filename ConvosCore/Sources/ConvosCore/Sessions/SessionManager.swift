@@ -287,11 +287,6 @@ class SessionManager: SessionManagerProtocol {
         // Ask all ready inbox state machines to unregister their installation before teardown
         NotificationCenter.default.post(name: .convosUnregisterAllInboxesRequested, object: nil)
 
-        // Wipe all keychain data when deleting all accounts
-        if let secureEnclaveAuthService = authService as? SecureEnclaveAuthService {
-            secureEnclaveAuthService.debugWipeAllKeychainData()
-        }
-
         try authService.deleteAll()
         try databaseWriter.write { db in
             try DBInbox.deleteAll(db)

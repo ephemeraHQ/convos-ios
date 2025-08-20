@@ -44,8 +44,7 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
     }
 
     public func deleteAll() throws {
-        let identities = try identityStore.loadAll()
-        try identities.forEach { try identityStore.delete(for: $0.id) }
+        try identityStore.deleteAll()
         try refreshAuthState()
     }
 
@@ -93,13 +92,5 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
 
         let result = AuthServiceResult(inboxes: inboxes)
         authStateSubject.send(.authorized(result))
-    }
-
-    // MARK: - Debug/Development Methods
-
-    /// WARNING: This will delete ALL keychain data. Use only for debugging/development.
-    /// Call this method temporarily to clear keychain data when testing keychain access group changes.
-    public func debugWipeAllKeychainData() throws {
-        try identityStore.deleteAll()
     }
 }
