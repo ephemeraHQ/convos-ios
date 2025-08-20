@@ -9,6 +9,10 @@ public protocol ConversationRepositoryProtocol {
     func fetchConversation() throws -> Conversation?
 }
 
+enum ConversationRepositoryError: Error {
+    case failedFetchingConversation
+}
+
 class ConversationRepository: ConversationRepositoryProtocol {
     private let dbReader: any DatabaseReader
     let conversationId: String

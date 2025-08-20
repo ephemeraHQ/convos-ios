@@ -100,9 +100,9 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             throw InboxStateError.inboxNotReady
         }
 
-//        let resizedImage = ImageCompression.resizeForCache(image)
+        let resizedImage = ImageCompression.resizeForCache(image)
 
-        guard let compressedImageData = image.jpegData(compressionQuality: 0.8) else {
+        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
             throw ConversationMetadataWriterError.failedImageCompression
         }
 
@@ -114,7 +114,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
         ) { uploadedURL in
             do {
                 try await self.updateGroupImageUrl(groupId: conversation.id, imageURL: uploadedURL)
-//                ImageCache.shared.setImage(resizedImage, for: conversation)
+                ImageCache.shared.setImage(resizedImage, for: conversation)
             } catch {
                 Logger.error("Failed updating group image URL: \(error.localizedDescription)")
             }

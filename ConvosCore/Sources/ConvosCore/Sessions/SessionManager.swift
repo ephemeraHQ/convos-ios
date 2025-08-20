@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 import GRDB
+import UserNotifications
 
 public extension Notification.Name {
     static let leftConversationNotification: Notification.Name = Notification.Name("LeftConversationNotification")
@@ -148,6 +149,14 @@ class SessionManager: SessionManagerProtocol {
                 guard let inboxId: String = notification.userInfo?["inboxId"] as? String else {
                     return
                 }
+
+                // Schedule explosion notification if conversationId is provided
+                if let conversationId: String = notification.userInfo?["conversationId"] as? String {
+                    Task {
+                        await self.scheduleExplosionNotification(inboxId: inboxId, conversationId: conversationId)
+                    }
+                }
+
                 do {
                     try deleteAccount(inboxId: inboxId)
                 } catch {
@@ -157,6 +166,75 @@ class SessionManager: SessionManagerProtocol {
                         )
                 }
             }
+    }
+
+    // MARK: - Local Notification
+
+    private func scheduleExplosionNotification(inboxId: String, conversationId: String) async {
+        do {
+            let conversation = try await fetchConversationDetails(conversationId: conversationId)
+
+            let content = UNMutableNotificationContent()
+            content.title = "💥 \(conversation.displayName) 💥"
+            content.body = "A convo exploded"
+            content.sound = .default
+            content.userInfo = [
+                "inboxId": inboxId,
+                "conversationId": conversationId,
+                "notificationType": "explosion"
+            ]
+
+            if let cachedImage = ImageCache.shared.image(for: conversation),
+               let cachedImageData = cachedImage.jpegData(compressionQuality: 1.0) {
+                do {
+                    let tempDirectory = FileManager.default.temporaryDirectory
+                    let tempFileName = "explosion-\(conversationId)-\(UUID().uuidString).jpg"
+                    let tempFileURL = tempDirectory.appendingPathComponent(tempFileName)
+                    try cachedImageData.write(to: tempFileURL)
+
+                    // Create notification attachment
+                    let attachment = try UNNotificationAttachment(
+                        identifier: UUID().uuidString,
+                        url: tempFileURL,
+                        options: nil
+                    )
+                    content.attachments = [attachment]
+
+                    Logger.info("Successfully added conversation image to explosion notification")
+                } catch {
+                    Logger.warning("Failed to download or create notification attachment: \(error)")
+                }
+            }
+
+            let request = UNNotificationRequest(
+                identifier: "explosion-\(conversationId)",
+                content: content,
+                trigger: nil // Immediate trigger
+            )
+            try await UNUserNotificationCenter.current().add(request)
+            Logger.info("Scheduled explosion notification for conversation: \(conversationId)")
+        } catch {
+            Logger.error("Failed to schedule explosion notification: \(error)")
+        }
+    }
+
+    private func fetchConversationDetails(conversationId: String) async throws -> Conversation {
+        return try await withCheckedThrowingContinuation { continuation in
+            let conversationRepository = ConversationRepository(
+                conversationId: conversationId,
+                dbReader: databaseReader
+            )
+
+            do {
+                if let conversation = try conversationRepository.fetchConversation() {
+                    continuation.resume(returning: conversation)
+                } else {
+                    continuation.resume(throwing: ConversationRepositoryError.failedFetchingConversation)
+                }
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
     }
 
     // MARK: Public
