@@ -73,18 +73,21 @@ public struct ProtocolNotificationData {
 // MARK: - Invite Join Request Data
 
 public struct InviteJoinRequestData {
+    public let requestId: String?
     public let requester: RequesterData?
     public let inviteCode: InviteCodeData?
     public let autoApprove: Bool
 
     public init(dictionary: [String: Any]?) {
         guard let dict = dictionary else {
+            self.requestId = nil
             self.requester = nil
             self.inviteCode = nil
             self.autoApprove = false
             return
         }
 
+        self.requestId = dict["id"] as? String ?? dict["requestId"] as? String
         self.requester = RequesterData(dictionary: dict["requester"] as? [String: Any])
         self.inviteCode = InviteCodeData(dictionary: dict["inviteCode"] as? [String: Any])
         self.autoApprove = dict["autoApprove"] as? Bool ?? false

@@ -200,7 +200,31 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
     }
 
     func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse {
-        .init(id: UUID().uuidString, inviteId: inviteCode, createdAt: Date().ISO8601Format())
+        .init(
+            id: UUID().uuidString,
+            invite: ConvosAPI.InviteDetailsResponse(
+                id: "created_invite_123",
+                name: "My Group",
+                description: nil,
+                imageUrl: nil,
+                maxUses: nil,
+                usesCount: 0,
+                status: .active,
+                expiresAt: nil,
+                autoApprove: false,
+                groupId: "my_group_123",
+                createdAt: Date(),
+                inviteLinkURL: "http://convos.org/join/my_group_123"
+            ),
+            createdAt: Date().ISO8601Format()
+        )
+    }
+
+    func deleteRequestToJoin(_ requestId: String) async throws -> ConvosAPI.DeleteRequestToJoinResponse {
+        .init(
+            id: requestId,
+            deleted: true
+        )
     }
 
     func uploadAttachment(
