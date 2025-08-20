@@ -1,3 +1,4 @@
+import ConvosCore
 import DifferenceKit
 import Foundation
 import UIKit
@@ -13,12 +14,12 @@ struct DateGroup: Hashable {
     }
 }
 
-extension ConversationUpdate: Differentiable {
-    var differenceIdentifier: Int {
+extension ConversationUpdate: @retroactive Differentiable {
+    public var differenceIdentifier: Int {
         hashValue
     }
 
-    func isContentEqual(to source: ConversationUpdate) -> Bool {
+    public func isContentEqual(to source: ConversationUpdate) -> Bool {
         self == source
     }
 }
@@ -33,12 +34,12 @@ extension DateGroup: Differentiable {
     }
 }
 
-extension Invite: Differentiable {
-    var differenceIdentifier: Int {
+extension Invite: @retroactive Differentiable {
+    public var differenceIdentifier: Int {
         hashValue
     }
 
-    func isContentEqual(to source: Invite) -> Bool {
+    public func isContentEqual(to source: Invite) -> Bool {
         self == source
     }
 }
@@ -70,12 +71,12 @@ enum ImageSource: Hashable {
     }
 }
 
-extension AnyMessage: Differentiable {
-    var differenceIdentifier: Int {
+extension AnyMessage: @retroactive Differentiable {
+    public var differenceIdentifier: Int {
         base.id.hashValue
     }
 
-    func isContentEqual(to source: AnyMessage) -> Bool {
+    public func isContentEqual(to source: AnyMessage) -> Bool {
         self == source
     }
 }

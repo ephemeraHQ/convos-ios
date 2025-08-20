@@ -70,10 +70,40 @@ echo "🔍 Detecting local IP address for Local development..."
 # Ensure minimal file exists first (in case this is the first run)
 ensure_minimal_secrets || true  # Don't exit if file already exists
 
-# Function to get the first non-internal IPv4 address
+# Function to get the first routable IPv4 address
 get_local_ip() {
-    # Get all network interfaces and find the first non-internal IPv4 address
-    ifconfig | grep -E "inet [0-9]+" | grep -v "127.0.0.1" | head -1 | awk '{print $2}'
+    # Get all network interfaces and find the first routable IPv4 address
+    # Exclude:
+    # - 127.x.x.x (loopback)
+    # - 169.254.x.x (link-local/APIPA - indicates DHCP failure)
+    # - 0.0.0.0 (invalid)
+    # Prefer in order:
+    # 1. Public IP addresses (not in private ranges)
+    # 2. Private network addresses (10.x.x.x, 172.16-31.x.x, 192.168.x.x)
+
+    # First try to get a public IP (not in private ranges)
+    local public_ip=$(ifconfig | grep -E "inet [0-9]+" | \
+        grep -v "127\." | \
+        grep -v "169\.254\." | \
+        grep -v "10\." | \
+        grep -v "172\.1[6-9]\." | \
+        grep -v "172\.2[0-9]\." | \
+        grep -v "172\.3[0-1]\." | \
+        grep -v "192\.168\." | \
+        head -1 | awk '{print $2}')
+
+    if [ -n "$public_ip" ]; then
+        echo "$public_ip"
+        return
+    fi
+
+    # If no public IP, get the first private network IP (but not link-local)
+    local private_ip=$(ifconfig | grep -E "inet [0-9]+" | \
+        grep -v "127\." | \
+        grep -v "169\.254\." | \
+        head -1 | awk '{print $2}')
+
+    echo "$private_ip"
 }
 
 # Detect the local IP

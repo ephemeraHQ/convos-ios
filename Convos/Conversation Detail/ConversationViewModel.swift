@@ -1,10 +1,7 @@
 import Combine
+import ConvosCore
 import Observation
 import UIKit
-
-extension Notification.Name {
-    static let leftConversationNotification: Notification.Name = Notification.Name("LeftConversationNotification")
-}
 
 @Observable
 class ConversationViewModel {
@@ -154,7 +151,7 @@ class ConversationViewModel {
             do {
                 try await localStateWriter.setUnread(false, for: self.conversation.id)
             } catch {
-                Logger.error("Error marking conversation as read: \(error.localizedDescription)")
+                Logger.warning("Failed marking conversation as read: \(error.localizedDescription)")
             }
         }
     }
