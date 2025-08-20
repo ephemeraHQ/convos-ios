@@ -184,14 +184,13 @@ class SessionManager: SessionManagerProtocol {
                 "notificationType": "explosion"
             ]
 
-            if let imageURL = conversation.imageURL {
-                // Download the image temporarily for the notification attachment
+            if let cachedImage = ImageCache.shared.image(for: conversation),
+               let cachedImageData = cachedImage.jpegData(compressionQuality: 1.0) {
                 do {
-                    let (data, _) = try await URLSession.shared.data(from: imageURL)
                     let tempDirectory = FileManager.default.temporaryDirectory
                     let tempFileName = "explosion-\(conversationId)-\(UUID().uuidString).jpg"
                     let tempFileURL = tempDirectory.appendingPathComponent(tempFileName)
-                    try data.write(to: tempFileURL)
+                    try cachedImageData.write(to: tempFileURL)
 
                     // Create notification attachment
                     let attachment = try UNNotificationAttachment(
