@@ -168,7 +168,7 @@ public extension SingleInboxAuthProcessor {
             Logger.info("Storing updated conversation with id: \(xmtpConversation.id)")
             let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
             let conversationWriter = ConversationWriter(databaseWriter: databaseWriter, messageWriter: messageWriter)
-            try await conversationWriter.store(conversation: xmtpConversation)
+            _ = try await conversationWriter.store(conversation: xmtpConversation)
 
             Logger.info("Successfully processed invite join request for \(requesterInboxId)")
         } catch {

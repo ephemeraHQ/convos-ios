@@ -6,7 +6,7 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
     private let identityStore: SecureEnclaveIdentityStore
     private let authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
-    public init(accessGroup: String? = nil) {
+    public init(accessGroup: String) {
         self.identityStore = SecureEnclaveIdentityStore(accessGroup: accessGroup)
     }
 
@@ -50,7 +50,7 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
         try refreshAuthState()
     }
 
-        public func save(inboxId: String, for providerId: String) throws {
+    public func save(inboxId: String, for providerId: String) throws {
         try identityStore.save(inboxId: inboxId, for: providerId)
     }
 
