@@ -6,10 +6,39 @@ import XMTPiOS
 
 // MARK: - Models
 
-public struct KeychainIdentity {
+public struct KeychainIdentity: Codable {
     public let id: String
     public let privateKey: PrivateKey
     public let databaseKey: Data
+
+    // Custom coding keys to handle PrivateKey serialization
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case privateKeyData
+        case databaseKey
+    }
+
+    public init(id: String, privateKey: PrivateKey, databaseKey: Data) {
+        self.id = id
+        self.privateKey = privateKey
+        self.databaseKey = databaseKey
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        databaseKey = try container.decode(Data.self, forKey: .databaseKey)
+
+        let privateKeyData = try container.decode(Data.self, forKey: .privateKeyData)
+        privateKey = try PrivateKey(privateKeyData)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(databaseKey, forKey: .databaseKey)
+        try container.encode(privateKey.secp256K1.bytes, forKey: .privateKeyData)
+    }
 }
 
 // MARK: - Errors
@@ -114,62 +143,72 @@ public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
 
     private let keychainService: String
     private let keychainAccessGroup: String
-    private let identitiesListKey: String
 
     // MARK: - Initialization
 
-    public init(accessGroup: String, service: String = "com.convos.ios.KeychainIdentityStore") {
+    public init(accessGroup: String, service: String = "org.convos.ios.KeychainIdentityStore") {
         self.keychainAccessGroup = accessGroup
         self.keychainService = service
-        self.identitiesListKey = "\(service).identitiesList"
     }
 
     // MARK: - Public Interface
 
     public func save() throws -> KeychainIdentity {
         let identityId = UUID().uuidString
+        let privateKey = try generatePrivateKey()
+        let databaseKey = try generateDatabaseKey()
 
-        // Create identity with rollback support
-        return try withRollback(identityId: identityId) {
-            let privateKey = try generatePrivateKey()
-            try savePrivateKey(privateKey, for: identityId)
-
-            let databaseKey = try generateAndSaveDatabaseKey(for: identityId)
-            try addIdentityIdToList(identityId)
-
-            return KeychainIdentity(
-                id: identityId,
-                privateKey: privateKey,
-                databaseKey: databaseKey
-            )
-        }
-    }
-
-    public func load(for identityId: String) throws -> KeychainIdentity? {
-        guard let databaseKey = try loadDatabaseKey(for: identityId) else {
-            return nil
-        }
-
-        let privateKey = try loadPrivateKey(for: identityId)
-
-        return KeychainIdentity(
+        let identity = KeychainIdentity(
             id: identityId,
             privateKey: privateKey,
             databaseKey: databaseKey
         )
+
+        try saveIdentity(identity)
+        return identity
+    }
+
+    public func load(for identityId: String) throws -> KeychainIdentity? {
+        let query = KeychainQuery(
+            account: identityId,
+            service: keychainService,
+            accessGroup: keychainAccessGroup
+        )
+
+        do {
+            let data = try loadData(with: query)
+            return try JSONDecoder().decode(KeychainIdentity.self, from: data)
+        } catch KeychainIdentityStoreError.identityNotFound {
+            return nil
+        }
     }
 
     public func loadAll() throws -> [KeychainIdentity] {
-        let identityIds = try loadIdentitiesList()
-        var identities: [KeychainIdentity] = []
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccessGroup as String: keychainAccessGroup,
+            kSecMatchLimit as String: kSecMatchLimitAll,
+            kSecReturnData as String: true
+        ]
 
-        for identityId in identityIds {
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        guard status == errSecSuccess, let items = result as? [Data] else {
+            if status == errSecItemNotFound {
+                return []
+            }
+            throw KeychainIdentityStoreError.keychainOperationFailed(status, "loadAll")
+        }
+
+        var identities: [KeychainIdentity] = []
+        for data in items {
             do {
-                if let identity = try load(for: identityId) {
-                    identities.append(identity)
-                }
+                let identity = try JSONDecoder().decode(KeychainIdentity.self, from: data)
+                identities.append(identity)
             } catch {
-                Logger.error("Failed loading identity \(identityId): \(error)")
+                Logger.error("Failed decoding identity: \(error)")
             }
         }
 
@@ -182,11 +221,17 @@ public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
             try? deleteProviderId(for: inboxId)
         }
 
-        // Delete all identity-related data
+        // Delete the identity
+        let query = KeychainQuery(
+            account: identityId,
+            service: keychainService,
+            accessGroup: keychainAccessGroup
+        )
+
+        try deleteData(with: query)
+
+        // Delete inbox ID mapping
         try deleteInboxId(for: identityId)
-        try removeIdentityIdFromList(identityId)
-        try deleteDatabaseKey(for: identityId)
-        try deletePrivateKey(for: identityId)
     }
 
     public func deleteAll() throws {
@@ -258,26 +303,28 @@ public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
 
     // MARK: - Private Methods
 
-    private func withRollback<T>(identityId: String, operation: () throws -> T) throws -> T {
-        do {
-            return try operation()
-        } catch {
-            // Attempt rollback
-            try? rollbackIdentity(identityId)
-            throw error
-        }
-    }
+    private func saveIdentity(_ identity: KeychainIdentity) throws {
+        let data = try JSONEncoder().encode(identity)
 
-    private func rollbackIdentity(_ identityId: String) throws {
-        let operations = [
-            { try? self.deletePrivateKey(for: identityId) },
-            { try? self.deleteDatabaseKey(for: identityId) },
-            { try? self.removeIdentityIdFromList(identityId) }
-        ]
-
-        for operation in operations {
-            operation()
+        // Create access control for enhanced security
+        guard let accessControl = SecAccessControlCreateWithFlags(
+            nil,
+            kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+            [],
+            nil
+        ) else {
+            throw KeychainIdentityStoreError.keychainOperationFailed(errSecNotAvailable, "create access control")
         }
+
+        let query = KeychainQuery(
+            account: identity.id,
+            service: keychainService,
+            accessGroup: keychainAccessGroup,
+            accessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+            accessControl: accessControl
+        )
+
+        try saveData(data, with: query)
     }
 
     // MARK: - Private Key Operations
@@ -290,98 +337,20 @@ public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         }
     }
 
-    private func savePrivateKey(_ privateKey: PrivateKey, for identityId: String) throws {
-        let privateKeyData = privateKey.secp256K1.bytes
-
-        guard let accessControl = SecAccessControlCreateWithFlags(
-            nil,
-            kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-            [],
-            nil
-        ) else {
-            throw KeychainIdentityStoreError.keychainOperationFailed(errSecNotAvailable, "create access control")
+    private func generateDatabaseKey() throws -> Data {
+        var key = Data(count: 32) // 256-bit key
+        let status: OSStatus = try key.withUnsafeMutableBytes { bytes in
+            guard let baseAddress = bytes.baseAddress else {
+                throw KeychainIdentityStoreError.keychainOperationFailed(errSecUnknownFormat, "generateDatabaseKey")
+            }
+            return SecRandomCopyBytes(kSecRandomDefault, 32, baseAddress)
         }
 
-        let query = KeychainQuery(
-            account: "\(identityId).privateKey",
-            service: keychainService,
-            accessGroup: keychainAccessGroup,
-            accessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-            accessControl: accessControl
-        )
-
-        try saveData(privateKeyData, with: query)
-    }
-
-    private func loadPrivateKey(for identityId: String) throws -> PrivateKey {
-        let context = LAContext()
-        context.localizedReason = "Authenticate to access your Convos account"
-
-        var query = KeychainQuery(
-            account: "\(identityId).privateKey",
-            service: keychainService,
-            accessGroup: keychainAccessGroup,
-            accessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        ).toReadDictionary()
-
-        query[kSecUseAuthenticationContext as String] = context
-
-        let data = try loadData(with: query)
-        return try PrivateKey(data)
-    }
-
-    private func deletePrivateKey(for identityId: String) throws {
-        let query = KeychainQuery(
-            account: "\(identityId).privateKey",
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        try deleteData(with: query)
-    }
-
-    // MARK: - Database Key Operations
-
-    private func generateAndSaveDatabaseKey(for identityId: String) throws -> Data {
-        let databaseKey = Data((0..<32).map { _ in UInt8.random(in: UInt8.min...UInt8.max) })
-        try saveDatabaseKey(databaseKey, for: identityId)
-        return databaseKey
-    }
-
-    private func saveDatabaseKey(_ databaseKey: Data, for identityId: String) throws {
-        let query = KeychainQuery(
-            account: identityId.lowercased(),
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        try saveData(databaseKey, with: query)
-    }
-
-    private func loadDatabaseKey(for identityId: String) throws -> Data? {
-        let query = KeychainQuery(
-            account: identityId.lowercased(),
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        do {
-            return try loadData(with: query)
-        } catch KeychainIdentityStoreError.identityNotFound {
-            // Expected case - identity doesn't have a database key
-            return nil
+        guard status == errSecSuccess else {
+            throw KeychainIdentityStoreError.keychainOperationFailed(status, "generateDatabaseKey")
         }
-        // Let all other errors propagate
-    }
 
-    private func deleteDatabaseKey(for identityId: String) throws {
-        let query = KeychainQuery(
-            account: identityId.lowercased(),
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        try deleteData(with: query)
+        return key
     }
 
     // MARK: - Inbox ID Operations
@@ -394,50 +363,6 @@ public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         )
 
         try deleteData(with: query)
-    }
-
-    // MARK: - Identities List Operations
-
-    private func loadIdentitiesList() throws -> [String] {
-        let query = KeychainQuery(
-            account: identitiesListKey,
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        do {
-            let data = try loadData(with: query)
-            return try JSONDecoder().decode([String].self, from: data)
-        } catch KeychainIdentityStoreError.identityNotFound {
-            // Expected case - no identities list exists yet
-            return []
-        }
-        // Let all other errors propagate
-    }
-
-    private func saveIdentitiesList(_ identitiesList: [String]) throws {
-        let data = try JSONEncoder().encode(identitiesList)
-        let query = KeychainQuery(
-            account: identitiesListKey,
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        try saveData(data, with: query)
-    }
-
-    private func addIdentityIdToList(_ identityId: String) throws {
-        var identitiesList = try loadIdentitiesList()
-        if !identitiesList.contains(identityId) {
-            identitiesList.append(identityId)
-            try saveIdentitiesList(identitiesList)
-        }
-    }
-
-    private func removeIdentityIdFromList(_ identityId: String) throws {
-        var identitiesList = try loadIdentitiesList()
-        identitiesList.removeAll { $0 == identityId }
-        try saveIdentitiesList(identitiesList)
     }
 
     // MARK: - Generic Keychain Operations

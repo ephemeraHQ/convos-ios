@@ -3,8 +3,6 @@ import Testing
 import ConvosCore
 
 /// Test suite for KeychainIdentityStore
-/// Note: KeychainIdentityStore operations are not thread-safe for concurrent access.
-/// Tests use @Suite(.serialized) to ensure sequential execution and avoid race conditions.
 @Suite(.serialized) class KeychainIdentityStoreExampleTests {
 
     // MARK: - Test Properties
@@ -204,13 +202,24 @@ import ConvosCore
 
     // MARK: - Error Handling Tests
 
-    @Test func testMultipleIdentityOperations() async throws {
+    @Test func testConcurrentIdentityOperations() async throws {
         // Given
         let numberOfIdentities = 10
 
-        // Note: KeychainIdentityStore operations are not thread-safe for concurrent access
-        // Using synchronous operations to ensure reliability
-        let identities = try (0..<numberOfIdentities).map { _ in try keychainStore.save() }
+        // When - Create multiple identities concurrently
+        let identities = try await withThrowingTaskGroup(of: KeychainIdentity.self) { group in
+            for _ in 0..<numberOfIdentities {
+                group.addTask {
+                    return try self.keychainStore.save()
+                }
+            }
+
+            var results: [KeychainIdentity] = []
+            for try await identity in group {
+                results.append(identity)
+            }
+            return results
+        }
 
         // Then
         #expect(identities.count == numberOfIdentities)
@@ -327,5 +336,61 @@ import ConvosCore
         } catch {
             // Expected
         }
+    }
+
+    @Test func testDeleteAll() async throws {
+        // Given - Create multiple identities with associated data
+        let identity1 = try keychainStore.save()
+        let identity2 = try keychainStore.save()
+        let identity3 = try keychainStore.save()
+
+        try keychainStore.save(inboxId: "inbox1", for: identity1.id)
+        try keychainStore.save(inboxId: "inbox2", for: identity2.id)
+        try keychainStore.save(inboxId: "inbox3", for: identity3.id)
+
+        try keychainStore.save(providerId: "provider1", for: "inbox1")
+        try keychainStore.save(providerId: "provider2", for: "inbox2")
+        try keychainStore.save(providerId: "provider3", for: "inbox3")
+
+        // Verify data exists
+        #expect(try keychainStore.loadAll().count == 3)
+        #expect(try keychainStore.loadInboxId(for: identity1.id) == "inbox1")
+        #expect(try keychainStore.loadProviderId(for: "inbox1") == "provider1")
+
+        // When - Delete all data
+        try keychainStore.deleteAll()
+
+        // Then - All identities should be gone
+        #expect(try keychainStore.loadAll().count == 0)
+
+        // Individual identities should not be loadable
+        #expect(try keychainStore.load(for: identity1.id) == nil)
+        #expect(try keychainStore.load(for: identity2.id) == nil)
+        #expect(try keychainStore.load(for: identity3.id) == nil)
+
+        // Inbox IDs should not be loadable
+        do {
+            _ = try keychainStore.loadInboxId(for: identity1.id)
+            #expect(Bool(false), "Inbox ID should be cleaned up")
+        } catch {
+            // Expected
+        }
+
+        // Provider IDs should not be loadable
+        do {
+            _ = try keychainStore.loadProviderId(for: "inbox1")
+            #expect(Bool(false), "Provider ID should be cleaned up")
+        } catch {
+            // Expected
+        }
+    }
+
+    @Test func testDeleteAllWhenEmpty() async throws {
+        // Given - Empty keychain store
+        #expect(try keychainStore.loadAll().count == 0)
+
+        // When & Then - Should not throw when deleting all from empty store
+        try keychainStore.deleteAll()
+        #expect(try keychainStore.loadAll().count == 0)
     }
 }
