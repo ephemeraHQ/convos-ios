@@ -2,6 +2,10 @@ import Foundation
 import GRDB
 import XMTPiOS
 
+enum ConversationWriterError: Error {
+    case inboxNotFound(String)
+}
+
 public protocol ConversationWriterProtocol {
     @discardableResult
     func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation
@@ -83,6 +87,14 @@ class ConversationWriter: ConversationWriterProtocol {
             try creator.save(db)
             try creatorProfile.insert(db, onConflict: .ignore)
 
+            // Ensure the inbox exists before saving the conversation
+            let existingInbox = try DBInbox.filter(DBInbox.Columns.inboxId == dbConversation.inboxId).fetchOne(db)
+            if existingInbox == nil {
+                Logger.error("Inbox \(dbConversation.inboxId) does not exist, cannot save conversation \(conversation.id)")
+                throw ConversationWriterError.inboxNotFound(dbConversation.inboxId)
+            }
+
+            // Save the conversation first (conversation_members need to reference it)
             if let localConversation = try DBConversation
                 .filter(Column("id") == conversation.id)
                 .filter(Column("clientConversationId") != clientConversationId)
@@ -104,6 +116,7 @@ class ConversationWriter: ConversationWriterProtocol {
                     try dbConversation.save(db)
                 } catch {
                     Logger.error("Failed saving incoming conversation \(conversation.id): \(error)")
+                    throw error
                 }
             }
 
