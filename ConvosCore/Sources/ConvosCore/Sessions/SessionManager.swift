@@ -218,6 +218,7 @@ class SessionManager: SessionManagerProtocol {
         try databaseWriter.write { db in
             try DBInbox.deleteAll(db)
             try DBConversation.deleteAll(db)
+            try ConversationLocalState.deleteAll(db)
             try DBConversationMember.deleteAll(db)
             try Member.deleteAll(db)
             try MemberProfile.deleteAll(db)
