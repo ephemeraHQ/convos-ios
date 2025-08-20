@@ -3,11 +3,11 @@ import Foundation
 import XMTPiOS
 
 public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
-    private let identityStore: SecureEnclaveIdentityStore
+    private let identityStore: KeychainIdentityStore
     private let authStateSubject: CurrentValueSubject<AuthServiceState, Never> = .init(.unknown)
 
     public init(accessGroup: String) {
-        self.identityStore = SecureEnclaveIdentityStore(accessGroup: accessGroup)
+        self.identityStore = KeychainIdentityStore(accessGroup: accessGroup)
     }
 
     public var state: AuthServiceState {

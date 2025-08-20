@@ -549,9 +549,3 @@ extension KeychainIdentityStore {
         Logger.warning("🚨 KEYCHAIN WIPE COMPLETE")
     }
 }
-
-// MARK: - Legacy Support
-
-// For backward compatibility, keep the old names as type aliases
-typealias SecureEnclaveIdentity = KeychainIdentity
-typealias SecureEnclaveIdentityStore = KeychainIdentityStore
