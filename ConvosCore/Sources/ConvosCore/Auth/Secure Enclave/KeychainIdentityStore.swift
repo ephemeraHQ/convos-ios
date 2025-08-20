@@ -357,7 +357,13 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
             accessGroup: keychainAccessGroup
         )
 
-        return try? loadData(with: query)
+        do {
+            return try loadData(with: query)
+        } catch KeychainIdentityStoreError.identityNotFound {
+            // Expected case - identity doesn't have a database key
+            return nil
+        }
+        // Let all other errors propagate
     }
 
     private func deleteDatabaseKey(for identityId: String) throws {
@@ -425,11 +431,14 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
             accessGroup: keychainAccessGroup
         )
 
-        guard let data = try? loadData(with: query) else {
+        do {
+            let data = try loadData(with: query)
+            return try JSONDecoder().decode([String].self, from: data)
+        } catch KeychainIdentityStoreError.identityNotFound {
+            // Expected case - no identities list exists yet
             return []
         }
-
-        return try JSONDecoder().decode([String].self, from: data)
+        // Let all other errors propagate
     }
 
     private func saveIdentitiesList(_ identitiesList: [String]) throws {
