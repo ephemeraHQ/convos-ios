@@ -1,0 +1,17 @@
+import SwiftUI
+
+struct KeychainIdentityStoreExampleView: View {
+    var body: some View {
+        VStack {
+            Image(systemName: "globe")
+                .imageScale(.large)
+                .foregroundStyle(.tint)
+            Text("Hello, world!")
+        }
+        .padding()
+    }
+}
+
+#Preview {
+    KeychainIdentityStoreExampleView()
+}

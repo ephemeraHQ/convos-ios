@@ -10,7 +10,6 @@
 	</array>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)$(NOTIFICATION_SERVICE_BUNDLE_ID)</string>
 		<string>$(AppIdentifierPrefix)$(APP_GROUP_IDENTIFIER)</string>
 	</array>
 </dict>

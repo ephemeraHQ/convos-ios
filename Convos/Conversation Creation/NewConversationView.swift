@@ -1,9 +1,10 @@
+import ConvosCore
 import SwiftUI
 
 struct InviteShareLink: View {
     let invite: Invite?
     var body: some View {
-        let inviteString = invite?.temporaryInviteString ?? ""
+        let inviteString = invite?.inviteUrlString ?? ""
         ShareLink(
             item: inviteString,
             preview: SharePreview(
@@ -40,7 +41,7 @@ struct NewConversationView: View {
                     if viewModel.showScannerOnAppear && !hasShownScannerOnAppear {
                         JoinConversationView { inviteCode in
                             hasShownScannerOnAppear = true
-                            viewModel.join(inviteCode: inviteCode)
+                            viewModel.join(inviteUrlString: inviteCode)
                         }
                     } else if let conversationViewModel = viewModel.conversationViewModel {
                         ConversationView(
@@ -86,7 +87,8 @@ struct NewConversationView: View {
                 .sheet(isPresented: $presentingJoinConversationSheet) {
                     JoinConversationView { inviteCode in
                         presentingJoinConversationSheet = false
-                        viewModel.join(inviteCode: inviteCode)
+                        Logger.info("Invite code: \(inviteCode)")
+                        viewModel.join(inviteUrlString: inviteCode)
                     }
                 }
                 .onAppear {

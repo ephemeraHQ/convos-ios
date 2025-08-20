@@ -1,4 +1,5 @@
 import Combine
+import ConvosCore
 import DifferenceKit
 import Foundation
 import SwiftUI

@@ -1,3 +1,4 @@
+import ConvosCore
 import SwiftUI
 import UIKit
 
@@ -74,7 +75,7 @@ struct DebugLogsView: View {
 struct DebugViewSection: View {
     @State private var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
     @State private var notificationAuthGranted: Bool = false
-    @State private var lastDeviceToken: String = NotificationProcessor.shared.getStoredDeviceToken() ?? "<none>"
+    @State private var lastDeviceToken: String = ""
 
     private var bundleIdentifier: String {
         Bundle.main.bundleIdentifier ?? "Unknown"
@@ -142,6 +143,7 @@ struct DebugViewSection: View {
                             Image(systemName: "doc.on.doc")
                         }
                         .buttonStyle(.borderless)
+                        .disabled(lastDeviceToken.isEmpty)
                     }
                 }
                 HStack {
@@ -188,7 +190,7 @@ struct DebugViewSection: View {
                 HStack {
                     Text("Environment")
                     Spacer()
-                    Text(ConfigManager.shared.currentEnvironment.rawValue.capitalized)
+                    Text(ConfigManager.shared.currentEnvironment.name.capitalized)
                         .foregroundStyle(.colorTextSecondary)
                 }
             }
@@ -223,7 +225,10 @@ extension DebugViewSection {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         notificationAuthStatus = settings.authorizationStatus
         notificationAuthGranted = settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
-        lastDeviceToken = NotificationProcessor.shared.getStoredDeviceToken() ?? "<none>"
+        lastDeviceToken = NotificationProcessor(
+            appGroupIdentifier: ConfigManager.shared.currentEnvironment.appGroupIdentifier
+        )
+            .getStoredDeviceToken() ?? ""
     }
 
     private func requestNotificationsNow() async {

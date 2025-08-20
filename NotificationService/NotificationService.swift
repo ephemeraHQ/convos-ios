@@ -1,89 +1,71 @@
+import ConvosCore
 import UserNotifications
 
 class NotificationService: UNNotificationServiceExtension {
-    var contentHandler: ((UNNotificationContent) -> Void)?
-    var bestAttemptContent: UNMutableNotificationContent?
+    private var pushHandler: CachedPushNotificationHandler?
+    private var contentHandler: ((UNNotificationContent) -> Void)?
+    private var bestAttemptContent: UNMutableNotificationContent?
+    private var pendingTask: Task<Void, Never>?
 
-    override func didReceive(_ request: UNNotificationRequest,
-                             withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
+    override func didReceive(
+        _ request: UNNotificationRequest,
+        withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
+    ) {
         self.contentHandler = contentHandler
         bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
 
-        NSLog("🔔 NSE Activating: didReceive")
+        pushHandler = NotificationExtensionEnvironment.createPushNotificationHandler()
 
-        if let bestAttemptContent = bestAttemptContent {
-            // Parse the notification payload
-            let userInfo = request.content.userInfo
-
-            // Log the raw payload received by the NSE (visible in Console.app)
-            logNSEPayload(userInfo)
-
-            let inboxId = userInfo["inboxId"] as? String
-            if let inboxId { NSLog("NSE: inboxId=%@", inboxId) }
-
-            if let notificationType = userInfo["notificationType"] as? String {
-                switch notificationType {
-                case "Protocol":
-                    // Expect notificationData dict with contentTopic and encryptedMessage
-                    if let data = userInfo["notificationData"] as? [String: Any] {
-                        let contentTopic = data["contentTopic"] as? String
-                        if let topic = contentTopic {
-                            let conversationId = conversationIdFromTopic(topic)
-                            bestAttemptContent.threadIdentifier = conversationId
-
-                            // Set a simple body if none present
-                            if bestAttemptContent.body.isEmpty { bestAttemptContent.body = "New message" }
-                        }
-                        // Keep title/body if backend provided; extension does not decrypt
-                        NSLog("NSE Protocol: topic=%@", contentTopic ?? "nil")
-                    }
-
-                case "InviteJoinRequest":
-                    // Expect inviteId; render a friendly alert
-                    let inviteId = userInfo["inviteId"] as? String
-                    bestAttemptContent.title = "Group Invitation"
-                    if let inviteId { bestAttemptContent.body = "You were invited (\(inviteId))" }
-                    // Thread by inbox if available so invites group in notification center
-                    if let inboxId { bestAttemptContent.threadIdentifier = "invites-\(inboxId)" }
-
-                default:
-                    break
-                }
-            }
-
-            contentHandler(bestAttemptContent)
+        // Handle the push notification asynchronously and wait for completion
+        pendingTask = Task {
+            await handlePushNotificationAsync(userInfo: request.content.userInfo)
         }
     }
 
     override func serviceExtensionTimeWillExpire() {
-        // Called just before the extension will be terminated by the system.
-        // Use this as an opportunity to deliver your "best attempt" at modified content,
-        // otherwise the original push payload will be used.
+        // Called just before the extension will be terminated by the system
+        // Cancel any ongoing async work to prevent multiple contentHandler calls
+        pendingTask?.cancel()
+        pendingTask = nil
+
+        pushHandler?.cleanup()
+
+        // Deliver the best attempt content
         if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
-            NSLog("NSE timeWillExpire - delivering best attempt content")
             contentHandler(bestAttemptContent)
         }
     }
 
-    // MARK: - Logging
-    private func logNSEPayload(_ userInfo: [AnyHashable: Any]) {
-        // Try to serialize to JSON for readability; fall back to dictionary description
-        if JSONSerialization.isValidJSONObject(userInfo),
-           let data = try? JSONSerialization.data(withJSONObject: userInfo, options: [.prettyPrinted]),
-           let json = String(data: data, encoding: .utf8) {
-            NSLog("NSE received push payload:\n%@", json)
-        } else {
-            NSLog("NSE received push payload (non-JSON): %@", String(describing: userInfo))
+    private func handlePushNotificationAsync(userInfo: [AnyHashable: Any]) async {
+        // Update notification content before processing
+        updateNotificationContent(userInfo: userInfo)
+
+        // Use the async version that waits for completion
+        await pushHandler?.handlePushNotificationAsync(userInfo: userInfo)
+
+        // Check if the task was cancelled before calling contentHandler
+        guard !Task.isCancelled else {
+            return
+        }
+
+        // Processing complete - deliver the notification
+        if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
+            contentHandler(bestAttemptContent)
         }
     }
 
-    // MARK: - Helpers
-    private func conversationIdFromTopic(_ topic: String) -> String {
-        // Example: /xmtp/mls/1/g-<conversationId>/proto -> <conversationId>
-        let parts = topic.split(separator: "/")
-        if let segment = parts.first(where: { $0.hasPrefix("g-") }) {
-            return String(segment.dropFirst(2))
+        private func updateNotificationContent(userInfo: [AnyHashable: Any]) {
+        guard let bestAttemptContent = bestAttemptContent else { return }
+
+        let payload = PushNotificationPayload(userInfo: userInfo)
+
+        // Use the centralized display logic from PushNotificationPayload
+        if let displayTitle = payload.displayTitle {
+            bestAttemptContent.title = displayTitle
         }
-        return topic
+
+        if let displayBody = payload.displayBody {
+            bestAttemptContent.body = displayBody
+        }
     }
 }

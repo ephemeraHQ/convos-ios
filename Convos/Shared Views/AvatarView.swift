@@ -1,4 +1,5 @@
 import Combine
+import ConvosCore
 import Observation
 import SwiftUI
 
@@ -102,13 +103,7 @@ struct ConversationAvatarView: View {
 
 #Preview {
     @Previewable @State var profileImage: UIImage?
-    let profile = Profile(
-        inboxId: "1",
-        name: "John Doe",
-        username: "johndoe",
-        avatar: nil
-    )
-
+    let profile: Profile = .mock(name: "John Doe")
     ProfileAvatarView(profile: profile)
 }
 

@@ -1,4 +1,5 @@
 import Combine
+import ConvosCore
 import SwiftUI
 
 @Observable
@@ -71,16 +72,14 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         }
     }
 
-    func join(inviteCode: String) {
-        guard let result = Invite.parse(temporaryInviteString: inviteCode) else {
+    func join(inviteUrlString: String) {
+        // New flow: accept only URL of form https://domain/join/{inviteCode}
+        guard let inviteCode = inviteUrlString.inviteCodeFromJoinURL else {
+            Logger.error("Invalid invite URL")
             return
         }
-        Logger.info("Scanned code: \(result)")
-        joinConversation(
-            inviteId: result.inviteId,
-            inboxId: result.inboxId,
-            inviteCode: result.code
-        )
+        Logger.info("Scanned inviteCode: \(inviteCode)")
+        joinConversation(inviteCode: inviteCode)
     }
 
     func deleteConversation() {
@@ -98,7 +97,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
 
     // MARK: - Private
 
-    private func joinConversation(inviteId: String, inboxId: String, inviteCode: String) {
+    private func joinConversation(inviteCode: String) {
         joinConversationTask?.cancel()
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
@@ -136,11 +135,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
 
                 draftConversationComposer
                     .draftConversationWriter
-                    .joinConversationWhenInboxReady(
-                        inviteId: inviteId,
-                        inviterInboxId: inboxId,
-                        inviteCode: inviteCode
-                    )
+                    .requestToJoinWhenInboxReady(inviteCode: inviteCode)
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
             }
