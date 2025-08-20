@@ -1,3 +1,4 @@
+import ConvosCore
 import UIKit
 
 // swiftlint:disable force_cast
@@ -15,6 +16,12 @@ final class CellFactory {
             return createDateTitle(in: collectionView, for: indexPath, title: group.value)
         case .typingIndicator:
             return createTypingIndicatorCell(in: collectionView, for: indexPath)
+        case let .invite(invite):
+            return createInviteCell(
+                in: collectionView,
+                for: indexPath,
+                invite: invite
+            )
         }
     }
 
@@ -102,6 +109,17 @@ final class CellFactory {
         ) as! ImageCollectionCell
         cell.setup(with: source, messageType: messageType)
         cell.layoutMargins = .init(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
+        return cell
+    }
+
+    private static func createInviteCell(in collectionView: UICollectionView,
+                                         for indexPath: IndexPath,
+                                         invite: Invite) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: InviteCell.reuseIdentifier,
+            for: indexPath
+        ) as! InviteCell
+        cell.prepare(with: invite)
         return cell
     }
 

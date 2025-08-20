@@ -20,6 +20,7 @@ final class MessagesCollectionViewDataSource: NSObject {
                                 forCellWithReuseIdentifier: TextMessageCollectionCell.reuseIdentifier)
         collectionView.register(ImageCollectionCell.self,
                                 forCellWithReuseIdentifier: ImageCollectionCell.reuseIdentifier)
+        collectionView.register(InviteCell.self, forCellWithReuseIdentifier: InviteCell.reuseIdentifier)
 
         collectionView.register(UserTitleCollectionCell.self,
                                 forCellWithReuseIdentifier: UserTitleCollectionCell.reuseIdentifier)

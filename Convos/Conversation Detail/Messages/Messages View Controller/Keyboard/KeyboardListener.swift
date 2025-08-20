@@ -24,6 +24,10 @@ final class KeyboardListener {
     private(set) var keyboardRect: CGRect?
     private var delegates: NSHashTable<AnyObject> = NSHashTable<AnyObject>.weakObjects()
 
+    // Fallback support
+    private var pendingDidChangeFrameInfo: KeyboardInfo?
+    private var didChangeFrameTimer: Timer?
+
     func add(delegate: KeyboardListenerDelegate) {
         delegates.add(delegate)
     }
@@ -53,7 +57,18 @@ final class KeyboardListener {
         guard let info = KeyboardInfo(notification) else {
             return
         }
+
         keyboardRect = info.frameEnd
+        pendingDidChangeFrameInfo = info
+
+        // Cancel any existing timer
+        didChangeFrameTimer?.invalidate()
+
+        // Start a fallback timer slightly longer than the expected duration
+        didChangeFrameTimer = Timer.scheduledTimer(withTimeInterval: info.animationDuration + 0.1, repeats: false) { [weak self] _ in
+            self?.handleMissingDidChangeFrame()
+        }
+
         delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
             $0.keyboardWillChangeFrame(info: info)
         }
@@ -64,6 +79,12 @@ final class KeyboardListener {
         guard let info = KeyboardInfo(notification) else {
             return
         }
+
+        // Cancel the fallback timer
+        didChangeFrameTimer?.invalidate()
+        didChangeFrameTimer = nil
+        pendingDidChangeFrameInfo = nil
+
         keyboardRect = info.frameEnd
         delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
             $0.keyboardDidChangeFrame(info: info)
@@ -75,6 +96,7 @@ final class KeyboardListener {
         guard let info = KeyboardInfo(notification) else {
             return
         }
+
         keyboardRect = info.frameEnd
         delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
             $0.keyboardDidShow(info: info)
@@ -86,6 +108,7 @@ final class KeyboardListener {
         guard let info = KeyboardInfo(notification) else {
             return
         }
+
         keyboardRect = info.frameEnd
         delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
             $0.keyboardWillHide(info: info)
@@ -97,9 +120,22 @@ final class KeyboardListener {
         guard let info = KeyboardInfo(notification) else {
             return
         }
+
         keyboardRect = info.frameEnd
         delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
             $0.keyboardDidHide(info: info)
+        }
+    }
+
+    private func handleMissingDidChangeFrame() {
+        guard let info = pendingDidChangeFrameInfo else { return }
+
+        keyboardRect = info.frameEnd
+        pendingDidChangeFrameInfo = nil
+        didChangeFrameTimer = nil
+
+        delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
+            $0.keyboardDidChangeFrame(info: info)
         }
     }
 

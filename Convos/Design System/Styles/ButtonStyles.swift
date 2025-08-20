@@ -43,9 +43,7 @@ struct RoundedButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .applyIf(fullWidth) { view in
-                view.frame(maxWidth: .infinity)
-            }
+            .frame(maxWidth: fullWidth ? .infinity : nil)
             .font(.subheadline)
             .lineLimit(1)
             .truncationMode(.middle)
@@ -53,7 +51,7 @@ struct RoundedButtonStyle: ButtonStyle {
             .padding(.horizontal, DesignConstants.Spacing.step4x)
             .opacity(configuration.isPressed ? 0.6 : 1.0)
             .background(.colorFillPrimary)
-            .clipShape(RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.medium))
+            .clipShape(Capsule())
             .foregroundColor(isEnabled ? .colorTextPrimaryInverted : .colorTextTertiary)
     }
 }
@@ -80,9 +78,7 @@ struct OutlineButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .applyIf(fullWidth) { view in
-                view.frame(maxWidth: .infinity)
-            }
+            .frame(maxWidth: fullWidth ? .infinity : nil)
             .font(.subheadline)
             .lineLimit(1)
             .truncationMode(.middle)

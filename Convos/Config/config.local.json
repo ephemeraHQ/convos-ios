@@ -1,0 +1,6 @@
+{
+  "environment": "local",
+  "bundleId": "org.convos.ios-local",
+  "appGroupIdentifier": "group.org.convos.ios-local",
+  "relyingPartyIdentifier": "local.convos.org"
+}

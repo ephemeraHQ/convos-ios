@@ -68,6 +68,8 @@ disabled_rules:
 
 type_body_length: 625
 
+line_length: 200
+
 function_body_length: 125
 function_parameter_count: 6
 nesting:
@@ -134,5 +136,8 @@ custom_rules:
     severity: warning
 
 excluded:
+  - ConvosCore/.build
   - ConvosTests
   - ConvosTests/Helpers
+  - ConvosAppClipTests
+  - ConvosAppClipUITests

@@ -7,36 +7,51 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = 7A1C3C742DB6F7AD00B723C0 /* PostHog */; };
-		7A349B6E2DD6FF5400E526A3 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */; };
-		7A349CA62DD7017B00E526A3 /* GRDB-dynamic in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		7A349D042DD96EA400E526A3 /* PasskeyAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7A349D032DD96EA400E526A3 /* PasskeyAuth */; };
-		7A5200F82DF0EF0800D2C55D /* TurnkeyPasskeys in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5200F72DF0EF0800D2C55D /* TurnkeyPasskeys */; };
-		7A5200FA2DF0EF0800D2C55D /* TurnkeyStamper in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5200F92DF0EF0800D2C55D /* TurnkeyStamper */; };
-		7A5200FC2DF0EF0800D2C55D /* TurnkeySwift in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5200FB2DF0EF0800D2C55D /* TurnkeySwift */; };
-		7A5201372DF0EFBC00D2C55D /* TurnkeyCrypto in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5201362DF0EFBC00D2C55D /* TurnkeyCrypto */; };
-		7A5201392DF0F1E600D2C55D /* TurnkeyHttp in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5201382DF0F1E600D2C55D /* TurnkeyHttp */; };
-		7ACA83952DDC395600848799 /* SwiftCBOR in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA83942DDC395600848799 /* SwiftCBOR */; };
-		7ACA83B22DDD19B200848799 /* OrderedCollections in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA83B12DDD19B200848799 /* OrderedCollections */; };
-		7ACA8BC82DE17FF800848799 /* GRDB-dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA8BC72DE17FF800848799 /* GRDB-dynamic */; };
-		7ACA8BCC2DE1800500848799 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA8BCB2DE1800500848799 /* XMTPiOS */; };
-		7ACA8BCD2DE1806900848799 /* GRDB-dynamic in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 7ACA8BC72DE17FF800848799 /* GRDB-dynamic */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		7A5D3E962E43B82400DA9B83 /* SwiftUIIntrospect in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5D3E952E43B82400DA9B83 /* SwiftUIIntrospect */; };
+		7AC59AB12E56228200D65D07 /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AC59AB02E56228200D65D07 /* ConvosCore */; };
+		7AD545902E4EA8BE00500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD5458F2E4EA8BE00500ADF /* ConvosCore */; };
+		7AD545922E4EA8D200500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545912E4EA8D200500ADF /* ConvosCore */; };
+		7AD545942E4EA8F300500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545932E4EA8F300500ADF /* ConvosCore */; };
+		7ADC0C902E2977820053978A /* ConvosAppClip.app in Embed App Clips */ = {isa = PBXBuildFile; fileRef = 7ADC0C6E2E2977800053978A /* ConvosAppClip.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = D80BAAC12DB2C36500C2FB42 /* Sentry */; };
-		D834386F2DB19D8C00A50F45 /* Factory in Frameworks */ = {isa = PBXBuildFile; productRef = D834386E2DB19D8C00A50F45 /* Factory */; };
-		D85B9B9F2DD26BC400831D58 /* (null) in Embed Frameworks */ = {isa = PBXBuildFile; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */; };
-		D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */ = {isa = PBXBuildFile; productRef = D8B5A9032DC272BD006003A4 /* XMTPiOS */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		7AC5993E2E5592FA00D65D07 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D8A2B6892DA4BA4B00EF8577 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7AC599302E5592F900D65D07;
+			remoteInfo = KeychainIdentityStoreExample;
+		};
 		7ACA8BA72DE16DE200848799 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D8A2B6892DA4BA4B00EF8577 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = D8A2B6902DA4BA4B00EF8577;
 			remoteInfo = Convos;
+		};
+		7ADC0C7D2E2977810053978A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D8A2B6892DA4BA4B00EF8577 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7ADC0C6D2E2977800053978A;
+			remoteInfo = ConvosAppClip;
+		};
+		7ADC0C872E2977810053978A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D8A2B6892DA4BA4B00EF8577 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7ADC0C6D2E2977800053978A;
+			remoteInfo = ConvosAppClip;
+		};
+		7ADC0C8E2E2977820053978A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D8A2B6892DA4BA4B00EF8577 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7ADC0C6D2E2977800053978A;
+			remoteInfo = ConvosAppClip;
 		};
 		D80850392DC94F4C00E708B0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -54,9 +69,19 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				7ACA8BCD2DE1806900848799 /* GRDB-dynamic in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7ADC0C632E2976210053978A /* Embed App Clips */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/AppClips";
+			dstSubfolderSpec = 16;
+			files = (
+				7ADC0C902E2977820053978A /* ConvosAppClip.app in Embed App Clips */,
+			);
+			name = "Embed App Clips";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D808503B2DC94F4C00E708B0 /* Embed Foundation Extensions */ = {
@@ -86,8 +111,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				D85B9B9F2DD26BC400831D58 /* (null) in Embed Frameworks */,
-				7A349CA62DD7017B00E526A3 /* GRDB-dynamic in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -97,7 +120,13 @@
 /* Begin PBXFileReference section */
 		7A1C3C512DB6F75000B723C0 /* Convos.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Convos.xcodeproj; sourceTree = "<group>"; };
 		7A7BB1322DB6FF8E009B8BBF /* Convos.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Convos.xcodeproj; sourceTree = "<group>"; };
+		7AC599312E5592F900D65D07 /* KeychainIdentityStoreExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KeychainIdentityStoreExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7AC5993D2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeychainIdentityStoreExampleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7ACA8BA32DE16DE200848799 /* ConvosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConvosTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7AD5458D2E4EA89400500ADF /* ConvosCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = ConvosCore; sourceTree = "<group>"; };
+		7ADC0C6E2E2977800053978A /* ConvosAppClip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ConvosAppClip.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7ADC0C7C2E2977810053978A /* ConvosAppClipTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConvosAppClipTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7ADC0C862E2977810053978A /* ConvosAppClipUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConvosAppClipUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D80850342DC94F4C00E708B0 /* NotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D8477AD42DCBA52F00E31E54 /* .env */ = {isa = PBXFileReference; lastKnownFileType = text; path = .env; sourceTree = "<group>"; };
 		D8477AD52DCBA52F00E31E54 /* .env.example */ = {isa = PBXFileReference; lastKnownFileType = text; path = .env.example; sourceTree = "<group>"; };
@@ -108,91 +137,16 @@
 		7ACA8BD52DE180B800848799 /* Exceptions for "Convos" folder in "ConvosTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"Convos Client/AppEnvironment.swift",
-				"Convos Client/Auth/AuthAccountServiceProtocol.swift",
-				"Convos Client/Auth/AuthServiceProtocol.swift",
-				"Convos Client/Auth/KeychainService.swift",
-				"Convos Client/Auth/Migrations/ReactNativeMigration.swift",
-				"Convos Client/Auth/MockAuthService.swift",
-				"Convos Client/Auth/Secure Enclave/SecureEnclaveAuthService.swift",
-				"Convos Client/Auth/Secure Enclave/SecureEnclaveIdentityStore.swift",
-				"Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
-				"Convos Client/Convos API/ConvosAPIClient.swift",
-				"Convos Client/Convos API/ConvosAPIClient+Models.swift",
-				"Convos Client/Convos API/MockAPIClient.swift",
-				"Convos Client/ConvosClient.swift",
-				"Convos Client/Inboxes/AuthorizeInboxOperation.swift",
-				"Convos Client/Inboxes/InboxStateMachine.swift",
-				"Convos Client/Inboxes/MockInboxesService.swift",
-				"Convos Client/Inboxes/SessionManager.swift",
-				"Convos Client/Inboxes/SessionManagerProtocol.swift",
-				"Convos Client/Messaging/MessagingService.swift",
-				"Convos Client/Messaging/MessagingServiceProtocol.swift",
-				"Convos Client/Messaging/MockMessagingService.swift",
-				"Convos Client/Messaging/SyncingManager.swift",
-				"Convos Client/Messaging/XMTPClientProvider.swift",
-				"Convos Client/Mock Data Helpers/TextGenerator.swift",
-				"Convos Client/Shared/ConvosKeychainItem.swift",
-				"Convos Client/Shared/Data+Hex.swift",
-				"Convos Client/Shared/Data+JsonString.swift",
-				"Convos Client/Storage/DatabaseManager.swift",
-				"Convos Client/Storage/Dependency Bundles/ConversationComposer.swift",
-				"Convos Client/Storage/Hydration/DBConversationDetails+Conversation.swift",
-				"Convos Client/Storage/Hydration/DBInboxDetails+Inbox.swift",
-				"Convos Client/Storage/Hydration/DBMessage+MessagePreview.swift",
-				"Convos Client/Storage/Hydration/DBProfile+Profile.swift",
-				"Convos Client/Storage/MockDatabaseManager.swift",
-				"Convos Client/Storage/Models/Conversation.swift",
-				"Convos Client/Storage/Models/Database+CurrentSession.swift",
-				"Convos Client/Storage/Models/Identity.swift",
-				"Convos Client/Storage/Models/Inbox.swift",
-				"Convos Client/Storage/Models/Member.swift",
-				"Convos Client/Storage/Models/Message.swift",
-				"Convos Client/Storage/Models/Profile.swift",
-				"Convos Client/Storage/Models/Session.swift",
-				"Convos Client/Storage/Repositories/ConversationRepository.swift",
-				"Convos Client/Storage/Repositories/ConversationsCountRepository.swift",
-				"Convos Client/Storage/Repositories/ConversationsRepository.swift",
-				"Convos Client/Storage/Repositories/CurrentSessionRepository.swift",
-				"Convos Client/Storage/Repositories/DB XMTP Representations/Consent+ConsentState.swift",
-				"Convos Client/Storage/Repositories/DraftConversationRepository.swift",
-				"Convos Client/Storage/Repositories/InboxesRepository.swift",
-				"Convos Client/Storage/Repositories/MessagesRepository.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockConversationConsentWriter.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockConversationRepository.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockConversationsRepository.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockDraftConversationWriter.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockInboxesRepository.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockMessagesRepository.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockOutgoingMessageWriter.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockProfileSearchRepository.swift",
-				"Convos Client/Storage/Repositories/Mocks/MockSyncingManager.swift",
-				"Convos Client/Storage/Repositories/ProfileSearchRepository.swift",
-				"Convos Client/Storage/SharedDatabaseMigrator.swift",
-				"Convos Client/Storage/States/DraftConversationState.swift",
-				"Convos Client/Storage/Writers/ConversationConsentWriter.swift",
-				"Convos Client/Storage/Writers/ConversationLocalStateWriter.swift",
-				"Convos Client/Storage/Writers/ConversationWriter.swift",
-				"Convos Client/Storage/Writers/DraftConversationWriter.swift",
-				"Convos Client/Storage/Writers/InboxWriter.swift",
-				"Convos Client/Storage/Writers/IncomingMessageWriter.swift",
-				"Convos Client/Storage/Writers/MemberProfileWriter.swift",
-				"Convos Client/Storage/Writers/OutgoingMessageWriter.swift",
-				"Convos Client/Storage/XMTP DB Representations/DecodedMessage+DBRepresentation.swift",
-				"Convos Client/Storage/XMTP DB Representations/MessageDeliveryStatus+DBRepresentation.swift",
-				"Convos Client/Storage/XMTP DB Representations/Reaction+DBRepresentation.swift",
-				Logging/Logger.swift,
-				"Utilities/Combine+Extensions.swift",
-				"Utilities/EthereumAddress+Validation.swift",
+				"_Archive/Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
 			);
 			target = 7ACA8BA22DE16DE200848799 /* ConvosTests */;
 		};
-		7ACA8BFA2DE181B800848799 /* Exceptions for "Config" folder in "ConvosTests" target */ = {
+		7ADC0C942E2977820053978A /* Exceptions for "ConvosAppClip" folder in "ConvosAppClip" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Secrets.swift,
+				Info.plist,
 			);
-			target = 7ACA8BA22DE16DE200848799 /* ConvosTests */;
+			target = 7ADC0C6D2E2977800053978A /* ConvosAppClip */;
 		};
 		D80850402DC94F4C00E708B0 /* Exceptions for "NotificationService" folder in "NotificationService" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -204,22 +158,60 @@
 		D8A2B6A32DA4BA4C00EF8577 /* Exceptions for "Convos" folder in "Convos" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"Convos Client/Auth/Passkey/AsyncAuthorizationController.swift",
-				"Convos Client/Auth/Passkey/PasskeyAuthError.swift",
-				"Convos Client/Auth/Passkey/PasskeyAuthService.swift",
-				"Convos Client/Auth/Passkey/PasskeyIdentityStore.swift",
-				"Convos Client/Auth/Passkey/PasskeyPresentationProvider.swift",
-				"Convos Client/Auth/Passkey/PasskeySigningKey.swift",
+				"_Archive/Convos Client/Auth/Passkey/AsyncAuthorizationController.swift",
+				"_Archive/Convos Client/Auth/Passkey/PasskeyAuthError.swift",
+				"_Archive/Convos Client/Auth/Passkey/PasskeyAuthService.swift",
+				"_Archive/Convos Client/Auth/Passkey/PasskeyIdentityStore.swift",
+				"_Archive/Convos Client/Auth/Passkey/PasskeyPresentationProvider.swift",
+				"_Archive/Convos Client/Auth/Passkey/PasskeySigningKey.swift",
+				"_Archive/Convos Client/Auth/Turnkey/TurnkeyAccountsService.swift",
+				"_Archive/Convos Client/Auth/Turnkey/TurnkeyAuthService.swift",
+				"_Archive/Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
+				"_Archive/Convos Client/Auth/Turnkey/TurnkeyPresentationAnchorProvider.swift",
+				"Conversation Detail/AddMemberView.swift",
+				"Design System/Animation/DraggableSpringyView.swift",
+				"Design System/Components/LabeledTextField.swift",
 				Info.plist,
+				"Shared Views/BackspaceTextField.swift",
+				"Shared Views/FlowLayout.swift",
+				"Shared Views/FlowLayoutTextEditor.swift",
 			);
 			target = D8A2B6902DA4BA4B00EF8577 /* Convos */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		7AC599322E5592F900D65D07 /* KeychainIdentityStoreExample */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KeychainIdentityStoreExample;
+			sourceTree = "<group>";
+		};
+		7AC599402E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KeychainIdentityStoreExampleTests;
+			sourceTree = "<group>";
+		};
 		7ACA8BA42DE16DE200848799 /* ConvosTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ConvosTests;
+			sourceTree = "<group>";
+		};
+		7ADC0C6F2E2977800053978A /* ConvosAppClip */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7ADC0C942E2977820053978A /* Exceptions for "ConvosAppClip" folder in "ConvosAppClip" target */,
+			);
+			path = ConvosAppClip;
+			sourceTree = "<group>";
+		};
+		7ADC0C7F2E2977810053978A /* ConvosAppClipTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ConvosAppClipTests;
+			sourceTree = "<group>";
+		};
+		7ADC0C892E2977810053978A /* ConvosAppClipUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ConvosAppClipUITests;
 			sourceTree = "<group>";
 		};
 		D80850352DC94F4C00E708B0 /* NotificationService */ = {
@@ -228,14 +220,6 @@
 				D80850402DC94F4C00E708B0 /* Exceptions for "NotificationService" folder in "NotificationService" target */,
 			);
 			path = NotificationService;
-			sourceTree = "<group>";
-		};
-		D83A7ABA2DA5C98400879441 /* Config */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				7ACA8BFA2DE181B800848799 /* Exceptions for "Config" folder in "ConvosTests" target */,
-			);
-			path = Config;
 			sourceTree = "<group>";
 		};
 		D8A2B6932DA4BA4B00EF8577 /* Convos */ = {
@@ -250,12 +234,47 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		7AC5992E2E5592F900D65D07 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7AC5993A2E5592FA00D65D07 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7AC59AB12E56228200D65D07 /* ConvosCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7ACA8BA02DE16DE200848799 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7ACA8BC82DE17FF800848799 /* GRDB-dynamic in Frameworks */,
-				7ACA8BCC2DE1800500848799 /* XMTPiOS in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7ADC0C6B2E2977800053978A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7AD545942E4EA8F300500ADF /* ConvosCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7ADC0C792E2977810053978A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7ADC0C832E2977810053978A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -263,6 +282,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7AD545922E4EA8D200500ADF /* ConvosCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -270,21 +290,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7A5200FA2DF0EF0800D2C55D /* TurnkeyStamper in Frameworks */,
-				7A5201392DF0F1E600D2C55D /* TurnkeyHttp in Frameworks */,
-				7ACA83B22DDD19B200848799 /* OrderedCollections in Frameworks */,
-				D834386F2DB19D8C00A50F45 /* Factory in Frameworks */,
-				D8A2B6BB2DA4BBA400EF8577 /* AnchorKit in Frameworks */,
-				7A5200F82DF0EF0800D2C55D /* TurnkeyPasskeys in Frameworks */,
+				7A5D3E962E43B82400DA9B83 /* SwiftUIIntrospect in Frameworks */,
+				7AD545902E4EA8BE00500ADF /* ConvosCore in Frameworks */,
 				D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */,
-				D8B5A9042DC272BD006003A4 /* XMTPiOS in Frameworks */,
-				7A349B6E2DD6FF5400E526A3 /* GRDB-dynamic in Frameworks */,
-				7A349D042DD96EA400E526A3 /* PasskeyAuth in Frameworks */,
-				7A5200FC2DF0EF0800D2C55D /* TurnkeySwift in Frameworks */,
-				7A5201372DF0EFBC00D2C55D /* TurnkeyCrypto in Frameworks */,
-				7A1C3C752DB6F7AD00B723C0 /* PostHog in Frameworks */,
-				D80BAAC22DB2C36500C2FB42 /* Sentry in Frameworks */,
-				7ACA83952DDC395600848799 /* SwiftCBOR in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -315,12 +323,17 @@
 		D8A2B6882DA4BA4B00EF8577 = {
 			isa = PBXGroup;
 			children = (
+				7AD5458D2E4EA89400500ADF /* ConvosCore */,
 				D8477AD42DCBA52F00E31E54 /* .env */,
 				D8477AD52DCBA52F00E31E54 /* .env.example */,
-				D83A7ABA2DA5C98400879441 /* Config */,
 				D8A2B6932DA4BA4B00EF8577 /* Convos */,
 				D80850352DC94F4C00E708B0 /* NotificationService */,
 				7ACA8BA42DE16DE200848799 /* ConvosTests */,
+				7ADC0C6F2E2977800053978A /* ConvosAppClip */,
+				7ADC0C7F2E2977810053978A /* ConvosAppClipTests */,
+				7ADC0C892E2977810053978A /* ConvosAppClipUITests */,
+				7AC599322E5592F900D65D07 /* KeychainIdentityStoreExample */,
+				7AC599402E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */,
 				7ACA8BC42DE17F2E00848799 /* Frameworks */,
 				D8A2B6922DA4BA4B00EF8577 /* Products */,
 			);
@@ -332,6 +345,11 @@
 				D8A2B6912DA4BA4B00EF8577 /* Convos.app */,
 				D80850342DC94F4C00E708B0 /* NotificationService.appex */,
 				7ACA8BA32DE16DE200848799 /* ConvosTests.xctest */,
+				7ADC0C6E2E2977800053978A /* ConvosAppClip.app */,
+				7ADC0C7C2E2977810053978A /* ConvosAppClipTests.xctest */,
+				7ADC0C862E2977810053978A /* ConvosAppClipUITests.xctest */,
+				7AC599312E5592F900D65D07 /* KeychainIdentityStoreExample.app */,
+				7AC5993D2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -339,6 +357,53 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		7AC599302E5592F900D65D07 /* KeychainIdentityStoreExample */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7AC599582E5592FA00D65D07 /* Build configuration list for PBXNativeTarget "KeychainIdentityStoreExample" */;
+			buildPhases = (
+				7AC5992D2E5592F900D65D07 /* Sources */,
+				7AC5992E2E5592F900D65D07 /* Frameworks */,
+				7AC5992F2E5592F900D65D07 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				7AC599322E5592F900D65D07 /* KeychainIdentityStoreExample */,
+			);
+			name = KeychainIdentityStoreExample;
+			packageProductDependencies = (
+				7AC5995B2E5593C300D65D07 /* ConvosCore */,
+			);
+			productName = KeychainIdentityStoreExample;
+			productReference = 7AC599312E5592F900D65D07 /* KeychainIdentityStoreExample.app */;
+			productType = "com.apple.product-type.application";
+		};
+		7AC5993C2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7AC599592E5592FA00D65D07 /* Build configuration list for PBXNativeTarget "KeychainIdentityStoreExampleTests" */;
+			buildPhases = (
+				7AC599392E5592FA00D65D07 /* Sources */,
+				7AC5993A2E5592FA00D65D07 /* Frameworks */,
+				7AC5993B2E5592FA00D65D07 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7AC5993F2E5592FA00D65D07 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				7AC599402E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */,
+			);
+			name = KeychainIdentityStoreExampleTests;
+			packageProductDependencies = (
+				7AC59AB02E56228200D65D07 /* ConvosCore */,
+			);
+			productName = KeychainIdentityStoreExampleTests;
+			productReference = 7AC5993D2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		7ACA8BA22DE16DE200848799 /* ConvosTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7ACA8BA92DE16DE200848799 /* Build configuration list for PBXNativeTarget "ConvosTests" */;
@@ -358,17 +423,85 @@
 			);
 			name = ConvosTests;
 			packageProductDependencies = (
-				7ACA8BC72DE17FF800848799 /* GRDB-dynamic */,
-				7ACA8BCB2DE1800500848799 /* XMTPiOS */,
 			);
 			productName = ConvosTests;
 			productReference = 7ACA8BA32DE16DE200848799 /* ConvosTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		7ADC0C6D2E2977800053978A /* ConvosAppClip */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7ADC0C912E2977820053978A /* Build configuration list for PBXNativeTarget "ConvosAppClip" */;
+			buildPhases = (
+				7ADC0C6A2E2977800053978A /* Sources */,
+				7ADC0C6B2E2977800053978A /* Frameworks */,
+				7ADC0C6C2E2977800053978A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				7ADC0C6F2E2977800053978A /* ConvosAppClip */,
+			);
+			name = ConvosAppClip;
+			packageProductDependencies = (
+				7AD545932E4EA8F300500ADF /* ConvosCore */,
+			);
+			productName = ConvosAppClip;
+			productReference = 7ADC0C6E2E2977800053978A /* ConvosAppClip.app */;
+			productType = "com.apple.product-type.application.on-demand-install-capable";
+		};
+		7ADC0C7B2E2977810053978A /* ConvosAppClipTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7ADC0C952E2977820053978A /* Build configuration list for PBXNativeTarget "ConvosAppClipTests" */;
+			buildPhases = (
+				7ADC0C782E2977810053978A /* Sources */,
+				7ADC0C792E2977810053978A /* Frameworks */,
+				7ADC0C7A2E2977810053978A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7ADC0C7E2E2977810053978A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				7ADC0C7F2E2977810053978A /* ConvosAppClipTests */,
+			);
+			name = ConvosAppClipTests;
+			packageProductDependencies = (
+			);
+			productName = ConvosAppClipTests;
+			productReference = 7ADC0C7C2E2977810053978A /* ConvosAppClipTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		7ADC0C852E2977810053978A /* ConvosAppClipUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7ADC0C982E2977820053978A /* Build configuration list for PBXNativeTarget "ConvosAppClipUITests" */;
+			buildPhases = (
+				7ADC0C822E2977810053978A /* Sources */,
+				7ADC0C832E2977810053978A /* Frameworks */,
+				7ADC0C842E2977810053978A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7ADC0C882E2977810053978A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				7ADC0C892E2977810053978A /* ConvosAppClipUITests */,
+			);
+			name = ConvosAppClipUITests;
+			packageProductDependencies = (
+			);
+			productName = ConvosAppClipUITests;
+			productReference = 7ADC0C862E2977810053978A /* ConvosAppClipUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		D80850332DC94F4C00E708B0 /* NotificationService */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D808503D2DC94F4C00E708B0 /* Build configuration list for PBXNativeTarget "NotificationService" */;
 			buildPhases = (
+				DA06CC472E537505006BFFBA /* Copy Environment Config */,
 				D80850302DC94F4C00E708B0 /* Sources */,
 				D80850312DC94F4C00E708B0 /* Frameworks */,
 				D80850322DC94F4C00E708B0 /* Resources */,
@@ -391,39 +524,29 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D8A2B6A42DA4BA4C00EF8577 /* Build configuration list for PBXNativeTarget "Convos" */;
 			buildPhases = (
+				DAFC98F62E37C4E700991094 /* Copy Environment Config */,
 				D8A2B68D2DA4BA4B00EF8577 /* Sources */,
 				D8A2B68E2DA4BA4B00EF8577 /* Frameworks */,
 				D8A2B68F2DA4BA4B00EF8577 /* Resources */,
 				D808503B2DC94F4C00E708B0 /* Embed Foundation Extensions */,
 				D85B9BA02DD26BC400831D58 /* Embed Frameworks */,
+				7ADC0C632E2976210053978A /* Embed App Clips */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				D8084C1C2DC91F1300E708B0 /* PBXTargetDependency */,
 				D808503A2DC94F4C00E708B0 /* PBXTargetDependency */,
+				7ADC0C8F2E2977820053978A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				D83A7ABA2DA5C98400879441 /* Config */,
 				D8A2B6932DA4BA4B00EF8577 /* Convos */,
 			);
 			name = Convos;
 			packageProductDependencies = (
-				D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */,
-				D834386E2DB19D8C00A50F45 /* Factory */,
-				D80BAAC12DB2C36500C2FB42 /* Sentry */,
-				7A1C3C742DB6F7AD00B723C0 /* PostHog */,
-				D8B5A9032DC272BD006003A4 /* XMTPiOS */,
 				D8084BA82DC9193A00E708B0 /* DifferenceKit */,
-				7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */,
-				7A349D032DD96EA400E526A3 /* PasskeyAuth */,
-				7ACA83942DDC395600848799 /* SwiftCBOR */,
-				7ACA83B12DDD19B200848799 /* OrderedCollections */,
-				7A5200F72DF0EF0800D2C55D /* TurnkeyPasskeys */,
-				7A5200F92DF0EF0800D2C55D /* TurnkeyStamper */,
-				7A5200FB2DF0EF0800D2C55D /* TurnkeySwift */,
-				7A5201362DF0EFBC00D2C55D /* TurnkeyCrypto */,
-				7A5201382DF0F1E600D2C55D /* TurnkeyHttp */,
+				7A5D3E952E43B82400DA9B83 /* SwiftUIIntrospect */,
+				7AD5458F2E4EA8BE00500ADF /* ConvosCore */,
 			);
 			productName = Convos;
 			productReference = D8A2B6912DA4BA4B00EF8577 /* Convos.app */;
@@ -436,11 +559,29 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1630;
+				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					7AC599302E5592F900D65D07 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					7AC5993C2E5592FA00D65D07 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 7AC599302E5592F900D65D07;
+					};
 					7ACA8BA22DE16DE200848799 = {
 						CreatedOnToolsVersion = 16.3;
+					};
+					7ADC0C6D2E2977800053978A = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					7ADC0C7B2E2977810053978A = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 7ADC0C6D2E2977800053978A;
+					};
+					7ADC0C852E2977810053978A = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 7ADC0C6D2E2977800053978A;
 					};
 					D80850332DC94F4C00E708B0 = {
 						CreatedOnToolsVersion = 16.3;
@@ -460,18 +601,9 @@
 			mainGroup = D8A2B6882DA4BA4B00EF8577;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */,
-				D834386D2DB19D8C00A50F45 /* XCRemoteSwiftPackageReference "Factory" */,
-				D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
-				7A1C3C732DB6F7AD00B723C0 /* XCRemoteSwiftPackageReference "posthog-ios" */,
-				D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */,
 				D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */,
-				7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
-				7A349D022DD96EA400E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */,
-				7ACA83932DDC395600848799 /* XCRemoteSwiftPackageReference "SwiftCBOR" */,
-				7ACA83B02DDD19B200848799 /* XCRemoteSwiftPackageReference "swift-collections" */,
-				7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */,
+				7A5D3E942E43B82400DA9B83 /* XCRemoteSwiftPackageReference "swiftui-introspect" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
@@ -491,12 +623,52 @@
 				D8A2B6902DA4BA4B00EF8577 /* Convos */,
 				D80850332DC94F4C00E708B0 /* NotificationService */,
 				7ACA8BA22DE16DE200848799 /* ConvosTests */,
+				7ADC0C6D2E2977800053978A /* ConvosAppClip */,
+				7ADC0C7B2E2977810053978A /* ConvosAppClipTests */,
+				7ADC0C852E2977810053978A /* ConvosAppClipUITests */,
+				7AC599302E5592F900D65D07 /* KeychainIdentityStoreExample */,
+				7AC5993C2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		7AC5992F2E5592F900D65D07 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7AC5993B2E5592FA00D65D07 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7ACA8BA12DE16DE200848799 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7ADC0C6C2E2977800053978A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7ADC0C7A2E2977810053978A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7ADC0C842E2977810053978A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -519,8 +691,89 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		DA06CC472E537505006BFFBA /* Copy Environment Config */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Convos/Config/$(CONFIG_FILE)",
+				"$(SRCROOT)/.env",
+			);
+			name = "Copy Environment Config";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/config.json",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#!/bin/bash\nset -e\n\n# Part 1: Generate Secrets.swift for Local builds only (App target only)\nif [ \"$TARGET_NAME\" = \"Convos\" ] && [ \"$CONFIGURATION\" = \"Local\" ]; then\n    echo \"🏠 Local build detected - generating secrets with auto-detected IP\"\n    \n    SECRETS_FILE=\"${SRCROOT}/Convos/Config/Secrets.swift\"\n    \n    # Get the first routable IPv4 address (excluding link-local/APIPA addresses)\n    # First try to get a public IP (not in private ranges)\n    LOCAL_IP=$(ifconfig | grep -E \"inet [0-9]+\" | grep -v \"127\\.\" | grep -v \"169\\.254\\.\" | grep -v \"10\\.\" | grep -v \"172\\.1[6-9]\\.\" | grep -v \"172\\.2[0-9]\\.\" | grep -v \"172\\.3[0-1]\\.\" | grep -v \"192\\.168\\.\" | head -1 | awk '{print $2}')\n    # If no public IP, get the first private network IP (but not link-local)\n    if [ -z \"$LOCAL_IP\" ]; then\n        LOCAL_IP=$(ifconfig | grep -E \"inet [0-9]+\" | grep -v \"127\\.\" | grep -v \"169\\.254\\.\" | head -1 | awk '{print $2}')\n    fi\n    \n    if [ -z \"$LOCAL_IP\" ]; then\n        echo \"❌ Could not detect local IP address\"\n        exit 1\n    fi\n    \n    echo \"✅ Detected local IP\"\n    \n    # Create directory if needed\n    mkdir -p \"${SRCROOT}/Convos/Config\"\n    \n    # Start generating Secrets.swift\n    cat > \"$SECRETS_FILE\" << 'HEADER_EOF'\nimport Foundation\n\n// WARNING:\n// This code is generated by the build phase for Local development.\n// Do not edit this file directly. Your changes will be lost on next build.\n// Git does not track this file.\n// For Local builds, the IP addresses are auto-detected from your network interfaces.\n// For other environments, edit the .env file and run ./Scripts/generate-secrets.sh\n\n// swiftlint:disable all\n\n/// Secrets are generated automatically for Local development\nenum Secrets {\nHEADER_EOF\n\n    # Check if .env has custom values first, otherwise auto-detect\n    CONVOS_API_BASE_URL=\"\"\n    XMTP_CUSTOM_HOST=\"\"\n    \n    if [ -f \"${SRCROOT}/.env\" ]; then\n        # Check for uncommented values in .env\n        CONVOS_API_BASE_URL=$(grep -v '^#' \"${SRCROOT}/.env\" | grep '^CONVOS_API_BASE_URL=' | cut -d'=' -f2- | sed -e 's/^\"//' -e 's/\"$//' || true)\n        XMTP_CUSTOM_HOST=$(grep -v '^#' \"${SRCROOT}/.env\" | grep '^XMTP_CUSTOM_HOST=' | cut -d'=' -f2- | sed -e 's/^\"//' -e 's/\"$//' || true)\n    fi\n\n    # Use .env values if present, otherwise auto-detect\n    if [ -n \"$CONVOS_API_BASE_URL\" ]; then\n        echo \"🔧 Using CONVOS_API_BASE_URL from .env\"\n        echo \"    static let CONVOS_API_BASE_URL = \\\"$CONVOS_API_BASE_URL\\\"\" >> \"$SECRETS_FILE\"\n    else\n        echo \"🔍 Auto-detecting CONVOS_API_BASE_URL\"\n        echo \"    static let CONVOS_API_BASE_URL = \\\"http://$LOCAL_IP:4000/api\\\"\" >> \"$SECRETS_FILE\"\n    fi\n\n    if [ -n \"$XMTP_CUSTOM_HOST\" ]; then\n        echo \"🔧 Using XMTP_CUSTOM_HOST from .env\"\n        echo \"    static let XMTP_CUSTOM_HOST = \\\"$XMTP_CUSTOM_HOST\\\"\" >> \"$SECRETS_FILE\"\n    else\n        echo \"🔍 Auto-detecting XMTP_CUSTOM_HOST\"\n        echo \"    static let XMTP_CUSTOM_HOST = \\\"$LOCAL_IP\\\"\" >> \"$SECRETS_FILE\"\n    fi\n    \n    # Add other secrets from .env if available\n    if [ -f \"${SRCROOT}/.env\" ]; then\n        echo \"📋 Adding additional secrets from .env file...\"\n        \n        # Process .env file: skip comments, empty lines, and IP-related keys (since we handled them above), then format as Swift\n        sed -n '/^[^#]/p' \"${SRCROOT}/.env\" | grep '=' | grep -v '^CONVOS_API_BASE_URL' | grep -v '^XMTP_CUSTOM_HOST' | sed 's/^\\([^=]*\\)=\\(.*\\)$/    static let \\1 = \"\\2\"/' | sed 's/\"\"\\(.*\\)\"\"/\"\\1\"/' >> \"$SECRETS_FILE\"\n    fi\n    \n    # Close the enum\n    cat >> \"$SECRETS_FILE\" << 'FOOTER_EOF'\n}\n\n// swiftlint:enable all\nFOOTER_EOF\n    \n    echo \"🏁 Generated Secrets.swift with auto-detected IP\"\nfi\n\n# Part 2: Copy config file (existing functionality)\nCONFIG_SOURCE=\"${SRCROOT}/Convos/Config/${CONFIG_FILE}\"\nCONFIG_DEST=\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}/config.json\"\n\nif [ ! -f \"$CONFIG_SOURCE\" ]; then\n    echo \"error: Config file not found: $CONFIG_SOURCE (CONFIG_FILE=$CONFIG_FILE)\"\n    exit 1\nfi\n\necho \"📋 Copying $CONFIG_FILE to app bundle\"\ncp \"$CONFIG_SOURCE\" \"$CONFIG_DEST\"\necho \"✅ Config copied successfully\"\n";
+		};
+		DAFC98F62E37C4E700991094 /* Copy Environment Config */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Convos/Config/$(CONFIG_FILE)",
+				"$(SRCROOT)/.env",
+			);
+			name = "Copy Environment Config";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(CODESIGNING_FOLDER_PATH)/config.json",
+				"$(SRCROOT)/Convos/Config/Secrets.swift",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#!/bin/bash\nset -e\n\n# Part 1: Generate Secrets.swift for Local builds only (App target only)\nif [ \"$TARGET_NAME\" = \"Convos\" ] && [ \"$CONFIGURATION\" = \"Local\" ]; then\n    echo \"🏠 Local build detected - generating secrets with auto-detected IP\"\n    \n    SECRETS_FILE=\"${SRCROOT}/Convos/Config/Secrets.swift\"\n    \n    # Get the first routable IPv4 address (excluding link-local/APIPA addresses)\n    # First try to get a public IP (not in private ranges)\n    LOCAL_IP=$(ifconfig | grep -E \"inet [0-9]+\" | grep -v \"127\\.\" | grep -v \"169\\.254\\.\" | grep -v \"10\\.\" | grep -v \"172\\.1[6-9]\\.\" | grep -v \"172\\.2[0-9]\\.\" | grep -v \"172\\.3[0-1]\\.\" | grep -v \"192\\.168\\.\" | head -1 | awk '{print $2}')\n    # If no public IP, get the first private network IP (but not link-local)\n    if [ -z \"$LOCAL_IP\" ]; then\n        LOCAL_IP=$(ifconfig | grep -E \"inet [0-9]+\" | grep -v \"127\\.\" | grep -v \"169\\.254\\.\" | head -1 | awk '{print $2}')\n    fi\n    \n    if [ -z \"$LOCAL_IP\" ]; then\n        echo \"❌ Could not detect local IP address\"\n        exit 1\n    fi\n    \n    echo \"✅ Detected local IP\"\n    \n    # Create directory if needed\n    mkdir -p \"${SRCROOT}/Convos/Config\"\n    \n    # Start generating Secrets.swift\n    cat > \"$SECRETS_FILE\" << 'HEADER_EOF'\nimport Foundation\n\n// WARNING:\n// This code is generated by the build phase for Local development.\n// Do not edit this file directly. Your changes will be lost on next build.\n// Git does not track this file.\n// For Local builds, the IP addresses are auto-detected from your network interfaces.\n// For other environments, edit the .env file and run ./Scripts/generate-secrets.sh\n\n// swiftlint:disable all\n\n/// Secrets are generated automatically for Local development\nenum Secrets {\nHEADER_EOF\n\n    # Check if .env has custom values first, otherwise auto-detect\n    CONVOS_API_BASE_URL=\"\"\n    XMTP_CUSTOM_HOST=\"\"\n    \n    if [ -f \"${SRCROOT}/.env\" ]; then\n        # Check for uncommented values in .env\n        CONVOS_API_BASE_URL=$(grep -v '^#' \"${SRCROOT}/.env\" | grep '^CONVOS_API_BASE_URL=' | cut -d'=' -f2- | sed -e 's/^\"//' -e 's/\"$//' || true)\n        XMTP_CUSTOM_HOST=$(grep -v '^#' \"${SRCROOT}/.env\" | grep '^XMTP_CUSTOM_HOST=' | cut -d'=' -f2- | sed -e 's/^\"//' -e 's/\"$//' || true)\n    fi\n\n    # Use .env values if present, otherwise auto-detect\n    if [ -n \"$CONVOS_API_BASE_URL\" ]; then\n        echo \"🔧 Using CONVOS_API_BASE_URL from .env\"\n        echo \"    static let CONVOS_API_BASE_URL = \\\"$CONVOS_API_BASE_URL\\\"\" >> \"$SECRETS_FILE\"\n    else\n        echo \"🔍 Auto-detecting CONVOS_API_BASE_URL\"\n        echo \"    static let CONVOS_API_BASE_URL = \\\"http://$LOCAL_IP:4000/api\\\"\" >> \"$SECRETS_FILE\"\n    fi\n\n    if [ -n \"$XMTP_CUSTOM_HOST\" ]; then\n        echo \"🔧 Using XMTP_CUSTOM_HOST from .env\"\n        echo \"    static let XMTP_CUSTOM_HOST = \\\"$XMTP_CUSTOM_HOST\\\"\" >> \"$SECRETS_FILE\"\n    else\n        echo \"🔍 Auto-detecting XMTP_CUSTOM_HOST\"\n        echo \"    static let XMTP_CUSTOM_HOST = \\\"$LOCAL_IP\\\"\" >> \"$SECRETS_FILE\"\n    fi\n    \n    # Add other secrets from .env if available\n    if [ -f \"${SRCROOT}/.env\" ]; then\n        echo \"📋 Adding additional secrets from .env file...\"\n        \n        # Process .env file: skip comments, empty lines, and IP-related keys (since we handled them above), then format as Swift\n        sed -n '/^[^#]/p' \"${SRCROOT}/.env\" | grep '=' | grep -v '^CONVOS_API_BASE_URL' | grep -v '^XMTP_CUSTOM_HOST' | sed 's/^\\([^=]*\\)=\\(.*\\)$/    static let \\1 = \"\\2\"/' | sed 's/\"\"\\(.*\\)\"\"/\"\\1\"/' >> \"$SECRETS_FILE\"\n    fi\n    \n    # Close the enum\n    cat >> \"$SECRETS_FILE\" << 'FOOTER_EOF'\n}\n\n// swiftlint:enable all\nFOOTER_EOF\n    \n    echo \"🏁 Generated Secrets.swift with auto-detected IP\"\nfi\n\n# Part 2: Copy config file (existing functionality)\nCONFIG_SOURCE=\"${SRCROOT}/Convos/Config/${CONFIG_FILE}\"\nCONFIG_DEST=\"${CODESIGNING_FOLDER_PATH}/config.json\"\n\nif [ ! -f \"$CONFIG_SOURCE\" ]; then\n    echo \"error: Config file not found: $CONFIG_SOURCE (CONFIG_FILE=$CONFIG_FILE)\"\n    exit 1\nfi\n\necho \"📋 Copying $CONFIG_FILE to app bundle\"\ncp \"$CONFIG_SOURCE\" \"$CONFIG_DEST\"\necho \"✅ Config copied successfully\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
+		7AC5992D2E5592F900D65D07 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7AC599392E5592FA00D65D07 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		7ACA8B9F2DE16DE200848799 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7ADC0C6A2E2977800053978A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7ADC0C782E2977810053978A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7ADC0C822E2977810053978A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -544,10 +797,30 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		7AC5993F2E5592FA00D65D07 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7AC599302E5592F900D65D07 /* KeychainIdentityStoreExample */;
+			targetProxy = 7AC5993E2E5592FA00D65D07 /* PBXContainerItemProxy */;
+		};
 		7ACA8BA82DE16DE200848799 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = D8A2B6902DA4BA4B00EF8577 /* Convos */;
 			targetProxy = 7ACA8BA72DE16DE200848799 /* PBXContainerItemProxy */;
+		};
+		7ADC0C7E2E2977810053978A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7ADC0C6D2E2977800053978A /* ConvosAppClip */;
+			targetProxy = 7ADC0C7D2E2977810053978A /* PBXContainerItemProxy */;
+		};
+		7ADC0C882E2977810053978A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7ADC0C6D2E2977800053978A /* ConvosAppClip */;
+			targetProxy = 7ADC0C872E2977810053978A /* PBXContainerItemProxy */;
+		};
+		7ADC0C8F2E2977820053978A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7ADC0C6D2E2977800053978A /* ConvosAppClip */;
+			targetProxy = 7ADC0C8E2E2977820053978A /* PBXContainerItemProxy */;
 		};
 		D8084C1C2DC91F1300E708B0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -565,8 +838,299 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		7ACA8BAA2DE16DE200848799 /* Debug */ = {
+		7AC5994F2E5592FA00D65D07 /* Dev */ = {
 			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_ENTITLEMENTS = KeychainIdentityStoreExample/KeychainIdentityStoreExample.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = org.convos.KeychainIdentityStoreExample;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Dev;
+		};
+		7AC599502E5592FA00D65D07 /* Local */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = KeychainIdentityStoreExample/KeychainIdentityStoreExample.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.convos.KeychainIdentityStoreExample;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Local;
+		};
+		7AC599512E5592FA00D65D07 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = KeychainIdentityStoreExample/KeychainIdentityStoreExample.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.convos.KeychainIdentityStoreExample;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7AC599522E5592FA00D65D07 /* Dev */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = org.convos.KeychainIdentityStoreExampleTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KeychainIdentityStoreExample.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/KeychainIdentityStoreExample";
+			};
+			name = Dev;
+		};
+		7AC599532E5592FA00D65D07 /* Local */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.convos.KeychainIdentityStoreExampleTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KeychainIdentityStoreExample.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/KeychainIdentityStoreExample";
+			};
+			name = Local;
+		};
+		7AC599542E5592FA00D65D07 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.convos.KeychainIdentityStoreExampleTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KeychainIdentityStoreExample.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/KeychainIdentityStoreExample";
+			};
+			name = Release;
+		};
+		7ACA8BAA2DE16DE200848799 /* Dev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Dev.xcconfig;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -574,16 +1138,18 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.convos.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_TESTS_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = Debug;
+			name = Dev;
 		};
 		7ACA8BAB2DE16DE200848799 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Prod.xcconfig;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -591,7 +1157,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.convos.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_TESTS_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -599,8 +1165,184 @@
 			};
 			name = Release;
 		};
-		D808503E2DC94F4C00E708B0 /* Debug */ = {
+		7ADC0C922E2977820053978A /* Dev */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Dev.xcconfig;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ConvosAppClip/ConvosAppClip.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 12;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ConvosAppClip/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_APP_CLIP_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Dev;
+		};
+		7ADC0C932E2977820053978A /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Prod.xcconfig;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ConvosAppClip/ConvosAppClip.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 12;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ConvosAppClip/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_APP_CLIP_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7ADC0C962E2977820053978A /* Dev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Dev.xcconfig;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_APP_CLIP_TESTS_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ConvosAppClip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ConvosAppClip";
+			};
+			name = Dev;
+		};
+		7ADC0C972E2977820053978A /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Prod.xcconfig;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_APP_CLIP_TESTS_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ConvosAppClip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ConvosAppClip";
+			};
+			name = Release;
+		};
+		7ADC0C992E2977820053978A /* Dev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Dev.xcconfig;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(NOTIFICATION_SERVICE_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ConvosAppClip;
+			};
+			name = Dev;
+		};
+		7ADC0C9A2E2977820053978A /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Prod.xcconfig;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(NOTIFICATION_SERVICE_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ConvosAppClip;
+			};
+			name = Release;
+		};
+		D808503E2DC94F4C00E708B0 /* Dev */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Dev.xcconfig;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = NotificationService/NotificationService.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -609,24 +1351,26 @@
 				INFOPLIST_FILE = NotificationService/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = NotificationService;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview.ConvosNSE;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(NOTIFICATION_SERVICE_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = Debug;
+			name = Dev;
 		};
 		D808503F2DC94F4C00E708B0 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Prod.xcconfig;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = NotificationService/NotificationService.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -635,14 +1379,14 @@
 				INFOPLIST_FILE = NotificationService/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = NotificationService;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview.ConvosNSE;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(NOTIFICATION_SERVICE_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -651,66 +1395,86 @@
 			};
 			name = Release;
 		};
-		D8A2B6A52DA4BA4C00EF8577 /* Debug */ = {
+		D8A2B6A52DA4BA4C00EF8577 /* Dev */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Dev.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Convos/Convos.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 12;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Convos/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Convos uses the camera to scan QR code invites";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_PREFIX_HEADER = "$(SRCROOT)/Convos/Config/InfoPlistPrefix.Dev.h";
+				INFOPLIST_PREPROCESS = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = NO;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = Debug;
+			name = Dev;
 		};
 		D8A2B6A62DA4BA4C00EF8577 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Prod.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Convos/Convos.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 12;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Convos/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Convos uses the camera to scan QR code invites";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_PREFIX_HEADER = "$(SRCROOT)/Convos/Config/InfoPlistPrefix.Prod.h";
+				INFOPLIST_PREPROCESS = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.convos.preview;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = NO;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
-		D8A2B6A72DA4BA4C00EF8577 /* Debug */ = {
+		D8A2B6A72DA4BA4C00EF8577 /* Dev */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Dev.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -772,10 +1536,12 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
-			name = Debug;
+			name = Dev;
 		};
 		D8A2B6A82DA4BA4C00EF8577 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Prod.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -832,14 +1598,303 @@
 			};
 			name = Release;
 		};
+		DAF2D7272E37B3D100A17FF9 /* Local */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Local.xcconfig;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Local;
+		};
+		DAF2D7282E37B3D100A17FF9 /* Local */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Local.xcconfig;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Convos/Convos.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 12;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Convos/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Convos uses the camera to scan QR code invites";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_PREPROCESS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = NO;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Local;
+		};
+		DAF2D7292E37B3D100A17FF9 /* Local */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Local.xcconfig;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = NotificationService/NotificationService.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 12;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NotificationService/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = NotificationService;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(NOTIFICATION_SERVICE_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Local;
+		};
+		DAF2D72A2E37B3D100A17FF9 /* Local */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Local.xcconfig;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_TESTS_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Local;
+		};
+		DAF2D72B2E37B3D100A17FF9 /* Local */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Local.xcconfig;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ConvosAppClip/ConvosAppClip.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 12;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ConvosAppClip/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_APP_CLIP_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Local;
+		};
+		DAF2D72C2E37B3D100A17FF9 /* Local */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Local.xcconfig;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_APP_CLIP_TESTS_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ConvosAppClip.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ConvosAppClip";
+			};
+			name = Local;
+		};
+		DAF2D72D2E37B3D100A17FF9 /* Local */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
+			baseConfigurationReferenceRelativePath = Config/Local.xcconfig;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FY4NZR34Z3;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(NOTIFICATION_SERVICE_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = ConvosAppClip;
+			};
+			name = Local;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		7AC599582E5592FA00D65D07 /* Build configuration list for PBXNativeTarget "KeychainIdentityStoreExample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7AC5994F2E5592FA00D65D07 /* Dev */,
+				7AC599502E5592FA00D65D07 /* Local */,
+				7AC599512E5592FA00D65D07 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7AC599592E5592FA00D65D07 /* Build configuration list for PBXNativeTarget "KeychainIdentityStoreExampleTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7AC599522E5592FA00D65D07 /* Dev */,
+				7AC599532E5592FA00D65D07 /* Local */,
+				7AC599542E5592FA00D65D07 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		7ACA8BA92DE16DE200848799 /* Build configuration list for PBXNativeTarget "ConvosTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				7ACA8BAA2DE16DE200848799 /* Debug */,
+				7ACA8BAA2DE16DE200848799 /* Dev */,
+				DAF2D72A2E37B3D100A17FF9 /* Local */,
 				7ACA8BAB2DE16DE200848799 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7ADC0C912E2977820053978A /* Build configuration list for PBXNativeTarget "ConvosAppClip" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7ADC0C922E2977820053978A /* Dev */,
+				DAF2D72B2E37B3D100A17FF9 /* Local */,
+				7ADC0C932E2977820053978A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7ADC0C952E2977820053978A /* Build configuration list for PBXNativeTarget "ConvosAppClipTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7ADC0C962E2977820053978A /* Dev */,
+				DAF2D72C2E37B3D100A17FF9 /* Local */,
+				7ADC0C972E2977820053978A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7ADC0C982E2977820053978A /* Build configuration list for PBXNativeTarget "ConvosAppClipUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7ADC0C992E2977820053978A /* Dev */,
+				DAF2D72D2E37B3D100A17FF9 /* Local */,
+				7ADC0C9A2E2977820053978A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -847,7 +1902,8 @@
 		D808503D2DC94F4C00E708B0 /* Build configuration list for PBXNativeTarget "NotificationService" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D808503E2DC94F4C00E708B0 /* Debug */,
+				D808503E2DC94F4C00E708B0 /* Dev */,
+				DAF2D7292E37B3D100A17FF9 /* Local */,
 				D808503F2DC94F4C00E708B0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -856,7 +1912,8 @@
 		D8A2B68C2DA4BA4B00EF8577 /* Build configuration list for PBXProject "Convos" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D8A2B6A72DA4BA4C00EF8577 /* Debug */,
+				D8A2B6A72DA4BA4C00EF8577 /* Dev */,
+				DAF2D7272E37B3D100A17FF9 /* Local */,
 				D8A2B6A82DA4BA4C00EF8577 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -865,7 +1922,8 @@
 		D8A2B6A42DA4BA4C00EF8577 /* Build configuration list for PBXNativeTarget "Convos" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D8A2B6A52DA4BA4C00EF8577 /* Debug */,
+				D8A2B6A52DA4BA4C00EF8577 /* Dev */,
+				DAF2D7282E37B3D100A17FF9 /* Local */,
 				D8A2B6A62DA4BA4C00EF8577 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
@@ -874,52 +1932,12 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		7A1C3C732DB6F7AD00B723C0 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+		7A5D3E942E43B82400DA9B83 /* XCRemoteSwiftPackageReference "swiftui-introspect" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			repositoryURL = "https://github.com/siteline/swiftui-introspect.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 3.24.0;
-			};
-		};
-		7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/groue/GRDB.swift.git";
-			requirement = {
-				kind = exactVersion;
-				version = 7.5.0;
-			};
-		};
-		7A349D022DD96EA400E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/ephemeraHQ/PasskeyAuth";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
-		7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/tkhq/swift-sdk.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.2.0;
-			};
-		};
-		7ACA83932DDC395600848799 /* XCRemoteSwiftPackageReference "SwiftCBOR" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/valpackett/SwiftCBOR";
-			requirement = {
-				branch = master;
-				kind = branch;
-			};
-		};
-		7ACA83B02DDD19B200848799 /* XCRemoteSwiftPackageReference "swift-collections" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-collections.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.0;
+				minimumVersion = "1.4.0-beta.4";
 			};
 		};
 		D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */ = {
@@ -930,14 +1948,6 @@
 				minimumVersion = 1.3.0;
 			};
 		};
-		D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 8.49.0;
-			};
-		};
 		D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/SimplyDanny/SwiftLintPlugins";
@@ -946,92 +1956,33 @@
 				minimumVersion = 0.59.1;
 			};
 		};
-		D834386D2DB19D8C00A50F45 /* XCRemoteSwiftPackageReference "Factory" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/hmlongco/Factory";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.4.3;
-			};
-		};
-		D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Weebly/AnchorKit.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.0.3;
-			};
-		};
-		D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/xmtp/xmtp-ios.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 4.2.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		7A1C3C742DB6F7AD00B723C0 /* PostHog */ = {
+		7A5D3E952E43B82400DA9B83 /* SwiftUIIntrospect */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7A1C3C732DB6F7AD00B723C0 /* XCRemoteSwiftPackageReference "posthog-ios" */;
-			productName = PostHog;
+			package = 7A5D3E942E43B82400DA9B83 /* XCRemoteSwiftPackageReference "swiftui-introspect" */;
+			productName = SwiftUIIntrospect;
 		};
-		7A349B6D2DD6FF5400E526A3 /* GRDB-dynamic */ = {
+		7AC5995B2E5593C300D65D07 /* ConvosCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
-			productName = "GRDB-dynamic";
+			productName = ConvosCore;
 		};
-		7A349D032DD96EA400E526A3 /* PasskeyAuth */ = {
+		7AC59AB02E56228200D65D07 /* ConvosCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7A349D022DD96EA400E526A3 /* XCRemoteSwiftPackageReference "PasskeyAuth" */;
-			productName = PasskeyAuth;
+			productName = ConvosCore;
 		};
-		7A5200F72DF0EF0800D2C55D /* TurnkeyPasskeys */ = {
+		7AD5458F2E4EA8BE00500ADF /* ConvosCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */;
-			productName = TurnkeyPasskeys;
+			productName = ConvosCore;
 		};
-		7A5200F92DF0EF0800D2C55D /* TurnkeyStamper */ = {
+		7AD545912E4EA8D200500ADF /* ConvosCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */;
-			productName = TurnkeyStamper;
+			productName = ConvosCore;
 		};
-		7A5200FB2DF0EF0800D2C55D /* TurnkeySwift */ = {
+		7AD545932E4EA8F300500ADF /* ConvosCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */;
-			productName = TurnkeySwift;
-		};
-		7A5201362DF0EFBC00D2C55D /* TurnkeyCrypto */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */;
-			productName = TurnkeyCrypto;
-		};
-		7A5201382DF0F1E600D2C55D /* TurnkeyHttp */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7A5200F62DF0EF0800D2C55D /* XCRemoteSwiftPackageReference "swift-sdk" */;
-			productName = TurnkeyHttp;
-		};
-		7ACA83942DDC395600848799 /* SwiftCBOR */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7ACA83932DDC395600848799 /* XCRemoteSwiftPackageReference "SwiftCBOR" */;
-			productName = SwiftCBOR;
-		};
-		7ACA83B12DDD19B200848799 /* OrderedCollections */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7ACA83B02DDD19B200848799 /* XCRemoteSwiftPackageReference "swift-collections" */;
-			productName = OrderedCollections;
-		};
-		7ACA8BC72DE17FF800848799 /* GRDB-dynamic */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7A349B6C2DD6FF5400E526A3 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
-			productName = "GRDB-dynamic";
-		};
-		7ACA8BCB2DE1800500848799 /* XMTPiOS */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */;
-			productName = XMTPiOS;
+			productName = ConvosCore;
 		};
 		D8084BA82DC9193A00E708B0 /* DifferenceKit */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -1047,26 +1998,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
 			productName = "plugin:SwiftLintBuildToolPlugin";
-		};
-		D80BAAC12DB2C36500C2FB42 /* Sentry */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D80BAAC02DB2C36500C2FB42 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = Sentry;
-		};
-		D834386E2DB19D8C00A50F45 /* Factory */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D834386D2DB19D8C00A50F45 /* XCRemoteSwiftPackageReference "Factory" */;
-			productName = Factory;
-		};
-		D8A2B6BA2DA4BBA400EF8577 /* AnchorKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D8A2B6B92DA4BBA400EF8577 /* XCRemoteSwiftPackageReference "AnchorKit" */;
-			productName = AnchorKit;
-		};
-		D8B5A9032DC272BD006003A4 /* XMTPiOS */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D8B5A9022DC272BD006003A4 /* XCRemoteSwiftPackageReference "xmtp-ios" */;
-			productName = XMTPiOS;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

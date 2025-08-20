@@ -1,42 +1,6 @@
 {
-  "originHash" : "d8dad89e94a06f95ae88aef21f60d6691722802c2aae53acb44fe41954246691",
+  "originHash" : "28dfc736740d82679fe24d9447a1d83a96204e6fc33c2fedae7037cc878f3cb4",
   "pins" : [
-    {
-      "identity" : "anchorkit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Weebly/AnchorKit.git",
-      "state" : {
-        "revision" : "d8ac708856ee1975c705ebd44b0fa2b68e393e58",
-        "version" : "3.0.3"
-      }
-    },
-    {
-      "identity" : "base58",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/anquii/Base58.git",
-      "state" : {
-        "revision" : "7e4a1e4e6813c750ed2f9e80a0494c608eebb2ca",
-        "version" : "1.0.1"
-      }
-    },
-    {
-      "identity" : "base58check",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/anquii/Base58Check.git",
-      "state" : {
-        "revision" : "f35a770ff7f3fd553cc44057f492c0107cc7b481",
-        "version" : "1.0.1"
-      }
-    },
-    {
-      "identity" : "bigint",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/attaswift/BigInt.git",
-      "state" : {
-        "revision" : "0ed110f7555c34ff468e72e1686e59721f2b0da6",
-        "version" : "5.3.0"
-      }
-    },
     {
       "identity" : "connect-swift",
       "kind" : "remoteSourceControl",
@@ -74,15 +38,6 @@
       }
     },
     {
-      "identity" : "factory",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/hmlongco/Factory",
-      "state" : {
-        "revision" : "22157b88670bbeac591895c0fc8b8f7f340cf757",
-        "version" : "2.5.0"
-      }
-    },
-    {
       "identity" : "grdb.swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/groue/GRDB.swift.git",
@@ -96,35 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/xmtp/libxmtp-swift.git",
       "state" : {
-        "revision" : "cf06462bb5bf9883551efac4e915391dcd215861",
-        "version" : "4.2.0"
-      }
-    },
-    {
-      "identity" : "passkeyauth",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/ephemeraHQ/PasskeyAuth",
-      "state" : {
-        "branch" : "main",
-        "revision" : "aa89ebf3fb6f79c78977e08f98be8ee1d9fa56f0"
-      }
-    },
-    {
-      "identity" : "posthog-ios",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/PostHog/posthog-ios.git",
-      "state" : {
-        "revision" : "479ce5ba9ce899dfe969dea7c88cd110adb800e7",
-        "version" : "3.25.1"
-      }
-    },
-    {
-      "identity" : "sentry-cocoa",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/getsentry/sentry-cocoa",
-      "state" : {
-        "revision" : "d87b07a27cd9a082d367261d7199a96a54e59f1d",
-        "version" : "8.50.2"
+        "revision" : "f5e8891dd8f4656cb7c9ceba2c87a90559a90cf3",
+        "version" : "4.3.0"
       }
     },
     {
@@ -139,19 +67,10 @@
     {
       "identity" : "swift-collections",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-collections",
+      "location" : "https://github.com/apple/swift-collections.git",
       "state" : {
-        "revision" : "c1805596154bb3a265fd91b8ac0c4433b4348fb0",
-        "version" : "1.2.0"
-      }
-    },
-    {
-      "identity" : "swift-http-types",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-http-types",
-      "state" : {
-        "revision" : "a0a57e949a8903563aba4615869310c0ebf14c03",
-        "version" : "1.4.0"
+        "revision" : "8c0c0a8b49e080e54e5e328cc552821ff07cd341",
+        "version" : "1.2.1"
       }
     },
     {
@@ -182,24 +101,6 @@
       }
     },
     {
-      "identity" : "swift-openapi-runtime",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-openapi-runtime",
-      "state" : {
-        "revision" : "8f33cc5dfe81169fb167da73584b9c72c3e8bc23",
-        "version" : "1.8.2"
-      }
-    },
-    {
-      "identity" : "swift-openapi-urlsession",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-openapi-urlsession",
-      "state" : {
-        "revision" : "6fac6f7c428d5feea2639b5f5c8b06ddfb79434b",
-        "version" : "1.1.0"
-      }
-    },
-    {
       "identity" : "swift-protobuf",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-protobuf.git",
@@ -209,30 +110,12 @@
       }
     },
     {
-      "identity" : "swift-sdk",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/tkhq/swift-sdk.git",
-      "state" : {
-        "revision" : "c108fe590607fd728d002329e6d7e5eae5b6a178",
-        "version" : "2.2.0"
-      }
-    },
-    {
       "identity" : "swift-system",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-system.git",
       "state" : {
-        "revision" : "a34201439c74b53f0fd71ef11741af7e7caf01e1",
-        "version" : "1.4.2"
-      }
-    },
-    {
-      "identity" : "swiftcbor",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/valpackett/SwiftCBOR",
-      "state" : {
-        "branch" : "master",
-        "revision" : "ea5ece79b0efde241495bfaa74eccceeffc382bc"
+        "revision" : "890830fff1a577dc83134890c7984020c5f6b43b",
+        "version" : "1.6.2"
       }
     },
     {
@@ -245,12 +128,21 @@
       }
     },
     {
+      "identity" : "swiftui-introspect",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/siteline/swiftui-introspect.git",
+      "state" : {
+        "revision" : "9bedf1e79c7b7c34b35b74bef126f56d2400ef7f",
+        "version" : "1.4.0-beta.4"
+      }
+    },
+    {
       "identity" : "xmtp-ios",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/xmtp/xmtp-ios.git",
       "state" : {
-        "revision" : "381c21ff5fb770ff6cbe9c45ae87c775f0ec8371",
-        "version" : "4.2.0"
+        "revision" : "893dcf5ff4fd57de33bc3d0d4cd40d666a50b9e0",
+        "version" : "4.3.0"
       }
     }
   ],

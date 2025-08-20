@@ -1,0 +1,53 @@
+import Foundation
+import GRDB
+
+public struct Profile: Codable, Identifiable, Hashable {
+    public var id: String { inboxId }
+    public let inboxId: String
+    public let name: String?
+    public let username: String?
+    public let avatar: String?
+
+    public var avatarURL: URL? {
+        guard let avatar, let url = URL(string: avatar) else {
+            return nil
+        }
+        return url
+    }
+
+    public var displayName: String {
+        name ?? "Someone"
+    }
+
+    public static func empty(inboxId: String = "") -> Profile {
+        .init(
+            inboxId: inboxId,
+            name: nil,
+            username: nil,
+            avatar: nil
+        )
+    }
+}
+
+// MARK: - Array Extensions
+
+public extension Array where Element == Profile {
+    var formattedNamesString: String {
+        let displayNames = self.map { $0.displayName }
+            .filter { !$0.isEmpty }
+            .sorted()
+
+        switch displayNames.count {
+        case 0:
+            return ""
+        case 1:
+            return displayNames[0]
+        case 2:
+            return displayNames.joined(separator: " & ")
+        default:
+            let allButLast = displayNames.dropLast().joined(separator: ", ")
+            let last = displayNames.last ?? ""
+            return "\(allButLast) and \(last)"
+        }
+    }
+}

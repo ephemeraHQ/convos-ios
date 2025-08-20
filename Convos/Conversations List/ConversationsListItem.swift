@@ -1,3 +1,4 @@
+import ConvosCore
 import SwiftUI
 
 extension Conversation {
@@ -6,10 +7,7 @@ extension Conversation {
         case .dm:
             return otherMember?.profile.displayName ?? ""
         case .group:
-            guard let name else {
-                return memberNamesString
-            }
-            return name.isEmpty ? memberNamesString : name
+            return displayName
         }
     }
 }
@@ -60,7 +58,7 @@ struct ListItemView<LeadingContent: View, SubtitleContent: View, AccessoryConten
 
             accessoryContent()
         }
-        .padding(.horizontal, DesignConstants.Spacing.step4x)
+        .padding(.horizontal, DesignConstants.Spacing.step6x)
         .padding(.vertical, DesignConstants.Spacing.step3x)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.colorBackgroundPrimary)
