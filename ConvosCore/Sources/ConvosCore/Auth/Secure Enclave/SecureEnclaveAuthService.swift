@@ -23,12 +23,11 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
     }
 
     public func register(displayName: String? = nil) throws -> any AuthServiceRegisteredResultType {
-        let inboxType: InboxType = .ephemeral
-        let identity = try identityStore.save(type: inboxType)
+        let identity = try identityStore.save()
         let result = AuthServiceRegisteredResult(
             displayName: displayName,
             inbox: AuthServiceInbox(
-                type: inboxType,
+                type: .ephemeral,
                 provider: .local,
                 providerId: identity.id,
                 signingKey: identity.privateKey,
@@ -65,7 +64,7 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
             return nil
         }
         return AuthServiceInbox(
-            type: identity.type,
+            type: .ephemeral,
             provider: .local,
             providerId: identity.id,
             signingKey: identity.privateKey,
@@ -84,7 +83,7 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
 
         let inboxes: [AuthServiceInbox] = identities.map { identity in
             AuthServiceInbox(
-                type: identity.type,
+                type: .ephemeral,
                 provider: .local,
                 providerId: identity.id,
                 signingKey: identity.privateKey,
@@ -100,7 +99,7 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
 
     /// WARNING: This will delete ALL keychain data. Use only for debugging/development.
     /// Call this method temporarily to clear keychain data when testing keychain access group changes.
-    public func debugWipeAllKeychainData() {
-        identityStore.debugWipeAllKeychainData()
+    public func debugWipeAllKeychainData() throws {
+        try identityStore.deleteAll()
     }
 }

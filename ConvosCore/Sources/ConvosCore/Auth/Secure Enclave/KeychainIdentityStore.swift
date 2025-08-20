@@ -6,16 +6,15 @@ import XMTPiOS
 
 // MARK: - Models
 
-struct KeychainIdentity {
-    let id: String
-    let privateKey: PrivateKey
-    let databaseKey: Data
-    let type: InboxType
+public struct KeychainIdentity {
+    public let id: String
+    public let privateKey: PrivateKey
+    public let databaseKey: Data
 }
 
 // MARK: - Errors
 
-enum KeychainIdentityStoreError: Error, LocalizedError {
+public enum KeychainIdentityStoreError: Error, LocalizedError {
     case keychainOperationFailed(OSStatus, String)
     case dataEncodingFailed(String)
     case dataDecodingFailed(String)
@@ -25,7 +24,7 @@ enum KeychainIdentityStoreError: Error, LocalizedError {
     case rollbackFailed(String)
     case invalidAccessGroup
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case let .keychainOperationFailed(status, operation):
             return "Keychain \(operation) failed with status: \(status)"
@@ -60,7 +59,7 @@ private struct KeychainQuery {
         account: String,
         service: String,
         accessGroup: String,
-        accessible: CFString = kSecAttrAccessibleAfterFirstUnlock,
+        accessible: CFString = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         accessControl: SecAccessControl? = nil
     ) {
         self.account = account
@@ -97,11 +96,12 @@ private struct KeychainQuery {
 
 // MARK: - Keychain Identity Store
 
-protocol KeychainIdentityStoreProtocol {
-    func save(type: InboxType) throws -> KeychainIdentity
+public protocol KeychainIdentityStoreProtocol {
+    func save() throws -> KeychainIdentity
     func load(for identityId: String) throws -> KeychainIdentity?
     func loadAll() throws -> [KeychainIdentity]
     func delete(for identityId: String) throws
+    func deleteAll() throws
     func save(inboxId: String, for identityId: String) throws
     func loadInboxId(for identityId: String) throws -> String
     func save(providerId: String, for inboxId: String) throws
@@ -109,7 +109,7 @@ protocol KeychainIdentityStoreProtocol {
     func deleteProviderId(for inboxId: String) throws
 }
 
-final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
+public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
     // MARK: - Properties
 
     private let keychainService: String
@@ -118,7 +118,7 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
 
     // MARK: - Initialization
 
-    init(accessGroup: String, service: String = "com.convos.ios.KeychainIdentityStore") {
+    public init(accessGroup: String, service: String = "com.convos.ios.KeychainIdentityStore") {
         self.keychainAccessGroup = accessGroup
         self.keychainService = service
         self.identitiesListKey = "\(service).identitiesList"
@@ -126,7 +126,7 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
 
     // MARK: - Public Interface
 
-    func save(type: InboxType) throws -> KeychainIdentity {
+    public func save() throws -> KeychainIdentity {
         let identityId = UUID().uuidString
 
         // Create identity with rollback support
@@ -135,35 +135,31 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
             try savePrivateKey(privateKey, for: identityId)
 
             let databaseKey = try generateAndSaveDatabaseKey(for: identityId)
-            try saveInboxType(type: type, for: identityId)
             try addIdentityIdToList(identityId)
 
             return KeychainIdentity(
                 id: identityId,
                 privateKey: privateKey,
-                databaseKey: databaseKey,
-                type: type
+                databaseKey: databaseKey
             )
         }
     }
 
-    func load(for identityId: String) throws -> KeychainIdentity? {
+    public func load(for identityId: String) throws -> KeychainIdentity? {
         guard let databaseKey = try loadDatabaseKey(for: identityId) else {
             return nil
         }
 
-        let inboxType = try loadInboxType(for: identityId)
         let privateKey = try loadPrivateKey(for: identityId)
 
         return KeychainIdentity(
             id: identityId,
             privateKey: privateKey,
-            databaseKey: databaseKey,
-            type: inboxType
+            databaseKey: databaseKey
         )
     }
 
-    func loadAll() throws -> [KeychainIdentity] {
+    public func loadAll() throws -> [KeychainIdentity] {
         let identityIds = try loadIdentitiesList()
         var identities: [KeychainIdentity] = []
 
@@ -180,7 +176,7 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         return identities
     }
 
-    func delete(for identityId: String) throws {
+    public func delete(for identityId: String) throws {
         // Clean up provider ID mapping if it exists
         if let inboxId = try? loadInboxId(for: identityId) {
             try? deleteProviderId(for: inboxId)
@@ -189,12 +185,24 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         // Delete all identity-related data
         try deleteInboxId(for: identityId)
         try removeIdentityIdFromList(identityId)
-        try deleteInboxType(for: identityId)
         try deleteDatabaseKey(for: identityId)
         try deletePrivateKey(for: identityId)
     }
 
-    func save(inboxId: String, for identityId: String) throws {
+    public func deleteAll() throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccessGroup as String: keychainAccessGroup
+        ]
+
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw KeychainIdentityStoreError.keychainOperationFailed(status, "deleteAll")
+        }
+    }
+
+    public func save(inboxId: String, for identityId: String) throws {
         let data = try encodeString(inboxId, context: "inboxId")
         let query = KeychainQuery(
             account: "\(identityId.lowercased()).inboxId",
@@ -205,7 +213,7 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         try saveData(data, with: query)
     }
 
-    func loadInboxId(for identityId: String) throws -> String {
+    public func loadInboxId(for identityId: String) throws -> String {
         let query = KeychainQuery(
             account: "\(identityId.lowercased()).inboxId",
             service: keychainService,
@@ -216,7 +224,7 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         return try decodeString(from: data, context: "inboxId")
     }
 
-    func save(providerId: String, for inboxId: String) throws {
+    public func save(providerId: String, for inboxId: String) throws {
         let data = try encodeString(providerId, context: "providerId")
         let query = KeychainQuery(
             account: "providerId.\(inboxId)",
@@ -227,7 +235,7 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         try saveData(data, with: query)
     }
 
-    func loadProviderId(for inboxId: String) throws -> String {
+    public func loadProviderId(for inboxId: String) throws -> String {
         let query = KeychainQuery(
             account: "providerId.\(inboxId)",
             service: keychainService,
@@ -238,7 +246,7 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         return try decodeString(from: data, context: "providerId")
     }
 
-    func deleteProviderId(for inboxId: String) throws {
+    public func deleteProviderId(for inboxId: String) throws {
         let query = KeychainQuery(
             account: "providerId.\(inboxId)",
             service: keychainService,
@@ -264,7 +272,6 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         let operations = [
             { try? self.deletePrivateKey(for: identityId) },
             { try? self.deleteDatabaseKey(for: identityId) },
-            { try? self.deleteInboxType(for: identityId) },
             { try? self.removeIdentityIdFromList(identityId) }
         ]
 
@@ -313,7 +320,8 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         var query = KeychainQuery(
             account: "\(identityId).privateKey",
             service: keychainService,
-            accessGroup: keychainAccessGroup
+            accessGroup: keychainAccessGroup,
+            accessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         ).toReadDictionary()
 
         query[kSecUseAuthenticationContext as String] = context
@@ -369,40 +377,6 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
     private func deleteDatabaseKey(for identityId: String) throws {
         let query = KeychainQuery(
             account: identityId.lowercased(),
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        try deleteData(with: query)
-    }
-
-    // MARK: - Inbox Type Operations
-
-    private func saveInboxType(type: InboxType, for identityId: String) throws {
-        let data = try JSONEncoder().encode(type)
-        let query = KeychainQuery(
-            account: "\(identityId.lowercased()).inboxType",
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        try saveData(data, with: query)
-    }
-
-    private func loadInboxType(for identityId: String) throws -> InboxType {
-        let query = KeychainQuery(
-            account: "\(identityId.lowercased()).inboxType",
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        let data = try loadData(with: query)
-        return try JSONDecoder().decode(InboxType.self, from: data)
-    }
-
-    private func deleteInboxType(for identityId: String) throws {
-        let query = KeychainQuery(
-            account: "\(identityId.lowercased()).inboxType",
             service: keychainService,
             accessGroup: keychainAccessGroup
         )
@@ -528,33 +502,5 @@ final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
             throw KeychainIdentityStoreError.dataDecodingFailed(context)
         }
         return string
-    }
-}
-
-// MARK: - Debug Support
-
-extension KeychainIdentityStore {
-    /// WARNING: This will delete ALL keychain data for this service. Use only for debugging/development.
-    func debugWipeAllKeychainData() {
-        Logger.warning("🚨 WIPING ALL KEYCHAIN DATA FOR SERVICE: \(keychainService)")
-        Logger.info("Configured keychain access group: \(keychainAccessGroup)")
-
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccessGroup as String: keychainAccessGroup
-        ]
-
-        let status = SecItemDelete(query as CFDictionary)
-        switch status {
-        case errSecSuccess:
-            Logger.info("✅ Successfully deleted keychain items")
-        case errSecItemNotFound:
-            Logger.info("ℹ️ No keychain items found to delete")
-        default:
-            Logger.warning("⚠️ Failed to delete keychain items: \(status)")
-        }
-
-        Logger.warning("🚨 KEYCHAIN WIPE COMPLETE")
     }
 }
