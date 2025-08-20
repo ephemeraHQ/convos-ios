@@ -65,11 +65,18 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         // Check if this is an explosion notification
         if let notificationType = userInfo["notificationType"] as? String,
            notificationType == "explosion" {
+            let inboxId = userInfo["inboxId"] as? String
+            let conversationId = userInfo["conversationId"] as? String
+
             await MainActor.run {
                 NotificationCenter.default.post(
                     name: .explosionNotificationTapped,
                     object: nil,
-                    userInfo: userInfo
+                    userInfo: [
+                        "inboxId": inboxId as Any,
+                        "conversationId": conversationId as Any,
+                        "notificationType": notificationType
+                    ]
                 )
             }
         }
