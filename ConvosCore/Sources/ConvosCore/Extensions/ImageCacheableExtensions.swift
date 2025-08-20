@@ -1,13 +1,13 @@
-import ConvosCore
+import Foundation
 
 extension Profile: ImageCacheable {
-    var imageCacheIdentifier: String {
+    public var imageCacheIdentifier: String {
         inboxId
     }
 }
 
 extension Conversation: ImageCacheable {
-    var imageCacheIdentifier: String {
+    public var imageCacheIdentifier: String {
         id
     }
 }
