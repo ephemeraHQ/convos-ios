@@ -172,10 +172,8 @@ class SessionManager: SessionManagerProtocol {
 
     private func scheduleExplosionNotification(inboxId: String, conversationId: String) async {
         do {
-            // Fetch conversation details
-            let conversation = try await fetchConversationDetails(inboxId: inboxId, conversationId: conversationId)
+            let conversation = try await fetchConversationDetails(conversationId: conversationId)
 
-            // Create notification content
             let content = UNMutableNotificationContent()
             content.title = "💥 \(conversation.displayName) 💥"
             content.body = "A convo exploded"
@@ -186,17 +184,13 @@ class SessionManager: SessionManagerProtocol {
                 "notificationType": "explosion"
             ]
 
-            // Add conversation image if available
             if let imageURL = conversation.imageURL {
                 // Download the image temporarily for the notification attachment
                 do {
                     let (data, _) = try await URLSession.shared.data(from: imageURL)
-
-                    // Create a temporary file for the image
                     let tempDirectory = FileManager.default.temporaryDirectory
                     let tempFileName = "explosion-\(conversationId)-\(UUID().uuidString).jpg"
                     let tempFileURL = tempDirectory.appendingPathComponent(tempFileName)
-
                     try data.write(to: tempFileURL)
 
                     // Create notification attachment
@@ -213,14 +207,11 @@ class SessionManager: SessionManagerProtocol {
                 }
             }
 
-            // Create notification request
             let request = UNNotificationRequest(
                 identifier: "explosion-\(conversationId)",
                 content: content,
                 trigger: nil // Immediate trigger
             )
-
-            // Schedule the notification
             try await UNUserNotificationCenter.current().add(request)
             Logger.info("Scheduled explosion notification for conversation: \(conversationId)")
         } catch {
@@ -228,9 +219,8 @@ class SessionManager: SessionManagerProtocol {
         }
     }
 
-    private func fetchConversationDetails(inboxId: String, conversationId: String) async throws -> Conversation {
+    private func fetchConversationDetails(conversationId: String) async throws -> Conversation {
         return try await withCheckedThrowingContinuation { continuation in
-            // Create a temporary conversation repository to fetch the conversation
             let conversationRepository = ConversationRepository(
                 conversationId: conversationId,
                 dbReader: databaseReader
@@ -240,7 +230,7 @@ class SessionManager: SessionManagerProtocol {
                 if let conversation = try conversationRepository.fetchConversation() {
                     continuation.resume(returning: conversation)
                 } else {
-                    continuation.resume(throwing: SessionManagerError.inboxNotFound)
+                    continuation.resume(throwing: ConversationRepositoryError.failedFetchingConversation)
                 }
             } catch {
                 continuation.resume(throwing: error)
