@@ -88,6 +88,7 @@ public extension SingleInboxAuthProcessor {
             return
         }
 
+        // NSE should ONLY decode for display, not sync
         // If we're in notification service extension and have encrypted message data, try to decode it
         if isNotificationServiceExtension,
            let encryptedMessage = protocolData.encryptedMessage,
@@ -103,8 +104,9 @@ public extension SingleInboxAuthProcessor {
                 ) {
                     Logger.info("Successfully decoded text message for notification: \(result.text)")
 
-                    // Store the decoded content for the notification service to use
-                    try await storeDecodedContentForNotification(
+                    // Set decoded content directly on the payload object
+                    try await setDecodedContentOnPayload(
+                        payload: payload,
                         conversationId: protocolData.conversationId ?? contentTopic,
                         textContent: result.text,
                         senderInboxId: result.senderInboxId,
@@ -123,6 +125,10 @@ public extension SingleInboxAuthProcessor {
                 Logger.error("Failed to decode message in notification service: \(error)")
                 // Don't throw here - show generic notification on decode error
             }
+
+            // NSE should exit here - it only decodes for display, not sync
+            Logger.info("NSE: Finished decoding for display, skipping sync")
+            return
         } else if let contentTopic = protocolData.contentTopic {
             // For main app, just sync the conversation
             Logger.info("Processing protocol message for topic: \(contentTopic)")
@@ -188,8 +194,9 @@ public extension SingleInboxAuthProcessor {
         return DecodedMessageResult(text: textContent, senderInboxId: decodedMessage.senderInboxId)
     }
 
-    /// Stores decoded content for notification service to use
-    private func storeDecodedContentForNotification(
+    /// Sets decoded content directly on the payload object for NSE access
+    private func setDecodedContentOnPayload(
+        payload: PushNotificationPayload,
         conversationId: String,
         textContent: String,
         senderInboxId: String,
@@ -222,26 +229,11 @@ public extension SingleInboxAuthProcessor {
             // Continue with no custom title
         }
 
-        var notificationData: [String: Any] = [
-            "text": textContent,
-            "body": notificationBody,
-            "senderInboxId": senderInboxId,
-            "conversationId": conversationId,
-            "timestamp": Date().timeIntervalSince1970
-        ]
+        // Set decoded content directly on the payload object
+        payload.decodedTitle = notificationTitle
+        payload.decodedBody = notificationBody
 
-        // Only include title if we have a group name
-        if let title = notificationTitle {
-            notificationData["title"] = title
-        }
-
-        let storageKey = "decoded_notification_\(conversationId)"
-
-        if let data = try? JSONSerialization.data(withJSONObject: notificationData),
-           let jsonString = String(data: data, encoding: .utf8) {
-            UserDefaults(suiteName: environment.appGroupIdentifier)?.set(jsonString, forKey: storageKey)
-            Logger.info("Stored decoded notification - Title: \(notificationTitle ?? "default"), Body: \(notificationBody)")
-        }
+        Logger.info("Set decoded content on payload - Title: \(notificationTitle ?? "default"), Body: \(notificationBody)")
     }
 
     /// Syncs a conversation if needed when a notification is received

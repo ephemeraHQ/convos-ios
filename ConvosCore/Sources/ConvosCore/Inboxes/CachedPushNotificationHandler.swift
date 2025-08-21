@@ -68,6 +68,9 @@ public class CachedPushNotificationHandler {
     private var processors: [String: SingleInboxAuthProcessor] = [:]
     private var cancellables: Set<AnyCancellable> = []
 
+    // Store the processed payload for NSE access
+    private var processedPayload: PushNotificationPayload?
+
     private let authService: any LocalAuthServiceProtocol
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
@@ -152,6 +155,9 @@ public class CachedPushNotificationHandler {
         // Get or create processor for this inbox
         let processor = getOrCreateProcessor(for: inboxId)
 
+        // Store payload for NSE access
+        self.processedPayload = payload
+
         // Use async/await to wait for completion
         do {
             _ = try await processor.processPushNotification(payload: payload).async()
@@ -165,6 +171,11 @@ public class CachedPushNotificationHandler {
             // For other errors, just log them but don't re-throw
             Logger.error("Push notification processing failed: \(error)")
         }
+    }
+
+    /// Gets the processed payload with decoded content for NSE use
+    public func getProcessedPayload() -> PushNotificationPayload? {
+        return processedPayload
     }
 
     /// Schedules custom work for a specific inbox
@@ -204,11 +215,19 @@ public class CachedPushNotificationHandler {
 
     /// Cleans up all resources
     public func cleanup() {
+        Logger.info("CachedPushNotificationHandler: Starting cleanup of \(processors.count) processors")
+
         for processor in processors.values {
             processor.stop()
         }
         processors.removeAll()
         cancellables.removeAll()
+        processedPayload = nil // Clear processed payload
+
+        // For NSE, GRDB will handle database connection cleanup automatically when the process ends
+        if isNotificationServiceExtension {
+            Logger.info("NSE: Cleanup complete - all XMTP operations stopped, GRDB will handle database connection cleanup automatically")
+        }
     }
 
     // MARK: - Private Methods

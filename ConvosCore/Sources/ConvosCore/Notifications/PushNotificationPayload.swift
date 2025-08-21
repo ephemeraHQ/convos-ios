@@ -1,15 +1,32 @@
 import Foundation
 
+/// Represents decoded notification content from NSE processing
+public struct DecodedNotificationContent {
+    public let title: String?
+    public let body: String?
+
+    public init(title: String?, body: String?) {
+        self.title = title
+        self.body = body
+    }
+}
+
 /// Represents the payload structure of a push notification
-public struct PushNotificationPayload {
+public class PushNotificationPayload {
     public let inboxId: String?
     public let notificationType: NotificationType?
     public let notificationData: NotificationData?
+
+    // Decoded content properties (mutable for NSE processing)
+    public var decodedTitle: String?
+    public var decodedBody: String?
 
     public init(userInfo: [AnyHashable: Any]) {
         self.inboxId = userInfo["inboxId"] as? String
         self.notificationType = NotificationType(rawValue: userInfo["notificationType"] as? String ?? "")
         self.notificationData = NotificationData(dictionary: userInfo["notificationData"] as? [String: Any])
+        self.decodedTitle = nil
+        self.decodedBody = nil
     }
 }
 
@@ -214,13 +231,12 @@ public extension PushNotificationPayload {
     }
 
     /// Generates a display title for the notification with decoded content
-    /// - Parameter appGroupIdentifier: The app group identifier for shared storage
     /// - Returns: The display title with decoded content if available
-    func displayTitleWithDecodedContent(appGroupIdentifier: String) -> String? {
+    func displayTitleWithDecodedContent() -> String? {
         switch notificationType {
         case .protocolMessage:
-            // Try to get decoded title from stored content
-            if let decodedTitle = getDecodedTitle(appGroupIdentifier: appGroupIdentifier) {
+            // Use decoded title if available, otherwise fall back to default
+            if let decodedTitle = decodedTitle {
                 return decodedTitle
             }
             return displayTitle
@@ -232,13 +248,12 @@ public extension PushNotificationPayload {
     }
 
     /// Generates a display body for the notification with decoded content
-    /// - Parameter appGroupIdentifier: The app group identifier for shared storage
     /// - Returns: The display body with decoded content if available
-    func displayBodyWithDecodedContent(appGroupIdentifier: String) -> String? {
+    func displayBodyWithDecodedContent() -> String? {
         switch notificationType {
         case .protocolMessage:
-            // Try to get decoded body from stored content
-            if let decodedBody = getDecodedBody(appGroupIdentifier: appGroupIdentifier) {
+            // Use decoded body if available, otherwise fall back to default
+            if let decodedBody = decodedBody {
                 return decodedBody
             }
             return displayBody
@@ -249,50 +264,7 @@ public extension PushNotificationPayload {
         }
     }
 
-    // MARK: - Private Helpers
-
-    /// Gets decoded title from stored content if available
-    private func getDecodedTitle(appGroupIdentifier: String) -> String? {
-        guard let conversationId = notificationData?.protocolData?.conversationId else {
-            return nil
-        }
-
-        let storageKey = "decoded_notification_\(conversationId)"
-
-        guard let appGroupDefaults = UserDefaults(suiteName: appGroupIdentifier),
-              let jsonString = appGroupDefaults.string(forKey: storageKey),
-              let data = jsonString.data(using: .utf8),
-              let notificationData = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return nil
-        }
-
-        // Return title if available, don't clean up yet (body method will clean up)
-        return notificationData["title"] as? String
-    }
-
-    /// Gets decoded body from stored content if available
-    private func getDecodedBody(appGroupIdentifier: String) -> String? {
-        guard let conversationId = notificationData?.protocolData?.conversationId else {
-            return nil
-        }
-
-        let storageKey = "decoded_notification_\(conversationId)"
-
-        guard let appGroupDefaults = UserDefaults(suiteName: appGroupIdentifier),
-              let jsonString = appGroupDefaults.string(forKey: storageKey),
-              let data = jsonString.data(using: .utf8),
-              let notificationData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let body = notificationData["body"] as? String else {
-            return nil
-        }
-
-        // Clean up the stored data after using it (since body is typically called after title)
-        appGroupDefaults.removeObject(forKey: storageKey)
-
-        return body
-    }
-
-        /// Checks if the notification has valid data for processing
+    /// Checks if the notification has valid data for processing
     var isValid: Bool {
         return inboxId != nil && notificationType != nil
     }

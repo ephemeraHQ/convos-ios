@@ -49,8 +49,13 @@ public final class DatabaseManager: DatabaseManagerProtocol {
         }
 
         var config = Configuration()
-        config.label = "ConvosDB"
+        // Add process identifier to help with debugging concurrent access issues
+        let isNSE = Bundle.main.bundleIdentifier?.contains("NotificationService") ?? false
+        config.label = isNSE ? "ConvosDB-NSE" : "ConvosDB-MainApp"
         config.foreignKeysEnabled = true
+        // Improve concurrent access handling for multi-process scenarios (NSE + Main App)
+        config.maximumReaderCount = 5  // Allow multiple readers
+        config.busyMode = .timeout(10.0)  // Wait up to 10 seconds for locks
 #if DEBUG
 //        config.prepareDatabase { db in
 //            db.trace { Logger.info("\($0)") }

@@ -28,6 +28,7 @@ class NotificationService: UNNotificationServiceExtension {
         pendingTask?.cancel()
         pendingTask = nil
 
+        Logger.info("NSE: Extension time expiring, cleaning up XMTP resources")
         pushHandler?.cleanup()
 
         // Deliver the best attempt content
@@ -47,7 +48,9 @@ class NotificationService: UNNotificationServiceExtension {
             // Check if this is a message that should be dropped
             if let error = error as? NotificationError, error == .messageShouldBeDropped {
                 Logger.info("Notification dropped - message from self or non-text")
-                // Don't deliver any notification
+                // Cleanup and don't deliver any notification
+                Logger.info("NSE: Cleaning up XMTP resources after dropping notification")
+                pushHandler?.cleanup()
                 return
             }
             // For other errors, continue with generic notification
@@ -56,13 +59,19 @@ class NotificationService: UNNotificationServiceExtension {
 
         // Check if the task was cancelled before calling contentHandler
         guard !Task.isCancelled else {
+            Logger.info("NSE: Task cancelled, cleaning up XMTP resources")
+            pushHandler?.cleanup()
             return
         }
 
         // After processing, update with decoded content if available
         updateNotificationContentWithDecodedData(userInfo: userInfo)
 
-        // Processing complete - deliver the notification
+        // Processing complete - cleanup resources before delivering notification
+        Logger.info("NSE: Cleaning up XMTP resources after successful notification processing")
+        pushHandler?.cleanup()
+
+        // Deliver the notification
         if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
             contentHandler(bestAttemptContent)
         }
@@ -91,19 +100,31 @@ class NotificationService: UNNotificationServiceExtension {
     private func updateNotificationContentWithDecodedData(userInfo: [AnyHashable: Any]) {
         guard let bestAttemptContent = bestAttemptContent else { return }
 
-        let payload = PushNotificationPayload(userInfo: userInfo)
+        // Get the processed payload with decoded content from the push handler
+        if let processedPayload = pushHandler?.getProcessedPayload() {
+            // Use the processed payload that contains decoded content
+            if let title = processedPayload.displayTitleWithDecodedContent() {
+                bestAttemptContent.title = title
+            }
 
-        // Get the app group identifier from the environment
-        let environment = NotificationExtensionEnvironment.getEnvironment()
-        let appGroupIdentifier = environment.appGroupIdentifier
+            if let body = processedPayload.displayBodyWithDecodedContent() {
+                bestAttemptContent.body = body
+            }
 
-        // Use the enhanced display logic that includes decoded content
-        if let displayTitle = payload.displayTitleWithDecodedContent(appGroupIdentifier: appGroupIdentifier) {
-            bestAttemptContent.title = displayTitle
-        }
+            Logger.info("Applied decoded notification content - Title: \(bestAttemptContent.title), Body: \(bestAttemptContent.body)")
+        } else {
+            // Fallback to creating new payload if processed payload not available
+            let payload = PushNotificationPayload(userInfo: userInfo)
 
-        if let displayBody = payload.displayBodyWithDecodedContent(appGroupIdentifier: appGroupIdentifier) {
-            bestAttemptContent.body = displayBody
+            if let title = payload.displayTitleWithDecodedContent() {
+                bestAttemptContent.title = title
+            }
+
+            if let body = payload.displayBodyWithDecodedContent() {
+                bestAttemptContent.body = body
+            }
+
+            Logger.info("Applied fallback notification content - Title: \(bestAttemptContent.title), Body: \(bestAttemptContent.body)")
         }
     }
 }
