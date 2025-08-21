@@ -167,6 +167,20 @@ extension SharedDatabaseMigrator {
             }
         }
 
+        migrator.registerMigration("addPushNotificationRegistration") { db in
+            try db.create(table: "push_notification_registration") { t in
+                t.column("identityId", .text)
+                    .notNull()
+                    .indexed()
+                    .references("inbox", column: "inboxId", onDelete: .cascade)
+                t.column("registrationHash", .text).notNull()
+                t.column("registeredAt", .datetime).notNull()
+
+                // Primary key on identityId since we only store one registration per identity
+                t.primaryKey(["identityId"])
+            }
+        }
+
         return migrator
     }
 }

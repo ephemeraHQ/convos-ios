@@ -119,6 +119,9 @@ public actor InboxStateMachine {
     private var unregisterInstallationObserver: NSObjectProtocol?
     private var willEnterForegroundObserver: NSObjectProtocol?
 
+    // Writer for persistent push notification registration tracking
+    private let pushRegistrationWriter: any PushNotificationRegistrationWriterProtocol
+
     // MARK: - Nonisolated
 
     nonisolated
@@ -148,6 +151,7 @@ public actor InboxStateMachine {
         syncingManager: any SyncingManagerProtocol,
         inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol,
         environment: AppEnvironment,
+        pushRegistrationWriter: any PushNotificationRegistrationWriterProtocol,
         isNotificationServiceExtension: Bool = false
     ) {
         self.inbox = inbox
@@ -156,6 +160,7 @@ public actor InboxStateMachine {
         self.syncingManager = syncingManager
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
+        self.pushRegistrationWriter = pushRegistrationWriter
         self.isNotificationServiceExtension = isNotificationServiceExtension
 
         // Set custom XMTP host if provided
@@ -369,8 +374,11 @@ public actor InboxStateMachine {
             queue: .main
         ) { [weak self] _ in
             guard let self else { return }
+            Logger.info("📱 Push token changed notification received - clearing cache and triggering update")
             Task { [weak self] in
                 guard let self else { return }
+                // Clear the cache since token changed - this is a valid reason to re-register
+                await self.clearRegistrationCache()
                 await self.updateIfReady()
             }
         }
@@ -413,7 +421,16 @@ public actor InboxStateMachine {
         syncingManager.stop()
         inviteJoinRequestsManager.stop()
         try client.deleteLocalDatabase()
-        try await inboxWriter.deleteInbox(inboxId: client.inboxId)
+                try await inboxWriter.deleteInbox(inboxId: client.inboxId)
+
+        // Clean up push notification registration cache for this identity
+        do {
+            try await pushRegistrationWriter.clearRegistrations(for: client.inboxId)
+            Logger.info("Cleared push registration cache for deleted inbox \(client.inboxId)")
+        } catch {
+            Logger.error("Failed to clear push registration cache for \(client.inboxId): \(error)")
+        }
+
         Logger.info("Successfully deleted inbox \(client.inboxId)")
         enqueueAction(.stop)
     }
@@ -423,6 +440,8 @@ public actor InboxStateMachine {
         _state = .stopping
         removeObservers()
         _state = .uninitialized
+        // Note: We don't clear the registration cache when stopping since it's persistent
+        // This allows the cache to survive app restarts
     }
 
     // MARK: - Helpers
@@ -556,6 +575,7 @@ extension InboxStateMachine {
             queue: .main
         ) { [weak self] _ in
             guard let self else { return }
+            Logger.info("📱 App entering foreground - triggering push token update check")
             Task { [weak self] in
                 guard let self else { return }
                 await self.handleForegroundForPushTokenUpdate()
@@ -582,8 +602,16 @@ extension InboxStateMachine {
         await self.updateIfReady()
     }
 
+    private func clearRegistrationCache() async {
+        do {
+            try await pushRegistrationWriter.clearRegistrations(for: inbox.providerId)
+        } catch {
+            Logger.error("Failed to clear push registration cache: \(error)")
+        }
+    }
     private func updateIfReady() async {
         guard case let .ready(result) = _state else { return }
+        Logger.info("📱 updateIfReady called - checking if push registration needed")
         // If the system prompt hasn't been shown yet, request now (app is foregrounding)
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         if settings.authorizationStatus == .notDetermined {
@@ -594,16 +622,48 @@ extension InboxStateMachine {
 
     private func registerForNotificationsIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
         let notifProcessor = NotificationProcessor(appGroupIdentifier: environment.appGroupIdentifier)
-        guard let token = notifProcessor.getStoredDeviceToken(), !token.isEmpty else { return }
+        guard let token = notifProcessor.getStoredDeviceToken(), !token.isEmpty else {
+            Logger.info("📱 No push token available, skipping registration")
+            return
+        }
         let deviceId = await currentDeviceId()
         let identityId = client.inboxId
         let installationId = client.installationId
+
+        // Check if we've already registered this exact combination in the database
+        do {
+            let alreadyRegistered = try await pushRegistrationWriter.hasValidRegistration(
+                deviceId: deviceId,
+                pushToken: token,
+                identityId: identityId,
+                installationId: installationId
+            )
+
+            if alreadyRegistered {
+                Logger.info("Push notification already registered with same parameter hash, skipping duplicate call")
+                return
+            }
+        } catch {
+            Logger.error("Failed to check existing registration: \(error)")
+            // Continue with registration attempt if we can't check the database
+        }
+
+        Logger.info("📱 Attempting to register push notifications - deviceId: \(deviceId), installationId: \(installationId)")
+
         do {
             try await apiClient.registerForNotifications(deviceId: deviceId,
                                                          pushToken: token,
                                                          identityId: identityId,
                                                          xmtpInstallationId: installationId)
             Logger.info("Registered notifications mapping for deviceId=\(deviceId), installationId=\(installationId)")
+
+            // Store successful registration in database to avoid duplicate calls
+            try await pushRegistrationWriter.storeRegistration(
+                deviceId: deviceId,
+                pushToken: token,
+                identityId: identityId,
+                installationId: installationId
+            )
         } catch {
             Logger.error("Failed to register notifications mapping: \(error)")
         }

@@ -297,6 +297,7 @@ class SessionManager: SessionManagerProtocol {
             try MemberProfile.deleteAll(db)
             try DBInvite.deleteAll(db)
             try DBMessage.deleteAll(db)
+            try PushNotificationRegistration.deleteAll(db)
         }
 
         // Get the app group container URL

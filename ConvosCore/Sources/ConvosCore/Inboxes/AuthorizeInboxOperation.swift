@@ -41,6 +41,7 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     ) {
         self.inbox = inbox
         let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
+        let pushRegistrationWriter = PushNotificationRegistrationWriter(databaseWriter: databaseWriter)
         stateMachine = InboxStateMachine(
             inbox: inbox,
             inboxWriter: inboxWriter,
@@ -51,6 +52,7 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
                 databaseWriter: databaseWriter
             ),
             environment: environment,
+            pushRegistrationWriter: pushRegistrationWriter,
             isNotificationServiceExtension: isNotificationServiceExtension
         )
         inboxReadyPublisher = stateMachine
