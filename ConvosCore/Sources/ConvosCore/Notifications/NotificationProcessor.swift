@@ -141,6 +141,4 @@ public class NotificationProcessor {
         }
         return topic
     }
-
-    // MARK: - Topic Builders
 }

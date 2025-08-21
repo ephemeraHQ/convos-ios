@@ -3,6 +3,11 @@ import Foundation
 import GRDB
 import XMTPiOS
 
+/// Error types for notification processing
+public enum NotificationError: Error {
+    case messageShouldBeDropped
+}
+
 /// Extension providing push notification specific functionality for SingleInboxAuthProcessor
 public extension SingleInboxAuthProcessor {
     /// Processes a push notification by scheduling work when the inbox is ready
@@ -83,9 +88,169 @@ public extension SingleInboxAuthProcessor {
             return
         }
 
-        if let contentTopic = protocolData.contentTopic {
+        // If we're in notification service extension and have encrypted message data, try to decode it
+        if isNotificationServiceExtension,
+           let encryptedMessage = protocolData.encryptedMessage,
+           let contentTopic = protocolData.contentTopic,
+           let currentInboxId = payload.inboxId {
+            do {
+                // Try to decode the text message for notification display
+                if let result = try await decodeTextMessageWithSender(
+                    encryptedMessage: encryptedMessage,
+                    contentTopic: contentTopic,
+                    currentInboxId: currentInboxId,
+                    client: client
+                ) {
+                    Logger.info("Successfully decoded text message for notification: \(result.text)")
+
+                    // Store the decoded content for the notification service to use
+                    try await storeDecodedContentForNotification(
+                        conversationId: protocolData.conversationId ?? contentTopic,
+                        textContent: result.text,
+                        senderInboxId: result.senderInboxId,
+                        client: client
+                    )
+                } else {
+                    Logger.info("Message was dropped (from self or non-text)")
+
+                    // Throw an error to indicate this notification should be dropped
+                    throw NotificationError.messageShouldBeDropped
+                }
+            } catch NotificationError.messageShouldBeDropped {
+                // Re-throw to indicate notification should be dropped
+                throw NotificationError.messageShouldBeDropped
+            } catch {
+                Logger.error("Failed to decode message in notification service: \(error)")
+                // Don't throw here - show generic notification on decode error
+            }
+        } else if let contentTopic = protocolData.contentTopic {
+            // For main app, just sync the conversation
             Logger.info("Processing protocol message for topic: \(contentTopic)")
-            // try await decodeAndStoreMessage(contentTopic: contentTopic, client: client)
+            try await syncConversationIfNeeded(contentTopic: contentTopic, client: client)
+        }
+    }
+
+    /// Result type for decoded text message with sender info
+    private struct DecodedMessageResult {
+        let text: String
+        let senderInboxId: String
+    }
+
+    /// Decodes a text message for notification display with sender info
+    private func decodeTextMessageWithSender(
+        encryptedMessage: String,
+        contentTopic: String,
+        currentInboxId: String,
+        client: any XMTPClientProvider
+    ) async throws -> DecodedMessageResult? {
+        // Extract conversation ID from topic path
+        let notificationProcessor = NotificationProcessor(appGroupIdentifier: environment.appGroupIdentifier)
+        let conversationId = notificationProcessor.getConversationIdFromTopic(contentTopic)
+
+        // Find the conversation
+        guard let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) else {
+            Logger.warning("Conversation not found for topic: \(contentTopic), extracted ID: \(conversationId)")
+            return nil
+        }
+
+        // Decode the encrypted message
+        guard let messageBytes = Data(base64Encoded: Data(encryptedMessage.utf8)) else {
+            Logger.warning("Failed to decode base64 encrypted message")
+            return nil
+        }
+
+        // Process the message
+        guard let decodedMessage = try await conversation.processMessage(messageBytes: messageBytes) else {
+            Logger.warning("Failed to process message bytes")
+            return nil
+        }
+
+        // Check if message is from self - if so, drop it
+        if decodedMessage.senderInboxId == currentInboxId {
+            Logger.info("Dropping notification - message from self")
+            return nil
+        }
+
+        // Only handle text content type
+        let encodedContentType = try decodedMessage.encodedContent.type
+        guard encodedContentType == ContentTypeText else {
+            Logger.info("Skipping non-text content type: \(encodedContentType.description)")
+            return nil
+        }
+
+        // Extract text content
+        let content = try decodedMessage.content() as Any
+        guard let textContent = content as? String else {
+            Logger.warning("Could not extract text content from message")
+            return nil
+        }
+
+        return DecodedMessageResult(text: textContent, senderInboxId: decodedMessage.senderInboxId)
+    }
+
+            /// Stores decoded content for notification service to use
+    private func storeDecodedContentForNotification(
+        conversationId: String,
+        textContent: String,
+        senderInboxId: String,
+        client: any XMTPClientProvider
+    ) async throws {
+        var notificationTitle: String?
+        let notificationBody = textContent // Just the decoded text, no "Sender:" prefix
+
+        // Try to get group name directly from XMTP without additional DB operations
+        do {
+            if let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) {
+                if case .group(let group) = conversation {
+                    // Try to get group name directly from XMTP
+                    if let groupName = try? group.name(), !groupName.isEmpty {
+                        notificationTitle = groupName
+                        Logger.info("Found group name for notification: \(groupName)")
+                    } else {
+                        Logger.info("Group has no name, using default title")
+                    }
+                }
+            }
+        } catch {
+            Logger.warning("Could not get conversation details for notification: \(error)")
+            // Continue with no title
+        }
+
+        var notificationData: [String: Any] = [
+            "text": textContent,
+            "body": notificationBody,
+            "senderInboxId": senderInboxId,
+            "conversationId": conversationId,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+
+        // Only include title if we have a group name
+        if let title = notificationTitle {
+            notificationData["title"] = title
+        }
+
+        let storageKey = "decoded_notification_\(conversationId)"
+
+        if let data = try? JSONSerialization.data(withJSONObject: notificationData),
+           let jsonString = String(data: data, encoding: .utf8) {
+            UserDefaults(suiteName: environment.appGroupIdentifier)?.set(jsonString, forKey: storageKey)
+            Logger.info("Stored decoded notification - Title: \(notificationTitle ?? "nil"), Body: \(notificationBody)")
+        }
+    }
+
+    /// Syncs a conversation if needed when a notification is received
+    private func syncConversationIfNeeded(
+        contentTopic: String,
+        client: any XMTPClientProvider
+    ) async throws {
+        // Extract conversation ID from topic path
+        let notificationProcessor = NotificationProcessor(appGroupIdentifier: environment.appGroupIdentifier)
+        let conversationId = notificationProcessor.getConversationIdFromTopic(contentTopic)
+
+        // Find and sync the conversation using the correct method
+        if let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) {
+            try await conversation.sync()
+            Logger.info("Synced conversation for topic: \(contentTopic)")
         }
     }
 

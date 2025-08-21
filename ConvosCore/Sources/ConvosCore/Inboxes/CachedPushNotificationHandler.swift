@@ -131,7 +131,8 @@ public class CachedPushNotificationHandler {
     /// Handles a push notification asynchronously and waits for completion
     /// - Parameter userInfo: The raw notification userInfo dictionary
     /// - Returns: Async completion when processing is done
-    public func handlePushNotificationAsync(userInfo: [AnyHashable: Any]) async {
+    /// - Throws: NotificationError.messageShouldBeDropped if the message should not be shown
+    public func handlePushNotificationAsync(userInfo: [AnyHashable: Any]) async throws {
         Logger.info("🔍 RAW USERINFO: \(userInfo)")
         let payload = PushNotificationPayload(userInfo: userInfo)
 
@@ -156,6 +157,12 @@ public class CachedPushNotificationHandler {
             _ = try await processor.processPushNotification(payload: payload).async()
             Logger.info("Push notification processed successfully")
         } catch {
+            // Check if this is a notification that should be dropped
+            if let error = error as? NotificationError, error == .messageShouldBeDropped {
+                Logger.info("Re-throwing messageShouldBeDropped error")
+                throw NotificationError.messageShouldBeDropped
+            }
+            // For other errors, just log them but don't re-throw
             Logger.error("Push notification processing failed: \(error)")
         }
     }
