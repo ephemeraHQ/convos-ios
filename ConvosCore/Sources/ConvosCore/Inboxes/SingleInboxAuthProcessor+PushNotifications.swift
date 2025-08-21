@@ -188,7 +188,7 @@ public extension SingleInboxAuthProcessor {
         return DecodedMessageResult(text: textContent, senderInboxId: decodedMessage.senderInboxId)
     }
 
-            /// Stores decoded content for notification service to use
+    /// Stores decoded content for notification service to use
     private func storeDecodedContentForNotification(
         conversationId: String,
         textContent: String,
@@ -196,24 +196,30 @@ public extension SingleInboxAuthProcessor {
         client: any XMTPClientProvider
     ) async throws {
         var notificationTitle: String?
-        let notificationBody = textContent // Just the decoded text, no "Sender:" prefix
+        let notificationBody = textContent // Just the decoded text
 
-        // Try to get group name directly from XMTP without additional DB operations
+        // Try to get group name from the conversation we already found during decoding
+        // This should be safe since we already accessed this conversation successfully
         do {
             if let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) {
                 if case .group(let group) = conversation {
-                    // Try to get group name directly from XMTP
-                    if let groupName = try? group.name(), !groupName.isEmpty {
+                    // Get group name from XMTP group
+                    let groupName = try group.name()
+                    if !groupName.isEmpty {
                         notificationTitle = groupName
                         Logger.info("Found group name for notification: \(groupName)")
                     } else {
-                        Logger.info("Group has no name, using default title")
+                        Logger.info("Group has empty name, using default title")
                     }
+                } else {
+                    Logger.info("Conversation is DM, using default title")
                 }
+            } else {
+                Logger.warning("Could not find conversation again for notification")
             }
         } catch {
-            Logger.warning("Could not get conversation details for notification: \(error)")
-            // Continue with no title
+            Logger.warning("Error getting group name for notification: \(error)")
+            // Continue with no custom title
         }
 
         var notificationData: [String: Any] = [
@@ -234,7 +240,7 @@ public extension SingleInboxAuthProcessor {
         if let data = try? JSONSerialization.data(withJSONObject: notificationData),
            let jsonString = String(data: data, encoding: .utf8) {
             UserDefaults(suiteName: environment.appGroupIdentifier)?.set(jsonString, forKey: storageKey)
-            Logger.info("Stored decoded notification - Title: \(notificationTitle ?? "nil"), Body: \(notificationBody)")
+            Logger.info("Stored decoded notification - Title: \(notificationTitle ?? "default"), Body: \(notificationBody)")
         }
     }
 

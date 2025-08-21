@@ -52,8 +52,10 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
         let userInfo = notification.request.content.userInfo
         Logger.debug("Received notification in foreground: \(userInfo)")
 
-        // Show notification even when app is in foreground
-        return [.banner, .badge, .sound]
+        // Don't show notification when app is in foreground
+        // This forces ALL notifications to go through NSE for processing
+        Logger.info("App in foreground - notification will be processed by NSE instead")
+        return []
     }
 
     // Handle notification taps
