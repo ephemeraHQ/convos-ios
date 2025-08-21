@@ -54,7 +54,7 @@ class NotificationService: UNNotificationServiceExtension {
         }
     }
 
-        private func updateNotificationContent(userInfo: [AnyHashable: Any]) {
+    private func updateNotificationContent(userInfo: [AnyHashable: Any]) {
         guard let bestAttemptContent = bestAttemptContent else { return }
 
         let payload = PushNotificationPayload(userInfo: userInfo)

@@ -85,6 +85,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
     func deleteConversation() {
         Logger.info("🗑️ Deleting conversation in NewConversationViewModel")
         newConversationTask?.cancel()
+        joinConversationTask?.cancel()
         draftConversationComposer = nil
         conversationViewModel = nil
         Task { [weak self] in

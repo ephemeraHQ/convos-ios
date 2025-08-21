@@ -67,7 +67,7 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
            notificationType == "explosion",
            let inboxId = userInfo["inboxId"] as? String,
            let conversationId = userInfo["conversationId"] as? String {
-            await MainActor.run {
+            DispatchQueue.main.async {
                 NotificationCenter.default.post(
                     name: .explosionNotificationTapped,
                     object: nil,
