@@ -13,20 +13,17 @@ public struct ConvosConfiguration {
     public let appGroupIdentifier: String
     public let relyingPartyIdentifier: String
     public let xmtpEndpoint: String?
-    public let appCheckToken: String
 
     public init(
         apiBaseURL: String,
         appGroupIdentifier: String,
         relyingPartyIdentifier: String,
         xmtpEndpoint: String? = nil,
-        appCheckToken: String,
     ) {
         self.apiBaseURL = apiBaseURL
         self.appGroupIdentifier = appGroupIdentifier
         self.relyingPartyIdentifier = relyingPartyIdentifier
         self.xmtpEndpoint = xmtpEndpoint
-        self.appCheckToken = appCheckToken
     }
 }
 
@@ -40,7 +37,6 @@ extension ConvosConfiguration {
             appGroupIdentifier: "group.org.convos.ios-test",
             relyingPartyIdentifier: "test.convos.org",
             xmtpEndpoint: nil,
-            appCheckToken: "test-token"
         )
     }
 }

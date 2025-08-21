@@ -42,23 +42,14 @@ public enum AppEnvironment {
         case local, dev, production, tests
     }
 
-    var appCheckToken: String {
-        switch self {
-        case .local(config: let config), .dev(config: let config), .production(config: let config):
-            return config.appCheckToken
-        case .tests:
-            return "test-token"
-        }
-    }
-
     public var firebaseConfigURL: URL? {
         let resource: String
         switch self {
-        case .local(_), .tests:
+        case .local, .tests:
             resource = "GoogleService-Info.Local"
-        case .dev(_):
+        case .dev:
             resource = "GoogleService-Info.Dev"
-        case .production(_):
+        case .production:
             resource = "GoogleService-Info.Prod"
         }
 

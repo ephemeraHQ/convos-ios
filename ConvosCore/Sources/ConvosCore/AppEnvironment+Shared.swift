@@ -66,7 +66,6 @@ public extension AppEnvironment {
             appGroupIdentifier: "group.org.convos.ios-local",
             relyingPartyIdentifier: "local.convos.org",
             xmtpEndpoint: nil, // Will be set by main app if needed
-            appCheckToken: "" // Will be set by main app if needed
         )
         return .local(config: config)
     }
@@ -78,7 +77,6 @@ public extension AppEnvironment {
             appGroupIdentifier: "group.org.convos.ios-preview",
             relyingPartyIdentifier: "otr-preview.convos.org",
             xmtpEndpoint: nil,
-            appCheckToken: ""
         )
         return .dev(config: config)
     }
@@ -90,7 +88,6 @@ public extension AppEnvironment {
             appGroupIdentifier: "group.org.convos.ios",
             relyingPartyIdentifier: "convos.org",
             xmtpEndpoint: nil,
-            appCheckToken: ""
         )
         return .production(config: config)
     }
@@ -105,7 +102,6 @@ public struct SharedAppConfiguration: Codable {
     public let appGroupIdentifier: String
     public let relyingPartyIdentifier: String
     public let xmtpEndpoint: String?
-    public let appCheckToken: String
 
     public init(environment: AppEnvironment) {
         self.environment = environment.name
@@ -113,7 +109,6 @@ public struct SharedAppConfiguration: Codable {
         self.appGroupIdentifier = environment.appGroupIdentifier
         self.relyingPartyIdentifier = environment.relyingPartyIdentifier
         self.xmtpEndpoint = environment.xmtpEndpoint
-        self.appCheckToken = environment.appCheckToken
     }
 
     public func toAppEnvironment() -> AppEnvironment {
@@ -122,7 +117,6 @@ public struct SharedAppConfiguration: Codable {
             appGroupIdentifier: appGroupIdentifier,
             relyingPartyIdentifier: relyingPartyIdentifier,
             xmtpEndpoint: xmtpEndpoint,
-            appCheckToken: appCheckToken
         )
 
         switch environment {
