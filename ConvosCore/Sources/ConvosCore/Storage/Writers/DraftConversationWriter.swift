@@ -159,7 +159,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         apiClient: any ConvosAPIClientProtocol
     ) async throws {
         // Call API to request to join
-        _ = try await apiClient.requestToJoin(inviteCode)
+        let response = try await apiClient.requestToJoin(inviteCode)
 
         // Then wait for conversation to appear and finalize
         streamConversationsTask = Task { [weak self] in
@@ -175,25 +175,14 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
                     // Accept consent and store on first matching conversation for this invite
                     try await conversation.updateConsentState(state: .allowed)
-
-                    Task { [weak self] in
-                        guard let self else { return }
-                        // fetch invite details and save to the DB so the QR code shows when/if we join
-                        do {
-                            Logger.info("Fetching invite details...")
-                            let response = try await apiClient.publicInviteDetails(inviteCode)
-                            Logger.info("Received invite details: \(response)")
-                            try await inviteWriter.store(
-                                invite: response,
-                                conversationId: conversation.id,
-                                inboxId: client.inboxId
-                            )
-                        } catch {
-                            Logger.error("Failed fetching invite details after join: \(error.localizedDescription)")
-                        }
-                    }
-
                     Logger.info("Joined conversation with id: \(conversation.id)")
+
+                    Logger.info("Storing invite details: \(response)")
+                    try await inviteWriter.store(
+                        invite: response.invite,
+                        inboxId: client.inboxId
+                    )
+
                     let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
                     let conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
                                                                 messageWriter: messageWriter)
