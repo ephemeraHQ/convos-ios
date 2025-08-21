@@ -32,7 +32,6 @@ final class ConfigManager {
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
                 xmtpEndpoint: Secrets.XMTP_CUSTOM_HOST.isEmpty ? nil : Secrets.XMTP_CUSTOM_HOST,
-                appCheckToken: Secrets.FIREBASE_APP_CHECK_TOKEN
             )
             environment = .local(config: config)
 
@@ -41,7 +40,6 @@ final class ConfigManager {
                 apiBaseURL: apiBaseURL,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
-                appCheckToken: Secrets.FIREBASE_APP_CHECK_TOKEN
             )
             environment = .dev(config: config)
 
@@ -50,7 +48,6 @@ final class ConfigManager {
                 apiBaseURL: apiBaseURL,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
-                appCheckToken: Secrets.FIREBASE_APP_CHECK_TOKEN
             )
             environment = .production(config: config)
 

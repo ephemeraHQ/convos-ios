@@ -38,6 +38,7 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
 
     func authenticate(inboxId: String,
                       installationId: String,
+                      appCheckToken: String,
                       signature: String) async throws -> String
 
     func getUser() async throws -> ConvosAPI.UserResponse
@@ -104,7 +105,6 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue(environment.appCheckToken, forHTTPHeaderField: "X-Firebase-AppCheck")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let requestBody: [String: Any] = [
@@ -205,13 +205,14 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     private func reAuthenticate() async throws -> String {
         let installationId = client.installationId
         let inboxId = client.inboxId
-        let firebaseAppCheckToken = environment.appCheckToken
+        let firebaseAppCheckToken = try await FirebaseHelperCore.getAppCheckToken()
         let signatureData = try client.signWithInstallationKey(message: firebaseAppCheckToken)
         let signature = signatureData.hexEncodedString()
 
         return try await authenticate(
             inboxId: inboxId,
             installationId: installationId,
+            appCheckToken: firebaseAppCheckToken,
             signature: signature
         )
     }
@@ -220,6 +221,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
     func authenticate(inboxId: String,
                       installationId: String,
+                      appCheckToken: String,
                       signature: String) async throws -> String {
         let url = baseURL.appendingPathComponent("v1/authenticate")
         var request = URLRequest(url: url)
@@ -228,7 +230,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         request.setValue(installationId, forHTTPHeaderField: "X-XMTP-InstallationId")
         request.setValue(inboxId, forHTTPHeaderField: "X-XMTP-InboxId")
         request.setValue("0x\(signature)", forHTTPHeaderField: "X-XMTP-Signature")
-        request.setValue(environment.appCheckToken, forHTTPHeaderField: "X-Firebase-AppCheck")
+        request.setValue(appCheckToken, forHTTPHeaderField: "X-Firebase-AppCheck")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let (data, response) = try await session.data(for: request)

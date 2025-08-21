@@ -403,8 +403,8 @@ public actor InboxStateMachine {
         Logger.info("Retrieving installation ID and Firebase App Check token...")
         let installationId = client.installationId
         let inboxId = client.inboxId
-        let firebaseAppCheckToken = environment.appCheckToken
-        let signatureData = try client.signWithInstallationKey(message: firebaseAppCheckToken)
+        let appCheckToken = try await FirebaseHelperCore.getAppCheckToken()
+        let signatureData = try client.signWithInstallationKey(message: appCheckToken)
         let signature = signatureData.hexEncodedString()
         Logger.info("Attempting to authenticate with Convos backend...")
         let apiClient = ConvosAPIClientFactory.authenticatedClient(
@@ -414,6 +414,7 @@ public actor InboxStateMachine {
         _ = try await apiClient.authenticate(
             inboxId: inboxId,
             installationId: installationId,
+            appCheckToken: appCheckToken,
             signature: signature
         )
         return apiClient
