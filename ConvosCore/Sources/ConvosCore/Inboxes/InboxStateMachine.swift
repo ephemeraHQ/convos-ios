@@ -321,8 +321,8 @@ public actor InboxStateMachine {
             // Request system notification authorization (APNS registration is handled separately)
             await requestNotificationAuthorizationIfNeeded()
 
-            // Register backend notifications mapping (deviceId + token + identity + installation)
-            await registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
+            // Wait briefly for push token to arrive, then register
+            await registerForNotificationsWithTokenWait(client: client, apiClient: apiClient)
 
             do {
                 try await refreshUserAndProfile(client: client, apiClient: apiClient)
@@ -618,6 +618,30 @@ extension InboxStateMachine {
             await requestNotificationAuthorizationIfNeeded()
         }
         await registerForNotificationsIfNeeded(client: result.client, apiClient: result.apiClient)
+    }
+
+    private func registerForNotificationsWithTokenWait(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
+        // First try immediate registration
+        await registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
+
+        // If no token, wait briefly for APNS callback
+        let notifProcessor = NotificationProcessor(appGroupIdentifier: environment.appGroupIdentifier)
+        if notifProcessor.getStoredDeviceToken()?.isEmpty != false {
+            Logger.info("No push token yet, waiting briefly for APNS callback...")
+
+            // Wait with exponential backoff: 1s, 2s, 3s, 4s = 10 seconds total
+            let delays = [1.0, 2.0, 3.0, 4.0]
+            for (attempt, delay) in delays.enumerated() {
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                if let token = notifProcessor.getStoredDeviceToken(), !token.isEmpty {
+                    let totalWait = delays[0...attempt].reduce(0, +)
+                    Logger.info("Push token received after \(totalWait)s, retrying registration")
+                    await registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
+                    return
+                }
+            }
+            Logger.warning("Push token still not available after 10s wait - will retry when token changes")
+        }
     }
 
     private func registerForNotificationsIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
