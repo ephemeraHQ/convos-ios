@@ -177,12 +177,6 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                     try await conversation.updateConsentState(state: .allowed)
                     Logger.info("Joined conversation with id: \(conversation.id)")
 
-                    Logger.info("Storing invite details: \(response)")
-                    try await inviteWriter.store(
-                        invite: response.invite,
-                        inboxId: client.inboxId
-                    )
-
                     let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
                     let conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
                                                                 messageWriter: messageWriter)
@@ -190,6 +184,11 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                     let dbConversation = try await conversationWriter.store(conversation: conversation,
                                                                             clientConversationId: conversationId)
                     Logger.info("Created conversation in database: \(dbConversation)")
+                    Logger.info("Storing invite details: \(response)")
+                    try await inviteWriter.store(
+                        invite: response.invite,
+                        inboxId: client.inboxId
+                    )
                     self.state = .existing(id: conversation.id)
 
                     // Subscribe to push topic upon join
