@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		7A5D3E962E43B82400DA9B83 /* SwiftUIIntrospect in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5D3E952E43B82400DA9B83 /* SwiftUIIntrospect */; };
+		7A8EED172E57E10200F2998C /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AC5995B2E5593C300D65D07 /* ConvosCore */; };
 		7AC59AB12E56228200D65D07 /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AC59AB02E56228200D65D07 /* ConvosCore */; };
 		7AD545902E4EA8BE00500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD5458F2E4EA8BE00500ADF /* ConvosCore */; };
 		7AD545922E4EA8D200500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545912E4EA8D200500ADF /* ConvosCore */; };
@@ -238,6 +239,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7A8EED172E57E10200F2998C /* ConvosCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

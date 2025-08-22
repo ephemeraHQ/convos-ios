@@ -1,15 +1,32 @@
 import Foundation
 
+/// Represents decoded notification content from NSE processing
+public struct DecodedNotificationContent {
+    public let title: String?
+    public let body: String?
+
+    public init(title: String?, body: String?) {
+        self.title = title
+        self.body = body
+    }
+}
+
 /// Represents the payload structure of a push notification
-public struct PushNotificationPayload {
+public final class PushNotificationPayload {
     public let inboxId: String?
     public let notificationType: NotificationType?
     public let notificationData: NotificationData?
+
+    // Decoded content properties (mutable for NSE processing)
+    public internal(set) var decodedTitle: String?
+    public internal(set) var decodedBody: String?
 
     public init(userInfo: [AnyHashable: Any]) {
         self.inboxId = userInfo["inboxId"] as? String
         self.notificationType = NotificationType(rawValue: userInfo["notificationType"] as? String ?? "")
         self.notificationData = NotificationData(dictionary: userInfo["notificationData"] as? [String: Any])
+        self.decodedTitle = nil
+        self.decodedBody = nil
     }
 }
 
@@ -208,6 +225,46 @@ public extension PushNotificationPayload {
             } else {
                 return "\(displayName) requested to join \(groupName)"
             }
+        case .none:
+            return nil
+        }
+    }
+
+    /// Generates a display title for the notification with decoded content
+    /// - Returns: The display title with decoded content if available
+    func displayTitleWithDecodedContent() -> String? {
+        switch notificationType {
+        case .protocolMessage:
+            // Use decoded title if available and non-empty, otherwise fall back to default
+            if let decodedTitle = decodedTitle {
+                let trimmed = decodedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    return trimmed
+                }
+            }
+            return displayTitle
+        case .inviteJoinRequest:
+            return displayTitle
+        case .none:
+            return nil
+        }
+    }
+
+    /// Generates a display body for the notification with decoded content
+    /// - Returns: The display body with decoded content if available
+    func displayBodyWithDecodedContent() -> String? {
+        switch notificationType {
+        case .protocolMessage:
+            // Use decoded body if available and non-empty, otherwise fall back to default
+            if let decodedBody = decodedBody {
+                let trimmed = decodedBody.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    return trimmed
+                }
+            }
+            return displayBody
+        case .inviteJoinRequest:
+            return displayBody
         case .none:
             return nil
         }

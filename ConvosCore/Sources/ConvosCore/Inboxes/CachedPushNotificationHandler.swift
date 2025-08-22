@@ -68,6 +68,9 @@ public class CachedPushNotificationHandler {
     private var processors: [String: SingleInboxAuthProcessor] = [:]
     private var cancellables: Set<AnyCancellable> = []
 
+    // Store the processed payload for NSE access
+    private var processedPayload: PushNotificationPayload?
+
     private let authService: any LocalAuthServiceProtocol
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
@@ -91,7 +94,7 @@ public class CachedPushNotificationHandler {
     /// Handles a push notification using the structured payload
     /// - Parameter userInfo: The raw notification userInfo dictionary
     public func handlePushNotification(userInfo: [AnyHashable: Any]) {
-        Logger.info("🔍 RAW USERINFO: \(userInfo)")
+        Logger.info("🔍 Processing raw push notification")
         let payload = PushNotificationPayload(userInfo: userInfo)
 
         guard payload.isValid else {
@@ -131,8 +134,9 @@ public class CachedPushNotificationHandler {
     /// Handles a push notification asynchronously and waits for completion
     /// - Parameter userInfo: The raw notification userInfo dictionary
     /// - Returns: Async completion when processing is done
-    public func handlePushNotificationAsync(userInfo: [AnyHashable: Any]) async {
-        Logger.info("🔍 RAW USERINFO: \(userInfo)")
+    /// - Throws: NotificationError.messageShouldBeDropped if the message should not be shown
+    public func handlePushNotificationAsync(userInfo: [AnyHashable: Any]) async throws {
+        Logger.info("🔍 Processing raw push notification")
         let payload = PushNotificationPayload(userInfo: userInfo)
 
         guard payload.isValid else {
@@ -151,13 +155,27 @@ public class CachedPushNotificationHandler {
         // Get or create processor for this inbox
         let processor = getOrCreateProcessor(for: inboxId)
 
+        // Store payload for NSE access
+        self.processedPayload = payload
+
         // Use async/await to wait for completion
         do {
             _ = try await processor.processPushNotification(payload: payload).async()
             Logger.info("Push notification processed successfully")
         } catch {
+            // Check if this is a notification that should be dropped
+            if let error = error as? NotificationError, error == .messageShouldBeDropped {
+                Logger.info("Re-throwing messageShouldBeDropped error")
+                throw NotificationError.messageShouldBeDropped
+            }
+            // For other errors, just log them but don't re-throw
             Logger.error("Push notification processing failed: \(error)")
         }
+    }
+
+    /// Gets the processed payload with decoded content for NSE use
+    public func getProcessedPayload() -> PushNotificationPayload? {
+        return processedPayload
     }
 
     /// Schedules custom work for a specific inbox
@@ -197,11 +215,19 @@ public class CachedPushNotificationHandler {
 
     /// Cleans up all resources
     public func cleanup() {
+        Logger.info("CachedPushNotificationHandler: Starting cleanup of \(processors.count) processors")
+
         for processor in processors.values {
             processor.stop()
         }
         processors.removeAll()
         cancellables.removeAll()
+        processedPayload = nil // Clear processed payload
+
+        // For NSE, GRDB will handle database connection cleanup automatically when the process ends
+        if isNotificationServiceExtension {
+            Logger.info("NSE: Cleanup complete - all XMTP operations stopped, GRDB will handle database connection cleanup automatically")
+        }
     }
 
     // MARK: - Private Methods

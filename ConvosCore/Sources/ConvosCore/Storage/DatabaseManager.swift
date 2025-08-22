@@ -7,7 +7,7 @@ public protocol DatabaseManagerProtocol {
 }
 
 public final class DatabaseManager: DatabaseManagerProtocol {
-    public static let shared: DatabaseManager = DatabaseManager()
+    let environment: AppEnvironment
 
     public let dbPool: DatabasePool
 
@@ -19,18 +19,18 @@ public final class DatabaseManager: DatabaseManagerProtocol {
         dbPool as DatabaseReader
     }
 
-    private init() {
+    init(environment: AppEnvironment) {
+        self.environment = environment
         do {
-            dbPool = try Self.makeDatabasePool()
+            dbPool = try Self.makeDatabasePool(environment: environment)
         } catch {
             fatalError("Failed to initialize database: \(error)")
         }
     }
 
-    private static func makeDatabasePool() throws -> DatabasePool {
+    private static func makeDatabasePool(environment: AppEnvironment) throws -> DatabasePool {
         let fileManager = FileManager.default
         // Use the shared App Group container so the main app and NSE share the same DB
-        let environment = AppEnvironment.detected()
         let groupDirURL = environment.defaultDatabasesDirectoryURL
         let dbURL = groupDirURL.appendingPathComponent("convos.sqlite")
 
@@ -49,8 +49,13 @@ public final class DatabaseManager: DatabaseManagerProtocol {
         }
 
         var config = Configuration()
-        config.label = "ConvosDB"
+        // Add process identifier to help with debugging concurrent access issues
+        let isNSE = Bundle.main.bundleIdentifier?.contains("NotificationService") ?? false
+        config.label = isNSE ? "ConvosDB-NSE" : "ConvosDB-MainApp"
         config.foreignKeysEnabled = true
+        // Improve concurrent access handling for multi-process scenarios (NSE + Main App)
+        config.maximumReaderCount = 5  // Allow multiple readers
+        config.busyMode = .timeout(10.0)  // Wait up to 10 seconds for locks
 #if DEBUG
 //        config.prepareDatabase { db in
 //            db.trace { Logger.info("\($0)") }

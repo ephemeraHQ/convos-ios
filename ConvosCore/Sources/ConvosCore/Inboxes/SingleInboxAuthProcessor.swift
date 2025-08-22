@@ -9,7 +9,7 @@ public class SingleInboxAuthProcessor {
     private let authService: any LocalAuthServiceProtocol
     internal let databaseReader: any DatabaseReader
     internal let databaseWriter: any DatabaseWriter
-    private let environment: AppEnvironment
+    internal let environment: AppEnvironment
 
     private var operation: AuthorizeInboxOperation?
     private var cancellables: Set<AnyCancellable> = []
@@ -18,7 +18,7 @@ public class SingleInboxAuthProcessor {
     private var isAuthorizing: Bool = false
     private var authorizationError: Error?
 
-    private let isNotificationServiceExtension: Bool
+    internal let isNotificationServiceExtension: Bool
 
     public init(
         inboxId: String,

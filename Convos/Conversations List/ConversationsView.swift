@@ -112,6 +112,12 @@ struct ConversationsView: View {
                     }
 
                     ToolbarItem(placement: .bottomBar) {
+                        Button("Scan", systemImage: "qrcode.viewfinder") {
+                            viewModel.onJoinConvo()
+                        }
+                    }
+
+                    ToolbarItem(placement: .bottomBar) {
                         Button("Compose", systemImage: "plus") {
                             viewModel.onStartConvo()
                         }
