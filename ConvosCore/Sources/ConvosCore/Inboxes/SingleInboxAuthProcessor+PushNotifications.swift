@@ -123,7 +123,8 @@ public extension SingleInboxAuthProcessor {
                 throw NotificationError.messageShouldBeDropped
             } catch {
                 Logger.error("Failed to decode message in notification service: \(error)")
-                // Don't throw here - show generic notification on decode error
+                // Throw to suppress notification on decode failure - better than showing generic content
+                throw NotificationError.messageShouldBeDropped
             }
 
             // NSE should exit here - it only decodes for display, not sync
