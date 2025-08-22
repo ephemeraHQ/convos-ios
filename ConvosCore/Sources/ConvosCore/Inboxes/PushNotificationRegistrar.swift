@@ -36,14 +36,6 @@ public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol 
         UserDefaults.standard.string(forKey: tokenKey)
     }
 
-    private var token: String? {
-        get {
-            UserDefaults.standard.string(forKey: Self.tokenKey)
-        } set {
-            UserDefaults.standard.set(newValue, forKey: Self.tokenKey)
-        }
-    }
-
     func registerForRemoteNotifications() async {
         await MainActor.run {
             UIApplication.shared.registerForRemoteNotifications()
@@ -69,7 +61,7 @@ public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol 
     }
 
     func registerForNotificationsIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
-        guard let token, !token.isEmpty else { return }
+        guard let token = Self.token, !token.isEmpty else { return }
 
         let deviceId = await currentDeviceId()
         let identityId = client.inboxId
