@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import XMTPiOS
 
@@ -63,8 +62,6 @@ enum InboxStateError: Error {
     case inboxNotReady
 }
 
-public typealias InboxReadyResultPublisher = AnyPublisher<InboxReadyResult, Never>
-
 public struct InboxReadyResult {
     public let inbox: any AuthServiceInboxType
     public let client: any XMTPClientProvider
@@ -105,33 +102,50 @@ public actor InboxStateMachine {
     private let pushNotificationRegistrar: (any PushNotificationRegistrarProtocol)?
     private let refreshProfileWhenReady: Bool
 
-    private var _state: State = .uninitialized {
-        didSet {
-            stateSubject.send(_state)
-        }
-    }
-
     private var currentTask: Task<Void, Never>?
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
     private var pushTokenObserver: NSObjectProtocol?
 
-    // MARK: - Nonisolated
+    // MARK: - State Observation
 
-    nonisolated
+    private var stateContinuations: [AsyncStream<State>.Continuation] = []
+    private var _state: State = .uninitialized
+
     var state: State {
-        stateSubject.value
+        get async {
+            _state
+        }
     }
 
-    nonisolated
-    private let stateSubject: CurrentValueSubject<State, Never> = .init(
-        .uninitialized
-    )
+    var stateSequence: AsyncStream<State> {
+        AsyncStream { continuation in
+            Task { @MainActor in
+                await self.addStateContinuation(continuation)
+            }
+        }
+    }
 
-    nonisolated
-    var statePublisher: AnyPublisher<State, Never> {
-        stateSubject
-            .eraseToAnyPublisher()
+    private func addStateContinuation(_ continuation: AsyncStream<State>.Continuation) {
+        stateContinuations.append(continuation)
+        // Emit current state immediately
+        continuation.yield(_state)
+    }
+
+    private func emitStateChange(_ newState: State) {
+        _state = newState
+
+        // Emit to all continuations
+        for continuation in stateContinuations {
+            continuation.yield(newState)
+        }
+    }
+
+    private func cleanupContinuations() {
+        stateContinuations.removeAll { continuation in
+            continuation.finish()
+            return true
+        }
     }
 
     // MARK: - Init
@@ -257,12 +271,12 @@ public actor InboxStateMachine {
             Logger.error(
                 "Failed state transition \(_state) -> \(action): \(error.localizedDescription)"
             )
-            _state = .error(error)
+            emitStateChange(.error(error))
         }
     }
 
     private func handleAuthorize() async throws {
-        _state = .initializing
+        emitStateChange(.initializing)
         let client: any XMTPClientProvider
         do {
             client = try await buildXmtpClient(
@@ -280,7 +294,7 @@ public actor InboxStateMachine {
     }
 
     private func handleRegister(displayName: String?) async throws {
-        _state = .initializing
+        emitStateChange(.initializing)
         let client = try await createXmtpClient(
             signingKey: inbox.signingKey,
             options: clientOptions
@@ -290,7 +304,7 @@ public actor InboxStateMachine {
     }
 
     private func handleClientInitialized(_ client: any XMTPClientProvider) async throws {
-        _state = .authorizing
+        emitStateChange(.authorizing)
 
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
@@ -307,10 +321,10 @@ public actor InboxStateMachine {
     }
 
     private func handleClientRegistered(_ client: any XMTPClientProvider, displayName: String?) async throws {
-        _state = .authorizing
+        emitStateChange(.authorizing)
         Logger.info("Authorizing backend for registration...")
         let apiClient = try await authorizeConvosBackend(client: client)
-        _state = .registering
+        emitStateChange(.registering)
         Logger.info("Creating user with display name '\(displayName ?? "nil")'...")
         let user = try await createUser(
             displayName: displayName,
@@ -328,7 +342,7 @@ public actor InboxStateMachine {
     }
 
     private func handleAuthorized(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) throws {
-        _state = .ready(.init(inbox: inbox, client: client, apiClient: apiClient))
+        emitStateChange(.ready(.init(inbox: inbox, client: client, apiClient: apiClient)))
         syncingManager.start(with: client, apiClient: apiClient)
         inviteJoinRequestsManager.start(with: client, apiClient: apiClient)
 
@@ -357,7 +371,7 @@ public actor InboxStateMachine {
 
         await pushNotificationRegistrar?.unregisterInstallation(client: client, apiClient: apiClient)
 
-        _state = .deleting
+        emitStateChange(.deleting)
         syncingManager.stop()
         inviteJoinRequestsManager.stop()
         try client.deleteLocalDatabase()
@@ -368,9 +382,9 @@ public actor InboxStateMachine {
 
     private func handleStop() throws {
         Logger.info("Stopping inbox with providerId '\(inbox.providerId)'...")
-        _state = .stopping
+        emitStateChange(.stopping)
         removePushNotificationObservers()
-        _state = .uninitialized
+        emitStateChange(.uninitialized)
     }
 
     // MARK: - Helpers
