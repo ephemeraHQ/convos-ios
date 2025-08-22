@@ -42,13 +42,22 @@ public enum AppEnvironment {
         case local, dev, production, tests
     }
 
-    var appCheckToken: String {
+    public var firebaseConfigURL: URL? {
+        let resource: String
         switch self {
-        case .local(config: let config), .dev(config: let config), .production(config: let config):
-            return config.appCheckToken
-        case .tests:
-            return "test-token"
+        case .local, .tests:
+            resource = "GoogleService-Info.Local"
+        case .dev:
+            resource = "GoogleService-Info.Dev"
+        case .production:
+            resource = "GoogleService-Info.Prod"
         }
+
+        if let url = Bundle.main.url(forResource: resource, withExtension: "plist") {
+            return url
+        }
+
+        return nil
     }
 
     var apiBaseURL: String {

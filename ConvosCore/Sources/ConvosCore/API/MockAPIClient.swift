@@ -60,7 +60,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         super.init()
     }
 
-    func authenticate(inboxId: String, installationId: String, signature: String) async throws -> String {
+    func authenticate(inboxId: String, installationId: String, appCheckToken: String, signature: String) async throws -> String {
         return "mock-jwt-token"
     }
 
