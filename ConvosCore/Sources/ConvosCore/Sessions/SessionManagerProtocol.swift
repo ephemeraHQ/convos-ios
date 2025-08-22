@@ -7,8 +7,6 @@ public struct AddAccountResultType {
 }
 
 public protocol SessionManagerProtocol {
-    var authState: AnyPublisher<AuthServiceState, Never> { get }
-
     func prepare() throws
     func addAccount() throws -> AddAccountResultType
     func deleteAccount(inboxId: String) throws

@@ -6,39 +6,67 @@ import XMTPiOS
 
 // MARK: - Models
 
-public struct KeychainIdentity: Codable {
-    public let id: String
+public struct KeychainIdentityKeys: Codable {
     public let privateKey: PrivateKey
     public let databaseKey: Data
 
-    // Custom coding keys to handle PrivateKey serialization
     private enum CodingKeys: String, CodingKey {
-        case id
         case privateKeyData
         case databaseKey
     }
 
-    public init(id: String, privateKey: PrivateKey, databaseKey: Data) {
-        self.id = id
+    static func generate() throws -> KeychainIdentityKeys {
+        let privateKey = try generatePrivateKey()
+        let databaseKey = try generateDatabaseKey()
+        return .init(privateKey: privateKey, databaseKey: databaseKey)
+    }
+
+    init(privateKey: PrivateKey, databaseKey: Data) {
         self.privateKey = privateKey
         self.databaseKey = databaseKey
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(String.self, forKey: .id)
         databaseKey = try container.decode(Data.self, forKey: .databaseKey)
-
         let privateKeyData = try container.decode(Data.self, forKey: .privateKeyData)
         privateKey = try PrivateKey(privateKeyData)
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
         try container.encode(databaseKey, forKey: .databaseKey)
         try container.encode(privateKey.secp256K1.bytes, forKey: .privateKeyData)
     }
+
+    private static func generatePrivateKey() throws -> PrivateKey {
+        do {
+            return try PrivateKey.generate()
+        } catch {
+            throw KeychainIdentityStoreError.privateKeyGenerationFailed
+        }
+    }
+
+    private static func generateDatabaseKey() throws -> Data {
+        var key = Data(count: 32) // 256-bit key
+        let status: OSStatus = try key.withUnsafeMutableBytes { bytes in
+            guard let baseAddress = bytes.baseAddress else {
+                throw KeychainIdentityStoreError.keychainOperationFailed(errSecUnknownFormat, "generateDatabaseKey")
+            }
+            return SecRandomCopyBytes(kSecRandomDefault, 32, baseAddress)
+        }
+
+        guard status == errSecSuccess else {
+            throw KeychainIdentityStoreError.keychainOperationFailed(status, "generateDatabaseKey")
+        }
+
+        return key
+    }
+}
+
+public struct KeychainIdentity: Codable {
+    public let id: String
+    public let keys: KeychainIdentityKeys
 }
 
 // MARK: - Errors
@@ -155,13 +183,11 @@ public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
 
     public func save() throws -> KeychainIdentity {
         let identityId = UUID().uuidString
-        let privateKey = try generatePrivateKey()
-        let databaseKey = try generateDatabaseKey()
+        let keys = try KeychainIdentityKeys.generate()
 
         let identity = KeychainIdentity(
             id: identityId,
-            privateKey: privateKey,
-            databaseKey: databaseKey
+            keys: keys
         )
 
         try saveIdentity(identity)
@@ -325,32 +351,6 @@ public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         )
 
         try saveData(data, with: query)
-    }
-
-    // MARK: - Private Key Operations
-
-    private func generatePrivateKey() throws -> PrivateKey {
-        do {
-            return try PrivateKey.generate()
-        } catch {
-            throw KeychainIdentityStoreError.privateKeyGenerationFailed
-        }
-    }
-
-    private func generateDatabaseKey() throws -> Data {
-        var key = Data(count: 32) // 256-bit key
-        let status: OSStatus = try key.withUnsafeMutableBytes { bytes in
-            guard let baseAddress = bytes.baseAddress else {
-                throw KeychainIdentityStoreError.keychainOperationFailed(errSecUnknownFormat, "generateDatabaseKey")
-            }
-            return SecRandomCopyBytes(kSecRandomDefault, 32, baseAddress)
-        }
-
-        guard status == errSecSuccess else {
-            throw KeychainIdentityStoreError.keychainOperationFailed(status, "generateDatabaseKey")
-        }
-
-        return key
     }
 
     // MARK: - Inbox ID Operations

@@ -29,8 +29,8 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
                 type: .ephemeral,
                 provider: .local,
                 providerId: identity.id,
-                signingKey: identity.privateKey,
-                databaseKey: identity.databaseKey
+                signingKey: identity.keys.privateKey,
+                databaseKey: identity.keys.databaseKey
             )
         )
         authStateSubject.send(.registered(result))
@@ -65,8 +65,8 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
             type: .ephemeral,
             provider: .local,
             providerId: identity.id,
-            signingKey: identity.privateKey,
-            databaseKey: identity.databaseKey
+            signingKey: identity.keys.privateKey,
+            databaseKey: identity.keys.databaseKey
         )
     }
 
@@ -84,8 +84,8 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
                 type: .ephemeral,
                 provider: .local,
                 providerId: identity.id,
-                signingKey: identity.privateKey,
-                databaseKey: identity.databaseKey
+                signingKey: identity.keys.privateKey,
+                databaseKey: identity.keys.databaseKey
             )
         }
 

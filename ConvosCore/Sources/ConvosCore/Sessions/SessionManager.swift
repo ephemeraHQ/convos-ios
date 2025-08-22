@@ -18,7 +18,6 @@ enum SessionManagerError: Error {
 }
 
 class SessionManager: SessionManagerProtocol {
-    let authState: AnyPublisher<AuthServiceState, Never>
     private let currentSessionRepository: any CurrentSessionRepositoryProtocol
     private let inboxOperationsPublisher: CurrentValueSubject<[any AuthorizeInboxOperationProtocol], Never> = .init([])
     private var cancellables: Set<AnyCancellable> = []
@@ -42,10 +41,8 @@ class SessionManager: SessionManagerProtocol {
         self.environment = environment
         let currentSessionRepository = CurrentSessionRepository(dbReader: databaseReader)
         self.currentSessionRepository = currentSessionRepository
-        self.authState = authService.authStatePublisher
-            .eraseToAnyPublisher()
         observe()
-        authState
+        authService.authStatePublisher
             .sink { [weak self] authState in
                 do {
                     try self?.handleAuthStateChange(authState)

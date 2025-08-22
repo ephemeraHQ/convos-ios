@@ -56,10 +56,6 @@ public final class ConvosClient {
         self.environment = environment
     }
 
-    public var authState: AnyPublisher<AuthServiceState, Never> {
-        sessionManager.authState
-    }
-
     public func prepare() throws {
         try sessionManager.prepare()
     }
