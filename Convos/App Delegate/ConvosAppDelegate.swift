@@ -39,9 +39,6 @@ extension ConvosAppDelegate: UNUserNotificationCenterDelegate {
     // Handle notifications when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        let userInfo = notification.request.content.userInfo
-        Logger.debug("Received notification in foreground")
-
         // Show notification banner when app is in foreground
         // NSE processes all notifications regardless of app state
         Logger.info("App in foreground - showing notification banner")
