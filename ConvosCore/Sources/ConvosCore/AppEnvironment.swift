@@ -69,34 +69,11 @@ public enum AppEnvironment {
 
     public var appGroupIdentifier: String {
         switch self {
-        case .local(let config):
+        case .local(config: let config), .dev(config: let config), .production(config: let config):
             return config.appGroupIdentifier
         case .tests:
             return "group.org.convos.ios-local"
-        case .dev(let config):
-            return config.appGroupIdentifier
-        case .production(let config):
-            return config.appGroupIdentifier
         }
-    }
-
-        public var keychainGroupIdentifier: String {
-        // The keychain access group needs the team prefix
-        let teamPrefix = "FY4NZR34Z3."
-        let bundleIdentifier: String
-
-        switch self {
-        case .local:
-            bundleIdentifier = "org.convos.ios-local"
-        case .tests:
-            bundleIdentifier = "org.convos.ios-local"
-        case .dev:
-            bundleIdentifier = "org.convos.ios-preview"
-        case .production:
-            bundleIdentifier = "org.convos.ios"
-        }
-
-        return teamPrefix + bundleIdentifier
     }
 
     public var keychainAccessGroup: String {
@@ -108,27 +85,19 @@ public enum AppEnvironment {
 
     public var relyingPartyIdentifier: String {
         switch self {
-        case .local(let config):
+        case .local(config: let config), .dev(config: let config), .production(config: let config):
             return config.relyingPartyIdentifier
         case .tests:
             return "local.convos.org"
-        case .dev(let config):
-            return config.relyingPartyIdentifier
-        case .production(let config):
-            return config.relyingPartyIdentifier
         }
     }
 
     var xmtpEndpoint: String? {
         switch self {
-        case .local(let config):
+        case .local(config: let config), .dev(config: let config), .production(config: let config):
             return config.xmtpEndpoint
         case .tests:
             return nil
-        case .dev(let config):
-            return config.xmtpEndpoint
-        case .production(let config):
-            return config.xmtpEndpoint
         }
     }
 

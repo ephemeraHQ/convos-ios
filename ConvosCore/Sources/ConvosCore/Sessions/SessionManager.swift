@@ -284,9 +284,6 @@ class SessionManager: SessionManagerProtocol {
     }
 
     func deleteAllAccounts() throws {
-        // Ask all ready inbox state machines to unregister their installation before teardown
-        NotificationCenter.default.post(name: .convosUnregisterAllInboxesRequested, object: nil)
-
         try authService.deleteAll()
         try databaseWriter.write { db in
             try DBInbox.deleteAll(db)
@@ -298,6 +295,8 @@ class SessionManager: SessionManagerProtocol {
             try DBInvite.deleteAll(db)
             try DBMessage.deleteAll(db)
         }
+
+        clearAllOperations()
 
         // Get the app group container URL
         let appGroupId = environment.appGroupIdentifier

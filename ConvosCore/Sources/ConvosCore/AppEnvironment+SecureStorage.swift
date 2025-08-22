@@ -4,7 +4,7 @@ import Security
 /// Secure storage for environment configuration using iOS Keychain
 public extension AppEnvironment {
     /// Stores the current environment configuration securely in the Keychain
-    func storeSecureConfiguration() {
+    func storeSecureConfigurationForNotificationExtension() {
         let sharedConfig = SharedAppConfiguration(environment: self)
 
         guard let data = try? JSONEncoder().encode(sharedConfig) else {
@@ -37,13 +37,18 @@ public extension AppEnvironment {
 
     /// Retrieves stored environment configuration securely from the Keychain
     /// - Parameter accessGroup: The keychain access group to use (required for proper data sharing)
-    static func retrieveSecureConfiguration(accessGroup: String) -> AppEnvironment? {
+    static func retrieveSecureConfigurationForNotificationExtension() -> AppEnvironment? {
+        guard let bundleIdentifier = Bundle.main.bundleIdentifier,
+              let appGroupIdentifier = bundleIdentifier.asAppGroupIdentifier else {
+            return nil
+        }
+
         // Try to retrieve from Keychain
         let keychainQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: "SharedAppConfiguration",
             kSecAttrService as String: "ConvosEnvironment",
-            kSecAttrAccessGroup as String: accessGroup,
+            kSecAttrAccessGroup as String: appGroupIdentifier,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
@@ -61,5 +66,14 @@ public extension AppEnvironment {
         }
 
         return nil
+    }
+}
+
+extension String {
+    var asAppGroupIdentifier: String? {
+        var parts = self.split(separator: ".")
+        guard parts.count > 1 else { return nil }
+        parts.removeLast()
+        return "group." + parts.joined(separator: ".")
     }
 }

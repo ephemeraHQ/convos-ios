@@ -29,19 +29,3 @@ public struct ConvosConfiguration {
         self.appCheckToken = appCheckToken
     }
 }
-
-// MARK: - Test Helpers
-#if DEBUG
-extension ConvosConfiguration {
-    /// Test configuration - only available in DEBUG builds for unit tests
-    public static var testConfig: ConvosConfiguration {
-        ConvosConfiguration(
-            apiBaseURL: "http://localhost:4000/api/",
-            appGroupIdentifier: "group.org.convos.ios-test",
-            relyingPartyIdentifier: "test.convos.org",
-            xmtpEndpoint: nil,
-            appCheckToken: "test-token"
-        )
-    }
-}
-#endif

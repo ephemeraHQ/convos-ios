@@ -41,6 +41,14 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     ) {
         self.inbox = inbox
         let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
+
+        // Create push notification registrar only if not in notification service extension
+        let pushNotificationRegistrar: PushNotificationRegistrarProtocol? = isNotificationServiceExtension ? nil : PushNotificationRegistrar(
+            environment: environment,
+            authService: authService,
+            inbox: inbox
+        )
+
         stateMachine = InboxStateMachine(
             inbox: inbox,
             inboxWriter: inboxWriter,
@@ -50,8 +58,9 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
                 databaseReader: databaseReader,
                 databaseWriter: databaseWriter
             ),
+            pushNotificationRegistrar: pushNotificationRegistrar,
+            refreshProfileWhenready: !isNotificationServiceExtension,
             environment: environment,
-            isNotificationServiceExtension: isNotificationServiceExtension
         )
         inboxReadyPublisher = stateMachine
             .statePublisher

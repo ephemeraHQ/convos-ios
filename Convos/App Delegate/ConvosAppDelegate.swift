@@ -3,64 +3,54 @@ import Foundation
 import UIKit
 import UserNotifications
 
-@Observable
-class PushNotificationManager: NSObject {
-    static let shared: PushNotificationManager = .init()
-    private(set) var deviceToken: String?
+// MARK: - UIApplication Delegate Adapter
 
-    private let notificationProcessor: NotificationProcessor
-
-    private override init() {
-        // Get app group identifier from ConfigManager
-        let appGroupId = ConfigManager.shared.currentEnvironment.appGroupIdentifier
-        self.notificationProcessor = NotificationProcessor(appGroupIdentifier: appGroupId)
-
-        super.init()
-
-        // Set notification center delegate early so foreground notifications are handled
+@MainActor
+class ConvosAppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+
+        return true
     }
 
-    // MARK: - Device Token Handling
-
-    func handleDeviceToken(_ deviceToken: Data) {
+    func application(_ application: UIApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
         let token = tokenParts.joined()
 
         Logger.info("Received device token from APNS: \(token)")
-        self.deviceToken = token
-
         // Store token in shared storage
-        notificationProcessor.storeDeviceToken(token)
+        PushNotificationRegistrar.save(token: token)
         Logger.info("Stored device token in shared storage")
 
         // Notify listeners that token changed so session-ready components can push it to backend
         NotificationCenter.default.post(name: .convosPushTokenDidChange, object: nil)
     }
 
-    func handleRegistrationError(_ error: Error) {
+    func application(_ application: UIApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
         Logger.error("Failed to register for remote notifications: \(error)")
     }
 }
 
 // MARK: - UNUserNotificationCenterDelegate
 
-extension PushNotificationManager: UNUserNotificationCenterDelegate {
+extension ConvosAppDelegate: UNUserNotificationCenterDelegate {
     // Handle notifications when app is in foreground
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         let userInfo = notification.request.content.userInfo
         Logger.debug("Received notification in foreground: \(userInfo)")
 
         // Don't show notification when app is in foreground
         // This forces ALL notifications to go through NSE for processing
         Logger.info("App in foreground - notification will be processed by NSE instead")
-        return []
+        return [.banner]
     }
 
     // Handle notification taps
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                            didReceive response: UNNotificationResponse) async {
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse) async {
         let userInfo = response.notification.request.content.userInfo
         Logger.debug("Notification tapped: \(userInfo)")
 
@@ -81,20 +71,5 @@ extension PushNotificationManager: UNUserNotificationCenterDelegate {
                 )
             }
         }
-    }
-}
-
-// MARK: - UIApplication Delegate Adapter
-
-@MainActor
-class PushNotificationDelegate: NSObject, UIApplicationDelegate {
-    func application(_ application: UIApplication,
-                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        PushNotificationManager.shared.handleDeviceToken(deviceToken)
-    }
-
-    func application(_ application: UIApplication,
-                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        PushNotificationManager.shared.handleRegistrationError(error)
     }
 }

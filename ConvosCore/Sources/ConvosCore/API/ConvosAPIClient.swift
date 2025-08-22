@@ -161,7 +161,7 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
     private func performRequest<T: Decodable>(_ request: URLRequest, retryCount: Int = 0) async throws -> T {
         let (data, response) = try await session.data(for: request)
 
-        Logger.info("Received response: \(data.prettyPrintedJSONString ?? "nil data")")
+        Logger.info("\(request.url?.path(percentEncoded: false) ?? "nil") received response: \(data.prettyPrintedJSONString ?? "nil data")")
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
@@ -353,7 +353,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         do {
             let (data, response) = try await session.data(for: request)
 
-            Logger.info("Received response: \(data.prettyPrintedJSONString ?? "nil data")")
+            Logger.info("\(request.url?.path(percentEncoded: false) ?? "nil") received response: \(data.prettyPrintedJSONString ?? "nil data")")
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.invalidResponse

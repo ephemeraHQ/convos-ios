@@ -159,7 +159,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         apiClient: any ConvosAPIClientProtocol
     ) async throws {
         // Call API to request to join
-        let response = try await apiClient.requestToJoin(inviteCode)
+        _ = try await apiClient.requestToJoin(inviteCode)
 
         // Then wait for conversation to appear and finalize
         streamConversationsTask = Task { [weak self] in
@@ -177,12 +177,6 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                     try await conversation.updateConsentState(state: .allowed)
                     Logger.info("Joined conversation with id: \(conversation.id)")
 
-                    Logger.info("Storing invite details: \(response)")
-                    try await inviteWriter.store(
-                        invite: response.invite,
-                        inboxId: client.inboxId
-                    )
-
                     let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
                     let conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
                                                                 messageWriter: messageWriter)
@@ -190,6 +184,22 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                     let dbConversation = try await conversationWriter.store(conversation: conversation,
                                                                             clientConversationId: conversationId)
                     Logger.info("Created conversation in database: \(dbConversation)")
+                    let inviteResponse = try await apiClient.createInvite(
+                        .init(
+                            groupId: conversation.id,
+                            name: nil,
+                            description: nil,
+                            imageUrl: nil,
+                            maxUses: nil,
+                            expiresAt: nil,
+                            autoApprove: true,
+                            notificationTargets: []
+                        )
+                    )
+                    try await inviteWriter.store(
+                        invite: inviteResponse,
+                        inboxId: client.inboxId
+                    )
                     self.state = .existing(id: conversation.id)
 
                     // Subscribe to push topic upon join
@@ -257,7 +267,6 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         let optimisticConversation = try await client.prepareConversation()
         let externalConversationId = optimisticConversation.id
         state = .created(id: externalConversationId)
-//        try createDraftConversation(conversationId: externalConversationId, inboxId: client.inboxId)
         try await optimisticConversation.publish()
 
         guard let createdConversation = try await client.conversation(

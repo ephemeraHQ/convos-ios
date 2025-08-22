@@ -1,7 +1,5 @@
 import Combine
 import Foundation
-import UIKit
-import UserNotifications
 import XMTPiOS
 
 private extension AppEnvironment {
@@ -104,6 +102,8 @@ public actor InboxStateMachine {
     private let clientOptions: ClientOptions
     private let syncingManager: any SyncingManagerProtocol
     private let inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol
+    private let pushNotificationRegistrar: (any PushNotificationRegistrarProtocol)?
+    private let refreshProfileWhenReady: Bool
 
     private var _state: State = .uninitialized {
         didSet {
@@ -115,9 +115,6 @@ public actor InboxStateMachine {
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
     private var pushTokenObserver: NSObjectProtocol?
-    private var conversationUnsubscribeObserver: NSObjectProtocol?
-    private var unregisterInstallationObserver: NSObjectProtocol?
-    private var willEnterForegroundObserver: NSObjectProtocol?
 
     // MARK: - Nonisolated
 
@@ -139,16 +136,15 @@ public actor InboxStateMachine {
 
     // MARK: - Init
 
-    private let isNotificationServiceExtension: Bool
-
     init(
         inbox: any AuthServiceInboxType,
         inboxWriter: any InboxWriterProtocol,
         authService: any LocalAuthServiceProtocol,
         syncingManager: any SyncingManagerProtocol,
         inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol,
-        environment: AppEnvironment,
-        isNotificationServiceExtension: Bool = false
+        pushNotificationRegistrar: (any PushNotificationRegistrarProtocol)? = nil,
+        refreshProfileWhenready: Bool = true,
+        environment: AppEnvironment
     ) {
         self.inbox = inbox
         self.inboxWriter = inboxWriter
@@ -156,7 +152,8 @@ public actor InboxStateMachine {
         self.syncingManager = syncingManager
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
-        self.isNotificationServiceExtension = isNotificationServiceExtension
+        self.pushNotificationRegistrar = pushNotificationRegistrar
+        self.refreshProfileWhenReady = refreshProfileWhenready
 
         // Set custom XMTP host if provided
         Logger.info("🔧 XMTP Configuration:")
@@ -191,11 +188,6 @@ public actor InboxStateMachine {
             dbEncryptionKey: inbox.databaseKey,
             dbDirectory: environment.defaultDatabasesDirectory
         )
-
-        // Observe app foreground events to retry push token update when ready
-        Task { [weak self] in
-            await self?.registerForegroundObserver()
-        }
     }
 
     // MARK: - Public
@@ -253,7 +245,7 @@ public actor InboxStateMachine {
                 (.registering, let .authorized(result)):
                 try handleAuthorized(client: result.client, apiClient: result.apiClient)
             case (let .ready(result), .delete):
-                try await handleDelete(client: result.client)
+                try await handleDelete(client: result.client, apiClient: result.apiClient)
             case (.ready, .stop), (.error, .stop), (.deleting, .stop):
                 try handleStop()
             case (.uninitialized, .stop):
@@ -293,32 +285,17 @@ public actor InboxStateMachine {
             signingKey: inbox.signingKey,
             options: clientOptions
         )
+        try authService.save(inboxId: client.inboxId, for: inbox.providerId)
         enqueueAction(.clientRegistered(client, displayName))
     }
 
     private func handleClientInitialized(_ client: any XMTPClientProvider) async throws {
         _state = .authorizing
 
-        try authService.save(inboxId: client.inboxId, for: inbox.providerId)
-
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
 
-        if isNotificationServiceExtension {
-            Logger.info("🚀 NSE Mode: Lightweight initialization - skipping push registration and profile refresh")
-        } else {
-            // Main app: perform full initialization including push notification operations
-            Logger.info("🔧 Main App Mode: Full initialization with push notifications")
-
-            // Attempt to register for remote notifications to obtain APNS token ASAP
-            await registerForRemoteNotificationsAlways()
-
-            // Request system notification authorization (APNS registration is handled separately)
-            await requestNotificationAuthorizationIfNeeded()
-
-            // Register backend notifications mapping (deviceId + token + identity + installation)
-            await registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
-
+        if refreshProfileWhenReady {
             do {
                 try await refreshUserAndProfile(client: client, apiClient: apiClient)
             } catch {
@@ -347,10 +324,6 @@ public actor InboxStateMachine {
             provider: inbox.provider,
             providerId: inbox.providerId
         )
-
-        // Save provider ID mapping for push notifications
-        try authService.save(inboxId: client.inboxId, for: inbox.providerId)
-
         enqueueAction(.authorized(.init(inbox: inbox, client: client, apiClient: apiClient)))
     }
 
@@ -358,56 +331,31 @@ public actor InboxStateMachine {
         _state = .ready(.init(inbox: inbox, client: client, apiClient: apiClient))
         syncingManager.start(with: client, apiClient: apiClient)
         inviteJoinRequestsManager.start(with: client, apiClient: apiClient)
-        Task { [weak self] in
-            guard let self else { return }
-            await self.updateIfReady()
-        }
-        // Observe future token changes
-        pushTokenObserver = NotificationCenter.default.addObserver(
-            forName: .convosPushTokenDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self else { return }
-            Task { [weak self] in
-                guard let self else { return }
-                await self.updateIfReady()
-            }
-        }
 
-        // Observe conversation unsubscribe requests and propagate to backend
-        conversationUnsubscribeObserver = NotificationCenter.default.addObserver(
-            forName: .convosConversationUnsubscribeRequested,
-            object: nil,
-            queue: .main
-        ) { [weak self] note in
-            guard let conversationId = note.userInfo?["conversationId"] as? String else { return }
-            Task { [weak self] in
-                guard let self else { return }
-                await self.unsubscribeIfReady(conversationId: conversationId)
-            }
-        }
+        // Setup push notification observers if registrar is provided
+        if let pushNotificationRegistrar = pushNotificationRegistrar {
+            setupPushNotificationObservers()
 
-        // Unregister the installation (all topics) when requested (single-inbox delete uses handleDelete)
-        unregisterInstallationObserver = NotificationCenter.default.addObserver(
-            forName: .convosUnregisterAllInboxesRequested,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { [weak self] in
-                guard let self else { return }
-                await self.unregisterInstallationIfReady()
+            Task {
+                Logger.info("Registering for push notifications")
+                // Attempt to register for remote notifications to obtain APNS token ASAP
+                await pushNotificationRegistrar.registerForRemoteNotifications()
+
+                // Request system notification authorization (APNS registration is handled separately)
+                await pushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
+
+                // Register backend notifications mapping (deviceId + token + identity + installation)
+                await pushNotificationRegistrar.registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
             }
+        } else {
+            Logger.info("Push notification registrar not available, skipping push notification setup")
         }
     }
 
-    private func handleDelete(client: any XMTPClientProvider) async throws {
+    private func handleDelete(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
         Logger.info("Deleting inbox '\(client.inboxId)'...")
 
-        // Ensure backend unregister occurs while we're still authorized/ready
-        if case .ready = _state {
-            await unregisterInstallationIfReady()
-        }
+        await pushNotificationRegistrar?.unregisterInstallation(client: client, apiClient: apiClient)
 
         _state = .deleting
         syncingManager.stop()
@@ -421,7 +369,7 @@ public actor InboxStateMachine {
     private func handleStop() throws {
         Logger.info("Stopping inbox with providerId '\(inbox.providerId)'...")
         _state = .stopping
-        removeObservers()
+        removePushNotificationObservers()
         _state = .uninitialized
     }
 
@@ -438,10 +386,14 @@ public actor InboxStateMachine {
     private func buildXmtpClient(identity: PublicIdentity,
                                  options: ClientOptions) async throws -> any XMTPClientProvider {
         Logger.info("Building XMTP client...")
+        let inboxId = try? authService.inboxId(for: inbox.providerId)
+        if inboxId == nil {
+            Logger.warning("Building XMTP client with nil inboxId")
+        }
         let client = try await Client.build(
             publicIdentity: identity,
             options: options,
-            inboxId: try? authService.inboxId(for: inbox.providerId)
+            inboxId: inboxId
         )
         Logger.info("XMTP Client built.")
         return client
@@ -546,116 +498,32 @@ public actor InboxStateMachine {
     }
 }
 
-// MARK: - Push Token Update
+// MARK: - Push Notification Observers
 
 extension InboxStateMachine {
-    private func registerForegroundObserver() {
-        willEnterForegroundObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.willEnterForegroundNotification,
+    private func setupPushNotificationObservers() {
+        guard pushNotificationRegistrar != nil else { return }
+
+        // Observe future token changes
+        pushTokenObserver = NotificationCenter.default.addObserver(
+            forName: .convosPushTokenDidChange,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            guard let self else { return }
             Task { [weak self] in
-                guard let self else { return }
-                await self.handleForegroundForPushTokenUpdate()
+                await self?.handleTokenChange()
             }
         }
     }
 
-    private func currentDeviceId() async -> String {
-        await MainActor.run { DeviceInfo.deviceIdentifier }
-    }
-
-    private func expectedApnsEnvString() -> String {
-        environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
-    }
-
-    private func storedDeviceToken() -> String? {
-        NotificationProcessor(appGroupIdentifier: environment.appGroupIdentifier).getStoredDeviceToken()
-    }
-
-    private func userIdForCurrentInbox() -> String { inbox.providerId }
-
-    nonisolated private func handleForegroundForPushTokenUpdate() async {
-        // Hop back to the actor to read state and call the actor-isolated updater
-        await self.updateIfReady()
-    }
-
-    private func updateIfReady() async {
-        guard case let .ready(result) = _state else { return }
-        // If the system prompt hasn't been shown yet, request now (app is foregrounding)
-        let settings = await UNUserNotificationCenter.current().notificationSettings()
-        if settings.authorizationStatus == .notDetermined {
-            await requestNotificationAuthorizationIfNeeded()
-        }
-        await registerForNotificationsIfNeeded(client: result.client, apiClient: result.apiClient)
-    }
-
-    private func registerForNotificationsIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
-        let notifProcessor = NotificationProcessor(appGroupIdentifier: environment.appGroupIdentifier)
-        guard let token = notifProcessor.getStoredDeviceToken(), !token.isEmpty else { return }
-        let deviceId = await currentDeviceId()
-        let identityId = client.inboxId
-        let installationId = client.installationId
-        do {
-            try await apiClient.registerForNotifications(deviceId: deviceId,
-                                                         pushToken: token,
-                                                         identityId: identityId,
-                                                         xmtpInstallationId: installationId)
-            Logger.info("Registered notifications mapping for deviceId=\(deviceId), installationId=\(installationId)")
-        } catch {
-            Logger.error("Failed to register notifications mapping: \(error)")
-        }
-    }
-
-    private func unsubscribeIfReady(conversationId: String) async {
-        guard case let .ready(result) = _state else { return }
-        let topic = conversationId.xmtpGroupTopicFormat
-        do {
-            try await result.apiClient.unsubscribeFromTopics(installationId: result.client.installationId, topics: [topic])
-            Logger.info("Unsubscribed from topic: \(topic)")
-        } catch {
-            Logger.error("Failed to unsubscribe from topic \(topic): \(error)")
-        }
-    }
-
-    private func unregisterInstallationIfReady() async {
-        guard case let .ready(result) = _state else { return }
-        do {
-            try await result.apiClient.unregisterInstallation(xmtpInstallationId: result.client.installationId)
-            Logger.info("Unregistered installation: \(result.client.installationId)")
-        } catch {
-            Logger.error("Failed to unregister installation: \(error)")
-        }
-    }
-
-    private func requestNotificationAuthorizationIfNeeded() async {
-        do {
-            let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
-            // APNS registration is performed via registerForRemoteNotificationsAlways()
-            _ = granted
-        } catch {
-            Logger.warning("Notification authorization failed: \(error)")
-        }
-    }
-
-    // Always call registerForRemoteNotifications to get a device token even if alerts aren't authorized yet.
-    // This allows silent/background capabilities and ensures we have a token to send to backend.
-    private func registerForRemoteNotificationsAlways() async {
-        await MainActor.run {
-            UIApplication.shared.registerForRemoteNotifications()
-        }
-    }
-
-    private func removeObservers() {
+    private func removePushNotificationObservers() {
         if let pushTokenObserver { NotificationCenter.default.removeObserver(pushTokenObserver) }
-        if let conversationUnsubscribeObserver { NotificationCenter.default.removeObserver(conversationUnsubscribeObserver) }
-        if let unregisterInstallationObserver { NotificationCenter.default.removeObserver(unregisterInstallationObserver) }
-        if let willEnterForegroundObserver { NotificationCenter.default.removeObserver(willEnterForegroundObserver) }
         pushTokenObserver = nil
-        conversationUnsubscribeObserver = nil
-        unregisterInstallationObserver = nil
-        willEnterForegroundObserver = nil
+    }
+
+    private func handleTokenChange() async {
+        guard let pushNotificationRegistrar = pushNotificationRegistrar else { return }
+        guard case let .ready(result) = _state else { return }
+        await pushNotificationRegistrar.requestAuthAndRegisterIfNeeded(client: result.client, apiClient: result.apiClient)
     }
 }
