@@ -128,8 +128,12 @@ public actor InboxStateMachine {
 
     private func addStateContinuation(_ continuation: AsyncStream<State>.Continuation) {
         stateContinuations.append(continuation)
-        // Emit current state immediately
         continuation.yield(_state)
+        continuation.onTermination = { [weak self] _ in
+            Task {
+                await self?.removeStateContinuation(continuation)
+            }
+        }
     }
 
     private func emitStateChange(_ newState: State) {
@@ -139,6 +143,10 @@ public actor InboxStateMachine {
         for continuation in stateContinuations {
             continuation.yield(newState)
         }
+    }
+
+    private func removeStateContinuation(_ continuation: AsyncStream<State>.Continuation) {
+        stateContinuations.removeAll { $0 == continuation }
     }
 
     private func cleanupContinuations() {
