@@ -150,8 +150,10 @@ public extension SingleInboxAuthProcessor {
         client: any XMTPClientProvider
     ) async throws -> DecodedMessageResult? {
         // Extract conversation ID from topic path
-        let notificationProcessor = NotificationProcessor(appGroupIdentifier: environment.appGroupIdentifier)
-        let conversationId = notificationProcessor.getConversationIdFromTopic(contentTopic)
+        guard let conversationId = contentTopic.conversationIdFromXMTPGroupTopic else {
+            Logger.warning("Unable to extract conversation id from contentTopic: \(contentTopic)")
+            return nil
+        }
 
         // Find the conversation
         guard let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) else {
@@ -242,8 +244,10 @@ public extension SingleInboxAuthProcessor {
         client: any XMTPClientProvider
     ) async throws {
         // Extract conversation ID from topic path
-        let notificationProcessor = NotificationProcessor(appGroupIdentifier: environment.appGroupIdentifier)
-        let conversationId = notificationProcessor.getConversationIdFromTopic(contentTopic)
+        guard let conversationId = contentTopic.conversationIdFromXMTPGroupTopic else {
+            Logger.warning("Unable to extract conversation ID from topic: \(contentTopic)")
+            return
+        }
 
         // Find and sync the conversation using the correct method
         if let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) {

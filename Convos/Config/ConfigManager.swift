@@ -59,7 +59,7 @@ final class ConfigManager {
         }
 
         // Store the environment configuration securely for the notification extension
-        environment.storeSecureConfiguration()
+        environment.storeSecureConfigurationForNotificationExtension()
 
         return environment
     }

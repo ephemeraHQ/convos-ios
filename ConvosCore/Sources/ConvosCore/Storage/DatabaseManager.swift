@@ -7,7 +7,7 @@ public protocol DatabaseManagerProtocol {
 }
 
 public final class DatabaseManager: DatabaseManagerProtocol {
-    public static let shared: DatabaseManager = DatabaseManager()
+    let environment: AppEnvironment
 
     public let dbPool: DatabasePool
 
@@ -19,18 +19,18 @@ public final class DatabaseManager: DatabaseManagerProtocol {
         dbPool as DatabaseReader
     }
 
-    private init() {
+    init(environment: AppEnvironment) {
+        self.environment = environment
         do {
-            dbPool = try Self.makeDatabasePool()
+            dbPool = try Self.makeDatabasePool(environment: environment)
         } catch {
             fatalError("Failed to initialize database: \(error)")
         }
     }
 
-    private static func makeDatabasePool() throws -> DatabasePool {
+    private static func makeDatabasePool(environment: AppEnvironment) throws -> DatabasePool {
         let fileManager = FileManager.default
         // Use the shared App Group container so the main app and NSE share the same DB
-        let environment = AppEnvironment.detected()
         let groupDirURL = environment.defaultDatabasesDirectoryURL
         let dbURL = groupDirURL.appendingPathComponent("convos.sqlite")
 

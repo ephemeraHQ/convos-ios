@@ -14,7 +14,11 @@ class NotificationService: UNNotificationServiceExtension {
         self.contentHandler = contentHandler
         bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
 
-        pushHandler = NotificationExtensionEnvironment.createPushNotificationHandler()
+        do {
+            pushHandler = try NotificationExtensionEnvironment.createPushNotificationHandler()
+        } catch {
+            Logger.error("Error creating push notification handler: \(error.localizedDescription)")
+        }
 
         // Handle the push notification asynchronously and wait for completion
         pendingTask = Task {
