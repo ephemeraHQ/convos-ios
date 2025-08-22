@@ -40,7 +40,7 @@ extension ConvosAppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         let userInfo = notification.request.content.userInfo
-        Logger.debug("Received notification in foreground: \(userInfo)")
+        Logger.debug("Received notification in foreground")
 
         // Show notification banner when app is in foreground
         // NSE processes all notifications regardless of app state
@@ -52,7 +52,7 @@ extension ConvosAppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse) async {
         let userInfo = response.notification.request.content.userInfo
-        Logger.debug("Notification tapped: \(userInfo)")
+        Logger.debug("Notification tapped")
 
         // Check if this is an explosion notification
         if let notificationType = userInfo["notificationType"] as? String,
