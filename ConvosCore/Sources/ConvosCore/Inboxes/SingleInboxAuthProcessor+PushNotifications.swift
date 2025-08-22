@@ -102,7 +102,7 @@ public extension SingleInboxAuthProcessor {
                     currentInboxId: currentInboxId,
                     client: client
                 ) {
-                    Logger.info("Successfully decoded text message for notification: \(result.text)")
+                    Logger.info("Successfully decoded text message for notification")
 
                     // Set decoded content directly on the payload object
                     try await setDecodedContentOnPayload(
@@ -123,13 +123,14 @@ public extension SingleInboxAuthProcessor {
                 throw NotificationError.messageShouldBeDropped
             } catch {
                 Logger.error("Failed to decode message in notification service: \(error)")
-                // Don't throw here - show generic notification on decode error
+                // Throw to suppress notification on decode failure - better than showing generic content
+                throw NotificationError.messageShouldBeDropped
             }
 
             // NSE should exit here - it only decodes for display, not sync
             Logger.info("NSE: Finished decoding for display, skipping sync")
             return
-        } else if let contentTopic = protocolData.contentTopic {
+        } else if !isNotificationServiceExtension, let contentTopic = protocolData.contentTopic {
             // For main app, just sync the conversation
             Logger.info("Processing protocol message for topic: \(contentTopic)")
             try await syncConversationIfNeeded(contentTopic: contentTopic, client: client)
@@ -216,7 +217,7 @@ public extension SingleInboxAuthProcessor {
                     let groupName = try group.name()
                     if !groupName.isEmpty {
                         notificationTitle = groupName
-                        Logger.info("Found group name for notification: \(groupName)")
+                        Logger.info("Found group name for notification")
                     } else {
                         Logger.info("Group has empty name, using default title")
                     }
@@ -235,7 +236,7 @@ public extension SingleInboxAuthProcessor {
         payload.decodedTitle = notificationTitle
         payload.decodedBody = notificationBody
 
-        Logger.info("Set decoded content on payload - Title: \(notificationTitle ?? "default"), Body: \(notificationBody)")
+        Logger.info("Set decoded content on payload")
     }
 
     /// Syncs a conversation if needed when a notification is received

@@ -94,7 +94,7 @@ public class CachedPushNotificationHandler {
     /// Handles a push notification using the structured payload
     /// - Parameter userInfo: The raw notification userInfo dictionary
     public func handlePushNotification(userInfo: [AnyHashable: Any]) {
-        Logger.info("🔍 RAW USERINFO: \(userInfo)")
+        Logger.info("🔍 Processing raw push notification")
         let payload = PushNotificationPayload(userInfo: userInfo)
 
         guard payload.isValid else {
@@ -136,7 +136,7 @@ public class CachedPushNotificationHandler {
     /// - Returns: Async completion when processing is done
     /// - Throws: NotificationError.messageShouldBeDropped if the message should not be shown
     public func handlePushNotificationAsync(userInfo: [AnyHashable: Any]) async throws {
-        Logger.info("🔍 RAW USERINFO: \(userInfo)")
+        Logger.info("🔍 Processing raw push notification")
         let payload = PushNotificationPayload(userInfo: userInfo)
 
         guard payload.isValid else {

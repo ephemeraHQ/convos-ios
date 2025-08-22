@@ -35,9 +35,15 @@ class NotificationService: UNNotificationServiceExtension {
         Logger.info("NSE: Extension time expiring, cleaning up XMTP resources")
         pushHandler?.cleanup()
 
-        // Deliver the best attempt content
-        if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
-            contentHandler(bestAttemptContent)
+        // Only deliver notification if we successfully decoded content
+        if hasDecodedContent() {
+            Logger.info("NSE: Delivering notification with decoded content on timeout")
+            if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
+                contentHandler(bestAttemptContent)
+            }
+        } else {
+            Logger.info("NSE: Suppressing notification - no decoded content available on timeout")
+            // Don't call contentHandler - this suppresses the notification
         }
     }
 
@@ -52,7 +58,7 @@ class NotificationService: UNNotificationServiceExtension {
             // Check if this is a message that should be dropped
             if let error = error as? NotificationError, error == .messageShouldBeDropped {
                 Logger.info("Notification dropped - message from self or non-text")
-                // Cleanup and don't deliver any notification
+                // Cleanup and return without delivering any notification
                 Logger.info("NSE: Cleaning up XMTP resources after dropping notification")
                 pushHandler?.cleanup()
                 return
@@ -65,6 +71,20 @@ class NotificationService: UNNotificationServiceExtension {
         guard !Task.isCancelled else {
             Logger.info("NSE: Task cancelled, cleaning up XMTP resources")
             pushHandler?.cleanup()
+
+            // Try to use any partial decoded content
+            updateNotificationContentWithDecodedData(userInfo: userInfo)
+
+            // Only deliver notification if we successfully decoded content
+            if hasDecodedContent() {
+                Logger.info("NSE: Delivering notification with decoded content after cancellation")
+                if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
+                    contentHandler(bestAttemptContent)
+                }
+            } else {
+                Logger.info("NSE: Suppressing notification - no decoded content available after cancellation")
+                // Don't call contentHandler - this suppresses the notification
+            }
             return
         }
 
@@ -115,7 +135,7 @@ class NotificationService: UNNotificationServiceExtension {
                 bestAttemptContent.body = body
             }
 
-            Logger.info("Applied decoded notification content - Title: \(bestAttemptContent.title), Body: \(bestAttemptContent.body)")
+            Logger.info("Applied decoded notification content")
         } else {
             // Fallback to creating new payload if processed payload not available
             let payload = PushNotificationPayload(userInfo: userInfo)
@@ -128,7 +148,24 @@ class NotificationService: UNNotificationServiceExtension {
                 bestAttemptContent.body = body
             }
 
-            Logger.info("Applied fallback notification content - Title: \(bestAttemptContent.title), Body: \(bestAttemptContent.body)")
+            Logger.info("Applied fallback notification content")
         }
+    }
+
+    private func hasDecodedContent() -> Bool {
+        // Check if we have decoded content from the push handler
+        if let processedPayload = pushHandler?.getProcessedPayload() {
+            // For protocol messages, we need decoded content
+            if processedPayload.notificationType == .protocolMessage {
+                return processedPayload.decodedBody != nil || processedPayload.decodedTitle != nil
+            }
+            // For other known notification types (like invite join requests), no decoding is needed
+            if processedPayload.notificationType == .inviteJoinRequest {
+                return true
+            }
+            // For unknown/nil notification types, don't deliver to be safe
+            return false
+        }
+        return false
     }
 }

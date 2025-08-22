@@ -12,14 +12,14 @@ public struct DecodedNotificationContent {
 }
 
 /// Represents the payload structure of a push notification
-public class PushNotificationPayload {
+public final class PushNotificationPayload {
     public let inboxId: String?
     public let notificationType: NotificationType?
     public let notificationData: NotificationData?
 
     // Decoded content properties (mutable for NSE processing)
-    public var decodedTitle: String?
-    public var decodedBody: String?
+    public internal(set) var decodedTitle: String?
+    public internal(set) var decodedBody: String?
 
     public init(userInfo: [AnyHashable: Any]) {
         self.inboxId = userInfo["inboxId"] as? String
@@ -235,9 +235,12 @@ public extension PushNotificationPayload {
     func displayTitleWithDecodedContent() -> String? {
         switch notificationType {
         case .protocolMessage:
-            // Use decoded title if available, otherwise fall back to default
+            // Use decoded title if available and non-empty, otherwise fall back to default
             if let decodedTitle = decodedTitle {
-                return decodedTitle
+                let trimmed = decodedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    return trimmed
+                }
             }
             return displayTitle
         case .inviteJoinRequest:
@@ -252,9 +255,12 @@ public extension PushNotificationPayload {
     func displayBodyWithDecodedContent() -> String? {
         switch notificationType {
         case .protocolMessage:
-            // Use decoded body if available, otherwise fall back to default
+            // Use decoded body if available and non-empty, otherwise fall back to default
             if let decodedBody = decodedBody {
-                return decodedBody
+                let trimmed = decodedBody.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    return trimmed
+                }
             }
             return displayBody
         case .inviteJoinRequest:
