@@ -11,7 +11,7 @@ protocol AuthorizeInboxOperationProtocol {
     var inboxReadyPublisher: InboxReadyResultPublisher { get }
 
     func authorize()
-    func register(displayName: String?)
+    func register()
     func deleteAndStop()
     func stop()
 }
@@ -63,7 +63,6 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
                 databaseWriter: databaseWriter
             ),
             pushNotificationRegistrar: pushNotificationRegistrar,
-            refreshProfileWhenReady: !isNotificationServiceExtension,
             environment: environment,
         )
 
@@ -115,10 +114,10 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         }
     }
 
-    func register(displayName: String?) {
+    func register() {
         task?.cancel()
         task = Task { [stateMachine] in
-            await stateMachine.register(displayName: displayName)
+            await stateMachine.register()
         }
     }
 

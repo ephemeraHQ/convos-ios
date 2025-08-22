@@ -1,5 +1,11 @@
 import Foundation
 
+extension ConvosAPI.CreateUserRequest.Profile {
+    static var empty: Self {
+        .init(name: nil, username: nil, description: nil, avatar: nil)
+    }
+}
+
 public enum ConvosAPI {
     public enum AuthenticatorTransport: String, Codable {
         case ble = "AUTHENTICATOR_TRANSPORT_BLE"

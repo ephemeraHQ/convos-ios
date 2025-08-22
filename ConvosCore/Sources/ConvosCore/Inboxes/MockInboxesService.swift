@@ -62,7 +62,6 @@ extension MockInboxesService: InboxesRepositoryProtocol {
         [
             Inbox(
                 inboxId: "1",
-                identities: [],
                 profile: .mock(),
                 type: .ephemeral,
                 provider: .local,

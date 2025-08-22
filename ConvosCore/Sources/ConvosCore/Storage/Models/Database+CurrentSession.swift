@@ -9,7 +9,6 @@ extension Database {
 
         let dbInboxes = try DBInbox
             .filter(Column("sessionId") == currentSession.id)
-            .including(all: DBInbox.identities)
             .including(required: DBInbox.memberProfile)
             .asRequest(of: DBInboxDetails.self)
             .fetchAll(self)
@@ -17,7 +16,6 @@ extension Database {
         let inboxes: [Inbox] = dbInboxes.map {
             .init(
                 inboxId: $0.inbox.inboxId,
-                identities: $0.inboxIdentities,
                 profile: $0.inboxMemberProfile.hydrateProfile(),
                 type: $0.inbox.type,
                 provider: $0.inbox.provider,

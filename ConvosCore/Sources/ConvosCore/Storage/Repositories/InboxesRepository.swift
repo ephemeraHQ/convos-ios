@@ -42,7 +42,6 @@ extension Array where Element == DBInboxDetails {
 fileprivate extension Database {
     func composeAllInboxes() throws -> [Inbox] {
         let dbInboxDetails = try DBInbox
-            .including(all: DBInbox.identities)
             .including(required: DBInbox.memberProfile)
             .asRequest(of: DBInboxDetails.self)
             .fetchAll(self)

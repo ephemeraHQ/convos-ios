@@ -71,9 +71,9 @@ public struct InboxReadyResult {
 public actor InboxStateMachine {
     enum Action {
         case authorize,
-             register(String?),
+             register,
              clientInitialized(any XMTPClientProvider),
-             clientRegistered(any XMTPClientProvider, String?),
+             clientRegistered(any XMTPClientProvider),
              authorized(InboxReadyResult),
              delete,
              stop
@@ -100,7 +100,6 @@ public actor InboxStateMachine {
     private let syncingManager: any SyncingManagerProtocol
     private let inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol
     private let pushNotificationRegistrar: (any PushNotificationRegistrarProtocol)?
-    private let refreshProfileWhenReady: Bool
 
     private var currentTask: Task<Void, Never>?
     private var actionQueue: [Action] = []
@@ -165,7 +164,6 @@ public actor InboxStateMachine {
         syncingManager: any SyncingManagerProtocol,
         inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol,
         pushNotificationRegistrar: (any PushNotificationRegistrarProtocol)? = nil,
-        refreshProfileWhenReady: Bool = true,
         environment: AppEnvironment
     ) {
         self.inbox = inbox
@@ -175,7 +173,6 @@ public actor InboxStateMachine {
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
         self.pushNotificationRegistrar = pushNotificationRegistrar
-        self.refreshProfileWhenReady = refreshProfileWhenReady
 
         // Set custom XMTP host if provided
         Logger.info("🔧 XMTP Configuration:")
@@ -218,8 +215,8 @@ public actor InboxStateMachine {
         enqueueAction(.authorize)
     }
 
-    func register(displayName: String?) {
-        enqueueAction(.register(displayName))
+    func register() {
+        enqueueAction(.register)
     }
 
     func stop() {
@@ -256,13 +253,13 @@ public actor InboxStateMachine {
             case (.uninitialized, .authorize),
                 (.error, .authorize):
                 try await handleAuthorize()
-            case (.uninitialized, let .register(displayName)),
-                (.error, let .register(displayName)):
-                try await handleRegister(displayName: displayName)
+            case (.uninitialized, .register),
+                (.error, .register):
+                try await handleRegister()
             case (.initializing, let .clientInitialized(client)):
                 try await handleClientInitialized(client)
-            case (.initializing, let .clientRegistered(client, displayName)):
-                try await handleClientRegistered(client, displayName: displayName)
+            case (.initializing, let .clientRegistered(client)):
+                try await handleClientRegistered(client)
             case (.authorizing, let .authorized(result)),
                 (.registering, let .authorized(result)):
                 try handleAuthorized(client: result.client, apiClient: result.apiClient)
@@ -301,14 +298,14 @@ public actor InboxStateMachine {
         enqueueAction(.clientInitialized(client))
     }
 
-    private func handleRegister(displayName: String?) async throws {
+    private func handleRegister() async throws {
         emitStateChange(.initializing)
         let client = try await createXmtpClient(
             signingKey: inbox.signingKey,
             options: clientOptions
         )
         try authService.save(inboxId: client.inboxId, for: inbox.providerId)
-        enqueueAction(.clientRegistered(client, displayName))
+        enqueueAction(.clientRegistered(client))
     }
 
     private func handleClientInitialized(_ client: any XMTPClientProvider) async throws {
@@ -317,31 +314,21 @@ public actor InboxStateMachine {
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
 
-        if refreshProfileWhenReady {
-            do {
-                try await refreshUserAndProfile(client: client, apiClient: apiClient)
-            } catch {
-                Logger.error("Error refreshing user and profile: \(error.localizedDescription)")
-            }
-        }
-
         enqueueAction(.authorized(.init(inbox: inbox, client: client, apiClient: apiClient)))
     }
 
-    private func handleClientRegistered(_ client: any XMTPClientProvider, displayName: String?) async throws {
+    private func handleClientRegistered(_ client: any XMTPClientProvider) async throws {
         emitStateChange(.authorizing)
         Logger.info("Authorizing backend for registration...")
         let apiClient = try await authorizeConvosBackend(client: client)
         emitStateChange(.registering)
-        Logger.info("Creating user with display name '\(displayName ?? "nil")'...")
-        let user = try await createUser(
-            displayName: displayName,
+        Logger.info("Creating identity in backend...")
+        _ = try await createUser(
             client: client,
             apiClient: apiClient
         )
         try await inboxWriter.storeInbox(
             inboxId: client.inboxId,
-            user: user,
             type: inbox.type,
             provider: inbox.provider,
             providerId: inbox.providerId
@@ -441,82 +428,22 @@ public actor InboxStateMachine {
         return apiClient
     }
 
-    private func refreshUserAndProfile(
-        client: any XMTPClientProvider,
-        apiClient: any ConvosAPIClientProtocol
-    ) async throws {
-        Logger.info("Authorization succeeded, fetching user and profile")
-        async let user = try apiClient.getUser()
-        async let profile = try apiClient.getProfile(inboxId: client.inboxId)
-        try await inboxWriter.storeInbox(
-            inboxId: client.inboxId,
-            type: inbox.type,
-            provider: inbox.provider,
-            providerId: inbox.providerId,
-            user: await user,
-            profile: await profile
-        )
-    }
-
     // MARK: - User Creation
 
     private func createUser(
-        displayName: String?,
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol
     ) async throws -> ConvosAPI.CreatedUserResponse {
         let requestBody: ConvosAPI.CreateUserRequest = .init(
-            userId: inbox.providerId,
+            userId: UUID().uuidString, // @jarod remove this
             userType: .onDevice,
             device: .current(),
-            identity: .init(identityAddress: inbox.signingKey.identity.identifier,
+            identity: .init(identityAddress: nil,
                             xmtpId: client.inboxId,
                             xmtpInstallationId: client.installationId),
-            profile: .init(
-                name: displayName,
-                username: nil,
-                description: nil,
-                avatar: nil
-            )
+            profile: .empty
         )
         return try await apiClient.createUser(requestBody)
-    }
-
-    private func generateUsername(
-        apiClient: any ConvosAPIClientProtocol,
-        from displayName: String,
-        maxRetries: Int = 5
-    ) async throws -> String {
-        let base = displayName
-            .lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .joined()
-
-        let baseUsername = base.isEmpty ? "convos_user" : base
-
-        for i in 0...maxRetries {
-            let candidate: String
-            if i == 0 {
-                candidate = baseUsername
-            } else {
-                let numDigits = Int(pow(2.0, Double(i - 1)))
-                let min = Int(pow(10.0, Double(numDigits - 1)))
-                let max = Int(pow(10.0, Double(numDigits))) - 1
-                let randomNumber = Int.random(in: min...max)
-                candidate = "\(baseUsername)\(randomNumber)"
-            }
-            do {
-                let check = try await apiClient.checkUsername(candidate)
-                if !check.taken {
-                    return candidate
-                }
-            } catch {
-                Logger.warning("Username check failed for \(candidate): \(error)")
-            }
-        }
-
-        let random = UUID().uuidString.prefix(10).lowercased()
-        return "\(baseUsername)\(random)"
     }
 }
 
