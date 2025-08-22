@@ -71,9 +71,9 @@ public struct InboxReadyResult {
 public actor InboxStateMachine {
     enum Action {
         case authorize,
-             register(String?),
+             register,
              clientInitialized(any XMTPClientProvider),
-             clientRegistered(any XMTPClientProvider, String?),
+             clientRegistered(any XMTPClientProvider),
              authorized(InboxReadyResult),
              delete,
              stop
@@ -215,8 +215,8 @@ public actor InboxStateMachine {
         enqueueAction(.authorize)
     }
 
-    func register(displayName: String?) {
-        enqueueAction(.register(displayName))
+    func register() {
+        enqueueAction(.register)
     }
 
     func stop() {
@@ -253,13 +253,13 @@ public actor InboxStateMachine {
             case (.uninitialized, .authorize),
                 (.error, .authorize):
                 try await handleAuthorize()
-            case (.uninitialized, let .register(displayName)),
-                (.error, let .register(displayName)):
-                try await handleRegister(displayName: displayName)
+            case (.uninitialized, .register),
+                (.error, .register):
+                try await handleRegister()
             case (.initializing, let .clientInitialized(client)):
                 try await handleClientInitialized(client)
-            case (.initializing, let .clientRegistered(client, displayName)):
-                try await handleClientRegistered(client, displayName: displayName)
+            case (.initializing, let .clientRegistered(client)):
+                try await handleClientRegistered(client)
             case (.authorizing, let .authorized(result)),
                 (.registering, let .authorized(result)):
                 try handleAuthorized(client: result.client, apiClient: result.apiClient)
@@ -298,14 +298,14 @@ public actor InboxStateMachine {
         enqueueAction(.clientInitialized(client))
     }
 
-    private func handleRegister(displayName: String?) async throws {
+    private func handleRegister() async throws {
         emitStateChange(.initializing)
         let client = try await createXmtpClient(
             signingKey: inbox.signingKey,
             options: clientOptions
         )
         try authService.save(inboxId: client.inboxId, for: inbox.providerId)
-        enqueueAction(.clientRegistered(client, displayName))
+        enqueueAction(.clientRegistered(client))
     }
 
     private func handleClientInitialized(_ client: any XMTPClientProvider) async throws {
@@ -317,7 +317,7 @@ public actor InboxStateMachine {
         enqueueAction(.authorized(.init(inbox: inbox, client: client, apiClient: apiClient)))
     }
 
-    private func handleClientRegistered(_ client: any XMTPClientProvider, displayName: String?) async throws {
+    private func handleClientRegistered(_ client: any XMTPClientProvider) async throws {
         emitStateChange(.authorizing)
         Logger.info("Authorizing backend for registration...")
         let apiClient = try await authorizeConvosBackend(client: client)

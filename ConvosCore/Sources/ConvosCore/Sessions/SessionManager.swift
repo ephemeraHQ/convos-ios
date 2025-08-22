@@ -79,8 +79,7 @@ class SessionManager: SessionManagerProtocol {
         case .registered(let registeredResult):
             try updateOperations(
                 for: registeredResult.inboxes,
-                forRegistration: true,
-                displayName: registeredResult.displayName
+                forRegistration: true
             )
         case .unauthorized, .notReady, .unknown:
             clearAllOperations()
@@ -89,8 +88,7 @@ class SessionManager: SessionManagerProtocol {
 
     private func updateOperations(
         for inboxes: [any AuthServiceInboxType],
-        forRegistration: Bool,
-        displayName: String? = nil
+        forRegistration: Bool
     ) throws {
         // @jarodl revisit how we're responding to auth state changes
         if !forRegistration {
@@ -120,7 +118,7 @@ class SessionManager: SessionManagerProtocol {
                 operationsByProviderId[providerId] = operation
 
                 if forRegistration {
-                    operation.register(displayName: displayName)
+                    operation.register()
                 } else {
                     operation.authorize()
                 }
@@ -244,7 +242,7 @@ class SessionManager: SessionManagerProtocol {
     }
 
     func addAccount() throws -> AddAccountResultType {
-        let authResult = try authService.register(displayName: nil)
+        let authResult = try authService.register()
         Logger.info("Added account: \(authResult)")
         let matchingInboxReadyPublisher = inboxOperationsPublisher
             .flatMap { operations in

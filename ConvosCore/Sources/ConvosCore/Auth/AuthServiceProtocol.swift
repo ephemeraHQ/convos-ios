@@ -3,7 +3,6 @@ import Foundation
 import XMTPiOS
 
 public protocol AuthServiceRegisteredResultType: AuthServiceResultType {
-    var displayName: String? { get }
     var inbox: any AuthServiceInboxType { get }
 }
 
@@ -20,7 +19,6 @@ public protocol AuthServiceInboxType {
 }
 
 public struct AuthServiceRegisteredResult: AuthServiceRegisteredResultType {
-    public let displayName: String?
     public let inbox: any AuthServiceInboxType
     public var inboxes: [any AuthServiceInboxType] { [inbox] }
 }
@@ -80,7 +78,7 @@ public protocol AuthServiceProtocol: BaseAuthServiceProtocol {
 }
 
 public protocol LocalAuthServiceProtocol: BaseAuthServiceProtocol {
-    func register(displayName: String?) throws -> any AuthServiceRegisteredResultType
+    func register() throws -> any AuthServiceRegisteredResultType
     func deleteAccount(with providerId: String) throws
     func deleteAll() throws
     func save(inboxId: String, for providerId: String) throws

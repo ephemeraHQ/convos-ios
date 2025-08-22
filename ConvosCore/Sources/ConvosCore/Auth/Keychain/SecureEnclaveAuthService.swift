@@ -22,10 +22,9 @@ public class SecureEnclaveAuthService: LocalAuthServiceProtocol {
         try refreshAuthState()
     }
 
-    public func register(displayName: String? = nil) throws -> any AuthServiceRegisteredResultType {
+    public func register() throws -> any AuthServiceRegisteredResultType {
         let identity = try identityStore.save()
         let result = AuthServiceRegisteredResult(
-            displayName: displayName,
             inbox: AuthServiceInbox(
                 type: .ephemeral,
                 provider: .local,
