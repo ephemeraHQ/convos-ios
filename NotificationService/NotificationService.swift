@@ -52,9 +52,10 @@ class NotificationService: UNNotificationServiceExtension {
             // Check if this is a message that should be dropped
             if let error = error as? NotificationError, error == .messageShouldBeDropped {
                 Logger.info("Notification dropped - message from self or non-text")
-                // Cleanup and don't deliver any notification
+                // Cleanup and deliver minimal notification
                 Logger.info("NSE: Cleaning up XMTP resources after dropping notification")
                 pushHandler?.cleanup()
+                deliverMinimalNotification()
                 return
             }
             // For other errors, continue with generic notification
@@ -65,6 +66,7 @@ class NotificationService: UNNotificationServiceExtension {
         guard !Task.isCancelled else {
             Logger.info("NSE: Task cancelled, cleaning up XMTP resources")
             pushHandler?.cleanup()
+            deliverMinimalNotification()
             return
         }
 
@@ -115,7 +117,7 @@ class NotificationService: UNNotificationServiceExtension {
                 bestAttemptContent.body = body
             }
 
-            Logger.info("Applied decoded notification content - Title: \(bestAttemptContent.title), Body: \(bestAttemptContent.body)")
+            Logger.info("Applied decoded notification content")
         } else {
             // Fallback to creating new payload if processed payload not available
             let payload = PushNotificationPayload(userInfo: userInfo)
@@ -128,7 +130,14 @@ class NotificationService: UNNotificationServiceExtension {
                 bestAttemptContent.body = body
             }
 
-            Logger.info("Applied fallback notification content - Title: \(bestAttemptContent.title), Body: \(bestAttemptContent.body)")
+            Logger.info("Applied fallback notification content")
+        }
+    }
+
+    private func deliverMinimalNotification() {
+        // Deliver the best attempt content we have
+        if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
+            contentHandler(bestAttemptContent)
         }
     }
 }

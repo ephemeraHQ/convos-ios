@@ -129,7 +129,7 @@ public extension SingleInboxAuthProcessor {
             // NSE should exit here - it only decodes for display, not sync
             Logger.info("NSE: Finished decoding for display, skipping sync")
             return
-        } else if let contentTopic = protocolData.contentTopic {
+        } else if !isNotificationServiceExtension, let contentTopic = protocolData.contentTopic {
             // For main app, just sync the conversation
             Logger.info("Processing protocol message for topic: \(contentTopic)")
             try await syncConversationIfNeeded(contentTopic: contentTopic, client: client)
