@@ -143,7 +143,7 @@ public actor InboxStateMachine {
         syncingManager: any SyncingManagerProtocol,
         inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol,
         pushNotificationRegistrar: (any PushNotificationRegistrarProtocol)? = nil,
-        refreshProfileWhenready: Bool = true,
+        refreshProfileWhenReady: Bool = true,
         environment: AppEnvironment
     ) {
         self.inbox = inbox
@@ -153,7 +153,7 @@ public actor InboxStateMachine {
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
         self.pushNotificationRegistrar = pushNotificationRegistrar
-        self.refreshProfileWhenReady = refreshProfileWhenready
+        self.refreshProfileWhenReady = refreshProfileWhenReady
 
         // Set custom XMTP host if provided
         Logger.info("🔧 XMTP Configuration:")
