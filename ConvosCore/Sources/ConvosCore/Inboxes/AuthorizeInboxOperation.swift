@@ -2,6 +2,8 @@ import Combine
 import Foundation
 import GRDB
 
+public typealias InboxReadyResultPublisher = AnyPublisher<InboxReadyResult, Never>
+
 protocol AuthorizeInboxOperationProtocol {
     var inbox: any AuthServiceInboxType { get }
     var state: InboxStateMachine.State { get }
@@ -18,18 +20,20 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     let inbox: any AuthServiceInboxType
 
     var state: InboxStateMachine.State {
-        stateMachine.state
+        stateSubject.value
     }
 
     var statePublisher: AnyPublisher<InboxStateMachine.State, Never> {
-        stateMachine.statePublisher
+        stateSubject.eraseToAnyPublisher()
     }
 
     let inboxReadyPublisher: InboxReadyResultPublisher
 
     private let stateMachine: InboxStateMachine
+    private let stateSubject: CurrentValueSubject<InboxStateMachine.State, Never> = .init(.uninitialized)
     private var cancellables: Set<AnyCancellable> = []
     private var task: Task<Void, Never>?
+    private var stateObservationTask: Task<Void, Never>?
 
     init(
         inbox: any AuthServiceInboxType,
@@ -62,8 +66,8 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             refreshProfileWhenready: !isNotificationServiceExtension,
             environment: environment,
         )
-        inboxReadyPublisher = stateMachine
-            .statePublisher
+
+        inboxReadyPublisher = stateSubject
             .compactMap { state in
                 switch state {
                 case let .ready(result):
@@ -73,11 +77,35 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
                 }
             }
             .eraseToAnyPublisher()
+
+        Task { [weak self] in
+            guard let self = self else { return }
+            let currentState = await self.stateMachine.state
+            await MainActor.run {
+                self.stateSubject.send(currentState)
+            }
+
+            self.startStateObservation()
+        }
     }
 
     deinit {
         task?.cancel()
         task = nil
+        stateObservationTask?.cancel()
+        stateObservationTask = nil
+    }
+
+    private func startStateObservation() {
+        stateObservationTask = Task { [weak self] in
+            guard let self = self else { return }
+            let stateSequence = await self.stateMachine.stateSequence
+            for await state in stateSequence {
+                await MainActor.run {
+                    self.stateSubject.send(state)
+                }
+            }
+        }
     }
 
     func authorize() {
