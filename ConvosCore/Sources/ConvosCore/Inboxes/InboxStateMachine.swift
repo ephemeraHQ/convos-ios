@@ -435,7 +435,7 @@ public actor InboxStateMachine {
         apiClient: any ConvosAPIClientProtocol
     ) async throws -> ConvosAPI.CreatedUserResponse {
         let requestBody: ConvosAPI.CreateUserRequest = .init(
-            userId: UUID().uuidString, // TODO: remove this
+            userId: UUID().uuidString, // @jarod remove this
             userType: .onDevice,
             device: .current(),
             identity: .init(identityAddress: nil,
