@@ -6,15 +6,8 @@ import UserNotifications
 @Observable
 class PushNotificationManager: NSObject {
     static let shared: PushNotificationManager = .init()
-    private(set) var deviceToken: String?
-
-    private let notificationProcessor: NotificationProcessor
 
     private override init() {
-        // Get app group identifier from ConfigManager
-        let appGroupId = ConfigManager.shared.currentEnvironment.appGroupIdentifier
-        self.notificationProcessor = NotificationProcessor(appGroupIdentifier: appGroupId)
-
         super.init()
 
         // Set notification center delegate early so foreground notifications are handled
@@ -28,10 +21,8 @@ class PushNotificationManager: NSObject {
         let token = tokenParts.joined()
 
         Logger.info("Received device token from APNS: \(token)")
-        self.deviceToken = token
-
         // Store token in shared storage
-        notificationProcessor.storeDeviceToken(token)
+        PushNotificationRegistrar.save(token: token)
         Logger.info("Stored device token in shared storage")
 
         // Notify listeners that token changed so session-ready components can push it to backend

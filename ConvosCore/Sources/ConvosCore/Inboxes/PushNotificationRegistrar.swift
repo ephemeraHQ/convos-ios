@@ -11,7 +11,7 @@ protocol PushNotificationRegistrarProtocol {
     func unregisterInstallation(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async
 }
 
-final class PushNotificationRegistrar: PushNotificationRegistrarProtocol {
+public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol {
     private let environment: AppEnvironment
     private let authService: any LocalAuthServiceProtocol
     private let inbox: any AuthServiceInboxType
@@ -24,6 +24,24 @@ final class PushNotificationRegistrar: PushNotificationRegistrarProtocol {
         self.environment = environment
         self.authService = authService
         self.inbox = inbox
+    }
+
+    private static var tokenKey: String = "pushToken"
+
+    public static func save(token: String) {
+        UserDefaults.standard.set(token, forKey: tokenKey)
+    }
+
+    public static var token: String? {
+        UserDefaults.standard.string(forKey: tokenKey)
+    }
+
+    private var token: String? {
+        get {
+            UserDefaults.standard.string(forKey: Self.tokenKey)
+        } set {
+            UserDefaults.standard.set(newValue, forKey: Self.tokenKey)
+        }
     }
 
     func registerForRemoteNotifications() async {
@@ -51,9 +69,7 @@ final class PushNotificationRegistrar: PushNotificationRegistrarProtocol {
     }
 
     func registerForNotificationsIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
-        // TODO: store and get device token in a better way
-        let notifProcessor = NotificationProcessor(appGroupIdentifier: environment.appGroupIdentifier)
-        guard let token = notifProcessor.getStoredDeviceToken(), !token.isEmpty else { return }
+        guard let token, !token.isEmpty else { return }
 
         let deviceId = await currentDeviceId()
         let identityId = client.inboxId

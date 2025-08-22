@@ -225,10 +225,7 @@ extension DebugViewSection {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         notificationAuthStatus = settings.authorizationStatus
         notificationAuthGranted = settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
-        lastDeviceToken = NotificationProcessor(
-            appGroupIdentifier: ConfigManager.shared.currentEnvironment.appGroupIdentifier
-        )
-            .getStoredDeviceToken() ?? ""
+        lastDeviceToken = PushNotificationRegistrar.token ?? ""
     }
 
     private func requestNotificationsNow() async {
