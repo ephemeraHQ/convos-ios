@@ -42,9 +42,9 @@ extension ConvosAppDelegate: UNUserNotificationCenterDelegate {
         let userInfo = notification.request.content.userInfo
         Logger.debug("Received notification in foreground: \(userInfo)")
 
-        // Don't show notification when app is in foreground
-        // This forces ALL notifications to go through NSE for processing
-        Logger.info("App in foreground - notification will be processed by NSE instead")
+        // Show notification banner when app is in foreground
+        // NSE processes all notifications regardless of app state
+        Logger.info("App in foreground - showing notification banner")
         return [.banner]
     }
 
