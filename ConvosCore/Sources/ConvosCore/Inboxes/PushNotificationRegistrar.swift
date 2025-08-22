@@ -100,6 +100,5 @@ final class MockPushNotificationRegistrar: PushNotificationRegistrarProtocol {
     func requestNotificationAuthorizationIfNeeded() async {}
     func requestAuthAndRegisterIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {}
     func registerForNotificationsIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {}
-    func unsubscribeFromConversation(conversationId: String, client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {}
     func unregisterInstallation(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {}
 }
