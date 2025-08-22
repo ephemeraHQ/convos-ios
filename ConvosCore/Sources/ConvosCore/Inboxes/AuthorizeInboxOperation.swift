@@ -63,7 +63,6 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
                 databaseWriter: databaseWriter
             ),
             pushNotificationRegistrar: pushNotificationRegistrar,
-            refreshProfileWhenReady: !isNotificationServiceExtension,
             environment: environment,
         )
 

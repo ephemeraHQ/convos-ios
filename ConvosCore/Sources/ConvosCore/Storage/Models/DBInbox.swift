@@ -25,12 +25,6 @@ struct DBInbox: Codable, FetchableRecord, PersistableRecord, Identifiable, Hasha
         using: ForeignKey([Columns.inboxId], to: [DBConversation.Columns.inboxId])
     )
 
-    static let identities: HasManyAssociation<DBInbox, Identity> = hasMany(
-        Identity.self,
-        key: "inboxIdentities",
-        using: ForeignKey(["inboxId"], to: ["inboxId"])
-    )
-
     private static let _member: HasOneAssociation<DBInbox, Member> = hasOne(
         Member.self,
         key: "inboxMember",
@@ -47,6 +41,5 @@ struct DBInbox: Codable, FetchableRecord, PersistableRecord, Identifiable, Hasha
 
 struct DBInboxDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
     let inbox: DBInbox
-    let inboxIdentities: [Identity]
     let inboxMemberProfile: MemberProfile
 }

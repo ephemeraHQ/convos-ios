@@ -48,17 +48,6 @@ extension SharedDatabaseMigrator {
                     .primaryKey()
             }
 
-            try db.create(table: "identity") { t in
-                t.column("id", .text)
-                    .unique()
-                    .primaryKey()
-                t.column("inboxId", .text)
-                    .notNull()
-                    .indexed()
-                    .references("inbox", onDelete: .cascade)
-                t.column("walletAddress", .text)
-            }
-
             try db.create(table: "conversation") { t in
                 t.column("id", .text)
                     .notNull()

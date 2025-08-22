@@ -4,7 +4,6 @@ public extension Inbox {
     static func mock(type: InboxType = .standard) -> Self {
         .init(
             inboxId: UUID().uuidString,
-            identities: [],
             profile: .mock(),
             type: type,
             provider: .external(.turnkey),
@@ -16,7 +15,6 @@ public extension Inbox {
 public struct Inbox: Codable, Identifiable, Hashable {
     public var id: String { inboxId }
     public let inboxId: String
-    public let identities: [Identity]
     public let profile: Profile
     public let type: InboxType
     public let provider: InboxProvider
