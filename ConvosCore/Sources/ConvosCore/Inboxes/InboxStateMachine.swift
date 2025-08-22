@@ -285,13 +285,12 @@ public actor InboxStateMachine {
             signingKey: inbox.signingKey,
             options: clientOptions
         )
+        try authService.save(inboxId: client.inboxId, for: inbox.providerId)
         enqueueAction(.clientRegistered(client, displayName))
     }
 
     private func handleClientInitialized(_ client: any XMTPClientProvider) async throws {
         _state = .authorizing
-
-        try authService.save(inboxId: client.inboxId, for: inbox.providerId)
 
         Logger.info("Authorizing backend for signin...")
         let apiClient = try await authorizeConvosBackend(client: client)
@@ -387,10 +386,14 @@ public actor InboxStateMachine {
     private func buildXmtpClient(identity: PublicIdentity,
                                  options: ClientOptions) async throws -> any XMTPClientProvider {
         Logger.info("Building XMTP client...")
+        let inboxId = try? authService.inboxId(for: inbox.providerId)
+        if inboxId == nil {
+            Logger.warning("Building XMTP client with nil inboxId")
+        }
         let client = try await Client.build(
             publicIdentity: identity,
             options: options,
-            inboxId: try? authService.inboxId(for: inbox.providerId)
+            inboxId: inboxId
         )
         Logger.info("XMTP Client built.")
         return client
