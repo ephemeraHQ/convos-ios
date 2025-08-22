@@ -5,8 +5,7 @@ import SwiftUI
 struct ConvosApp: App {
     let convos: ConvosClient = .client(environment: ConfigManager.shared.currentEnvironment)
 
-    @UIApplicationDelegateAdaptor(PushNotificationDelegate.self) var pushDelegate: PushNotificationDelegate
-    @State private var pushNotificationManager: PushNotificationManager = .shared
+    @UIApplicationDelegateAdaptor(ConvosAppDelegate.self) var appDelegate: ConvosAppDelegate
 
     init() {
         // Configure Logger based on environment
@@ -30,7 +29,6 @@ struct ConvosApp: App {
         WindowGroup {
             ConversationsView(session: convos.session)
                 .withSafeAreaEnvironment()
-                .environment(pushNotificationManager)
         }
     }
 }
