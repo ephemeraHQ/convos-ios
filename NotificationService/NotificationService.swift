@@ -52,10 +52,9 @@ class NotificationService: UNNotificationServiceExtension {
             // Check if this is a message that should be dropped
             if let error = error as? NotificationError, error == .messageShouldBeDropped {
                 Logger.info("Notification dropped - message from self or non-text")
-                // Cleanup and deliver minimal notification
+                // Cleanup and return without delivering any notification
                 Logger.info("NSE: Cleaning up XMTP resources after dropping notification")
                 pushHandler?.cleanup()
-                deliverMinimalNotification()
                 return
             }
             // For other errors, continue with generic notification
@@ -66,7 +65,9 @@ class NotificationService: UNNotificationServiceExtension {
         guard !Task.isCancelled else {
             Logger.info("NSE: Task cancelled, cleaning up XMTP resources")
             pushHandler?.cleanup()
-            deliverMinimalNotification()
+
+            // Try to use any partial decoded content, then let serviceExtensionTimeWillExpire handle delivery
+            updateNotificationContentWithDecodedData(userInfo: userInfo)
             return
         }
 
@@ -131,13 +132,6 @@ class NotificationService: UNNotificationServiceExtension {
             }
 
             Logger.info("Applied fallback notification content")
-        }
-    }
-
-    private func deliverMinimalNotification() {
-        // Deliver the best attempt content we have
-        if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
-            contentHandler(bestAttemptContent)
         }
     }
 }
