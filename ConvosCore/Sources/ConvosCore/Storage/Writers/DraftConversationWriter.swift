@@ -267,7 +267,6 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         let optimisticConversation = try await client.prepareConversation()
         let externalConversationId = optimisticConversation.id
         state = .created(id: externalConversationId)
-//        try createDraftConversation(conversationId: externalConversationId, inboxId: client.inboxId)
         try await optimisticConversation.publish()
 
         guard let createdConversation = try await client.conversation(
