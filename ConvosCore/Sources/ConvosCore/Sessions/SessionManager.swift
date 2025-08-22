@@ -296,6 +296,8 @@ class SessionManager: SessionManagerProtocol {
             try DBMessage.deleteAll(db)
         }
 
+        clearAllOperations()
+
         // Get the app group container URL
         let appGroupId = environment.appGroupIdentifier
         guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
