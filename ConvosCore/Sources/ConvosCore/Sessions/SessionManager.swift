@@ -162,20 +162,24 @@ class SessionManager: SessionManagerProtocol {
     }
 
     func deleteInbox(for messagingService: AnyMessagingService) throws {
-        if let messagingServiceIndex = messagingServices.firstIndex(
-            where: { $0.identifier == messagingService.identifier }
-        ) {
-            let messagingService = messagingServices[messagingServiceIndex]
-            messagingService.stopAndDelete()
+        guard let messagingServiceIndex = messagingServices.firstIndex(
+            where: { $0.identifier == messagingService.identifier || $0 === messagingService }
+        ) else {
+            Logger.error("Inbox to delete for messaging service not found")
+            return
         }
+        let messagingService = messagingServices[messagingServiceIndex]
+        messagingService.stopAndDelete()
     }
 
     func deleteInbox(inboxId: String) throws {
-        if let messagingServiceIndex = messagingServices.firstIndex(where: { $0.identifier == inboxId }) {
-            let messagingService = messagingServices[messagingServiceIndex]
-            messagingService.stopAndDelete()
-            messagingServices.remove(at: messagingServiceIndex)
+        guard let messagingServiceIndex = messagingServices.firstIndex(where: { $0.identifier == inboxId }) else {
+            Logger.error("Inbox to delete for inbox id \(inboxId) not found")
+            return
         }
+        let messagingService = messagingServices[messagingServiceIndex]
+        messagingService.stopAndDelete()
+        messagingServices.remove(at: messagingServiceIndex)
     }
 
     func deleteAllInboxes() throws {
@@ -235,6 +239,7 @@ class SessionManager: SessionManagerProtocol {
 
     func messagingService(for inboxId: String) -> AnyMessagingService {
         guard let messagingService = messagingServices.first(where: { $0.identifier == inboxId }) else {
+            Logger.info("Messaging service not found, starting...")
             return startMessagingService(for: inboxId)
         }
 
