@@ -2,61 +2,64 @@ import Combine
 import Foundation
 import GRDB
 
-public typealias InboxReadyResultPublisher = AnyPublisher<InboxReadyResult, Never>
-
 protocol AuthorizeInboxOperationProtocol {
-    var inbox: any AuthServiceInboxType { get }
-    var state: InboxStateMachine.State { get }
-    var statePublisher: AnyPublisher<InboxStateMachine.State, Never> { get }
-    var inboxReadyPublisher: InboxReadyResultPublisher { get }
-
-    func authorize()
-    func register()
-    func deleteAndStop()
+    func stopAndDelete()
     func stop()
 }
 
-class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
-    let inbox: any AuthServiceInboxType
-
-    var state: InboxStateMachine.State {
-        stateSubject.value
-    }
-
-    var statePublisher: AnyPublisher<InboxStateMachine.State, Never> {
-        stateSubject.eraseToAnyPublisher()
-    }
-
-    let inboxReadyPublisher: InboxReadyResultPublisher
-
-    private let stateMachine: InboxStateMachine
-    private let stateSubject: CurrentValueSubject<InboxStateMachine.State, Never> = .init(.uninitialized)
+final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
+    let stateMachine: InboxStateMachine
     private var cancellables: Set<AnyCancellable> = []
     private var task: Task<Void, Never>?
-    private var stateObservationTask: Task<Void, Never>?
 
-    init(
-        inbox: any AuthServiceInboxType,
-        authService: any LocalAuthServiceProtocol,
+    static func authorize(
+        inboxId: String,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
-        isNotificationServiceExtension: Bool = false
+        registersForPushNotifications: Bool = false
+    ) -> AuthorizeInboxOperation {
+        let operation = AuthorizeInboxOperation(
+            databaseReader: databaseReader,
+            databaseWriter: databaseWriter,
+            environment: environment,
+            registersForPushNotifications: registersForPushNotifications
+        )
+        operation.authorize(inboxId: inboxId)
+        return operation
+    }
+
+    static func register(
+        databaseReader: any DatabaseReader,
+        databaseWriter: any DatabaseWriter,
+        environment: AppEnvironment,
+        registersForPushNotifications: Bool = false
+    ) -> AuthorizeInboxOperation {
+        let operation = AuthorizeInboxOperation(
+            databaseReader: databaseReader,
+            databaseWriter: databaseWriter,
+            environment: environment,
+            registersForPushNotifications: registersForPushNotifications
+        )
+        operation.register()
+        return operation
+    }
+
+    private init(
+        databaseReader: any DatabaseReader,
+        databaseWriter: any DatabaseWriter,
+        environment: AppEnvironment,
+        registersForPushNotifications: Bool = false
     ) {
-        self.inbox = inbox
         let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
 
         // Create push notification registrar only if not in notification service extension
-        let pushNotificationRegistrar: PushNotificationRegistrarProtocol? = isNotificationServiceExtension ? nil : PushNotificationRegistrar(
-            environment: environment,
-            authService: authService,
-            inbox: inbox
-        )
+        let pushNotificationRegistrar: PushNotificationRegistrarProtocol? = registersForPushNotifications ? PushNotificationRegistrar(
+            environment: environment
+        ) : nil
 
         stateMachine = InboxStateMachine(
-            inbox: inbox,
             inboxWriter: inboxWriter,
-            authService: authService,
             syncingManager: SyncingManager(databaseWriter: databaseWriter),
             inviteJoinRequestsManager: InviteJoinRequestsManager(
                 databaseReader: databaseReader,
@@ -65,66 +68,31 @@ class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             pushNotificationRegistrar: pushNotificationRegistrar,
             environment: environment,
         )
-
-        inboxReadyPublisher = stateSubject
-            .compactMap { state in
-                switch state {
-                case let .ready(result):
-                    return result
-                default:
-                    return nil
-                }
-            }
-            .eraseToAnyPublisher()
-
-        Task { [weak self] in
-            guard let self = self else { return }
-            let currentState = await self.stateMachine.state
-            await MainActor.run {
-                self.stateSubject.send(currentState)
-            }
-
-            self.startStateObservation()
-        }
     }
 
     deinit {
         task?.cancel()
         task = nil
-        stateObservationTask?.cancel()
-        stateObservationTask = nil
     }
 
-    private func startStateObservation() {
-        stateObservationTask = Task { [weak self] in
-            guard let self = self else { return }
-            let stateSequence = await self.stateMachine.stateSequence
-            for await state in stateSequence {
-                await MainActor.run {
-                    self.stateSubject.send(state)
-                }
-            }
-        }
-    }
-
-    func authorize() {
+    private func authorize(inboxId: String) {
         task?.cancel()
         task = Task { [stateMachine] in
-            await stateMachine.authorize()
+            await stateMachine.authorize(inboxId: inboxId)
         }
     }
 
-    func register() {
+    private func register() {
         task?.cancel()
         task = Task { [stateMachine] in
             await stateMachine.register()
         }
     }
 
-    func deleteAndStop() {
+    func stopAndDelete() {
         task?.cancel()
         task = Task { [stateMachine] in
-            await stateMachine.deleteAndStop()
+            await stateMachine.stopAndDelete()
         }
     }
 

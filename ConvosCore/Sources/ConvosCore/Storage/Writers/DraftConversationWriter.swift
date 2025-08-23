@@ -8,19 +8,13 @@ public protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
     var conversationIdPublisher: AnyPublisher<String, Never> { get }
     var conversationMetadataWriter: any ConversationMetadataWriterProtocol { get }
 
-    func createConversationWhenInboxReady()
-    func requestToJoinWhenInboxReady(inviteCode: String)
+    func createConversation() async throws
+    func requestToJoin(inviteCode: String) async throws
 }
 
 class DraftConversationWriter: DraftConversationWriterProtocol {
     enum DraftConversationWriterError: Error {
-        case missingClientProvider,
-             missingConversationMembers,
-             failedFindingConversation,
-             missingCurrentUser,
-             missingProfileForRemoving,
-             modifyingMembersOnExistingConversation,
-             inboxReadyTimeout
+        case failedFindingConversation
     }
 
     private enum DraftConversationWriterState: Equatable {
@@ -38,7 +32,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
-    private let inboxReadyValue: PublisherValue<InboxReadyResult>
+    private let inboxStateManager: InboxStateManager
     private let isSendingValue: CurrentValueSubject<Bool, Never> = .init(false)
     private let sentMessageSubject: PassthroughSubject<String, Never> = .init()
     private let inviteWriter: any InviteWriterProtocol
@@ -67,17 +61,13 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     var conversationIdPublisher: AnyPublisher<String, Never> {
         conversationIdSubject.eraseToAnyPublisher()
     }
-    private var clientPublisherCancellable: AnyCancellable?
-    private var createConversationTask: Task<Void, Never>?
-    private var joinConversationTask: Task<Void, Never>?
-    private var publishConversationTask: Task<Void, Never>?
     private var streamConversationsTask: Task<Void, Never>?
 
-    init(inboxReadyValue: PublisherValue<InboxReadyResult>,
+    init(inboxStateManager: InboxStateManager,
          databaseReader: any DatabaseReader,
          databaseWriter: any DatabaseWriter,
          draftConversationId: String) {
-        self.inboxReadyValue = inboxReadyValue
+        self.inboxStateManager = inboxStateManager
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
         self.state = .draft(id: draftConversationId)
@@ -85,83 +75,80 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         self.draftConversationId = draftConversationId
         self.inviteWriter = InviteWriter(databaseWriter: databaseWriter)
         self.conversationMetadataWriter = ConversationMetadataWriter(
-            inboxReadyValue: inboxReadyValue,
+            inboxStateManager: inboxStateManager,
             databaseWriter: databaseWriter
         )
     }
 
     deinit {
-        cleanup()
-    }
-
-    func cleanup() {
-        clientPublisherCancellable?.cancel()
-        createConversationTask?.cancel()
-        joinConversationTask?.cancel()
-        publishConversationTask?.cancel()
         streamConversationsTask?.cancel()
-        inboxReadyValue.dispose()
     }
 
-    func createConversationWhenInboxReady() {
-        createConversationTask?.cancel()
-        clientPublisherCancellable?.cancel()
-        clientPublisherCancellable = inboxReadyValue
-            .publisher
-            .compactMap { $0 }
-            .first()
-            .eraseToAnyPublisher()
-            .sink { [weak self] inboxReady in
-                guard let self else { return }
-                self.createConversationTask = Task { [weak self] in
-                    guard let self else { return }
-                    do {
-                        try await self.createExternalConversation(
-                            client: inboxReady.client,
-                            apiClient: inboxReady.apiClient
-                        )
-                    } catch {
-                        Logger.error("Error creating external conversation: \(error.localizedDescription)")
-                    }
-                }
-            }
+    func createConversation() async throws {
+        let inboxReady = try await self.inboxStateManager.waitForInboxReadyResult()
+        Logger.info("Inbox ready, creating conversation...")
+
+        guard case .draft = state else { return }
+
+        let client = inboxReady.client
+        let apiClient = inboxReady.apiClient
+        let optimisticConversation = try await client.prepareConversation()
+        let externalConversationId = optimisticConversation.id
+        state = .created(id: externalConversationId)
+        try await optimisticConversation.publish()
+
+        guard let createdConversation = try await client.conversation(
+            with: externalConversationId
+        ) else {
+            throw DraftConversationWriterError.failedFindingConversation
+        }
+
+        guard case .group(let group) = createdConversation else {
+            Logger.error("Created conversation was not a group, returning...")
+            return
+        }
+
+        try await group.updateAddMemberPermission(newPermissionOption: .allow)
+
+        let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
+        let conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
+                                                    messageWriter: messageWriter)
+        _ = try await conversationWriter.store(conversation: createdConversation,
+                                               clientConversationId: conversationId)
+
+        // Subscribe to push topic for this conversation
+        let topic = externalConversationId.xmtpGroupTopicFormat
+        do {
+            try await apiClient.subscribeToTopics(installationId: client.installationId, topics: [topic])
+            Logger.info("Subscribed to push topic: \(topic)")
+        } catch {
+            Logger.error("Failed subscribing to topic \(topic): \(error)")
+        }
+
+        let response = try await apiClient.createInvite(
+            .init(
+                groupId: externalConversationId,
+                name: nil,
+                description: nil,
+                imageUrl: nil,
+                maxUses: nil,
+                expiresAt: nil,
+                autoApprove: true,
+                notificationTargets: []
+            )
+        )
+        let invite = try await inviteWriter.store(invite: response, inboxId: client.inboxId)
+        Logger.info("Created invite for conversation \(externalConversationId): \(invite)")
     }
 
-    func requestToJoinWhenInboxReady(inviteCode: String) {
-        joinConversationTask?.cancel()
-        clientPublisherCancellable?.cancel()
-        clientPublisherCancellable = inboxReadyValue
-            .publisher
-            .compactMap { $0 }
-            .first()
-            .eraseToAnyPublisher()
-            .sink { [weak self] inboxReady in
-                guard let self else { return }
-                Logger.info("Inbox ready, joining conversation...")
-                self.joinConversationTask = Task { [weak self] in
-                    guard let self else { return }
-                    do {
-                        try await self.requestToJoin(
-                            inviteCode: inviteCode,
-                            client: inboxReady.client,
-                            apiClient: inboxReady.apiClient
-                        )
-                    } catch {
-                        Logger.error("Error requesting to join conversation: \(error.localizedDescription)")
-                    }
-                }
-            }
-    }
-
-    private func requestToJoin(
-        inviteCode: String,
-        client: AnyClientProvider,
-        apiClient: any ConvosAPIClientProtocol
-    ) async throws {
-        // Call API to request to join
+    func requestToJoin(inviteCode: String) async throws {
+        let inboxReady = try await self.inboxStateManager.waitForInboxReadyResult()
+        Logger.info("Inbox ready, requesting to join conversation...")
+        let apiClient = inboxReady.apiClient
         _ = try await apiClient.requestToJoin(inviteCode)
-
-        // Then wait for conversation to appear and finalize
+        let client = inboxReady.client
+        // Wait for conversation to appear and finalize
+        // TODO: we should add a timeout here
         streamConversationsTask = Task { [weak self] in
             do {
                 Logger.info("Started streaming conversations for inboxId: \(client.inboxId)")
@@ -173,16 +160,19 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                 ) {
                     guard let self else { return }
 
+                    guard !Task.isCancelled else { return }
                     // Accept consent and store on first matching conversation for this invite
                     try await conversation.updateConsentState(state: .allowed)
                     Logger.info("Joined conversation with id: \(conversation.id)")
 
+                    guard !Task.isCancelled else { return }
                     let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
                     let conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
                                                                 messageWriter: messageWriter)
                     Logger.info("Current state conversation id: \(conversationId)")
                     let dbConversation = try await conversationWriter.store(conversation: conversation,
                                                                             clientConversationId: conversationId)
+                    guard !Task.isCancelled else { return }
                     Logger.info("Created conversation in database: \(dbConversation)")
                     let inviteResponse = try await apiClient.createInvite(
                         .init(
@@ -196,11 +186,14 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                             notificationTargets: []
                         )
                     )
+                    guard !Task.isCancelled else { return }
                     try await inviteWriter.store(
                         invite: inviteResponse,
                         inboxId: client.inboxId
                     )
                     self.state = .existing(id: conversation.id)
+
+                    guard !Task.isCancelled else { return }
 
                     // Subscribe to push topic upon join
                     let topic = conversation.id.xmtpGroupTopicFormat
@@ -258,65 +251,9 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         }
     }
 
-    private func createExternalConversation(
-        client: AnyClientProvider,
-        apiClient: any ConvosAPIClientProtocol
-    ) async throws {
-        guard case .draft = state else { return }
-
-        let optimisticConversation = try await client.prepareConversation()
-        let externalConversationId = optimisticConversation.id
-        state = .created(id: externalConversationId)
-        try await optimisticConversation.publish()
-
-        guard let createdConversation = try await client.conversation(
-            with: externalConversationId
-        ) else {
-            throw DraftConversationWriterError.failedFindingConversation
-        }
-
-        guard case .group(let group) = createdConversation else {
-            Logger.error("Created conversation was not a group, returning...")
-            return
-        }
-
-        try await group.updateAddMemberPermission(newPermissionOption: .allow)
-
-        let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-        let conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
-                                                    messageWriter: messageWriter)
-        _ = try await conversationWriter.store(conversation: createdConversation,
-                                               clientConversationId: conversationId)
-
-        // Subscribe to push topic for this conversation
-        let topic = externalConversationId.xmtpGroupTopicFormat
-        do {
-            try await apiClient.subscribeToTopics(installationId: client.installationId, topics: [topic])
-            Logger.info("Subscribed to push topic: \(topic)")
-        } catch {
-            Logger.error("Failed subscribing to topic \(topic): \(error)")
-        }
-
-        let response = try await apiClient.createInvite(
-            .init(
-                groupId: externalConversationId,
-                name: nil,
-                description: nil,
-                imageUrl: nil,
-                maxUses: nil,
-                expiresAt: nil,
-                autoApprove: true,
-                notificationTargets: []
-            )
-        )
-        let invite = try await inviteWriter.store(invite: response, inboxId: client.inboxId)
-        Logger.info("Created invite for conversation \(externalConversationId): \(invite)")
-    }
-
     func send(text: String) async throws {
-        guard let client = inboxReadyValue.value?.client else {
-            throw InboxStateError.inboxNotReady
-        }
+        let inboxReady = try await self.inboxStateManager.waitForInboxReadyResult()
+        let client = inboxReady.client
 
         isSendingValue.send(true)
 
@@ -328,8 +265,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         case .existing(let id), .created(let id):
             // send the message
             let messageWriter = OutgoingMessageWriter(
-                client: client,
-                clientPublisher: inboxReadyValue.publisher.compactMap { $0?.client }.eraseToAnyPublisher(),
+                inboxStateManager: inboxStateManager,
                 databaseWriter: databaseWriter,
                 conversationId: id
             )

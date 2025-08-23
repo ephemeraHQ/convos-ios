@@ -11,8 +11,6 @@ public protocol AuthServiceResultType {
 }
 
 public protocol AuthServiceInboxType {
-    var type: InboxType { get }
-    var provider: InboxProvider { get }
     var providerId: String { get }
     var signingKey: any XMTPiOS.SigningKey { get }
     var databaseKey: Data { get }
@@ -28,8 +26,6 @@ public struct AuthServiceResult: AuthServiceResultType {
 }
 
 public struct AuthServiceInbox: AuthServiceInboxType {
-    public let type: InboxType
-    public let provider: InboxProvider
     public let providerId: String
     public let signingKey: any XMTPiOS.SigningKey
     public let databaseKey: Data
@@ -62,14 +58,9 @@ public enum AuthServiceState {
     }
 }
 
-public protocol BaseAuthServiceProtocol {
-    var state: AuthServiceState { get }
-    var authStatePublisher: AnyPublisher<AuthServiceState, Never> { get }
-
+public protocol AuthServiceProtocol {
     func prepare() throws
-}
 
-public protocol AuthServiceProtocol: BaseAuthServiceProtocol {
     var accountsService: (any AuthAccountsServiceProtocol)? { get }
 
     func signIn() async throws
@@ -77,7 +68,8 @@ public protocol AuthServiceProtocol: BaseAuthServiceProtocol {
     func signOut() async throws
 }
 
-public protocol LocalAuthServiceProtocol: BaseAuthServiceProtocol {
+public protocol LocalAuthServiceProtocol {
+    func prepare() throws
     func register() throws -> any AuthServiceRegisteredResultType
     func deleteAccount(with providerId: String) throws
     func deleteAll() throws

@@ -8,133 +8,50 @@ public extension Notification.Name {
 }
 
 public typealias AnyMessagingService = any MessagingServiceProtocol
-public typealias AnyMessagingServicePublisher = AnyPublisher<AnyMessagingService, Never>
 public typealias AnyClientProvider = any XMTPClientProvider
-public typealias AnyClientProviderPublisher = AnyPublisher<AnyClientProvider, Never>
 
 enum SessionManagerError: Error {
-    case missingOperationForAddedInbox
     case inboxNotFound
 }
 
 class SessionManager: SessionManagerProtocol {
-    private let currentSessionRepository: any CurrentSessionRepositoryProtocol
-    private let inboxOperationsPublisher: CurrentValueSubject<[any AuthorizeInboxOperationProtocol], Never> = .init([])
     private var cancellables: Set<AnyCancellable> = []
     private var leftConversationObserver: Any?
 
-    // Dictionary to track operations by provider ID to prevent duplicates
-    private var operationsByProviderId: [String: any AuthorizeInboxOperationProtocol] = [:]
+    private var messagingServices: [AnyMessagingService] = []
 
     private let databaseWriter: any DatabaseWriter
     private let databaseReader: any DatabaseReader
-    private let authService: any LocalAuthServiceProtocol
     private let environment: AppEnvironment
 
-    init(authService: any LocalAuthServiceProtocol,
-         databaseWriter: any DatabaseWriter,
+    init(databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader,
          environment: AppEnvironment) {
         self.databaseWriter = databaseWriter
         self.databaseReader = databaseReader
-        self.authService = authService
         self.environment = environment
-        let currentSessionRepository = CurrentSessionRepository(dbReader: databaseReader)
-        self.currentSessionRepository = currentSessionRepository
         observe()
-        authService.authStatePublisher
-            .sink { [weak self] authState in
-                do {
-                    try self?.handleAuthStateChange(authState)
-                } catch {
-                    Logger.error("Error handling auth state change: \(authState)")
-                }
-            }
-            .store(in: &cancellables)
     }
 
     deinit {
         if let leftConversationObserver {
             NotificationCenter.default.removeObserver(leftConversationObserver)
         }
-        cleanup()
-    }
-
-    func cleanup() {
         cancellables.removeAll()
-        clearAllOperations()
+        messagingServices.removeAll()
     }
 
     // MARK: - Private Methods
 
-    private func handleAuthStateChange(_ authState: AuthServiceState) throws {
-        Logger.info("Auth state changed: \(authState)")
-
-        switch authState {
-        case .authorized(let authResult):
-            try updateOperations(for: authResult.inboxes, forRegistration: false)
-        case .registered(let registeredResult):
-            try updateOperations(
-                for: registeredResult.inboxes,
-                forRegistration: true
-            )
-        case .unauthorized, .notReady, .unknown:
-            clearAllOperations()
-        }
-    }
-
-    private func updateOperations(
-        for inboxes: [any AuthServiceInboxType],
-        forRegistration: Bool
-    ) throws {
-        // @jarodl revisit how we're responding to auth state changes
-        if !forRegistration {
-            let incomingProviderIds = Set(inboxes.map { $0.providerId })
-            let providerIdsToRemove = operationsByProviderId.keys.filter { !incomingProviderIds.contains($0) }
-            for providerId in providerIdsToRemove {
-                Logger.info("Stopping inbox operation for provider: \(providerId)")
-                if let operation = operationsByProviderId.removeValue(forKey: providerId) {
-                    operation.stop()
-                }
-            }
-        }
-
-        // Create or update operations for inboxes
-        for inbox in inboxes {
-            let providerId = inbox.providerId
-
-            // Create new operation if it doesn't exist
-            if operationsByProviderId[providerId] == nil {
-                let operation = AuthorizeInboxOperation(
-                    inbox: inbox,
-                    authService: authService,
-                    databaseReader: databaseReader,
-                    databaseWriter: databaseWriter,
-                    environment: environment
-                )
-                operationsByProviderId[providerId] = operation
-
-                if forRegistration {
-                    operation.register()
-                } else {
-                    operation.authorize()
-                }
-            }
-        }
-
-        // Update the publisher with current operations
-        inboxOperationsPublisher.send(Array(operationsByProviderId.values))
-    }
-
-    private func clearAllOperations() {
-        // Stop all existing operations
-        for operation in operationsByProviderId.values {
-            operation.stop()
-        }
-
-        // Clear the dictionary and publisher
-        operationsByProviderId.removeAll()
-        inboxOperationsPublisher.send([])
+    private func startMessagingService(for inboxId: String) -> AnyMessagingService {
+        let messagingService = MessagingService.messagingService(
+            for: inboxId,
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            environment: environment
+        )
+        messagingServices.append(messagingService)
+        return messagingService
     }
 
     private func observe() {
@@ -153,7 +70,7 @@ class SessionManager: SessionManagerProtocol {
                 }
 
                 do {
-                    try deleteAccount(inboxId: inboxId)
+                    try deleteInbox(inboxId: inboxId)
                 } catch {
                     Logger
                         .error(
@@ -234,64 +151,36 @@ class SessionManager: SessionManagerProtocol {
 
     // MARK: Public
 
-    func prepare() throws {
-        try authService.prepare()
-    }
-
-    func addAccount() throws -> AddAccountResultType {
-        let authResult = try authService.register()
-        Logger.info("Added account: \(authResult)")
-        let matchingInboxReadyPublisher = inboxOperationsPublisher
-            .flatMap { operations in
-                Publishers.MergeMany(
-                    operations.map { $0.inboxReadyPublisher }
-                )
-            }
-            .first { result in
-                result.inbox.providerId == authResult.inbox.providerId
-            }
-            .eraseToAnyPublisher()
-        return .init(
-            providerId: authResult.inbox.providerId,
-            messagingService: MessagingService(
-                inboxReadyPublisher: matchingInboxReadyPublisher,
-                databaseWriter: databaseWriter,
-                databaseReader: databaseReader
-            )
+    func addInbox() throws -> AnyMessagingService {
+        let messagingService = MessagingService.messagingService(
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            environment: environment
         )
+        messagingServices.append(messagingService)
+        return messagingService
     }
 
-    func deleteAccount(inboxId: String) throws {
-        let inbox: DBInbox? = try databaseReader.read { db in
-            try DBInbox.fetchOne(db, key: inboxId)
+    func deleteInbox(for messagingService: AnyMessagingService) throws {
+        if let messagingServiceIndex = messagingServices.firstIndex(
+            where: { $0.identifier == messagingService.identifier }
+        ) {
+            let messagingService = messagingServices[messagingServiceIndex]
+            messagingService.stopAndDelete()
         }
-        guard let inbox else {
-            throw SessionManagerError.inboxNotFound
-        }
-        try deleteAccount(providerId: inbox.providerId)
     }
 
-    func deleteAccount(providerId: String) throws {
-        if let operation = operationsByProviderId[providerId] {
-            operation.deleteAndStop()
+    func deleteInbox(inboxId: String) throws {
+        if let messagingServiceIndex = messagingServices.firstIndex(where: { $0.identifier == inboxId }) {
+            let messagingService = messagingServices[messagingServiceIndex]
+            messagingService.stopAndDelete()
+            messagingServices.remove(at: messagingServiceIndex)
         }
-        try authService.deleteAccount(with: providerId)
     }
 
-    func deleteAllAccounts() throws {
-        try authService.deleteAll()
-        try databaseWriter.write { db in
-            try DBInbox.deleteAll(db)
-            try DBConversation.deleteAll(db)
-            try ConversationLocalState.deleteAll(db)
-            try DBConversationMember.deleteAll(db)
-            try Member.deleteAll(db)
-            try MemberProfile.deleteAll(db)
-            try DBInvite.deleteAll(db)
-            try DBMessage.deleteAll(db)
-        }
-
-        clearAllOperations()
+    func deleteAllInboxes() throws {
+        messagingServices.forEach { $0.stopAndDelete() }
+        messagingServices.removeAll()
 
         // Get the app group container URL
         let appGroupId = environment.appGroupIdentifier
@@ -345,21 +234,11 @@ class SessionManager: SessionManagerProtocol {
     // MARK: Messaging
 
     func messagingService(for inboxId: String) -> AnyMessagingService {
-        let matchingInboxReadyPublisher = inboxOperationsPublisher
-            .flatMap { operations in
-                Publishers.MergeMany(
-                    operations.map { $0.inboxReadyPublisher }
-                )
-            }
-            .first { result in
-                result.client.inboxId == inboxId
-            }
-            .eraseToAnyPublisher()
-        return MessagingService(
-            inboxReadyPublisher: matchingInboxReadyPublisher,
-            databaseWriter: databaseWriter,
-            databaseReader: databaseReader
-        )
+        guard let messagingService = messagingServices.first(where: { $0.identifier == inboxId }) else {
+            return startMessagingService(for: inboxId)
+        }
+
+        return messagingService
     }
 
     // MARK: Displaying All Conversations

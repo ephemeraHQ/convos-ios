@@ -28,7 +28,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
             setupObservations()
         }
     }
-    private var addAccountResult: AddAccountResultType?
+    private var messagingService: AnyMessagingService?
     private var newConversationTask: Task<Void, Never>?
     private var joinConversationTask: Task<Void, Never>?
     private var cancellables: Set<AnyCancellable> = []
@@ -52,20 +52,22 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
     // MARK: - Actions
 
     func newConversation() {
-        guard addAccountResult == nil else { return }
+        guard messagingService == nil else { return }
         newConversationTask?.cancel()
         newConversationTask = Task { [weak self] in
             guard let self else { return }
             do {
-                let addAccountResult = try session.addAccount()
-                self.addAccountResult = addAccountResult
-                let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
+                let messagingService = try session.addInbox()
+                self.messagingService = messagingService
+                guard !Task.isCancelled else { return }
+                let draftConversationComposer = messagingService.draftConversationComposer()
                 self.draftConversationComposer = draftConversationComposer
-                draftConversationComposer.draftConversationWriter.createConversationWhenInboxReady()
                 self.conversationViewModel = try conversationViewModel(
-                    for: addAccountResult,
+                    for: messagingService,
                     from: draftConversationComposer
                 )
+                guard !Task.isCancelled else { return }
+                try await draftConversationComposer.draftConversationWriter.createConversation()
             } catch {
                 Logger.error("Error starting new conversation: \(error.localizedDescription)")
             }
@@ -90,9 +92,9 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         conversationViewModel = nil
         Task { [weak self] in
             guard let self else { return }
-            guard let addAccountResult else { return }
-            try session.deleteAccount(providerId: addAccountResult.providerId)
-            self.addAccountResult = nil
+            guard let messagingService else { return }
+            try session.deleteInbox(for: messagingService)
+            self.messagingService = nil
         }
     }
 
@@ -103,21 +105,23 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
             do {
-                if self.addAccountResult == nil {
-                    Logger.info("No account found, creating one while joining conversation...")
-                    let addAccountResult = try session.addAccount()
-                    self.addAccountResult = addAccountResult
+                if self.messagingService == nil {
+                    Logger.info("No messaging service found, starting one while joining conversation...")
+                    let messagingService = try session.addInbox()
+                    self.messagingService = messagingService
                 }
 
-                guard let addAccountResult else {
+                guard let messagingService else {
                     Logger.error("Failed adding account while joining conversation")
                     return
                 }
 
                 if self.draftConversationComposer == nil {
                     Logger.info("Setting up draft composer for joining conversation...")
-                    let draftConversationComposer = addAccountResult.messagingService.draftConversationComposer()
-                    draftConversationComposer.draftConversationWriter.createConversationWhenInboxReady()
+                    let draftConversationComposer = messagingService.draftConversationComposer()
+//                    Task {
+//                        try await draftConversationComposer.draftConversationWriter.createConversation()
+//                    }
                     self.draftConversationComposer = draftConversationComposer
                 }
 
@@ -129,14 +133,12 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
                 if self.conversationViewModel == nil {
                     Logger.info("ConversationViewModel is `nil`... creating a new one.")
                     self.conversationViewModel = try conversationViewModel(
-                        for: addAccountResult,
+                        for: messagingService,
                         from: draftConversationComposer
                     )
                 }
 
-                draftConversationComposer
-                    .draftConversationWriter
-                    .requestToJoinWhenInboxReady(inviteCode: inviteCode)
+                try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
             }
@@ -168,7 +170,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
     }
 
     func conversationViewModel(
-        for addAccountResult: AddAccountResultType,
+        for messagingService: AnyMessagingService,
         from draftConversationComposer: any DraftConversationComposerProtocol
     ) throws -> ConversationViewModel {
         let draftConversation = try draftConversationComposer.draftConversationRepository.fetchConversation() ?? .empty(
@@ -178,7 +180,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
             conversation: draftConversation,
             session: session,
             myProfileWriter: draftConversationComposer.myProfileWriter,
-            myProfileRepository: addAccountResult.messagingService.myProfileRepository(),
+            myProfileRepository: messagingService.myProfileRepository(),
             conversationRepository: draftConversationComposer.draftConversationRepository,
             messagesRepository: draftConversationComposer.draftConversationRepository.messagesRepository,
             outgoingMessageWriter: draftConversationComposer.draftConversationWriter,

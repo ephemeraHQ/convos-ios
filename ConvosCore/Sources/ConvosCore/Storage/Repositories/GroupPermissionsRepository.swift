@@ -115,35 +115,19 @@ public struct GroupMemberInfo {
 // MARK: - Group Permissions Repository Implementation
 
 final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
-    private let client: AnyClientProvider?
-    private let clientPublisher: AnyClientProviderPublisher
-    private let clientValue: PublisherValue<AnyClientProvider>
+    private let inboxStateManager: InboxStateManager
     private let databaseReader: any DatabaseReader
 
-    init(client: AnyClientProvider?,
-         clientPublisher: AnyClientProviderPublisher,
+    init(inboxStateManager: InboxStateManager,
          databaseReader: any DatabaseReader) {
-        self.client = client
-        self.clientPublisher = clientPublisher
-        self.clientValue = .init(initial: client, upstream: clientPublisher)
+        self.inboxStateManager = inboxStateManager
         self.databaseReader = databaseReader
-    }
-
-    deinit {
-        cleanup()
-    }
-
-    func cleanup() {
-        clientValue.dispose()
     }
 
     // MARK: - Public Methods
 
     func getGroupPermissions(for groupId: String) async throws -> GroupPermissionPolicySet {
-        guard let client = clientValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
-
+        let client = try await self.inboxStateManager.waitForInboxReadyResult().client
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupPermissionsError.groupNotFound(groupId: groupId)
@@ -176,9 +160,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
     }
 
     func getMemberRole(memberInboxId: String, in groupId: String) async throws -> MemberRole {
-        guard let client = clientValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -239,9 +221,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
     }
 
     func getGroupMembers(for groupId: String) async throws -> [GroupMemberInfo] {
-        guard let client = clientValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -290,9 +270,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
     }
 
     func addAdmin(memberInboxId: String, to groupId: String) async throws {
-        guard let client = clientValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -303,9 +281,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
     }
 
     func removeAdmin(memberInboxId: String, from groupId: String) async throws {
-        guard let client = clientValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -316,9 +292,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
     }
 
     func addSuperAdmin(memberInboxId: String, to groupId: String) async throws {
-        guard let client = clientValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -329,9 +303,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
     }
 
     func removeSuperAdmin(memberInboxId: String, from groupId: String) async throws {
-        guard let client = clientValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -342,9 +314,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
     }
 
     func addMembers(inboxIds: [String], to groupId: String) async throws {
-        guard let client = clientValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -355,9 +325,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
     }
 
     func removeMembers(inboxIds: [String], from groupId: String) async throws {
-        guard let client = clientValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
         guard let conversation = try await client.conversation(with: groupId),
               case .group(let group) = conversation else {

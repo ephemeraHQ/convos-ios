@@ -2,6 +2,10 @@ import Combine
 import Foundation
 
 public protocol MessagingServiceProtocol {
+    var identifier: String { get }
+
+    func stopAndDelete()
+
     func myProfileRepository() -> any MyProfileRepositoryProtocol
     func myProfileWriter() -> any MyProfileWriterProtocol
 

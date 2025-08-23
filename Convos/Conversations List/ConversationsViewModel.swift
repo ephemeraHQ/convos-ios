@@ -75,9 +75,9 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
         newConversationViewModel = .init(session: session, showScannerOnAppear: true)
     }
 
-    func deleteAllAccounts() {
+    func deleteAllInboxes() {
         do {
-            try session.deleteAllAccounts()
+            try session.deleteAllInboxes()
         } catch {
             Logger.error("Error deleting all accounts: \(error)")
         }
@@ -85,7 +85,7 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
 
     func leave(conversation: Conversation) {
         do {
-            try session.deleteAccount(inboxId: conversation.inboxId)
+            try session.deleteInbox(inboxId: conversation.inboxId)
             NotificationCenter.default.post(
                 name: .leftConversationNotification,
                 object: nil,

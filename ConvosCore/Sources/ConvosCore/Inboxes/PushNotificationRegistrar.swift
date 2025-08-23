@@ -13,17 +13,9 @@ protocol PushNotificationRegistrarProtocol {
 
 public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol {
     private let environment: AppEnvironment
-    private let authService: any LocalAuthServiceProtocol
-    private let inbox: any AuthServiceInboxType
 
-    init(
-        environment: AppEnvironment,
-        authService: any LocalAuthServiceProtocol,
-        inbox: any AuthServiceInboxType
-    ) {
+    init(environment: AppEnvironment) {
         self.environment = environment
-        self.authService = authService
-        self.inbox = inbox
     }
 
     private static var tokenKey: String = "pushToken"

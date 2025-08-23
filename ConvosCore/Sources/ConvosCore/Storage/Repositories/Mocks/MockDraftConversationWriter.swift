@@ -2,11 +2,15 @@ import Combine
 import Foundation
 
 class MockDraftConversationWriter: DraftConversationWriterProtocol {
+    func createConversation() async throws {
+    }
+
+    func requestToJoin(inviteCode: String) async throws {
+    }
+
     var conversationMetadataWriter: any ConversationMetadataWriterProtocol {
         MockGroupMetadataWriter()
     }
-
-    func requestToJoinWhenInboxReady(inviteCode: String) {}
 
     var isSendingPublisher: AnyPublisher<Bool, Never> {
         Just(false).eraseToAnyPublisher()
@@ -31,8 +35,5 @@ class MockDraftConversationWriter: DraftConversationWriterProtocol {
     }
 
     func send(text: String) async throws {
-    }
-
-    func createConversationWhenInboxReady() {
     }
 }

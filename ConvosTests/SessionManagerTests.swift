@@ -6,11 +6,9 @@ struct SessionManagerTests {
     @Test("Authorizing starts messaging service")
     func testAuthStartsMessaging() async throws {
         let authService = MockAuthService()
-        let localAuthService = SecureEnclaveAuthService()
         let databaseWriter = MockDatabaseManager.shared.dbWriter
         let databaseReader = MockDatabaseManager.shared.dbReader
         let sessionManager = SessionManager(
-            authService: authService,
             localAuthService: localAuthService,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
@@ -52,7 +50,6 @@ struct SessionManagerTests {
     @Test("Test local auth starts messaging service")
     func testLocalAuthStartsMessaging() async throws {
         let authService = MockAuthService()
-        let localAuthService = SecureEnclaveAuthService()
         let databaseWriter = MockDatabaseManager.shared.dbWriter
         let databaseReader = MockDatabaseManager.shared.dbReader
         let sessionManager = SessionManager(

@@ -289,7 +289,7 @@ class ConversationViewModel {
 
     func leaveConvo() {
         do {
-            try session.deleteAccount(inboxId: conversation.inboxId)
+            try session.deleteInbox(inboxId: conversation.inboxId)
             presentingConversationSettings = false
             NotificationCenter.default.post(
                 name: .leftConversationNotification,
@@ -320,7 +320,7 @@ class ConversationViewModel {
                     groupId: conversation.id,
                     memberInboxIds: memberIdsToRemove
                 )
-                try session.deleteAccount(inboxId: conversation.inboxId)
+                try session.deleteInbox(inboxId: conversation.inboxId)
                 presentingConversationSettings = false
             } catch {
                 Logger.error("Error exploding convo: \(error.localizedDescription)")
