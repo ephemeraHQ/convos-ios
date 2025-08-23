@@ -114,7 +114,7 @@ public final class ClosureStateObserver: InboxStateObserver {
 }
 
 public final class StateObserverHandle {
-    private weak var observer: ClosureStateObserver?
+    private var observer: ClosureStateObserver?
     private weak var manager: InboxStateManager?
 
     init(observer: ClosureStateObserver, manager: InboxStateManager) {
