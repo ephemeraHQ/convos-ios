@@ -15,7 +15,7 @@ public struct KeychainIdentityKeys: Codable, XMTPClientKeys {
     public let privateKey: PrivateKey
     public let databaseKey: Data
 
-    var signingKey: any SigningKey {
+    public var signingKey: any SigningKey {
         privateKey
     }
 
@@ -198,7 +198,6 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
         try KeychainIdentityKeys.generate()
     }
 
-    @discardableResult
     public func save(inboxId: String, keys: KeychainIdentityKeys) throws -> KeychainIdentity {
         let identity = KeychainIdentity(
             inboxId: inboxId,

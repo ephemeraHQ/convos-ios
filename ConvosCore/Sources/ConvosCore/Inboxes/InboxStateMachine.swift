@@ -295,7 +295,7 @@ public actor InboxStateMachine {
             signingKey: keys.signingKey,
             options: clientOptions(keys: keys)
         )
-        try await identityStore.save(inboxId: client.inboxId, keys: keys)
+        _ = try await identityStore.save(inboxId: client.inboxId, keys: keys)
         enqueueAction(.clientRegistered(client))
     }
 
