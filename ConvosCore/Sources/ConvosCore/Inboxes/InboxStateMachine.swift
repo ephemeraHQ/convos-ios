@@ -91,7 +91,7 @@ public actor InboxStateMachine {
 
     // MARK: -
 
-    private let identityStore: KeychainIdentityStore
+    private let identityStore: any KeychainIdentityStoreProtocol
     private let inboxWriter: any InboxWriterProtocol
     private let environment: AppEnvironment
     private let syncingManager: any SyncingManagerProtocol
@@ -156,13 +156,14 @@ public actor InboxStateMachine {
     // MARK: - Init
 
     init(
+        identityStore: any KeychainIdentityStoreProtocol,
         inboxWriter: any InboxWriterProtocol,
         syncingManager: any SyncingManagerProtocol,
         inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol,
         pushNotificationRegistrar: (any PushNotificationRegistrarProtocol)? = nil,
         environment: AppEnvironment
     ) {
-        self.identityStore = KeychainIdentityStore(accessGroup: environment.keychainAccessGroup)
+        self.identityStore = identityStore
         self.inboxWriter = inboxWriter
         self.syncingManager = syncingManager
         self.inviteJoinRequestsManager = inviteJoinRequestsManager

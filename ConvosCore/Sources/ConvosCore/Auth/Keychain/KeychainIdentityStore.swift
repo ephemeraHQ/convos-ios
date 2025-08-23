@@ -170,15 +170,16 @@ private struct KeychainQuery {
 
 // MARK: - Keychain Identity Store
 
-public protocol KeychainIdentityStoreProtocol {
+public protocol KeychainIdentityStoreProtocol: Actor {
     func generateKeys() throws -> KeychainIdentityKeys
-    func identity(for inboxId: String) throws -> KeychainIdentity?
+    func save(inboxId: String, keys: KeychainIdentityKeys) throws -> KeychainIdentity
+    func identity(for inboxId: String) throws -> KeychainIdentity
     func loadAll() throws -> [KeychainIdentity]
     func delete(inboxId: String) throws
     func deleteAll() throws
 }
 
-public final actor KeychainIdentityStore {
+public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
     // MARK: - Properties
 
     private let keychainService: String
