@@ -148,7 +148,6 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         _ = try await apiClient.requestToJoin(inviteCode)
         let client = inboxReady.client
         // Wait for conversation to appear and finalize
-        // TODO: we should add a timeout here
         streamConversationsTask = Task { [weak self] in
             do {
                 Logger.info("Started streaming conversations for inboxId: \(client.inboxId)")
@@ -172,7 +171,9 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
                     Logger.info("Current state conversation id: \(conversationId)")
                     let dbConversation = try await conversationWriter.store(conversation: conversation,
                                                                             clientConversationId: conversationId)
-                    guard !Task.isCancelled else { return }
+                    guard !Task.isCancelled else {
+                        return
+                    }
                     Logger.info("Created conversation in database: \(dbConversation)")
                     let inviteResponse = try await apiClient.createInvite(
                         .init(
