@@ -239,7 +239,10 @@ public actor InboxStateMachine {
                 try await handleClientRegistered(client)
             case (.authorizing, let .authorized(result)),
                 (.registering, let .authorized(result)):
-                try handleAuthorized(client: result.client, apiClient: result.apiClient)
+                try await handleAuthorized(
+                    client: result.client,
+                    apiClient: result.apiClient
+                )
             case (let .ready(result), .delete):
                 try await handleDelete(client: result.client, apiClient: result.apiClient)
             case (.error, .delete):
@@ -314,12 +317,16 @@ public actor InboxStateMachine {
             client: client,
             apiClient: apiClient
         )
-        try await inboxWriter.storeInbox(inboxId: client.inboxId)
         enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
     }
 
-    private func handleAuthorized(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) throws {
+    private func handleAuthorized(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
         emitStateChange(.ready(.init(client: client, apiClient: apiClient)))
+
+        // write the inbox when we're in the ready state so we have an inbox ID
+        // in SessionManager's observation of inboxes
+        try await inboxWriter.storeInbox(inboxId: client.inboxId)
+
         syncingManager.start(with: client, apiClient: apiClient)
         inviteJoinRequestsManager.start(with: client, apiClient: apiClient)
 

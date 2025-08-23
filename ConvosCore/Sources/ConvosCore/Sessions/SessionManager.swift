@@ -30,6 +30,17 @@ class SessionManager: SessionManagerProtocol {
         self.databaseWriter = databaseWriter
         self.databaseReader = databaseReader
         self.environment = environment
+        self.messagingServices = []
+        let inboxesRepository = InboxesRepository(databaseReader: databaseReader)
+        inboxesRepository.inboxesPublisher
+            .sink { [weak self] inboxes in
+                do {
+                    try self?.startMessagingServices(for: inboxes)
+                } catch {
+                    Logger.error("Error starting messaging services: \(error.localizedDescription)")
+                }
+            }
+            .store(in: &cancellables)
         observe()
     }
 
@@ -42,6 +53,23 @@ class SessionManager: SessionManagerProtocol {
     }
 
     // MARK: - Private Methods
+
+    private func startMessagingServices(for inboxes: [Inbox]) throws {
+        let inboxIds = Set(inboxes.map(\.inboxId))
+        let existingInboxIds = Set(messagingServices.map { $0.identifier })
+        let newInboxIds = inboxIds.subtracting(existingInboxIds)
+        let oldInboxIds = existingInboxIds.subtracting(inboxIds)
+        Logger
+            .info(
+                "Starting messaging services: \(newInboxIds), stopping for: \(oldInboxIds). Current count: \(messagingServices.count)"
+            )
+        for inboxId in newInboxIds {
+            _ = startMessagingService(for: inboxId)
+        }
+        for oldInboxId in oldInboxIds {
+            try deleteInbox(inboxId: oldInboxId)
+        }
+    }
 
     private func startMessagingService(for inboxId: String) -> AnyMessagingService {
         let messagingService = MessagingService.messagingService(
