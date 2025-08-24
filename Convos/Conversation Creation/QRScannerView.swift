@@ -82,11 +82,7 @@ struct QRScannerView: UIViewRepresentable {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
             completion(true)
-        case .notDetermined:
-            AVCaptureDevice.requestAccess(for: .video) { granted in
-                completion(granted)
-            }
-        case .denied, .restricted:
+        case .denied, .restricted, .notDetermined:
             completion(false)
         @unknown default:
             completion(false)
