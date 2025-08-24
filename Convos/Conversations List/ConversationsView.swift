@@ -116,9 +116,13 @@ struct ConversationsView: View {
                             viewModel.onJoinConvo()
                         }
                     }
+                    .matchedTransitionSource(
+                        id: "composer-transition-source",
+                        in: namespace
+                    )
 
                     ToolbarItem(placement: .bottomBar) {
-                        Button("Compose", systemImage: "plus") {
+                        Button("Compose", systemImage: "square.and.pencil") {
                             viewModel.onStartConvo()
                         }
                     }

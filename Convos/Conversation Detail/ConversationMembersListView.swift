@@ -10,7 +10,7 @@ struct ConversationMembersListView: View {
                     ConversationMemberView(viewModel: viewModel, member: member)
                 } label: {
                     HStack {
-                        ProfileAvatarView(profile: member.profile)
+                        ProfileAvatarView(profile: member.profile, profileImage: nil)
                             .frame(width: DesignConstants.ImageSizes.mediumAvatar, height: DesignConstants.ImageSizes.mediumAvatar)
 
                         Text(member.profile.displayName)

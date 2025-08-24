@@ -6,7 +6,7 @@ struct MessagesView: View {
         case share, scan
     }
 
-    let conversation: Conversation
+    let conversation: ConversationViewModel
     let messages: [AnyMessage]
     let invite: Invite
     let profile: Profile
@@ -37,7 +37,7 @@ struct MessagesView: View {
     var body: some View {
         Group {
             MessagesViewRepresentable(
-                conversationId: conversation.id,
+                conversation: conversation,
                 messages: messages,
                 invite: invite,
                 onTapMessage: onTapMessage,

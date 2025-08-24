@@ -46,7 +46,7 @@ struct AppSettingsView: View {
                                 .foregroundStyle(.colorTextPrimary)
 
                             Spacer()
-                            ProfileAvatarView(profile: .empty())
+                            ProfileAvatarView(profile: .empty(), profileImage: nil)
                                 .frame(width: 16.0, height: 16.0)
                             Text("Somebody")
                                 .foregroundStyle(.colorTextPrimary)
@@ -78,13 +78,21 @@ struct AppSettingsView: View {
                         .foregroundStyle(.colorTextSecondary)
                 }
 
-                DebugViewSection()
-
                 Section {
                     Button {
                         openURL(URL(string: "https://xmtp.org")!)
                     } label: {
-                        NavigationLink("Secured by XMTP", destination: EmptyView())
+                        NavigationLink {
+                            EmptyView()
+                        } label: {
+                            HStack(alignment: .firstTextBaseline, spacing: 0.0) {
+                                Text("Secured by ")
+                                Image("xmtpIcon")
+                                    .padding(.trailing, 1.0)
+                                Text("XMTP")
+                            }
+                            .foregroundStyle(.colorTextPrimary)
+                        }
                     }
                     .foregroundStyle(.colorTextPrimary)
 
@@ -134,6 +142,8 @@ struct AppSettingsView: View {
                         }
                     }
                 }
+
+                DebugViewSection()
             }
             .toolbarTitleDisplayMode(.inline)
             .toolbar {

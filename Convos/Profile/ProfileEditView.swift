@@ -2,86 +2,98 @@ import PhotosUI
 import SwiftUI
 
 struct ProfileView: View {
-    @State var displayName: String = ""
-    @State var useForNewConvos: Bool = false
-    @State private var imageSelection: PhotosPickerItem?
+    @Bindable var viewModel: ConversationViewModel
 
-    var backgroundColor: Color {
-        Color(UIColor.systemGroupedBackground)
-    }
+    @Environment(\.dismiss) private var dismiss: DismissAction
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    ProfileAvatarView(profile: .mock())
-                        .frame(maxWidth: .infinity, maxHeight: 175.0)
+                    HStack {
+                        Spacer()
+                        VStack(spacing: DesignConstants.Spacing.step6x) {
+                            ProfileAvatarView(
+                                profile: viewModel.profile,
+                                profileImage: viewModel.profileImage
+                            )
+                            .frame(width: 160.0, height: 160.0)
 
-                    PhotosPicker(selection: $imageSelection,
-                                 matching: .images,
-                                 photoLibrary: .shared()) {
-                        Label("Photo Picker", systemImage: "photo.on.rectangle.angled")
-                            .tint(.white)
-                            .labelStyle(.iconOnly)
-                            .frame(width: 50, height: 50)
-                            .background(Circle().fill(.gray))
-                            .foregroundColor(.white)
+                            ImagePickerButton(
+                                currentImage: $viewModel.profileImage,
+                                showsCurrentImage: false,
+                                symbolSize: 20.0,
+                                symbolName: "photo.on.rectangle.angled"
+                            )
+                            .frame(width: 44.0, height: 44.0)
+                        }
+                        Spacer()
                     }
-                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
                 }
-                .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowSpacing(0.0)
                 .listRowInsets(.all, DesignConstants.Spacing.step2x)
+                .listSectionMargins(.top, 0.0)
+                .listSectionSeparator(.hidden)
 
                 Section {
                     HStack {
-                        TextField("Somebody", text: $displayName)
+                        TextField("Somebody", text: $viewModel.displayName)
 
-                        Button {
-                        } label: {
-                            Image(systemName: "shuffle")
-                        }
-                        .buttonStyle(.plain)
+//                        Button {
+//                        } label: {
+//                            Image(systemName: "shuffle")
+//                        }
+//                        .buttonStyle(.plain)
                     }
                 }
 
                 Section {
-                    Toggle("Use for new convos", isOn: $useForNewConvos)
+                    Toggle(isOn: $viewModel.useDisplayNameForNewConvos) {
+                        Text("Quickname")
+                            .foregroundStyle(.colorTextPrimary)
+                    }
+                } footer: {
+                    Text("Use this name quickly in new convos")
+                        .foregroundStyle(.colorTextSecondary)
                 }
 
-                Section {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Randomizer")
-                            Text("american • gender neutral")
-                        }
-                        Spacer()
-                        VStack {
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                            Spacer()
-                        }
-                    }
-                }
+//                Section {
+//                    Toggle("Use for new convos", isOn: $useForNewConvos)
+//                }
+//
+//                Section {
+//                    HStack {
+//                        VStack(alignment: .leading) {
+//                            Text("Randomizer")
+//                            Text("american • gender neutral")
+//                        }
+//                        Spacer()
+//                        VStack {
+//                            Spacer()
+//                            Image(systemName: "chevron.right")
+//                            Spacer()
+//                        }
+//                    }
+//                }
             }
             .contentMargins(.top, 0.0)
             .listSectionMargins(.all, 0.0)
             .listRowInsets(.all, 0.0)
             .listSectionSpacing(DesignConstants.Spacing.step6x)
-            .background(backgroundColor)
-            .scrollContentBackground(.hidden)
-            .scrollClipDisabled()
-            .background(backgroundColor)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(role: .cancel) {
+                        dismiss()
                     }
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(role: .confirm) {
+                        viewModel.onProfileSettingsDismissed()
                     }
+                    .tint(.colorBackgroundInverted)
                 }
             }
         }
@@ -89,5 +101,5 @@ struct ProfileView: View {
 }
 
 #Preview {
-    ProfileView()
+    ProfileView(viewModel: .mock)
 }

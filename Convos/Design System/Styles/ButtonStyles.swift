@@ -56,6 +56,26 @@ struct RoundedButtonStyle: ButtonStyle {
     }
 }
 
+struct RoundedDestructiveButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled: Bool
+
+    let fullWidth: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(maxWidth: fullWidth ? .infinity : nil)
+            .font(.subheadline)
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .padding(.vertical, DesignConstants.Spacing.step3x)
+            .padding(.horizontal, DesignConstants.Spacing.step4x)
+            .opacity(configuration.isPressed ? 0.6 : 1.0)
+            .background(.colorCaution.opacity(0.08))
+            .clipShape(Capsule())
+            .foregroundColor(isEnabled ? .colorCaution : .colorCaution.opacity(0.75))
+    }
+}
+
 struct TextButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled: Bool
 

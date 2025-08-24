@@ -1,19 +1,25 @@
 import ConvosCore
 import SwiftUI
 
-struct ConversationInfoButton: View {
+struct ConversationInfoButton<InfoView: View>: View {
     let conversation: Conversation
     let placeholderName: String
     let untitledConversationPlaceholder: String
     @Binding var conversationName: String
     @Binding var conversationImage: UIImage?
+    @Binding var presentingConversationSettings: Bool
     @FocusState.Binding var focusState: MessagesViewInputFocus?
     let viewModelFocus: MessagesViewInputFocus?
+    let showsExplodeNowButton: Bool
     let onConversationInfoTapped: () -> Void
     let onConversationNameEndedEditing: () -> Void
     let onConversationSettings: () -> Void
+    let onExplodeNow: () -> Void
+    @ViewBuilder let infoView: () -> InfoView
 
     @State private var progress: CGFloat = 0.0
+    @State private var showingExplodeConfirmation: Bool = false
+    @Namespace private var namespace: Namespace.ID
 
     var body: some View {
         PrimarySecondaryContainerView(
@@ -37,14 +43,50 @@ struct ConversationInfoButton: View {
                 action: onConversationInfoTapped
             )
         } secondaryContent: {
-            QuickEditView(
-                placeholderText: conversationName.isEmpty ? placeholderName : conversationName,
-                text: $conversationName,
-                image: $conversationImage,
-                focusState: $focusState,
-                focused: .conversationName,
-                onSubmit: onConversationNameEndedEditing,
-                onSettings: onConversationSettings)
+            VStack(spacing: DesignConstants.Spacing.step4x) {
+                QuickEditView(
+                    placeholderText: conversationName.isEmpty ? placeholderName : conversationName,
+                    text: $conversationName,
+                    image: $conversationImage,
+                    focusState: $focusState,
+                    focused: .conversationName,
+                    onSubmit: onConversationNameEndedEditing,
+                    onSettings: onConversationSettings)
+
+                if showsExplodeNowButton {
+                    Button {
+                        showingExplodeConfirmation = true
+                    } label: {
+                        Text("Explode now")
+                    }
+                    .buttonStyle(RoundedDestructiveButtonStyle(fullWidth: true))
+                    .confirmationDialog(
+                        "",
+                        isPresented: $showingExplodeConfirmation
+                    ) {
+                        Button("Explode", role: .destructive) {
+                            onExplodeNow()
+                        }
+
+                        Button("Cancel") {
+                            showingExplodeConfirmation = false
+                        }
+                    }
+                }
+            }
+            .matchedTransitionSource(
+                id: "convo-info-transition-source",
+                in: namespace
+            )
+            .sheet(isPresented: $presentingConversationSettings) {
+                infoView()
+                    .navigationTransition(
+                        .zoom(
+                            sourceID: "convo-info-transition-source",
+                            in: namespace
+                        )
+                    )
+            }
         }
         .onChange(of: viewModelFocus) { _, newValue in
             withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
@@ -58,6 +100,7 @@ struct ConversationInfoButton: View {
     @Previewable @State var conversationName: String = ""
     @Previewable @State var conversationImage: UIImage?
     @Previewable @State var viewModelFocus: MessagesViewInputFocus?
+    @Previewable @State var presentingConversationSettings: Bool = false
     @Previewable @FocusState var focusState: MessagesViewInputFocus?
 
     let conversation: Conversation = .mock()
@@ -69,14 +112,20 @@ struct ConversationInfoButton: View {
         untitledConversationPlaceholder: "Untitled",
         conversationName: $conversationName,
         conversationImage: $conversationImage,
+        presentingConversationSettings: $presentingConversationSettings,
         focusState: $focusState,
         viewModelFocus: viewModelFocus,
+        showsExplodeNowButton: true,
         onConversationInfoTapped: {
             focusState = .conversationName
         },
         onConversationNameEndedEditing: {
             focusState = nil
         },
-        onConversationSettings: {}
+        onConversationSettings: {},
+        onExplodeNow: {},
+        infoView: {
+            EmptyView()
+        }
     )
 }

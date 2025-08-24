@@ -47,6 +47,8 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
                 return .estimated(CGSize(width: 60, height: 36))
             case .messageGroup:
                 return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 18))
+            case .conversationInfo:
+                return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 300.0))
             }
         case .footer, .header:
             return .auto
@@ -75,6 +77,8 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
                 return .fullWidth
             case .typingIndicator:
                 return .leading
+            case .conversationInfo:
+                return .center
             }
         case .footer:
             return .trailing

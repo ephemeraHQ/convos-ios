@@ -16,6 +16,8 @@ final class MessagesCollectionViewDataSource: NSObject {
                                                                                                    oldSections: [])
 
     private func registerCells(in collectionView: UICollectionView) {
+        collectionView.register(ConversationInfoCell.self,
+                                forCellWithReuseIdentifier: ConversationInfoCell.reuseIdentifier)
         collectionView.register(TextMessageCollectionCell.self,
                                 forCellWithReuseIdentifier: TextMessageCollectionCell.reuseIdentifier)
         collectionView.register(ImageCollectionCell.self,

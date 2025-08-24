@@ -8,7 +8,6 @@ struct ConversationInfoPresenter<Content: View>: View {
 
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
     @Environment(\.safeAreaInsets) private var safeAreaInsets: EdgeInsets
-    @Namespace private var namespace: Namespace.ID
 
     var body: some View {
         ZStack {
@@ -23,24 +22,16 @@ struct ConversationInfoPresenter<Content: View>: View {
                             untitledConversationPlaceholder: viewModel.untitledConversationPlaceholder,
                             conversationName: $viewModel.conversationName,
                             conversationImage: $viewModel.conversationImage,
+                            presentingConversationSettings: $viewModel.presentingConversationSettings,
                             focusState: $focusState,
                             viewModelFocus: viewModel.focus,
+                            showsExplodeNowButton: viewModel.showsExplodeNowButton,
                             onConversationInfoTapped: viewModel.onConversationInfoTap,
                             onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
-                            onConversationSettings: viewModel.onConversationSettings
-                        )
-                        .matchedTransitionSource(
-                            id: "convo-info-transition-source",
-                            in: namespace
-                        )
-                        .sheet(isPresented: $viewModel.presentingConversationSettings) {
+                            onConversationSettings: viewModel.onConversationSettings,
+                            onExplodeNow: viewModel.explodeConvo
+                        ) {
                             ConversationInfoView(viewModel: viewModel)
-                                .navigationTransition(
-                                    .zoom(
-                                        sourceID: "convo-info-transition-source",
-                                        in: namespace
-                                    )
-                                )
                         }
                         .padding(.top, safeAreaInsets.top)
                         .padding(.leading, horizontalSizeClass != .compact ? sidebarColumnWidth : 0.0)

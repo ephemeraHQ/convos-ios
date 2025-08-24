@@ -5,10 +5,10 @@ struct SoonLabel: View {
         Text("Soon")
             .font(.system(size: 14.0))
             .foregroundStyle(.colorTextSecondary)
-            .padding(.vertical, 2.0)
-            .padding(.horizontal, 6.0)
+            .padding(.vertical, DesignConstants.Spacing.stepX)
+            .padding(.horizontal, DesignConstants.Spacing.step2x)
             .background(
-                RoundedRectangle(cornerRadius: 4.0)
+                Capsule()
                     .fill(.colorFillMinimal)
             )
     }
@@ -45,7 +45,6 @@ struct ExplodeInfoView: View {
                     }
                 }
                 .convosButtonStyle(.text)
-                .disabled(true)
             }
             .padding(.top, DesignConstants.Spacing.step4x)
         }

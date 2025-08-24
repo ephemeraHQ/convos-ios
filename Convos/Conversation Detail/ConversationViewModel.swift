@@ -26,6 +26,7 @@ class ConversationViewModel {
     var conversation: Conversation {
         didSet {
             conversationName = conversation.name ?? ""
+            conversationDescription = conversation.description ?? ""
         }
     }
     var messages: [AnyMessage] = []
@@ -39,6 +40,7 @@ class ConversationViewModel {
     var conversationNamePlaceholder: String = "Name"
     var conversationDescriptionPlaceholder: String = "Description"
     var joinEnabled: Bool = true
+    var notificationsEnabled: Bool = true
     var displayName: String = ""
     var conversationName: String = ""
     var conversationDescription: String = ""
@@ -51,13 +53,19 @@ class ConversationViewModel {
     var canRemoveMembers: Bool {
         conversation.creator.isCurrentUser
     }
+    var showsExplodeNowButton: Bool {
+        conversation.members.count > 1 && conversation.creator.isCurrentUser
+    }
     var sendButtonEnabled: Bool = false
     var profileImage: UIImage?
     /// we manage focus in the view model along with @FocusState in the view
     /// since programatically changing @FocusState doesn't always propagate to child views
     var focus: MessagesViewInputFocus?
     var presentingConversationSettings: Bool = false
+    var presentingProfileSettings: Bool = false
     var presentingProfileForMember: ConversationMember?
+
+    var useDisplayNameForNewConvos: Bool = false
 
     // MARK: - Init
 
@@ -91,6 +99,7 @@ class ConversationViewModel {
         fetchLatest()
         self.displayName = profile.name ?? ""
         self.conversationName = conversation.name ?? ""
+        self.conversationDescription = conversation.description ?? ""
         observe()
 
         KeyboardListener.shared.add(delegate: self)
@@ -198,6 +207,20 @@ class ConversationViewModel {
                 }
             }
         }
+
+        if conversationDescription != (conversation.description ?? "") {
+            Task { [weak self] in
+                guard let self else { return }
+                do {
+                    try await metadataWriter.updateGroupDescription(
+                        groupId: conversation.id,
+                        description: conversationDescription
+                    )
+                } catch {
+                    Logger.error("Failed updating group description: \(error)")
+                }
+            }
+        }
     }
 
     func onConversationSettings() {
@@ -212,6 +235,11 @@ class ConversationViewModel {
 
     func onProfilePhotoTap() {
         focus = .displayName
+    }
+
+    func onProfileSettingsDismissed() {
+        onDisplayNameEndedEditing(nextFocus: nil)
+        presentingProfileSettings = false
     }
 
     func onSendMessage() {
@@ -265,6 +293,7 @@ class ConversationViewModel {
     }
 
     func onProfileSettings() {
+        presentingProfileSettings = true
     }
 
     func onAppear() {

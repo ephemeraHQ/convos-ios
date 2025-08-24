@@ -120,7 +120,7 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
         }
         .compositingGroup()
         .clipShape(.rect(cornerRadius: cornerRadius))
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
+        .glassEffect(.regular.tint(.white).interactive(), in: .rect(cornerRadius: cornerRadius))
         .scaleEffect(
             x: 1 + (blurProgress * 0.15),
             y: 1 - (blurProgress * 0.05)

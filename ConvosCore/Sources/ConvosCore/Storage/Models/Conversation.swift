@@ -42,6 +42,6 @@ public extension Conversation {
 
     var membersCountString: String {
         let totalCount = members.count
-        return "\(totalCount) \(totalCount == 1 ? "person" : "people")"
+        return "\(totalCount) \(totalCount == 1 ? "member" : "members")"
     }
 }
