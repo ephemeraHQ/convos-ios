@@ -441,12 +441,54 @@ public actor ConversationStateMachine {
     }
 
     private func handleDelete() async throws {
+        // For invites, we need the external conversation ID if available,
+        // capture before changing state
+        let externalConversationId: String? = switch _state {
+        case .ready(let result):
+            result.externalConversationId
+        default:
+            nil
+        }
+
         emitStateChange(.deleting)
 
         // Cancel any ongoing tasks
         streamConversationsTask?.cancel()
 
-        // TODO: Clean up conversation data if needed
+        // Clean up conversation data from database
+        // We always use draftConversationId for the local database records
+        let conversationId = draftConversationId
+
+        try await databaseWriter.write { db in
+            // Delete messages first (due to foreign key constraints)
+            try DBMessage
+                .filter(DBMessage.Columns.conversationId == conversationId)
+                .deleteAll(db)
+
+            // Delete conversation members
+            try DBConversationMember
+                .filter(DBConversationMember.Columns.conversationId == conversationId)
+                .deleteAll(db)
+
+            // Delete conversation local state
+            try ConversationLocalState
+                .filter(Column("conversationId") == conversationId)
+                .deleteAll(db)
+
+            // Delete invites (using external conversation ID if available)
+            if let externalConversationId = externalConversationId {
+                try DBInvite
+                    .filter(DBInvite.Columns.conversationId == externalConversationId)
+                    .deleteAll(db)
+            }
+
+            // Finally delete the conversation itself
+            try DBConversation
+                .filter(DBConversation.Columns.id == conversationId)
+                .deleteAll(db)
+
+            Logger.info("Cleaned up conversation data for id: \(conversationId), externalId: \(externalConversationId ?? "none")")
+        }
 
         emitStateChange(.uninitialized)
     }

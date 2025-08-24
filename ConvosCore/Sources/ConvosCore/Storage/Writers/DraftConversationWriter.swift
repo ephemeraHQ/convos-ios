@@ -10,6 +10,7 @@ public protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
 
     func createConversation() async throws
     func requestToJoin(inviteCode: String) async throws
+    func delete() async
 }
 
 class DraftConversationWriter: DraftConversationWriterProtocol {

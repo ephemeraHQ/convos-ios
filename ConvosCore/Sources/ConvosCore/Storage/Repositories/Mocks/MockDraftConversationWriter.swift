@@ -32,4 +32,7 @@ class MockDraftConversationWriter: DraftConversationWriterProtocol {
 
     func send(text: String) async throws {
     }
+
+    func delete() async {
+    }
 }

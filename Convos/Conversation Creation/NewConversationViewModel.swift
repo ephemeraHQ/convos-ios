@@ -85,15 +85,15 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
     }
 
     func deleteConversation() {
-        Logger.info("🗑️ Deleting conversation in NewConversationViewModel")
+        Logger.info("Deleting conversation")
         newConversationTask?.cancel()
         joinConversationTask?.cancel()
-        draftConversationComposer = nil
         conversationViewModel = nil
         Task { [weak self] in
             guard let self else { return }
             guard let messagingService else { return }
             try session.deleteInbox(for: messagingService)
+            await draftConversationComposer?.draftConversationWriter.delete()
             self.messagingService = nil
         }
     }
