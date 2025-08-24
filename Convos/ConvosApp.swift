@@ -18,11 +18,6 @@ struct ConvosApp: App {
         }
 
         Logger.info("🚀 App starting with environment: \(environment)")
-        do {
-            try convos.prepare()
-        } catch {
-            Logger.error("Convos SDK failed preparing: \(error.localizedDescription)")
-        }
     }
 
     var body: some Scene {

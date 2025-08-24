@@ -36,8 +36,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "7AC5993C2E5592FA00D65D07"
-               BuildableName = "KeychainIdentityStoreExampleTests.xctest"
-               BlueprintName = "KeychainIdentityStoreExampleTests"
+               BuildableName = "KeychainIdentityStoreTests.xctest"
+               BlueprintName = "KeychainIdentityStoreTests"
                ReferencedContainer = "container:Convos.xcodeproj">
             </BuildableReference>
          </TestableReference>

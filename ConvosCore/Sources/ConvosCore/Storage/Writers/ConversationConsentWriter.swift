@@ -19,33 +19,17 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
         }
     }
 
-    private let client: AnyClientProvider?
-    private let clientPublisher: AnyClientProviderPublisher
-    private let clientValue: PublisherValue<AnyClientProvider>
+    private let inboxStateManager: InboxStateManager
     private let databaseWriter: any DatabaseWriter
 
-    init(client: AnyClientProvider?,
-         clientPublisher: AnyClientProviderPublisher,
+    init(inboxStateManager: InboxStateManager,
          databaseWriter: any DatabaseWriter) {
-        self.client = client
-        self.clientPublisher = clientPublisher
-        self.clientValue = .init(initial: client, upstream: clientPublisher)
+        self.inboxStateManager = inboxStateManager
         self.databaseWriter = databaseWriter
     }
 
-    deinit {
-        cleanup()
-    }
-
-    func cleanup() {
-        clientValue.dispose()
-    }
-
     func join(conversation: Conversation) async throws {
-        guard let client = clientValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
-
+        let client = try await self.inboxStateManager.waitForInboxReadyResult().client
         try await client.update(consent: .allowed, for: conversation.id)
         try await databaseWriter.write { db in
             if let localConversation = try DBConversation
@@ -61,10 +45,7 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
     }
 
     func delete(conversation: Conversation) async throws {
-        guard let client = clientValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
-
+        let client = try await self.inboxStateManager.waitForInboxReadyResult().client
         try await client.update(consent: .denied, for: conversation.id)
         try await databaseWriter.write { db in
             if let localConversation = try DBConversation
@@ -80,10 +61,7 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
     }
 
     func deleteAll() async throws {
-        guard let client = clientValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
-
+        let client = try await self.inboxStateManager.waitForInboxReadyResult().client
         let conversationsToDeny: [DBConversation] = try await databaseWriter.read { db in
             try DBConversation
                 .filter(DBConversation.Columns.inboxId == client.inboxId)

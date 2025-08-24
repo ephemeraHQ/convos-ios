@@ -125,7 +125,7 @@ struct AppSettingsView: View {
                     }
                     .confirmationDialog("", isPresented: $showingDeleteAllDataConfirmation) {
                         Button("Delete", role: .destructive) {
-                            viewModel.deleteAllAccounts()
+                            viewModel.deleteAllInboxes()
                             dismiss()
                         }
 

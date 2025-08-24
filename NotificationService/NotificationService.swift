@@ -22,7 +22,7 @@ class NotificationService: UNNotificationServiceExtension {
 
         // Handle the push notification asynchronously and wait for completion
         pendingTask = Task {
-            await handlePushNotificationAsync(userInfo: request.content.userInfo)
+            await handlePushNotification(userInfo: request.content.userInfo)
         }
     }
 
@@ -47,13 +47,12 @@ class NotificationService: UNNotificationServiceExtension {
         }
     }
 
-    private func handlePushNotificationAsync(userInfo: [AnyHashable: Any]) async {
+    private func handlePushNotification(userInfo: [AnyHashable: Any]) async {
         // Set initial notification content
         updateNotificationContent(userInfo: userInfo)
 
-        // Use the async version that waits for completion (this will decode the message)
         do {
-            try await pushHandler?.handlePushNotificationAsync(userInfo: userInfo)
+            try await pushHandler?.handlePushNotification(userInfo: userInfo)
         } catch {
             // Check if this is a message that should be dropped
             if let error = error as? NotificationError, error == .messageShouldBeDropped {

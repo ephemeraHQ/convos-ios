@@ -26,29 +26,19 @@ enum ConversationMetadataWriterError: Error {
 }
 
 final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
-    private let inboxReadyValue: PublisherValue<InboxReadyResult>
+    private let inboxStateManager: InboxStateManager
     private let databaseWriter: any DatabaseWriter
 
-    init(inboxReadyValue: PublisherValue<InboxReadyResult>,
+    init(inboxStateManager: InboxStateManager,
          databaseWriter: any DatabaseWriter) {
-        self.inboxReadyValue = inboxReadyValue
+        self.inboxStateManager = inboxStateManager
         self.databaseWriter = databaseWriter
-    }
-
-    deinit {
-        cleanup()
-    }
-
-    func cleanup() {
-        inboxReadyValue.dispose()
     }
 
     // MARK: - Group Metadata Updates
 
     func updateGroupName(groupId: String, name: String) async throws {
-        guard let inboxReady = inboxReadyValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -71,9 +61,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     }
 
     func updateGroupDescription(groupId: String, description: String) async throws {
-        guard let inboxReady = inboxReadyValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -96,9 +84,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     }
 
     func updateGroupImage(conversation: Conversation, image: UIImage) async throws {
-        guard let inboxReady = inboxReadyValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         let resizedImage = ImageCompression.resizeForCache(image)
 
@@ -122,9 +108,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     }
 
     func updateGroupImageUrl(groupId: String, imageURL: String) async throws {
-        guard let inboxReady = inboxReadyValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -149,9 +133,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     // MARK: - Member Management
 
     func addGroupMembers(groupId: String, memberInboxIds: [String]) async throws {
-        guard let inboxReady = inboxReadyValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -178,9 +160,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     }
 
     func removeGroupMembers(groupId: String, memberInboxIds: [String]) async throws {
-        guard let inboxReady = inboxReadyValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -205,9 +185,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     // MARK: - Admin Management
 
     func promoteToAdmin(groupId: String, memberInboxId: String) async throws {
-        guard let inboxReady = inboxReadyValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -231,9 +209,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     }
 
     func demoteFromAdmin(groupId: String, memberInboxId: String) async throws {
-        guard let inboxReady = inboxReadyValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -256,9 +232,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     }
 
     func promoteToSuperAdmin(groupId: String, memberInboxId: String) async throws {
-        guard let inboxReady = inboxReadyValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
@@ -281,9 +255,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     }
 
     func demoteFromSuperAdmin(groupId: String, memberInboxId: String) async throws {
-        guard let inboxReady = inboxReadyValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {

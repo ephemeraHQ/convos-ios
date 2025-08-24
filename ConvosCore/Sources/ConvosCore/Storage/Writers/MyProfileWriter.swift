@@ -12,30 +12,19 @@ enum MyProfileWriterError: Error {
 }
 
 class MyProfileWriter: MyProfileWriterProtocol {
-    private let inboxReadyValue: PublisherValue<InboxReadyResult>
+    private let inboxStateManager: InboxStateManager
     private let databaseWriter: any DatabaseWriter
 
     init(
-        inboxReadyValue: PublisherValue<InboxReadyResult>,
+        inboxStateManager: InboxStateManager,
         databaseWriter: any DatabaseWriter
     ) {
-        self.inboxReadyValue = inboxReadyValue
+        self.inboxStateManager = inboxStateManager
         self.databaseWriter = databaseWriter
     }
 
-    deinit {
-        cleanup()
-    }
-
-    func cleanup() {
-        inboxReadyValue.dispose()
-    }
-
     func update(displayName: String) async throws {
-        guard let inboxReady = inboxReadyValue.value else {
-            return
-        }
-
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
         let displayName: String? = displayName.isEmpty ? nil : displayName
         let inboxId = inboxReady.client.inboxId
         let profile = try await databaseWriter.write { db in
@@ -54,10 +43,7 @@ class MyProfileWriter: MyProfileWriterProtocol {
     }
 
     func update(avatar: UIImage?) async throws {
-        guard let inboxReady = inboxReadyValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
-
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
         let inboxId = inboxReady.client.inboxId
         let profile = try await databaseWriter.write { db in
             let member = Member(inboxId: inboxId)

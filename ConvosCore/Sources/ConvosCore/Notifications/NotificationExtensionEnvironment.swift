@@ -24,11 +24,9 @@ public struct NotificationExtensionEnvironment {
         let environment = try getEnvironment()
         let databaseManager = DatabaseManager(environment: environment)
         return CachedPushNotificationHandler(
-            authService: SecureEnclaveAuthService(accessGroup: environment.keychainAccessGroup),
             databaseReader: databaseManager.dbReader,
             databaseWriter: databaseManager.dbWriter,
-            environment: environment,
-            isNotificationServiceExtension: true
+            environment: environment
         )
     }
 }

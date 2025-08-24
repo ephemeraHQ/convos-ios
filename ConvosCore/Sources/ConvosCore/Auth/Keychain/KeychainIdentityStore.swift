@@ -6,38 +6,83 @@ import XMTPiOS
 
 // MARK: - Models
 
-public struct KeychainIdentity: Codable {
-    public let id: String
+protocol XMTPClientKeys {
+    var signingKey: any XMTPiOS.SigningKey { get }
+    var databaseKey: Data { get }
+}
+
+public struct KeychainIdentityKeys: Codable, XMTPClientKeys {
     public let privateKey: PrivateKey
     public let databaseKey: Data
 
-    // Custom coding keys to handle PrivateKey serialization
+    public var signingKey: any SigningKey {
+        privateKey
+    }
+
     private enum CodingKeys: String, CodingKey {
-        case id
         case privateKeyData
         case databaseKey
     }
 
-    public init(id: String, privateKey: PrivateKey, databaseKey: Data) {
-        self.id = id
+    static func generate() throws -> KeychainIdentityKeys {
+        let privateKey = try generatePrivateKey()
+        let databaseKey = try generateDatabaseKey()
+        return .init(privateKey: privateKey, databaseKey: databaseKey)
+    }
+
+    init(privateKey: PrivateKey, databaseKey: Data) {
         self.privateKey = privateKey
         self.databaseKey = databaseKey
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(String.self, forKey: .id)
         databaseKey = try container.decode(Data.self, forKey: .databaseKey)
-
         let privateKeyData = try container.decode(Data.self, forKey: .privateKeyData)
         privateKey = try PrivateKey(privateKeyData)
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
         try container.encode(databaseKey, forKey: .databaseKey)
         try container.encode(privateKey.secp256K1.bytes, forKey: .privateKeyData)
+    }
+
+    private static func generatePrivateKey() throws -> PrivateKey {
+        do {
+            return try PrivateKey.generate()
+        } catch {
+            throw KeychainIdentityStoreError.privateKeyGenerationFailed
+        }
+    }
+
+    private static func generateDatabaseKey() throws -> Data {
+        var key = Data(count: 32) // 256-bit key
+        let status: OSStatus = try key.withUnsafeMutableBytes { bytes in
+            guard let baseAddress = bytes.baseAddress else {
+                throw KeychainIdentityStoreError.keychainOperationFailed(errSecUnknownFormat, "generateDatabaseKey")
+            }
+            return SecRandomCopyBytes(kSecRandomDefault, 32, baseAddress)
+        }
+
+        guard status == errSecSuccess else {
+            throw KeychainIdentityStoreError.keychainOperationFailed(status, "generateDatabaseKey")
+        }
+
+        return key
+    }
+}
+
+protocol KeychainIdentityType {
+    var inboxId: String { get }
+    var clientKeys: any XMTPClientKeys { get }
+}
+
+public struct KeychainIdentity: Codable, KeychainIdentityType {
+    public let inboxId: String
+    public let keys: KeychainIdentityKeys
+    var clientKeys: any XMTPClientKeys {
+        keys
     }
 }
 
@@ -125,20 +170,16 @@ private struct KeychainQuery {
 
 // MARK: - Keychain Identity Store
 
-public protocol KeychainIdentityStoreProtocol {
-    func save() throws -> KeychainIdentity
-    func load(for identityId: String) throws -> KeychainIdentity?
+public protocol KeychainIdentityStoreProtocol: Actor {
+    func generateKeys() throws -> KeychainIdentityKeys
+    func save(inboxId: String, keys: KeychainIdentityKeys) throws -> KeychainIdentity
+    func identity(for inboxId: String) throws -> KeychainIdentity
     func loadAll() throws -> [KeychainIdentity]
-    func delete(for identityId: String) throws
+    func delete(inboxId: String) throws
     func deleteAll() throws
-    func save(inboxId: String, for identityId: String) throws
-    func loadInboxId(for identityId: String) throws -> String
-    func save(providerId: String, for inboxId: String) throws
-    func loadProviderId(for inboxId: String) throws -> String
-    func deleteProviderId(for inboxId: String) throws
 }
 
-public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
+public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
     // MARK: - Properties
 
     private let keychainService: String
@@ -153,34 +194,27 @@ public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
 
     // MARK: - Public Interface
 
-    public func save() throws -> KeychainIdentity {
-        let identityId = UUID().uuidString
-        let privateKey = try generatePrivateKey()
-        let databaseKey = try generateDatabaseKey()
+    public func generateKeys() throws -> KeychainIdentityKeys {
+        try KeychainIdentityKeys.generate()
+    }
 
+    public func save(inboxId: String, keys: KeychainIdentityKeys) throws -> KeychainIdentity {
         let identity = KeychainIdentity(
-            id: identityId,
-            privateKey: privateKey,
-            databaseKey: databaseKey
+            inboxId: inboxId,
+            keys: keys
         )
-
-        try saveIdentity(identity)
+        try save(identity: identity)
         return identity
     }
 
-    public func load(for identityId: String) throws -> KeychainIdentity? {
+    public func identity(for inboxId: String) throws -> KeychainIdentity {
         let query = KeychainQuery(
-            account: identityId,
+            account: inboxId,
             service: keychainService,
             accessGroup: keychainAccessGroup
         )
-
-        do {
-            let data = try loadData(with: query)
-            return try JSONDecoder().decode(KeychainIdentity.self, from: data)
-        } catch KeychainIdentityStoreError.identityNotFound {
-            return nil
-        }
+        let data = try loadData(with: query)
+        return try JSONDecoder().decode(KeychainIdentity.self, from: data)
     }
 
     public func loadAll() throws -> [KeychainIdentity] {
@@ -215,23 +249,14 @@ public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         return identities
     }
 
-    public func delete(for identityId: String) throws {
-        // Clean up provider ID mapping if it exists
-        if let inboxId = try? loadInboxId(for: identityId) {
-            try? deleteProviderId(for: inboxId)
-        }
-
-        // Delete the identity
+    public func delete(inboxId: String) throws {
         let query = KeychainQuery(
-            account: identityId,
+            account: inboxId,
             service: keychainService,
             accessGroup: keychainAccessGroup
         )
 
         try deleteData(with: query)
-
-        // Delete inbox ID mapping
-        try deleteInboxId(for: identityId)
     }
 
     public func deleteAll() throws {
@@ -247,63 +272,9 @@ public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         }
     }
 
-    public func save(inboxId: String, for identityId: String) throws {
-        let data = try encodeString(inboxId, context: "inboxId")
-        let query = KeychainQuery(
-            account: "\(identityId.lowercased()).inboxId",
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        try saveData(data, with: query)
-    }
-
-    public func loadInboxId(for identityId: String) throws -> String {
-        let query = KeychainQuery(
-            account: "\(identityId.lowercased()).inboxId",
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        let data = try loadData(with: query)
-        return try decodeString(from: data, context: "inboxId")
-    }
-
-    public func save(providerId: String, for inboxId: String) throws {
-        let data = try encodeString(providerId, context: "providerId")
-        let query = KeychainQuery(
-            account: "providerId.\(inboxId)",
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        try saveData(data, with: query)
-    }
-
-    public func loadProviderId(for inboxId: String) throws -> String {
-        let query = KeychainQuery(
-            account: "providerId.\(inboxId)",
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        let data = try loadData(with: query)
-        return try decodeString(from: data, context: "providerId")
-    }
-
-    public func deleteProviderId(for inboxId: String) throws {
-        let query = KeychainQuery(
-            account: "providerId.\(inboxId)",
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        try deleteData(with: query)
-    }
-
     // MARK: - Private Methods
 
-    private func saveIdentity(_ identity: KeychainIdentity) throws {
+    private func save(identity: KeychainIdentity) throws {
         let data = try JSONEncoder().encode(identity)
 
         // Create access control for enhanced security
@@ -317,7 +288,7 @@ public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         }
 
         let query = KeychainQuery(
-            account: identity.id,
+            account: identity.inboxId,
             service: keychainService,
             accessGroup: keychainAccessGroup,
             accessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
@@ -325,44 +296,6 @@ public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         )
 
         try saveData(data, with: query)
-    }
-
-    // MARK: - Private Key Operations
-
-    private func generatePrivateKey() throws -> PrivateKey {
-        do {
-            return try PrivateKey.generate()
-        } catch {
-            throw KeychainIdentityStoreError.privateKeyGenerationFailed
-        }
-    }
-
-    private func generateDatabaseKey() throws -> Data {
-        var key = Data(count: 32) // 256-bit key
-        let status: OSStatus = try key.withUnsafeMutableBytes { bytes in
-            guard let baseAddress = bytes.baseAddress else {
-                throw KeychainIdentityStoreError.keychainOperationFailed(errSecUnknownFormat, "generateDatabaseKey")
-            }
-            return SecRandomCopyBytes(kSecRandomDefault, 32, baseAddress)
-        }
-
-        guard status == errSecSuccess else {
-            throw KeychainIdentityStoreError.keychainOperationFailed(status, "generateDatabaseKey")
-        }
-
-        return key
-    }
-
-    // MARK: - Inbox ID Operations
-
-    private func deleteInboxId(for identityId: String) throws {
-        let query = KeychainQuery(
-            account: "\(identityId.lowercased()).inboxId",
-            service: keychainService,
-            accessGroup: keychainAccessGroup
-        )
-
-        try deleteData(with: query)
     }
 
     // MARK: - Generic Keychain Operations
@@ -411,21 +344,5 @@ public final class KeychainIdentityStore: KeychainIdentityStoreProtocol {
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeychainIdentityStoreError.keychainOperationFailed(status, "delete")
         }
-    }
-
-    // MARK: - Data Encoding/Decoding
-
-    private func encodeString(_ string: String, context: String) throws -> Data {
-        guard let data = string.data(using: .utf8) else {
-            throw KeychainIdentityStoreError.dataEncodingFailed(context)
-        }
-        return data
-    }
-
-    private func decodeString(from data: Data, context: String) throws -> String {
-        guard let string = String(data: data, encoding: .utf8) else {
-            throw KeychainIdentityStoreError.dataDecodingFailed(context)
-        }
-        return string
     }
 }
