@@ -138,6 +138,7 @@ struct JoinConversationView: View {
             .alert("This is not a convo", isPresented: .constant(showingScanFailedForInviteCode != nil)) {
                 Button("Try again") {
                     showingScanFailedForInviteCode = nil
+                    qrScannerDelegate.resetScanning()
                 }
                 .buttonStyle(.glassProminent)
             } message: {

@@ -9,19 +9,31 @@ class QRScannerDelegate: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     var cameraAuthorized: Bool = false
     var cameraSetupCompleted: Bool = false
     var onSetupCamera: (() -> Void)?
+    var isScanningEnabled: Bool = true
 
     func metadataOutput(
         _ output: AVCaptureMetadataOutput,
         didOutput metadataObjects: [AVMetadataObject],
         from connection: AVCaptureConnection
     ) {
+        // Only process if scanning is enabled
+        guard isScanningEnabled else { return }
+
         if let metadataObject = metadataObjects.first {
             guard let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject else { return }
             guard let stringValue = readableObject.stringValue else { return }
 
             AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
             scannedCode = stringValue
+
+            // Disable further scanning after detecting a code
+            isScanningEnabled = false
         }
+    }
+
+    func resetScanning() {
+        isScanningEnabled = true
+        scannedCode = nil
     }
 }
 
@@ -38,10 +50,23 @@ struct QRScannerView: UIViewRepresentable {
         var parentView: UIView?
 
         deinit {
+            // Failsafe cleanup in case dismantleUIView wasn't called
+            if let captureSession = captureSession, captureSession.isRunning {
+                captureSession.stopRunning()
+
+                // Clear metadata output delegates
+                captureSession.outputs.forEach { output in
+                    if let metadataOutput = output as? AVCaptureMetadataOutput {
+                        metadataOutput.setMetadataObjectsDelegate(nil, queue: nil)
+                    }
+                }
+            }
+
             if let observer = orientationObserver {
                 NotificationCenter.default.removeObserver(observer)
             }
-            captureSession?.stopRunning()
+
+            previewLayer?.removeFromSuperlayer()
         }
     }
 
@@ -235,6 +260,35 @@ struct QRScannerView: UIViewRepresentable {
     }
 
     static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
-        // All cleanup is handled in Coordinator's deinit
+        // Stop the capture session immediately
+        if let captureSession = coordinator.captureSession {
+            if captureSession.isRunning {
+                captureSession.stopRunning()
+            }
+
+            // Remove all inputs and outputs
+            captureSession.inputs.forEach { captureSession.removeInput($0) }
+            captureSession.outputs.forEach { output in
+                // Clear the delegate before removing the output
+                if let metadataOutput = output as? AVCaptureMetadataOutput {
+                    metadataOutput.setMetadataObjectsDelegate(nil, queue: nil)
+                }
+                captureSession.removeOutput(output)
+            }
+        }
+
+        // Remove preview layer
+        coordinator.previewLayer?.removeFromSuperlayer()
+        coordinator.previewLayer = nil
+
+        // Clear all references
+        coordinator.captureSession = nil
+        coordinator.captureDevice = nil
+
+        // Remove orientation observer
+        if let observer = coordinator.orientationObserver {
+            NotificationCenter.default.removeObserver(observer)
+            coordinator.orientationObserver = nil
+        }
     }
 }
