@@ -9,11 +9,14 @@ struct ConversationInfoButton: View {
     @Binding var conversationImage: UIImage?
     @FocusState.Binding var focusState: MessagesViewInputFocus?
     let viewModelFocus: MessagesViewInputFocus?
+    let showsExplodeNowButton: Bool
     let onConversationInfoTapped: () -> Void
     let onConversationNameEndedEditing: () -> Void
     let onConversationSettings: () -> Void
+    let onExplodeNow: () -> Void
 
     @State private var progress: CGFloat = 0.0
+    @State private var showingExplodeConfirmation: Bool = false
 
     var body: some View {
         PrimarySecondaryContainerView(
@@ -37,14 +40,37 @@ struct ConversationInfoButton: View {
                 action: onConversationInfoTapped
             )
         } secondaryContent: {
-            QuickEditView(
-                placeholderText: conversationName.isEmpty ? placeholderName : conversationName,
-                text: $conversationName,
-                image: $conversationImage,
-                focusState: $focusState,
-                focused: .conversationName,
-                onSubmit: onConversationNameEndedEditing,
-                onSettings: onConversationSettings)
+            VStack(spacing: DesignConstants.Spacing.step4x) {
+                QuickEditView(
+                    placeholderText: conversationName.isEmpty ? placeholderName : conversationName,
+                    text: $conversationName,
+                    image: $conversationImage,
+                    focusState: $focusState,
+                    focused: .conversationName,
+                    onSubmit: onConversationNameEndedEditing,
+                    onSettings: onConversationSettings)
+
+                if showsExplodeNowButton {
+                    Button {
+                        showingExplodeConfirmation = true
+                    } label: {
+                        Text("Explode now")
+                    }
+                    .buttonStyle(RoundedDestructiveButtonStyle(fullWidth: true))
+                    .confirmationDialog(
+                        "",
+                        isPresented: $showingExplodeConfirmation
+                    ) {
+                        Button("Explode", role: .destructive) {
+                            onExplodeNow()
+                        }
+
+                        Button("Cancel") {
+                            showingExplodeConfirmation = false
+                        }
+                    }
+                }
+            }
         }
         .onChange(of: viewModelFocus) { _, newValue in
             withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
@@ -71,12 +97,14 @@ struct ConversationInfoButton: View {
         conversationImage: $conversationImage,
         focusState: $focusState,
         viewModelFocus: viewModelFocus,
+        showsExplodeNowButton: true,
         onConversationInfoTapped: {
             focusState = .conversationName
         },
         onConversationNameEndedEditing: {
             focusState = nil
         },
-        onConversationSettings: {}
+        onConversationSettings: {},
+        onExplodeNow: {}
     )
 }

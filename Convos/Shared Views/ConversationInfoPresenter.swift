@@ -25,9 +25,11 @@ struct ConversationInfoPresenter<Content: View>: View {
                             conversationImage: $viewModel.conversationImage,
                             focusState: $focusState,
                             viewModelFocus: viewModel.focus,
+                            showsExplodeNowButton: viewModel.showsExplodeNowButton,
                             onConversationInfoTapped: viewModel.onConversationInfoTap,
                             onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
-                            onConversationSettings: viewModel.onConversationSettings
+                            onConversationSettings: viewModel.onConversationSettings,
+                            onExplodeNow: viewModel.explodeConvo
                         )
                         .matchedTransitionSource(
                             id: "convo-info-transition-source",

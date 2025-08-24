@@ -51,6 +51,9 @@ class ConversationViewModel {
     var canRemoveMembers: Bool {
         conversation.creator.isCurrentUser
     }
+    var showsExplodeNowButton: Bool {
+        conversation.members.count > 1 && conversation.creator.isCurrentUser
+    }
     var sendButtonEnabled: Bool = false
     var profileImage: UIImage?
     /// we manage focus in the view model along with @FocusState in the view
