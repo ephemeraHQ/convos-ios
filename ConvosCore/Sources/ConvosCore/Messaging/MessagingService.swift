@@ -18,17 +18,19 @@ final class MessagingService: MessagingServiceProtocol {
     internal let databaseWriter: any DatabaseWriter
     private var cancellables: Set<AnyCancellable> = []
 
-    static func messagingService(
+    static func authorizedMessagingService(
         for inboxId: String,
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        registersForPushNotifications: Bool = true
     ) -> MessagingService {
         let authorizationOperation = AuthorizeInboxOperation.authorize(
             inboxId: inboxId,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
-            environment: environment
+            environment: environment,
+            registersForPushNotifications: registersForPushNotifications
         )
         return .init(
             inboxId: inboxId,
@@ -38,7 +40,7 @@ final class MessagingService: MessagingServiceProtocol {
         )
     }
 
-    static func messagingService(
+    static func registeredMessagingService(
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
         environment: AppEnvironment
@@ -46,7 +48,8 @@ final class MessagingService: MessagingServiceProtocol {
         let authorizationOperation = AuthorizeInboxOperation.register(
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
-            environment: environment
+            environment: environment,
+            registersForPushNotifications: true
         )
         return .init(
             inboxId: nil,

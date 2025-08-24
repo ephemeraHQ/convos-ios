@@ -65,11 +65,12 @@ public class CachedPushNotificationHandler {
             return existing
         }
 
-        let messagingService = MessagingService.messagingService(
+        let messagingService = MessagingService.authorizedMessagingService(
             for: inboxId,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
-            environment: environment
+            environment: environment,
+            registersForPushNotifications: false
         )
         messagingServices[inboxId] = messagingService
         return messagingService

@@ -28,7 +28,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
-        registersForPushNotifications: Bool = false
+        registersForPushNotifications: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
             databaseReader: databaseReader,
@@ -44,7 +44,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
-        registersForPushNotifications: Bool = false
+        registersForPushNotifications: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
             databaseReader: databaseReader,
@@ -60,7 +60,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
-        registersForPushNotifications: Bool = false
+        registersForPushNotifications: Bool
     ) {
         let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
 

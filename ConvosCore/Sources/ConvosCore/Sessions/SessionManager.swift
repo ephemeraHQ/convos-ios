@@ -72,7 +72,7 @@ class SessionManager: SessionManagerProtocol {
     }
 
     private func startMessagingService(for inboxId: String) -> AnyMessagingService {
-        let messagingService = MessagingService.messagingService(
+        let messagingService = MessagingService.authorizedMessagingService(
             for: inboxId,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
@@ -180,7 +180,7 @@ class SessionManager: SessionManagerProtocol {
     // MARK: Public
 
     func addInbox() throws -> AnyMessagingService {
-        let messagingService = MessagingService.messagingService(
+        let messagingService = MessagingService.registeredMessagingService(
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment
