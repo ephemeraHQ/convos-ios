@@ -75,13 +75,14 @@ struct AvatarView: View {
 
 struct ProfileAvatarView: View {
     let profile: Profile
+    let profileImage: UIImage?
 
     var body: some View {
         AvatarView(
             imageURL: profile.avatarURL,
             fallbackName: profile.displayName,
             cacheableObject: profile,
-            placeholderImage: nil
+            placeholderImage: profileImage
         )
     }
 }
@@ -108,7 +109,7 @@ struct ConversationAvatarView: View {
 #Preview {
     @Previewable @State var profileImage: UIImage?
     let profile: Profile = .mock(name: "John Doe")
-    ProfileAvatarView(profile: profile)
+    ProfileAvatarView(profile: profile, profileImage: nil)
 }
 
 #Preview {

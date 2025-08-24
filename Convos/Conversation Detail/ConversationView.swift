@@ -68,6 +68,9 @@ struct ConversationView: View {
             onDeleteConversation: onDeleteConversation,
             confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
         )
+        .sheet(isPresented: $viewModel.presentingProfileSettings) {
+            ProfileView(viewModel: viewModel)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 switch messagesTopBarTrailingItem {

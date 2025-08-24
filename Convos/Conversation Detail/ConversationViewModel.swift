@@ -61,7 +61,10 @@ class ConversationViewModel {
     /// since programatically changing @FocusState doesn't always propagate to child views
     var focus: MessagesViewInputFocus?
     var presentingConversationSettings: Bool = false
+    var presentingProfileSettings: Bool = false
     var presentingProfileForMember: ConversationMember?
+
+    var useDisplayNameForNewConvos: Bool = false
 
     // MARK: - Init
 
@@ -233,6 +236,11 @@ class ConversationViewModel {
         focus = .displayName
     }
 
+    func onProfileSettingsDismissed() {
+        onDisplayNameEndedEditing(nextFocus: nil)
+        presentingProfileSettings = false
+    }
+
     func onSendMessage() {
         let prevMessageText = messageText
         messageText = ""
@@ -284,6 +292,7 @@ class ConversationViewModel {
     }
 
     func onProfileSettings() {
+        presentingProfileSettings = true
     }
 
     func onAppear() {

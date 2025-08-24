@@ -46,7 +46,7 @@ struct AppSettingsView: View {
                                 .foregroundStyle(.colorTextPrimary)
 
                             Spacer()
-                            ProfileAvatarView(profile: .empty())
+                            ProfileAvatarView(profile: .empty(), profileImage: nil)
                                 .frame(width: 16.0, height: 16.0)
                             Text("Somebody")
                                 .foregroundStyle(.colorTextPrimary)
