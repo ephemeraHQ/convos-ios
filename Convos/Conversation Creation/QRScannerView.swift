@@ -60,6 +60,15 @@ struct QRScannerView: UIViewRepresentable {
             self.setupCamera()
         }
 
+        checkCameraAuthorization { authorized in
+            DispatchQueue.main.async {
+                self.delegate.cameraAuthorized = authorized
+                if authorized {
+                    self.setupCamera()
+                }
+            }
+        }
+
         return view
     }
 
