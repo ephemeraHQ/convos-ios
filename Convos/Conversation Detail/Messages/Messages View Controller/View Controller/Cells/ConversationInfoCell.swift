@@ -59,7 +59,7 @@ struct ConversationInfoPreview: View {
                             .foregroundStyle(.colorTextPrimary)
                     }
                 }
-                .padding(.horizontal, DesignConstants.Spacing.step6x)
+                .padding(.horizontal, DesignConstants.Spacing.step2x)
 
                 Text(conversation.conversation.membersCountString)
                     .font(.caption)
