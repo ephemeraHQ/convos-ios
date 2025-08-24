@@ -74,7 +74,6 @@ struct RoundedDestructiveButtonStyle: ButtonStyle {
             .clipShape(Capsule())
             .foregroundColor(isEnabled ? .colorCaution : .colorCaution.opacity(0.75))
     }
-
 }
 
 struct TextButtonStyle: ButtonStyle {

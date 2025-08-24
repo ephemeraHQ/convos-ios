@@ -1,12 +1,13 @@
 import ConvosCore
 import SwiftUI
 
-struct ConversationInfoButton: View {
+struct ConversationInfoButton<InfoView: View>: View {
     let conversation: Conversation
     let placeholderName: String
     let untitledConversationPlaceholder: String
     @Binding var conversationName: String
     @Binding var conversationImage: UIImage?
+    @Binding var presentingConversationSettings: Bool
     @FocusState.Binding var focusState: MessagesViewInputFocus?
     let viewModelFocus: MessagesViewInputFocus?
     let showsExplodeNowButton: Bool
@@ -14,9 +15,11 @@ struct ConversationInfoButton: View {
     let onConversationNameEndedEditing: () -> Void
     let onConversationSettings: () -> Void
     let onExplodeNow: () -> Void
+    @ViewBuilder let infoView: () -> InfoView
 
     @State private var progress: CGFloat = 0.0
     @State private var showingExplodeConfirmation: Bool = false
+    @Namespace private var namespace: Namespace.ID
 
     var body: some View {
         PrimarySecondaryContainerView(
@@ -71,6 +74,19 @@ struct ConversationInfoButton: View {
                     }
                 }
             }
+            .matchedTransitionSource(
+                id: "convo-info-transition-source",
+                in: namespace
+            )
+            .sheet(isPresented: $presentingConversationSettings) {
+                infoView()
+                    .navigationTransition(
+                        .zoom(
+                            sourceID: "convo-info-transition-source",
+                            in: namespace
+                        )
+                    )
+            }
         }
         .onChange(of: viewModelFocus) { _, newValue in
             withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
@@ -84,6 +100,7 @@ struct ConversationInfoButton: View {
     @Previewable @State var conversationName: String = ""
     @Previewable @State var conversationImage: UIImage?
     @Previewable @State var viewModelFocus: MessagesViewInputFocus?
+    @Previewable @State var presentingConversationSettings: Bool = false
     @Previewable @FocusState var focusState: MessagesViewInputFocus?
 
     let conversation: Conversation = .mock()
@@ -95,6 +112,7 @@ struct ConversationInfoButton: View {
         untitledConversationPlaceholder: "Untitled",
         conversationName: $conversationName,
         conversationImage: $conversationImage,
+        presentingConversationSettings: $presentingConversationSettings,
         focusState: $focusState,
         viewModelFocus: viewModelFocus,
         showsExplodeNowButton: true,
@@ -105,6 +123,9 @@ struct ConversationInfoButton: View {
             focusState = nil
         },
         onConversationSettings: {},
-        onExplodeNow: {}
+        onExplodeNow: {},
+        infoView: {
+            EmptyView()
+        }
     )
 }
