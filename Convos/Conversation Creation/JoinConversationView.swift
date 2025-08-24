@@ -1,9 +1,16 @@
+import AVFoundation
 import SwiftUI
+
+// swiftlint:disable force_unwrapping
 
 struct JoinConversationView: View {
     @State private var qrScannerDelegate: QRScannerDelegate = QRScannerDelegate()
-    @Environment(\.dismiss) var dismiss: DismissAction
+    @State private var qrScannerCoordinator: QRScannerView.Coordinator?
+    @State private var showingExplanation: Bool = false
     let onScannedCode: (String) -> Void
+
+    @Environment(\.dismiss) private var dismiss: DismissAction
+    @Environment(\.openURL) private var openURL: OpenURLAction
 
     init(onScannedCode: @escaping (String) -> Void) {
         self.onScannedCode = onScannedCode
@@ -12,7 +19,7 @@ struct JoinConversationView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                QRScannerView(delegate: qrScannerDelegate)
+                QRScannerView(delegate: qrScannerDelegate, coordinator: $qrScannerCoordinator)
                     .ignoresSafeArea()
 
                 let cutoutSize = 240.0
@@ -23,41 +30,98 @@ struct JoinConversationView: View {
                     VStack(spacing: DesignConstants.Spacing.stepX) {
                         Spacer()
 
-                        RoundedRectangle(cornerRadius: 20)
-                            .frame(width: cutoutSize, height: cutoutSize)
-                            .blendMode(.destinationOut)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(.white, lineWidth: 4)
-                                    .frame(width: cutoutSize, height: cutoutSize)
-                            )
-                            .padding(.bottom, DesignConstants.Spacing.step3x)
-                        Text("Scan a Convo Code")
-                            .font(.system(size: 16.0))
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.white)
-                        Text("You’ll join immediately and anonymously")
-                            .font(.system(size: 12.0))
-                            .multilineTextAlignment(.center)
-                            .foregroundStyle(.white.opacity(0.7))
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 20)
+                                .frame(width: cutoutSize, height: cutoutSize)
+                                .blendMode(.destinationOut)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(.white, lineWidth: 4)
+                                        .frame(width: cutoutSize, height: cutoutSize)
+                                )
+
+                            // Show "Enable camera" button when camera is not authorized
+                            if !qrScannerDelegate.cameraAuthorized {
+                                Button {
+                                    requestCameraAccess()
+                                } label: {
+                                    HStack(spacing: DesignConstants.Spacing.step2x) {
+                                        Image(systemName: "camera.fill")
+                                            .font(.system(size: 16.0))
+                                            .foregroundStyle(.black)
+                                        Text("Allow")
+                                            .font(.system(size: 16.0, weight: .medium))
+                                            .foregroundStyle(.black)
+                                    }
+                                    .padding(.vertical, DesignConstants.Spacing.step3x)
+                                    .padding(.horizontal, DesignConstants.Spacing.step4x)
+                                    .background(
+                                        Capsule()
+                                            .fill(.white)
+                                    )
+                                }
+                                .frame(width: cutoutSize, height: cutoutSize)
+                            }
+                        }
+                        .padding(.bottom, DesignConstants.Spacing.step3x)
+
+                        Button {
+                            withAnimation {
+                                showingExplanation.toggle()
+                            }
+                        } label: {
+                            if showingExplanation {
+                                Text("Scan a convo code to access the app")
+                                    .font(.system(size: 16.0))
+                                    .multilineTextAlignment(.center)
+                                    .foregroundStyle(.white)
+                            } else {
+                                HStack(spacing: DesignConstants.Spacing.step2x) {
+                                    Image(systemName: "qrcode")
+                                        .foregroundStyle(.white)
+                                    Text("Join a convo")
+                                        .font(.system(size: 16.0))
+                                        .multilineTextAlignment(.center)
+                                        .foregroundStyle(.white)
+                                }
+                            }
+                        }
 
                         Spacer()
 
-                        Button {
-                            if let code = UIPasteboard.general.string {
-                                onScannedCode(code)
-                            }
-                        } label: {
-                            Text("Or paste a link")
-                                .font(.system(size: 16.0))
+                        Group {
+                            HStack {
+                                Button {
+                                    openURL(URL(string: "https://convos.org/terms-and-privacy")!)
+                                } label: {
+                                    HStack(spacing: DesignConstants.Spacing.stepX) {
+                                        Text("Privacy & Terms")
+                                        Image(systemName: "chevron.right")
+                                            .foregroundStyle(.colorTextTertiary)
+                                    }
+                                }
+                                .font(.caption)
                                 .foregroundStyle(.colorTextSecondary)
-                                .padding(.horizontal, DesignConstants.Spacing.step4x)
-                                .padding(.vertical, DesignConstants.Spacing.step3x)
-                                .frame(maxWidth: .infinity)
+                                .frame(alignment: .center)
+
+                                Spacer()
+
+                                Button {
+                                    if let code = UIPasteboard.general.string {
+                                        onScannedCode(code)
+                                    }
+                                } label: {
+                                    Image(systemName: "clipboard")
+                                        .font(.system(size: 20.0))
+                                        .foregroundStyle(.colorTextSecondary)
+                                        .padding(.horizontal, DesignConstants.Spacing.step4x)
+                                        .padding(.vertical, DesignConstants.Spacing.step3x)
+                                }
+                                .glassEffect(.regular, in: Circle())
+                            }
                         }
-                        .glassEffect(.regular, in: Capsule())
                         .padding(.horizontal, DesignConstants.Spacing.step6x)
-                        .padding(.bottom, DesignConstants.Spacing.step6x)
+                        .padding(.vertical, DesignConstants.Spacing.step8x)
                     }
                 }
                 .compositingGroup()
@@ -78,9 +142,19 @@ struct JoinConversationView: View {
         }
     }
 
-    private func handleCode(code: String) {
+    private func requestCameraAccess() {
+        AVCaptureDevice.requestAccess(for: .video) { granted in
+            DispatchQueue.main.async {
+                qrScannerDelegate.cameraAuthorized = granted
+                if granted {
+                    qrScannerDelegate.onSetupCamera?()
+                }
+            }
+        }
     }
 }
+
+// swiftlint:enable force_unwrapping
 
 #Preview {
     JoinConversationView(onScannedCode: { _ in })

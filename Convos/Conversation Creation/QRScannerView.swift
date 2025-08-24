@@ -6,6 +6,9 @@ import SwiftUI
 @Observable
 class QRScannerDelegate: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     var scannedCode: String?
+    var cameraAuthorized: Bool = false
+    var cameraSetupCompleted: Bool = false
+    var onSetupCamera: (() -> Void)?
 
     func metadataOutput(
         _ output: AVCaptureMetadataOutput,
@@ -25,12 +28,14 @@ class QRScannerDelegate: NSObject, AVCaptureMetadataOutputObjectsDelegate {
 // MARK: - Camera Preview
 struct QRScannerView: UIViewRepresentable {
     let delegate: QRScannerDelegate
+    @Binding var coordinator: Coordinator?
 
     class Coordinator {
         var orientationObserver: Any?
         var captureSession: AVCaptureSession?
         var previewLayer: AVCaptureVideoPreviewLayer?
         var captureDevice: AVCaptureDevice?
+        var parentView: UIView?
 
         deinit {
             if let observer = orientationObserver {
@@ -48,17 +53,20 @@ struct QRScannerView: UIViewRepresentable {
         let view = UIView()
         view.backgroundColor = .black
         view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        context.coordinator.parentView = view
+        coordinator = context.coordinator
 
-        // Check camera authorization
-        checkCameraAuthorization { authorized in
-            if authorized {
-                DispatchQueue.main.async {
-                    self.setupCamera(on: view, coordinator: context.coordinator)
-                }
-            }
+        delegate.onSetupCamera = {
+            self.setupCamera()
         }
 
         return view
+    }
+
+    func setupCamera() {
+        guard let coordinator = coordinator else { return }
+        guard let view = coordinator.parentView else { return }
+        setupCamera(on: view, coordinator: coordinator)
     }
 
     private func checkCameraAuthorization(completion: @escaping (Bool) -> Void) {
@@ -155,6 +163,9 @@ struct QRScannerView: UIViewRepresentable {
         DispatchQueue.global(qos: .background).async {
             captureSession.startRunning()
         }
+
+        // Mark camera setup as completed
+        delegate.cameraSetupCompleted = true
     }
 
     func updateUIView(_ uiView: UIView, context: Context) {
