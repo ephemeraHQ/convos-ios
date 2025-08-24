@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		7A5D3E962E43B82400DA9B83 /* SwiftUIIntrospect in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5D3E952E43B82400DA9B83 /* SwiftUIIntrospect */; };
 		7AD20B572E5A21AE00F68E6E /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD20B562E5A21AE00F68E6E /* ConvosCore */; };
+		7AD20CA42E5A8F0B00F68E6E /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AC5995B2E5593C300D65D07 /* ConvosCore */; };
 		7AD545902E4EA8BE00500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD5458F2E4EA8BE00500ADF /* ConvosCore */; };
 		7AD545922E4EA8D200500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545912E4EA8D200500ADF /* ConvosCore */; };
 		7AD545942E4EA8F300500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545932E4EA8F300500ADF /* ConvosCore */; };
@@ -238,6 +239,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7AD20CA42E5A8F0B00F68E6E /* ConvosCore in Frameworks */,
 				7AD20B572E5A21AE00F68E6E /* ConvosCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

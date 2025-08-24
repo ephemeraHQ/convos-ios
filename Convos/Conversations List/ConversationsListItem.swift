@@ -75,7 +75,7 @@ struct ConversationsListItem: View {
             isMuted: conversation.isMuted,
             isUnread: conversation.isUnread,
             leadingContent: {
-                ConversationAvatarView(conversation: conversation)
+                ConversationAvatarView(conversation: conversation, conversationImage: nil)
             },
             subtitle: {
                 if let message = conversation.lastMessage {

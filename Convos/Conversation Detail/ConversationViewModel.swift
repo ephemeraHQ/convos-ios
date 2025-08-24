@@ -39,6 +39,7 @@ class ConversationViewModel {
     var conversationNamePlaceholder: String = "Name"
     var conversationDescriptionPlaceholder: String = "Description"
     var joinEnabled: Bool = true
+    var notificationsEnabled: Bool = true
     var displayName: String = ""
     var conversationName: String = ""
     var conversationDescription: String = ""
@@ -94,6 +95,7 @@ class ConversationViewModel {
         fetchLatest()
         self.displayName = profile.name ?? ""
         self.conversationName = conversation.name ?? ""
+        self.conversationDescription = conversation.description ?? ""
         observe()
 
         KeyboardListener.shared.add(delegate: self)
