@@ -1,6 +1,6 @@
+import ConvosCore
 import Foundation
 import Testing
-import ConvosCore
 
 /// Test suite for KeychainIdentityStore
 @Suite(.serialized) class KeychainIdentityStoreExampleTests {
