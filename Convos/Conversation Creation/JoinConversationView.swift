@@ -7,12 +7,13 @@ struct JoinConversationView: View {
     @State private var qrScannerDelegate: QRScannerDelegate = QRScannerDelegate()
     @State private var qrScannerCoordinator: QRScannerView.Coordinator?
     @State private var showingExplanation: Bool = false
-    let onScannedCode: (String) -> Void
+    @State private var showingScanFailedForInviteCode: String?
+    let onScannedCode: (String) -> Bool
 
     @Environment(\.dismiss) private var dismiss: DismissAction
     @Environment(\.openURL) private var openURL: OpenURLAction
 
-    init(onScannedCode: @escaping (String) -> Void) {
+    init(onScannedCode: @escaping (String) -> Bool) {
         self.onScannedCode = onScannedCode
     }
 
@@ -108,7 +109,7 @@ struct JoinConversationView: View {
 
                                 Button {
                                     if let code = UIPasteboard.general.string {
-                                        onScannedCode(code)
+                                        attemptToScanCode(code)
                                     }
                                 } label: {
                                     Image(systemName: "clipboard")
@@ -134,11 +135,29 @@ struct JoinConversationView: View {
                     }
                 }
             }
+            .alert("This is not a convo", isPresented: .constant(showingScanFailedForInviteCode != nil)) {
+                Button("Try again") {
+                    showingScanFailedForInviteCode = nil
+                }
+                .buttonStyle(.glassProminent)
+            } message: {
+                if let failedCode = showingScanFailedForInviteCode {
+                    Text(failedCode)
+                }
+            }
         }
         .onChange(of: qrScannerDelegate.scannedCode) { _, newValue in
             if let code = newValue {
-                onScannedCode(code)
+                attemptToScanCode(code)
             }
+        }
+    }
+
+    private func attemptToScanCode(_ code: String) {
+        if !onScannedCode(code) {
+            showingScanFailedForInviteCode = code
+        } else {
+            showingScanFailedForInviteCode = nil
         }
     }
 
@@ -173,5 +192,5 @@ struct JoinConversationView: View {
 // swiftlint:enable force_unwrapping
 
 #Preview {
-    JoinConversationView(onScannedCode: { _ in })
+    JoinConversationView(onScannedCode: { _ in true })
 }

@@ -74,14 +74,14 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         }
     }
 
-    func join(inviteUrlString: String) {
-        // New flow: accept only URL of form https://domain/join/{inviteCode}
+    func join(inviteUrlString: String) -> Bool {
         guard let inviteCode = inviteUrlString.inviteCodeFromJoinURL else {
             Logger.error("Invalid invite URL")
-            return
+            return false
         }
         Logger.info("Scanned inviteCode: \(inviteCode)")
         joinConversation(inviteCode: inviteCode)
+        return true
     }
 
     func deleteConversation() {
