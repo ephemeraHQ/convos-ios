@@ -76,7 +76,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
 
     func join(inviteUrlString: String) -> Bool {
         guard let inviteCode = inviteUrlString.inviteCodeFromJoinURL else {
-            Logger.error("Invalid invite URL")
+            Logger.warning("Invalid invite URL")
             return false
         }
         Logger.info("Scanned inviteCode: \(inviteCode)")
