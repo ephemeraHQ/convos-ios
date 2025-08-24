@@ -42,7 +42,7 @@ struct ConversationView: View {
 
     var body: some View {
         MessagesView(
-            conversation: viewModel.conversation,
+            conversation: viewModel,
             messages: viewModel.messages,
             invite: viewModel.invite,
             profile: viewModel.profile,

@@ -22,7 +22,18 @@ final class CellFactory {
                 for: indexPath,
                 invite: invite
             )
+        case let .conversationInfo(viewModel):
+            return createConversationInfoCell(in: collectionView, for: indexPath, viewModel: viewModel)
         }
+    }
+
+    private static func createConversationInfoCell(in collectionView: UICollectionView,
+                                                   for indexPath: IndexPath,
+                                                   viewModel: ConversationViewModel) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ConversationInfoCell.reuseIdentifier,
+                                                      for: indexPath) as! ConversationInfoCell
+        cell.setup(conversation: viewModel)
+        return cell
     }
 
     private static func createMessageCell(in collectionView: UICollectionView,

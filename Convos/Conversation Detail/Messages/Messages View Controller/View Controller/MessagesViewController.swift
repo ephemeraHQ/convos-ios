@@ -7,7 +7,7 @@ import UIKit
 
 final class MessagesViewController: UIViewController {
     struct MessagesState {
-        let conversationId: String
+        let conversationViewModel: ConversationViewModel
         let messages: [AnyMessage]
         let invite: Invite
     }
@@ -59,6 +59,7 @@ final class MessagesViewController: UIViewController {
         didSet {
             guard let state = state else {
                 processUpdates(
+                    for: nil,
                     with: [],
                     invite: .empty,
                     animated: true,
@@ -66,8 +67,9 @@ final class MessagesViewController: UIViewController {
                 return
             }
 
-            let animated = oldValue?.conversationId == state.conversationId
+            let animated = oldValue?.conversationViewModel.conversation.id == state.conversationViewModel.conversation.id
             processUpdates(
+                for: state.conversationViewModel,
                 with: state.messages,
                 invite: state.invite,
                 animated: animated,
@@ -313,7 +315,8 @@ final class MessagesViewController: UIViewController {
 // MARK: - MessagesControllerDelegate
 
 extension MessagesViewController {
-    private func processUpdates(with messages: [AnyMessage],
+    private func processUpdates(for conversation: ConversationViewModel?,
+                                with messages: [AnyMessage],
                                 invite: Invite,
                                 animated: Bool = true,
                                 requiresIsolatedProcess: Bool,
@@ -360,7 +363,13 @@ extension MessagesViewController {
             return cells
         }
 
-        cells.insert(.invite(invite), at: 0)
+        if let conversation {
+            if conversation.conversation.creator.isCurrentUser {
+                cells.insert(.invite(invite), at: 0)
+            } else {
+                cells.insert(.conversationInfo(conversation), at: 0)
+            }
+        }
 
         let sections: [MessagesCollectionSection] = [
             .init(id: 0, title: "", cells: cells)
@@ -372,7 +381,8 @@ extension MessagesViewController {
         }
 
         guard currentInterfaceActions.options.isEmpty else {
-            scheduleDelayedUpdate(with: messages,
+            scheduleDelayedUpdate(for: conversation,
+                                  with: messages,
                                   invite: invite,
                                   animated: animated,
                                   requiresIsolatedProcess: requiresIsolatedProcess,
@@ -386,7 +396,8 @@ extension MessagesViewController {
                       completion: completion)
     }
 
-    private func scheduleDelayedUpdate(with messages: [AnyMessage],
+    private func scheduleDelayedUpdate(for conversation: ConversationViewModel?,
+                                       with messages: [AnyMessage],
                                        invite: Invite,
                                        animated: Bool,
                                        requiresIsolatedProcess: Bool,
@@ -397,7 +408,8 @@ extension MessagesViewController {
             executionType: .once,
             actionBlock: { [weak self] in
                 guard let self else { return }
-                processUpdates(with: messages,
+                processUpdates(for: conversation,
+                               with: messages,
                                invite: invite,
                                animated: animated,
                                requiresIsolatedProcess: requiresIsolatedProcess,
