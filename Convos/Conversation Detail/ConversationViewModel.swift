@@ -26,6 +26,7 @@ class ConversationViewModel {
     var conversation: Conversation {
         didSet {
             conversationName = conversation.name ?? ""
+            conversationDescription = conversation.description ?? ""
         }
     }
     var messages: [AnyMessage] = []
@@ -216,7 +217,7 @@ class ConversationViewModel {
                         description: conversationDescription
                     )
                 } catch {
-                    Logger.error("Failed updating group name: \(error)")
+                    Logger.error("Failed updating group description: \(error)")
                 }
             }
         }
