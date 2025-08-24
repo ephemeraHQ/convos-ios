@@ -12,10 +12,6 @@ class MockDraftConversationWriter: DraftConversationWriterProtocol {
         MockGroupMetadataWriter()
     }
 
-    var isSendingPublisher: AnyPublisher<Bool, Never> {
-        Just(false).eraseToAnyPublisher()
-    }
-
     var sentMessage: AnyPublisher<String, Never> {
         Just("").eraseToAnyPublisher()
     }

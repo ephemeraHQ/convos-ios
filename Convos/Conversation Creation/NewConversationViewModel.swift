@@ -105,6 +105,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
             do {
+                // Ensure we have a messaging service
                 if self.messagingService == nil {
                     Logger.info("No messaging service found, starting one while joining conversation...")
                     let messagingService = try session.addInbox()
@@ -116,12 +117,10 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
                     return
                 }
 
+                // Ensure we have a draft conversation composer
                 if self.draftConversationComposer == nil {
                     Logger.info("Setting up draft composer for joining conversation...")
                     let draftConversationComposer = messagingService.draftConversationComposer()
-//                    Task {
-//                        try await draftConversationComposer.draftConversationWriter.createConversation()
-//                    }
                     self.draftConversationComposer = draftConversationComposer
                 }
 
@@ -130,6 +129,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
                     return
                 }
 
+                // Ensure we have a conversation view model
                 if self.conversationViewModel == nil {
                     Logger.info("ConversationViewModel is `nil`... creating a new one.")
                     self.conversationViewModel = try conversationViewModel(
@@ -138,6 +138,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
                     )
                 }
 
+                // Request to join - the state machine handles all the complexity
                 try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
