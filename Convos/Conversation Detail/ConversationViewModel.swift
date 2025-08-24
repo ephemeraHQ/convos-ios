@@ -203,6 +203,20 @@ class ConversationViewModel {
                 }
             }
         }
+
+        if conversationDescription != (conversation.description ?? "") {
+            Task { [weak self] in
+                guard let self else { return }
+                do {
+                    try await metadataWriter.updateGroupDescription(
+                        groupId: conversation.id,
+                        description: conversationDescription
+                    )
+                } catch {
+                    Logger.error("Failed updating group name: \(error)")
+                }
+            }
+        }
     }
 
     func onConversationSettings() {
