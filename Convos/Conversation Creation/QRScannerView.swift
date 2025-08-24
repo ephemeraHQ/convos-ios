@@ -115,6 +115,17 @@ struct QRScannerView: UIViewRepresentable {
     }
 
     private func setupCamera(on view: UIView, coordinator: Coordinator) {
+        // Guard against duplicate initialization
+        guard coordinator.captureSession == nil else {
+            // If session already exists, just ensure it's running
+            if let existingSession = coordinator.captureSession, !existingSession.isRunning {
+                DispatchQueue.global(qos: .background).async {
+                    existingSession.startRunning()
+                }
+            }
+            return
+        }
+
         let captureSession = AVCaptureSession()
         captureSession.sessionPreset = .high
 
