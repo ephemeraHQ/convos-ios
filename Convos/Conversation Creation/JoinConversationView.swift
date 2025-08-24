@@ -143,13 +143,29 @@ struct JoinConversationView: View {
     }
 
     private func requestCameraAccess() {
-        AVCaptureDevice.requestAccess(for: .video) { granted in
-            DispatchQueue.main.async {
-                qrScannerDelegate.cameraAuthorized = granted
-                if granted {
-                    qrScannerDelegate.onSetupCamera?()
+        let currentStatus = AVCaptureDevice.authorizationStatus(for: .video)
+
+        switch currentStatus {
+        case .denied, .restricted:
+            // Camera access is denied, direct user to Settings
+            if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(settingsUrl)
+            }
+        case .notDetermined:
+            // Request access for the first time
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    qrScannerDelegate.cameraAuthorized = granted
+                    if granted {
+                        // Trigger camera setup using the callback
+                        qrScannerDelegate.onSetupCamera?()
+                    }
                 }
             }
+        case .authorized:
+            qrScannerDelegate.onSetupCamera?()
+        @unknown default:
+            break
         }
     }
 }
