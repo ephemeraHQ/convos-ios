@@ -186,8 +186,8 @@ class SessionManager: SessionManagerProtocol {
 
     // MARK: Public
 
-    func addInbox() throws -> AnyMessagingService {
-        let messagingService = MessagingService.registeredMessagingService(
+    func addInbox() async throws -> AnyMessagingService {
+        let messagingService = await MessagingService.registeredMessagingService(
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment
