@@ -19,8 +19,6 @@ extension PrivateKey {
 struct MockAuthResult: AuthServiceResultType, AuthServiceRegisteredResultType, Codable {
     var inbox: any AuthServiceInboxType {
         AuthServiceInbox(
-            type: .ephemeral,
-            provider: .local,
             providerId: id,
             signingKey: privateKey,
             databaseKey: databaseKey

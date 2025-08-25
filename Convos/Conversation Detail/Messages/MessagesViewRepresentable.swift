@@ -2,7 +2,7 @@ import ConvosCore
 import SwiftUI
 
 struct MessagesViewRepresentable: UIViewControllerRepresentable {
-    let conversationId: String
+    let conversation: ConversationViewModel
     let messages: [AnyMessage]
     let invite: Invite
     let onTapMessage: (AnyMessage) -> Void
@@ -10,11 +10,7 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
     let bottomBarHeight: CGFloat
 
     func makeUIViewController(context: Context) -> MessagesViewController {
-        let messagesViewController = MessagesViewController()
-        messagesViewController.topBarHeight = topBarHeight
-        messagesViewController.bottomBarHeight = bottomBarHeight
-        messagesViewController.onTapMessage = onTapMessage
-        return messagesViewController
+        return MessagesViewController()
     }
 
     func updateUIViewController(_ messagesViewController: MessagesViewController, context: Context) {
@@ -22,7 +18,7 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
         messagesViewController.bottomBarHeight = bottomBarHeight
         messagesViewController.onTapMessage = onTapMessage
         messagesViewController.state = .init(
-            conversationId: conversationId,
+            conversationViewModel: conversation,
             messages: messages,
             invite: invite
         )
@@ -32,12 +28,11 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
 #Preview {
     @Previewable @State var topBarHeight: CGFloat = 0.0
     @Previewable @State var bottomBarHeight: CGFloat = 0.0
-    let conversationId: String = "1"
     let messages: [AnyMessage] = []
     let invite: Invite = .empty
 
     MessagesViewRepresentable(
-        conversationId: conversationId,
+        conversation: .mock,
         messages: messages,
         invite: invite,
         onTapMessage: { _ in },

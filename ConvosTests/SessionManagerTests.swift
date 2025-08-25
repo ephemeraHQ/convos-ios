@@ -6,11 +6,9 @@ struct SessionManagerTests {
     @Test("Authorizing starts messaging service")
     func testAuthStartsMessaging() async throws {
         let authService = MockAuthService()
-        let localAuthService = SecureEnclaveAuthService()
         let databaseWriter = MockDatabaseManager.shared.dbWriter
         let databaseReader = MockDatabaseManager.shared.dbReader
         let sessionManager = SessionManager(
-            authService: authService,
             localAuthService: localAuthService,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
@@ -36,7 +34,7 @@ struct SessionManagerTests {
         let inboxId = inbox.inboxId
         Logger.info("🔍 Found inbox with ID: \(inboxId)")
 
-        let messagingService = sessionManager.messagingService(for: inboxId)
+        let messagingService = await sessionManager.messagingService(for: inboxId)
         var inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
 
         Logger.info("🔍 Waiting for messaging service...")
@@ -52,7 +50,6 @@ struct SessionManagerTests {
     @Test("Test local auth starts messaging service")
     func testLocalAuthStartsMessaging() async throws {
         let authService = MockAuthService()
-        let localAuthService = SecureEnclaveAuthService()
         let databaseWriter = MockDatabaseManager.shared.dbWriter
         let databaseReader = MockDatabaseManager.shared.dbReader
         let sessionManager = SessionManager(
@@ -83,7 +80,7 @@ struct SessionManagerTests {
         let inboxId = inbox.inboxId
         Logger.info("🔍 Found inbox with ID: \(inboxId)")
 
-        let messagingService = sessionManager.messagingService(for: inboxId)
+        let messagingService = await sessionManager.messagingService(for: inboxId)
         var inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
 
         Logger.info("🔍 Waiting for messaging service...")

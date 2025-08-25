@@ -2,10 +2,7 @@ import Foundation
 import GRDB
 
 public protocol InboxWriterProtocol {
-    func storeInbox(inboxId: String,
-                    type: InboxType,
-                    provider: InboxProvider,
-                    providerId: String) async throws
+    func storeInbox(inboxId: String) async throws
     func deleteInbox(inboxId: String) async throws
 }
 
@@ -16,20 +13,12 @@ final class InboxWriter: InboxWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    func storeInbox(inboxId: String,
-                    type: InboxType,
-                    provider: InboxProvider,
-                    providerId: String) async throws {
+    func storeInbox(inboxId: String) async throws {
         let member: Member = .init(inboxId: inboxId)
         let memberProfile: MemberProfile = .init(inboxId: inboxId,
                                                  name: nil,
                                                  avatar: nil)
-        let dbInbox = DBInbox(
-            inboxId: inboxId,
-            type: type,
-            provider: provider,
-            providerId: providerId
-        )
+        let dbInbox = DBInbox(inboxId: inboxId)
         try await databaseWriter.write { db in
             let session = Session()
             try? session.save(db)

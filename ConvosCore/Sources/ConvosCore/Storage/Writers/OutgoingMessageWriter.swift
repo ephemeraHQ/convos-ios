@@ -4,7 +4,6 @@ import GRDB
 import XMTPiOS
 
 public protocol OutgoingMessageWriterProtocol {
-    var isSendingPublisher: AnyPublisher<Bool, Never> { get }
     var sentMessage: AnyPublisher<String, Never> { get }
     func send(text: String) async throws
 }
@@ -14,46 +13,27 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
         case missingClientProvider
     }
 
-    private let clientPublisher: AnyClientProviderPublisher
-    private let clientValue: PublisherValue<AnyClientProvider>
+    private let inboxStateManager: InboxStateManager
     private let databaseWriter: any DatabaseWriter
     private let conversationId: String
     private let isSendingValue: CurrentValueSubject<Bool, Never> = .init(false)
     private let sentMessageSubject: PassthroughSubject<String, Never> = .init()
 
-    var isSendingPublisher: AnyPublisher<Bool, Never> {
-        isSendingValue.eraseToAnyPublisher()
-    }
-
     var sentMessage: AnyPublisher<String, Never> {
         sentMessageSubject.eraseToAnyPublisher()
     }
 
-    init(client: AnyClientProvider?,
-         clientPublisher: AnyClientProviderPublisher,
+    init(inboxStateManager: InboxStateManager,
          databaseWriter: any DatabaseWriter,
          conversationId: String) {
-        self.clientPublisher = clientPublisher
-        self.clientValue = .init(
-            initial: client,
-            upstream: clientPublisher
-        )
+        self.inboxStateManager = inboxStateManager
         self.databaseWriter = databaseWriter
         self.conversationId = conversationId
     }
 
-    deinit {
-        cleanup()
-    }
-
-    func cleanup() {
-        clientValue.dispose()
-    }
-
     func send(text: String) async throws {
-        guard let client = clientValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
+        let inboxReady = try await self.inboxStateManager.waitForInboxReadyResult()
+        let client = inboxReady.client
 
         isSendingValue.send(true)
 

@@ -7,7 +7,7 @@ import UIKit
 
 final class MessagesViewController: UIViewController {
     struct MessagesState {
-        let conversationId: String
+        let conversationViewModel: ConversationViewModel
         let messages: [AnyMessage]
         let invite: Invite
     }
@@ -59,6 +59,7 @@ final class MessagesViewController: UIViewController {
         didSet {
             guard let state = state else {
                 processUpdates(
+                    for: nil,
                     with: [],
                     invite: .empty,
                     animated: true,
@@ -66,8 +67,9 @@ final class MessagesViewController: UIViewController {
                 return
             }
 
-            let animated = oldValue?.conversationId == state.conversationId
+            let animated = oldValue?.conversationViewModel.conversation.id == state.conversationViewModel.conversation.id
             processUpdates(
+                for: state.conversationViewModel,
                 with: state.messages,
                 invite: state.invite,
                 animated: animated,
@@ -313,7 +315,8 @@ final class MessagesViewController: UIViewController {
 // MARK: - MessagesControllerDelegate
 
 extension MessagesViewController {
-    private func processUpdates(with messages: [AnyMessage],
+    private func processUpdates(for conversation: ConversationViewModel?,
+                                with messages: [AnyMessage],
                                 invite: Invite,
                                 animated: Bool = true,
                                 requiresIsolatedProcess: Bool,
@@ -360,7 +363,13 @@ extension MessagesViewController {
             return cells
         }
 
-        cells.insert(.invite(invite), at: 0)
+        if let conversation {
+            if conversation.conversation.creator.isCurrentUser {
+                cells.insert(.invite(invite), at: 0)
+            } else {
+                cells.insert(.conversationInfo(conversation), at: 0)
+            }
+        }
 
         let sections: [MessagesCollectionSection] = [
             .init(id: 0, title: "", cells: cells)
@@ -372,7 +381,9 @@ extension MessagesViewController {
         }
 
         guard currentInterfaceActions.options.isEmpty else {
-            scheduleDelayedUpdate(with: messages,
+            Logger.info("Interface actions exist, scheduling delayed update...")
+            scheduleDelayedUpdate(for: conversation,
+                                  with: messages,
                                   invite: invite,
                                   animated: animated,
                                   requiresIsolatedProcess: requiresIsolatedProcess,
@@ -386,7 +397,8 @@ extension MessagesViewController {
                       completion: completion)
     }
 
-    private func scheduleDelayedUpdate(with messages: [AnyMessage],
+    private func scheduleDelayedUpdate(for conversation: ConversationViewModel?,
+                                       with messages: [AnyMessage],
                                        invite: Invite,
                                        animated: Bool,
                                        requiresIsolatedProcess: Bool,
@@ -397,7 +409,8 @@ extension MessagesViewController {
             executionType: .once,
             actionBlock: { [weak self] in
                 guard let self else { return }
-                processUpdates(with: messages,
+                processUpdates(for: conversation,
+                               with: messages,
                                invite: invite,
                                animated: animated,
                                requiresIsolatedProcess: requiresIsolatedProcess,
@@ -531,7 +544,6 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
             return
         }
 
-        Logger.info("Updated bottom bar height: \(bottomBarHeight)")
         if let lastKeyboardFrameChange {
             let newBottomInset = calculateNewBottomInset(for: lastKeyboardFrameChange)
             updateBottomInset(inset: newBottomInset, info: lastKeyboardFrameChange)
@@ -545,7 +557,6 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
 
 extension MessagesViewController: KeyboardListenerDelegate {
     func keyboardWillChangeFrame(info: KeyboardInfo) {
-        Logger.info("keyboardWillChangeFrame")
         guard shouldHandleKeyboardFrameChange(info: info) else { return }
 
         self.lastKeyboardFrameChange = info
@@ -557,16 +568,13 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
     private func updateBottomInset(inset: CGFloat, info: KeyboardInfo?) {
         guard collectionView.contentInset.bottom != inset else { return }
-        Logger.info("Updating bottom inset: \(inset)")
         updateCollectionViewInsets(to: inset, with: info)
     }
 
     func keyboardWillHide(info: KeyboardInfo) {
-        Logger.info("keyboardWillHide")
     }
 
     func keyboardDidChangeFrame(info: KeyboardInfo) {
-        Logger.info("keyboardDidChangeFrame")
         guard currentInterfaceActions.options.contains(.changingKeyboardFrame) else { return }
         currentInterfaceActions.options.remove(.changingKeyboardFrame)
     }
@@ -589,12 +597,10 @@ extension MessagesViewController: KeyboardListenerDelegate {
                      collectionView.frame.size.height -
                      keyboardFrame.minY - collectionView.safeAreaInsets.bottom)
         let inset = max(keyboardInset, bottomBarHeight)
-        Logger.info("Calculated new bottom inset: \(inset) (keyboard: \(keyboardInset), bottomBar: \(bottomBarHeight))")
         return inset
     }
 
     private func updateCollectionViewInsets(to topInset: CGFloat) {
-        Logger.info("updateCollectionViewInsets topInset: \(topInset)")
         let positionSnapshot = messagesLayout.getContentOffsetSnapshot(from: .top)
 
         if currentControllerActions.options.contains(.updatingCollection) {
@@ -606,7 +612,6 @@ extension MessagesViewController: KeyboardListenerDelegate {
         currentInterfaceActions.options.insert(.changingContentInsets)
         UIView.animate(withDuration: 0.2, animations: {
             self.collectionView.performBatchUpdates({
-                Logger.info("Setting new top inset: \(topInset)")
                 self.collectionView.contentInset.top = topInset
                 self.collectionView.verticalScrollIndicatorInsets.top = topInset
             }, completion: nil)
@@ -620,7 +625,6 @@ extension MessagesViewController: KeyboardListenerDelegate {
     }
 
     private func updateCollectionViewInsets(to newBottomInset: CGFloat, with info: KeyboardInfo?) {
-        Logger.info("updateCollectionViewInsets: \(newBottomInset)")
         let positionSnapshot = messagesLayout.getContentOffsetSnapshot(from: .bottom)
 
         if currentControllerActions.options.contains(.updatingCollection) {
@@ -632,7 +636,6 @@ extension MessagesViewController: KeyboardListenerDelegate {
         currentInterfaceActions.options.insert(.changingContentInsets)
         UIView.animate(withDuration: info?.animationDuration ?? 0.2, animations: {
             self.collectionView.performBatchUpdates({
-                Logger.info("Setting new bottom inset: \(newBottomInset)")
                 self.collectionView.contentInset.bottom = newBottomInset
                 self.collectionView.verticalScrollIndicatorInsets.bottom = newBottomInset
             }, completion: nil)

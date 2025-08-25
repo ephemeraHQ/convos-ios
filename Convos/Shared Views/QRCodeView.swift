@@ -1,53 +1,46 @@
 import ConvosCore
-import CoreImage.CIFilterBuiltins
 import SwiftUI
 
 struct QRCodeView: View {
     let identifier: String
-    let backgroundColor: Color
-    let foregroundColor: Color
+    let backgroundColor: Color?
+    let foregroundColor: Color?
     @State private var isRegenerating: Bool = false
     @State private var currentQRCode: UIImage?
     @State private var generationTask: Task<Void, Never>?
+    @Environment(\.displayScale) private var displayScale: CGFloat
+    @Environment(\.colorScheme) private var colorScheme: ColorScheme
 
-    init(identifier: String, backgroundColor: Color = .white, foregroundColor: Color = .black) {
+    init(identifier: String, backgroundColor: Color = .colorBackgroundPrimary, foregroundColor: Color = .colorTextPrimary) {
         self.identifier = identifier
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
-        self.currentQRCode = ImageCache.shared.image(for: identifier)
     }
 
     private func generateQRCode() async -> UIImage? {
-        let context = CIContext()
-        let filter = CIFilter.roundedQRCodeGenerator()
+        let options: QRCodeGenerator.Options
 
-        filter.message = Data(identifier.utf8)
-        filter.roundedMarkers = 1
-        filter.roundedData = false
-        filter.centerSpaceSize = 0.3
-        filter.correctionLevel = "H"
-        filter.color1 = CIColor(color: UIColor(foregroundColor))
-        filter.color0 = CIColor(color: UIColor(backgroundColor))
+        if let backgroundColor = backgroundColor, let foregroundColor = foregroundColor {
+            // Use custom colors
+            options = QRCodeGenerator.Options(
+                scale: displayScale,
+                displaySize: 220,
+                foregroundColor: UIColor(foregroundColor),
+                backgroundColor: UIColor(backgroundColor)
+            )
+        } else {
+            // Use appropriate preset based on color scheme
+            options = colorScheme == .dark ? .qrCodeDark : .qrCodeLight
+        }
 
-        guard let outputImage = filter.outputImage else { return nil }
+        return await QRCodeGenerator.generate(from: identifier, options: options)
+    }
 
-        let displaySize: CGFloat = 220 // The max size we display in the UI
-        let screenScale = await MainActor.run { UIScreen.main.scale }
-
-        let outputExtent = outputImage.extent
-        let baseSize = max(outputExtent.width, outputExtent.height)
-
-        // Scale to match the display size * screen scale (e.g., 220 * 3 = 660 pixels on 3x screens)
-        let targetPixelSize = displaySize * screenScale
-        let scaleFactor = targetPixelSize / baseSize
-
-        let transform = CGAffineTransform(scaleX: scaleFactor, y: scaleFactor)
-        let scaledImage = outputImage.transformed(by: transform)
-
-        guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
-        let image = UIImage(cgImage: cgImage)
-        ImageCache.shared.cacheImage(image, for: identifier)
-        return image
+    private var effectiveBackgroundColor: Color {
+        if let backgroundColor = backgroundColor {
+            return backgroundColor
+        }
+        return colorScheme == .dark ? .black : .white
     }
 
     private func updateQRCode() {
@@ -79,17 +72,14 @@ struct QRCodeView: View {
                     .frame(maxWidth: 220, maxHeight: 220)
             } else {
                 RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.medium)
-                    .fill(backgroundColor)
+                    .fill(.colorFillMinimal)
                     .frame(width: 220, height: 220)
-                    .overlay(
-                        ProgressView()
-                    )
             }
 
             ShareLink(item: identifier) {
                 Image(systemName: "square.and.arrow.up")
                     .font(.system(size: 24.0, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.colorTextPrimaryInverted)
                     .frame(width: 60, height: 60)
                     .padding(DesignConstants.Spacing.step2x)
             }
@@ -102,10 +92,14 @@ struct QRCodeView: View {
             guard oldIdentifier != newIdentifier else { return }
             updateQRCode()
         }
-        .onAppear {
-            if currentQRCode == nil {
+        .onChange(of: colorScheme) { _, _ in
+            // Regenerate QR code when color scheme changes (if using automatic colors)
+            if backgroundColor == nil && foregroundColor == nil {
                 updateQRCode()
             }
+        }
+        .onAppear {
+            updateQRCode()
         }
         .onDisappear {
             generationTask?.cancel()
@@ -113,13 +107,25 @@ struct QRCodeView: View {
     }
 }
 
-#Preview {
+#Preview("Automatic Colors") {
+    @Previewable @State var identifier: String = UUID().uuidString
+
+    VStack(spacing: 40.0) {
+        QRCodeView(identifier: identifier)
+
+        Button("Refresh", systemImage: "shuffle.circle.fill") {
+            identifier = UUID().uuidString
+        }
+    }
+}
+
+#Preview("Custom Colors") {
     @Previewable @State var identifier: String = UUID().uuidString
 
     VStack(spacing: 40.0) {
         QRCodeView(
             identifier: identifier,
-            backgroundColor: .black,
+            backgroundColor: .purple,
             foregroundColor: .white
         )
 

@@ -16,10 +16,7 @@ extension Database {
         let inboxes: [Inbox] = dbInboxes.map {
             .init(
                 inboxId: $0.inbox.inboxId,
-                profile: $0.inboxMemberProfile.hydrateProfile(),
-                type: $0.inbox.type,
-                provider: $0.inbox.provider,
-                providerId: $0.inbox.providerId
+                profile: $0.inboxMemberProfile.hydrateProfile()
             )
         }
         return .init(inboxes: inboxes)

@@ -1,8 +1,6 @@
 import Foundation
 import GRDB
 
-// swiftlint:disable function_body_length
-
 class SharedDatabaseMigrator {
     static let shared: SharedDatabaseMigrator = SharedDatabaseMigrator()
 
@@ -13,6 +11,8 @@ class SharedDatabaseMigrator {
         try migrator.migrate(database)
     }
 }
+
+// swiftlint:disable function_body_length
 
 extension SharedDatabaseMigrator {
     private func createMigrator() -> DatabaseMigrator {
@@ -33,12 +33,8 @@ extension SharedDatabaseMigrator {
                 t.column("inboxId", .text)
                     .unique()
                     .primaryKey()
-                t.column("providerId", .text)
-                    .notNull()
                 t.column("sessionId", .integer)
                     .references("session", onDelete: .cascade)
-                t.column("type", .jsonText).notNull()
-                t.column("provider", .text).notNull()
             }
 
             try db.create(table: "member") { t in
@@ -84,10 +80,10 @@ extension SharedDatabaseMigrator {
                 t.column("id", .text)
                     .notNull()
                     .primaryKey()
+                t.column("creatorInboxId", .text)
+                    .notNull()
                 t.column("conversationId", .text)
                     .notNull()
-                    .unique(onConflict: .replace)
-                    .references("conversation", onDelete: .cascade)
                 t.column("inviteUrlString", .text)
                     .notNull()
                 t.column("maxUses", .numeric)
@@ -101,6 +97,17 @@ extension SharedDatabaseMigrator {
                 t.column("autoApprove", .boolean)
                     .notNull()
                     .defaults(to: false)
+
+                // Foreign key to the conversation member who created this invite
+                t.foreignKey(
+                    ["creatorInboxId", "conversationId"],
+                    references: "conversation_members",
+                    columns: ["inboxId", "conversationId"],
+                    onDelete: .cascade
+                )
+
+                // Unique constraint to prevent duplicate invites per member per conversation
+                t.uniqueKey(["creatorInboxId", "conversationId"], onConflict: .replace)
             }
 
             try db.create(table: "conversation_members") { t in
