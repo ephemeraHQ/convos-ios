@@ -76,12 +76,12 @@ public actor ConversationStateMachine {
 
     private func addStateContinuation(_ continuation: AsyncStream<State>.Continuation) {
         stateContinuations.append(continuation)
-        continuation.yield(_state)
         continuation.onTermination = { [weak self] _ in
             Task {
                 await self?.removeStateContinuation(continuation)
             }
         }
+        continuation.yield(_state)
     }
 
     private func emitStateChange(_ newState: State) {
@@ -168,11 +168,16 @@ public actor ConversationStateMachine {
         isProcessing = true
         let action = actionQueue.removeFirst()
 
-        currentTask = Task {
-            await processAction(action)
-            isProcessing = false
-            processNextAction()
+        currentTask = Task.detached { [weak self] in
+            guard let self else { return }
+            await self.processAction(action)
+            await self.setProcessingComplete()
         }
+    }
+
+    private func setProcessingComplete() {
+        isProcessing = false
+        processNextAction()
     }
 
     private func processAction(_ action: Action) async {
@@ -296,15 +301,34 @@ public actor ConversationStateMachine {
         let apiClient = inboxReady.apiClient
         let client = inboxReady.client
 
-        // check if we've already joined this conversation
+        // check if we've already joined this conversation (invite code)
         let existingInvite: DBInvite? = try await databaseReader.read { db in
             try DBInvite.fetchOne(db, key: inviteCode)
         }
         if let existingInvite, let existingConversation: DBConversation = try await databaseReader.read ({ db in
             try DBConversation.fetchOne(db, key: existingInvite.conversationId)
         }) {
-            Logger.info("Existing conversation found, cancelling join...")
+            Logger.info("Existing conversation found locally, cancelling join...")
             throw ConversationStateMachineError.alreadyRedeemedInviteForConversation(existingConversation.id)
+        }
+
+        // Check if we're already a member of this group (groupId check)
+        // Only do network check if we have existing conversations that might conflict
+        let hasExistingConversations = try await databaseReader.read { db in
+            try DBConversation.fetchCount(db) > 0
+        }
+
+        if hasExistingConversations {
+            let inviteWithGroup = try await apiClient.inviteDetailsWithGroup(inviteCode)
+            let groupId = inviteWithGroup.groupId
+
+            // Check local database for existing group membership
+            if let existingConversation: DBConversation = try await databaseReader.read({ db in
+                try DBConversation.fetchOne(db, key: groupId)
+            }) {
+                Logger.info("Already a member of group \(groupId), cancelling join...")
+                throw ConversationStateMachineError.alreadyRedeemedInviteForConversation(existingConversation.id)
+            }
         }
 
         // Request to join

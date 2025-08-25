@@ -18,7 +18,6 @@ struct ConvosToolbarButton: View {
             }
             .padding(padding ? DesignConstants.Spacing.step2x : 0)
         }
-        .glassEffect(.regular.tint(.white).interactive())
     }
 }
 
@@ -88,6 +87,8 @@ struct AppSettingsView: View {
                             HStack(alignment: .firstTextBaseline, spacing: 0.0) {
                                 Text("Secured by ")
                                 Image("xmtpIcon")
+                                    .renderingMode(.template)
+                                    .foregroundStyle(.colorTextPrimary)
                                     .padding(.trailing, 1.0)
                                 Text("XMTP")
                             }
@@ -155,6 +156,7 @@ struct AppSettingsView: View {
 
                 ToolbarItem(placement: .principal) {
                     ConvosToolbarButton(padding: true) {}
+                        .glassEffect(.regular.tint(.colorBackgroundPrimary).interactive(), in: Capsule())
                         .disabled(true)
                 }
             }

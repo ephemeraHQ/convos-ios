@@ -120,7 +120,7 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
         }
         .compositingGroup()
         .clipShape(.rect(cornerRadius: cornerRadius))
-        .glassEffect(.regular.tint(.white).interactive(), in: .rect(cornerRadius: cornerRadius))
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
         .scaleEffect(
             x: 1 + (blurProgress * 0.15),
             y: 1 - (blurProgress * 0.05)
@@ -230,7 +230,7 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
                         Image(systemName: "arrow.up")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.colorTextPrimaryInverted)
                             .padding(.horizontal, 12.0)
                     }
                     .frame(width: 40.0, height: 40.0)

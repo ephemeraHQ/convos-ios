@@ -71,7 +71,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         newConversationTask = Task { [weak self] in
             guard let self else { return }
             do {
-                let messagingService = try session.addInbox()
+                let messagingService = try await session.addInbox()
                 self.messagingService = messagingService
                 guard !Task.isCancelled else { return }
                 let draftConversationComposer = messagingService.draftConversationComposer()
@@ -107,7 +107,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         Task { [weak self] in
             guard let self else { return }
             guard let messagingService else { return }
-            try session.deleteInbox(for: messagingService)
+            try await session.deleteInbox(for: messagingService)
             await draftConversationComposer?.draftConversationWriter.delete()
             self.messagingService = nil
         }
@@ -123,7 +123,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
                 // Ensure we have a messaging service
                 if self.messagingService == nil {
                     Logger.info("No messaging service found, starting one while joining conversation...")
-                    let messagingService = try session.addInbox()
+                    let messagingService = try await session.addInbox()
                     self.messagingService = messagingService
                 }
 
