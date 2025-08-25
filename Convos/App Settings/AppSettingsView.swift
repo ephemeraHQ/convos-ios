@@ -2,14 +2,7 @@ import SwiftUI
 
 struct ConvosToolbarButton: View {
     let padding: Bool
-    let useGlassEffect: Bool
     let action: () -> Void
-
-    init(padding: Bool, useGlassEffect: Bool = true, action: @escaping () -> Void) {
-        self.padding = padding
-        self.useGlassEffect = useGlassEffect
-        self.action = action
-    }
 
     var body: some View {
         Button {
@@ -25,18 +18,7 @@ struct ConvosToolbarButton: View {
             }
             .padding(padding ? DesignConstants.Spacing.step2x : 0)
         }
-        .conditionalEffect(useGlassEffect)
-    }
-}
-
-extension View {
-    @ViewBuilder
-    func conditionalEffect(_ useGlass: Bool) -> some View {
-        if useGlass {
-            self.glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12.0))
-        } else {
-            self
-        }
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12.0))
     }
 }
 
@@ -174,7 +156,7 @@ struct AppSettingsView: View {
                 }
 
                 ToolbarItem(placement: .principal) {
-                    ConvosToolbarButton(padding: true, useGlassEffect: true) {}
+                    ConvosToolbarButton(padding: true) {}
                         .disabled(true)
                 }
             }
