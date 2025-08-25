@@ -18,7 +18,7 @@ struct ConvosToolbarButton: View {
             }
             .padding(padding ? DesignConstants.Spacing.step2x : 0)
         }
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12.0))
+        .glassEffect(.regular)
     }
 }
 
