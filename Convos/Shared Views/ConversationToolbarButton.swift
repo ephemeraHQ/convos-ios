@@ -40,8 +40,11 @@ struct ConversationToolbarButton: View {
             action()
         } label: {
             HStack(spacing: 0.0) {
-                ConversationAvatarView(conversation: conversation)
-                    .frame(width: 36.0, height: 36.0)
+                ConversationAvatarView(
+                    conversation: conversation,
+                    conversationImage: conversationImage
+                )
+                .frame(width: 36.0, height: 36.0)
 
                 VStack(alignment: .leading, spacing: 0.0) {
                     Text(title)

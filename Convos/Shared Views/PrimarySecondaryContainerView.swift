@@ -230,7 +230,7 @@ struct PrimarySecondaryContainerView<PrimaryContent: View,
                         Image(systemName: "arrow.up")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.colorTextPrimaryInverted)
                             .padding(.horizontal, 12.0)
                     }
                     .frame(width: 40.0, height: 40.0)

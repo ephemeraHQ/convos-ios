@@ -3,7 +3,10 @@ import Foundation
 public struct ConversationUpdate: Hashable, Codable {
     public struct MetadataChange: Hashable, Codable {
         public enum Field: String, Codable {
-            case name = "group_name", image = "group_image_url_square", unknown
+            case name = "group_name",
+                 description = "description",
+                 image = "group_image_url_square",
+                 unknown
         }
         public let field: Field
         public let oldValue: String?
@@ -30,6 +33,10 @@ public struct ConversationUpdate: Hashable, Codable {
                   metadataChange.field == .image,
                   metadataChange.newValue != nil {
             "\(creator.displayName) changed the convo photo"
+        } else if let metadataChange = metadataChanges.first,
+                  metadataChange.field == .description,
+                  metadataChange.newValue != nil {
+            "\(creator.displayName) changed the convo description"
         } else {
             "Unknown update"
         }

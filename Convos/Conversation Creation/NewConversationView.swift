@@ -20,9 +20,8 @@ struct InviteShareLink: View {
 }
 
 struct NewConversationView: View {
-    let viewModel: NewConversationViewModel
+    @Bindable var viewModel: NewConversationViewModel
     @State private var hasShownScannerOnAppear: Bool = false
-    @State private var presentingJoinConversationSheet: Bool = false
     @State private var presentingDeleteConfirmation: Bool = false
     @State private var sidebarWidth: CGFloat = 0.0
 
@@ -40,16 +39,18 @@ struct NewConversationView: View {
                 Group {
                     if viewModel.showScannerOnAppear && !hasShownScannerOnAppear {
                         JoinConversationView { inviteCode in
-                            hasShownScannerOnAppear = true
-                            viewModel.join(inviteUrlString: inviteCode)
+                            if viewModel.join(inviteUrlString: inviteCode) {
+                                hasShownScannerOnAppear = true
+                                return true
+                            } else {
+                                return false
+                            }
                         }
                     } else if let conversationViewModel = viewModel.conversationViewModel {
                         ConversationView(
                             viewModel: conversationViewModel,
                             focusState: $focusState,
-                            onScanInviteCode: {
-                                presentingJoinConversationSheet = true
-                            },
+                            onScanInviteCode: viewModel.onScanInviteCode,
                             onDeleteConversation: viewModel.deleteConversation,
                             confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
                             messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
@@ -84,10 +85,8 @@ struct NewConversationView: View {
                     }
                 }
                 .background(.colorBackgroundPrimary)
-                .sheet(isPresented: $presentingJoinConversationSheet) {
+                .sheet(isPresented: $viewModel.presentingJoinConversationSheet) {
                     JoinConversationView { inviteCode in
-                        presentingJoinConversationSheet = false
-                        Logger.info("Invite code: \(inviteCode)")
                         viewModel.join(inviteUrlString: inviteCode)
                     }
                 }

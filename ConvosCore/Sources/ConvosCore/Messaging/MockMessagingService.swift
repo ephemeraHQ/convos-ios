@@ -4,12 +4,11 @@ import UIKit
 import XMTPiOS
 
 public class MockMessagingService: MessagingServiceProtocol {
+    public let identifier: String
+
     public let currentUser: ConversationMember = .mock()
     public let allUsers: [ConversationMember]
     public let _conversations: [Conversation]
-    public var inboxReadyPublisher: InboxReadyResultPublisher {
-        Empty().eraseToAnyPublisher()
-    }
 
     private var unpublishedMessages: [AnyMessage] = []
 
@@ -19,6 +18,7 @@ public class MockMessagingService: MessagingServiceProtocol {
     private var messageTimer: Timer?
 
     public init() {
+        self.identifier = UUID().uuidString
         let users = Self.randomUsers()
         allUsers = users
         _conversations = Self.randomConversations(with: users)
@@ -33,6 +33,8 @@ public class MockMessagingService: MessagingServiceProtocol {
     }
 
     // MARK: - Protocol Conformance
+
+    public func stopAndDelete() {}
 
     public func myProfileWriter() -> any MyProfileWriterProtocol {
         self
@@ -203,10 +205,6 @@ extension MockMessagingService: MessagesRepositoryProtocol {
 }
 
 extension MockMessagingService: OutgoingMessageWriterProtocol {
-    public var isSendingPublisher: AnyPublisher<Bool, Never> {
-        Just(false).eraseToAnyPublisher()
-    }
-
     public var sentMessage: AnyPublisher<String, Never> {
         Just("").eraseToAnyPublisher()
     }

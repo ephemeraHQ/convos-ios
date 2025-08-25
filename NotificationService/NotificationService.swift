@@ -22,7 +22,7 @@ class NotificationService: UNNotificationServiceExtension {
 
         // Handle the push notification asynchronously and wait for completion
         pendingTask = Task {
-            await handlePushNotificationAsync(userInfo: request.content.userInfo)
+            await handlePushNotification(userInfo: request.content.userInfo)
         }
     }
 
@@ -35,56 +35,44 @@ class NotificationService: UNNotificationServiceExtension {
         Logger.info("NSE: Extension time expiring, cleaning up XMTP resources")
         pushHandler?.cleanup()
 
-        // Only deliver notification if we successfully decoded content
-        if hasDecodedContent() {
-            Logger.info("NSE: Delivering notification with decoded content on timeout")
-            if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
-                contentHandler(bestAttemptContent)
-            }
-        } else {
-            Logger.info("NSE: Suppressing notification - no decoded content available on timeout")
-            // Don't call contentHandler - this suppresses the notification
-        }
+        // With notification filtering entitlement, we can choose not to show anything on timeout
+        // by not calling contentHandler. This completely suppresses the notification.
+        Logger.info("NSE: Timeout - dropping notification by not calling contentHandler")
+        // Don't call contentHandler - notification is dropped
     }
 
-    private func handlePushNotificationAsync(userInfo: [AnyHashable: Any]) async {
-        // Set initial notification content
-        updateNotificationContent(userInfo: userInfo)
+    private func handlePushNotification(userInfo: [AnyHashable: Any]) async {
+        // Don't set initial content yet - wait to see if we should drop the notification
 
-        // Use the async version that waits for completion (this will decode the message)
         do {
-            try await pushHandler?.handlePushNotificationAsync(userInfo: userInfo)
+            try await pushHandler?.handlePushNotification(userInfo: userInfo)
+
+            // Only set initial content if we're going to show the notification
+            updateNotificationContent(userInfo: userInfo)
         } catch {
             // Check if this is a message that should be dropped
             if let error = error as? NotificationError, error == .messageShouldBeDropped {
                 Logger.info("Notification dropped - message from self or non-text")
-                // Cleanup and return without delivering any notification
                 Logger.info("NSE: Cleaning up XMTP resources after dropping notification")
                 pushHandler?.cleanup()
+                // Don't call contentHandler - this drops the notification with filtering entitlement
                 return
             }
-            // For other errors, continue with generic notification
+            // For any other errors, also drop the notification
+            // Better to show nothing than generic/incorrect content
             Logger.error("Push notification processing error: \(error)")
+            Logger.info("NSE: Dropping notification due to processing error")
+            pushHandler?.cleanup()
+            // Don't call contentHandler - this drops the notification with filtering entitlement
+            return
         }
 
         // Check if the task was cancelled before calling contentHandler
         guard !Task.isCancelled else {
             Logger.info("NSE: Task cancelled, cleaning up XMTP resources")
             pushHandler?.cleanup()
-
-            // Try to use any partial decoded content
-            updateNotificationContentWithDecodedData(userInfo: userInfo)
-
-            // Only deliver notification if we successfully decoded content
-            if hasDecodedContent() {
-                Logger.info("NSE: Delivering notification with decoded content after cancellation")
-                if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
-                    contentHandler(bestAttemptContent)
-                }
-            } else {
-                Logger.info("NSE: Suppressing notification - no decoded content available after cancellation")
-                // Don't call contentHandler - this suppresses the notification
-            }
+            Logger.info("NSE: Dropping notification - task was cancelled")
+            // Don't call contentHandler - this drops the notification with filtering entitlement
             return
         }
 
@@ -150,22 +138,5 @@ class NotificationService: UNNotificationServiceExtension {
 
             Logger.info("Applied fallback notification content")
         }
-    }
-
-    private func hasDecodedContent() -> Bool {
-        // Check if we have decoded content from the push handler
-        if let processedPayload = pushHandler?.getProcessedPayload() {
-            // For protocol messages, we need decoded content
-            if processedPayload.notificationType == .protocolMessage {
-                return processedPayload.decodedBody != nil || processedPayload.decodedTitle != nil
-            }
-            // For other known notification types (like invite join requests), no decoding is needed
-            if processedPayload.notificationType == .inviteJoinRequest {
-                return true
-            }
-            // For unknown/nil notification types, don't deliver to be safe
-            return false
-        }
-        return false
     }
 }

@@ -77,7 +77,7 @@ struct MessageBubble: View {
                         if style == .normal {
                             Spacer()
                         } else {
-                            ProfileAvatarView(profile: profile)
+                            ProfileAvatarView(profile: profile, profileImage: nil)
                         }
                     }
                 }

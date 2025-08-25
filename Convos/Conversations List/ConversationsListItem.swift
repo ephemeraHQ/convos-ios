@@ -75,14 +75,16 @@ struct ConversationsListItem: View {
             isMuted: conversation.isMuted,
             isUnread: conversation.isUnread,
             leadingContent: {
-                ConversationAvatarView(conversation: conversation)
+                ConversationAvatarView(conversation: conversation, conversationImage: nil)
             },
             subtitle: {
-                if let message = conversation.lastMessage {
-                    HStack(spacing: DesignConstants.Spacing.stepX) {
+                HStack(spacing: DesignConstants.Spacing.stepX) {
+                    if let message = conversation.lastMessage {
                         RelativeDateLabel(date: message.createdAt)
                         Text("•")
                         Text(message.text)
+                    } else {
+                        RelativeDateLabel(date: conversation.createdAt)
                     }
                 }
             },

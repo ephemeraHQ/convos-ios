@@ -4,31 +4,78 @@ import GRDB
 import XMTPiOS
 
 final class MessagingService: MessagingServiceProtocol {
-    private let inboxReadyValue: PublisherValue<InboxReadyResult>
-    private var clientPublisher: AnyClientProviderPublisher {
-        inboxReadyValue.publisher
-            .compactMap { $0?.client }
-            .eraseToAnyPublisher()
+    var identifier: String {
+        guard case .ready(let result) = inboxStateManager.currentState else {
+            return internalIdentifier
+        }
+        return result.client.inboxId
     }
+    private let inboxId: String?
+    private let internalIdentifier: String
+    private let authorizationOperation: any AuthorizeInboxOperationProtocol
+    internal let inboxStateManager: InboxStateManager
     private let databaseReader: any DatabaseReader
-    private let databaseWriter: any DatabaseWriter
+    internal let databaseWriter: any DatabaseWriter
     private var cancellables: Set<AnyCancellable> = []
 
-    init(inboxReadyPublisher: InboxReadyResultPublisher,
-         databaseWriter: any DatabaseWriter,
-         databaseReader: any DatabaseReader) {
-        self.inboxReadyValue = .init(initial: nil, upstream: inboxReadyPublisher)
+    static func authorizedMessagingService(
+        for inboxId: String,
+        databaseWriter: any DatabaseWriter,
+        databaseReader: any DatabaseReader,
+        environment: AppEnvironment,
+        registersForPushNotifications: Bool = true
+    ) -> MessagingService {
+        let authorizationOperation = AuthorizeInboxOperation.authorize(
+            inboxId: inboxId,
+            databaseReader: databaseReader,
+            databaseWriter: databaseWriter,
+            environment: environment,
+            registersForPushNotifications: registersForPushNotifications
+        )
+        return .init(
+            inboxId: inboxId,
+            authorizationOperation: authorizationOperation,
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader
+        )
+    }
+
+        static func registeredMessagingService(
+        databaseWriter: any DatabaseWriter,
+        databaseReader: any DatabaseReader,
+        environment: AppEnvironment
+    ) async -> MessagingService {
+        return await UnusedInboxCache.shared.consumeOrCreateMessagingService(
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            environment: environment
+        )
+    }
+
+    internal init(inboxId: String?,
+                  authorizationOperation: AuthorizeInboxOperation,
+                  databaseWriter: any DatabaseWriter,
+                  databaseReader: any DatabaseReader) {
+        self.inboxId = inboxId
+        self.internalIdentifier = inboxId ?? UUID().uuidString
+        self.authorizationOperation = authorizationOperation
+        self.inboxStateManager = InboxStateManager(stateMachine: authorizationOperation.stateMachine)
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
     }
 
     deinit {
-        cleanup()
+        cancellables.removeAll()
     }
 
-    func cleanup() {
-        cancellables.removeAll()
-        inboxReadyValue.dispose()
+    // MARK: State
+
+    func stopAndDelete() {
+        authorizationOperation.stopAndDelete()
+    }
+
+    func stopAndDelete() async {
+        await authorizationOperation.stopAndDelete()
     }
 
     // MARK: Invites
@@ -44,11 +91,11 @@ final class MessagingService: MessagingServiceProtocol {
     // MARK: My Profile
 
     func myProfileRepository() -> any MyProfileRepositoryProtocol {
-        MyProfileRepository(inboxReadyValue: inboxReadyValue, databaseReader: databaseReader)
+        MyProfileRepository(inboxStateManager: inboxStateManager, databaseReader: databaseReader)
     }
 
     func myProfileWriter() -> any MyProfileWriterProtocol {
-        MyProfileWriter(inboxReadyValue: inboxReadyValue, databaseWriter: databaseWriter)
+        MyProfileWriter(inboxStateManager: inboxStateManager, databaseWriter: databaseWriter)
     }
 
     // MARK: New Conversation
@@ -56,7 +103,7 @@ final class MessagingService: MessagingServiceProtocol {
     func draftConversationComposer() -> any DraftConversationComposerProtocol {
         let clientConversationId: String = DBConversation.generateDraftConversationId()
         let draftConversationWriter = DraftConversationWriter(
-            inboxReadyValue: inboxReadyValue,
+            inboxStateManager: inboxStateManager,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             draftConversationId: clientConversationId
@@ -91,8 +138,7 @@ final class MessagingService: MessagingServiceProtocol {
 
     func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
         ConversationConsentWriter(
-            client: inboxReadyValue.value?.client,
-            clientPublisher: clientPublisher,
+            inboxStateManager: inboxStateManager,
             databaseWriter: databaseWriter
         )
     }
@@ -109,8 +155,7 @@ final class MessagingService: MessagingServiceProtocol {
     }
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
-        OutgoingMessageWriter(client: inboxReadyValue.value?.client,
-                              clientPublisher: clientPublisher,
+        OutgoingMessageWriter(inboxStateManager: inboxStateManager,
                               databaseWriter: databaseWriter,
                               conversationId: conversationId)
     }
@@ -119,23 +164,19 @@ final class MessagingService: MessagingServiceProtocol {
 
     func groupMetadataWriter() -> any ConversationMetadataWriterProtocol {
         ConversationMetadataWriter(
-            inboxReadyValue: inboxReadyValue,
+            inboxStateManager: inboxStateManager,
             databaseWriter: databaseWriter
         )
     }
 
     func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
-        GroupPermissionsRepository(client: inboxReadyValue.value?.client,
-                                   clientPublisher: clientPublisher,
+        GroupPermissionsRepository(inboxStateManager: inboxStateManager,
                                    databaseReader: databaseReader)
     }
 
     func uploadImage(data: Data, filename: String) async throws -> String {
-        guard let inboxReady = inboxReadyValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
-
-        return try await inboxReady.apiClient.uploadAttachment(
+        let result = try await inboxStateManager.waitForInboxReadyResult()
+        return try await result.apiClient.uploadAttachment(
             data: data,
             filename: filename,
             contentType: "image/jpeg",
@@ -148,14 +189,27 @@ final class MessagingService: MessagingServiceProtocol {
         filename: String,
         afterUpload: @escaping (String) async throws -> Void
     ) async throws -> String {
-        guard let inboxReady = inboxReadyValue.value else {
-            throw InboxStateError.inboxNotReady
-        }
-
-        return try await inboxReady.apiClient.uploadAttachmentAndExecute(
+        let result = try await inboxStateManager.waitForInboxReadyResult()
+        return try await result.apiClient.uploadAttachmentAndExecute(
             data: data,
             filename: filename,
             afterUpload: afterUpload
         )
+    }
+
+    // MARK: - Public Unused Inbox Methods
+
+    static func createUnusedInboxIfNeeded(
+        databaseWriter: any DatabaseWriter,
+        databaseReader: any DatabaseReader,
+        environment: AppEnvironment
+    ) {
+        Task {
+            await UnusedInboxCache.shared.prepareUnusedInboxIfNeeded(
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment
+            )
+        }
     }
 }
