@@ -14,9 +14,8 @@ enum SessionManagerError: Error {
     case inboxNotFound
 }
 
-class SessionManager: SessionManagerProtocol {
+actor SessionManager: SessionManagerProtocol {
     private var leftConversationObserver: Any?
-
     private var messagingServices: [AnyMessagingService] = []
 
     private let databaseWriter: any DatabaseWriter
@@ -32,24 +31,26 @@ class SessionManager: SessionManagerProtocol {
         self.messagingServices = []
 
         let inboxesRepository = InboxesRepository(databaseReader: databaseReader)
-        Task { [weak self, inboxesRepository] in
+        Task { [weak self] in
             guard let self else { return }
             do {
                 let inboxes = try inboxesRepository.allInboxes()
-                try startMessagingServices(for: inboxes)
+                try await self.startMessagingServices(for: inboxes)
             } catch {
                 Logger.error("Error starting messaging services: \(error.localizedDescription)")
             }
         }
 
-        observe()
+        Task { await observe() }
 
         // Schedule creation of unused inbox on app startup
-        MessagingService.createUnusedInboxIfNeeded(
-            databaseWriter: databaseWriter,
-            databaseReader: databaseReader,
-            environment: environment
-        )
+        Task {
+            MessagingService.createUnusedInboxIfNeeded(
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment
+            )
+        }
     }
 
     deinit {
@@ -64,7 +65,9 @@ class SessionManager: SessionManagerProtocol {
     private func startMessagingServices(for inboxes: [Inbox]) throws {
         let inboxIds = inboxes.map { $0.inboxId }
         Logger.info("Starting messaging services for inboxes: \(inboxIds)")
-        inboxIds.forEach { _ = startMessagingService(for: $0) }
+        for inboxId in inboxIds {
+            _ = startMessagingService(for: inboxId)
+        }
     }
 
     private func startMessagingService(for inboxId: String) -> AnyMessagingService {
@@ -80,26 +83,23 @@ class SessionManager: SessionManagerProtocol {
 
     private func observe() {
         leftConversationObserver = NotificationCenter.default
-            .addObserver(forName: .leftConversationNotification, object: nil, queue: .main) { [weak self] notification in
-                guard let self else { return }
-                guard let inboxId: String = notification.userInfo?["inboxId"] as? String else {
-                    return
-                }
+            .addObserver(forName: .leftConversationNotification, object: nil, queue: .main) { notification in
+                Task { [weak self] in
+                    guard let self else { return }
+                    guard let inboxId: String = notification.userInfo?["inboxId"] as? String else {
+                        return
+                    }
 
-                // Schedule explosion notification if conversationId is provided
-                if let conversationId: String = notification.userInfo?["conversationId"] as? String {
-                    Task {
+                    // Schedule explosion notification if conversationId is provided
+                    if let conversationId: String = notification.userInfo?["conversationId"] as? String {
                         await self.scheduleExplosionNotification(inboxId: inboxId, conversationId: conversationId)
                     }
-                }
 
-                do {
-                    try deleteInbox(inboxId: inboxId)
-                } catch {
-                    Logger
-                        .error(
-                            "Error deleting account from left conversation notification: \(error.localizedDescription)"
-                        )
+                    do {
+                        try await self.deleteInbox(inboxId: inboxId)
+                    } catch {
+                        Logger.error("Error deleting account from left conversation notification: \(error.localizedDescription)")
+                    }
                 }
             }
     }
@@ -185,60 +185,60 @@ class SessionManager: SessionManagerProtocol {
         return messagingService
     }
 
-    func deleteInbox(for messagingService: AnyMessagingService) throws {
+    func deleteInbox(for messagingService: AnyMessagingService) async throws {
         guard let messagingServiceIndex = messagingServices.firstIndex(
             where: { $0.identifier == messagingService.identifier || $0 === messagingService }
         ) else {
             Logger.error("Inbox to delete for messaging service not found")
             return
         }
-        let messagingService = messagingServices[messagingServiceIndex]
-        Logger.info("Stopping messaging service with id: \(messagingService.identifier)")
-        messagingService.stopAndDelete()
+        let service = messagingServices[messagingServiceIndex]
+        Logger.info("Stopping messaging service with id: \(service.identifier)")
+        await service.stopAndDelete()
+        messagingServices.remove(at: messagingServiceIndex)
     }
 
-    func deleteInbox(inboxId: String) throws {
+    func deleteInbox(inboxId: String) async throws {
         guard let messagingServiceIndex = messagingServices.firstIndex(where: { $0.identifier == inboxId }) else {
             Logger.error("Inbox to delete for inbox id \(inboxId) not found")
             return
         }
         let messagingService = messagingServices[messagingServiceIndex]
-        messagingService.stopAndDelete()
+        Logger.info("Stopping messaging service with id: \(messagingService.identifier)")
+        await messagingService.stopAndDelete()
         messagingServices.remove(at: messagingServiceIndex)
     }
 
-    func deleteAllInboxes() throws {
-        Task { [weak self] in
-            guard let self else { return }
-            await withTaskGroup { group in
-                for messagingService in self.messagingServices {
-                    group.addTask {
-                        await messagingService.stopAndDelete()
-                    }
+    func deleteAllInboxes() async throws {
+        let services = messagingServices // Get a local copy
+        await withTaskGroup(of: Void.self) { group in
+            for messagingService in services {
+                group.addTask {
+                    await messagingService.stopAndDelete()
                 }
             }
-            self.messagingServices.removeAll()
         }
+        messagingServices.removeAll()
     }
 
     // MARK: Messaging
 
-    func messagingService(for inboxId: String) -> AnyMessagingService {
-        guard let messagingService = messagingServices.first(where: { $0.identifier == inboxId }) else {
-            Logger.info("Messaging service not found, starting...")
-            return startMessagingService(for: inboxId)
+    func messagingService(for inboxId: String) async -> AnyMessagingService {
+        if let existingService = messagingServices.first(where: { $0.identifier == inboxId }) {
+            return existingService
         }
 
-        return messagingService
+        Logger.info("Messaging service not found, starting...")
+        return startMessagingService(for: inboxId)
     }
 
     // MARK: Displaying All Conversations
 
-    func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
+    nonisolated func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
         ConversationsRepository(dbReader: databaseReader, consent: consent)
     }
 
-    func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
+    nonisolated func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
         ConversationsCountRepository(databaseReader: databaseReader, consent: consent, kinds: kinds)
     }
 }

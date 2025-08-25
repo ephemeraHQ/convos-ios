@@ -326,16 +326,18 @@ class ConversationViewModel {
     }
 
     func leaveConvo() {
-        do {
-            try session.deleteInbox(inboxId: conversation.inboxId)
-            presentingConversationSettings = false
-            NotificationCenter.default.post(
-                name: .leftConversationNotification,
-                object: nil,
-                userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
-            )
-        } catch {
-            Logger.error("Error leaving convo: \(error.localizedDescription)")
+        Task {
+            do {
+                try await session.deleteInbox(inboxId: conversation.inboxId)
+                presentingConversationSettings = false
+                NotificationCenter.default.post(
+                    name: .leftConversationNotification,
+                    object: nil,
+                    userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
+                )
+            } catch {
+                Logger.error("Error leaving convo: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -358,7 +360,7 @@ class ConversationViewModel {
                     groupId: conversation.id,
                     memberInboxIds: memberIdsToRemove
                 )
-                try session.deleteInbox(inboxId: conversation.inboxId)
+                try await session.deleteInbox(inboxId: conversation.inboxId)
                 presentingConversationSettings = false
             } catch {
                 Logger.error("Error exploding convo: \(error.localizedDescription)")

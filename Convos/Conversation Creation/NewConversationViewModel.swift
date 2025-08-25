@@ -107,7 +107,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         Task { [weak self] in
             guard let self else { return }
             guard let messagingService else { return }
-            try session.deleteInbox(for: messagingService)
+            try await session.deleteInbox(for: messagingService)
             await draftConversationComposer?.draftConversationWriter.delete()
             self.messagingService = nil
         }
