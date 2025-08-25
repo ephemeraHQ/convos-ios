@@ -2,6 +2,13 @@ import Combine
 import ConvosCore
 import SwiftUI
 
+protocol NewConversationsViewModelDelegate: AnyObject {
+    func newConversationsViewModel(
+        _ viewModel: NewConversationViewModel,
+        attemptedJoiningExistingConversationWithId conversationId: String
+    )
+}
+
 @Observable
 class NewConversationViewModel: SelectableConversationViewModelType, Identifiable {
     override var selectedConversationViewModel: ConversationViewModel? {
@@ -17,9 +24,11 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
 
     let session: any SessionManagerProtocol
     var conversationViewModel: ConversationViewModel?
+    private weak var delegate: NewConversationsViewModelDelegate?
     private(set) var messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .scan
     private(set) var shouldConfirmDeletingConversation: Bool = true
     private(set) var showScannerOnAppear: Bool
+    var presentingJoinConversationSheet: Bool = false
 
     // MARK: - Private
 
@@ -35,9 +44,10 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
 
     // MARK: - Init
 
-    init(session: any SessionManagerProtocol, showScannerOnAppear: Bool = false) {
+    init(session: any SessionManagerProtocol, showScannerOnAppear: Bool = false, delegate: NewConversationsViewModelDelegate? = nil) {
         self.session = session
         self.showScannerOnAppear = showScannerOnAppear
+        self.delegate = delegate
         super.init()
     }
 
@@ -50,6 +60,10 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
     }
 
     // MARK: - Actions
+
+    func onScanInviteCode() {
+        presentingJoinConversationSheet = true
+    }
 
     func newConversation() {
         guard messagingService == nil else { return }
@@ -80,6 +94,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
             return false
         }
         Logger.info("Scanned inviteCode: \(inviteCode)")
+        presentingJoinConversationSheet = false
         joinConversation(inviteCode: inviteCode)
         return true
     }
@@ -138,8 +153,17 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
                     )
                 }
 
-                // Request to join - the state machine handles all the complexity
-                try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
+                // Request to join
+                do {
+                    try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
+                } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
+                    Logger.info("Invite already redeeemed, showing existing conversation...")
+                    presentingJoinConversationSheet = false
+                    delegate?.newConversationsViewModel(
+                        self,
+                        attemptedJoiningExistingConversationWithId: conversationId
+                    )
+                }
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
             }
@@ -166,6 +190,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
             guard let self else { return }
             messagesTopBarTrailingItem = .share
             shouldConfirmDeletingConversation = false
+            conversationViewModel?.untitledConversationPlaceholder = "Untitled"
         }
         .store(in: &cancellables)
     }

@@ -12,7 +12,7 @@ public final class InboxStateManager {
     public private(set) var hasError: Bool = false
     public private(set) var errorMessage: String?
 
-    private weak var stateMachine: InboxStateMachine?
+    private(set) weak var stateMachine: InboxStateMachine?
     private var stateTask: Task<Void, Never>?
     private var observers: [WeakObserver] = []
 

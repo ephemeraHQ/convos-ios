@@ -24,7 +24,7 @@ public actor ConversationStateMachine {
         case joining(inviteCode: String)
         case ready(ConversationReadyResult)
         case deleting
-        case error(String)
+        case error(Error)
 
         public static func == (lhs: State, rhs: State) -> Bool {
             switch (lhs, rhs) {
@@ -36,8 +36,6 @@ public actor ConversationStateMachine {
                 return lhsCode == rhsCode
             case let (.ready(lhsResult), .ready(rhsResult)):
                 return lhsResult.conversationId == rhsResult.conversationId
-            case let (.error(lhsError), .error(rhsError)):
-                return lhsError == rhsError
             default:
                 return false
             }
@@ -148,8 +146,8 @@ public actor ConversationStateMachine {
             switch state {
             case .ready(let result):
                 return result
-            case .error(let message):
-                throw ConversationStateMachineError.stateMachineError(message)
+            case .error(let error):
+                throw error
             default:
                 continue
             }
@@ -184,6 +182,8 @@ public actor ConversationStateMachine {
                 try await handleCreate()
             case (.uninitialized, let .join(inviteCode)):
                 try await handleJoin(inviteCode: inviteCode)
+            case (.ready, let .join(inviteCode)):
+                try await handleJoinFromReadyState(inviteCode: inviteCode)
             case (_, let .sendMessage(text)):
                 try await handleSendMessage(text: text)
             case (.ready, .delete), (.error, .delete):
@@ -195,7 +195,7 @@ public actor ConversationStateMachine {
             }
         } catch {
             Logger.error("Failed state transition \(_state) -> \(action): \(error.localizedDescription)")
-            emitStateChange(.error(error.localizedDescription))
+            emitStateChange(.error(error))
         }
     }
 
@@ -264,6 +264,29 @@ public actor ConversationStateMachine {
         )))
     }
 
+    private func handleJoinFromReadyState(inviteCode: String) async throws {
+        let previousResult: ConversationReadyResult? = switch _state {
+        case .ready(let result):
+            result
+        default:
+            nil
+        }
+
+        do {
+            try await handleJoin(inviteCode: inviteCode)
+        } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
+            // if the join succeeds, clean up `previousConversationId`
+            if let previousResult {
+                try await cleanUp(
+                    conversationId: previousResult.conversationId,
+                    externalConversationId: previousResult.externalConversationId
+                )
+            }
+
+            throw ConversationStateMachineError.alreadyRedeemedInviteForConversation(conversationId)
+        }
+    }
+
     private func handleJoin(inviteCode: String) async throws {
         emitStateChange(.joining(inviteCode: inviteCode))
 
@@ -272,6 +295,17 @@ public actor ConversationStateMachine {
 
         let apiClient = inboxReady.apiClient
         let client = inboxReady.client
+
+        // check if we've already joined this conversation
+        let existingInvite: DBInvite? = try await databaseReader.read { db in
+            try DBInvite.fetchOne(db, key: inviteCode)
+        }
+        if let existingInvite, let existingConversation: DBConversation = try await databaseReader.read ({ db in
+            try DBConversation.fetchOne(db, key: existingInvite.conversationId)
+        }) {
+            Logger.info("Existing conversation found, cancelling join...")
+            throw ConversationStateMachineError.alreadyRedeemedInviteForConversation(existingConversation.id)
+        }
 
         // Request to join
         let response = try await apiClient.requestToJoin(inviteCode)
@@ -297,6 +331,10 @@ public actor ConversationStateMachine {
                     let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
                     let conversationWriter = ConversationWriter(databaseWriter: databaseWriter, messageWriter: messageWriter)
                     _ = try await conversationWriter.store(conversation: conversation, clientConversationId: draftConversationId)
+
+                    // Store the invite we used so we don't join the same conversation again
+                    let conversationCreatorInboxId = try await conversation.creatorInboxId
+                    _ = try await inviteWriter.store(invite: response.invite, inboxId: conversationCreatorInboxId)
 
                     // Create invite for the joined conversation
                     let inviteResponse = try await apiClient.createInvite(
@@ -334,7 +372,7 @@ public actor ConversationStateMachine {
                 }
             } catch {
                 Logger.error("Error streaming conversations: \(error)")
-                await self?.emitStateChange(.error(error.localizedDescription))
+                await self?.emitStateChange(.error(error))
             }
         }
     }
@@ -384,8 +422,8 @@ public actor ConversationStateMachine {
         case .deleting:
             Logger.warning("Cannot send message while conversation is being deleted")
 
-        case .error(let message):
-            throw ConversationStateMachineError.stateMachineError(message)
+        case .error(let error):
+            throw ConversationStateMachineError.stateMachineError(error)
         }
     }
 
@@ -459,15 +497,19 @@ public actor ConversationStateMachine {
         // We always use draftConversationId for the local database records
         let conversationId = draftConversationId
 
+        try await cleanUp(
+            conversationId: conversationId,
+            externalConversationId: externalConversationId
+        )
+
+        emitStateChange(.uninitialized)
+    }
+
+    private func cleanUp(conversationId: String, externalConversationId: String?) async throws {
         try await databaseWriter.write { db in
             // Delete messages first (due to foreign key constraints)
             try DBMessage
                 .filter(DBMessage.Columns.conversationId == conversationId)
-                .deleteAll(db)
-
-            // Delete conversation members
-            try DBConversationMember
-                .filter(DBConversationMember.Columns.conversationId == conversationId)
                 .deleteAll(db)
 
             // Delete conversation local state
@@ -475,22 +517,33 @@ public actor ConversationStateMachine {
                 .filter(Column("conversationId") == conversationId)
                 .deleteAll(db)
 
-            // Delete invites (using external conversation ID if available)
+            // Delete the conversation
+            try DBConversation
+                .filter(DBConversation.Columns.clientConversationId == conversationId)
+                .deleteAll(db)
+
+            // Delete anything with an external id
             if let externalConversationId = externalConversationId {
+                // Delete conversation members
+                try DBConversationMember
+                    .filter(DBConversationMember.Columns.conversationId == externalConversationId)
+                    .deleteAll(db)
+
+                try ConversationLocalState
+                    .filter(Column("conversationId") == externalConversationId)
+                    .deleteAll(db)
+
                 try DBInvite
                     .filter(DBInvite.Columns.conversationId == externalConversationId)
                     .deleteAll(db)
-            }
 
-            // Finally delete the conversation itself
-            try DBConversation
-                .filter(DBConversation.Columns.id == conversationId)
-                .deleteAll(db)
+                try DBConversation
+                    .filter(DBConversation.Columns.id == externalConversationId)
+                    .deleteAll(db)
+            }
 
             Logger.info("Cleaned up conversation data for id: \(conversationId), externalId: \(externalConversationId ?? "none")")
         }
-
-        emitStateChange(.uninitialized)
     }
 
     private func handleStop() {
@@ -501,9 +554,10 @@ public actor ConversationStateMachine {
 
 // MARK: - Errors
 
-enum ConversationStateMachineError: Error {
+public enum ConversationStateMachineError: Error {
     case failedFindingConversation
     case notReady
-    case stateMachineError(String)
+    case stateMachineError(Error)
     case unexpectedTermination
+    case alreadyRedeemedInviteForConversation(String)
 }
