@@ -69,7 +69,7 @@ public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol 
                                                          pushToken: token,
                                                          identityId: identityId,
                                                          xmtpInstallationId: installationId)
-            Logger.info("Registered notifications mapping for deviceId=\(deviceId), installationId=\(installationId)")
+            Logger.info("Registered notifications mapping for deviceId=\(deviceId), inboxId=\(identityId)")
             savePushToken(token, for: identityId)
         } catch {
             Logger.error("Failed to register notifications mapping: \(error)")

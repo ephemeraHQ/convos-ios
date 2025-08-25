@@ -15,7 +15,6 @@ enum SessionManagerError: Error {
 }
 
 class SessionManager: SessionManagerProtocol {
-    private var cancellables: Set<AnyCancellable> = []
     private var leftConversationObserver: Any?
 
     private var messagingServices: [AnyMessagingService] = []
@@ -31,16 +30,18 @@ class SessionManager: SessionManagerProtocol {
         self.databaseReader = databaseReader
         self.environment = environment
         self.messagingServices = []
+
         let inboxesRepository = InboxesRepository(databaseReader: databaseReader)
-        inboxesRepository.inboxesPublisher
-            .sink { [weak self] inboxes in
-                do {
-                    try self?.startMessagingServices(for: inboxes)
-                } catch {
-                    Logger.error("Error starting messaging services: \(error.localizedDescription)")
-                }
+        Task { [weak self, inboxesRepository] in
+            guard let self else { return }
+            do {
+                let inboxes = try inboxesRepository.allInboxes()
+                try startMessagingServices(for: inboxes)
+            } catch {
+                Logger.error("Error starting messaging services: \(error.localizedDescription)")
             }
-            .store(in: &cancellables)
+        }
+
         observe()
 
         // Schedule creation of unused inbox on app startup
@@ -55,27 +56,15 @@ class SessionManager: SessionManagerProtocol {
         if let leftConversationObserver {
             NotificationCenter.default.removeObserver(leftConversationObserver)
         }
-        cancellables.removeAll()
         messagingServices.removeAll()
     }
 
     // MARK: - Private Methods
 
     private func startMessagingServices(for inboxes: [Inbox]) throws {
-        let inboxIds = Set(inboxes.map(\.inboxId))
-        let existingInboxIds = Set(messagingServices.map { $0.identifier })
-        let newInboxIds = inboxIds.subtracting(existingInboxIds)
-        let oldInboxIds = existingInboxIds.subtracting(inboxIds)
-        Logger
-            .info(
-                "Starting messaging services: \(newInboxIds), stopping for: \(oldInboxIds). Current count: \(messagingServices.count)"
-            )
-        for inboxId in newInboxIds {
-            _ = startMessagingService(for: inboxId)
-        }
-        for oldInboxId in oldInboxIds {
-            try deleteInbox(inboxId: oldInboxId)
-        }
+        let inboxIds = inboxes.map { $0.inboxId }
+        Logger.info("Starting messaging services for inboxes: \(inboxIds)")
+        inboxIds.forEach { _ = startMessagingService(for: $0) }
     }
 
     private func startMessagingService(for inboxId: String) -> AnyMessagingService {
@@ -204,6 +193,7 @@ class SessionManager: SessionManagerProtocol {
             return
         }
         let messagingService = messagingServices[messagingServiceIndex]
+        Logger.info("Stopping messaging service with id: \(messagingService.identifier)")
         messagingService.stopAndDelete()
     }
 
