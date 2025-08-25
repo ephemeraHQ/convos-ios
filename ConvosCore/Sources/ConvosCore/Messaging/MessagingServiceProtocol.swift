@@ -7,6 +7,8 @@ public protocol MessagingServiceProtocol: AnyObject {
     func stopAndDelete()
     func stopAndDelete() async
 
+    func registerForPushNotifications() async
+
     func myProfileRepository() -> any MyProfileRepositoryProtocol
     func myProfileWriter() -> any MyProfileWriterProtocol
 

@@ -5,6 +5,7 @@ struct ConversationInfoButton<InfoView: View>: View {
     let conversation: Conversation
     let placeholderName: String
     let untitledConversationPlaceholder: String
+    let subtitle: String
     @Binding var conversationName: String
     @Binding var conversationImage: UIImage?
     @Binding var presentingConversationSettings: Bool
@@ -40,6 +41,7 @@ struct ConversationInfoButton<InfoView: View>: View {
                 conversationImage: $conversationImage,
                 conversationName: conversationName,
                 placeholderName: untitledConversationPlaceholder,
+                subtitle: subtitle,
                 action: onConversationInfoTapped
             )
         } secondaryContent: {
@@ -110,6 +112,7 @@ struct ConversationInfoButton<InfoView: View>: View {
         conversation: conversation,
         placeholderName: placeholderName,
         untitledConversationPlaceholder: "Untitled",
+        subtitle: "Customize",
         conversationName: $conversationName,
         conversationImage: $conversationImage,
         presentingConversationSettings: $presentingConversationSettings,

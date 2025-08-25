@@ -96,7 +96,8 @@ public actor InboxStateMachine {
     private let environment: AppEnvironment
     private let syncingManager: any SyncingManagerProtocol
     private let inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol
-    private let pushNotificationRegistrar: (any PushNotificationRegistrarProtocol)?
+    private let pushNotificationRegistrar: any PushNotificationRegistrarProtocol
+    private let autoRegistersForPushNotifications: Bool
 
     private var inboxId: String?
     private var currentTask: Task<Void, Never>?
@@ -160,7 +161,8 @@ public actor InboxStateMachine {
         inboxWriter: any InboxWriterProtocol,
         syncingManager: any SyncingManagerProtocol,
         inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol,
-        pushNotificationRegistrar: (any PushNotificationRegistrarProtocol)? = nil,
+        pushNotificationRegistrar: any PushNotificationRegistrarProtocol,
+        autoRegistersForPushNotifications: Bool,
         environment: AppEnvironment
     ) {
         self.identityStore = identityStore
@@ -169,6 +171,7 @@ public actor InboxStateMachine {
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
         self.pushNotificationRegistrar = pushNotificationRegistrar
+        self.autoRegistersForPushNotifications = autoRegistersForPushNotifications
 
         // Set custom XMTP host if provided
         Logger.info("🔧 XMTP Configuration:")
@@ -203,6 +206,34 @@ public actor InboxStateMachine {
 
     func stopAndDelete() {
         enqueueAction(.delete)
+    }
+
+    /// Registers for push notifications once the inbox is in a ready state.
+    func registerForPushNotifications() async {
+        Logger.info("Manually triggering push notification registration")
+        setupPushNotificationObservers()
+
+        // Check if we're already in ready state
+        if case .ready(let result) = _state {
+            await performPushNotificationRegistration(client: result.client, apiClient: result.apiClient)
+            return
+        }
+
+        // Wait for ready state
+        for await state in stateSequence {
+            switch state {
+            case .ready(let result):
+                await performPushNotificationRegistration(client: result.client, apiClient: result.apiClient)
+                return
+            case .error, .stopping, .deleting:
+                // Don't wait if we're in an error or terminal state
+                Logger.warning("Cannot register for push notifications in state: \(state)")
+                return
+            default:
+                // Continue waiting for ready state
+                continue
+            }
+        }
     }
 
     // MARK: - Private
@@ -337,29 +368,18 @@ public actor InboxStateMachine {
         inviteJoinRequestsManager.start(with: client, apiClient: apiClient)
 
         // Setup push notification observers if registrar is provided
-        if let pushNotificationRegistrar = pushNotificationRegistrar {
+        if autoRegistersForPushNotifications {
             setupPushNotificationObservers()
-
-            Task {
-                Logger.info("Registering for push notifications")
-                // Attempt to register for remote notifications to obtain APNS token ASAP
-                await pushNotificationRegistrar.registerForRemoteNotifications()
-
-                // Request system notification authorization (APNS registration is handled separately)
-                await pushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
-
-                // Register backend notifications mapping (deviceId + token + identity + installation)
-                await pushNotificationRegistrar.registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
-            }
+            await performPushNotificationRegistration(client: client, apiClient: apiClient)
         } else {
-            Logger.info("Push notification registrar not available, skipping push notification setup")
+            Logger.info("Auto push notification registration is disabled, skipping push notification setup")
         }
     }
 
     private func handleDelete(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
         Logger.info("Deleting inbox '\(client.inboxId)'...")
 
-        await pushNotificationRegistrar?.unregisterInstallation(client: client, apiClient: apiClient)
+        await pushNotificationRegistrar.unregisterInstallation(client: client, apiClient: apiClient)
 
         emitStateChange(.deleting)
         syncingManager.stop()
@@ -477,9 +497,20 @@ public actor InboxStateMachine {
 // MARK: - Push Notification Observers
 
 extension InboxStateMachine {
-    private func setupPushNotificationObservers() {
-        guard pushNotificationRegistrar != nil else { return }
+    private func performPushNotificationRegistration(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
+        Logger.info("Registering for push notifications")
+        // Attempt to register for remote notifications to obtain APNS token ASAP
+        await pushNotificationRegistrar.registerForRemoteNotifications()
 
+        // Request system notification authorization (APNS registration is handled separately)
+        await pushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
+
+        // Register backend notifications mapping (deviceId + token + identity + installation)
+        await pushNotificationRegistrar.registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
+    }
+
+    private func setupPushNotificationObservers() {
+        guard pushTokenObserver == nil else { return }
         // Observe future token changes
         pushTokenObserver = NotificationCenter.default.addObserver(
             forName: .convosPushTokenDidChange,
@@ -498,7 +529,6 @@ extension InboxStateMachine {
     }
 
     private func handleTokenChange() async {
-        guard let pushNotificationRegistrar = pushNotificationRegistrar else { return }
         guard case let .ready(result) = _state else { return }
         await pushNotificationRegistrar.requestAuthAndRegisterIfNeeded(client: result.client, apiClient: result.apiClient)
     }

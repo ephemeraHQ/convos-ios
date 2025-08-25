@@ -79,6 +79,8 @@ actor UnusedInboxCache {
                 )
             }
 
+            await unusedService.registerForPushNotifications()
+
             return unusedService
         }
 

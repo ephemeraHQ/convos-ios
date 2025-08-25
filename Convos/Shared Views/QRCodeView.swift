@@ -3,44 +3,29 @@ import SwiftUI
 
 struct QRCodeView: View {
     let identifier: String
-    let backgroundColor: Color?
-    let foregroundColor: Color?
+    let backgroundColor: Color
+    let foregroundColor: Color
     @State private var isRegenerating: Bool = false
     @State private var currentQRCode: UIImage?
     @State private var generationTask: Task<Void, Never>?
     @Environment(\.displayScale) private var displayScale: CGFloat
-    @Environment(\.colorScheme) private var colorScheme: ColorScheme
 
-    init(identifier: String, backgroundColor: Color = .colorBackgroundPrimary, foregroundColor: Color = .colorTextPrimary) {
+    init(identifier: String,
+         backgroundColor: Color = .colorBackgroundPrimary,
+         foregroundColor: Color = .colorTextPrimary) {
         self.identifier = identifier
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
     }
 
     private func generateQRCode() async -> UIImage? {
-        let options: QRCodeGenerator.Options
-
-        if let backgroundColor = backgroundColor, let foregroundColor = foregroundColor {
-            // Use custom colors
-            options = QRCodeGenerator.Options(
-                scale: displayScale,
-                displaySize: 220,
-                foregroundColor: UIColor(foregroundColor),
-                backgroundColor: UIColor(backgroundColor)
-            )
-        } else {
-            // Use appropriate preset based on color scheme
-            options = colorScheme == .dark ? .qrCodeDark : .qrCodeLight
-        }
-
+        let options: QRCodeGenerator.Options = QRCodeGenerator.Options(
+            scale: displayScale,
+            displaySize: 220,
+            foregroundColor: UIColor(foregroundColor),
+            backgroundColor: .clear,
+        )
         return await QRCodeGenerator.generate(from: identifier, options: options)
-    }
-
-    private var effectiveBackgroundColor: Color {
-        if let backgroundColor = backgroundColor {
-            return backgroundColor
-        }
-        return colorScheme == .dark ? .black : .white
     }
 
     private func updateQRCode() {
@@ -91,12 +76,6 @@ struct QRCodeView: View {
         .onChange(of: identifier) { oldIdentifier, newIdentifier in
             guard oldIdentifier != newIdentifier else { return }
             updateQRCode()
-        }
-        .onChange(of: colorScheme) { _, _ in
-            // Regenerate QR code when color scheme changes (if using automatic colors)
-            if backgroundColor == nil && foregroundColor == nil {
-                updateQRCode()
-            }
         }
         .onAppear {
             updateQRCode()

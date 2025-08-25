@@ -22,8 +22,7 @@ struct ProfileView: View {
                             ImagePickerButton(
                                 currentImage: $viewModel.profileImage,
                                 showsCurrentImage: false,
-                                symbolSize: 20.0,
-                                symbolName: "photo.on.rectangle.angled"
+                                symbolSize: 20.0
                             )
                             .frame(width: 44.0, height: 44.0)
                         }
