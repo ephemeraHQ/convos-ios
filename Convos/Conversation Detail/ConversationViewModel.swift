@@ -96,10 +96,15 @@ class ConversationViewModel {
         self.profile = .empty(inboxId: conversation.inboxId)
 
         Logger.info("🔄 created for conversation: \(conversation.id)")
-        fetchLatest()
-        self.displayName = profile.name ?? ""
-        self.conversationName = conversation.name ?? ""
-        self.conversationDescription = conversation.description ?? ""
+
+        Task { [weak self] in
+            guard let self else { return }
+            fetchLatest()
+            self.displayName = profile.name ?? ""
+            self.conversationName = conversation.name ?? ""
+            self.conversationDescription = conversation.description ?? ""
+        }
+
         observe()
 
         KeyboardListener.shared.add(delegate: self)
@@ -127,18 +132,21 @@ class ConversationViewModel {
 
     private func observe() {
         myProfileRepository.myProfilePublisher
+            .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] profile in
                 self?.profile = profile
             }
             .store(in: &cancellables)
         messagesRepository.messagesPublisher
+            .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] messages in
                 self?.messages = messages
             }
             .store(in: &cancellables)
         inviteRepository.invitePublisher
+            .dropFirst()
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
             .sink { [weak self] invite in
@@ -146,6 +154,7 @@ class ConversationViewModel {
             }
             .store(in: &cancellables)
         conversationRepository.conversationPublisher
+            .dropFirst()
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
             .sink { [weak self] conversation in

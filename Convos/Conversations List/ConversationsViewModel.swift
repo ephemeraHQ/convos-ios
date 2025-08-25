@@ -14,6 +14,7 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
 
     var selectedConversation: Conversation? {
         didSet {
+            guard selectedConversation != oldValue else { return }
             Logger.debug("did set selectedConversation")
             if let selectedConversation {
                 selectedConversationViewModel = conversationViewModel(for: selectedConversation)

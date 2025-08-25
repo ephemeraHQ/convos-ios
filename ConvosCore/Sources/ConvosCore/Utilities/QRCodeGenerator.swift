@@ -1,5 +1,4 @@
 import CoreImage.CIFilterBuiltins
-import CoreImage
 import Foundation
 import UIKit
 
@@ -44,6 +43,26 @@ public enum QRCodeGenerator {
             self.correctionLevel = correctionLevel
             self.foregroundColor = CIColor(color: foregroundColor)
             self.backgroundColor = CIColor(color: backgroundColor)
+        }
+
+        /// Configuration for QR codes in light mode
+        public static var qrCodeLight: Options {
+            Options(
+                scale: 3.0, // Default to 3x for retina displays
+                displaySize: 220,
+                foregroundColor: .black, // Dark QR code
+                backgroundColor: .clear  // Light background
+            )
+        }
+
+        /// Configuration for QR codes in dark mode
+        public static var qrCodeDark: Options {
+            Options(
+                scale: 3.0, // Default to 3x for retina displays
+                displaySize: 220,
+                foregroundColor: .white, // Light QR code
+                backgroundColor: .clear  // Dark background
+            )
         }
     }
 
@@ -154,6 +173,32 @@ public enum QRCodeGenerator {
         }.value
     }
 
+    /// Pre-generates QR codes for both light and dark modes
+    /// - Parameters:
+    ///   - string: The string to encode
+    ///   - scale: Optional scale factor (defaults to 3.0)
+    /// - Returns: Tuple of (lightModeImage, darkModeImage)
+    public static func pregenerate(from string: String, scale: CGFloat = 3.0) async -> (light: UIImage?, dark: UIImage?) {
+        let lightOptions = Options(
+            scale: scale,
+            displaySize: 220,
+            foregroundColor: .black,
+            backgroundColor: .white
+        )
+
+        let darkOptions = Options(
+            scale: scale,
+            displaySize: 220,
+            foregroundColor: .white,
+            backgroundColor: .black
+        )
+
+        async let lightImage = generate(from: string, options: lightOptions)
+        async let darkImage = generate(from: string, options: darkOptions)
+
+        return await (lightImage, darkImage)
+    }
+
     /// Clears a specific QR code from the cache
     /// - Parameters:
     ///   - string: The string content of the QR code
@@ -161,5 +206,12 @@ public enum QRCodeGenerator {
     public static func clearFromCache(string: String, options: Options = .init()) {
         let cacheKey = cacheKey(for: string, options: options)
         ImageCache.shared.removeImage(for: cacheKey)
+    }
+
+    /// Clears QR codes for both light and dark modes from cache
+    /// - Parameter string: The string content of the QR code
+    public static func clearFromCacheAllModes(string: String) {
+        clearFromCache(string: string, options: Options.qrCodeLight)
+        clearFromCache(string: string, options: Options.qrCodeDark)
     }
 }
