@@ -12,6 +12,7 @@ struct DBInvite: Codable, FetchableRecord, PersistableRecord, Identifiable, Hash
 
     enum Columns {
         static let id: Column = Column(CodingKeys.id)
+        static let creatorInboxId: Column = Column(CodingKeys.creatorInboxId)
         static let conversationId: Column = Column(CodingKeys.conversationId)
         static let inviteUrlString: Column = Column(CodingKeys.inviteUrlString)
         static let maxUses: Column = Column(CodingKeys.maxUses)
@@ -22,6 +23,7 @@ struct DBInvite: Codable, FetchableRecord, PersistableRecord, Identifiable, Hash
     }
 
     let id: String
+    let creatorInboxId: String
     let conversationId: String
     let inviteUrlString: String
     let maxUses: Int?
@@ -30,14 +32,23 @@ struct DBInvite: Codable, FetchableRecord, PersistableRecord, Identifiable, Hash
     let createdAt: Date
     let autoApprove: Bool
 
-    static let conversationForeignKey: ForeignKey = ForeignKey(
-        [Columns.conversationId],
-        to: [DBConversation.Columns.id]
+    // Foreign key to the member who created this invite
+    static let creatorForeignKey: ForeignKey = ForeignKey(
+        [Columns.creatorInboxId, Columns.conversationId],
+        to: [DBConversationMember.Columns.inboxId, DBConversationMember.Columns.conversationId]
     )
 
-    static let conversation: BelongsToAssociation<DBInvite, DBConversation> = belongsTo(
+    static let creator: BelongsToAssociation<DBInvite, DBConversationMember> = belongsTo(
+        DBConversationMember.self,
+        key: "inviteCreator",
+        using: creatorForeignKey
+    )
+
+    // Association to get the conversation through the creator
+    static let conversation: HasOneThroughAssociation<DBInvite, DBConversation> = hasOne(
         DBConversation.self,
-        key: "inviteConversation",
-        using: conversationForeignKey
+        through: creator,
+        using: DBConversationMember.conversation,
+        key: "inviteConversation"
     )
 }

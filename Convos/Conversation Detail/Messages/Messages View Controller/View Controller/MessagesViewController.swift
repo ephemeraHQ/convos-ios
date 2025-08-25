@@ -381,6 +381,7 @@ extension MessagesViewController {
         }
 
         guard currentInterfaceActions.options.isEmpty else {
+            Logger.info("Interface actions exist, scheduling delayed update...")
             scheduleDelayedUpdate(for: conversation,
                                   with: messages,
                                   invite: invite,
@@ -543,7 +544,6 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
             return
         }
 
-        Logger.info("Updated bottom bar height: \(bottomBarHeight)")
         if let lastKeyboardFrameChange {
             let newBottomInset = calculateNewBottomInset(for: lastKeyboardFrameChange)
             updateBottomInset(inset: newBottomInset, info: lastKeyboardFrameChange)
@@ -557,7 +557,6 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
 
 extension MessagesViewController: KeyboardListenerDelegate {
     func keyboardWillChangeFrame(info: KeyboardInfo) {
-        Logger.info("keyboardWillChangeFrame")
         guard shouldHandleKeyboardFrameChange(info: info) else { return }
 
         self.lastKeyboardFrameChange = info
@@ -569,16 +568,13 @@ extension MessagesViewController: KeyboardListenerDelegate {
 
     private func updateBottomInset(inset: CGFloat, info: KeyboardInfo?) {
         guard collectionView.contentInset.bottom != inset else { return }
-        Logger.info("Updating bottom inset: \(inset)")
         updateCollectionViewInsets(to: inset, with: info)
     }
 
     func keyboardWillHide(info: KeyboardInfo) {
-        Logger.info("keyboardWillHide")
     }
 
     func keyboardDidChangeFrame(info: KeyboardInfo) {
-        Logger.info("keyboardDidChangeFrame")
         guard currentInterfaceActions.options.contains(.changingKeyboardFrame) else { return }
         currentInterfaceActions.options.remove(.changingKeyboardFrame)
     }
@@ -601,12 +597,10 @@ extension MessagesViewController: KeyboardListenerDelegate {
                      collectionView.frame.size.height -
                      keyboardFrame.minY - collectionView.safeAreaInsets.bottom)
         let inset = max(keyboardInset, bottomBarHeight)
-        Logger.info("Calculated new bottom inset: \(inset) (keyboard: \(keyboardInset), bottomBar: \(bottomBarHeight))")
         return inset
     }
 
     private func updateCollectionViewInsets(to topInset: CGFloat) {
-        Logger.info("updateCollectionViewInsets topInset: \(topInset)")
         let positionSnapshot = messagesLayout.getContentOffsetSnapshot(from: .top)
 
         if currentControllerActions.options.contains(.updatingCollection) {
@@ -618,7 +612,6 @@ extension MessagesViewController: KeyboardListenerDelegate {
         currentInterfaceActions.options.insert(.changingContentInsets)
         UIView.animate(withDuration: 0.2, animations: {
             self.collectionView.performBatchUpdates({
-                Logger.info("Setting new top inset: \(topInset)")
                 self.collectionView.contentInset.top = topInset
                 self.collectionView.verticalScrollIndicatorInsets.top = topInset
             }, completion: nil)
@@ -632,7 +625,6 @@ extension MessagesViewController: KeyboardListenerDelegate {
     }
 
     private func updateCollectionViewInsets(to newBottomInset: CGFloat, with info: KeyboardInfo?) {
-        Logger.info("updateCollectionViewInsets: \(newBottomInset)")
         let positionSnapshot = messagesLayout.getContentOffsetSnapshot(from: .bottom)
 
         if currentControllerActions.options.contains(.updatingCollection) {
@@ -644,7 +636,6 @@ extension MessagesViewController: KeyboardListenerDelegate {
         currentInterfaceActions.options.insert(.changingContentInsets)
         UIView.animate(withDuration: info?.animationDuration ?? 0.2, animations: {
             self.collectionView.performBatchUpdates({
-                Logger.info("Setting new bottom inset: \(newBottomInset)")
                 self.collectionView.contentInset.bottom = newBottomInset
                 self.collectionView.verticalScrollIndicatorInsets.bottom = newBottomInset
             }, completion: nil)

@@ -22,10 +22,7 @@ struct InviteView: View {
     var body: some View {
         VStack {
             Group {
-                QRCodeView(
-                    identifier: invite.inviteUrlString,
-                    backgroundColor: .colorFillMinimal
-                )
+                QRCodeView(identifier: invite.inviteUrlString)
                 .frame(maxWidth: 220, maxHeight: 220)
                 .padding(DesignConstants.Spacing.step12x)
             }

@@ -50,9 +50,11 @@ struct ConversationInfoPreview: View {
                 .frame(width: 96.0, height: 96.0)
 
                 VStack(spacing: DesignConstants.Spacing.stepHalf) {
-                    Text(conversation.conversationName)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(.colorTextPrimary)
+                    Text(
+                        conversation.conversationName.isEmpty ? conversation.conversation.displayName : conversation.conversationName
+                    )
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.colorTextPrimary)
                     if !conversation.conversationDescription.isEmpty {
                         Text(conversation.conversationDescription)
                             .font(.subheadline.weight(.regular))
