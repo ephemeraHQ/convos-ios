@@ -71,7 +71,7 @@ final class SyncingManager: SyncingManagerProtocol {
             do {
                 for try await message in await client.conversationsProvider
                     .streamAllMessages(
-                        type: .all,
+                        type: .groups,
                         consentStates: consentStates,
                         onClose: {
                             Logger.warning("Closing messages stream for inboxId: \(client.inboxId)...")

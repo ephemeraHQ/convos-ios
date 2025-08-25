@@ -18,7 +18,6 @@ struct ConvosToolbarButton: View {
             }
             .padding(padding ? DesignConstants.Spacing.step2x : 0)
         }
-        .glassEffect(.regular.tint(.white).interactive())
     }
 }
 
@@ -46,7 +45,7 @@ struct AppSettingsView: View {
                                 .foregroundStyle(.colorTextPrimary)
 
                             Spacer()
-                            ProfileAvatarView(profile: .empty())
+                            ProfileAvatarView(profile: .empty(), profileImage: nil)
                                 .frame(width: 16.0, height: 16.0)
                             Text("Somebody")
                                 .foregroundStyle(.colorTextPrimary)
@@ -78,13 +77,23 @@ struct AppSettingsView: View {
                         .foregroundStyle(.colorTextSecondary)
                 }
 
-                DebugViewSection()
-
                 Section {
                     Button {
                         openURL(URL(string: "https://xmtp.org")!)
                     } label: {
-                        NavigationLink("Secured by XMTP", destination: EmptyView())
+                        NavigationLink {
+                            EmptyView()
+                        } label: {
+                            HStack(alignment: .firstTextBaseline, spacing: 0.0) {
+                                Text("Secured by ")
+                                Image("xmtpIcon")
+                                    .renderingMode(.template)
+                                    .foregroundStyle(.colorTextPrimary)
+                                    .padding(.trailing, 1.0)
+                                Text("XMTP")
+                            }
+                            .foregroundStyle(.colorTextPrimary)
+                        }
                     }
                     .foregroundStyle(.colorTextPrimary)
 
@@ -125,7 +134,7 @@ struct AppSettingsView: View {
                     }
                     .confirmationDialog("", isPresented: $showingDeleteAllDataConfirmation) {
                         Button("Delete", role: .destructive) {
-                            viewModel.deleteAllAccounts()
+                            viewModel.deleteAllInboxes()
                             dismiss()
                         }
 
@@ -134,6 +143,8 @@ struct AppSettingsView: View {
                         }
                     }
                 }
+
+                DebugViewSection()
             }
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -145,6 +156,7 @@ struct AppSettingsView: View {
 
                 ToolbarItem(placement: .principal) {
                     ConvosToolbarButton(padding: true) {}
+                        .glassEffect(.regular.tint(.colorBackgroundPrimary).interactive(), in: Capsule())
                         .disabled(true)
                 }
             }

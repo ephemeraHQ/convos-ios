@@ -1,5 +1,11 @@
 import Foundation
 
+extension ConvosAPI.CreateUserRequest.Profile {
+    static var empty: Self {
+        .init(name: nil, username: nil, description: nil, avatar: nil)
+    }
+}
+
 public enum ConvosAPI {
     public enum AuthenticatorTransport: String, Codable {
         case ble = "AUTHENTICATOR_TRANSPORT_BLE"
@@ -134,6 +140,15 @@ public enum ConvosAPI {
         public let groupId: String
         public let createdAt: Date
         public let inviteLinkURL: String
+    }
+
+    public struct InviteDetailsWithGroupResponse: Decodable {
+        public let id: String
+        public let name: String?
+        public let description: String?
+        public let imageUrl: String?
+        public let inviteLinkURL: String
+        public let groupId: String
     }
 
     public struct PublicInviteDetailsResponse: Decodable {

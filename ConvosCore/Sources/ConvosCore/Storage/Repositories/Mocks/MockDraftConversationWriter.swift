@@ -2,14 +2,14 @@ import Combine
 import Foundation
 
 class MockDraftConversationWriter: DraftConversationWriterProtocol {
-    var conversationMetadataWriter: any ConversationMetadataWriterProtocol {
-        MockGroupMetadataWriter()
+    func createConversation() async throws {
     }
 
-    func requestToJoinWhenInboxReady(inviteCode: String) {}
+    func requestToJoin(inviteCode: String) async throws {
+    }
 
-    var isSendingPublisher: AnyPublisher<Bool, Never> {
-        Just(false).eraseToAnyPublisher()
+    var conversationMetadataWriter: any ConversationMetadataWriterProtocol {
+        MockGroupMetadataWriter()
     }
 
     var sentMessage: AnyPublisher<String, Never> {
@@ -33,6 +33,6 @@ class MockDraftConversationWriter: DraftConversationWriterProtocol {
     func send(text: String) async throws {
     }
 
-    func createConversationWhenInboxReady() {
+    func delete() async {
     }
 }

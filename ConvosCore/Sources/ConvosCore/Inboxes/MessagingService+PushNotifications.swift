@@ -9,40 +9,29 @@ public enum NotificationError: Error {
 }
 
 /// Extension providing push notification specific functionality for SingleInboxAuthProcessor
-public extension SingleInboxAuthProcessor {
-    /// Processes a push notification by scheduling work when the inbox is ready
+extension MessagingService {
+    /// Processes a push notification when the inbox is ready
     /// - Parameters:
     ///   - payload: The decoded push notification payload
-    ///   - timeout: Timeout duration for inbox authorization (default: 30 seconds)
-    /// - Returns: A publisher that emits when processing is complete
     func processPushNotification(
-        payload: PushNotificationPayload,
-        timeout: TimeInterval = 30
-    ) -> AnyPublisher<Void, Error> {
-        Logger.info("🚀 SingleInboxAuthProcessor: processPushNotification called for type: \(payload.notificationType?.rawValue ?? "nil")")
-        return scheduleWork(timeout: timeout) { [weak self] inboxReadyResult in
-            guard let self = self else {
-                throw SingleInboxAuthProcessorError.processorDeallocated
-            }
-            Logger.info("🎯 SingleInboxAuthProcessor: Inbox ready, calling handlePushNotification")
-            try await self.handlePushNotification(
-                inboxReadyResult: inboxReadyResult,
-                payload: payload
-            )
-        }
+        payload: PushNotificationPayload
+    ) async throws {
+        Logger.info("processPushNotification called for type: \(payload.notificationType?.rawValue ?? "nil")")
+        let inboxReadyResult = try await inboxStateManager.waitForInboxReadyResult()
+        try await self.handlePushNotification(
+            inboxReadyResult: inboxReadyResult,
+            payload: payload
+        )
     }
 
     /// Processes a push notification using raw userInfo dictionary
     /// - Parameters:
     ///   - userInfo: The raw notification userInfo dictionary
-    ///   - timeout: Timeout duration for inbox authorization (default: 30 seconds)
-    /// - Returns: A publisher that emits when processing is complete
     func processPushNotification(
-        userInfo: [AnyHashable: Any],
-        timeout: TimeInterval = 30
-    ) -> AnyPublisher<Void, Error> {
+        userInfo: [AnyHashable: Any]
+    ) async throws {
         let payload = PushNotificationPayload(userInfo: userInfo)
-        return processPushNotification(payload: payload, timeout: timeout)
+        return try await processPushNotification(payload: payload)
     }
 
     /// Handles the actual push notification processing when inbox is ready
@@ -88,10 +77,7 @@ public extension SingleInboxAuthProcessor {
             return
         }
 
-        // NSE should ONLY decode for display, not sync
-        // If we're in notification service extension and have encrypted message data, try to decode it
-        if isNotificationServiceExtension,
-           let encryptedMessage = protocolData.encryptedMessage,
+        if let encryptedMessage = protocolData.encryptedMessage,
            let contentTopic = protocolData.contentTopic,
            let currentInboxId = payload.inboxId {
             do {
@@ -129,11 +115,6 @@ public extension SingleInboxAuthProcessor {
 
             // NSE should exit here - it only decodes for display, not sync
             Logger.info("NSE: Finished decoding for display, skipping sync")
-            return
-        } else if !isNotificationServiceExtension, let contentTopic = protocolData.contentTopic {
-            // For main app, just sync the conversation
-            Logger.info("Processing protocol message for topic: \(contentTopic)")
-            try await syncConversationIfNeeded(contentTopic: contentTopic, client: client)
         }
     }
 
@@ -357,31 +338,5 @@ public extension SingleInboxAuthProcessor {
             Logger.error("Failed to add member to group: \(error.localizedDescription)")
             throw error
         }
-    }
-
-    /// Decodes and stores an XMTP message from push notification data
-    /// - Parameters:
-    ///   - contentTopic: The XMTP content topic
-    ///   - client: The XMTP client
-    private func decodeAndStoreMessage(
-        contentTopic: String,
-        client: any XMTPClientProvider
-    ) async throws {
-        // Implementation would decode the message and store it in the database
-        // This is a placeholder for the actual implementation
-        Logger.info("Processing XMTP message for topic: \(contentTopic)")
-    }
-
-    /// Processes invite join request data
-    /// - Parameters:
-    ///   - inviteData: The invite join request data
-    ///   - apiClient: The API client
-    private func processInviteJoinRequest(
-        inviteData: InviteJoinRequestData,
-        apiClient: any ConvosAPIClientProtocol
-    ) async throws {
-        // Implementation would process the invite join request
-        // This is a placeholder for the actual implementation
-        Logger.info("Processing invite join request: \(inviteData)")
     }
 }

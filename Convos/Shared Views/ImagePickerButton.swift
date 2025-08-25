@@ -46,7 +46,10 @@ extension PhotosPickerItem {
 
 struct ImagePickerButton: View {
     @Binding var currentImage: UIImage?
+    @State var showsCurrentImage: Bool = true
     @State var imageState: ImagePickerImage.State = .empty
+    @State var symbolSize: CGFloat = 24.0
+    @State var symbolName: String = "camera.fill"
     @State private var imageLoadingTask: Task<Void, Never>?
     @State private var imageSelection: PhotosPickerItem?
 
@@ -57,8 +60,8 @@ struct ImagePickerButton: View {
                 matching: .images,
                 photoLibrary: .shared()
             ) {
-                if imageState.isEmpty {
-                    if let currentImage = currentImage {
+                if imageState.isEmpty || !showsCurrentImage {
+                    if let currentImage = currentImage, showsCurrentImage {
                         Image(uiImage: currentImage)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
@@ -67,8 +70,8 @@ struct ImagePickerButton: View {
                         ZStack {
                             Circle()
                                 .fill(.black)
-                            Image(systemName: "photo.on.rectangle.fill")
-                                .font(.system(size: 24.0))
+                            Image(systemName: symbolName)
+                                .font(.system(size: symbolSize))
                                 .foregroundColor(.white)
                         }
                     }
@@ -122,6 +125,11 @@ struct ImagePickerButton: View {
 
 #Preview {
     @Previewable @State var image: UIImage?
-    ImagePickerButton(currentImage: $image)
-        .frame(width: 52.0, height: 52.0)
+    VStack {
+        ImagePickerButton(currentImage: $image)
+            .frame(width: 52.0, height: 52.0)
+
+        ImagePickerButton(currentImage: $image, showsCurrentImage: false)
+            .frame(width: 52.0, height: 52.0)
+    }
 }

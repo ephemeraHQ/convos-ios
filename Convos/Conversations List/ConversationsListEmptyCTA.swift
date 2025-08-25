@@ -39,20 +39,42 @@ struct ConversationsListEmptyCTA: View {
             .background(.colorFillMinimal)
             .cornerRadius(32.0)
 
-            Button {
-                openURL(URL(string: "https://convos.org/terms-and-privacy")!, prefersInApp: true)
-            } label: {
-                HStack(spacing: DesignConstants.Spacing.step2x) {
-                    Text("Terms & Privacy Policy")
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.colorTextTertiary)
+            HStack(spacing: DesignConstants.Spacing.step4x) {
+                Button {
+                    openURL(URL(string: "https://xmtp.org")!, prefersInApp: true)
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: 0.0) {
+                        Text("Secured by ")
+                        Image("xmtpIcon")
+                            .renderingMode(.template)
+                            .resizable()
+                            .frame(width: 10.0, height: 10.0)
+                            .padding(.leading, 2.0)
+                            .padding(.trailing, 1.0)
+                            .offset(y: 0.5)
+                        Text("XMTP")
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.colorTextTertiary)
+                            .padding(.leading, DesignConstants.Spacing.stepX)
+                    }
+                    .font(.system(size: 12.0))
+                    .foregroundStyle(.colorTextSecondary)
                 }
-                .font(.caption)
-                .foregroundStyle(.colorTextSecondary)
-                .padding(.vertical, DesignConstants.Spacing.step4x)
-                .padding(.horizontal, DesignConstants.Spacing.step6x)
+
+                Button {
+                    openURL(URL(string: "https://convos.org/terms-and-privacy")!, prefersInApp: true)
+                } label: {
+                    HStack(spacing: DesignConstants.Spacing.stepX) {
+                        Text("Terms & Privacy Policy")
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.colorTextTertiary)
+                    }
+                    .font(.system(size: 12.0))
+                    .foregroundStyle(.colorTextSecondary)
+                }
             }
+            .padding(.vertical, DesignConstants.Spacing.step4x)
+            .padding(.horizontal, DesignConstants.Spacing.step6x)
         }
     }
 }

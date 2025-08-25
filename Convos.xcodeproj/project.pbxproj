@@ -8,8 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		7A5D3E962E43B82400DA9B83 /* SwiftUIIntrospect in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5D3E952E43B82400DA9B83 /* SwiftUIIntrospect */; };
-		7A8EED172E57E10200F2998C /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AC5995B2E5593C300D65D07 /* ConvosCore */; };
-		7AC59AB12E56228200D65D07 /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AC59AB02E56228200D65D07 /* ConvosCore */; };
+		7AD20B572E5A21AE00F68E6E /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD20B562E5A21AE00F68E6E /* ConvosCore */; };
+		7AD20CA42E5A8F0B00F68E6E /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AC5995B2E5593C300D65D07 /* ConvosCore */; };
 		7AD545902E4EA8BE00500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD5458F2E4EA8BE00500ADF /* ConvosCore */; };
 		7AD545922E4EA8D200500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545912E4EA8D200500ADF /* ConvosCore */; };
 		7AD545942E4EA8F300500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545932E4EA8F300500ADF /* ConvosCore */; };
@@ -122,7 +122,7 @@
 		7A1C3C512DB6F75000B723C0 /* Convos.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Convos.xcodeproj; sourceTree = "<group>"; };
 		7A7BB1322DB6FF8E009B8BBF /* Convos.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = Convos.xcodeproj; sourceTree = "<group>"; };
 		7AC599312E5592F900D65D07 /* KeychainIdentityStoreExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KeychainIdentityStoreExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		7AC5993D2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeychainIdentityStoreExampleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7AC5993D2E5592FA00D65D07 /* KeychainIdentityStoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeychainIdentityStoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7ACA8BA32DE16DE200848799 /* ConvosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConvosTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7AD5458D2E4EA89400500ADF /* ConvosCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = ConvosCore; sourceTree = "<group>"; };
 		7ADC0C6E2E2977800053978A /* ConvosAppClip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ConvosAppClip.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -187,9 +187,9 @@
 			path = KeychainIdentityStoreExample;
 			sourceTree = "<group>";
 		};
-		7AC599402E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */ = {
+		7AC599402E5592FA00D65D07 /* KeychainIdentityStoreTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = KeychainIdentityStoreExampleTests;
+			path = KeychainIdentityStoreTests;
 			sourceTree = "<group>";
 		};
 		7ACA8BA42DE16DE200848799 /* ConvosTests */ = {
@@ -239,7 +239,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7A8EED172E57E10200F2998C /* ConvosCore in Frameworks */,
+				7AD20CA42E5A8F0B00F68E6E /* ConvosCore in Frameworks */,
+				7AD20B572E5A21AE00F68E6E /* ConvosCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -247,7 +248,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7AC59AB12E56228200D65D07 /* ConvosCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -335,7 +335,7 @@
 				7ADC0C7F2E2977810053978A /* ConvosAppClipTests */,
 				7ADC0C892E2977810053978A /* ConvosAppClipUITests */,
 				7AC599322E5592F900D65D07 /* KeychainIdentityStoreExample */,
-				7AC599402E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */,
+				7AC599402E5592FA00D65D07 /* KeychainIdentityStoreTests */,
 				7ACA8BC42DE17F2E00848799 /* Frameworks */,
 				D8A2B6922DA4BA4B00EF8577 /* Products */,
 			);
@@ -351,7 +351,7 @@
 				7ADC0C7C2E2977810053978A /* ConvosAppClipTests.xctest */,
 				7ADC0C862E2977810053978A /* ConvosAppClipUITests.xctest */,
 				7AC599312E5592F900D65D07 /* KeychainIdentityStoreExample.app */,
-				7AC5993D2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests.xctest */,
+				7AC5993D2E5592FA00D65D07 /* KeychainIdentityStoreTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -377,14 +377,15 @@
 			name = KeychainIdentityStoreExample;
 			packageProductDependencies = (
 				7AC5995B2E5593C300D65D07 /* ConvosCore */,
+				7AD20B562E5A21AE00F68E6E /* ConvosCore */,
 			);
 			productName = KeychainIdentityStoreExample;
 			productReference = 7AC599312E5592F900D65D07 /* KeychainIdentityStoreExample.app */;
 			productType = "com.apple.product-type.application";
 		};
-		7AC5993C2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */ = {
+		7AC5993C2E5592FA00D65D07 /* KeychainIdentityStoreTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 7AC599592E5592FA00D65D07 /* Build configuration list for PBXNativeTarget "KeychainIdentityStoreExampleTests" */;
+			buildConfigurationList = 7AC599592E5592FA00D65D07 /* Build configuration list for PBXNativeTarget "KeychainIdentityStoreTests" */;
 			buildPhases = (
 				7AC599392E5592FA00D65D07 /* Sources */,
 				7AC5993A2E5592FA00D65D07 /* Frameworks */,
@@ -396,14 +397,13 @@
 				7AC5993F2E5592FA00D65D07 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				7AC599402E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */,
+				7AC599402E5592FA00D65D07 /* KeychainIdentityStoreTests */,
 			);
-			name = KeychainIdentityStoreExampleTests;
+			name = KeychainIdentityStoreTests;
 			packageProductDependencies = (
-				7AC59AB02E56228200D65D07 /* ConvosCore */,
 			);
 			productName = KeychainIdentityStoreExampleTests;
-			productReference = 7AC5993D2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests.xctest */;
+			productReference = 7AC5993D2E5592FA00D65D07 /* KeychainIdentityStoreTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		7ACA8BA22DE16DE200848799 /* ConvosTests */ = {
@@ -606,6 +606,7 @@
 				D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */,
 				D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */,
 				7A5D3E942E43B82400DA9B83 /* XCRemoteSwiftPackageReference "swiftui-introspect" */,
+				7AD20B552E5A21AE00F68E6E /* XCLocalSwiftPackageReference "ConvosCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D8A2B6922DA4BA4B00EF8577 /* Products */;
@@ -629,7 +630,7 @@
 				7ADC0C7B2E2977810053978A /* ConvosAppClipTests */,
 				7ADC0C852E2977810053978A /* ConvosAppClipUITests */,
 				7AC599302E5592F900D65D07 /* KeychainIdentityStoreExample */,
-				7AC5993C2E5592FA00D65D07 /* KeychainIdentityStoreExampleTests */,
+				7AC5993C2E5592FA00D65D07 /* KeychainIdentityStoreTests */,
 			);
 		};
 /* End PBXProject section */
@@ -1412,7 +1413,7 @@
 				INFOPLIST_FILE = Convos/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Convos uses the camera to scan QR code invites";
+				INFOPLIST_KEY_NSCameraUsageDescription = "To join a convo, scan its QR code";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -1450,7 +1451,7 @@
 				INFOPLIST_FILE = Convos/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Convos uses the camera to scan QR code invites";
+				INFOPLIST_KEY_NSCameraUsageDescription = "To join a convo, scan its QR code";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -1682,7 +1683,7 @@
 				INFOPLIST_FILE = Convos/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "$(APP_DISPLAY_NAME)";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Convos uses the camera to scan QR code invites";
+				INFOPLIST_KEY_NSCameraUsageDescription = "To join a convo, scan its QR code";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -1851,7 +1852,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		7AC599592E5592FA00D65D07 /* Build configuration list for PBXNativeTarget "KeychainIdentityStoreExampleTests" */ = {
+		7AC599592E5592FA00D65D07 /* Build configuration list for PBXNativeTarget "KeychainIdentityStoreTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				7AC599522E5592FA00D65D07 /* Dev */,
@@ -1933,6 +1934,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		7AD20B552E5A21AE00F68E6E /* XCLocalSwiftPackageReference "ConvosCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ConvosCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		7A5D3E942E43B82400DA9B83 /* XCRemoteSwiftPackageReference "swiftui-introspect" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -1970,7 +1978,7 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = ConvosCore;
 		};
-		7AC59AB02E56228200D65D07 /* ConvosCore */ = {
+		7AD20B562E5A21AE00F68E6E /* ConvosCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ConvosCore;
 		};

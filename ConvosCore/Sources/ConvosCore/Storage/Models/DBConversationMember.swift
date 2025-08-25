@@ -23,6 +23,18 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
     static let memberForeignKey: ForeignKey = ForeignKey(["inboxId"], to: ["inboxId"])
     static let conversationForeignKey: ForeignKey = ForeignKey(["conversationId"])
 
+    // Foreign key to match invites created by this member for this conversation
+    static let inviteForeignKey: ForeignKey = ForeignKey(
+        ["creatorInboxId", "conversationId"],
+        to: ["inboxId", "conversationId"]
+    )
+
+    static let invite: HasOneAssociation<DBConversationMember, DBInvite> = hasOne(
+        DBInvite.self,
+        key: "memberInvite",
+        using: inviteForeignKey
+    )
+
     static let conversation: BelongsToAssociation<DBConversationMember, DBConversation> = belongsTo(
         DBConversation.self,
         using: conversationForeignKey
