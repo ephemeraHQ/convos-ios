@@ -37,7 +37,7 @@ struct JoinConversationView: View {
                                 .blendMode(.destinationOut)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 20)
-                                        .stroke(.colorTextPrimaryInverted, lineWidth: 4)
+                                        .stroke(.white, lineWidth: 4)
                                         .frame(width: cutoutSize, height: cutoutSize)
                                 )
 
@@ -58,7 +58,7 @@ struct JoinConversationView: View {
                                     .padding(.horizontal, DesignConstants.Spacing.step4x)
                                     .background(
                                         Capsule()
-                                            .fill(.colorBackgroundPrimary)
+                                            .fill(.white)
                                     )
                                 }
                                 .frame(width: cutoutSize, height: cutoutSize)
@@ -75,15 +75,15 @@ struct JoinConversationView: View {
                                 Text("Scan a convo code to access the app")
                                     .font(.system(size: 16.0))
                                     .multilineTextAlignment(.center)
-                                    .foregroundStyle(.colorTextPrimaryInverted)
+                                    .foregroundStyle(.white)
                             } else {
                                 HStack(spacing: DesignConstants.Spacing.step2x) {
                                     Image(systemName: "qrcode")
-                                        .foregroundStyle(.colorTextPrimaryInverted)
+                                        .foregroundStyle(.white)
                                     Text("Join a convo")
                                         .font(.system(size: 16.0))
                                         .multilineTextAlignment(.center)
-                                        .foregroundStyle(.colorTextPrimaryInverted)
+                                        .foregroundStyle(.white)
                                 }
                             }
                         }
