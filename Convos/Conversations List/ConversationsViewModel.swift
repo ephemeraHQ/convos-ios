@@ -14,9 +14,12 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
 
     var selectedConversation: Conversation? {
         didSet {
+            guard selectedConversation != oldValue else { return }
             Logger.debug("did set selectedConversation")
             if let selectedConversation {
-                selectedConversationViewModel = conversationViewModel(for: selectedConversation)
+                Task {
+                    selectedConversationViewModel = await conversationViewModel(for: selectedConversation)
+                }
             } else {
                 selectedConversationViewModel = nil
             }
@@ -77,28 +80,32 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
     }
 
     func deleteAllInboxes() {
-        do {
-            try session.deleteAllInboxes()
-        } catch {
-            Logger.error("Error deleting all accounts: \(error)")
+        Task {
+            do {
+                try await session.deleteAllInboxes()
+            } catch {
+                Logger.error("Error deleting all accounts: \(error)")
+            }
         }
     }
 
     func leave(conversation: Conversation) {
-        do {
-            try session.deleteInbox(inboxId: conversation.inboxId)
-            NotificationCenter.default.post(
-                name: .leftConversationNotification,
-                object: nil,
-                userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
-            )
-        } catch {
-            Logger.error("Error leaving convo: \(error.localizedDescription)")
+        Task {
+            do {
+                try await session.deleteInbox(inboxId: conversation.inboxId)
+                NotificationCenter.default.post(
+                    name: .leftConversationNotification,
+                    object: nil,
+                    userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
+                )
+            } catch {
+                Logger.error("Error leaving convo: \(error.localizedDescription)")
+            }
         }
     }
 
-    func conversationViewModel(for conversation: Conversation) -> ConversationViewModel {
-        let messagingService = session.messagingService(for: conversation.inboxId)
+    func conversationViewModel(for conversation: Conversation) async -> ConversationViewModel {
+        let messagingService = await session.messagingService(for: conversation.inboxId)
         return .init(
             conversation: conversation,
             session: session,

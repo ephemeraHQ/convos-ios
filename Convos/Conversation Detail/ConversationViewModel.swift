@@ -96,10 +96,15 @@ class ConversationViewModel {
         self.profile = .empty(inboxId: conversation.inboxId)
 
         Logger.info("🔄 created for conversation: \(conversation.id)")
-        fetchLatest()
-        self.displayName = profile.name ?? ""
-        self.conversationName = conversation.name ?? ""
-        self.conversationDescription = conversation.description ?? ""
+
+        Task { [weak self] in
+            guard let self else { return }
+            fetchLatest()
+            self.displayName = profile.name ?? ""
+            self.conversationName = conversation.name ?? ""
+            self.conversationDescription = conversation.description ?? ""
+        }
+
         observe()
 
         KeyboardListener.shared.add(delegate: self)
@@ -127,18 +132,21 @@ class ConversationViewModel {
 
     private func observe() {
         myProfileRepository.myProfilePublisher
+            .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] profile in
                 self?.profile = profile
             }
             .store(in: &cancellables)
         messagesRepository.messagesPublisher
+            .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] messages in
                 self?.messages = messages
             }
             .store(in: &cancellables)
         inviteRepository.invitePublisher
+            .dropFirst()
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
             .sink { [weak self] invite in
@@ -146,6 +154,7 @@ class ConversationViewModel {
             }
             .store(in: &cancellables)
         conversationRepository.conversationPublisher
+            .dropFirst()
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
             .sink { [weak self] conversation in
@@ -317,16 +326,18 @@ class ConversationViewModel {
     }
 
     func leaveConvo() {
-        do {
-            try session.deleteInbox(inboxId: conversation.inboxId)
-            presentingConversationSettings = false
-            NotificationCenter.default.post(
-                name: .leftConversationNotification,
-                object: nil,
-                userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
-            )
-        } catch {
-            Logger.error("Error leaving convo: \(error.localizedDescription)")
+        Task {
+            do {
+                try await session.deleteInbox(inboxId: conversation.inboxId)
+                presentingConversationSettings = false
+                NotificationCenter.default.post(
+                    name: .leftConversationNotification,
+                    object: nil,
+                    userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
+                )
+            } catch {
+                Logger.error("Error leaving convo: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -349,7 +360,7 @@ class ConversationViewModel {
                     groupId: conversation.id,
                     memberInboxIds: memberIdsToRemove
                 )
-                try session.deleteInbox(inboxId: conversation.inboxId)
+                try await session.deleteInbox(inboxId: conversation.inboxId)
                 presentingConversationSettings = false
             } catch {
                 Logger.error("Error exploding convo: \(error.localizedDescription)")

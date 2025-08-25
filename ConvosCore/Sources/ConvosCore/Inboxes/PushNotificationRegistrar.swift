@@ -13,6 +13,7 @@ protocol PushNotificationRegistrarProtocol {
 
 public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol {
     private let environment: AppEnvironment
+    private let keychainService: KeychainService<LastRegisteredPushTokenKeychainItem> = .init()
 
     init(environment: AppEnvironment) {
         self.environment = environment
@@ -55,15 +56,21 @@ public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol 
     func registerForNotificationsIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
         guard let token = Self.token, !token.isEmpty else { return }
 
-        let deviceId = await currentDeviceId()
         let identityId = client.inboxId
+        let lastRegisteredPushToken = lastSavedPushToken(for: identityId)
+        guard token != lastRegisteredPushToken else {
+            return
+        }
+
+        let deviceId = await currentDeviceId()
         let installationId = client.installationId
         do {
             try await apiClient.registerForNotifications(deviceId: deviceId,
                                                          pushToken: token,
                                                          identityId: identityId,
                                                          xmtpInstallationId: installationId)
-            Logger.info("Registered notifications mapping for deviceId=\(deviceId), installationId=\(installationId)")
+            Logger.info("Registered notifications mapping for deviceId=\(deviceId), inboxId=\(identityId)")
+            savePushToken(token, for: identityId)
         } catch {
             Logger.error("Failed to register notifications mapping: \(error)")
         }
@@ -72,6 +79,7 @@ public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol 
     func unregisterInstallation(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
         do {
             try await apiClient.unregisterInstallation(xmtpInstallationId: client.installationId)
+            deleteLastUsedPushTokenFromKeychain(for: client.inboxId)
             Logger.info("Unregistered installation: \(client.installationId)")
         } catch {
             Logger.error("Failed to unregister installation: \(error)")
@@ -82,6 +90,33 @@ public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol 
 
     private func currentDeviceId() async -> String {
         await MainActor.run { DeviceInfo.deviceIdentifier }
+    }
+
+    private func lastSavedPushToken(for inboxId: String) -> String? {
+        do {
+            return try keychainService.retrieveString(.init(inboxId: inboxId))
+        } catch {
+            Logger.debug("Last saved push token not found in keychain: \(error)")
+            return nil
+        }
+    }
+
+    private func savePushToken(_ token: String, for inboxId: String) {
+        do {
+            try keychainService.saveString(token, for: .init(inboxId: inboxId))
+            Logger.info("Saved push token to keychain: \(inboxId)")
+        } catch {
+            Logger.error("Failed to save push token to keychain: \(error)")
+        }
+    }
+
+    private func deleteLastUsedPushTokenFromKeychain(for inboxId: String) {
+        do {
+            try keychainService.delete(.init(inboxId: inboxId))
+            Logger.debug("Deleted last used push token from keychain")
+        } catch {
+            Logger.debug("Failed to delete last used push token from keychain: \(error)")
+        }
     }
 }
 

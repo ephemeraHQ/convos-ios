@@ -10,11 +10,7 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
     let bottomBarHeight: CGFloat
 
     func makeUIViewController(context: Context) -> MessagesViewController {
-        let messagesViewController = MessagesViewController()
-        messagesViewController.topBarHeight = topBarHeight
-        messagesViewController.bottomBarHeight = bottomBarHeight
-        messagesViewController.onTapMessage = onTapMessage
-        return messagesViewController
+        return MessagesViewController()
     }
 
     func updateUIViewController(_ messagesViewController: MessagesViewController, context: Context) {
