@@ -41,6 +41,9 @@ public class CachedPushNotificationHandler {
         Logger.info("Processing push notification for inbox: \(inboxId), type: \(payload.notificationType?.displayName ?? "unknown")")
         Logger.info("🔍 PARSED PAYLOAD: notificationType=\(payload.notificationType?.rawValue ?? "nil"), hasNotificationData=\(payload.notificationData != nil)")
 
+        // Store the payload for NSE to retrieve after processing
+        processedPayload = payload
+
         // Get or create messaging service for this inbox
         let messagingService = getOrCreateMessagingService(for: inboxId)
         try await messagingService.processPushNotification(payload: payload)

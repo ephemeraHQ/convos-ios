@@ -136,6 +136,17 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
             )
     }
 
+    func inviteDetailsWithGroup(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsWithGroupResponse {
+        return ConvosAPI.InviteDetailsWithGroupResponse(
+            id: "invite_123",
+            name: "My Group",
+            description: nil,
+            imageUrl: nil,
+            inviteLinkURL: "http://convos.org/join/invite_123",
+            groupId: "my_group_123"
+        )
+    }
+
     func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse {
         return ConvosAPI.UsernameCheckResponse(taken: username == "takenusername")
     }

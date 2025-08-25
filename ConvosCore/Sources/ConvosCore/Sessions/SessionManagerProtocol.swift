@@ -2,7 +2,7 @@ import Combine
 import Foundation
 
 public protocol SessionManagerProtocol {
-    func addInbox() throws -> AnyMessagingService
+    func addInbox() async throws -> AnyMessagingService
     func deleteInbox(inboxId: String) throws
     func deleteInbox(for messagingService: AnyMessagingService) throws
     func deleteAllInboxes() throws

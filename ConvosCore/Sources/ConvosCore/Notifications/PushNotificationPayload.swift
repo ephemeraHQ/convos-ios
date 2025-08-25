@@ -18,8 +18,8 @@ public final class PushNotificationPayload {
     public let notificationData: NotificationData?
 
     // Decoded content properties (mutable for NSE processing)
-    public internal(set) var decodedTitle: String?
-    public internal(set) var decodedBody: String?
+    public var decodedTitle: String?
+    public var decodedBody: String?
 
     public init(userInfo: [AnyHashable: Any]) {
         self.inboxId = userInfo["inboxId"] as? String

@@ -9,7 +9,7 @@ public class MockInboxesService: SessionManagerProtocol {
         Just(AuthServiceState.unknown).eraseToAnyPublisher()
     }
 
-    public func addInbox() throws -> AnyMessagingService {
+    public func addInbox() async throws -> AnyMessagingService {
         MockMessagingService()
     }
 
