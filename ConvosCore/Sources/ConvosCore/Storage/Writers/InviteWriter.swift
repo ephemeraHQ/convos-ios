@@ -18,6 +18,7 @@ class InviteWriter: InviteWriterProtocol {
     func store(invite: ConvosAPI.PublicInviteDetailsResponse, conversationId: String, inboxId: String) async throws -> Invite {
         let dbInvite = DBInvite(
             id: invite.id,
+            creatorInboxId: inboxId,
             conversationId: conversationId,
             inviteUrlString: invite.inviteLinkURL,
             maxUses: nil,
@@ -27,6 +28,21 @@ class InviteWriter: InviteWriterProtocol {
             autoApprove: true
         )
         try await databaseWriter.write { db in
+            try Member(inboxId: inboxId).save(db, onConflict: .ignore)
+            try DBConversationMember(
+                conversationId: conversationId,
+                inboxId: inboxId,
+                role: .member,
+                consent: .allowed,
+                createdAt: Date()
+            )
+            .save(db, onConflict: .ignore)
+            let memberProfile = MemberProfile(
+                inboxId: inboxId,
+                name: nil,
+                avatar: nil
+            )
+            try? memberProfile.insert(db, onConflict: .ignore)
             try dbInvite.save(db)
         }
         return dbInvite.hydrateInvite()
@@ -35,6 +51,7 @@ class InviteWriter: InviteWriterProtocol {
     func store(invite: ConvosAPI.InviteDetailsResponse, inboxId: String) async throws -> Invite {
         let dbInvite = DBInvite(
             id: invite.id,
+            creatorInboxId: inboxId,
             conversationId: invite.groupId,
             inviteUrlString: invite.inviteLinkURL,
             maxUses: invite.maxUses,
@@ -44,6 +61,21 @@ class InviteWriter: InviteWriterProtocol {
             autoApprove: invite.autoApprove
         )
         try await databaseWriter.write { db in
+            try Member(inboxId: inboxId).save(db, onConflict: .ignore)
+            try DBConversationMember(
+                conversationId: invite.groupId,
+                inboxId: inboxId,
+                role: .member,
+                consent: .allowed,
+                createdAt: Date()
+            )
+            .save(db, onConflict: .ignore)
+            let memberProfile = MemberProfile(
+                inboxId: inboxId,
+                name: nil,
+                avatar: nil
+            )
+            try? memberProfile.insert(db, onConflict: .ignore)
             try dbInvite.save(db)
         }
         return dbInvite.hydrateInvite()

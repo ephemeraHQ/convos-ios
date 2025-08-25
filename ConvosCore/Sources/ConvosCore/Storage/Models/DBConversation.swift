@@ -34,13 +34,27 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
         [Columns.creatorId],
         to: [DBConversationMember.Columns.inboxId]
     )
+    static let inboxMemberKey: ForeignKey = ForeignKey(
+        [Columns.inboxId],
+        to: [DBConversationMember.Columns.inboxId]
+    )
     static let localStateForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
     static let inviteForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
 
-    static let invite: HasOneAssociation<DBConversation, DBInvite> = hasOne(
+    // The invite created by the current inbox member (the user viewing this conversation)
+    static let invite: HasOneThroughAssociation<DBConversation, DBInvite> = hasOne(
         DBInvite.self,
-        key: "conversationInvite",
-        using: inviteForeignKey
+        through: inboxMember,
+        using: DBConversationMember.invite,
+        key: "conversationInvite"
+    )
+
+    // The invite created by the conversation creator
+    static let creatorInvite: HasOneThroughAssociation<DBConversation, DBInvite> = hasOne(
+        DBInvite.self,
+        through: creator,
+        using: DBConversationMember.invite,
+        key: "conversationCreatorInvite"
     )
 
     static let inbox: BelongsToAssociation<DBConversation, DBInbox> = belongsTo(
@@ -53,6 +67,13 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
         DBConversationMember.self,
         key: "conversationCreator",
         using: creatorForeignKey
+    )
+
+    // the member whos inbox this is
+    static let inboxMember: BelongsToAssociation<DBConversation, DBConversationMember> = belongsTo(
+        DBConversationMember.self,
+        key: "conversationInboxMember",
+        using: inboxMemberKey
     )
 
     static let creatorProfile: HasOneThroughAssociation<DBConversation, MemberProfile> = hasOne(

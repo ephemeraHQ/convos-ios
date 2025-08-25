@@ -81,6 +81,10 @@ final class MessagingService: MessagingServiceProtocol {
         authorizationOperation.stopAndDelete()
     }
 
+    func stopAndDelete() async {
+        await authorizationOperation.stopAndDelete()
+    }
+
     // MARK: Invites
 
     func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {

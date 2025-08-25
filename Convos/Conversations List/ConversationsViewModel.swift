@@ -14,6 +14,7 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
 
     var selectedConversation: Conversation? {
         didSet {
+            Logger.debug("did set selectedConversation")
             if let selectedConversation {
                 selectedConversationViewModel = conversationViewModel(for: selectedConversation)
             } else {
@@ -68,11 +69,11 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
     }
 
     func onStartConvo() {
-        newConversationViewModel = .init(session: session)
+        newConversationViewModel = .init(session: session, delegate: self)
     }
 
     func onJoinConvo() {
-        newConversationViewModel = .init(session: session, showScannerOnAppear: true)
+        newConversationViewModel = .init(session: session, showScannerOnAppear: true, delegate: self)
     }
 
     func deleteAllInboxes() {
@@ -150,6 +151,22 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
                 self?.conversations = conversations
             }
             .store(in: &cancellables)
+    }
+}
+
+extension ConversationsViewModel: NewConversationsViewModelDelegate {
+    func newConversationsViewModel(
+        _ viewModel: NewConversationViewModel,
+        attemptedJoiningExistingConversationWithId conversationId: String
+    ) {
+        // stop showing new convo view
+        newConversationViewModel = nil
+
+        guard let conversation = conversations.first(where: { $0.id == conversationId }) else {
+            return
+        }
+
+        selectedConversation = conversation
     }
 }
 

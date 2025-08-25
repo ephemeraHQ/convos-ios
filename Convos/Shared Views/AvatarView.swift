@@ -96,7 +96,7 @@ struct ConversationAvatarView: View {
             // Fall back to URL-based loading with conversation object for cache awareness
             AvatarView(
                 imageURL: conversation.imageURL,
-                fallbackName: conversation.name ?? "Untitled",
+                fallbackName: conversation.displayName,
                 cacheableObject: conversation,
                 placeholderImage: conversationImage
             )

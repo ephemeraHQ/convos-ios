@@ -205,10 +205,6 @@ extension MockMessagingService: MessagesRepositoryProtocol {
 }
 
 extension MockMessagingService: OutgoingMessageWriterProtocol {
-    public var isSendingPublisher: AnyPublisher<Bool, Never> {
-        Just(false).eraseToAnyPublisher()
-    }
-
     public var sentMessage: AnyPublisher<String, Never> {
         Just("").eraseToAnyPublisher()
     }

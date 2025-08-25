@@ -14,6 +14,7 @@ extension AppEnvironment {
 }
 
 protocol AuthorizeInboxOperationProtocol {
+    func stopAndDelete() async
     func stopAndDelete()
     func stop()
 }
@@ -106,6 +107,11 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         task = Task { [stateMachine] in
             await stateMachine.stopAndDelete()
         }
+    }
+
+    func stopAndDelete() async {
+        task?.cancel()
+        await stateMachine.stopAndDelete()
     }
 
     func stop() {

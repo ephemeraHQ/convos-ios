@@ -12,6 +12,8 @@ class SharedDatabaseMigrator {
     }
 }
 
+// swiftlint:disable function_body_length
+
 extension SharedDatabaseMigrator {
     private func createMigrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -78,10 +80,10 @@ extension SharedDatabaseMigrator {
                 t.column("id", .text)
                     .notNull()
                     .primaryKey()
+                t.column("creatorInboxId", .text)
+                    .notNull()
                 t.column("conversationId", .text)
                     .notNull()
-                    .unique(onConflict: .replace)
-                    .references("conversation", onDelete: .cascade)
                 t.column("inviteUrlString", .text)
                     .notNull()
                 t.column("maxUses", .numeric)
@@ -95,6 +97,17 @@ extension SharedDatabaseMigrator {
                 t.column("autoApprove", .boolean)
                     .notNull()
                     .defaults(to: false)
+
+                // Foreign key to the conversation member who created this invite
+                t.foreignKey(
+                    ["creatorInboxId", "conversationId"],
+                    references: "conversation_members",
+                    columns: ["inboxId", "conversationId"],
+                    onDelete: .cascade
+                )
+
+                // Unique constraint to prevent duplicate invites per member per conversation
+                t.uniqueKey(["creatorInboxId", "conversationId"], onConflict: .replace)
             }
 
             try db.create(table: "conversation_members") { t in
@@ -153,3 +166,5 @@ extension SharedDatabaseMigrator {
         return migrator
     }
 }
+
+// swiftlint:enable function_body_length

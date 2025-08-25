@@ -4,7 +4,6 @@ import GRDB
 import XMTPiOS
 
 public protocol OutgoingMessageWriterProtocol {
-    var isSendingPublisher: AnyPublisher<Bool, Never> { get }
     var sentMessage: AnyPublisher<String, Never> { get }
     func send(text: String) async throws
 }
@@ -19,10 +18,6 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
     private let conversationId: String
     private let isSendingValue: CurrentValueSubject<Bool, Never> = .init(false)
     private let sentMessageSubject: PassthroughSubject<String, Never> = .init()
-
-    var isSendingPublisher: AnyPublisher<Bool, Never> {
-        isSendingValue.eraseToAnyPublisher()
-    }
 
     var sentMessage: AnyPublisher<String, Never> {
         sentMessageSubject.eraseToAnyPublisher()
