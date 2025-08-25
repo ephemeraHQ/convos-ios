@@ -18,7 +18,6 @@ struct ConvosToolbarButton: View {
             }
             .padding(padding ? DesignConstants.Spacing.step2x : 0)
         }
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12.0))
     }
 }
 
@@ -157,6 +156,7 @@ struct AppSettingsView: View {
 
                 ToolbarItem(placement: .principal) {
                     ConvosToolbarButton(padding: true) {}
+                        .glassEffect(.regular.tint(.colorBackgroundPrimary).interactive(), in: Capsule())
                         .disabled(true)
                 }
             }
