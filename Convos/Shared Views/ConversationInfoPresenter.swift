@@ -20,6 +20,7 @@ struct ConversationInfoPresenter<Content: View>: View {
                             conversation: viewModel.conversation,
                             placeholderName: viewModel.conversationNamePlaceholder,
                             untitledConversationPlaceholder: viewModel.untitledConversationPlaceholder,
+                            subtitle: viewModel.conversationInfoSubtitle,
                             conversationName: $viewModel.conversationName,
                             conversationImage: $viewModel.conversationImage,
                             presentingConversationSettings: $viewModel.presentingConversationSettings,
