@@ -156,7 +156,7 @@ struct ConversationsView: View {
         }
         .fullScreenCover(item: $viewModel.newConversationViewModel) { viewModel in
             NewConversationView(viewModel: viewModel)
-                .background(.white)
+                .background(.colorBackgroundPrimary)
                 .interactiveDismissDisabled()
                 .navigationTransition(
                     .zoom(

@@ -11,15 +11,7 @@ struct QRCodeView: View {
     @Environment(\.displayScale) private var displayScale: CGFloat
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
 
-    /// Initialize with automatic light/dark mode support
-    init(identifier: String) {
-        self.identifier = identifier
-        self.backgroundColor = nil
-        self.foregroundColor = nil
-    }
-
-    /// Initialize with custom colors
-    init(identifier: String, backgroundColor: Color, foregroundColor: Color) {
+    init(identifier: String, backgroundColor: Color = .colorBackgroundPrimary, foregroundColor: Color = .colorTextPrimary) {
         self.identifier = identifier
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
@@ -87,7 +79,7 @@ struct QRCodeView: View {
             ShareLink(item: identifier) {
                 Image(systemName: "square.and.arrow.up")
                     .font(.system(size: 24.0, weight: .medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.colorTextPrimaryInverted)
                     .frame(width: 60, height: 60)
                     .padding(DesignConstants.Spacing.step2x)
             }

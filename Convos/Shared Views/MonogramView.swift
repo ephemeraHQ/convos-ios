@@ -22,7 +22,7 @@ struct MonogramView: View {
                     .font(.system(size: fontSize, weight: .semibold, design: .rounded))
                     .minimumScaleFactor(0.01)
                     .lineLimit(1)
-                    .foregroundColor(.white)
+                    .foregroundColor(.colorTextPrimaryInverted)
                     .padding(padding)
             }
             .frame(width: side, height: side)
