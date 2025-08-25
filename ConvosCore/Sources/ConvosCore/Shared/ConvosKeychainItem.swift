@@ -13,3 +13,11 @@ struct ConvosJWTKeychainItem: KeychainItemProtocol {
         return inboxId
     }
 }
+
+struct UnusedInboxKeychainItem: KeychainItemProtocol {
+    static let account: String = "unused-inbox"
+
+    var account: String {
+        return Self.account
+    }
+}

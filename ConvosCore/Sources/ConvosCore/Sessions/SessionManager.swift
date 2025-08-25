@@ -42,6 +42,13 @@ class SessionManager: SessionManagerProtocol {
             }
             .store(in: &cancellables)
         observe()
+
+        // Schedule creation of unused inbox on app startup
+        MessagingService.createUnusedInboxIfNeeded(
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            environment: environment
+        )
     }
 
     deinit {

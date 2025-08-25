@@ -4,6 +4,12 @@ import GRDB
 import XMTPiOS
 
 final class MessagingService: MessagingServiceProtocol {
+    // MARK: - Unused Inbox Management
+
+    private static let keychainService: KeychainService<UnusedInboxKeychainItem> = .init()
+    private static var isCreatingUnusedInbox: Bool = false
+    private static let unusedInboxQueue: DispatchQueue = DispatchQueue(label: "org.convos.unused-inbox-queue")
+    private static var unusedMessagingService: MessagingService?
     var identifier: String {
         guard case .ready(let result) = inboxStateManager.currentState else {
             return internalIdentifier
@@ -45,12 +51,73 @@ final class MessagingService: MessagingServiceProtocol {
         databaseReader: any DatabaseReader,
         environment: AppEnvironment
     ) -> MessagingService {
+        // Check if we have a pre-created unused messaging service
+        if let unusedService = unusedMessagingService {
+            Logger.info("Using pre-created unused messaging service")
+
+            // Clear the static reference
+            unusedMessagingService = nil
+
+            // Clear the unused inbox from keychain
+            clearUnusedInbox()
+
+            // Schedule background task to create a new unused inbox
+            scheduleUnusedInboxCreation(
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment
+            )
+
+            // Return the pre-created service
+            return unusedService
+        }
+
+        // Check for an unused inbox ID in keychain (fallback)
+        if let unusedInboxId = getUnusedInbox() {
+            Logger.info("Using unused inbox ID from keychain: \(unusedInboxId)")
+
+            // Clear the unused inbox from keychain
+            clearUnusedInbox()
+
+            // Schedule background task to create a new unused inbox
+            scheduleUnusedInboxCreation(
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment
+            )
+
+            // Use the existing inbox with authorize
+            let authorizationOperation = AuthorizeInboxOperation.authorize(
+                inboxId: unusedInboxId,
+                databaseReader: databaseReader,
+                databaseWriter: databaseWriter,
+                environment: environment,
+                registersForPushNotifications: true
+            )
+            return .init(
+                inboxId: unusedInboxId,
+                authorizationOperation: authorizationOperation,
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader
+            )
+        }
+
+        // No unused inbox available, create a new one
+        Logger.info("No unused inbox available, creating new one")
         let authorizationOperation = AuthorizeInboxOperation.register(
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
             registersForPushNotifications: true
         )
+
+        // Schedule background task to create an unused inbox for next time
+        scheduleUnusedInboxCreation(
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            environment: environment
+        )
+
         return .init(
             inboxId: nil,
             authorizationOperation: authorizationOperation,
@@ -202,5 +269,170 @@ final class MessagingService: MessagingServiceProtocol {
             filename: filename,
             afterUpload: afterUpload
         )
+    }
+
+    // MARK: - Public Unused Inbox Methods
+
+    static func createUnusedInboxIfNeeded(
+        databaseWriter: any DatabaseWriter,
+        databaseReader: any DatabaseReader,
+        environment: AppEnvironment
+    ) {
+        // Check if we already have an unused messaging service ready
+        if unusedMessagingService != nil {
+            Logger.debug("Unused messaging service already exists, skipping creation")
+            return
+        }
+
+        // Check if we have an unused inbox ID in keychain
+        if let unusedInboxId = getUnusedInbox() {
+            Logger.info("Found unused inbox ID in keychain, authorizing it: \(unusedInboxId)")
+
+            // Create and authorize the messaging service in background
+            Task {
+                let authorizationOperation = AuthorizeInboxOperation.authorize(
+                    inboxId: unusedInboxId,
+                    databaseReader: databaseReader,
+                    databaseWriter: databaseWriter,
+                    environment: environment,
+                    registersForPushNotifications: false // Don't register for push for unused inbox
+                )
+
+                let messagingService = MessagingService(
+                    inboxId: unusedInboxId,
+                    authorizationOperation: authorizationOperation,
+                    databaseWriter: databaseWriter,
+                    databaseReader: databaseReader
+                )
+
+                do {
+                    // Wait for it to be ready
+                    _ = try await messagingService.inboxStateManager.waitForInboxReadyResult()
+
+                    // Store it as the unused messaging service
+                    unusedMessagingService = messagingService
+
+                    Logger.info("Successfully authorized unused inbox from keychain: \(unusedInboxId)")
+                } catch {
+                    Logger.error("Failed to authorize unused inbox from keychain: \(error)")
+                    // Clear the invalid inbox ID from keychain
+                    clearUnusedInbox()
+                    // Clean up the messaging service
+                    await messagingService.authorizationOperation.stopAndDelete()
+
+                    // Schedule creation of a new unused inbox
+                    scheduleUnusedInboxCreation(
+                        databaseWriter: databaseWriter,
+                        databaseReader: databaseReader,
+                        environment: environment
+                    )
+                }
+            }
+            return
+        }
+
+        // No unused inbox exists, schedule creation of a new one
+        Logger.info("No unused inbox found, scheduling creation on app startup")
+        scheduleUnusedInboxCreation(
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            environment: environment
+        )
+    }
+
+    // MARK: - Private Unused Inbox Methods
+
+    private static func getUnusedInbox() -> String? {
+        do {
+            return try keychainService.retrieveString(UnusedInboxKeychainItem())
+        } catch {
+            Logger.debug("No unused inbox found in keychain: \(error)")
+            return nil
+        }
+    }
+
+    private static func saveUnusedInbox(_ inboxId: String) {
+        do {
+            try keychainService.saveString(inboxId, for: UnusedInboxKeychainItem())
+            Logger.info("Saved unused inbox to keychain: \(inboxId)")
+        } catch {
+            Logger.error("Failed to save unused inbox to keychain: \(error)")
+        }
+    }
+
+    private static func clearUnusedInbox() {
+        do {
+            try keychainService.delete(UnusedInboxKeychainItem())
+            Logger.debug("Cleared unused inbox from keychain")
+        } catch {
+            Logger.debug("Failed to clear unused inbox from keychain: \(error)")
+        }
+    }
+
+    private static func scheduleUnusedInboxCreation(
+        databaseWriter: any DatabaseWriter,
+        databaseReader: any DatabaseReader,
+        environment: AppEnvironment
+    ) {
+        unusedInboxQueue.async {
+            guard !isCreatingUnusedInbox else {
+                Logger.debug("Already creating unused inbox, skipping")
+                return
+            }
+
+            isCreatingUnusedInbox = true
+
+            Task {
+                await createUnusedInbox(
+                    databaseWriter: databaseWriter,
+                    databaseReader: databaseReader,
+                    environment: environment
+                )
+
+                await MainActor.run {
+                    isCreatingUnusedInbox = false
+                }
+            }
+        }
+    }
+
+    private static func createUnusedInbox(
+        databaseWriter: any DatabaseWriter,
+        databaseReader: any DatabaseReader,
+        environment: AppEnvironment
+    ) async {
+        Logger.info("Creating new unused inbox in background")
+
+        let authorizationOperation = AuthorizeInboxOperation.register(
+            databaseReader: databaseReader,
+            databaseWriter: databaseWriter,
+            environment: environment,
+            registersForPushNotifications: false // Don't register for push for unused inbox
+        )
+
+        let tempMessagingService = MessagingService(
+            inboxId: nil,
+            authorizationOperation: authorizationOperation,
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader
+        )
+
+        // Wait for the inbox to be ready
+        do {
+            let result = try await tempMessagingService.inboxStateManager.waitForInboxReadyResult()
+            let inboxId = result.client.inboxId
+
+            // Save the inbox ID to keychain
+            saveUnusedInbox(inboxId)
+
+            // Store the messaging service instance
+            unusedMessagingService = tempMessagingService
+
+            Logger.info("Successfully created unused inbox: \(inboxId)")
+        } catch {
+            Logger.error("Failed to create unused inbox: \(error)")
+            // Clean up on error
+            await tempMessagingService.authorizationOperation.stopAndDelete()
+        }
     }
 }
