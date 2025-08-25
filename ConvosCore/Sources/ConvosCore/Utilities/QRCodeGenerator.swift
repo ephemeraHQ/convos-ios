@@ -146,7 +146,7 @@ public enum QRCodeGenerator {
         let scaledImage = outputImage.transformed(by: transform)
 
         guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
-        let image = UIImage(cgImage: cgImage)
+        let image = UIImage(cgImage: cgImage, scale: options.scale, orientation: .up)
 
         // Cache the generated image
         ImageCache.shared.cacheImage(image, for: cacheKey)
