@@ -42,7 +42,7 @@ struct ConversationView: View {
 
     var body: some View {
         MessagesView(
-            conversation: viewModel.conversation,
+            conversation: viewModel,
             messages: viewModel.messages,
             invite: viewModel.invite,
             profile: viewModel.profile,
@@ -68,6 +68,9 @@ struct ConversationView: View {
             onDeleteConversation: onDeleteConversation,
             confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
         )
+        .sheet(isPresented: $viewModel.presentingProfileSettings) {
+            ProfileView(viewModel: viewModel)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 switch messagesTopBarTrailingItem {

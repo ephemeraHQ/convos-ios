@@ -7,13 +7,14 @@ struct AvatarView: View {
     let imageURL: URL?
     let fallbackName: String
     let cacheableObject: any ImageCacheable
+    let placeholderImage: UIImage?
     @State private var cachedImage: UIImage?
     @State private var isLoading: Bool = false
 
     var body: some View {
         Group {
-            if let cachedImage {
-                Image(uiImage: cachedImage)
+            if let image = placeholderImage ?? cachedImage {
+                Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
                     .aspectRatio(contentMode: .fill)
@@ -74,26 +75,30 @@ struct AvatarView: View {
 
 struct ProfileAvatarView: View {
     let profile: Profile
+    let profileImage: UIImage?
 
     var body: some View {
         AvatarView(
             imageURL: profile.avatarURL,
             fallbackName: profile.displayName,
-            cacheableObject: profile
+            cacheableObject: profile,
+            placeholderImage: profileImage
         )
     }
 }
 
 struct ConversationAvatarView: View {
     let conversation: Conversation
+    let conversationImage: UIImage?
 
     var body: some View {
-        if conversation.imageURL != nil {
+        if conversation.imageURL != nil || conversationImage != nil {
             // Fall back to URL-based loading with conversation object for cache awareness
             AvatarView(
                 imageURL: conversation.imageURL,
-                fallbackName: conversation.name ?? "Untitled",
-                cacheableObject: conversation
+                fallbackName: conversation.displayName,
+                cacheableObject: conversation,
+                placeholderImage: conversationImage
             )
         } else {
             MonogramView(text: "")
@@ -104,11 +109,11 @@ struct ConversationAvatarView: View {
 #Preview {
     @Previewable @State var profileImage: UIImage?
     let profile: Profile = .mock(name: "John Doe")
-    ProfileAvatarView(profile: profile)
+    ProfileAvatarView(profile: profile, profileImage: nil)
 }
 
 #Preview {
     @Previewable @State var conversationImage: UIImage?
     let conversation = Conversation.mock(members: [.mock(), .mock()])
-    ConversationAvatarView(conversation: conversation)
+    ConversationAvatarView(conversation: conversation, conversationImage: nil)
 }

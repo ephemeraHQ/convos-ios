@@ -34,7 +34,7 @@ struct SessionManagerTests {
         let inboxId = inbox.inboxId
         Logger.info("🔍 Found inbox with ID: \(inboxId)")
 
-        let messagingService = sessionManager.messagingService(for: inboxId)
+        let messagingService = await sessionManager.messagingService(for: inboxId)
         var inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
 
         Logger.info("🔍 Waiting for messaging service...")
@@ -80,7 +80,7 @@ struct SessionManagerTests {
         let inboxId = inbox.inboxId
         Logger.info("🔍 Found inbox with ID: \(inboxId)")
 
-        let messagingService = sessionManager.messagingService(for: inboxId)
+        let messagingService = await sessionManager.messagingService(for: inboxId)
         var inboxReadyIterator = messagingService.inboxReadyPublisher.values.makeAsyncIterator()
 
         Logger.info("🔍 Waiting for messaging service...")

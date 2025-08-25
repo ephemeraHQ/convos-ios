@@ -40,29 +40,22 @@ final class MessagingService: MessagingServiceProtocol {
         )
     }
 
-    static func registeredMessagingService(
+        static func registeredMessagingService(
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
         environment: AppEnvironment
-    ) -> MessagingService {
-        let authorizationOperation = AuthorizeInboxOperation.register(
+    ) async -> MessagingService {
+        return await UnusedInboxCache.shared.consumeOrCreateMessagingService(
+            databaseWriter: databaseWriter,
             databaseReader: databaseReader,
-            databaseWriter: databaseWriter,
-            environment: environment,
-            registersForPushNotifications: true
-        )
-        return .init(
-            inboxId: nil,
-            authorizationOperation: authorizationOperation,
-            databaseWriter: databaseWriter,
-            databaseReader: databaseReader
+            environment: environment
         )
     }
 
-    private init(inboxId: String?,
-                 authorizationOperation: AuthorizeInboxOperation,
-                 databaseWriter: any DatabaseWriter,
-                 databaseReader: any DatabaseReader) {
+    internal init(inboxId: String?,
+                  authorizationOperation: AuthorizeInboxOperation,
+                  databaseWriter: any DatabaseWriter,
+                  databaseReader: any DatabaseReader) {
         self.inboxId = inboxId
         self.internalIdentifier = inboxId ?? UUID().uuidString
         self.authorizationOperation = authorizationOperation
@@ -79,6 +72,10 @@ final class MessagingService: MessagingServiceProtocol {
 
     func stopAndDelete() {
         authorizationOperation.stopAndDelete()
+    }
+
+    func stopAndDelete() async {
+        await authorizationOperation.stopAndDelete()
     }
 
     // MARK: Invites
@@ -198,5 +195,21 @@ final class MessagingService: MessagingServiceProtocol {
             filename: filename,
             afterUpload: afterUpload
         )
+    }
+
+    // MARK: - Public Unused Inbox Methods
+
+    static func createUnusedInboxIfNeeded(
+        databaseWriter: any DatabaseWriter,
+        databaseReader: any DatabaseReader,
+        environment: AppEnvironment
+    ) {
+        Task {
+            await UnusedInboxCache.shared.prepareUnusedInboxIfNeeded(
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment
+            )
+        }
     }
 }

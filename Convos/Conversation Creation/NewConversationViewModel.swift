@@ -2,6 +2,13 @@ import Combine
 import ConvosCore
 import SwiftUI
 
+protocol NewConversationsViewModelDelegate: AnyObject {
+    func newConversationsViewModel(
+        _ viewModel: NewConversationViewModel,
+        attemptedJoiningExistingConversationWithId conversationId: String
+    )
+}
+
 @Observable
 class NewConversationViewModel: SelectableConversationViewModelType, Identifiable {
     override var selectedConversationViewModel: ConversationViewModel? {
@@ -17,9 +24,11 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
 
     let session: any SessionManagerProtocol
     var conversationViewModel: ConversationViewModel?
+    private weak var delegate: NewConversationsViewModelDelegate?
     private(set) var messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .scan
     private(set) var shouldConfirmDeletingConversation: Bool = true
     private(set) var showScannerOnAppear: Bool
+    var presentingJoinConversationSheet: Bool = false
 
     // MARK: - Private
 
@@ -35,9 +44,10 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
 
     // MARK: - Init
 
-    init(session: any SessionManagerProtocol, showScannerOnAppear: Bool = false) {
+    init(session: any SessionManagerProtocol, showScannerOnAppear: Bool = false, delegate: NewConversationsViewModelDelegate? = nil) {
         self.session = session
         self.showScannerOnAppear = showScannerOnAppear
+        self.delegate = delegate
         super.init()
     }
 
@@ -51,13 +61,17 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
 
     // MARK: - Actions
 
+    func onScanInviteCode() {
+        presentingJoinConversationSheet = true
+    }
+
     func newConversation() {
         guard messagingService == nil else { return }
         newConversationTask?.cancel()
         newConversationTask = Task { [weak self] in
             guard let self else { return }
             do {
-                let messagingService = try session.addInbox()
+                let messagingService = try await session.addInbox()
                 self.messagingService = messagingService
                 guard !Task.isCancelled else { return }
                 let draftConversationComposer = messagingService.draftConversationComposer()
@@ -74,26 +88,27 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         }
     }
 
-    func join(inviteUrlString: String) {
-        // New flow: accept only URL of form https://domain/join/{inviteCode}
+    func join(inviteUrlString: String) -> Bool {
         guard let inviteCode = inviteUrlString.inviteCodeFromJoinURL else {
-            Logger.error("Invalid invite URL")
-            return
+            Logger.warning("Invalid invite URL")
+            return false
         }
         Logger.info("Scanned inviteCode: \(inviteCode)")
+        presentingJoinConversationSheet = false
         joinConversation(inviteCode: inviteCode)
+        return true
     }
 
     func deleteConversation() {
-        Logger.info("🗑️ Deleting conversation in NewConversationViewModel")
+        Logger.info("Deleting conversation")
         newConversationTask?.cancel()
         joinConversationTask?.cancel()
-        draftConversationComposer = nil
         conversationViewModel = nil
         Task { [weak self] in
             guard let self else { return }
             guard let messagingService else { return }
-            try session.deleteInbox(for: messagingService)
+            try await session.deleteInbox(for: messagingService)
+            await draftConversationComposer?.draftConversationWriter.delete()
             self.messagingService = nil
         }
     }
@@ -105,9 +120,10 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
             do {
+                // Ensure we have a messaging service
                 if self.messagingService == nil {
                     Logger.info("No messaging service found, starting one while joining conversation...")
-                    let messagingService = try session.addInbox()
+                    let messagingService = try await session.addInbox()
                     self.messagingService = messagingService
                 }
 
@@ -116,12 +132,10 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
                     return
                 }
 
+                // Ensure we have a draft conversation composer
                 if self.draftConversationComposer == nil {
                     Logger.info("Setting up draft composer for joining conversation...")
                     let draftConversationComposer = messagingService.draftConversationComposer()
-//                    Task {
-//                        try await draftConversationComposer.draftConversationWriter.createConversation()
-//                    }
                     self.draftConversationComposer = draftConversationComposer
                 }
 
@@ -130,6 +144,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
                     return
                 }
 
+                // Ensure we have a conversation view model
                 if self.conversationViewModel == nil {
                     Logger.info("ConversationViewModel is `nil`... creating a new one.")
                     self.conversationViewModel = try conversationViewModel(
@@ -138,7 +153,17 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
                     )
                 }
 
-                try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
+                // Request to join
+                do {
+                    try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
+                } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
+                    Logger.info("Invite already redeeemed, showing existing conversation...")
+                    presentingJoinConversationSheet = false
+                    delegate?.newConversationsViewModel(
+                        self,
+                        attemptedJoiningExistingConversationWithId: conversationId
+                    )
+                }
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
             }
@@ -165,6 +190,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
             guard let self else { return }
             messagesTopBarTrailingItem = .share
             shouldConfirmDeletingConversation = false
+            conversationViewModel?.untitledConversationPlaceholder = "Untitled"
         }
         .store(in: &cancellables)
     }

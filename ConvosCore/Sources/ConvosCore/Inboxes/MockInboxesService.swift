@@ -9,17 +9,17 @@ public class MockInboxesService: SessionManagerProtocol {
         Just(AuthServiceState.unknown).eraseToAnyPublisher()
     }
 
-    public func addInbox() throws -> AnyMessagingService {
+    public func addInbox() async throws -> AnyMessagingService {
         MockMessagingService()
     }
 
-    public func deleteInbox(inboxId: String) throws {
+    public func deleteInbox(inboxId: String) async throws {
     }
 
-    public func deleteAllInboxes() throws {
+    public func deleteAllInboxes() async throws {
     }
 
-    public func deleteInbox(for messagingService: AnyMessagingService) throws {
+    public func deleteInbox(for messagingService: AnyMessagingService) async throws {
     }
 
     public func deleteAllAccounts() throws {
@@ -29,7 +29,7 @@ public class MockInboxesService: SessionManagerProtocol {
         self
     }
 
-    public func messagingService(for inboxId: String) -> AnyMessagingService {
+    public func messagingService(for inboxId: String) async -> AnyMessagingService {
         MockMessagingService()
     }
 
