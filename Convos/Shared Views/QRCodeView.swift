@@ -1,5 +1,4 @@
 import ConvosCore
-import CoreImage.CIFilterBuiltins
 import SwiftUI
 
 struct QRCodeView: View {
@@ -9,45 +8,23 @@ struct QRCodeView: View {
     @State private var isRegenerating: Bool = false
     @State private var currentQRCode: UIImage?
     @State private var generationTask: Task<Void, Never>?
+    @Environment(\.displayScale) private var displayScale: CGFloat
 
     init(identifier: String, backgroundColor: Color = .white, foregroundColor: Color = .black) {
         self.identifier = identifier
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
-        self.currentQRCode = ImageCache.shared.image(for: identifier)
     }
 
     private func generateQRCode() async -> UIImage? {
-        let context = CIContext()
-        let filter = CIFilter.roundedQRCodeGenerator()
+        let options = QRCodeGenerator.Options(
+            scale: displayScale,
+            displaySize: 220,
+            foregroundColor: UIColor(foregroundColor),
+            backgroundColor: UIColor(backgroundColor)
+        )
 
-        filter.message = Data(identifier.utf8)
-        filter.roundedMarkers = 1
-        filter.roundedData = false
-        filter.centerSpaceSize = 0.3
-        filter.correctionLevel = "H"
-        filter.color1 = CIColor(color: UIColor(foregroundColor))
-        filter.color0 = CIColor(color: UIColor(backgroundColor))
-
-        guard let outputImage = filter.outputImage else { return nil }
-
-        let displaySize: CGFloat = 220 // The max size we display in the UI
-        let screenScale = await MainActor.run { UIScreen.main.scale }
-
-        let outputExtent = outputImage.extent
-        let baseSize = max(outputExtent.width, outputExtent.height)
-
-        // Scale to match the display size * screen scale (e.g., 220 * 3 = 660 pixels on 3x screens)
-        let targetPixelSize = displaySize * screenScale
-        let scaleFactor = targetPixelSize / baseSize
-
-        let transform = CGAffineTransform(scaleX: scaleFactor, y: scaleFactor)
-        let scaledImage = outputImage.transformed(by: transform)
-
-        guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
-        let image = UIImage(cgImage: cgImage)
-        ImageCache.shared.cacheImage(image, for: identifier)
-        return image
+        return await QRCodeGenerator.generate(from: identifier, options: options)
     }
 
     private func updateQRCode() {
@@ -81,9 +58,6 @@ struct QRCodeView: View {
                 RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.medium)
                     .fill(backgroundColor)
                     .frame(width: 220, height: 220)
-                    .overlay(
-                        ProgressView()
-                    )
             }
 
             ShareLink(item: identifier) {
@@ -103,9 +77,7 @@ struct QRCodeView: View {
             updateQRCode()
         }
         .onAppear {
-            if currentQRCode == nil {
-                updateQRCode()
-            }
+            updateQRCode()
         }
         .onDisappear {
             generationTask?.cancel()
