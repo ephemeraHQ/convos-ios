@@ -196,6 +196,11 @@ actor UnusedInboxCache {
         databaseReader: any DatabaseReader,
         environment: AppEnvironment
     ) async {
+        guard unusedMessagingService == nil else {
+            Logger.debug("Unused messaging service exists, skipping creating new unused inbox...")
+            return
+        }
+
         guard !isCreatingUnusedInbox else {
             Logger.debug("Already creating unused inbox, skipping")
             return
