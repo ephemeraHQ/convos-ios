@@ -218,11 +218,16 @@ public actor InboxStateMachine {
         isProcessing = true
         let action = actionQueue.removeFirst()
 
-        currentTask = Task {
-            await processAction(action)
-            isProcessing = false
-            processNextAction()
+        currentTask = Task.detached { [weak self] in
+            guard let self else { return }
+            await self.processAction(action)
+            await self.setProcessingComplete()
         }
+    }
+
+    private func setProcessingComplete() {
+        isProcessing = false
+        processNextAction()
     }
 
     private func processAction(_ action: Action) async {
