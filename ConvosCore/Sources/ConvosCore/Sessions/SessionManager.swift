@@ -44,13 +44,11 @@ actor SessionManager: SessionManagerProtocol {
         Task { await observe() }
 
         // Schedule creation of unused inbox on app startup
-        Task {
-            MessagingService.createUnusedInboxIfNeeded(
-                databaseWriter: databaseWriter,
-                databaseReader: databaseReader,
-                environment: environment
-            )
-        }
+        MessagingService.createUnusedInboxIfNeeded(
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            environment: environment
+        )
     }
 
     deinit {

@@ -17,6 +17,7 @@ protocol AuthorizeInboxOperationProtocol {
     func stopAndDelete() async
     func stopAndDelete()
     func stop()
+    func registerForPushNotifications() async
 }
 
 final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
@@ -119,5 +120,9 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         task = Task { [stateMachine] in
             await stateMachine.stop()
         }
+    }
+
+    func registerForPushNotifications() async {
+        await stateMachine.registerForPushNotifications()
     }
 }

@@ -36,6 +36,12 @@ public class MockMessagingService: MessagingServiceProtocol {
 
     public func stopAndDelete() {}
 
+    public func stopAndDelete() async {}
+
+    public func registerForPushNotifications() async {
+        // Mock implementation - no-op
+    }
+
     public func myProfileWriter() -> any MyProfileWriterProtocol {
         self
     }
