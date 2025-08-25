@@ -87,7 +87,7 @@ struct ConversationsView: View {
                 .toolbarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        ConvosToolbarButton(padding: false) {
+                        ConvosToolbarButton(padding: false, useGlassEffect: false) {
                             presentingAppSettings = true
                         }
                     }
