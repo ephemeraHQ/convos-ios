@@ -125,12 +125,12 @@ public actor InboxStateMachine {
 
     private func addStateContinuation(_ continuation: AsyncStream<State>.Continuation) {
         stateContinuations.append(continuation)
-        continuation.yield(_state)
         continuation.onTermination = { [weak self] _ in
             Task {
                 await self?.removeStateContinuation(continuation)
             }
         }
+        continuation.yield(_state)
     }
 
     private func emitStateChange(_ newState: State) {
