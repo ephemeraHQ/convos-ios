@@ -73,6 +73,7 @@ public class CachedPushNotificationHandler {
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment,
+            startsStreamingServices: false,
             registersForPushNotifications: false
         )
         messagingServices[inboxId] = messagingService

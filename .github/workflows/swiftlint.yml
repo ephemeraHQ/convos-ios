@@ -3,9 +3,9 @@ name: SwiftLint
 on:
   workflow_dispatch: # ← optional, to run manually
   pull_request:
-    branches: ['main']
+    branches: ['main', 'dev']
   push:
-    branches: ['main']
+    branches: ['main', 'dev']
 
 jobs:
   SwiftLint:

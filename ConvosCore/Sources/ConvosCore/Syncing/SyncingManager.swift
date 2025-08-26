@@ -32,6 +32,7 @@ final class SyncingManager: SyncingManagerProtocol {
     }
 
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
+        // each client (currently) has one conversation
         listConversationsTask = Task { [weak self] in
             do {
                 guard let self else { return }

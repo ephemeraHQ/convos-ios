@@ -23,6 +23,7 @@ final class MessagingService: MessagingServiceProtocol {
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
         environment: AppEnvironment,
+        startsStreamingServices: Bool,
         registersForPushNotifications: Bool = true
     ) -> MessagingService {
         let authorizationOperation = AuthorizeInboxOperation.authorize(
@@ -30,6 +31,7 @@ final class MessagingService: MessagingServiceProtocol {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
+            startsStreamingServices: startsStreamingServices,
             registersForPushNotifications: registersForPushNotifications
         )
         return .init(
