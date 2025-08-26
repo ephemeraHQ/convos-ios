@@ -149,6 +149,7 @@ public enum ConvosAPI {
         public let imageUrl: String?
         public let inviteLinkURL: String
         public let groupId: String
+        public let inviterInboxId: String
     }
 
     public struct PublicInviteDetailsResponse: Decodable {
