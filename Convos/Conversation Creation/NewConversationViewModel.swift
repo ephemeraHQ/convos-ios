@@ -92,19 +92,6 @@ class NewConversationViewModel: Identifiable {
         presentingJoinConversationSheet = true
     }
 
-    private func newConversation() {
-        guard messagingService == nil else { return }
-        newConversationTask?.cancel()
-        newConversationTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                try await draftConversationComposer?.draftConversationWriter.createConversation()
-            } catch {
-                Logger.error("Error starting new conversation: \(error.localizedDescription)")
-            }
-        }
-    }
-
     func join(inviteUrlString: String) -> Bool {
         guard let inviteCode = inviteUrlString.inviteCodeFromJoinURL else {
             Logger.warning("Invalid invite URL")
