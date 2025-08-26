@@ -135,16 +135,16 @@ struct ConversationsView: View {
                 }
                 .toolbar(removing: .sidebarToggle)
             } detail: {
-                    if let conversationViewModel = selectedConversationViewModel {
-                        ConversationView(
-                            viewModel: conversationViewModel,
-                            focusState: $focusState
-                        )
-                    } else if horizontalSizeClass != .compact {
-                        emptyConversationsView
-                    } else {
-                        EmptyView()
-                    }
+                if let conversationViewModel = selectedConversationViewModel {
+                    ConversationView(
+                        viewModel: conversationViewModel,
+                        focusState: $focusState
+                    )
+                } else if horizontalSizeClass != .compact {
+                    emptyConversationsView
+                } else {
+                    EmptyView()
+                }
             }
         }
         .onChange(of: viewModel.selectedConversation) {
