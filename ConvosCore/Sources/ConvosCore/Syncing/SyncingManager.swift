@@ -97,7 +97,7 @@ final class SyncingManager: SyncingManagerProtocol {
         streamMessagesTask = Task { [weak self] in
             do {
                 guard let self else { return }
-                for try await message in await client.conversationsProvider
+                for try await message in client.conversationsProvider
                     .streamAllMessages(
                         type: .groups,
                         consentStates: consentStates,
@@ -166,7 +166,7 @@ final class SyncingManager: SyncingManagerProtocol {
         Logger.info("Starting conversations stream for inbox: \(client.inboxId) (retry: \(retryCount))")
         streamConversationsTask = Task { [weak self] in
             do {
-                for try await conversation in await client.conversationsProvider.stream(
+                for try await conversation in client.conversationsProvider.stream(
                     type: .groups,
                     onClose: { [weak self] in
                         guard let self, !Task.isCancelled else { return }

@@ -14,7 +14,7 @@ public protocol ConversationSender {
     func publish() async throws
 }
 
-public protocol ConversationsProvider: Actor {
+public protocol ConversationsProvider {
     func listGroups(
         createdAfter: Date?,
         createdBefore: Date?,
@@ -113,7 +113,7 @@ extension XMTPiOS.Client: XMTPClientProvider {
     }
 
     public func prepareConversation() async throws -> ConversationSender {
-        return try await conversations.newGroupOptimistic()
+        return try conversations.newGroupOptimistic()
     }
 
     public func newConversation(with memberInboxIds: [String],
