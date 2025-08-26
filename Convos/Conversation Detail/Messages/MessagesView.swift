@@ -6,7 +6,7 @@ struct MessagesView: View {
         case share, scan
     }
 
-    let conversation: ConversationViewModel
+    let conversation: Conversation
     let messages: [AnyMessage]
     let invite: Invite
     let profile: Profile
@@ -28,9 +28,6 @@ struct MessagesView: View {
     let onTapMessage: (AnyMessage) -> Void
     let onDisplayNameEndedEditing: () -> Void
     let onProfileSettings: () -> Void
-    let onScanInviteCode: () -> Void
-    let onDeleteConversation: () -> Void
-    let confirmDeletionBeforeDismissal: Bool
 
     @State private var topBarHeight: CGFloat = 0.0
     @State private var bottomBarHeight: CGFloat = 0.0

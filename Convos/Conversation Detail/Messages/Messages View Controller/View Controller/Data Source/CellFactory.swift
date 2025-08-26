@@ -22,17 +22,21 @@ final class CellFactory {
                 for: indexPath,
                 invite: invite
             )
-        case let .conversationInfo(viewModel):
-            return createConversationInfoCell(in: collectionView, for: indexPath, viewModel: viewModel)
+        case let .conversationInfo(conversation):
+            return createConversationInfoCell(
+                in: collectionView,
+                for: indexPath,
+                conversation: conversation
+            )
         }
     }
 
     private static func createConversationInfoCell(in collectionView: UICollectionView,
                                                    for indexPath: IndexPath,
-                                                   viewModel: ConversationViewModel) -> UICollectionViewCell {
+                                                   conversation: Conversation) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ConversationInfoCell.reuseIdentifier,
                                                       for: indexPath) as! ConversationInfoCell
-        cell.setup(conversation: viewModel)
+        cell.setup(conversation: conversation)
         return cell
     }
 

@@ -4,27 +4,25 @@ import Foundation
 import Observation
 
 @Observable
-class SelectableConversationViewModelType {
-    var selectedConversationViewModel: ConversationViewModel?
-}
-
-@Observable
-final class ConversationsViewModel: SelectableConversationViewModelType {
+final class ConversationsViewModel {
     // MARK: - Public
 
     var selectedConversation: Conversation? {
-        didSet {
-            guard selectedConversation != oldValue else { return }
-            Logger.debug("did set selectedConversation")
-            if let selectedConversation {
-                Task {
-                    selectedConversationViewModel = await conversationViewModel(for: selectedConversation)
-                }
+        get {
+            selectedConversationViewModel?.conversation
+        }
+        set {
+            if let selectedConversation = newValue {
+                selectedConversationViewModel = ConversationViewModel(
+                    conversation: selectedConversation,
+                    session: session
+                )
             } else {
                 selectedConversationViewModel = nil
             }
         }
     }
+    private(set) var selectedConversationViewModel: ConversationViewModel?
     var newConversationViewModel: NewConversationViewModel?
     var presentingExplodeInfo: Bool = false
     private(set) var conversations: [Conversation] = []
@@ -60,7 +58,6 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
             Logger.error("Error fetching conversations: \(error)")
             self.conversations = []
         }
-        super.init()
         observe()
     }
 
@@ -93,32 +90,10 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
         Task {
             do {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
-                NotificationCenter.default.post(
-                    name: .leftConversationNotification,
-                    object: nil,
-                    userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
-                )
             } catch {
                 Logger.error("Error leaving convo: \(error.localizedDescription)")
             }
         }
-    }
-
-    func conversationViewModel(for conversation: Conversation) async -> ConversationViewModel {
-        let messagingService = await session.messagingService(for: conversation.inboxId)
-        return .init(
-            conversation: conversation,
-            session: session,
-            myProfileWriter: messagingService.myProfileWriter(),
-            myProfileRepository: messagingService.myProfileRepository(),
-            conversationRepository: messagingService.conversationRepository(for: conversation.id),
-            messagesRepository: messagingService.messagesRepository(for: conversation.id),
-            outgoingMessageWriter: messagingService.messageWriter(for: conversation.id),
-            consentWriter: messagingService.conversationConsentWriter(),
-            localStateWriter: messagingService.conversationLocalStateWriter(),
-            metadataWriter: messagingService.groupMetadataWriter(),
-            inviteRepository: messagingService.inviteRepository(for: conversation.id)
-        )
     }
 
     private func observe() {
@@ -132,7 +107,7 @@ final class ConversationsViewModel: SelectableConversationViewModelType {
                 if selectedConversation?.id == conversationId {
                     selectedConversation = nil
                 }
-                if newConversationViewModel?.selectedConversationViewModel?.conversation.id == conversationId {
+                if newConversationViewModel?.conversationViewModel?.conversation.id == conversationId {
                     newConversationViewModel = nil
                 }
             }
@@ -173,7 +148,9 @@ extension ConversationsViewModel: NewConversationsViewModelDelegate {
             return
         }
 
-        selectedConversation = conversation
+        DispatchQueue.main.async { [weak self] in
+            self?.selectedConversation = conversation
+        }
     }
 }
 
