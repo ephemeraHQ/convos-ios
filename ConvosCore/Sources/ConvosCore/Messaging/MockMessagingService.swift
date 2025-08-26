@@ -274,6 +274,10 @@ actor MockConversations: ConversationsProvider {
 }
 
 extension MockMessagingService: XMTPClientProvider {
+    public func newConversation(with memberInboxId: String) async throws -> any MessageSender {
+        self
+    }
+
     public var installationId: String {
         ""
     }

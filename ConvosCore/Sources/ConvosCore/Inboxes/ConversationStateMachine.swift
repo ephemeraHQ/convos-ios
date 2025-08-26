@@ -304,10 +304,21 @@ public actor ConversationStateMachine {
             try DBConversation.fetchCount(db) > 0
         }
 
-        if hasExistingConversations {
-            let inviteWithGroup = try await apiClient.inviteDetailsWithGroup(inviteCode)
-            let groupId = inviteWithGroup.groupId
+        let inviteWithGroup = try await apiClient.inviteDetailsWithGroup(inviteCode)
+        // @jarodl temporary backup to get around push notif delays
+        Task {
+            do {
+                let inviterInboxId = inviteWithGroup.inviterInboxId
+                let dm = try await client.newConversation(with: inviterInboxId)
+                _ = try await dm.prepare(text: inviteCode)
+                try await dm.publish()
+            } catch {
+                Logger.error("Failed sending backup invite request over XMTP: \(error)")
+            }
+        }
 
+        if hasExistingConversations {
+            let groupId = inviteWithGroup.groupId
             // Check local database for existing group membership
             if let existingConversation: DBConversation = try await databaseReader.read({ db in
                 try DBConversation.fetchOne(db, key: groupId)
