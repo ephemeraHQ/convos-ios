@@ -23,10 +23,6 @@ final class SyncingManager: SyncingManagerProtocol {
     private var lastMemberProfileSync: [String: Date] = [:]
     private let memberProfileSyncInterval: TimeInterval = 10 // seconds
 
-    // Store references for stream restart
-    private weak var currentClient: AnyClientProvider?
-    private weak var currentApiClient: (any ConvosAPIClientProtocol)?
-
     init(databaseWriter: any DatabaseWriter) {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
@@ -36,10 +32,6 @@ final class SyncingManager: SyncingManagerProtocol {
     }
 
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
-        // Store references for stream restart
-        currentClient = client
-        currentApiClient = apiClient
-
         listConversationsTask = Task { [weak self] in
             do {
                 guard let self else { return }
@@ -76,8 +68,8 @@ final class SyncingManager: SyncingManagerProtocol {
             }
         }
         // Start the streaming tasks
-        startMessageStream()
-        startConversationStream()
+        startMessageStream(client: client, apiClient: apiClient)
+        startConversationStream(client: client, apiClient: apiClient)
     }
 
     func stop() {
@@ -89,20 +81,12 @@ final class SyncingManager: SyncingManagerProtocol {
         streamConversationsTask = nil
         syncMemberProfilesTasks.forEach { $0.cancel() }
         syncMemberProfilesTasks.removeAll()
-
-        // Clear stored references
-        currentClient = nil
-        currentApiClient = nil
     }
 
     // MARK: - Private
 
-    private func startMessageStream() {
-        guard let client = currentClient, let apiClient = currentApiClient else {
-            Logger.error("Cannot start message stream: missing client or apiClient")
-            return
-        }
-
+    private func startMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
+        Logger.info("Starting messages stream for inbox: \(client.inboxId)")
         streamMessagesTask = Task { [weak self] in
             do {
                 guard let self else { return }
@@ -115,7 +99,7 @@ final class SyncingManager: SyncingManagerProtocol {
                             Logger.warning("Messages stream closed for inboxId: \(client.inboxId). Restarting...")
                             Task { [weak self] in
                                 guard !Task.isCancelled else { return }
-                                self?.startMessageStream()
+                                self?.startMessageStream(client: client, apiClient: apiClient)
                             }
                         }
                     ) {
@@ -138,18 +122,14 @@ final class SyncingManager: SyncingManagerProtocol {
                 guard !Task.isCancelled else { return }
                 Task { [weak self] in
                     guard !Task.isCancelled else { return }
-                    self?.startMessageStream()
+                    self?.startMessageStream(client: client, apiClient: apiClient)
                 }
             }
         }
     }
 
-    private func startConversationStream() {
-        guard let client = currentClient, let apiClient = currentApiClient else {
-            Logger.error("Cannot start conversation stream: missing client or apiClient")
-            return
-        }
-
+    private func startConversationStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
+        Logger.info("Starting conversations stream for inbox: \(client.inboxId)")
         streamConversationsTask = Task { [weak self] in
             do {
                 for try await conversation in await client.conversationsProvider.stream(
@@ -159,7 +139,7 @@ final class SyncingManager: SyncingManagerProtocol {
                         Logger.warning("Conversations stream closed for inboxId: \(client.inboxId). Restarting...")
                         Task { [weak self] in
                             guard !Task.isCancelled else { return }
-                            self?.startConversationStream()
+                            self?.startConversationStream(client: client, apiClient: apiClient)
                         }
                     }
                 ) {
@@ -174,7 +154,7 @@ final class SyncingManager: SyncingManagerProtocol {
                 guard !Task.isCancelled else { return }
                 Task { [weak self] in
                     guard !Task.isCancelled else { return }
-                    self?.startConversationStream()
+                    self?.startConversationStream(client: client, apiClient: apiClient)
                 }
             }
         }
