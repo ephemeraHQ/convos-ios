@@ -86,11 +86,13 @@ public enum Logger {
 
         private func prepare() {
             // Idempotency: close any previously opened handle and reset state up-front
-            if let handle = fileHandle {
-                try? handle.close()
+            fileQueue.sync {
+                if let handle = self.fileHandle {
+                    try? handle.close()
+                }
+                self.fileHandle = nil
+                self.logFileURL = nil
             }
-            fileHandle = nil
-            logFileURL = nil
 
             // Get app group identifier from environment configuration
             let appGroupIdentifier = getAppGroupIdentifier()
@@ -426,12 +428,15 @@ public enum Logger {
                         defer { try? handle.close() }
 
                         let chunkSize = 64 * 1024
-                        var buffer = Data()
+                        var chunks: [Data] = []
+                        var newlineCount: Int = 0
                         let endOffset = try handle.seekToEnd()
                         var position = endOffset
 
                         func countNewlines(_ data: Data) -> Int {
-                            data.reduce(into: 0) { count, byte in if byte == 0x0A { count += 1 } }
+                            var c = 0
+                            for b in data where b == 0x0A { c += 1 }
+                            return c
                         }
 
                         while position > 0 {
@@ -440,16 +445,30 @@ public enum Logger {
                             try handle.seek(toOffset: target)
                             position = target
                             let chunk = try handle.read(upToCount: readSize) ?? Data()
-                            buffer.insert(contentsOf: chunk, at: 0)
-                            if countNewlines(buffer) >= self.maxLogLines { break }
+                            chunks.append(chunk)
+                            newlineCount += countNewlines(chunk)
+                            if newlineCount >= self.maxLogLines { break }
                             if position == 0 { break }
                         }
 
-                        // Split into lines and keep the last maxLogLines
-                        let stringAll = String(data: buffer, encoding: .utf8) ?? ""
-                        let lines = stringAll.split(separator: "\n", omittingEmptySubsequences: false)
-                        let tailLines = lines.suffix(self.maxLogLines)
-                        let result = tailLines.joined(separator: "\n")
+                        // Concatenate once in forward order
+                        var combined = Data()
+                        for c in chunks.reversed() { combined.append(c) }
+
+                        // If we have more than needed, find start index of last maxLogLines
+                        if newlineCount > self.maxLogLines {
+                            var needed = self.maxLogLines
+                            var idx = combined.count - 1
+                            let bytes = [UInt8](combined)
+                            while idx >= 0 && needed > 0 {
+                                if bytes[idx] == 0x0A { needed -= 1 }
+                                idx -= 1
+                            }
+                            let start = max(idx + 2, 0) // move to byte after the found newline
+                            combined = combined.subdata(in: start..<combined.count)
+                        }
+
+                        let result = String(data: combined, encoding: .utf8) ?? ""
                         continuation.resume(returning: result.isEmpty ? "(Empty file)" : result)
                     } catch {
                         continuation.resume(returning: "Failed to read: \(error.localizedDescription)")
