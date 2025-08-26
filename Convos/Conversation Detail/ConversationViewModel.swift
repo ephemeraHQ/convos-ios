@@ -27,7 +27,6 @@ class ConversationViewModel {
 
     // MARK: - Public
 
-    var isLoading: Bool = true
     var loadingError: Error?
 
     var showsInfoView: Bool = true
@@ -58,7 +57,7 @@ class ConversationViewModel {
     var conversationImage: UIImage?
     var messageText: String = "" {
         didSet {
-            sendButtonEnabled = !messageText.isEmpty && !isLoading
+            sendButtonEnabled = !messageText.isEmpty
         }
     }
     var canRemoveMembers: Bool {
@@ -127,9 +126,6 @@ class ConversationViewModel {
 
         Logger.info("🔄 created for draft conversation: \(conversation.id)")
 
-        // Dependencies are already loaded, so mark as ready
-        self.isLoading = false
-
         fetchLatest()
         observe()
 
@@ -169,8 +165,6 @@ class ConversationViewModel {
             self.conversationName = conversation.name ?? ""
             self.conversationDescription = conversation.description ?? ""
 
-            // Mark as loaded
-            self.isLoading = false
             self.loadingError = nil
         }
     }
