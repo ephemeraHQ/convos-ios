@@ -23,6 +23,10 @@ final class SyncingManager: SyncingManagerProtocol {
     private var lastMemberProfileSync: [String: Date] = [:]
     private let memberProfileSyncInterval: TimeInterval = 10 // seconds
 
+    // Store references for stream restart
+    private weak var currentClient: AnyClientProvider?
+    private weak var currentApiClient: (any ConvosAPIClientProtocol)?
+
     init(databaseWriter: any DatabaseWriter) {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
@@ -32,7 +36,11 @@ final class SyncingManager: SyncingManagerProtocol {
     }
 
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
-        listConversationsTask = Task { [weak self, consentStates] in
+        // Store references for stream restart
+        currentClient = client
+        currentApiClient = apiClient
+
+        listConversationsTask = Task { [weak self] in
             do {
                 guard let self else { return }
                 do {
@@ -67,17 +75,50 @@ final class SyncingManager: SyncingManagerProtocol {
                 Logger.error("Error syncing conversations: \(error)")
             }
         }
-        streamMessagesTask = Task { [weak self, consentStates] in
+        // Start the streaming tasks
+        startMessageStream()
+        startConversationStream()
+    }
+
+    func stop() {
+        listConversationsTask?.cancel()
+        listConversationsTask = nil
+        streamMessagesTask?.cancel()
+        streamMessagesTask = nil
+        streamConversationsTask?.cancel()
+        streamConversationsTask = nil
+        syncMemberProfilesTasks.forEach { $0.cancel() }
+        syncMemberProfilesTasks.removeAll()
+
+        // Clear stored references
+        currentClient = nil
+        currentApiClient = nil
+    }
+
+    // MARK: - Private
+
+    private func startMessageStream() {
+        guard let client = currentClient, let apiClient = currentApiClient else {
+            Logger.error("Cannot start message stream: missing client or apiClient")
+            return
+        }
+
+        streamMessagesTask = Task { [weak self] in
             do {
+                guard let self else { return }
                 for try await message in await client.conversationsProvider
                     .streamAllMessages(
                         type: .groups,
                         consentStates: consentStates,
-                        onClose: {
-                            Logger.warning("Closing messages stream for inboxId: \(client.inboxId)...")
+                        onClose: { [weak self] in
+                            guard let self, !Task.isCancelled else { return }
+                            Logger.warning("Messages stream closed for inboxId: \(client.inboxId). Restarting...")
+                            Task { [weak self] in
+                                guard !Task.isCancelled else { return }
+                                self?.startMessageStream()
+                            }
                         }
                     ) {
-                    guard let self else { return }
                     guard let conversation = try await client.conversationsProvider.findConversation(
                         conversationId: message.conversationId
                     ) else {
@@ -93,14 +134,33 @@ final class SyncingManager: SyncingManagerProtocol {
                 }
             } catch {
                 Logger.error("Error streaming all messages: \(error)")
+                // Restart on error as well
+                guard !Task.isCancelled else { return }
+                Task { [weak self] in
+                    guard !Task.isCancelled else { return }
+                    self?.startMessageStream()
+                }
             }
         }
+    }
+
+    private func startConversationStream() {
+        guard let client = currentClient, let apiClient = currentApiClient else {
+            Logger.error("Cannot start conversation stream: missing client or apiClient")
+            return
+        }
+
         streamConversationsTask = Task { [weak self] in
             do {
                 for try await conversation in await client.conversationsProvider.stream(
                     type: .groups,
-                    onClose: {
-                        Logger.warning("Closing conversations stream for inboxId: \(client.inboxId)...")
+                    onClose: { [weak self] in
+                        guard let self, !Task.isCancelled else { return }
+                        Logger.warning("Conversations stream closed for inboxId: \(client.inboxId). Restarting...")
+                        Task { [weak self] in
+                            guard !Task.isCancelled else { return }
+                            self?.startConversationStream()
+                        }
                     }
                 ) {
                     guard let self else { return }
@@ -110,22 +170,15 @@ final class SyncingManager: SyncingManagerProtocol {
                 }
             } catch {
                 Logger.error("Error streaming conversations: \(error)")
+                // Restart on error as well
+                guard !Task.isCancelled else { return }
+                Task { [weak self] in
+                    guard !Task.isCancelled else { return }
+                    self?.startConversationStream()
+                }
             }
         }
     }
-
-    func stop() {
-        listConversationsTask?.cancel()
-        listConversationsTask = nil
-        streamMessagesTask?.cancel()
-        streamMessagesTask = nil
-        streamConversationsTask?.cancel()
-        streamConversationsTask = nil
-        syncMemberProfilesTasks.forEach { $0.cancel() }
-        syncMemberProfilesTasks.removeAll()
-    }
-
-    // MARK: - Private
 
     private func syncMemberProfiles(
         apiClient: any ConvosAPIClientProtocol,
