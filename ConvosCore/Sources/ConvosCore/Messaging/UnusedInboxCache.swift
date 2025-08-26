@@ -106,6 +106,7 @@ actor UnusedInboxCache {
                 databaseReader: databaseReader,
                 databaseWriter: databaseWriter,
                 environment: environment,
+                startsStreamingServices: true,
                 registersForPushNotifications: true
             )
             return MessagingService(
@@ -157,6 +158,7 @@ actor UnusedInboxCache {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
+            startsStreamingServices: true,
             registersForPushNotifications: false
         )
 

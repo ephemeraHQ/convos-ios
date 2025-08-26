@@ -30,12 +30,14 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
+        startsStreamingServices: Bool,
         registersForPushNotifications: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
+            startsStreamingServices: startsStreamingServices,
             registersForPushNotifications: registersForPushNotifications
         )
         operation.authorize(inboxId: inboxId)
@@ -52,6 +54,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
+            startsStreamingServices: true,
             registersForPushNotifications: registersForPushNotifications
         )
         operation.register()
@@ -62,17 +65,20 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
+        startsStreamingServices: Bool,
         registersForPushNotifications: Bool
     ) {
         let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
+        let syncingManager = startsStreamingServices ? SyncingManager(databaseWriter: databaseWriter) : nil
+        let inviteJoinRequestsManager = startsStreamingServices ? InviteJoinRequestsManager(
+            databaseReader: databaseReader,
+            databaseWriter: databaseWriter
+        ) : nil
         stateMachine = InboxStateMachine(
             identityStore: environment.defaultIdentityStore,
             inboxWriter: inboxWriter,
-            syncingManager: SyncingManager(databaseWriter: databaseWriter),
-            inviteJoinRequestsManager: InviteJoinRequestsManager(
-                databaseReader: databaseReader,
-                databaseWriter: databaseWriter
-            ),
+            syncingManager: syncingManager,
+            inviteJoinRequestsManager: inviteJoinRequestsManager,
             pushNotificationRegistrar: PushNotificationRegistrar(
                 environment: environment
             ),
