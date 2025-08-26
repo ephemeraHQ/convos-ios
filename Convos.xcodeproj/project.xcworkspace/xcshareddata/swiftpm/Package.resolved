@@ -1,5 +1,5 @@
 {
-  "originHash" : "28dfc736740d82679fe24d9447a1d83a96204e6fc33c2fedae7037cc878f3cb4",
+  "originHash" : "932fc76dd249f72425c49c133fa7ec109107b4c6b5b0da84cd4f804ae4accb32",
   "pins" : [
     {
       "identity" : "connect-swift",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/krzyzanowskim/CryptoSwift.git",
       "state" : {
-        "revision" : "678d442c6f7828def400a70ae15968aef67ef52d",
-        "version" : "1.8.3"
+        "revision" : "e45a26384239e028ec87fbcc788f513b67e10d8f",
+        "version" : "1.9.0"
       }
     },
     {
@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/xmtp/libxmtp-swift.git",
       "state" : {
-        "revision" : "f5e8891dd8f4656cb7c9ceba2c87a90559a90cf3",
-        "version" : "4.3.0"
+        "revision" : "6bbb0aacd82070cdef041e808402836c768e2f0e",
+        "version" : "4.4.0"
       }
     },
     {
@@ -141,8 +141,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/xmtp/xmtp-ios.git",
       "state" : {
-        "revision" : "893dcf5ff4fd57de33bc3d0d4cd40d666a50b9e0",
-        "version" : "4.3.0"
+        "revision" : "6b990f9ea6d9356a4df6866c68639b22f42a5aa8",
+        "version" : "4.4.0"
       }
     }
   ],

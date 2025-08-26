@@ -32,7 +32,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         streamMessagesTask = Task { [weak self, client] in
             do {
                 Logger.info("Started streaming messages...")
-                for try await message in await client.conversationsProvider
+                for try await message in client.conversationsProvider
                     .streamAllMessages(
                         type: .dms,
                         consentStates: [.unknown],

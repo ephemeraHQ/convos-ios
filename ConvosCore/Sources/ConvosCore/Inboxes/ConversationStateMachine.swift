@@ -336,7 +336,7 @@ public actor ConversationStateMachine {
         streamConversationsTask = Task { [weak self] in
             do {
                 Logger.info("Started streaming conversations for inboxId: \(client.inboxId), looking for convo: \(conversationId)...")
-                for try await conversation in await client.conversationsProvider.stream(
+                for try await conversation in client.conversationsProvider.stream(
                     type: .groups,
                     onClose: {
                         Logger.warning("Closing conversations stream...")
