@@ -90,7 +90,14 @@ struct DebugViewSection: View {
     }
 
     private var debugInfoFileURL: URL {
-        let logs = Logger.getAllLogs()
+        let semaphore = DispatchSemaphore(value: 0)
+        var logs: String = "Loading logs..."
+        Task {
+            logs = await Logger.getAllLogs()
+            semaphore.signal()
+        }
+        // Block only the file creation path while we fetch logs off main thread
+        _ = semaphore.wait(timeout: .now() + 2.0)
 
         // Create debug info text
         let debugInfo = """

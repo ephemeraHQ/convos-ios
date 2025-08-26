@@ -77,16 +77,28 @@ public enum Logger {
         }
 
         private func prepare() {
+            // Idempotency: close any previously opened handle and reset state up-front
+            if fileHandle != nil {
+                closeFileHandle()
+                fileHandle = nil
+            }
+            logFileURL = nil
+
             // Get app group identifier from environment configuration
             let appGroupIdentifier = getAppGroupIdentifier()
             let isNSE = Bundle.main.bundlePath.hasSuffix(".appex")
 
+            #if DEBUG
             print("Logger: Using app group identifier: \(appGroupIdentifier) (isNSE: \(isNSE))")
+            #endif
 
             // Use shared container - no fallback since we always need app group sharing
             guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+                #if DEBUG
                 print("Logger: Failed to get shared container for app group: \(appGroupIdentifier)")
+                #endif
                 self.logFileURL = nil
+                self.fileHandle = nil
                 return
             }
 
@@ -97,15 +109,24 @@ public enum Logger {
                 try FileManager.default.createDirectory(at: logsDirectory, withIntermediateDirectories: true)
 
                 // Use single log file for both main app and NSE
-                self.logFileURL = logsDirectory.appendingPathComponent("convos.log")
+                let resolvedLogFileURL = logsDirectory.appendingPathComponent("convos.log")
 
-                print("Logger: Log file path: \(self.logFileURL?.path ?? "nil")")
+                #if DEBUG
+                print("Logger: Log file path: \(resolvedLogFileURL.path)")
+                #endif
 
-                // Initialize file handle
+                // Only set after directory creation succeeds
+                self.logFileURL = resolvedLogFileURL
+
+                // Initialize file handle after URL is ready
                 self.initializeFileHandle()
             } catch {
-                print("Failed to create logs directory: \(error)")
+                #if DEBUG
+                print("Logger: Failed to create logs directory: \(error)")
+                #endif
+                // Ensure consistent nil state on failure
                 self.logFileURL = nil
+                self.fileHandle = nil
             }
         }
 
@@ -370,7 +391,7 @@ public enum Logger {
         }
 
                 /// Get logs from shared log file (contains both main app and NSE logs)
-        public func getAllLogs() -> String {
+        public func getAllLogs() async -> String {
             let appGroupIdentifier = getAppGroupIdentifier()
             guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
                 return "Failed to get shared container for app group: \(appGroupIdentifier)"
@@ -379,29 +400,53 @@ public enum Logger {
             let logsDirectory = containerURL.appendingPathComponent("Logs")
             let logURL = logsDirectory.appendingPathComponent("convos.log")
 
-            var result = "Debug Info:\n"
-            result += "App Group: \(appGroupIdentifier)\n"
-            result += "Container URL: \(containerURL.path)\n"
-            result += "Log Path: \(logURL.path)\n"
-            result += "Log Exists: \(FileManager.default.fileExists(atPath: logURL.path))\n\n"
+            var header = "Debug Info:\n"
+            header += "App Group: \(appGroupIdentifier)\n"
+            header += "Container URL: \(containerURL.path)\n"
+            header += "Log Path: \(logURL.path)\n"
+            header += "Log Exists: \(FileManager.default.fileExists(atPath: logURL.path))\n\n"
 
-            // Read the shared log file
-            if FileManager.default.fileExists(atPath: logURL.path) {
-                do {
-                    let logs = try String(contentsOf: logURL, encoding: .utf8)
-                    if !logs.isEmpty {
-                        result += "=== LOGS ===\n\(logs)\n"
-                    } else {
-                        result += "=== LOGS ===\n(Empty file)\n"
-                    }
-                } catch {
-                    result += "=== LOGS ===\nFailed to read: \(error.localizedDescription)\n"
-                }
-            } else {
-                result += "=== LOGS ===\nFile does not exist\n"
+            guard FileManager.default.fileExists(atPath: logURL.path) else {
+                return header + "=== LOGS ===\nFile does not exist\n"
             }
 
-            return result
+            // Read last maxLogLines lines by tailing from end asynchronously
+            let tailed: String = await withCheckedContinuation { continuation in
+                readQueue.async {
+                    do {
+                        let handle = try FileHandle(forReadingFrom: logURL)
+                        defer { try? handle.close() }
+
+                        let chunkSize = 64 * 1024
+                        var buffer = Data()
+                        var position = try handle.seekToEnd()
+
+                        func countNewlines(_ data: Data) -> Int {
+                            data.reduce(into: 0) { count, byte in if byte == 0x0A { count += 1 } }
+                        }
+
+                        while position > 0 {
+                            let readSize = position >= UInt64(chunkSize) ? chunkSize : Int(position)
+                            position = try handle.seek(toOffset: position - UInt64(readSize))
+                            let chunk = try handle.read(upToCount: readSize) ?? Data()
+                            buffer.insert(contentsOf: chunk, at: 0)
+                            if countNewlines(buffer) >= maxLogLines { break }
+                            if position == 0 { break }
+                        }
+
+                        // Split into lines and keep the last maxLogLines
+                        let stringAll = String(data: buffer, encoding: .utf8) ?? ""
+                        let lines = stringAll.split(separator: "\n", omittingEmptySubsequences: false)
+                        let tailLines = lines.suffix(maxLogLines)
+                        let result = tailLines.joined(separator: "\n")
+                        continuation.resume(returning: result.isEmpty ? "(Empty file)" : result)
+                    } catch {
+                        continuation.resume(returning: "Failed to read: \(error.localizedDescription)")
+                    }
+                }
+            }
+
+            return header + "=== LOGS ===\n" + tailed + "\n"
         }
 
         /// Get logs from both main app and NSE asynchronously

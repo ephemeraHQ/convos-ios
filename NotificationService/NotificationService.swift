@@ -8,15 +8,30 @@ class NotificationService: UNNotificationServiceExtension {
     private var bestAttemptContent: UNMutableNotificationContent?
     private var pendingTask: Task<Void, Never>?
     private var requestId: String = ""
+    private var didDeliverNotification: Bool = false
 
     private func logWithRequestId(_ message: String) {
         Logger.info("[RequestID: \(requestId)] \(message)")
+    }
+
+    private func deliverEmptyNotification() {
+        guard !didDeliverNotification, let contentHandler = contentHandler else { return }
+        let emptyContent = UNMutableNotificationContent()
+        contentHandler(emptyContent)
+        didDeliverNotification = true
     }
 
     private func configureLogging() {
         // Configure Logger with environment from stored configuration
         do {
             let environment = try NotificationExtensionEnvironment.getEnvironment()
+            // Set production mode BEFORE configuring to avoid verbose logs in production
+            switch environment {
+            case .production:
+                Logger.Default.configureForProduction(true)
+            default:
+                Logger.Default.configureForProduction(false)
+            }
             Logger.configure(environment: environment)
         } catch {
             // Fallback: just log the error but continue
@@ -64,10 +79,9 @@ class NotificationService: UNNotificationServiceExtension {
         logWithRequestId("NSE: Extension time expiring, cleaning up XMTP resources")
         pushHandler?.cleanup()
 
-        // With notification filtering entitlement, we can choose not to show anything on timeout
-        // by not calling contentHandler. This completely suppresses the notification.
-        logWithRequestId("NSE: Timeout - dropping notification by not calling contentHandler")
-        // Don't call contentHandler - notification is dropped
+        // With notification filtering entitlement, deliver an empty notification to suppress display
+        logWithRequestId("NSE: Timeout - delivering empty notification")
+        deliverEmptyNotification()
     }
 
     private func handlePushNotification(userInfo: [AnyHashable: Any]) async {
@@ -87,7 +101,8 @@ class NotificationService: UNNotificationServiceExtension {
                 logWithRequestId("NSE: Notification dropped - message from self or non-text")
                 logWithRequestId("NSE: Cleaning up XMTP resources after dropping notification")
                 pushHandler?.cleanup()
-                // Don't call contentHandler - this drops the notification with filtering entitlement
+                // Deliver empty notification (suppresses display)
+                deliverEmptyNotification()
                 return
             }
             // For any other errors, also drop the notification
@@ -95,7 +110,7 @@ class NotificationService: UNNotificationServiceExtension {
             logWithRequestId("NSE: Push notification processing error: \(error)")
             logWithRequestId("NSE: Dropping notification due to processing error")
             pushHandler?.cleanup()
-            // Don't call contentHandler - this drops the notification with filtering entitlement
+            deliverEmptyNotification()
             return
         }
 
@@ -104,7 +119,7 @@ class NotificationService: UNNotificationServiceExtension {
             logWithRequestId("NSE: Task cancelled, cleaning up XMTP resources")
             pushHandler?.cleanup()
             logWithRequestId("NSE: Dropping notification - task was cancelled")
-            // Don't call contentHandler - this drops the notification with filtering entitlement
+            deliverEmptyNotification()
             return
         }
 
@@ -120,8 +135,10 @@ class NotificationService: UNNotificationServiceExtension {
         if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
             logWithRequestId("NSE: Delivering notification to system")
             contentHandler(bestAttemptContent)
+            didDeliverNotification = true
         } else {
-            logWithRequestId("NSE: Warning - contentHandler or bestAttemptContent is nil, cannot deliver notification")
+            logWithRequestId("NSE: Warning - contentHandler or bestAttemptContent is nil, delivering empty notification")
+            deliverEmptyNotification()
         }
     }
 
@@ -137,12 +154,14 @@ class NotificationService: UNNotificationServiceExtension {
         // Use the basic display logic first
         if let displayTitle = payload.displayTitle {
             bestAttemptContent.title = displayTitle
-            logWithRequestId("NSE: Set notification title: \(displayTitle)")
+            let length = displayTitle.count
+            logWithRequestId("NSE: Notification title present=true length=\(length)")
         }
 
         if let displayBody = payload.displayBody {
             bestAttemptContent.body = displayBody
-            logWithRequestId("NSE: Set notification body: \(displayBody)")
+            let length = displayBody.count
+            logWithRequestId("NSE: Notification body present=true length=\(length)")
         }
 
         // Set thread identifier for conversation grouping
@@ -164,12 +183,12 @@ class NotificationService: UNNotificationServiceExtension {
             // Use the processed payload that contains decoded content
             if let title = processedPayload.displayTitleWithDecodedContent() {
                 bestAttemptContent.title = title
-                logWithRequestId("NSE: Updated notification title with decoded content: \(title)")
+                logWithRequestId("NSE: Decoded title present=true length=\(title.count)")
             }
 
             if let body = processedPayload.displayBodyWithDecodedContent() {
                 bestAttemptContent.body = body
-                logWithRequestId("NSE: Updated notification body with decoded content: \(body)")
+                logWithRequestId("NSE: Decoded body present=true length=\(body.count)")
             }
 
             logWithRequestId("NSE: Applied decoded notification content")
@@ -180,12 +199,12 @@ class NotificationService: UNNotificationServiceExtension {
 
             if let title = payload.displayTitleWithDecodedContent() {
                 bestAttemptContent.title = title
-                logWithRequestId("NSE: Set fallback notification title: \(title)")
+                logWithRequestId("NSE: Fallback title present=true length=\(title.count)")
             }
 
             if let body = payload.displayBodyWithDecodedContent() {
                 bestAttemptContent.body = body
-                logWithRequestId("NSE: Set fallback notification body: \(body)")
+                logWithRequestId("NSE: Fallback body present=true length=\(body.count)")
             }
 
             logWithRequestId("NSE: Applied fallback notification content")
