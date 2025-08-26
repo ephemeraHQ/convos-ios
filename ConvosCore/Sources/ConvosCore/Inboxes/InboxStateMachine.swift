@@ -379,6 +379,7 @@ public actor InboxStateMachine {
     private func handleDelete(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
         Logger.info("Deleting inbox '\(client.inboxId)'...")
 
+        removePushNotificationObservers()
         await pushNotificationRegistrar.unregisterInstallation(client: client, apiClient: apiClient)
 
         emitStateChange(.deleting)
@@ -392,6 +393,7 @@ public actor InboxStateMachine {
     }
 
     private func handleDeleteFromError() async throws {
+        Logger.info("Deleting inbox from error state...")
         emitStateChange(.deleting)
         syncingManager.stop()
         inviteJoinRequestsManager.stop()

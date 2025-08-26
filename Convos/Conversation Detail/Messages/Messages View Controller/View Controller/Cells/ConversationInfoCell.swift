@@ -18,7 +18,7 @@ class ConversationInfoCell: UICollectionViewCell {
         self.contentConfiguration = nil
     }
 
-    func setup(conversation: ConversationViewModel) {
+    func setup(conversation: Conversation) {
         contentConfiguration = UIHostingConfiguration {
             VStack(alignment: .leading) {
                 ConversationInfoPreview(conversation: conversation)
@@ -38,32 +38,30 @@ class ConversationInfoCell: UICollectionViewCell {
 }
 
 struct ConversationInfoPreview: View {
-    @Bindable var conversation: ConversationViewModel
+    let conversation: Conversation
 
     var body: some View {
         VStack {
             VStack(spacing: DesignConstants.Spacing.step2x) {
                 ConversationAvatarView(
-                    conversation: conversation.conversation,
-                    conversationImage: conversation.conversationImage
+                    conversation: conversation,
+                    conversationImage: nil
                 )
                 .frame(width: 96.0, height: 96.0)
 
                 VStack(spacing: DesignConstants.Spacing.stepHalf) {
-                    Text(
-                        conversation.conversationName.isEmpty ? conversation.conversation.displayName : conversation.conversationName
-                    )
+                    Text(conversation.displayName)
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(.colorTextPrimary)
-                    if !conversation.conversationDescription.isEmpty {
-                        Text(conversation.conversationDescription)
+                    if let description = conversation.description, !description.isEmpty {
+                        Text(description)
                             .font(.subheadline.weight(.regular))
                             .foregroundStyle(.colorTextPrimary)
                     }
                 }
                 .padding(.horizontal, DesignConstants.Spacing.step2x)
 
-                Text(conversation.conversation.membersCountString)
+                Text(conversation.membersCountString)
                     .font(.caption)
                     .foregroundStyle(.colorTextSecondary)
             }
@@ -88,5 +86,5 @@ struct ConversationInfoPreview: View {
 }
 
 #Preview {
-    ConversationInfoPreview(conversation: .mock)
+    ConversationInfoPreview(conversation: .mock())
 }

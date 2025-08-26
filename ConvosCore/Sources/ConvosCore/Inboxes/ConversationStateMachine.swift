@@ -141,20 +141,6 @@ public actor ConversationStateMachine {
         enqueueAction(.stop)
     }
 
-    func waitForReadyState() async throws -> ConversationReadyResult {
-        for await state in stateSequence {
-            switch state {
-            case .ready(let result):
-                return result
-            case .error(let error):
-                throw error
-            default:
-                continue
-            }
-        }
-        throw ConversationStateMachineError.unexpectedTermination
-    }
-
     // MARK: - Private Action Processing
 
     private func enqueueAction(_ action: Action) {
