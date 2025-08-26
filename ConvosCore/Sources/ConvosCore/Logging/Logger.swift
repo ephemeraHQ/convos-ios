@@ -28,6 +28,8 @@ public enum Logger {
         func getLogsAsync(completion: @escaping (String) -> Void)
         func clearLogs(completion: (() -> Void)?)
         func flushPendingWrites()
+        func getAllLogs() -> String
+        func getAllLogsAsync(completion: @escaping (String) -> Void)
     }
 
     public class Default: LoggerProtocol {
@@ -36,11 +38,20 @@ public enum Logger {
         public var minimumLogLevel: LogLevel = .info
         private var isProduction: Bool = false
         private var logFileURL: URL?
+        private var environment: AppEnvironment?
 
         /// Configure the logger for production mode
         public static func configureForProduction(_ isProduction: Bool) {
             if let defaultLogger = shared as? Default {
                 defaultLogger.isProduction = isProduction
+                defaultLogger.prepare()
+            }
+        }
+
+        /// Configure the logger with environment (for proper app group access)
+        public static func configure(environment: AppEnvironment) {
+            if let defaultLogger = shared as? Default {
+                defaultLogger.environment = environment
                 defaultLogger.prepare()
             }
         }
@@ -66,23 +77,53 @@ public enum Logger {
         }
 
         private func prepare() {
-            if !isProduction,
-               let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                // Create logs directory in app's documents folder
-                let logsDirectory = documentsPath.appendingPathComponent("Logs")
+            // Get app group identifier from environment configuration
+            let appGroupIdentifier = getAppGroupIdentifier()
+            let isNSE = Bundle.main.bundlePath.hasSuffix(".appex")
 
-                do {
-                    try FileManager.default.createDirectory(at: logsDirectory, withIntermediateDirectories: true)
-                    self.logFileURL = logsDirectory.appendingPathComponent("convos.log")
-                    // Initialize file handle
-                    self.initializeFileHandle()
-                } catch {
-                    print("Failed to create logs directory: \(error)")
-                    self.logFileURL = nil
-                }
-            } else {
+            print("Logger: Using app group identifier: \(appGroupIdentifier) (isNSE: \(isNSE))")
+
+            // Use shared container - no fallback since we always need app group sharing
+            guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+                print("Logger: Failed to get shared container for app group: \(appGroupIdentifier)")
+                self.logFileURL = nil
+                return
+            }
+
+            // Create logs directory in shared container
+            let logsDirectory = containerURL.appendingPathComponent("Logs")
+
+            do {
+                try FileManager.default.createDirectory(at: logsDirectory, withIntermediateDirectories: true)
+
+                // Use single log file for both main app and NSE
+                self.logFileURL = logsDirectory.appendingPathComponent("convos.log")
+
+                print("Logger: Log file path: \(self.logFileURL?.path ?? "nil")")
+
+                // Initialize file handle
+                self.initializeFileHandle()
+            } catch {
+                print("Failed to create logs directory: \(error)")
                 self.logFileURL = nil
             }
+        }
+
+        private func getAppGroupIdentifier() -> String {
+            // Use configured environment if available
+            if let environment = environment {
+                return environment.appGroupIdentifier
+            }
+
+            // For NSE, try to get from stored configuration
+            if Bundle.main.bundlePath.hasSuffix(".appex") {
+                if let storedEnvironment = AppEnvironment.retrieveSecureConfigurationForNotificationExtension() {
+                    return storedEnvironment.appGroupIdentifier
+                }
+            }
+
+            // Fallback to default app group identifier
+            return "group.org.convos.app"
         }
 
         private func initializeFileHandle() {
@@ -327,6 +368,49 @@ public enum Logger {
                 self.flushPendingWritesInternal()
             }
         }
+
+                /// Get logs from shared log file (contains both main app and NSE logs)
+        public func getAllLogs() -> String {
+            let appGroupIdentifier = getAppGroupIdentifier()
+            guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+                return "Failed to get shared container for app group: \(appGroupIdentifier)"
+            }
+
+            let logsDirectory = containerURL.appendingPathComponent("Logs")
+            let logURL = logsDirectory.appendingPathComponent("convos.log")
+
+            var result = "Debug Info:\n"
+            result += "App Group: \(appGroupIdentifier)\n"
+            result += "Container URL: \(containerURL.path)\n"
+            result += "Log Path: \(logURL.path)\n"
+            result += "Log Exists: \(FileManager.default.fileExists(atPath: logURL.path))\n\n"
+
+            // Read the shared log file
+            if FileManager.default.fileExists(atPath: logURL.path) {
+                do {
+                    let logs = try String(contentsOf: logURL, encoding: .utf8)
+                    if !logs.isEmpty {
+                        result += "=== LOGS ===\n\(logs)\n"
+                    } else {
+                        result += "=== LOGS ===\n(Empty file)\n"
+                    }
+                } catch {
+                    result += "=== LOGS ===\nFailed to read: \(error.localizedDescription)\n"
+                }
+            } else {
+                result += "=== LOGS ===\nFile does not exist\n"
+            }
+
+            return result
+        }
+
+        /// Get logs from both main app and NSE asynchronously
+        public func getAllLogsAsync(completion: @escaping (String) -> Void) {
+            readQueue.async {
+                let result = self.getAllLogs()
+                completion(result)
+            }
+        }
     }
 }
 
@@ -359,7 +443,22 @@ public extension Logger {
         Self.Default.shared.clearLogs(completion: completion)
     }
 
-    static func flushPendingWrites() {
+        static func flushPendingWrites() {
         Self.Default.shared.flushPendingWrites()
+    }
+
+    /// Configure the logger with environment (for proper app group access)
+    static func configure(environment: AppEnvironment) {
+        Self.Default.configure(environment: environment)
+    }
+
+    /// Get logs from both main app and NSE
+    static func getAllLogs() -> String {
+        return Self.Default.shared.getAllLogs()
+    }
+
+    /// Get logs from both main app and NSE asynchronously
+    static func getAllLogsAsync(completion: @escaping (String) -> Void) {
+        Self.Default.shared.getAllLogsAsync(completion: completion)
     }
 }

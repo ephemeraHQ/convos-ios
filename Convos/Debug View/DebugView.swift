@@ -90,7 +90,7 @@ struct DebugViewSection: View {
     }
 
     private var debugInfoFileURL: URL {
-        let logs = Logger.getLogs()
+        let logs = Logger.getAllLogs()
 
         // Create debug info text
         let debugInfo = """
@@ -100,7 +100,6 @@ struct DebugViewSection: View {
         Version: \(appVersion)
         Environment: \(ConfigManager.shared.currentEnvironment)
 
-        Logs:
         \(logs)
         """
 
