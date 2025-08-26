@@ -135,7 +135,6 @@ struct ConversationsView: View {
                 }
                 .toolbar(removing: .sidebarToggle)
             } detail: {
-                Group {
                     if let conversationViewModel = selectedConversationViewModel {
                         ConversationView(
                             viewModel: conversationViewModel,
@@ -143,8 +142,9 @@ struct ConversationsView: View {
                         )
                     } else if horizontalSizeClass != .compact {
                         emptyConversationsView
+                    } else {
+                        EmptyView()
                     }
-                }
             }
         }
         .onChange(of: viewModel.selectedConversation) {

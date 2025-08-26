@@ -6,7 +6,7 @@ struct MessagesView: View {
         case share, scan
     }
 
-    let conversation: ConversationViewModel
+    let conversation: Conversation
     let messages: [AnyMessage]
     let invite: Invite
     let profile: Profile

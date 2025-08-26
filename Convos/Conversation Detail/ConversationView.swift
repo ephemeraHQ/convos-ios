@@ -1,21 +1,7 @@
 import SwiftUI
 
-/// This allows the interactive swipe to go back gesture while hiding the toolbar
-struct SwipeBackGestureEnabler: UIViewControllerRepresentable {
-    func makeUIViewController(context: Context) -> UIViewController {
-        UIViewController()
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        DispatchQueue.main.async {
-            uiViewController.navigationController?.interactivePopGestureRecognizer?.isEnabled = true
-            uiViewController.navigationController?.interactivePopGestureRecognizer?.delegate = nil
-        }
-    }
-}
-
 struct ConversationView: View {
-    let viewModel: ConversationViewModel
+    @Bindable var viewModel: ConversationViewModel
     @FocusState.Binding var focusState: MessagesViewInputFocus?
     let onScanInviteCode: () -> Void
     let onDeleteConversation: () -> Void
@@ -41,9 +27,8 @@ struct ConversationView: View {
     }
 
     var body: some View {
-        @Bindable var viewModel = viewModel
         MessagesView(
-            conversation: viewModel,
+            conversation: viewModel.conversation,
             messages: viewModel.messages,
             invite: viewModel.invite,
             profile: viewModel.profile,
