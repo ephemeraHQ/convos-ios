@@ -21,7 +21,7 @@ final class SyncingManager: SyncingManagerProtocol {
 
     // Track last sync times for member profiles per conversation
     private var lastMemberProfileSync: [String: Date] = [:]
-    private let memberProfileSyncInterval: TimeInterval = 10 // seconds
+    private let memberProfileSyncInterval: TimeInterval = 120 // seconds
 
     init(databaseWriter: any DatabaseWriter) {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
@@ -85,8 +85,15 @@ final class SyncingManager: SyncingManagerProtocol {
 
     // MARK: - Private
 
-    private func startMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
-        Logger.info("Starting messages stream for inbox: \(client.inboxId)")
+    private let maxStreamRetries: Int = 5
+
+    private func startMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int = 0) {
+        guard retryCount < maxStreamRetries else {
+            Logger.error("Messages stream max retries (\(maxStreamRetries)) reached for inbox: \(client.inboxId). Giving up.")
+            return
+        }
+
+        Logger.info("Starting messages stream for inbox: \(client.inboxId) (retry: \(retryCount))")
         streamMessagesTask = Task { [weak self] in
             do {
                 guard let self else { return }
@@ -96,10 +103,11 @@ final class SyncingManager: SyncingManagerProtocol {
                         consentStates: consentStates,
                         onClose: { [weak self] in
                             guard let self, !Task.isCancelled else { return }
-                            Logger.warning("Messages stream closed for inboxId: \(client.inboxId). Restarting...")
+                            let nextRetry = retryCount + 1
+                            Logger.warning("Messages stream closed for inboxId: \(client.inboxId). Restarting (retry \(nextRetry)/\(self.maxStreamRetries))...")
                             Task { [weak self] in
                                 guard !Task.isCancelled else { return }
-                                self?.startMessageStream(client: client, apiClient: apiClient)
+                                self?.startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
                             }
                         }
                     ) {
@@ -120,26 +128,33 @@ final class SyncingManager: SyncingManagerProtocol {
                 Logger.error("Error streaming all messages: \(error)")
                 // Restart on error as well
                 guard !Task.isCancelled else { return }
+                let nextRetry = retryCount + 1
                 Task { [weak self] in
                     guard !Task.isCancelled else { return }
-                    self?.startMessageStream(client: client, apiClient: apiClient)
+                    self?.startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
                 }
             }
         }
     }
 
-    private func startConversationStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
-        Logger.info("Starting conversations stream for inbox: \(client.inboxId)")
+    private func startConversationStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int = 0) {
+        guard retryCount < maxStreamRetries else {
+            Logger.error("Conversations stream max retries (\(maxStreamRetries)) reached for inbox: \(client.inboxId). Giving up.")
+            return
+        }
+
+        Logger.info("Starting conversations stream for inbox: \(client.inboxId) (retry: \(retryCount))")
         streamConversationsTask = Task { [weak self] in
             do {
                 for try await conversation in await client.conversationsProvider.stream(
                     type: .groups,
                     onClose: { [weak self] in
                         guard let self, !Task.isCancelled else { return }
-                        Logger.warning("Conversations stream closed for inboxId: \(client.inboxId). Restarting...")
+                        let nextRetry = retryCount + 1
+                        Logger.warning("Conversations stream closed for inboxId: \(client.inboxId). Restarting (retry \(nextRetry)/\(self.maxStreamRetries))...")
                         Task { [weak self] in
                             guard !Task.isCancelled else { return }
-                            self?.startConversationStream(client: client, apiClient: apiClient)
+                            self?.startConversationStream(client: client, apiClient: apiClient, retryCount: nextRetry)
                         }
                     }
                 ) {
@@ -152,9 +167,10 @@ final class SyncingManager: SyncingManagerProtocol {
                 Logger.error("Error streaming conversations: \(error)")
                 // Restart on error as well
                 guard !Task.isCancelled else { return }
+                let nextRetry = retryCount + 1
                 Task { [weak self] in
                     guard !Task.isCancelled else { return }
-                    self?.startConversationStream(client: client, apiClient: apiClient)
+                    self?.startConversationStream(client: client, apiClient: apiClient, retryCount: nextRetry)
                 }
             }
         }
