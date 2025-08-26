@@ -91,6 +91,7 @@ struct DebugViewSection: View {
         Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
     }
 
+    @MainActor
     private func prepareDebugInfoFile() async {
         guard !preparingLogs else { return }
         preparingLogs = true
@@ -109,10 +110,8 @@ struct DebugViewSection: View {
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("convos-debug-info.txt")
         try? debugInfo.write(to: tempURL, atomically: true, encoding: .utf8)
-        await MainActor.run {
-            self.debugFileURL = tempURL
-            self.preparingLogs = false
-        }
+        self.debugFileURL = tempURL
+        self.preparingLogs = false
     }
 
     var body: some View {

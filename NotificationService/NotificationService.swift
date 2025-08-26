@@ -55,7 +55,7 @@ class NotificationService: UNNotificationServiceExtension {
         // Configure Logger with environment from stored configuration
         configureLogging()
 
-        Logger.info("[PID: \(processId)] [RequestID: \(requestId)] NSE: didReceive notification request")
+        Logger.info("[PID: \(processId)] [RequestID: \(requestId)] didReceive notification request")
 
         self.contentHandler = contentHandler
         bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
@@ -77,16 +77,16 @@ class NotificationService: UNNotificationServiceExtension {
     override func serviceExtensionTimeWillExpire() {
         // Called just before the extension will be terminated by the system
         // Cancel any ongoing async work to prevent multiple contentHandler calls
-        logWithRequestId("NSE: serviceExtensionTimeWillExpire called - extension about to be terminated")
+        logWithRequestId("serviceExtensionTimeWillExpire called - extension about to be terminated")
 
         pendingTask?.cancel()
         pendingTask = nil
 
-        logWithRequestId("NSE: Extension time expiring, cleaning up XMTP resources")
+        logWithRequestId("Extension time expiring, cleaning up XMTP resources")
         pushHandler?.cleanup()
 
         // With notification filtering entitlement, deliver an empty notification to suppress display
-        logWithRequestId("NSE: Timeout - delivering empty notification")
+        logWithRequestId("Timeout - delivering empty notification")
         performDelivery(UNMutableNotificationContent())
     }
 

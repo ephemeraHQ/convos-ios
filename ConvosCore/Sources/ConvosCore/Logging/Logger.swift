@@ -77,10 +77,10 @@ public enum Logger {
 
         private func prepare() {
             // Idempotency: close any previously opened handle and reset state up-front
-            if fileHandle != nil {
-                closeFileHandle()
-                fileHandle = nil
+            if let handle = fileHandle {
+                try? handle.close()
             }
+            fileHandle = nil
             logFileURL = nil
 
             // Get app group identifier from environment configuration
@@ -389,7 +389,7 @@ public enum Logger {
             }
         }
 
-                /// Get logs from shared log file (contains both main app and NSE logs)
+        /// Get logs from shared log file (contains both main app and NSE logs)
         public func getAllLogs() async -> String {
             let appGroupIdentifier = getAppGroupIdentifier()
             guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
@@ -484,7 +484,7 @@ public extension Logger {
         Self.Default.shared.clearLogs(completion: completion)
     }
 
-        static func flushPendingWrites() {
+    static func flushPendingWrites() {
         Self.Default.shared.flushPendingWrites()
     }
 
