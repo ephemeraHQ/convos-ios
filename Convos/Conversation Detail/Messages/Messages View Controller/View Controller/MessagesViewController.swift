@@ -363,10 +363,12 @@ extension MessagesViewController {
             return cells
         }
 
-        if conversation.creator.isCurrentUser {
-            cells.insert(.invite(invite), at: 0)
-        } else {
-            cells.insert(.conversationInfo(conversation), at: 0)
+        if !conversation.isDraft {
+            if conversation.creator.isCurrentUser {
+                cells.insert(.invite(invite), at: 0)
+            } else {
+                cells.insert(.conversationInfo(conversation), at: 0)
+            }
         }
 
         let sections: [MessagesCollectionSection] = [

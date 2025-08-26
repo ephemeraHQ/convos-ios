@@ -168,7 +168,7 @@ public enum QRCodeGenerator {
         }
 
         // Generate in background
-        return await Task.detached {
+        return await Task.detached(priority: .userInitiated) {
             generate(from: string, options: options)
         }.value
     }

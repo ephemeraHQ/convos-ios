@@ -3,7 +3,7 @@ import SwiftUI
 
 struct ConversationsView: View {
     let session: any SessionManagerProtocol
-    let viewModel: ConversationsViewModel
+    @Bindable var viewModel: ConversationsViewModel
 
     @Namespace private var namespace: Namespace.ID
     @State private var presentingExplodeConfirmation: Bool = false
@@ -47,8 +47,6 @@ struct ConversationsView: View {
     }
 
     var body: some View {
-        @Bindable var viewModel = viewModel
-
         ConversationInfoPresenter(
             viewModel: viewModel.selectedConversationViewModel,
             focusState: $focusState,
@@ -60,13 +58,7 @@ struct ConversationsView: View {
                         emptyConversationsView
                     } else {
                         List(viewModel.unpinnedConversations, id: \.self, selection: $viewModel.selectedConversation) { conversation in
-                            ZStack {
-                                ConversationsListItem(conversation: conversation)
-                                NavigationLink(value: conversation) {
-                                    EmptyView()
-                                }
-                                .opacity(0.0) // zstack hides disclosure indicator
-                            }
+                            ConversationsListItem(conversation: conversation)
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button(role: .destructive) {
                                     viewModel.leave(conversation: conversation)

@@ -130,17 +130,13 @@ class ConversationViewModel {
         // Dependencies are already loaded, so mark as ready
         self.isLoading = false
 
-        // Fetch initial data and start observing
-        Task { [weak self] in
-            guard let self else { return }
-            fetchLatest()
-            observe()
+        fetchLatest()
+        observe()
 
-            // Update UI state
-            self.displayName = profile.name ?? ""
-            self.conversationName = conversation.name ?? ""
-            self.conversationDescription = conversation.description ?? ""
-        }
+        // Update UI state
+        self.displayName = profile.name ?? ""
+        self.conversationName = conversation.name ?? ""
+        self.conversationDescription = conversation.description ?? ""
 
         KeyboardListener.shared.add(delegate: self)
     }
@@ -150,30 +146,33 @@ class ConversationViewModel {
         let messagingService = await session.messagingService(for: conversation.inboxId)
 
         // Store all the dependencies
-        self.myProfileWriter = messagingService.myProfileWriter()
-        self.myProfileRepository = messagingService.myProfileRepository()
-        self.conversationRepository = messagingService.conversationRepository(for: conversation.id)
-        self.messagesRepository = messagingService.messagesRepository(for: conversation.id)
-        self.outgoingMessageWriter = messagingService.messageWriter(for: conversation.id)
-        self.consentWriter = messagingService.conversationConsentWriter()
-        self.localStateWriter = messagingService.conversationLocalStateWriter()
-        self.metadataWriter = messagingService.groupMetadataWriter()
-        self.inviteRepository = messagingService.inviteRepository(for: conversation.id)
+        await MainActor.run { [weak self] in
+            guard let self else { return }
+            self.myProfileWriter = messagingService.myProfileWriter()
+            self.myProfileRepository = messagingService.myProfileRepository()
+            self.conversationRepository = messagingService.conversationRepository(for: conversation.id)
+            self.messagesRepository = messagingService.messagesRepository(for: conversation.id)
+            self.outgoingMessageWriter = messagingService.messageWriter(for: conversation.id)
+            self.consentWriter = messagingService.conversationConsentWriter()
+            self.localStateWriter = messagingService.conversationLocalStateWriter()
+            self.metadataWriter = messagingService.groupMetadataWriter()
+            self.inviteRepository = messagingService.inviteRepository(for: conversation.id)
 
-        // Fetch initial data
-        fetchLatest()
+            // Fetch initial data
+            fetchLatest()
 
-        // Start observing
-        observe()
+            // Start observing
+            observe()
 
-        // Update UI state
-        self.displayName = profile.name ?? ""
-        self.conversationName = conversation.name ?? ""
-        self.conversationDescription = conversation.description ?? ""
+            // Update UI state
+            self.displayName = profile.name ?? ""
+            self.conversationName = conversation.name ?? ""
+            self.conversationDescription = conversation.description ?? ""
 
-        // Mark as loaded
-        self.isLoading = false
-        self.loadingError = nil
+            // Mark as loaded
+            self.isLoading = false
+            self.loadingError = nil
+        }
     }
 
     deinit {
