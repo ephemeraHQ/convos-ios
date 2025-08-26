@@ -54,6 +54,15 @@ public enum Logger {
                 defaultLogger.prepare()
             }
         }
+
+        /// Configure both environment and production in a single prepare pass
+        public static func configure(environment: AppEnvironment, isProduction: Bool) {
+            if let defaultLogger = shared as? Default {
+                defaultLogger.environment = environment
+                defaultLogger.isProduction = isProduction
+                defaultLogger.prepare()
+            }
+        }
         private let fileQueue: DispatchQueue = DispatchQueue(label: "com.convos.logger.file", qos: .utility)
         private let readQueue: DispatchQueue = DispatchQueue(label: "com.convos.logger.read", qos: .utility)
         private let maxLogFileSize: Int64 = 10 * 1024 * 1024 // 10MB
@@ -491,6 +500,11 @@ public extension Logger {
     /// Configure the logger with environment (for proper app group access)
     static func configure(environment: AppEnvironment) {
         Self.Default.configure(environment: environment)
+    }
+
+    /// Configure both environment and production in a single prepare pass
+    static func configure(environment: AppEnvironment, isProduction: Bool) {
+        Self.Default.configure(environment: environment, isProduction: isProduction)
     }
 
     /// Get logs from both main app and NSE

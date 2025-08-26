@@ -31,14 +31,12 @@ class NotificationService: UNNotificationServiceExtension {
         // Configure Logger with environment from stored configuration
         do {
             let environment = try NotificationExtensionEnvironment.getEnvironment()
-            // Set production mode BEFORE configuring to avoid verbose logs in production
+            let isProd: Bool
             switch environment {
-            case .production:
-                Logger.Default.configureForProduction(true)
-            default:
-                Logger.Default.configureForProduction(false)
+            case .production: isProd = true
+            default: isProd = false
             }
-            Logger.configure(environment: environment)
+            Logger.configure(environment: environment, isProduction: isProd)
         } catch {
             // Fallback: just log the error but continue
             print("NSE: Failed to configure logging with environment: \(error)")
@@ -51,6 +49,12 @@ class NotificationService: UNNotificationServiceExtension {
     ) {
         self.requestId = request.identifier
         let processId = ProcessInfo.processInfo.processIdentifier
+
+        // Reset per-request state
+        didDeliverNotification = false
+        pendingTask?.cancel()
+        pendingTask = nil
+        pushHandler = nil
 
         // Configure Logger with environment from stored configuration
         configureLogging()
