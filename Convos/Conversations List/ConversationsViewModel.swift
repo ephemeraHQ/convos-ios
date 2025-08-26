@@ -7,20 +7,20 @@ import Observation
 final class ConversationsViewModel {
     // MARK: - Public
 
-    var selectedConversation: Conversation?
-//        didSet {
-//            Logger.info("did set selectedConversation: \(selectedConversation?.id)")
-//            if let selectedConversation {
-//                // Create view model immediately - it will load its dependencies internally
-//                selectedConversationViewModel = ConversationViewModel(
-//                    conversation: selectedConversation,
-//                    session: session
-//                )
-//            } else {
-//                selectedConversationViewModel = nil
-//            }
-//        }
-//    }
+    var selectedConversation: Conversation? {
+        didSet {
+            guard selectedConversation != oldValue else { return }
+            if let selectedConversation {
+                selectedConversationViewModel = ConversationViewModel(
+                    conversation: selectedConversation,
+                    session: session
+                )
+            } else {
+                selectedConversationViewModel = nil
+            }
+        }
+    }
+    var selectedConversationViewModel: ConversationViewModel?
     var newConversationViewModel: NewConversationViewModel?
     var presentingExplodeInfo: Bool = false
     private(set) var conversations: [Conversation] = []
@@ -151,7 +151,9 @@ extension ConversationsViewModel: NewConversationsViewModelDelegate {
             return
         }
 
-        selectedConversation = conversation
+        DispatchQueue.main.async { [weak self] in
+            self?.selectedConversation = conversation
+        }
     }
 }
 

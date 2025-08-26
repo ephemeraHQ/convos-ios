@@ -14,7 +14,6 @@ struct ConversationsView: View {
     @FocusState private var focusState: MessagesViewInputFocus?
     @State private var sidebarWidth: CGFloat = 0.0
     @State private var explodeInfoSheetHeight: CGFloat = 0.0
-    @State private var selectedConversationViewModel: ConversationViewModel?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
 
     init(
@@ -49,8 +48,9 @@ struct ConversationsView: View {
 
     var body: some View {
         @Bindable var viewModel = viewModel
+
         ConversationInfoPresenter(
-            viewModel: selectedConversationViewModel,
+            viewModel: viewModel.selectedConversationViewModel,
             focusState: $focusState,
             sidebarColumnWidth: $sidebarWidth,
         ) {
@@ -135,7 +135,7 @@ struct ConversationsView: View {
                 }
                 .toolbar(removing: .sidebarToggle)
             } detail: {
-                if let conversationViewModel = selectedConversationViewModel {
+                if let conversationViewModel = viewModel.selectedConversationViewModel {
                     ConversationView(
                         viewModel: conversationViewModel,
                         focusState: $focusState
@@ -145,16 +145,6 @@ struct ConversationsView: View {
                 } else {
                     EmptyView()
                 }
-            }
-        }
-        .onChange(of: viewModel.selectedConversation) {
-            if let selectedConversation = viewModel.selectedConversation {
-                selectedConversationViewModel = ConversationViewModel(
-                    conversation: selectedConversation,
-                    session: session
-                )
-            } else {
-                selectedConversationViewModel = nil
             }
         }
         .sheet(isPresented: $presentingAppSettings) {

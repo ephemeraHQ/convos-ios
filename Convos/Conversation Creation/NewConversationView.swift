@@ -59,11 +59,7 @@ struct NewConversationView: View {
                                     messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
                                 )
                             } else {
-                                VStack(alignment: .center) {
-                                    Spacer()
-                                    ProgressView()
-                                    Spacer()
-                                }
+                                EmptyView()
                             }
                         }
                         .toolbar {
