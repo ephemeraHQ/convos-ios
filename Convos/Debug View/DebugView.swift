@@ -76,6 +76,8 @@ struct DebugViewSection: View {
     @State private var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
     @State private var notificationAuthGranted: Bool = false
     @State private var lastDeviceToken: String = ""
+    @State private var debugFileURL: URL?
+    @State private var preparingLogs: Bool = false
 
     private var bundleIdentifier: String {
         Bundle.main.bundleIdentifier ?? "Unknown"
@@ -89,17 +91,11 @@ struct DebugViewSection: View {
         Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
     }
 
-    private var debugInfoFileURL: URL {
-        let semaphore = DispatchSemaphore(value: 0)
-        var logs: String = "Loading logs..."
-        Task {
-            logs = await Logger.getAllLogs()
-            semaphore.signal()
-        }
-        // Block only the file creation path while we fetch logs off main thread
-        _ = semaphore.wait(timeout: .now() + 2.0)
+    private func prepareDebugInfoFile() async {
+        guard !preparingLogs else { return }
+        preparingLogs = true
+        let logs = await Logger.getAllLogs()
 
-        // Create debug info text
         let debugInfo = """
         Convos Debug Information
 
@@ -110,11 +106,13 @@ struct DebugViewSection: View {
         \(logs)
         """
 
-        // Write to temporary file
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("convos-debug-info.txt")
-
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("convos-debug-info.txt")
         try? debugInfo.write(to: tempURL, atomically: true, encoding: .utf8)
-        return tempURL
+        await MainActor.run {
+            self.debugFileURL = tempURL
+            self.preparingLogs = false
+        }
     }
 
     var body: some View {
@@ -162,13 +160,22 @@ struct DebugViewSection: View {
             }
 
             Section("Debug") {
-                ShareLink(item: debugInfoFileURL) {
-                    HStack {
-                        Text("Share logs")
-                        Spacer()
-                        Image(systemName: "square.and.arrow.up")
+                if let debugFileURL {
+                    ShareLink(item: debugFileURL) {
+                        HStack {
+                            Text("Share logs")
+                            Spacer()
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                        .foregroundStyle(.colorTextPrimary)
                     }
-                    .foregroundStyle(.colorTextPrimary)
+                } else {
+                    HStack {
+                        Text("Preparing logs…")
+                        Spacer()
+                        if preparingLogs { ProgressView() }
+                    }
+                    .foregroundStyle(.colorTextSecondary)
                 }
 
                 HStack {
@@ -203,6 +210,7 @@ struct DebugViewSection: View {
         }
         .task {
             await refreshNotificationStatus()
+            await prepareDebugInfoFile()
         }
     }
 }

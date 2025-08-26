@@ -28,8 +28,7 @@ public enum Logger {
         func getLogsAsync(completion: @escaping (String) -> Void)
         func clearLogs(completion: (() -> Void)?)
         func flushPendingWrites()
-        func getAllLogs() -> String
-        func getAllLogsAsync(completion: @escaping (String) -> Void)
+        func getAllLogs() async -> String
     }
 
     public class Default: LoggerProtocol {
@@ -419,7 +418,8 @@ public enum Logger {
 
                         let chunkSize = 64 * 1024
                         var buffer = Data()
-                        var position = try handle.seekToEnd()
+                        let endOffset = try handle.seekToEnd()
+                        var position = endOffset
 
                         func countNewlines(_ data: Data) -> Int {
                             data.reduce(into: 0) { count, byte in if byte == 0x0A { count += 1 } }
@@ -427,17 +427,19 @@ public enum Logger {
 
                         while position > 0 {
                             let readSize = position >= UInt64(chunkSize) ? chunkSize : Int(position)
-                            position = try handle.seek(toOffset: position - UInt64(readSize))
+                            let target = position - UInt64(readSize)
+                            try handle.seek(toOffset: target)
+                            position = target
                             let chunk = try handle.read(upToCount: readSize) ?? Data()
                             buffer.insert(contentsOf: chunk, at: 0)
-                            if countNewlines(buffer) >= maxLogLines { break }
+                            if countNewlines(buffer) >= self.maxLogLines { break }
                             if position == 0 { break }
                         }
 
                         // Split into lines and keep the last maxLogLines
                         let stringAll = String(data: buffer, encoding: .utf8) ?? ""
                         let lines = stringAll.split(separator: "\n", omittingEmptySubsequences: false)
-                        let tailLines = lines.suffix(maxLogLines)
+                        let tailLines = lines.suffix(self.maxLogLines)
                         let result = tailLines.joined(separator: "\n")
                         continuation.resume(returning: result.isEmpty ? "(Empty file)" : result)
                     } catch {
@@ -449,13 +451,7 @@ public enum Logger {
             return header + "=== LOGS ===\n" + tailed + "\n"
         }
 
-        /// Get logs from both main app and NSE asynchronously
-        public func getAllLogsAsync(completion: @escaping (String) -> Void) {
-            readQueue.async {
-                let result = self.getAllLogs()
-                completion(result)
-            }
-        }
+        // getAllLogsAsync removed; use async getAllLogs() instead
     }
 }
 
@@ -498,12 +494,9 @@ public extension Logger {
     }
 
     /// Get logs from both main app and NSE
-    static func getAllLogs() -> String {
-        return Self.Default.shared.getAllLogs()
+    static func getAllLogs() async -> String {
+        return await (Self.Default.shared as? Default)?.getAllLogs() ?? "No logger"
     }
 
-    /// Get logs from both main app and NSE asynchronously
-    static func getAllLogsAsync(completion: @escaping (String) -> Void) {
-        Self.Default.shared.getAllLogsAsync(completion: completion)
-    }
+    // Removed legacy callback API; use async getAllLogs() instead
 }
