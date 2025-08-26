@@ -103,11 +103,21 @@ final class SyncingManager: SyncingManagerProtocol {
                         consentStates: consentStates,
                         onClose: { [weak self] in
                             guard let self, !Task.isCancelled else { return }
+                            // Check if the stream task is still active before scheduling retry
+                            guard let streamTask = self.streamMessagesTask, !streamTask.isCancelled else {
+                                Logger.info("Messages stream task was cancelled, not restarting")
+                                return
+                            }
                             let nextRetry = retryCount + 1
                             Logger.warning("Messages stream closed for inboxId: \(client.inboxId). Restarting (retry \(nextRetry)/\(self.maxStreamRetries))...")
                             Task { [weak self] in
-                                guard !Task.isCancelled else { return }
-                                self?.startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
+                                guard let self else { return }
+                                // Double-check the stream task is still active
+                                guard let streamTask = self.streamMessagesTask, !streamTask.isCancelled else {
+                                    Logger.info("Messages stream task was cancelled, not restarting")
+                                    return
+                                }
+                                self.startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
                             }
                         }
                     ) {
@@ -128,10 +138,20 @@ final class SyncingManager: SyncingManagerProtocol {
                 Logger.error("Error streaming all messages: \(error)")
                 // Restart on error as well
                 guard !Task.isCancelled else { return }
+                // Check if the stream task is still active before scheduling retry
+                guard let streamTask = self?.streamMessagesTask, !streamTask.isCancelled else {
+                    Logger.info("Messages stream task was cancelled, not restarting after error")
+                    return
+                }
                 let nextRetry = retryCount + 1
                 Task { [weak self] in
-                    guard !Task.isCancelled else { return }
-                    self?.startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
+                    guard let self else { return }
+                    // Double-check the stream task is still active
+                    guard let streamTask = self.streamMessagesTask, !streamTask.isCancelled else {
+                        Logger.info("Messages stream task was cancelled, not restarting after error")
+                        return
+                    }
+                    self.startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
                 }
             }
         }
@@ -150,11 +170,21 @@ final class SyncingManager: SyncingManagerProtocol {
                     type: .groups,
                     onClose: { [weak self] in
                         guard let self, !Task.isCancelled else { return }
+                        // Check if the stream task is still active before scheduling retry
+                        guard let streamTask = self.streamConversationsTask, !streamTask.isCancelled else {
+                            Logger.info("Conversations stream task was cancelled, not restarting")
+                            return
+                        }
                         let nextRetry = retryCount + 1
                         Logger.warning("Conversations stream closed for inboxId: \(client.inboxId). Restarting (retry \(nextRetry)/\(self.maxStreamRetries))...")
                         Task { [weak self] in
-                            guard !Task.isCancelled else { return }
-                            self?.startConversationStream(client: client, apiClient: apiClient, retryCount: nextRetry)
+                            guard let self else { return }
+                            // Double-check the stream task is still active
+                            guard let streamTask = self.streamConversationsTask, !streamTask.isCancelled else {
+                                Logger.info("Conversations stream task was cancelled, not restarting")
+                                return
+                            }
+                            self.startConversationStream(client: client, apiClient: apiClient, retryCount: nextRetry)
                         }
                     }
                 ) {
@@ -167,10 +197,20 @@ final class SyncingManager: SyncingManagerProtocol {
                 Logger.error("Error streaming conversations: \(error)")
                 // Restart on error as well
                 guard !Task.isCancelled else { return }
+                // Check if the stream task is still active before scheduling retry
+                guard let streamTask = self?.streamConversationsTask, !streamTask.isCancelled else {
+                    Logger.info("Conversations stream task was cancelled, not restarting after error")
+                    return
+                }
                 let nextRetry = retryCount + 1
                 Task { [weak self] in
-                    guard !Task.isCancelled else { return }
-                    self?.startConversationStream(client: client, apiClient: apiClient, retryCount: nextRetry)
+                    guard let self else { return }
+                    // Double-check the stream task is still active
+                    guard let streamTask = self.streamConversationsTask, !streamTask.isCancelled else {
+                        Logger.info("Conversations stream task was cancelled, not restarting after error")
+                        return
+                    }
+                    self.startConversationStream(client: client, apiClient: apiClient, retryCount: nextRetry)
                 }
             }
         }
