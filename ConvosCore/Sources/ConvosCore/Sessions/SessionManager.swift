@@ -73,7 +73,8 @@ actor SessionManager: SessionManagerProtocol {
             for: inboxId,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
-            environment: environment
+            environment: environment,
+            startsStreamingServices: true
         )
         messagingServices.append(messagingService)
         return messagingService

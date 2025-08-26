@@ -67,6 +67,9 @@ public struct InboxReadyResult {
     public let apiClient: any ConvosAPIClientProtocol
 }
 
+typealias AnySyncingManager = (any SyncingManagerProtocol)
+typealias AnyInviteJoinRequestsManager = (any InviteJoinRequestsManagerProtocol)
+
 public actor InboxStateMachine {
     enum Action {
         case authorize(inboxId: String),
@@ -94,8 +97,8 @@ public actor InboxStateMachine {
     private let identityStore: any KeychainIdentityStoreProtocol
     private let inboxWriter: any InboxWriterProtocol
     private let environment: AppEnvironment
-    private let syncingManager: any SyncingManagerProtocol
-    private let inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol
+    private let syncingManager: AnySyncingManager?
+    private let inviteJoinRequestsManager: AnyInviteJoinRequestsManager?
     private let pushNotificationRegistrar: any PushNotificationRegistrarProtocol
     private let autoRegistersForPushNotifications: Bool
 
@@ -159,8 +162,8 @@ public actor InboxStateMachine {
     init(
         identityStore: any KeychainIdentityStoreProtocol,
         inboxWriter: any InboxWriterProtocol,
-        syncingManager: any SyncingManagerProtocol,
-        inviteJoinRequestsManager: any InviteJoinRequestsManagerProtocol,
+        syncingManager: AnySyncingManager?,
+        inviteJoinRequestsManager: AnyInviteJoinRequestsManager?,
         pushNotificationRegistrar: any PushNotificationRegistrarProtocol,
         autoRegistersForPushNotifications: Bool,
         environment: AppEnvironment
@@ -364,8 +367,8 @@ public actor InboxStateMachine {
         // in SessionManager's observation of inboxes
         try await inboxWriter.storeInbox(inboxId: client.inboxId)
 
-        syncingManager.start(with: client, apiClient: apiClient)
-        inviteJoinRequestsManager.start(with: client, apiClient: apiClient)
+        syncingManager?.start(with: client, apiClient: apiClient)
+        inviteJoinRequestsManager?.start(with: client, apiClient: apiClient)
 
         // Setup push notification observers if registrar is provided
         if autoRegistersForPushNotifications {
@@ -383,8 +386,8 @@ public actor InboxStateMachine {
         await pushNotificationRegistrar.unregisterInstallation(client: client, apiClient: apiClient)
 
         emitStateChange(.deleting)
-        syncingManager.stop()
-        inviteJoinRequestsManager.stop()
+        syncingManager?.stop()
+        inviteJoinRequestsManager?.stop()
         try await inboxWriter.deleteInbox(inboxId: client.inboxId)
         try await identityStore.delete(inboxId: client.inboxId)
         try client.deleteLocalDatabase()
@@ -395,8 +398,8 @@ public actor InboxStateMachine {
     private func handleDeleteFromError() async throws {
         Logger.info("Deleting inbox from error state...")
         emitStateChange(.deleting)
-        syncingManager.stop()
-        inviteJoinRequestsManager.stop()
+        syncingManager?.stop()
+        inviteJoinRequestsManager?.stop()
         if let inboxId = inboxId {
             try await inboxWriter.deleteInbox(inboxId: inboxId)
             try await identityStore.delete(inboxId: inboxId)
@@ -408,8 +411,8 @@ public actor InboxStateMachine {
     private func handleStop() throws {
         Logger.info("Stopping inbox...")
         emitStateChange(.stopping)
-        syncingManager.stop()
-        inviteJoinRequestsManager.stop()
+        syncingManager?.stop()
+        inviteJoinRequestsManager?.stop()
         removePushNotificationObservers()
         emitStateChange(.uninitialized)
     }
