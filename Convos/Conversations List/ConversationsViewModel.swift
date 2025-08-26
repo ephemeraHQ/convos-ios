@@ -90,11 +90,6 @@ final class ConversationsViewModel {
         Task {
             do {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
-                NotificationCenter.default.post(
-                    name: .leftConversationNotification,
-                    object: nil,
-                    userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
-                )
             } catch {
                 Logger.error("Error leaving convo: \(error.localizedDescription)")
             }
