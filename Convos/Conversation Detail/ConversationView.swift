@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ConversationView: View {
-    let viewModel: ConversationViewModel
+    @Bindable var viewModel: ConversationViewModel
     @FocusState.Binding var focusState: MessagesViewInputFocus?
     let onScanInviteCode: () -> Void
     let onDeleteConversation: () -> Void
@@ -11,7 +11,6 @@ struct ConversationView: View {
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     var body: some View {
-        @Bindable var viewModel = viewModel
         MessagesView(
             conversation: viewModel.conversation,
             messages: viewModel.messages,

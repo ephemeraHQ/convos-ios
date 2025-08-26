@@ -14,26 +14,11 @@ struct ConversationInfoPresenter<Content: View>: View {
             content()
 
             VStack {
-                if let selectedConversation = viewModel, selectedConversation.showsInfoView {
-                    @Bindable var viewModel = selectedConversation
-                        ConversationInfoButton(
-                            conversation: viewModel.conversation,
-                            placeholderName: viewModel.conversationNamePlaceholder,
-                            untitledConversationPlaceholder: viewModel.untitledConversationPlaceholder,
-                            subtitle: viewModel.conversationInfoSubtitle,
-                            conversationName: $viewModel.conversationName,
-                            conversationImage: $viewModel.conversationImage,
-                            presentingConversationSettings: $viewModel.presentingConversationSettings,
-                            focusState: $focusState,
-                            viewModelFocus: viewModel.focus,
-                            showsExplodeNowButton: viewModel.showsExplodeNowButton,
-                            onConversationInfoTapped: viewModel.onConversationInfoTap,
-                            onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
-                            onConversationSettings: viewModel.onConversationSettings,
-                            onExplodeNow: viewModel.explodeConvo
-                        ) {
-                            ConversationInfoView(viewModel: viewModel)
-                        }
+                if let viewModel = viewModel, viewModel.showsInfoView {
+                    ConversationInfoButtonWrapper(
+                        viewModel: viewModel,
+                        focusState: $focusState
+                    )
                         .padding(.top, safeAreaInsets.top)
                         .padding(.leading, horizontalSizeClass != .compact ? sidebarColumnWidth : 0.0)
                         .transition(.asymmetric(
@@ -48,6 +33,32 @@ struct ConversationInfoPresenter<Content: View>: View {
             .ignoresSafeArea()
             .allowsHitTesting(true)
             .zIndex(1000)
+        }
+    }
+}
+
+private struct ConversationInfoButtonWrapper: View {
+    @Bindable var viewModel: ConversationViewModel
+    @FocusState.Binding var focusState: MessagesViewInputFocus?
+
+    var body: some View {
+        ConversationInfoButton(
+            conversation: viewModel.conversation,
+            placeholderName: viewModel.conversationNamePlaceholder,
+            untitledConversationPlaceholder: viewModel.untitledConversationPlaceholder,
+            subtitle: viewModel.conversationInfoSubtitle,
+            conversationName: $viewModel.conversationName,
+            conversationImage: $viewModel.conversationImage,
+            presentingConversationSettings: $viewModel.presentingConversationSettings,
+            focusState: $focusState,
+            viewModelFocus: viewModel.focus,
+            showsExplodeNowButton: viewModel.showsExplodeNowButton,
+            onConversationInfoTapped: viewModel.onConversationInfoTap,
+            onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
+            onConversationSettings: viewModel.onConversationSettings,
+            onExplodeNow: viewModel.explodeConvo
+        ) {
+            ConversationInfoView(viewModel: viewModel)
         }
     }
 }
