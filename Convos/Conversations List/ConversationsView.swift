@@ -3,7 +3,7 @@ import SwiftUI
 
 struct ConversationsView: View {
     let session: any SessionManagerProtocol
-    @State var viewModel: ConversationsViewModel
+    let viewModel: ConversationsViewModel
 
     @Namespace private var namespace: Namespace.ID
     @State private var presentingExplodeConfirmation: Bool = false
@@ -14,6 +14,7 @@ struct ConversationsView: View {
     @FocusState private var focusState: MessagesViewInputFocus?
     @State private var sidebarWidth: CGFloat = 0.0
     @State private var explodeInfoSheetHeight: CGFloat = 0.0
+    @State private var selectedConversationViewModel: ConversationViewModel?
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
 
     init(
@@ -47,8 +48,9 @@ struct ConversationsView: View {
     }
 
     var body: some View {
+        @Bindable var viewModel = viewModel
         ConversationInfoPresenter(
-            viewModel: viewModel,
+            viewModel: selectedConversationViewModel,
             focusState: $focusState,
             sidebarColumnWidth: $sidebarWidth,
         ) {
@@ -133,20 +135,30 @@ struct ConversationsView: View {
                 }
                 .toolbar(removing: .sidebarToggle)
             } detail: {
-                if let conversationViewModel = viewModel.selectedConversationViewModel {
-                    ConversationView(
-                        viewModel: conversationViewModel,
-                        focusState: $focusState
-                    )
-                } else if horizontalSizeClass != .compact {
-                    emptyConversationsView
-                } else {
-                    EmptyView()
+                Group {
+                    if let conversationViewModel = selectedConversationViewModel {
+                        ConversationView(
+                            viewModel: conversationViewModel,
+                            focusState: $focusState
+                        )
+                    } else if horizontalSizeClass != .compact {
+                        emptyConversationsView
+                    }
                 }
             }
         }
+        .onChange(of: viewModel.selectedConversation) {
+            if let selectedConversation = viewModel.selectedConversation {
+                selectedConversationViewModel = ConversationViewModel(
+                    conversation: selectedConversation,
+                    session: session
+                )
+            } else {
+                selectedConversationViewModel = nil
+            }
+        }
         .sheet(isPresented: $presentingAppSettings) {
-            AppSettingsView(viewModel: viewModel)
+            AppSettingsView(onDeleteAllInboxes: viewModel.deleteAllInboxes)
                 .navigationTransition(
                     .zoom(
                         sourceID: "app-settings-transition-source",

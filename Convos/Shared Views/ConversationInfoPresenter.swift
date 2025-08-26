@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ConversationInfoPresenter<Content: View>: View {
-    @Bindable var viewModel: SelectableConversationViewModelType
+    let viewModel: ConversationViewModel?
     @FocusState.Binding var focusState: MessagesViewInputFocus?
     @Binding var sidebarColumnWidth: CGFloat
     @ViewBuilder let content: () -> Content
@@ -14,7 +14,7 @@ struct ConversationInfoPresenter<Content: View>: View {
             content()
 
             VStack {
-                if let selectedConversation = viewModel.selectedConversationViewModel {
+                if let selectedConversation = viewModel, selectedConversation.showsInfoView {
                     @Bindable var viewModel = selectedConversation
                         ConversationInfoButton(
                             conversation: viewModel.conversation,
@@ -44,7 +44,7 @@ struct ConversationInfoPresenter<Content: View>: View {
 
                 Spacer()
             }
-            .animation(.bouncy(duration: 0.4, extraBounce: 0.15), value: viewModel.selectedConversationViewModel != nil)
+            .animation(.bouncy(duration: 0.4, extraBounce: 0.15), value: viewModel != nil)
             .ignoresSafeArea()
             .allowsHitTesting(true)
             .zIndex(1000)
@@ -53,11 +53,11 @@ struct ConversationInfoPresenter<Content: View>: View {
 }
 
 #Preview {
-    @Previewable @State var conversationsViewModel: ConversationsViewModel = .mock
+    @Previewable @State var conversationViewModel: ConversationViewModel? = .mock
     @Previewable @FocusState var focusState: MessagesViewInputFocus?
     @Previewable @State var sidebarColumnWidth: CGFloat = 0
     ConversationInfoPresenter(
-        viewModel: conversationsViewModel,
+        viewModel: conversationViewModel,
         focusState: $focusState,
         sidebarColumnWidth: $sidebarColumnWidth
     ) {

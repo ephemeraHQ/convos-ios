@@ -15,7 +15,7 @@ struct SwipeBackGestureEnabler: UIViewControllerRepresentable {
 }
 
 struct ConversationView: View {
-    @Bindable var viewModel: ConversationViewModel
+    let viewModel: ConversationViewModel
     @FocusState.Binding var focusState: MessagesViewInputFocus?
     let onScanInviteCode: () -> Void
     let onDeleteConversation: () -> Void
@@ -41,6 +41,7 @@ struct ConversationView: View {
     }
 
     var body: some View {
+        @Bindable var viewModel = viewModel
         MessagesView(
             conversation: viewModel,
             messages: viewModel.messages,

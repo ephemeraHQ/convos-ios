@@ -367,7 +367,7 @@ extension MessagesViewController {
             if conversation.conversation.creator.isCurrentUser {
                 cells.insert(.invite(invite), at: 0)
             } else {
-                cells.insert(.conversationInfo(conversation), at: 0)
+                cells.insert(.conversationInfo(conversation.conversation), at: 0)
             }
         }
 

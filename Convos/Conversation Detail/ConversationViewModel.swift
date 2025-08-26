@@ -8,22 +8,30 @@ class ConversationViewModel {
     // MARK: - Private
 
     private let session: any SessionManagerProtocol
-    private let myProfileWriter: any MyProfileWriterProtocol
-    private let myProfileRepository: any MyProfileRepositoryProtocol
-    private let conversationRepository: any ConversationRepositoryProtocol
-    private let messagesRepository: any MessagesRepositoryProtocol
-    private let outgoingMessageWriter: any OutgoingMessageWriterProtocol
-    private let consentWriter: any ConversationConsentWriterProtocol
-    private let localStateWriter: any ConversationLocalStateWriterProtocol
-    private let metadataWriter: any ConversationMetadataWriterProtocol
-    private let inviteRepository: any InviteRepositoryProtocol
+
+    // These will be loaded asynchronously
+    private var myProfileWriter: (any MyProfileWriterProtocol)?
+    private var myProfileRepository: (any MyProfileRepositoryProtocol)?
+    private var conversationRepository: (any ConversationRepositoryProtocol)?
+    private var messagesRepository: (any MessagesRepositoryProtocol)?
+    private var outgoingMessageWriter: (any OutgoingMessageWriterProtocol)?
+    private var consentWriter: (any ConversationConsentWriterProtocol)?
+    private var localStateWriter: (any ConversationLocalStateWriterProtocol)?
+    private var metadataWriter: (any ConversationMetadataWriterProtocol)?
+    private var inviteRepository: (any InviteRepositoryProtocol)?
+
     private var cancellables: Set<AnyCancellable> = []
     private var loadProfileImageTask: Task<Void, Never>?
     private var loadConversationImageTask: Task<Void, Never>?
+    private var initializationTask: Task<Void, Never>?
 
     // MARK: - Public
 
-    var conversation: Conversation {
+    var isLoading: Bool = true
+    var loadingError: Error?
+
+    var showsInfoView: Bool = true
+    private(set) var conversation: Conversation {
         didSet {
             conversationName = conversation.name ?? ""
             conversationDescription = conversation.description ?? ""
@@ -31,7 +39,7 @@ class ConversationViewModel {
     }
     var messages: [AnyMessage] = []
     var invite: Invite = .empty
-    var profile: Profile {
+    private(set) var profile: Profile = .empty(inboxId: "") {
         didSet {
             displayName = profile.name ?? ""
         }
@@ -50,7 +58,7 @@ class ConversationViewModel {
     var conversationImage: UIImage?
     var messageText: String = "" {
         didSet {
-            sendButtonEnabled = !messageText.isEmpty
+            sendButtonEnabled = !messageText.isEmpty && !isLoading
         }
     }
     var canRemoveMembers: Bool {
@@ -74,48 +82,104 @@ class ConversationViewModel {
 
     init(
         conversation: Conversation,
-        session: any SessionManagerProtocol,
-        myProfileWriter: any MyProfileWriterProtocol,
-        myProfileRepository: any MyProfileRepositoryProtocol,
-        conversationRepository: any ConversationRepositoryProtocol,
-        messagesRepository: any MessagesRepositoryProtocol,
-        outgoingMessageWriter: any OutgoingMessageWriterProtocol,
-        consentWriter: any ConversationConsentWriterProtocol,
-        localStateWriter: any ConversationLocalStateWriterProtocol,
-        metadataWriter: any ConversationMetadataWriterProtocol,
-        inviteRepository: any InviteRepositoryProtocol
+        session: any SessionManagerProtocol
     ) {
         self.conversation = conversation
         self.session = session
-        self.myProfileWriter = myProfileWriter
-        self.myProfileRepository = myProfileRepository
-        self.conversationRepository = conversationRepository
-        self.messagesRepository = messagesRepository
-        self.outgoingMessageWriter = outgoingMessageWriter
-        self.consentWriter = consentWriter
-        self.localStateWriter = localStateWriter
-        self.metadataWriter = metadataWriter
-        self.inviteRepository = inviteRepository
+        self.conversationName = conversation.name ?? ""
+        self.conversationDescription = conversation.description ?? ""
         self.profile = .empty(inboxId: conversation.inboxId)
 
         Logger.info("🔄 created for conversation: \(conversation.id)")
 
+        // Start async initialization
+        initializationTask = Task { [weak self] in
+            guard let self else { return }
+            await self.initializeAsyncDependencies()
+        }
+
+        KeyboardListener.shared.add(delegate: self)
+    }
+
+    // Alternative initializer for draft conversations with pre-loaded dependencies
+    init(
+        conversation: Conversation,
+        session: any SessionManagerProtocol,
+        draftConversationComposer: any DraftConversationComposerProtocol,
+        myProfileRepository: any MyProfileRepositoryProtocol
+    ) {
+        self.conversation = conversation
+        self.session = session
+        self.conversationName = conversation.name ?? ""
+        self.conversationDescription = conversation.description ?? ""
+        self.profile = .empty(inboxId: conversation.inboxId)
+
+        // Extract dependencies from draft composer
+        self.myProfileWriter = draftConversationComposer.myProfileWriter
+        self.myProfileRepository = myProfileRepository
+        self.conversationRepository = draftConversationComposer.draftConversationRepository
+        self.messagesRepository = draftConversationComposer.draftConversationRepository.messagesRepository
+        self.outgoingMessageWriter = draftConversationComposer.draftConversationWriter
+        self.consentWriter = draftConversationComposer.conversationConsentWriter
+        self.localStateWriter = draftConversationComposer.conversationLocalStateWriter
+        self.metadataWriter = draftConversationComposer.conversationMetadataWriter
+        self.inviteRepository = draftConversationComposer.draftConversationRepository.inviteRepository
+
+        Logger.info("🔄 created for draft conversation: \(conversation.id)")
+
+        // Dependencies are already loaded, so mark as ready
+        self.isLoading = false
+
+        // Fetch initial data and start observing
         Task { [weak self] in
             guard let self else { return }
             fetchLatest()
+            observe()
+
+            // Update UI state
             self.displayName = profile.name ?? ""
             self.conversationName = conversation.name ?? ""
             self.conversationDescription = conversation.description ?? ""
         }
 
+        KeyboardListener.shared.add(delegate: self)
+    }
+
+    private func initializeAsyncDependencies() async {
+        // Get the messaging service
+        let messagingService = await session.messagingService(for: conversation.inboxId)
+
+        // Store all the dependencies
+        self.myProfileWriter = messagingService.myProfileWriter()
+        self.myProfileRepository = messagingService.myProfileRepository()
+        self.conversationRepository = messagingService.conversationRepository(for: conversation.id)
+        self.messagesRepository = messagingService.messagesRepository(for: conversation.id)
+        self.outgoingMessageWriter = messagingService.messageWriter(for: conversation.id)
+        self.consentWriter = messagingService.conversationConsentWriter()
+        self.localStateWriter = messagingService.conversationLocalStateWriter()
+        self.metadataWriter = messagingService.groupMetadataWriter()
+        self.inviteRepository = messagingService.inviteRepository(for: conversation.id)
+
+        // Fetch initial data
+        fetchLatest()
+
+        // Start observing
         observe()
 
-        KeyboardListener.shared.add(delegate: self)
+        // Update UI state
+        self.displayName = profile.name ?? ""
+        self.conversationName = conversation.name ?? ""
+        self.conversationDescription = conversation.description ?? ""
+
+        // Mark as loaded
+        self.isLoading = false
+        self.loadingError = nil
     }
 
     deinit {
         Logger.info("🗑️ deallocated for conversation: \(conversation.id)")
         cancellables.removeAll()
+        initializationTask?.cancel()
         loadProfileImageTask?.cancel()
         loadConversationImageTask?.cancel()
         KeyboardListener.shared.remove(delegate: self)
@@ -125,30 +189,36 @@ class ConversationViewModel {
 
     private func fetchLatest() {
         do {
-            self.profile = try myProfileRepository.fetch(inboxId: conversation.inboxId)
-            self.conversation = try conversationRepository.fetchConversation() ?? conversation
-            self.messages = try messagesRepository.fetchAll()
+            if let myProfileRepository {
+                self.profile = try myProfileRepository.fetch(inboxId: conversation.inboxId)
+            }
+            if let conversationRepository {
+                self.conversation = try conversationRepository.fetchConversation() ?? conversation
+            }
+            if let messagesRepository {
+                self.messages = try messagesRepository.fetchAll()
+            }
         } catch {
             Logger.error("Error fetching latest: \(error.localizedDescription)")
         }
     }
 
     private func observe() {
-        myProfileRepository.myProfilePublisher
+        myProfileRepository?.myProfilePublisher
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] profile in
                 self?.profile = profile
             }
             .store(in: &cancellables)
-        messagesRepository.messagesPublisher
+        messagesRepository?.messagesPublisher
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] messages in
                 self?.messages = messages
             }
             .store(in: &cancellables)
-        inviteRepository.invitePublisher
+        inviteRepository?.invitePublisher
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
@@ -156,7 +226,7 @@ class ConversationViewModel {
                 self?.invite = invite
             }
             .store(in: &cancellables)
-        conversationRepository.conversationPublisher
+        conversationRepository?.conversationPublisher
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
@@ -167,8 +237,8 @@ class ConversationViewModel {
     }
 
     private func markConversationAsRead() {
-        Task { [weak self, localStateWriter] in
-            guard let self else { return }
+        Task { [weak self] in
+            guard let self, let localStateWriter = self.localStateWriter else { return }
             do {
                 try await localStateWriter.setUnread(false, for: self.conversation.id)
             } catch {
@@ -192,7 +262,7 @@ class ConversationViewModel {
 
         if conversationName != (conversation.name ?? "") {
             Task { [weak self] in
-                guard let self else { return }
+                guard let self, let metadataWriter = self.metadataWriter else { return }
                 do {
                     try await metadataWriter.updateGroupName(
                         groupId: conversation.id,
@@ -208,7 +278,7 @@ class ConversationViewModel {
             ImageCache.shared.setImage(conversationImage, for: conversation)
 
             Task { [weak self] in
-                guard let self else { return }
+                guard let self, let metadataWriter = self.metadataWriter else { return }
                 do {
                     try await metadataWriter.updateGroupImage(
                         conversation: conversation,
@@ -222,7 +292,7 @@ class ConversationViewModel {
 
         if conversationDescription != (conversation.description ?? "") {
             Task { [weak self] in
-                guard let self else { return }
+                guard let self, let metadataWriter = self.metadataWriter else { return }
                 do {
                     try await metadataWriter.updateGroupDescription(
                         groupId: conversation.id,
@@ -258,7 +328,7 @@ class ConversationViewModel {
         let prevMessageText = messageText
         messageText = ""
         Task { [weak self] in
-            guard let self else { return }
+            guard let self, let outgoingMessageWriter = self.outgoingMessageWriter else { return }
             do {
                 try await outgoingMessageWriter.send(text: prevMessageText)
             } catch {
@@ -280,7 +350,7 @@ class ConversationViewModel {
 
         if (profile.name ?? "") != displayName {
             Task { [weak self] in
-                guard let self else { return }
+                guard let self, let myProfileWriter = self.myProfileWriter else { return }
                 do {
                     try await myProfileWriter.update(displayName: displayName)
                 } catch {
@@ -294,7 +364,7 @@ class ConversationViewModel {
             ImageCache.shared.setImage(profileImage, for: profile)
 
             Task { [weak self] in
-                guard let self else { return }
+                guard let self, let myProfileWriter = self.myProfileWriter else { return }
                 do {
                     try await myProfileWriter.update(avatar: profileImage)
                 } catch {
@@ -319,7 +389,7 @@ class ConversationViewModel {
     func remove(member: ConversationMember) {
         guard canRemoveMembers else { return }
         Task { [weak self] in
-            guard let self else { return }
+            guard let self, let metadataWriter = self.metadataWriter else { return }
             do {
                 try await metadataWriter.removeGroupMembers(groupId: conversation.id, memberInboxIds: [member.profile.inboxId])
             } catch {
@@ -329,7 +399,8 @@ class ConversationViewModel {
     }
 
     func leaveConvo() {
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
                 presentingConversationSettings = false
@@ -354,7 +425,7 @@ class ConversationViewModel {
         )
 
         Task { [weak self] in
-            guard let self else { return }
+            guard let self, let metadataWriter = self.metadataWriter else { return }
             do {
                 let memberIdsToRemove = conversation.members
                     .filter { !$0.isCurrentUser } // @jarodl fix when we have self removal
@@ -372,16 +443,6 @@ class ConversationViewModel {
     }
 }
 
-extension ConversationViewModel: Hashable {
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(conversation)
-    }
-
-    static func == (lhs: ConversationViewModel, rhs: ConversationViewModel) -> Bool {
-        return lhs.conversation.id == rhs.conversation.id
-    }
-}
-
 extension ConversationViewModel: KeyboardListenerDelegate {
     func keyboardDidHide(info: KeyboardInfo) {
         focus = nil
@@ -390,19 +451,9 @@ extension ConversationViewModel: KeyboardListenerDelegate {
 
 extension ConversationViewModel {
     static var mock: ConversationViewModel {
-        let messaging = MockMessagingService()
         return .init(
             conversation: .mock(),
-            session: MockInboxesService(),
-            myProfileWriter: MockMyProfileWriter(),
-            myProfileRepository: messaging,
-            conversationRepository: MockConversationRepository(),
-            messagesRepository: messaging,
-            outgoingMessageWriter: MockOutgoingMessageWriter(),
-            consentWriter: MockConversationConsentWriter(),
-            localStateWriter: MockConversationLocalStateWriter(),
-            metadataWriter: MockGroupMetadataWriter(),
-            inviteRepository: MockInviteRepository()
+            session: MockInboxesService()
         )
     }
 }

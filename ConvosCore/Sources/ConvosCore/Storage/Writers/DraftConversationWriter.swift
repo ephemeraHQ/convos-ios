@@ -97,12 +97,10 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
     func createConversation() async throws {
         await stateMachine.create()
-        _ = try await stateMachine.waitForReadyState()
     }
 
     func requestToJoin(inviteCode: String) async throws {
         await stateMachine.join(inviteCode: inviteCode)
-        _ = try await stateMachine.waitForReadyState()
     }
 
     func send(text: String) async throws {

@@ -20,7 +20,7 @@ struct InviteShareLink: View {
 }
 
 struct NewConversationView: View {
-    @Bindable var viewModel: NewConversationViewModel
+    let viewModel: NewConversationViewModel
     @State private var hasShownScannerOnAppear: Bool = false
     @State private var presentingDeleteConfirmation: Bool = false
     @State private var sidebarWidth: CGFloat = 0.0
@@ -31,11 +31,12 @@ struct NewConversationView: View {
 
     var body: some View {
         ConversationInfoPresenter(
-            viewModel: viewModel,
+            viewModel: viewModel.conversationViewModel,
             focusState: $focusState,
             sidebarColumnWidth: $sidebarWidth,
         ) {
             NavigationStack {
+                @Bindable var viewModel = viewModel
                 Group {
                     if viewModel.showScannerOnAppear && !hasShownScannerOnAppear {
                         JoinConversationView { inviteCode in
@@ -46,15 +47,25 @@ struct NewConversationView: View {
                                 return false
                             }
                         }
-                    } else if let conversationViewModel = viewModel.conversationViewModel {
-                        ConversationView(
-                            viewModel: conversationViewModel,
-                            focusState: $focusState,
-                            onScanInviteCode: viewModel.onScanInviteCode,
-                            onDeleteConversation: viewModel.deleteConversation,
-                            confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
-                            messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
-                        )
+                    } else {
+                        Group {
+                            if let conversationViewModel = viewModel.conversationViewModel {
+                                ConversationView(
+                                    viewModel: conversationViewModel,
+                                    focusState: $focusState,
+                                    onScanInviteCode: viewModel.onScanInviteCode,
+                                    onDeleteConversation: viewModel.deleteConversation,
+                                    confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
+                                    messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
+                                )
+                            } else {
+                                VStack(alignment: .center) {
+                                    Spacer()
+                                    ProgressView()
+                                    Spacer()
+                                }
+                            }
+                        }
                         .toolbar {
                             ToolbarItem(placement: .topBarLeading) {
                                 Button(role: .close) {
@@ -76,23 +87,12 @@ struct NewConversationView: View {
                                 }
                             }
                         }
-                    } else {
-                        VStack(alignment: .center) {
-                            Spacer()
-                            ProgressView()
-                            Spacer()
-                        }
                     }
                 }
                 .background(.colorBackgroundPrimary)
                 .sheet(isPresented: $viewModel.presentingJoinConversationSheet) {
                     JoinConversationView { inviteCode in
                         viewModel.join(inviteUrlString: inviteCode)
-                    }
-                }
-                .onAppear {
-                    if !viewModel.showScannerOnAppear {
-                        viewModel.newConversation()
                     }
                 }
             }

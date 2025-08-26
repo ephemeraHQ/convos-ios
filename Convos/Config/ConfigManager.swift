@@ -17,7 +17,7 @@ final class ConfigManager {
     }
 
     /// Get the current AppEnvironment from config
-    var currentEnvironment: AppEnvironment {
+    lazy var currentEnvironment: AppEnvironment = {
         guard let envString = config["environment"] as? String else {
             fatalError("Missing 'environment' key in config.json")
         }
@@ -62,7 +62,7 @@ final class ConfigManager {
         environment.storeSecureConfigurationForNotificationExtension()
 
         return environment
-    }
+    }()
 
     /// API base URL from config (optional for local, required for dev/prod)
     var apiBaseURL: String {
