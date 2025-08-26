@@ -138,7 +138,11 @@ struct ConversationsView: View {
                 if let conversationViewModel = viewModel.selectedConversationViewModel {
                     ConversationView(
                         viewModel: conversationViewModel,
-                        focusState: $focusState
+                        focusState: $focusState,
+                        onScanInviteCode: {},
+                        onDeleteConversation: {},
+                        confirmDeletionBeforeDismissal: false,
+                        messagesTopBarTrailingItem: .share
                     )
                 } else if horizontalSizeClass != .compact {
                     emptyConversationsView

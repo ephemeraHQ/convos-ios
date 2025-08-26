@@ -10,13 +10,7 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
     let bottomBarHeight: CGFloat
 
     func makeUIViewController(context: Context) -> MessagesViewController {
-        let messagesViewController = MessagesViewController()
-        messagesViewController.state = .init(
-            conversation: conversation,
-            messages: messages,
-            invite: invite
-        )
-        return messagesViewController
+        return MessagesViewController()
     }
 
     func updateUIViewController(_ messagesViewController: MessagesViewController, context: Context) {

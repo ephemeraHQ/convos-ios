@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ConversationView: View {
-    @Bindable var viewModel: ConversationViewModel
+    let viewModel: ConversationViewModel
     @FocusState.Binding var focusState: MessagesViewInputFocus?
     let onScanInviteCode: () -> Void
     let onDeleteConversation: () -> Void
@@ -10,23 +10,8 @@ struct ConversationView: View {
 
     @Environment(\.dismiss) private var dismiss: DismissAction
 
-    init(
-        viewModel: ConversationViewModel,
-        focusState: FocusState<MessagesViewInputFocus?>.Binding,
-        onScanInviteCode: @escaping () -> Void = {},
-        onDeleteConversation: @escaping () -> Void = {},
-        confirmDeletionBeforeDismissal: Bool = false,
-        messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .share
-    ) {
-        self.viewModel = viewModel
-        self._focusState = focusState
-        self.onScanInviteCode = onScanInviteCode
-        self.onDeleteConversation = onDeleteConversation
-        self.confirmDeletionBeforeDismissal = confirmDeletionBeforeDismissal
-        self.messagesTopBarTrailingItem = messagesTopBarTrailingItem
-    }
-
     var body: some View {
+        @Bindable var viewModel = viewModel
         MessagesView(
             conversation: viewModel.conversation,
             messages: viewModel.messages,
@@ -50,9 +35,6 @@ struct ConversationView: View {
             onTapMessage: viewModel.onTapMessage(_:),
             onDisplayNameEndedEditing: viewModel.onDisplayNameEndedEditing,
             onProfileSettings: viewModel.onProfileSettings,
-            onScanInviteCode: onScanInviteCode,
-            onDeleteConversation: onDeleteConversation,
-            confirmDeletionBeforeDismissal: confirmDeletionBeforeDismissal
         )
         .sheet(isPresented: $viewModel.presentingProfileSettings) {
             ProfileView(viewModel: viewModel)
@@ -98,5 +80,12 @@ struct ConversationView: View {
 #Preview {
     @Previewable @State var viewModel: ConversationViewModel = .mock
     @Previewable @FocusState var focusState: MessagesViewInputFocus?
-    ConversationView(viewModel: viewModel, focusState: $focusState)
+    ConversationView(
+        viewModel: viewModel,
+        focusState: $focusState,
+        onScanInviteCode: {},
+        onDeleteConversation: {},
+        confirmDeletionBeforeDismissal: true,
+        messagesTopBarTrailingItem: .scan
+    )
 }

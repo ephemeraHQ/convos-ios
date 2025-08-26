@@ -8,9 +8,11 @@ final class ConversationsViewModel {
     // MARK: - Public
 
     var selectedConversation: Conversation? {
-        didSet {
-            guard selectedConversation != oldValue else { return }
-            if let selectedConversation {
+        get {
+            selectedConversationViewModel?.conversation
+        }
+        set {
+            if let selectedConversation = newValue {
                 selectedConversationViewModel = ConversationViewModel(
                     conversation: selectedConversation,
                     session: session
@@ -20,7 +22,7 @@ final class ConversationsViewModel {
             }
         }
     }
-    var selectedConversationViewModel: ConversationViewModel?
+    private(set) var selectedConversationViewModel: ConversationViewModel?
     var newConversationViewModel: NewConversationViewModel?
     var presentingExplodeInfo: Bool = false
     private(set) var conversations: [Conversation] = []
