@@ -8,7 +8,7 @@ enum NotificationExtensionEnvironmentError: Error {
 public struct NotificationExtensionEnvironment {
     /// Gets the environment configuration stored by the main app
     /// The NSE expects the main app to have stored its configuration in the shared keychain
-    static func getEnvironment() throws -> AppEnvironment {
+    public static func getEnvironment() throws -> AppEnvironment {
         // Retrieve the configuration stored by the main app
         guard let storedEnvironment = AppEnvironment.retrieveSecureConfigurationForNotificationExtension() else {
             Logger.warning("⚠️ No stored environment configuration found - main app should store config before NSE runs")

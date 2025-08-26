@@ -97,6 +97,13 @@ struct AppSettingsView: View {
                     }
                     .foregroundStyle(.colorTextPrimary)
 
+                    NavigationLink {
+                        DebugExportView()
+                    } label: {
+                        Text("Debug")
+                    }
+                    .foregroundStyle(.colorTextPrimary)
+
                     Button {
                         openURL(URL(string: "https://convos.org/terms-and-privacy")!)
                     } label: {
