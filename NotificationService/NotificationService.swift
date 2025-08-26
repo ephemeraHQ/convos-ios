@@ -9,16 +9,22 @@ class NotificationService: UNNotificationServiceExtension {
     private var pendingTask: Task<Void, Never>?
     private var requestId: String = ""
     private var didDeliverNotification: Bool = false
+    private let deliveryQueue: DispatchQueue = DispatchQueue(label: "org.convos.nse.delivery")
 
     private func logWithRequestId(_ message: String) {
         Logger.info("[RequestID: \(requestId)] \(message)")
     }
 
-    private func deliverEmptyNotification() {
-        guard !didDeliverNotification, let contentHandler = contentHandler else { return }
-        let emptyContent = UNMutableNotificationContent()
-        contentHandler(emptyContent)
-        didDeliverNotification = true
+    private func performDelivery(_ content: UNNotificationContent?) {
+        deliveryQueue.sync {
+            guard !didDeliverNotification, let contentHandler = contentHandler else { return }
+            didDeliverNotification = true
+            // Cancel and clear any in-flight task before delivering
+            pendingTask?.cancel()
+            pendingTask = nil
+            let payload = content ?? UNMutableNotificationContent()
+            contentHandler(payload)
+        }
     }
 
     private func configureLogging() {
@@ -81,7 +87,7 @@ class NotificationService: UNNotificationServiceExtension {
 
         // With notification filtering entitlement, deliver an empty notification to suppress display
         logWithRequestId("NSE: Timeout - delivering empty notification")
-        deliverEmptyNotification()
+        performDelivery(UNMutableNotificationContent())
     }
 
     private func handlePushNotification(userInfo: [AnyHashable: Any]) async {
@@ -102,7 +108,7 @@ class NotificationService: UNNotificationServiceExtension {
                 logWithRequestId("NSE: Cleaning up XMTP resources after dropping notification")
                 pushHandler?.cleanup()
                 // Deliver empty notification (suppresses display)
-                deliverEmptyNotification()
+                performDelivery(UNMutableNotificationContent())
                 return
             }
             // For any other errors, also drop the notification
@@ -110,7 +116,7 @@ class NotificationService: UNNotificationServiceExtension {
             logWithRequestId("NSE: Push notification processing error: \(error)")
             logWithRequestId("NSE: Dropping notification due to processing error")
             pushHandler?.cleanup()
-            deliverEmptyNotification()
+            performDelivery(UNMutableNotificationContent())
             return
         }
 
@@ -119,7 +125,7 @@ class NotificationService: UNNotificationServiceExtension {
             logWithRequestId("NSE: Task cancelled, cleaning up XMTP resources")
             pushHandler?.cleanup()
             logWithRequestId("NSE: Dropping notification - task was cancelled")
-            deliverEmptyNotification()
+            performDelivery(UNMutableNotificationContent())
             return
         }
 
@@ -132,13 +138,12 @@ class NotificationService: UNNotificationServiceExtension {
         pushHandler?.cleanup()
 
         // Deliver the notification
-        if let contentHandler = contentHandler, let bestAttemptContent = bestAttemptContent {
+        if let bestAttemptContent = bestAttemptContent {
             logWithRequestId("NSE: Delivering notification to system")
-            contentHandler(bestAttemptContent)
-            didDeliverNotification = true
+            performDelivery(bestAttemptContent)
         } else {
             logWithRequestId("NSE: Warning - contentHandler or bestAttemptContent is nil, delivering empty notification")
-            deliverEmptyNotification()
+            performDelivery(UNMutableNotificationContent())
         }
     }
 
