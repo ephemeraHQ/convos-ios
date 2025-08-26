@@ -33,7 +33,7 @@ enum ConvosAPIClientFactory: ConvosAPIClientFactoryType {
     }
 }
 
-public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol {
+public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     var identifier: String { get }
 
     func authenticate(inboxId: String,

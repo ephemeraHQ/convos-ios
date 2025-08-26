@@ -233,7 +233,7 @@ extension MockMessagingService: ConversationSender {
     }
 }
 
-actor MockConversations: ConversationsProvider {
+class MockConversations: ConversationsProvider {
     func listGroups(createdAfter: Date?, createdBefore: Date?, limit: Int?, consentStates: [ConsentState]?) throws -> [XMTPiOS.Group] {
         []
     }
@@ -274,6 +274,10 @@ actor MockConversations: ConversationsProvider {
 }
 
 extension MockMessagingService: XMTPClientProvider {
+    public func newConversation(with memberInboxId: String) async throws -> any MessageSender {
+        self
+    }
+
     public var installationId: String {
         ""
     }

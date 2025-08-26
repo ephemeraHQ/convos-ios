@@ -143,7 +143,8 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
             description: nil,
             imageUrl: nil,
             inviteLinkURL: "http://convos.org/join/invite_123",
-            groupId: "my_group_123"
+            groupId: "my_group_123",
+            inviterInboxId: "0x12345"
         )
     }
 
