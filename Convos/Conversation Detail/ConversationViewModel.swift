@@ -137,36 +137,34 @@ class ConversationViewModel {
         KeyboardListener.shared.add(delegate: self)
     }
 
+    @MainActor
     private func initializeAsyncDependencies() async {
         // Get the messaging service
         let messagingService = await session.messagingService(for: conversation.inboxId)
 
         // Store all the dependencies
-        await MainActor.run { [weak self] in
-            guard let self else { return }
-            self.myProfileWriter = messagingService.myProfileWriter()
-            self.myProfileRepository = messagingService.myProfileRepository()
-            self.conversationRepository = messagingService.conversationRepository(for: conversation.id)
-            self.messagesRepository = messagingService.messagesRepository(for: conversation.id)
-            self.outgoingMessageWriter = messagingService.messageWriter(for: conversation.id)
-            self.consentWriter = messagingService.conversationConsentWriter()
-            self.localStateWriter = messagingService.conversationLocalStateWriter()
-            self.metadataWriter = messagingService.groupMetadataWriter()
-            self.inviteRepository = messagingService.inviteRepository(for: conversation.id)
+        myProfileWriter = messagingService.myProfileWriter()
+        myProfileRepository = messagingService.myProfileRepository()
+        conversationRepository = messagingService.conversationRepository(for: conversation.id)
+        messagesRepository = messagingService.messagesRepository(for: conversation.id)
+        outgoingMessageWriter = messagingService.messageWriter(for: conversation.id)
+        consentWriter = messagingService.conversationConsentWriter()
+        localStateWriter = messagingService.conversationLocalStateWriter()
+        metadataWriter = messagingService.groupMetadataWriter()
+        inviteRepository = messagingService.inviteRepository(for: conversation.id)
 
-            // Fetch initial data
-            fetchLatest()
+        // Fetch initial data
+        fetchLatest()
 
-            // Start observing
-            observe()
+        // Start observing
+        observe()
 
-            // Update UI state
-            self.displayName = profile.name ?? ""
-            self.conversationName = conversation.name ?? ""
-            self.conversationDescription = conversation.description ?? ""
+        // Update UI state
+        displayName = profile.name ?? ""
+        conversationName = conversation.name ?? ""
+        conversationDescription = conversation.description ?? ""
 
-            self.loadingError = nil
-        }
+        loadingError = nil
     }
 
     deinit {
