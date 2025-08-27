@@ -366,13 +366,6 @@ public actor InboxStateMachine {
 
         // If JWT already exists, we consider backend initialized
         if !backendInitialized {
-            if (try? jwtService.retrieveString(.init(inboxId: client.inboxId))) != nil {
-                backendInitialized = true
-                Logger.info("JWT exists; skipping initWithBackend for inbox \(client.inboxId)")
-            }
-        }
-
-        if !backendInitialized {
             emitStateChange(.registering)
             Logger.info("Initializing with backend...")
             _ = try await initWithBackend(
@@ -395,13 +388,6 @@ public actor InboxStateMachine {
         if deferBackendInitialization {
             enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
             return
-        }
-
-        if !backendInitialized {
-            if (try? jwtService.retrieveString(.init(inboxId: client.inboxId))) != nil {
-                backendInitialized = true
-                Logger.info("JWT exists; skipping initWithBackend for inbox \(client.inboxId)")
-            }
         }
 
         if !backendInitialized {
@@ -434,10 +420,8 @@ public actor InboxStateMachine {
         // Setup push notification observers if registrar is provided
         if autoRegistersForPushNotifications {
             setupPushNotificationObservers()
-            // Register for push notifications in background - don't block the ready state
-            Task {
-                await performPushNotificationRegistration(client: client, apiClient: apiClient)
-            }
+            // Register synchronously after ready to ensure ordering after init
+            await performPushNotificationRegistration(client: client, apiClient: apiClient)
         } else {
             Logger.info("Auto push notification registration is disabled, skipping push notification setup")
         }

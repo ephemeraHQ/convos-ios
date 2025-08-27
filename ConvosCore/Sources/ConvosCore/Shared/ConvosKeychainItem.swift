@@ -29,3 +29,11 @@ struct UnusedInboxKeychainItem: KeychainItemProtocol {
         return Self.account
     }
 }
+
+struct BackendInitializedKeychainItem: KeychainItemProtocol {
+    let inboxId: String
+
+    var account: String {
+        return "backend-init-\(inboxId)"
+    }
+}

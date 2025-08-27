@@ -184,26 +184,40 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
     }
 }
 
+// MARK: - Global Init Registry
+
+private actor ConvosInitRegistry {
+    private var initializedInboxes: Set<String> = []
+    private var inflightInits: [String: Task<ConvosAPI.InitResponse, Error>] = [:]
+
+    func hasInitialized(_ inboxId: String) -> Bool {
+        initializedInboxes.contains(inboxId)
+    }
+
+    func markInitialized(_ inboxId: String) {
+        initializedInboxes.insert(inboxId)
+    }
+
+    func getInflight(_ inboxId: String) -> Task<ConvosAPI.InitResponse, Error>? {
+        inflightInits[inboxId]
+    }
+
+    func setInflight(_ inboxId: String, task: Task<ConvosAPI.InitResponse, Error>) {
+        inflightInits[inboxId] = task
+    }
+
+    func clearInflight(_ inboxId: String) {
+        inflightInits[inboxId] = nil
+    }
+}
+
 final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     private let client: any XMTPClientProvider
     private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
     private let maxRetryCount: Int = 3
 
-    // Global init state per inbox
-    private static var initializedInboxes: Set<String> = []
-    private static let initLock = NSLock()
-
-    private var hasInitializedWithBackend: Bool {
-        Self.initLock.lock()
-        defer { Self.initLock.unlock() }
-        return Self.initializedInboxes.contains(client.inboxId)
-    }
-
-    private func markAsInitialized() {
-        Self.initLock.lock()
-        defer { Self.initLock.unlock() }
-        Self.initializedInboxes.insert(client.inboxId)
-    }
+    // Global, async-safe registry
+    private static let initRegistry: ConvosInitRegistry = ConvosInitRegistry()
 
     var identifier: String {
         "\(client.inboxId)-\(client.installationId)"
@@ -265,19 +279,61 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     // MARK: - Init
 
     func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse {
-        // Proactively authenticate since we know this is the first call
-        if (try? keychainService.retrieveString(.init(inboxId: client.inboxId))) == nil {
-            Logger.info("No JWT token found, authenticating before init...")
-            _ = try await reAuthenticate()
+        let inboxId = client.inboxId
+
+        // Fast-path: already initialized in-memory
+        if await Self.initRegistry.hasInitialized(inboxId) {
+            Logger.info("Skipping backend init; already initialized for inbox \(inboxId)")
+            return .init(
+                device: .init(id: "", os: "", name: nil),
+                identity: .init(id: "", identityAddress: nil, xmtpId: inboxId),
+                profile: .init(id: "", name: nil, description: nil, avatar: nil)
+            )
         }
 
-        var request = try authenticatedRequest(for: "v1/init", method: "POST")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(requestBody)
-        Logger.info("Initializing user with backend")
-        let response: ConvosAPI.InitResponse = try await performRequest(request)
-        markAsInitialized()
-        return response
+        // Fast-path: durable keychain marker set previously
+        if (try? KeychainService<BackendInitializedKeychainItem>().retrieveString(.init(inboxId: inboxId))) != nil {
+            Logger.info("Backend init key present; skipping backend init for inbox \(inboxId)")
+            await Self.initRegistry.markInitialized(inboxId)
+            return .init(
+                device: .init(id: "", os: "", name: nil),
+                identity: .init(id: "", identityAddress: nil, xmtpId: inboxId),
+                profile: .init(id: "", name: nil, description: nil, avatar: nil)
+            )
+        }
+
+        // Single-flight: ensure only one init per inbox proceeds; others await the same Task
+        if let existing = await Self.initRegistry.getInflight(inboxId) {
+            return try await existing.value
+        }
+
+        let task = Task<ConvosAPI.InitResponse, Error> { [client] in
+            // Proactively authenticate since we know this is the first call
+            if (try? keychainService.retrieveString(.init(inboxId: client.inboxId))) == nil {
+                Logger.info("No JWT token found, authenticating before init...")
+                _ = try await reAuthenticate()
+            }
+
+            var request = try authenticatedRequest(for: "v1/init", method: "POST")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONEncoder().encode(requestBody)
+            Logger.info("Initializing user with backend")
+            let response: ConvosAPI.InitResponse = try await performRequest(request)
+            await Self.initRegistry.markInitialized(inboxId)
+            // Persist a durable marker so re-installs/restarts don't re-init this inbox
+            do { try KeychainService<BackendInitializedKeychainItem>().saveString("1", for: .init(inboxId: inboxId)) } catch {}
+            return response
+        }
+        await Self.initRegistry.setInflight(inboxId, task: task)
+
+        do {
+            let result = try await task.value
+            await Self.initRegistry.clearInflight(inboxId)
+            return result
+        } catch {
+            await Self.initRegistry.clearInflight(inboxId)
+            throw error
+        }
     }
 
     func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse {
