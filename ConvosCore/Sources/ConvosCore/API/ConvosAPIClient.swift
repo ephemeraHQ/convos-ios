@@ -187,8 +187,23 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
 final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     private let client: any XMTPClientProvider
     private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
-
     private let maxRetryCount: Int = 3
+
+    // Global init state per inbox
+    private static var initializedInboxes: Set<String> = []
+    private static let initLock = NSLock()
+    
+    private var hasInitializedWithBackend: Bool {
+        Self.initLock.lock()
+        defer { Self.initLock.unlock() }
+        return Self.initializedInboxes.contains(client.inboxId)
+    }
+    
+    private func markAsInitialized() {
+        Self.initLock.lock()
+        defer { Self.initLock.unlock() }
+        Self.initializedInboxes.insert(client.inboxId)
+    }
 
     var identifier: String {
         "\(client.inboxId)-\(client.installationId)"
@@ -260,7 +275,9 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(requestBody)
         Logger.info("Initializing user with backend")
-        return try await performRequest(request)
+        let response: ConvosAPI.InitResponse = try await performRequest(request)
+        markAsInitialized()
+        return response
     }
 
     func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse {
@@ -531,11 +548,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                                   pushToken: String,
                                   identityId: String,
                                   xmtpInstallationId: String) async throws {
-        // Check if we need to authenticate first (might be the first call after init)
-        if (try? keychainService.retrieveString(.init(inboxId: client.inboxId))) == nil {
-            Logger.info("No JWT token found, authenticating before push registration...")
-            _ = try await reAuthenticate()
-        }
+        // Init is now guaranteed to have been called before reaching .ready state
 
         var request = try authenticatedRequest(for: "v1/notifications/register", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

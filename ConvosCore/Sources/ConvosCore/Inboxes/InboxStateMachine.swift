@@ -343,6 +343,13 @@ public actor InboxStateMachine {
 
         Logger.info("Creating API client...")
         let apiClient = createConvosAPIClient(client: client)
+        
+        emitStateChange(.registering)
+        Logger.info("Initializing with backend...")
+        _ = try await initWithBackend(
+            client: client,
+            apiClient: apiClient
+        )
 
         enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
     }
@@ -373,7 +380,10 @@ public actor InboxStateMachine {
         // Setup push notification observers if registrar is provided
         if autoRegistersForPushNotifications {
             setupPushNotificationObservers()
-            await performPushNotificationRegistration(client: client, apiClient: apiClient)
+            // Register for push notifications in background - don't block the ready state
+            Task {
+                await performPushNotificationRegistration(client: client, apiClient: apiClient)
+            }
         } else {
             Logger.info("Auto push notification registration is disabled, skipping push notification setup")
         }
