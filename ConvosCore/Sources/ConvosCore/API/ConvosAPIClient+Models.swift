@@ -212,7 +212,7 @@ public enum ConvosAPI {
     }
 }
 
-extension ConvosAPI.InitRequest.Profile {
+public extension ConvosAPI.InitRequest.Profile {
     static var empty: Self {
         .init(name: nil, username: nil, description: nil, avatar: nil)
     }

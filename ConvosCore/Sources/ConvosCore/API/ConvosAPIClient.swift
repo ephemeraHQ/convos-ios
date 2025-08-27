@@ -255,7 +255,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             Logger.info("No JWT token found, authenticating before init...")
             _ = try await reAuthenticate()
         }
-        
+
         var request = try authenticatedRequest(for: "v1/init", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(requestBody)
@@ -347,13 +347,13 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         queryParameters: [String: String]? = nil
     ) throws -> URLRequest {
         var request = try request(for: path, method: method, queryParameters: queryParameters)
-        
+
         // Add JWT token if available (might be missing or expired)
         if let jwt = try? keychainService.retrieveString(.init(inboxId: client.inboxId)) {
             request.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
         }
         // If no JWT, the request will get a 401 and trigger authentication in performRequest
-        
+
         return request
     }
 
@@ -536,7 +536,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             Logger.info("No JWT token found, authenticating before push registration...")
             _ = try await reAuthenticate()
         }
-        
+
         var request = try authenticatedRequest(for: "v1/notifications/register", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
