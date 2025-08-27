@@ -250,6 +250,12 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     // MARK: - Init
 
     func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse {
+        // Proactively authenticate since we know this is the first call
+        if (try? keychainService.retrieveString(.init(inboxId: client.inboxId))) == nil {
+            Logger.info("No JWT token found, authenticating before init...")
+            _ = try await reAuthenticate()
+        }
+        
         var request = try authenticatedRequest(for: "v1/init", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(requestBody)
@@ -340,11 +346,14 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         method: String = "GET",
         queryParameters: [String: String]? = nil
     ) throws -> URLRequest {
-        guard let jwt = try keychainService.retrieveString(.init(inboxId: client.inboxId)) else {
-            throw APIError.notAuthenticated
-        }
         var request = try request(for: path, method: method, queryParameters: queryParameters)
-        request.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
+        
+        // Add JWT token if available (might be missing or expired)
+        if let jwt = try? keychainService.retrieveString(.init(inboxId: client.inboxId)) {
+            request.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
+        }
+        // If no JWT, the request will get a 401 and trigger authentication in performRequest
+        
         return request
     }
 
@@ -522,6 +531,12 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                                   pushToken: String,
                                   identityId: String,
                                   xmtpInstallationId: String) async throws {
+        // Check if we need to authenticate first (might be the first call after init)
+        if (try? keychainService.retrieveString(.init(inboxId: client.inboxId))) == nil {
+            Logger.info("No JWT token found, authenticating before push registration...")
+            _ = try await reAuthenticate()
+        }
+        
         var request = try authenticatedRequest(for: "v1/notifications/register", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 

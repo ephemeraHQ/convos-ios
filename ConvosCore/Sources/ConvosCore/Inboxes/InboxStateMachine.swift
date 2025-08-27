@@ -341,16 +341,16 @@ public actor InboxStateMachine {
     private func handleClientInitialized(_ client: any XMTPClientProvider) async throws {
         emitStateChange(.authorizing)
 
-        Logger.info("Authorizing backend...")
-        let apiClient = try await authorizeConvosBackend(client: client)
+        Logger.info("Creating API client...")
+        let apiClient = createConvosAPIClient(client: client)
 
         enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
     }
 
     private func handleClientRegistered(_ client: any XMTPClientProvider) async throws {
         emitStateChange(.authorizing)
-        Logger.info("Authorizing backend for registration...")
-        let apiClient = try await authorizeConvosBackend(client: client)
+        Logger.info("Creating API client for registration...")
+        let apiClient = createConvosAPIClient(client: client)
         emitStateChange(.registering)
         Logger.info("Creating identity in backend...")
         _ = try await initWithBackend(
@@ -460,24 +460,12 @@ public actor InboxStateMachine {
         return client
     }
 
-    private func authorizeConvosBackend(client: any XMTPClientProvider) async throws -> any ConvosAPIClientProtocol {
-        Logger.info("Retrieving installation ID and Firebase App Check token...")
-        let installationId = client.installationId
-        let inboxId = client.inboxId
-        let firebaseAppCheckToken = environment.appCheckToken
-        let signatureData = try client.signWithInstallationKey(message: firebaseAppCheckToken)
-        let signature = signatureData.hexEncodedString()
-        Logger.info("Attempting to authenticate with Convos backend...")
-        let apiClient = ConvosAPIClientFactory.authenticatedClient(
+    private func createConvosAPIClient(client: any XMTPClientProvider) -> any ConvosAPIClientProtocol {
+        Logger.info("Creating Convos API client...")
+        return ConvosAPIClientFactory.authenticatedClient(
             client: client,
             environment: environment
         )
-        _ = try await apiClient.authenticate(
-            inboxId: inboxId,
-            installationId: installationId,
-            signature: signature
-        )
-        return apiClient
     }
 
     // MARK: - Init
