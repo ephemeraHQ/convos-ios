@@ -353,7 +353,7 @@ public actor InboxStateMachine {
         let apiClient = try await authorizeConvosBackend(client: client)
         emitStateChange(.registering)
         Logger.info("Creating identity in backend...")
-        _ = try await createUser(
+        _ = try await initWithBackend(
             client: client,
             apiClient: apiClient
         )
@@ -480,22 +480,20 @@ public actor InboxStateMachine {
         return apiClient
     }
 
-    // MARK: - User Creation
+    // MARK: - Init
 
-    private func createUser(
+    private func initWithBackend(
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol
-    ) async throws -> ConvosAPI.CreatedUserResponse {
-        let requestBody: ConvosAPI.CreateUserRequest = .init(
-            userId: UUID().uuidString, // @jarod remove this
-            userType: .onDevice,
+    ) async throws -> ConvosAPI.InitResponse {
+        let requestBody: ConvosAPI.InitRequest = .init(
             device: .current(),
             identity: .init(identityAddress: nil,
                             xmtpId: client.inboxId,
                             xmtpInstallationId: client.installationId),
             profile: .empty
         )
-        return try await apiClient.createUser(requestBody)
+        return try await apiClient.initWithBackend(requestBody)
     }
 }
 
