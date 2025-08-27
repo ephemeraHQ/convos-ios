@@ -29,6 +29,10 @@ public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol 
         UserDefaults.standard.string(forKey: tokenKey)
     }
 
+    public static func clearToken() {
+        UserDefaults.standard.removeObject(forKey: tokenKey)
+    }
+
     func registerForRemoteNotifications() async {
         await MainActor.run {
             UIApplication.shared.registerForRemoteNotifications()

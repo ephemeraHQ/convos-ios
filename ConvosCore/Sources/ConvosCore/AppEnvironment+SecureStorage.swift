@@ -67,6 +67,23 @@ public extension AppEnvironment {
 
         return nil
     }
+
+    /// Deletes the shared environment configuration stored in Keychain for the NSE
+    static func clearSecureConfigurationForNotificationExtension() {
+        guard let bundleIdentifier = Bundle.main.bundleIdentifier,
+              let appGroupIdentifier = bundleIdentifier.asAppGroupIdentifier else {
+            return
+        }
+
+        let keychainQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: "SharedAppConfiguration",
+            kSecAttrService as String: "ConvosEnvironment",
+            kSecAttrAccessGroup as String: appGroupIdentifier
+        ]
+
+        SecItemDelete(keychainQuery as CFDictionary)
+    }
 }
 
 extension String {

@@ -2,6 +2,7 @@ import Combine
 import Foundation
 import GRDB
 import UserNotifications
+import Security
 
 public extension Notification.Name {
     static let leftConversationNotification: Notification.Name = Notification.Name("LeftConversationNotification")
@@ -218,6 +219,65 @@ actor SessionManager: SessionManagerProtocol {
             }
         }
         messagingServices.removeAll()
+
+        // After all inboxes are deleted, wipe shared state that may recreate or re-authenticate
+        await UnusedInboxCache.shared.reset()
+
+        // Clear any APNS token stored in UserDefaults
+        PushNotificationRegistrar.clearToken()
+
+        // Clear shared environment config stored for the NSE
+        AppEnvironment.clearSecureConfigurationForNotificationExtension()
+
+        // Clear any JWTs/push tokens that aren't tied to a specific inbox anymore (best-effort sweep)
+        // JWTs and push tokens are keyed by inboxId; since we've deleted all inboxes, try to delete all matching items.
+        // Use the keychain access group configured for this environment so we cover app + extension.
+        do {
+            try await environment.defaultIdentityStore.deleteAll()
+        } catch {
+            // Ignore errors; identities for deleted inboxes may already be gone
+        }
+
+        // Best-effort: remove all generic-password items for our shared service (JWTs, push tokens)
+        let keychainSweepQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "org.convos.ios"
+        ]
+        SecItemDelete(keychainSweepQuery as CFDictionary)
+
+        // Remove App Group databases and XMTP stores
+        let fileManager = FileManager.default
+        let groupURL = environment.defaultDatabasesDirectoryURL
+        do {
+            let contents = try fileManager.contentsOfDirectory(at: groupURL, includingPropertiesForKeys: nil)
+
+            let namesToDelete: Set<String> = [
+                "convos.sqlite",
+                "convos.sqlite-wal",
+                "convos.sqlite-shm"
+            ]
+
+            for url in contents {
+                let name = url.lastPathComponent
+                if namesToDelete.contains(name) {
+                    try? fileManager.removeItem(at: url)
+                    continue
+                }
+                if name.hasPrefix("xmtp-") || name.hasPrefix("xmtp_localhost-") {
+                    try? fileManager.removeItem(at: url)
+                }
+            }
+
+            // Remove logs directory content
+            let logsDir = groupURL.appendingPathComponent("Logs")
+            if let logContents = try? fileManager.contentsOfDirectory(at: logsDir, includingPropertiesForKeys: nil) {
+                for item in logContents {
+                    try? fileManager.removeItem(at: item)
+                }
+            }
+        } catch {
+            // Ignore file removal errors; safe best-effort cleanup
+        }
     }
 
     // MARK: Messaging

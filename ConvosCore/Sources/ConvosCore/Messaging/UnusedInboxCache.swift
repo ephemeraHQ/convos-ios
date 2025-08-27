@@ -54,6 +54,17 @@ actor UnusedInboxCache {
         }
     }
 
+    /// Clears any cached unused inbox and prevents it from being used.
+    /// - Note: This also clears the "unused inbox" keychain item so the next app start won't reuse it.
+    func reset() async {
+        // Best-effort stop and drop any in-memory unused service
+        if let service = unusedMessagingService {
+            await service.stopAndDelete()
+        }
+        unusedMessagingService = nil
+        clearUnusedInboxFromKeychain()
+    }
+
     /// Consumes the unused inbox if available, or creates a new one
     func consumeOrCreateMessagingService(
         databaseWriter: any DatabaseWriter,
