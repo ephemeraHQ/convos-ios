@@ -542,11 +542,8 @@ extension InboxStateMachine {
 
         do {
             emitStateChange(.registering)
-            if (try? jwtService.retrieveString(.init(inboxId: result.client.inboxId))) == nil {
-                _ = try await initWithBackend(client: result.client, apiClient: result.apiClient)
-            } else {
-                Logger.info("JWT exists; skipping initWithBackend for inbox \(result.client.inboxId)")
-            }
+            // Rely on API client to single-flight and skip if already initialized
+            _ = try await initWithBackend(client: result.client, apiClient: result.apiClient)
             hasActivatedDeferredIdentity = true
             backendInitialized = true
 

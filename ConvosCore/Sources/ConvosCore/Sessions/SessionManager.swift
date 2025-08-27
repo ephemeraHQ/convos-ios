@@ -239,11 +239,18 @@ actor SessionManager: SessionManagerProtocol {
         }
 
         // Best-effort: remove all generic-password items for our shared service (JWTs, push tokens)
-        let keychainSweepQuery: [String: Any] = [
+        var keychainSweepQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: "org.convos.ios"
         ]
-        SecItemDelete(keychainSweepQuery as CFDictionary)
+        if let bundleId = Bundle.main.bundleIdentifier,
+           let accessGroup = bundleId.asAppGroupIdentifier {
+            keychainSweepQuery[kSecAttrAccessGroup as String] = accessGroup
+        }
+        let sweepStatus = SecItemDelete(keychainSweepQuery as CFDictionary)
+        if sweepStatus != errSecSuccess && sweepStatus != errSecItemNotFound {
+            Logger.warning("Keychain sweep failed with status: \(sweepStatus)")
+        }
 
         // Remove App Group databases and XMTP stores
         let fileManager = FileManager.default
