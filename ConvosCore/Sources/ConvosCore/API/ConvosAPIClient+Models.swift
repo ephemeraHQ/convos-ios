@@ -30,27 +30,10 @@ public enum ConvosAPI {
         public let walletAddress: String
     }
 
-    public struct UserResponse: Decodable {
-        public let id: String
-        public let identities: [Identity]
-        public struct Identity: Decodable {
-            public let id: String
-            public let identityAddress: String?
-            public let xmtpId: String
-        }
-    }
-
     public struct InitRequest: Encodable {
-        // public let userId: String
-        // public let userType: UserType
         public let device: Device
         public let identity: Identity
         public let profile: Profile
-
-        public enum UserType: String, Encodable {
-            case onDevice
-            case turnkey
-        }
         public struct Device: Encodable {
             public let os: String
             public let name: String?
@@ -70,8 +53,6 @@ public enum ConvosAPI {
     }
 
     public struct InitResponse: Decodable {
-        // public let id: String
-        // public let userId: String
         public let device: Device
         public let identity: Identity
         public let profile: Profile

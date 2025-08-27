@@ -252,9 +252,8 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse {
         var request = try authenticatedRequest(for: "v1/init", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        Logger.info("Sending init request with body: \(requestBody)")
         request.httpBody = try JSONEncoder().encode(requestBody)
-        Logger.info("Init with json body: \(request.httpBody?.prettyPrintedJSONString ?? "")")
+        Logger.info("Initializing user with backend")
         return try await performRequest(request)
     }
 
