@@ -68,7 +68,7 @@ public enum ConvosAPI {
             public let avatar: String?
         }
     }
-    
+
     public struct InitResponse: Decodable {
         // public let id: String
         // public let userId: String
