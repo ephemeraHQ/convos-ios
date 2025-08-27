@@ -40,9 +40,7 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
                       installationId: String,
                       signature: String) async throws -> String
 
-    func getUser() async throws -> ConvosAPI.UserResponse
-    func createUser(_ requestBody: ConvosAPI.CreateUserRequest) async throws -> ConvosAPI.CreatedUserResponse
-    func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse
+    func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse
 
     func createInvite(_ requestBody: ConvosAPI.CreateInviteCode) async throws -> ConvosAPI.InviteDetailsResponse
     func inviteDetails(_ inviteCode: String) async throws -> ConvosAPI.InviteDetailsResponse
@@ -73,7 +71,7 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     ) async throws -> String
 
     // Push notifications
-    func getDevice(userId: String, deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse
+    func getDevice(deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse
     func registerForNotifications(deviceId: String,
                                   pushToken: String,
                                   identityId: String,
@@ -248,27 +246,15 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         return authResponse.token
     }
 
-    // MARK: - Users
+    // MARK: - Init
 
-    func getUser() async throws -> ConvosAPI.UserResponse {
-        let request = try authenticatedRequest(for: "v1/users/me")
-        let user: ConvosAPI.UserResponse = try await performRequest(request)
-        return user
-    }
-
-    func createUser(_ requestBody: ConvosAPI.CreateUserRequest) async throws -> ConvosAPI.CreatedUserResponse {
-        var request = try authenticatedRequest(for: "v1/users", method: "POST")
+    func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse {
+        let inboxId = client.inboxId
+        var request = try authenticatedRequest(for: "v1/init", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        Logger.info("Sending create user request with body: \(requestBody)")
         request.httpBody = try JSONEncoder().encode(requestBody)
-        Logger.info("Creating user with json body: \(request.httpBody?.prettyPrintedJSONString ?? "")")
+        Logger.info("Initializing backend")
         return try await performRequest(request)
-    }
-
-    func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse {
-        let request = try authenticatedRequest(for: "v1/profiles/check/\(username)")
-        let result: ConvosAPI.UsernameCheckResponse = try await performRequest(request)
-        return result
     }
 
     // MARK: - Invites
@@ -515,9 +501,9 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
     // MARK: - Device Management
 
-    func getDevice(userId: String, deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse {
+    func getDevice(deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse {
         let request = try authenticatedRequest(
-            for: "v1/devices/\(userId)/\(deviceId)",
+            for: "v1/devices/\(deviceId)",
             method: "GET"
         )
 

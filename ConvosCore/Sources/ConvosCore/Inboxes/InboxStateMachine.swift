@@ -222,6 +222,7 @@ public actor InboxStateMachine {
             return
         }
 
+        Logger.info("Inbox not ready, waiting to register for push notifications...")
         // Wait for ready state
         for await state in stateSequence {
             switch state {
@@ -352,8 +353,8 @@ public actor InboxStateMachine {
         Logger.info("Authorizing backend for registration...")
         let apiClient = try await authorizeConvosBackend(client: client)
         emitStateChange(.registering)
-        Logger.info("Creating identity in backend...")
-        _ = try await createUser(
+        Logger.info("Registering backend...")
+        _ = try await registerBackend(
             client: client,
             apiClient: apiClient
         )
@@ -480,22 +481,20 @@ public actor InboxStateMachine {
         return apiClient
     }
 
-    // MARK: - User Creation
+    // MARK: - Backend Init
 
-    private func createUser(
+    private func registerBackend(
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol
-    ) async throws -> ConvosAPI.CreatedUserResponse {
-        let requestBody: ConvosAPI.CreateUserRequest = .init(
-            userId: UUID().uuidString, // @jarod remove this
-            userType: .onDevice,
+    ) async throws -> ConvosAPI.InitResponse {
+        let requestBody: ConvosAPI.InitRequest = .init(
             device: .current(),
             identity: .init(identityAddress: nil,
                             xmtpId: client.inboxId,
                             xmtpInstallationId: client.installationId),
             profile: .empty
         )
-        return try await apiClient.createUser(requestBody)
+        return try await apiClient.initWithBackend(requestBody)
     }
 }
 
