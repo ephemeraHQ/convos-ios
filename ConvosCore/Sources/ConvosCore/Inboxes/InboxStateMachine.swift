@@ -305,6 +305,9 @@ public actor InboxStateMachine {
 
     private func handleAuthorize(inboxId: String) async throws {
         emitStateChange(.initializing)
+
+        Logger.info("Started authorization flow for inboxId: \(inboxId)")
+
         // keep the inbox id in case we need it for cleaning up after an error
         self.inboxId = inboxId
 
@@ -330,6 +333,7 @@ public actor InboxStateMachine {
 
     private func handleRegister() async throws {
         emitStateChange(.initializing)
+        Logger.info("Started registration flow...")
         let keys = try await identityStore.generateKeys()
         let client = try await createXmtpClient(
             signingKey: keys.signingKey,
@@ -363,6 +367,8 @@ public actor InboxStateMachine {
 
     private func handleAuthorized(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
         emitStateChange(.ready(.init(client: client, apiClient: apiClient)))
+
+        Logger.info("Authorized, state machine is ready.")
 
         // write the inbox when we're in the ready state so we have an inbox ID
         // in SessionManager's observation of inboxes
@@ -515,6 +521,7 @@ extension InboxStateMachine {
 
     private func setupPushNotificationObservers() {
         guard pushTokenObserver == nil else { return }
+        Logger.info("Started observing for push token change...")
         // Observe future token changes
         pushTokenObserver = NotificationCenter.default.addObserver(
             forName: .convosPushTokenDidChange,
