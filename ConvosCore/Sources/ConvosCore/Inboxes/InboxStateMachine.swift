@@ -268,28 +268,37 @@ public actor InboxStateMachine {
     private func processAction(_ action: Action) async {
         do {
             switch (_state, action) {
-            case (.uninitialized, let .authorize(inboxId)),
-                (.error, let .authorize(inboxId)):
+            case (.uninitialized, let .authorize(inboxId)):
                 try await handleAuthorize(inboxId: inboxId)
-            case (.uninitialized, .register),
-                (.error, .register):
+            case (.error, let .authorize(inboxId)):
+                try handleStop()
+                try await handleAuthorize(inboxId: inboxId)
+
+            case (.uninitialized, .register):
                 try await handleRegister()
+            case (.error, .register):
+                try handleStop()
+                try await handleRegister()
+
             case (.initializing, let .clientInitialized(client)):
                 try await handleClientInitialized(client)
             case (.initializing, let .clientRegistered(client)):
                 try await handleClientRegistered(client)
+
             case (.authorizing, let .authorized(result)),
                 (.registering, let .authorized(result)):
                 try await handleAuthorized(
                     client: result.client,
                     apiClient: result.apiClient
                 )
+
             case (let .ready(result), .delete):
                 try await handleDelete(client: result.client, apiClient: result.apiClient)
             case (.error, .delete):
                 try await handleDeleteFromError()
             case (.ready, .stop), (.error, .stop), (.deleting, .stop):
                 try handleStop()
+
             case (.uninitialized, .stop):
                 break
             default:
@@ -421,6 +430,7 @@ public actor InboxStateMachine {
         syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         removePushNotificationObservers()
+        inboxId = nil
         emitStateChange(.uninitialized)
     }
 
