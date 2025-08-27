@@ -1,8 +1,8 @@
 import Combine
 import Foundation
 import GRDB
-import UserNotifications
 import Security
+import UserNotifications
 
 public extension Notification.Name {
     static let leftConversationNotification: Notification.Name = Notification.Name("LeftConversationNotification")

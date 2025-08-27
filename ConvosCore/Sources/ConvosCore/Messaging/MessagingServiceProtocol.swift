@@ -8,6 +8,7 @@ public protocol MessagingServiceProtocol: AnyObject {
     func stopAndDelete() async
 
     func registerForPushNotifications() async
+    func activateDeferredInbox(registersForPushNotifications: Bool) async
 
     func myProfileRepository() -> any MyProfileRepositoryProtocol
     func myProfileWriter() -> any MyProfileWriterProtocol

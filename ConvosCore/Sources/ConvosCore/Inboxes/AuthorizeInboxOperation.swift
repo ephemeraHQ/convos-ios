@@ -18,6 +18,7 @@ protocol AuthorizeInboxOperationProtocol {
     func stopAndDelete()
     func stop()
     func registerForPushNotifications() async
+    func activateDeferredInbox(registersForPushNotifications: Bool) async
 }
 
 final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
@@ -31,14 +32,18 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
-        registersForPushNotifications: Bool = true
+        registersForPushNotifications: Bool = true,
+        deferBackendInitialization: Bool = false,
+        persistInboxOnReady: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
-            startsStreamingServices: startsStreamingServices,
-            registersForPushNotifications: registersForPushNotifications
+            shouldStartStreamingServicesOnReady: startsStreamingServices,
+            registersForPushNotifications: registersForPushNotifications,
+            deferBackendInitialization: deferBackendInitialization,
+            persistInboxOnReady: persistInboxOnReady
         )
         operation.authorize(inboxId: inboxId)
         return operation
@@ -48,14 +53,18 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
-        registersForPushNotifications: Bool = true
+        registersForPushNotifications: Bool = true,
+        deferBackendInitialization: Bool = false,
+        persistInboxOnReady: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
-            startsStreamingServices: true,
-            registersForPushNotifications: registersForPushNotifications
+            shouldStartStreamingServicesOnReady: true,
+            registersForPushNotifications: registersForPushNotifications,
+            deferBackendInitialization: deferBackendInitialization,
+            persistInboxOnReady: persistInboxOnReady
         )
         operation.register()
         return operation
@@ -65,15 +74,17 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
-        startsStreamingServices: Bool,
-        registersForPushNotifications: Bool
+        shouldStartStreamingServicesOnReady: Bool,
+        registersForPushNotifications: Bool,
+        deferBackendInitialization: Bool,
+        persistInboxOnReady: Bool
     ) {
         let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
-        let syncingManager = startsStreamingServices ? SyncingManager(databaseWriter: databaseWriter) : nil
-        let inviteJoinRequestsManager = startsStreamingServices ? InviteJoinRequestsManager(
+        let syncingManager = SyncingManager(databaseWriter: databaseWriter)
+        let inviteJoinRequestsManager = InviteJoinRequestsManager(
             databaseReader: databaseReader,
             databaseWriter: databaseWriter
-        ) : nil
+        )
         stateMachine = InboxStateMachine(
             identityStore: environment.defaultIdentityStore,
             inboxWriter: inboxWriter,
@@ -84,6 +95,9 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             ),
             autoRegistersForPushNotifications: registersForPushNotifications,
             environment: environment,
+            shouldStartStreamingServicesOnReady: shouldStartStreamingServicesOnReady,
+            deferBackendInitialization: deferBackendInitialization,
+            persistInboxOnReady: persistInboxOnReady
         )
     }
 
@@ -131,5 +145,9 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     func registerForPushNotifications() async {
         await stateMachine.registerForPushNotifications()
+    }
+
+    func activateDeferredInbox(registersForPushNotifications: Bool) async {
+        await stateMachine.activateDeferredInbox(registersForPushNotifications: registersForPushNotifications)
     }
 }

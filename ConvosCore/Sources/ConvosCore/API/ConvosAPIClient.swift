@@ -192,13 +192,13 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     // Global init state per inbox
     private static var initializedInboxes: Set<String> = []
     private static let initLock = NSLock()
-    
+
     private var hasInitializedWithBackend: Bool {
         Self.initLock.lock()
         defer { Self.initLock.unlock() }
         return Self.initializedInboxes.contains(client.inboxId)
     }
-    
+
     private func markAsInitialized() {
         Self.initLock.lock()
         defer { Self.initLock.unlock() }

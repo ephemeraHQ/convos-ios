@@ -24,7 +24,9 @@ final class MessagingService: MessagingServiceProtocol {
         databaseReader: any DatabaseReader,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
-        registersForPushNotifications: Bool = true
+        registersForPushNotifications: Bool = true,
+        deferBackendInitialization: Bool = false,
+        persistInboxOnReady: Bool = true
     ) -> MessagingService {
         let authorizationOperation = AuthorizeInboxOperation.authorize(
             inboxId: inboxId,
@@ -32,7 +34,9 @@ final class MessagingService: MessagingServiceProtocol {
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: startsStreamingServices,
-            registersForPushNotifications: registersForPushNotifications
+            registersForPushNotifications: registersForPushNotifications,
+            deferBackendInitialization: deferBackendInitialization,
+            persistInboxOnReady: persistInboxOnReady
         )
         return .init(
             inboxId: inboxId,
@@ -78,6 +82,10 @@ final class MessagingService: MessagingServiceProtocol {
 
     func stopAndDelete() async {
         await authorizationOperation.stopAndDelete()
+    }
+
+    func activateDeferredInbox(registersForPushNotifications: Bool = true) async {
+        await authorizationOperation.activateDeferredInbox(registersForPushNotifications: registersForPushNotifications)
     }
 
     // MARK: Push Notifications

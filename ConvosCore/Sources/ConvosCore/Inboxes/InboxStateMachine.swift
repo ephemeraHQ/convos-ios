@@ -1,4 +1,5 @@
 import Foundation
+import Security
 import XMTPiOS
 
 private extension AppEnvironment {
@@ -101,12 +102,19 @@ public actor InboxStateMachine {
     private let inviteJoinRequestsManager: AnyInviteJoinRequestsManager?
     private let pushNotificationRegistrar: any PushNotificationRegistrarProtocol
     private let autoRegistersForPushNotifications: Bool
+    private let shouldStartStreamingServicesOnReady: Bool
+    private let deferBackendInitialization: Bool
+    private var persistInboxOnReady: Bool
+    private var hasActivatedDeferredIdentity: Bool = false
 
     private var inboxId: String?
     private var currentTask: Task<Void, Never>?
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
     private var pushTokenObserver: NSObjectProtocol?
+    private var backendInitialized: Bool = false
+    private let jwtService: KeychainService<ConvosJWTKeychainItem> = .init()
+    private var isPushRegistrationInFlight: Bool = false
 
     // MARK: - State Observation
 
@@ -166,7 +174,10 @@ public actor InboxStateMachine {
         inviteJoinRequestsManager: AnyInviteJoinRequestsManager?,
         pushNotificationRegistrar: any PushNotificationRegistrarProtocol,
         autoRegistersForPushNotifications: Bool,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        shouldStartStreamingServicesOnReady: Bool = true,
+        deferBackendInitialization: Bool = false,
+        persistInboxOnReady: Bool = true
     ) {
         self.identityStore = identityStore
         self.inboxWriter = inboxWriter
@@ -175,6 +186,9 @@ public actor InboxStateMachine {
         self.environment = environment
         self.pushNotificationRegistrar = pushNotificationRegistrar
         self.autoRegistersForPushNotifications = autoRegistersForPushNotifications
+        self.shouldStartStreamingServicesOnReady = shouldStartStreamingServicesOnReady
+        self.deferBackendInitialization = deferBackendInitialization
+        self.persistInboxOnReady = persistInboxOnReady
 
         // Set custom XMTP host if provided
         Logger.info("🔧 XMTP Configuration:")
@@ -343,13 +357,32 @@ public actor InboxStateMachine {
 
         Logger.info("Creating API client...")
         let apiClient = createConvosAPIClient(client: client)
-        
-        emitStateChange(.registering)
-        Logger.info("Initializing with backend...")
-        _ = try await initWithBackend(
-            client: client,
-            apiClient: apiClient
-        )
+
+        if deferBackendInitialization {
+            // Skip backend init for deferred identities
+            enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
+            return
+        }
+
+        // If JWT already exists, we consider backend initialized
+        if !backendInitialized {
+            if (try? jwtService.retrieveString(.init(inboxId: client.inboxId))) != nil {
+                backendInitialized = true
+                Logger.info("JWT exists; skipping initWithBackend for inbox \(client.inboxId)")
+            }
+        }
+
+        if !backendInitialized {
+            emitStateChange(.registering)
+            Logger.info("Initializing with backend...")
+            _ = try await initWithBackend(
+                client: client,
+                apiClient: apiClient
+            )
+            backendInitialized = true
+        } else {
+            Logger.info("Skipping initWithBackend: already initialized for inbox \(client.inboxId)")
+        }
 
         enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
     }
@@ -358,24 +391,45 @@ public actor InboxStateMachine {
         emitStateChange(.authorizing)
         Logger.info("Creating API client for registration...")
         let apiClient = createConvosAPIClient(client: client)
-        emitStateChange(.registering)
-        Logger.info("Creating identity in backend...")
-        _ = try await initWithBackend(
-            client: client,
-            apiClient: apiClient
-        )
+
+        if deferBackendInitialization {
+            enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
+            return
+        }
+
+        if !backendInitialized {
+            if (try? jwtService.retrieveString(.init(inboxId: client.inboxId))) != nil {
+                backendInitialized = true
+                Logger.info("JWT exists; skipping initWithBackend for inbox \(client.inboxId)")
+            }
+        }
+
+        if !backendInitialized {
+            emitStateChange(.registering)
+            Logger.info("Creating identity in backend...")
+            _ = try await initWithBackend(
+                client: client,
+                apiClient: apiClient
+            )
+            backendInitialized = true
+        } else {
+            Logger.info("Skipping initWithBackend: already initialized for inbox \(client.inboxId)")
+        }
         enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
     }
 
     private func handleAuthorized(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
         emitStateChange(.ready(.init(client: client, apiClient: apiClient)))
 
-        // write the inbox when we're in the ready state so we have an inbox ID
-        // in SessionManager's observation of inboxes
-        try await inboxWriter.storeInbox(inboxId: client.inboxId)
+        // Optionally persist and start streaming services
+        if persistInboxOnReady {
+            try await inboxWriter.storeInbox(inboxId: client.inboxId)
+        }
 
-        syncingManager?.start(with: client, apiClient: apiClient)
-        inviteJoinRequestsManager?.start(with: client, apiClient: apiClient)
+        if shouldStartStreamingServicesOnReady {
+            syncingManager?.start(with: client, apiClient: apiClient)
+            inviteJoinRequestsManager?.start(with: client, apiClient: apiClient)
+        }
 
         // Setup push notification observers if registrar is provided
         if autoRegistersForPushNotifications {
@@ -495,10 +549,60 @@ public actor InboxStateMachine {
     }
 }
 
+// MARK: - Deferred Activation
+
+extension InboxStateMachine {
+    func activateDeferredInbox(registersForPushNotifications: Bool) async {
+        guard case let .ready(result) = _state else { return }
+        guard deferBackendInitialization, !hasActivatedDeferredIdentity else { return }
+
+        do {
+            emitStateChange(.registering)
+            if (try? jwtService.retrieveString(.init(inboxId: result.client.inboxId))) == nil {
+                _ = try await initWithBackend(client: result.client, apiClient: result.apiClient)
+            } else {
+                Logger.info("JWT exists; skipping initWithBackend for inbox \(result.client.inboxId)")
+            }
+            hasActivatedDeferredIdentity = true
+            backendInitialized = true
+
+            // Persist inbox if it wasn't persisted
+            if !persistInboxOnReady {
+                try await inboxWriter.storeInbox(inboxId: result.client.inboxId)
+                persistInboxOnReady = true
+            }
+
+            // Start streaming services if they were deferred
+            if !shouldStartStreamingServicesOnReady {
+                syncingManager?.start(with: result.client, apiClient: result.apiClient)
+                inviteJoinRequestsManager?.start(with: result.client, apiClient: result.apiClient)
+            }
+
+            if registersForPushNotifications {
+                setupPushNotificationObservers()
+                await performPushNotificationRegistration(client: result.client, apiClient: result.apiClient)
+            }
+
+            // Re-emit ready with same result
+            emitStateChange(.ready(result))
+        } catch {
+            Logger.error("Deferred activation failed: \(error)")
+            emitStateChange(.error(error))
+        }
+    }
+}
+
 // MARK: - Push Notification Observers
 
 extension InboxStateMachine {
     private func performPushNotificationRegistration(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
+        guard backendInitialized else {
+            Logger.info("Skipping push registration: backend not initialized yet")
+            return
+        }
+        guard !isPushRegistrationInFlight else { return }
+        isPushRegistrationInFlight = true
+        defer { isPushRegistrationInFlight = false }
         Logger.info("Registering for push notifications")
         // Attempt to register for remote notifications to obtain APNS token ASAP
         await pushNotificationRegistrar.registerForRemoteNotifications()
@@ -530,7 +634,14 @@ extension InboxStateMachine {
     }
 
     private func handleTokenChange() async {
+        guard backendInitialized else {
+            Logger.info("Ignoring token change: backend not initialized")
+            return
+        }
         guard case let .ready(result) = _state else { return }
+        guard !isPushRegistrationInFlight else { return }
+        isPushRegistrationInFlight = true
+        defer { isPushRegistrationInFlight = false }
         await pushNotificationRegistrar.requestAuthAndRegisterIfNeeded(client: result.client, apiClient: result.apiClient)
     }
 }

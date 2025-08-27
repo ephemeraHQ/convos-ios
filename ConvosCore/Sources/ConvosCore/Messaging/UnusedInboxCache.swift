@@ -169,8 +169,10 @@ actor UnusedInboxCache {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
-            startsStreamingServices: true,
-            registersForPushNotifications: false
+            startsStreamingServices: false,
+            registersForPushNotifications: false,
+            deferBackendInitialization: true,
+            persistInboxOnReady: false
         )
 
         let messagingService = MessagingService(
@@ -187,7 +189,7 @@ actor UnusedInboxCache {
             // Store it as the unused messaging service
             unusedMessagingService = messagingService
 
-            Logger.info("Successfully authorized unused inbox: \(inboxId)")
+            Logger.info("Successfully authorized unused inbox (deferred): \(inboxId)")
         } catch {
             Logger.error("Failed to authorize unused inbox: \(error)")
             // Clear the invalid inbox ID from keychain
@@ -230,7 +232,9 @@ actor UnusedInboxCache {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
-            registersForPushNotifications: false
+            registersForPushNotifications: false,
+            deferBackendInitialization: true,
+            persistInboxOnReady: false
         )
 
         let tempMessagingService = MessagingService(

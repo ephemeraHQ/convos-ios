@@ -82,6 +82,8 @@ class NewConversationViewModel: Identifiable {
             }
         }
         if !showScannerOnAppear {
+            // Activate the deferred identity right before creating a real conversation
+            await messagingService.activateDeferredInbox(registersForPushNotifications: true)
             try await draftConversationComposer.draftConversationWriter.createConversation()
         }
     }
@@ -125,6 +127,10 @@ class NewConversationViewModel: Identifiable {
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
             do {
+                // Ensure the deferred identity is activated before contacting backend
+                if let messagingService {
+                    await messagingService.activateDeferredInbox(registersForPushNotifications: true)
+                }
                 // Request to join
                 do {
                     try await draftConversationComposer?.draftConversationWriter.requestToJoin(inviteCode: inviteCode)

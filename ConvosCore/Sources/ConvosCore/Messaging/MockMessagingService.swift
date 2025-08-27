@@ -42,6 +42,10 @@ public class MockMessagingService: MessagingServiceProtocol {
         // Mock implementation - no-op
     }
 
+    public func activateDeferredInbox(registersForPushNotifications: Bool) async {
+        // Mock implementation - no-op
+    }
+
     public func myProfileWriter() -> any MyProfileWriterProtocol {
         self
     }

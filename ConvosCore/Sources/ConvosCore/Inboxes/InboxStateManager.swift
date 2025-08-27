@@ -94,6 +94,14 @@ public final class InboxStateManager {
         throw InboxStateError.inboxNotReady
     }
 
+    public func activateDeferredInbox(registersForPushNotifications: Bool) async {
+        await stateMachine?.activateDeferredInbox(registersForPushNotifications: registersForPushNotifications)
+    }
+
+    public func registerForPushNotifications() async {
+        await stateMachine?.registerForPushNotifications()
+    }
+
     public func observeState(_ handler: @escaping (InboxStateMachine.State) -> Void) -> StateObserverHandle {
         let observer = ClosureStateObserver(handler: handler)
         addObserver(observer)
