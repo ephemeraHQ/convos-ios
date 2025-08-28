@@ -74,7 +74,8 @@ workflows:
     - deploy-to-itunesconnect-application-loader@1:
         inputs:
         - connection: api_key
-        title: Deploy to App Store Connect
+        - altool_options: --bundle-id org.convos.ios-preview
+        title: Deploy to App Store Connect (Dev)
     - save-spm-cache@1: {}
     meta:
       bitrise.io:
@@ -132,6 +133,13 @@ workflows:
         - scheme: "$BITRISE_SCHEME_NSE"
         - configuration: "$BITRISE_BUILD_CONFIG"
         title: iOS Code Signing - NSE
+    - manage-ios-code-signing@2:
+        inputs:
+        - distribution_method: app-store
+        - scheme: "$BITRISE_SCHEME_APPCLIP"
+        - configuration: "$BITRISE_BUILD_CONFIG"
+        - verbose_log: 'yes'
+        title: iOS Code Signing - AppClip
     - xcode-archive@5:
         inputs:
         - project_path: "$BITRISE_PROJECT_PATH"
@@ -147,7 +155,8 @@ workflows:
     - deploy-to-itunesconnect-application-loader@1:
         inputs:
         - connection: api_key
-        title: Deploy to App Store Connect
+        - altool_options: --bundle-id org.convos.ios
+        title: Deploy to App Store Connect (Prod)
     - save-spm-cache@1: {}
     meta:
       bitrise.io:
