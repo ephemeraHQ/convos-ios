@@ -59,6 +59,13 @@ workflows:
         - scheme: "$BITRISE_SCHEME_NSE"
         - configuration: "$BITRISE_BUILD_CONFIG"
         title: iOS Code Signing - NSE
+    - manage-ios-code-signing@2:
+        inputs:
+        - distribution_method: app-store
+        - scheme: "$BITRISE_SCHEME_APPCLIP"
+        - configuration: "$BITRISE_BUILD_CONFIG"
+        - verbose_log: 'yes'
+        title: iOS Code Signing - AppClip
     - xcode-archive@5:
         inputs:
         - project_path: "$BITRISE_PROJECT_PATH"
@@ -70,51 +77,13 @@ workflows:
         - automatic_code_signing: api-key
         - scheme: "$BITRISE_SCHEME"
         - configuration: "$BITRISE_BUILD_CONFIG"
-        - export_development_team: FY4NZR34Z3
-    - script@1:
-        title: Debug - Check Bundle ID in IPA
-        inputs:
-        - content: |
-            #!/usr/bin/env bash
-            set -e
-            set -x
-            
-            echo "🔍 Checking bundle ID in the generated IPA..."
-            
-            # Find the IPA file
-            IPA_PATH="${BITRISE_DEPLOY_DIR}/Convos.ipa"
-            if [ ! -f "$IPA_PATH" ]; then
-                IPA_PATH="${BITRISE_IPA_PATH}"
-            fi
-            
-            echo "IPA Path: $IPA_PATH"
-            
-            # Extract and check Info.plist
-            unzip -q "$IPA_PATH" -d /tmp/ipa_check
-            PLIST_PATH=$(find /tmp/ipa_check -name "Info.plist" -path "*/Convos.app/*" | head -1)
-            
-            if [ -n "$PLIST_PATH" ]; then
-                BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST_PATH")
-                echo "✅ Bundle ID in IPA: $BUNDLE_ID"
-                echo "📦 Expected for Dev: org.convos.ios-preview"
-                
-                # Clean up
-                rm -rf /tmp/ipa_check
-                
-                # Verify it matches expected
-                if [ "$BUNDLE_ID" != "org.convos.ios-preview" ]; then
-                    echo "⚠️  WARNING: Bundle ID mismatch!"
-                    echo "   Expected: org.convos.ios-preview"
-                    echo "   Got: $BUNDLE_ID"
-                fi
-            else
-                echo "❌ Could not find Info.plist in IPA"
-                exit 1
-            fi
-    - deploy-to-itunesconnect-application-loader@1:
+    - deploy-to-bitrise-io@2: {}
+    - deploy-to-itunesconnect-deliver@2:
         inputs:
         - connection: api_key
-        title: Deploy to App Store Connect (Dev)
+        - bundle_id: org.convos.ios-preview
+        - app_id: '6748622252'
+        title: Deploy to App Store Connect (org.convos.ios-preview)
     - save-spm-cache@1: {}
     meta:
       bitrise.io:
@@ -190,51 +159,13 @@ workflows:
         - automatic_code_signing: api-key
         - scheme: "$BITRISE_SCHEME"
         - configuration: "$BITRISE_BUILD_CONFIG"
-        - export_development_team: FY4NZR34Z3
-    - script@1:
-        title: Debug - Check Bundle ID in IPA
-        inputs:
-        - content: |
-            #!/usr/bin/env bash
-            set -e
-            set -x
-            
-            echo "🔍 Checking bundle ID in the generated IPA..."
-            
-            # Find the IPA file
-            IPA_PATH="${BITRISE_DEPLOY_DIR}/Convos.ipa"
-            if [ ! -f "$IPA_PATH" ]; then
-                IPA_PATH="${BITRISE_IPA_PATH}"
-            fi
-            
-            echo "IPA Path: $IPA_PATH"
-            
-            # Extract and check Info.plist
-            unzip -q "$IPA_PATH" -d /tmp/ipa_check
-            PLIST_PATH=$(find /tmp/ipa_check -name "Info.plist" -path "*/Convos.app/*" | head -1)
-            
-            if [ -n "$PLIST_PATH" ]; then
-                BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST_PATH")
-                echo "✅ Bundle ID in IPA: $BUNDLE_ID"
-                echo "📦 Expected for Prod: org.convos.ios"
-                
-                # Clean up
-                rm -rf /tmp/ipa_check
-                
-                # Verify it matches expected
-                if [ "$BUNDLE_ID" != "org.convos.ios" ]; then
-                    echo "⚠️  WARNING: Bundle ID mismatch!"
-                    echo "   Expected: org.convos.ios"
-                    echo "   Got: $BUNDLE_ID"
-                fi
-            else
-                echo "❌ Could not find Info.plist in IPA"
-                exit 1
-            fi
-    - deploy-to-itunesconnect-application-loader@1:
+    - deploy-to-bitrise-io@2: {}
+    - deploy-to-itunesconnect-deliver@2:
         inputs:
         - connection: api_key
-        title: Deploy to App Store Connect (Prod)
+        - bundle_id: org.convos.ios
+        - app_id: '6744776535'
+        title: Deploy to App Store Connect (org.convos.ios)
     - save-spm-cache@1: {}
     meta:
       bitrise.io:
