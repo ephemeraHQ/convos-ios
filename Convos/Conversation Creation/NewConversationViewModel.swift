@@ -58,9 +58,10 @@ class NewConversationViewModel: Identifiable {
         cancellables.removeAll()
         newConversationTask?.cancel()
         joinConversationTask?.cancel()
-        self.conversationViewModel = nil
+        conversationViewModel = nil
     }
 
+    @MainActor
     private func initializeAsyncDependencies() async throws {
         let messagingService = try await session.addInbox()
         self.messagingService = messagingService
@@ -69,17 +70,15 @@ class NewConversationViewModel: Identifiable {
         let draftConversation = try draftConversationComposer.draftConversationRepository.fetchConversation() ?? .empty(
             id: draftConversationComposer.draftConversationRepository.conversationId
         )
-        await MainActor.run {
-            self.conversationViewModel = .init(
-                conversation: draftConversation,
-                session: session,
-                draftConversationComposer: draftConversationComposer,
-                myProfileRepository: messagingService.myProfileRepository()
-            )
-            self.conversationViewModel?.untitledConversationPlaceholder = "New convo"
-            if showScannerOnAppear {
-                self.conversationViewModel?.showsInfoView = false
-            }
+        self.conversationViewModel = .init(
+            conversation: draftConversation,
+            session: session,
+            draftConversationComposer: draftConversationComposer,
+            myProfileRepository: messagingService.myProfileRepository()
+        )
+        self.conversationViewModel?.untitledConversationPlaceholder = "New convo"
+        if showScannerOnAppear {
+            self.conversationViewModel?.showsInfoView = false
         }
         if !showScannerOnAppear {
             try await draftConversationComposer.draftConversationWriter.createConversation()
@@ -130,11 +129,13 @@ class NewConversationViewModel: Identifiable {
                     try await draftConversationComposer?.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
                 } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
                     Logger.info("Invite already redeeemed, showing existing conversation...")
-                    presentingJoinConversationSheet = false
-                    delegate?.newConversationsViewModel(
-                        self,
-                        attemptedJoiningExistingConversationWithId: conversationId
-                    )
+                    await MainActor.run {
+                        self.presentingJoinConversationSheet = false
+                        self.delegate?.newConversationsViewModel(
+                            self,
+                            attemptedJoiningExistingConversationWithId: conversationId
+                        )
+                    }
                 }
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")

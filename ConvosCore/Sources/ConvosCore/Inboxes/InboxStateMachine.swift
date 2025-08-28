@@ -222,6 +222,7 @@ public actor InboxStateMachine {
             return
         }
 
+        Logger.info("Inbox not ready, waiting to register for push notifications...")
         // Wait for ready state
         for await state in stateSequence {
             switch state {
@@ -267,28 +268,37 @@ public actor InboxStateMachine {
     private func processAction(_ action: Action) async {
         do {
             switch (_state, action) {
-            case (.uninitialized, let .authorize(inboxId)),
-                (.error, let .authorize(inboxId)):
+            case (.uninitialized, let .authorize(inboxId)):
                 try await handleAuthorize(inboxId: inboxId)
-            case (.uninitialized, .register),
-                (.error, .register):
+            case (.error, let .authorize(inboxId)):
+                try handleStop()
+                try await handleAuthorize(inboxId: inboxId)
+
+            case (.uninitialized, .register):
                 try await handleRegister()
+            case (.error, .register):
+                try handleStop()
+                try await handleRegister()
+
             case (.initializing, let .clientInitialized(client)):
                 try await handleClientInitialized(client)
             case (.initializing, let .clientRegistered(client)):
                 try await handleClientRegistered(client)
+
             case (.authorizing, let .authorized(result)),
                 (.registering, let .authorized(result)):
                 try await handleAuthorized(
                     client: result.client,
                     apiClient: result.apiClient
                 )
+
             case (let .ready(result), .delete):
                 try await handleDelete(client: result.client, apiClient: result.apiClient)
             case (.error, .delete):
                 try await handleDeleteFromError()
             case (.ready, .stop), (.error, .stop), (.deleting, .stop):
                 try handleStop()
+
             case (.uninitialized, .stop):
                 break
             default:
@@ -304,6 +314,9 @@ public actor InboxStateMachine {
 
     private func handleAuthorize(inboxId: String) async throws {
         emitStateChange(.initializing)
+
+        Logger.info("Started authorization flow for inboxId: \(inboxId)")
+
         // keep the inbox id in case we need it for cleaning up after an error
         self.inboxId = inboxId
 
@@ -329,6 +342,7 @@ public actor InboxStateMachine {
 
     private func handleRegister() async throws {
         emitStateChange(.initializing)
+        Logger.info("Started registration flow...")
         let keys = try await identityStore.generateKeys()
         let client = try await createXmtpClient(
             signingKey: keys.signingKey,
@@ -352,8 +366,8 @@ public actor InboxStateMachine {
         Logger.info("Authorizing backend for registration...")
         let apiClient = try await authorizeConvosBackend(client: client)
         emitStateChange(.registering)
-        Logger.info("Creating identity in backend...")
-        _ = try await createUser(
+        Logger.info("Registering backend...")
+        _ = try await registerBackend(
             client: client,
             apiClient: apiClient
         )
@@ -362,6 +376,8 @@ public actor InboxStateMachine {
 
     private func handleAuthorized(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
         emitStateChange(.ready(.init(client: client, apiClient: apiClient)))
+
+        Logger.info("Authorized, state machine is ready.")
 
         // write the inbox when we're in the ready state so we have an inbox ID
         // in SessionManager's observation of inboxes
@@ -414,6 +430,7 @@ public actor InboxStateMachine {
         syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         removePushNotificationObservers()
+        inboxId = nil
         emitStateChange(.uninitialized)
     }
 
@@ -480,22 +497,20 @@ public actor InboxStateMachine {
         return apiClient
     }
 
-    // MARK: - User Creation
+    // MARK: - Backend Init
 
-    private func createUser(
+    private func registerBackend(
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol
-    ) async throws -> ConvosAPI.CreatedUserResponse {
-        let requestBody: ConvosAPI.CreateUserRequest = .init(
-            userId: UUID().uuidString, // @jarod remove this
-            userType: .onDevice,
+    ) async throws -> ConvosAPI.InitResponse {
+        let requestBody: ConvosAPI.InitRequest = .init(
             device: .current(),
             identity: .init(identityAddress: nil,
                             xmtpId: client.inboxId,
                             xmtpInstallationId: client.installationId),
             profile: .empty
         )
-        return try await apiClient.createUser(requestBody)
+        return try await apiClient.initWithBackend(requestBody)
     }
 }
 
@@ -516,6 +531,7 @@ extension InboxStateMachine {
 
     private func setupPushNotificationObservers() {
         guard pushTokenObserver == nil else { return }
+        Logger.info("Started observing for push token change...")
         // Observe future token changes
         pushTokenObserver = NotificationCenter.default.addObserver(
             forName: .convosPushTokenDidChange,
