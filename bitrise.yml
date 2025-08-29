@@ -76,13 +76,69 @@ workflows:
         - automatic_code_signing: api-key
         - scheme: "$BITRISE_SCHEME"
         - configuration: "$BITRISE_BUILD_CONFIG"
+    - script@1:
+        title: Read Release Notes from Git Tag
+        inputs:
+        - content: |
+            #!/bin/bash
+            set -e
+            set -o pipefail
+
+            # Get the version from Xcode project
+            VERSION=$(grep -o 'MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*;' Convos.xcodeproj/project.pbxproj | head -1 | sed 's/MARKETING_VERSION = \([0-9]*\.[0-9]*\.[0-9]*\);/\1/')
+
+            echo "🔍 Reading release notes from git tag: $VERSION"
+
+            # Check if the tag exists
+            if ! git tag -l | grep -q "^$VERSION$"; then
+              echo "❌ Git tag $VERSION not found"
+              echo "Make sure you've run the release workflow and the tag exists"
+              exit 1
+            fi
+
+            echo "✅ Git tag $VERSION found"
+
+            # Extract release notes from the tag message
+            TAG_MESSAGE=$(git show --no-patch --format=%B "$VERSION")
+
+            if [ -z "$TAG_MESSAGE" ]; then
+              echo "❌ No release notes found in tag $VERSION"
+              exit 1
+            fi
+
+            echo "✅ Release notes extracted from tag"
+
+            # Extract release notes from tag message (after "Release vX.X.X" line)
+            RELEASE_NOTES=$(echo "$TAG_MESSAGE" | sed -n '3,/^Generated:/p' | sed '$d')
+
+            # Display the notes
+            echo ""
+            echo "📝 Release Notes (for App Store):"
+            echo "=================================="
+            echo "$RELEASE_NOTES"
+
+            # Make notes available for App Store submission
+            envman add --key RELEASE_NOTES --value "$RELEASE_NOTES"
+
+            # Create App Store formatted version (clean text)
+            echo "$RELEASE_NOTES" > app-store-notes.txt
+
+            echo ""
+            echo "🎯 Release notes are now available as environment variable:"
+            echo "  - RELEASE_NOTES: For App Store submission"
+            echo "  - app-store-notes.txt: Clean text file for App Store"
+
+            echo ""
+            echo "🏷️ Source: Git tag $VERSION message"
+        outputs:
+          - RELEASE_NOTES
     - deploy-to-itunesconnect-deliver@2:
         inputs:
         - connection: api_key
         - bundle_id: org.convos.ios-preview
-        - app_id: '6748622252'
+        - release_notes: "$RELEASE_NOTES"
+        - whats_new: "$RELEASE_NOTES"
         title: Deploy to App Store Connect (org.convos.ios-preview)
-    - deploy-to-bitrise-io@2: {}
     - save-spm-cache@1: {}
     meta:
       bitrise.io:
@@ -158,13 +214,69 @@ workflows:
         - automatic_code_signing: api-key
         - scheme: "$BITRISE_SCHEME"
         - configuration: "$BITRISE_BUILD_CONFIG"
+    - script@1:
+        title: Read Release Notes from Git Tag
+        inputs:
+        - content: |
+            #!/bin/bash
+            set -e
+            set -o pipefail
+
+            # Get the version from Xcode project
+            VERSION=$(grep -o 'MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*;' Convos.xcodeproj/project.pbxproj | head -1 | sed 's/MARKETING_VERSION = \([0-9]*\.[0-9]*\.[0-9]*\);/\1/')
+
+            echo "🔍 Reading release notes from git tag: $VERSION"
+
+            # Check if the tag exists
+            if ! git tag -l | grep -q "^$VERSION$"; then
+              echo "❌ Git tag $VERSION not found"
+              echo "Make sure you've run the release workflow and the tag exists"
+              exit 1
+            fi
+
+            echo "✅ Git tag $VERSION found"
+
+            # Extract release notes from the tag message
+            TAG_MESSAGE=$(git show --no-patch --format=%B "$VERSION")
+
+            if [ -z "$TAG_MESSAGE" ]; then
+              echo "❌ No release notes found in tag $VERSION"
+              exit 1
+            fi
+
+            echo "✅ Release notes extracted from tag"
+
+            # Extract release notes from tag message (after "Release vX.X.X" line)
+            RELEASE_NOTES=$(echo "$TAG_MESSAGE" | sed -n '3,/^Generated:/p' | sed '$d')
+
+            # Display the notes
+            echo ""
+            echo "📝 Release Notes (for App Store):"
+            echo "=================================="
+            echo "$RELEASE_NOTES"
+
+            # Make notes available for App Store submission
+            envman add --key RELEASE_NOTES --value "$RELEASE_NOTES"
+
+            # Create App Store formatted version (clean text)
+            echo "$RELEASE_NOTES" > app-store-notes.txt
+
+            echo ""
+            echo "🎯 Release notes are now available as environment variable:"
+            echo "  - RELEASE_NOTES: For App Store submission"
+            echo "  - app-store-notes.txt: Clean text file for App Store"
+
+            echo ""
+            echo "🏷️ Source: Git tag $VERSION message"
+        outputs:
+          - RELEASE_NOTES
     - deploy-to-itunesconnect-deliver@2:
         inputs:
         - connection: api_key
         - bundle_id: org.convos.ios
-        - app_id: '6744776535'
+        - release_notes: "$RELEASE_NOTES"
+        - whats_new: "$RELEASE_NOTES"
         title: Deploy to App Store Connect (org.convos.ios)
-    - deploy-to-bitrise-io@2: {}
     - save-spm-cache@1: {}
     meta:
       bitrise.io:
