@@ -28,7 +28,7 @@ INFOPLIST_PREFIX_HEADER = $(SRCROOT)/Convos/Config/InfoPlistPrefix.Prod.h
 
 // Release-level build settings for App Store compliance
 // These ensure production builds are fully optimized
-SWIFT_OPTIMIZATION_LEVEL = "-O"
+SWIFT_OPTIMIZATION_LEVEL = -O
 SWIFT_COMPILATION_MODE = wholemodule
 ENABLE_NS_ASSERTIONS = NO
 ENABLE_TESTABILITY = NO

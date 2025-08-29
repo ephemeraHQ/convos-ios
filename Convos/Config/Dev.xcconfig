@@ -29,7 +29,7 @@ INFOPLIST_PREFIX_HEADER = $(SRCROOT)/Convos/Config/InfoPlistPrefix.Dev.h
 
 // Release-level build settings for App Store compliance (TestFlight)
 // These override the base configuration to ensure App Store-ready builds
-SWIFT_OPTIMIZATION_LEVEL = "-O"
+SWIFT_OPTIMIZATION_LEVEL = -O
 SWIFT_COMPILATION_MODE = wholemodule
 ENABLE_NS_ASSERTIONS = NO
 ENABLE_TESTABILITY = NO
