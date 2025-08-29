@@ -22,8 +22,7 @@ app:
       is_expand: false
 workflows:
   archive_and_export_dev:
-    summary: Create a dev build and upload it to App Store Connect for TestFlight
-      internal testing
+    summary: Create a dev build and upload it to App Store Connect for TestFlight internal testing
     steps:
     - git-clone@8: {}
     - restore-spm-cache@2: {}

@@ -23,5 +23,5 @@ bundle install
 
 # generate secrets from .env file if available
 if [ -f ".env" ]; then
-    ./Scripts/generate-secrets.sh
+    ./Scripts/generate-secrets-local.sh
 fi

@@ -1,15 +1,44 @@
 .PHONY: help
-help: ## Print help
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' \
-	$(MAKEFILE_LIST) | sort
+help: ## Print comprehensive help for all commands
+	@echo "🔧 Convos iOS Development Commands"
+	@echo "=================================="
+	@echo ""
+	@echo "🔑 Secrets Management:"
+	@echo "  make secrets        - Generate Secrets.swift for CI/CD"
+	@echo "  make secrets-local  - Generate Secrets.swift for local development"
+	@echo "  make mock-env       - Generate mock environment for PR builds"
+	@echo ""
+	@echo "📱 Version Management:"
+	@echo "  make version        - Show current version from Xcode project"
+	@echo ""
+	@echo "🔧 Setup & Maintenance:"
+	@echo "  make setup          - Setup development environment"
+	@echo "  make clean          - Clean generated files"
+	@echo "  make clean-all      - Clean all files and build artifacts"
+	@echo "  make status         - Show project status"
+	@echo ""
+	@echo "🌍 Environment Configuration:"
+	@echo "  • Local: org.convos.ios (local development, no CI)"
+	@echo "  • Dev: org.convos.ios-preview (TestFlight internal, CI: dev branch)"
+	@echo "  • Prod: org.convos.ios (App Store, CI: main branch)"
+	@echo ""
+	@echo "📋 Build Workflow:"
+	@echo "  • Local: Version from Xcode, Build always 1"
+	@echo "  • Dev: Version from Xcode, Build from BITRISE_BUILD_NUMBER"
+	@echo "  • Prod: Version from Xcode, Build from BITRISE_BUILD_NUMBER"
+	@echo ""
+	@echo "🔄 Release Process:"
+	@echo "  1. Feature branches → dev (merge on dev triggers a dev TestFlight build)"
+	@echo "  2. Manual PR: dev → main (triggers production build)"
+	@echo "  3. Main → App Store (after review and approval)"
 
 .PHONY: setup
 setup: ## Setup dependencies and developer environment
 	./Scripts/setup.sh
 
 .PHONY: secrets
-secrets: ## Generate Secrets.swift from .env
-	./Scripts/generate-secrets.sh
+secrets: ## Generate Secrets.swift from environment variables (CI/CD)
+	./Scripts/generate-secrets-secure.sh
 
 .PHONY: secrets-local
 secrets-local: ## Generate Secrets.swift with auto-detected local IP
@@ -19,33 +48,42 @@ secrets-local: ## Generate Secrets.swift with auto-detected local IP
 ensure-secrets: ## Ensure minimal Secrets.swift exists
 	./Scripts/generate-secrets-local.sh --ensure-only
 
-.PHONY: entitlements
-entitlements: ## Generate entitlements file from .env
-	./Scripts/generate_entitlements.sh
-
 .PHONY: mock-env
-mock-env: ## Generate a mock .env file for PR builds using Scripts/generate-mock-env.sh
+mock-env: ## Generate a mock .env file for PR builds
 	./Scripts/generate-mock-env.sh
 
-.PHONY: upload_symbols
-upload_symbols: ## Upload symbols to Sentry
-	# for local uploading, use like this: DSYM_DIR_PATH=/path/to/dSYM/dir make upload_symbols
-	./Scripts/upload_symbols.sh
+.PHONY: version
+version: ## Get current version from Xcode project
+	./Scripts/get-version.sh
 
-.PHONY: bump-version
-bump-version: ## Bump version number in Xcode project, resets build number to 1
-	./Scripts/bump-version.sh
+.PHONY: clean
+clean: ## Clean generated files
+	rm -f Convos/Config/Secrets.swift
+	rm -f Convos/Convos.entitlements
+	rm -f .env
 
-.PHONY: bump-build
-bump-build: ## Increment build number by 1 in Xcode project
-	./Scripts/bump-build.sh
+.PHONY: clean-all
+clean-all: ## Clean all generated files and build artifacts
+	rm -f Convos/Config/Secrets.swift
+	rm -f Convos/Convos.entitlements
+	rm -f .env
+	rm -rf build/
+	rm -rf DerivedData/
+	rm -rf *.xcarchive
+	rm -rf *.ipa
 
-.PHONY: release
-release: ## Create a release branch for a given version. pass env=production, etc.
-	./Scripts/release.sh ENV=$(env) post_slack=true
+.PHONY: status
+status: ## Show project status (version, secrets, git)
+	@echo "📱 Project Status"
+	@echo "=================="
+	@echo "Version: $(shell ./Scripts/get-version.sh)"
+	@echo "Build Numbers: �� Managed by Bitrise ($$BITRISE_BUILD_NUMBER)"
+	@echo "Secrets: $(shell if [ -f Convos/Config/Secrets.swift ]; then echo "✅ Generated"; else echo "❌ Missing"; fi)"
+	@echo "Git: $(shell git rev-parse --abbrev-ref HEAD) ($(shell git rev-parse --short HEAD))"
+	@echo "Environment: $(shell if [ -f .env ]; then echo "✅ .env exists"; else echo "❌ No .env"; fi)"
+	@echo ""
+	@echo "🌍 Current Environment:"
+	@echo "  • Local: org.convos.ios (local development, no CI)"
+	@echo "  • Dev: org.convos.ios-preview (TestFlight internal, CI: dev branch)"
+	@echo "  • Prod: org.convos.ios (App Store, CI: main branch)"
 
-.PHONY: slack_changelog
-slack_changelog: ## Post a changelog to Slack. Usage: make slack_changelog old=<SHA> new=<SHA> chosen_env=<ENV>
-	./Scripts/post-to-slack.sh old=$(old) new=$(new) chosen_env=$(chosen_env)
-
-.PHONY: secrets entitlements upload_symbols bump-version bump-build release slack_changelog
