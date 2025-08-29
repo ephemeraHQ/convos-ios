@@ -73,6 +73,13 @@ get_current_version() {
 update_xcode_version() {
     local new_version="$1"
     local project_file="Convos.xcodeproj/project.pbxproj"
+    local temp_file=""
+
+    if [ "$DRY_RUN" = true ]; then
+        print_status "DRY RUN: Would update version in Xcode project to $new_version..."
+        print_success "DRY RUN: Version update simulation completed ✓"
+        return 0
+    fi
 
     print_status "Updating version in Xcode project to $new_version..."
 
@@ -82,28 +89,61 @@ update_xcode_version() {
         exit 1
     fi
 
-    # Create backup
-    cp "$project_file" "${project_file}.backup"
-    print_status "Created backup: ${project_file}.backup"
-
-    # Update MARKETING_VERSION using sed
-    if sed -i '' "s/MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*;/MARKETING_VERSION = $new_version;/g" "$project_file"; then
-        print_success "Updated MARKETING_VERSION to $new_version ✓"
-    else
-        print_error "Failed to update MARKETING_VERSION"
-        # Restore backup
-        mv "${project_file}.backup" "$project_file"
+    # Create temporary file for atomic update
+    temp_file=$(mktemp "${project_file}.tmp.XXXXXXXXXX")
+    if [ ! -f "$temp_file" ]; then
+        print_error "Failed to create temporary file"
         exit 1
     fi
 
-    # Verify the update
-    local updated_count=$(grep -c "MARKETING_VERSION = $new_version;" "$project_file" || echo "0")
+    # Copy original to temp file
+    cp "$project_file" "$temp_file"
+
+    # Update MARKETING_VERSION using portable sed
+    local SED
+    if command -v gsed >/dev/null 2>&1; then
+        SED=gsed
+    else
+        SED=sed
+    fi
+
+    # Use appropriate in-place flag based on sed version
+    if "$SED" --version >/dev/null 2>&1; then
+        # GNU sed (Linux)
+        if "$SED" -i "s/MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*;/MARKETING_VERSION = $new_version;/g" "$temp_file"; then
+            print_success "Updated MARKETING_VERSION to $new_version ✓"
+        else
+            print_error "Failed to update MARKETING_VERSION"
+            rm -f "$temp_file"
+            exit 1
+        fi
+    else
+        # BSD sed (macOS)
+        if "$SED" -i '' "s/MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*;/MARKETING_VERSION = $new_version;/g" "$temp_file"; then
+            print_success "Updated MARKETING_VERSION to $new_version ✓"
+        else
+            print_error "Failed to update MARKETING_VERSION"
+            rm -f "$temp_file"
+            exit 1
+        fi
+    fi
+
+    # Verify the update in temp file
+    local updated_count=$(grep -c "MARKETING_VERSION = $new_version;" "$temp_file" || echo "0")
     if [ "$updated_count" -gt 0 ]; then
         print_success "Verified $updated_count MARKETING_VERSION entries updated ✓"
+
+        # Atomic move of temp file to original
+        if mv "$temp_file" "$project_file"; then
+            print_success "Version update completed successfully ✓"
+        else
+            print_error "Failed to apply version update"
+            rm -f "$temp_file"
+            exit 1
+        fi
     else
         print_error "Version update verification failed"
-        # Restore backup
-        mv "${project_file}.backup" "$project_file"
+        rm -f "$temp_file"
         exit 1
     fi
 }
@@ -111,6 +151,12 @@ update_xcode_version() {
 # Function to commit version update
 commit_version_update() {
     local new_version="$1"
+
+    if [ "$DRY_RUN" = true ]; then
+        print_status "DRY RUN: Would commit version update to $new_version..."
+        print_success "DRY RUN: Commit simulation completed ✓"
+        return 0
+    fi
 
     print_status "Committing version update to $new_version..."
 
@@ -136,9 +182,16 @@ commit_version_update() {
 create_and_push_tag() {
     local new_version="$1"
 
+    if [ "$DRY_RUN" = true ]; then
+        print_status "DRY RUN: Would create tag $new_version..."
+        print_status "DRY RUN: Would push tag $new_version to origin..."
+        print_success "DRY RUN: Tag creation simulation completed ✓"
+        return 0
+    fi
+
     print_status "Creating tag $new_version..."
 
-    # Create the tag
+    # Create the tag (lightweight - GitHub Actions will enhance it)
     if git tag "$new_version"; then
         print_success "Tag $new_version created ✓"
     else
@@ -159,6 +212,12 @@ create_and_push_tag() {
 
 # Function to push dev branch
 push_dev_branch() {
+    if [ "$DRY_RUN" = true ]; then
+        print_status "DRY RUN: Would push dev branch to origin..."
+        print_success "DRY RUN: Push simulation completed ✓"
+        return 0
+    fi
+
     print_status "Pushing dev branch to origin..."
 
     if git push origin dev; then
@@ -169,11 +228,41 @@ push_dev_branch() {
     fi
 }
 
+# Parse command line arguments
+DRY_RUN=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: $0 [--dry-run]"
+            echo "  --dry-run    Test the release workflow without making changes"
+            echo "  -h, --help   Show this help message"
+            exit 0
+            ;;
+        *)
+            print_error "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
 # Main execution
 main() {
-    echo "🚀 Convos iOS Release Tag Creator"
-    echo "=================================="
-    echo ""
+    if [ "$DRY_RUN" = true ]; then
+        echo "🔍 Convos iOS Release Tag Creator (DRY RUN MODE)"
+        echo "================================================"
+        echo ""
+        print_warning "DRY RUN MODE: No actual changes will be made!"
+        echo ""
+    else
+        echo "🚀 Convos iOS Release Tag Creator"
+        echo "=================================="
+        echo ""
+    fi
 
     # Check prerequisites
     check_dev_branch
@@ -196,13 +285,26 @@ main() {
 
     # Confirm action
     echo ""
-    print_warning "This will:"
-    echo "  1. Update version in Xcode project to $NEW_VERSION"
-    echo "  2. Commit the change to dev branch"
-    echo "  3. Create tag $NEW_VERSION"
-    echo "  4. Push both tag and dev branch to origin"
-    echo "  5. Trigger GitHub Actions to create release PR"
-    echo ""
+    if [ "$DRY_RUN" = true ]; then
+        print_warning "DRY RUN MODE - This will simulate:"
+        echo "  1. Update version in Xcode project to $NEW_VERSION"
+        echo "  2. Commit the change to dev branch"
+        echo "  3. Create tag $NEW_VERSION"
+        echo "  4. Push both tag and dev branch to origin"
+        echo "  5. Trigger GitHub Actions to create release PR"
+        echo ""
+        print_status "No actual changes will be made!"
+        echo ""
+    else
+        print_warning "This will:"
+        echo "  1. Update version in Xcode project to $NEW_VERSION"
+        echo "  2. Commit the change to dev branch"
+        echo "  3. Create tag $NEW_VERSION"
+        echo "  4. Push both tag and dev branch to origin"
+        echo "  5. Trigger GitHub Actions to create release PR"
+        echo ""
+    fi
+
     read -p "Continue? (y/N): " CONFIRM
 
     if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
@@ -215,19 +317,34 @@ main() {
     # Execute the release workflow
     update_xcode_version "$NEW_VERSION"
     commit_version_update "$NEW_VERSION"
+
+
+
     create_and_push_tag "$NEW_VERSION"
     push_dev_branch
 
     echo ""
-    print_success "🎉 Release tag $NEW_VERSION created successfully!"
-    echo ""
-    print_status "What happens next:"
-    echo "  • GitHub Actions will automatically trigger on the tag"
-    echo "  • A release PR will be created from dev → main"
-    echo "  • Review the PR and merge when ready"
-    echo "  • Bitrise will build and deploy to TestFlight"
-    echo ""
-    print_status "Check the Actions tab in GitHub for progress"
+    if [ "$DRY_RUN" = true ]; then
+        print_success "🔍 DRY RUN COMPLETED: Release workflow simulation finished!"
+        echo ""
+        print_status "What would happen next in a real run:"
+        echo "  • GitHub Actions would automatically trigger on the tag"
+        echo "  • A release PR would be created from dev → main"
+        echo "  • Review the PR and merge when ready"
+        echo "  • Bitrise would build and deploy to TestFlight"
+        echo ""
+        print_status "To perform the actual release, run: ./Scripts/create-release-tag.sh"
+    else
+        print_success "🎉 Release tag $NEW_VERSION created successfully!"
+        echo ""
+        print_status "What happens next:"
+        echo "  • GitHub Actions will automatically trigger on the tag"
+        echo "  • A release PR will be created from dev → main"
+        echo "  • Review the PR and merge when ready"
+        echo "  • Bitrise will build and deploy to TestFlight"
+        echo ""
+        print_status "Check the Actions tab in GitHub for progress"
+    fi
 }
 
 # Run main function

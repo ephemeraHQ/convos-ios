@@ -103,6 +103,16 @@ if ! command -v swiftformat &> /dev/null; then
     fi
 fi
 
+# Check and install GitHub CLI
+if ! command -v gh &> /dev/null; then
+    echo "Installing GitHub CLI..."
+    if ! brew install gh; then
+        echo "❌ Failed to install GitHub CLI. Please try installing manually:"
+        echo "  brew install gh"
+        exit 1
+    fi
+fi
+
 # Check Ruby version (require Ruby 3.3.3)
 RUBY_VERSION=$(ruby -v | awk '{print $2}' | cut -d'p' -f1)
 if [ "$RUBY_VERSION" != "3.3.3" ]; then

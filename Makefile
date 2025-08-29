@@ -10,6 +10,8 @@ help: ## Print comprehensive help for all commands
 	@echo ""
 	@echo "📱 Version Management:"
 	@echo "   make version        - Show current version from Xcode project"
+	@echo "   make dry-run-release - Test release workflow with confirmation"
+	@echo "   make dry-run-release-quick - Quick test without confirmation"
 	@echo "   make tag-release    - Create and push a release tag (triggers auto-PR with rebase merge)"
 	@echo ""
 	@echo "🔧 Setup & Maintenance:"
@@ -83,3 +85,20 @@ status: ## Show project status (version, secrets, git)
 .PHONY: tag-release
 tag-release: ## Create and push a release tag (triggers auto-PR creation)
 	./Scripts/create-release-tag.sh
+
+.PHONY: dry-run-release
+dry-run-release: ## Test release workflow without making changes (dry run)
+	@echo "🔍 DRY RUN MODE: Testing release workflow..."
+	@echo "This will show what would happen without making actual changes."
+	@echo ""
+	@echo "To proceed with a real release, use: make tag-release"
+	@echo ""
+	@read -p "Press Enter to continue with dry run, or Ctrl+C to cancel... "
+	./Scripts/create-release-tag.sh --dry-run
+
+.PHONY: dry-run-release-quick
+dry-run-release-quick: ## Quick dry run without user interaction
+	@echo "🔍 QUICK DRY RUN: Testing release workflow..."
+	@echo "This will simulate the release process without making changes."
+	@echo ""
+	./Scripts/create-release-tag.sh --dry-run
