@@ -13,8 +13,7 @@ help: ## Print comprehensive help for all commands
 	@echo ""
 	@echo "🔧 Setup & Maintenance:"
 	@echo "   make setup          - Setup development environment"
-	@echo "   make clean          - Clean generated files"
-	@echo "   make clean-all      - Clean all files and build artifacts"
+	@echo "   make clean          - Clean all generated files and build artifacts"
 	@echo "   make status         - Show project status"
 	@echo ""
 	@echo "🌐 Environment Configuration:"
@@ -38,13 +37,7 @@ setup: ## Setup dependencies and developer environment
 
 .PHONY: secrets
 secrets: ## Generate Secrets.swift (auto-detects environment)
-	@if [ -n "$$CI" ] || [ -n "$$BITRISE" ]; then \
-		echo "🔧 CI/CD environment detected, using secure secrets..."; \
-		./Scripts/generate-secrets-secure.sh; \
-	else \
-		echo "🏠 Local environment detected, using local secrets..."; \
-		./Scripts/generate-secrets-local.sh; \
-	fi
+	@if [ -n "$$CI" ] || [ -n "$$BITRISE" ]; then echo "🔧 CI/CD environment detected, using secure secrets..."; ./Scripts/generate-secrets-secure.sh; else echo "🏠 Local environment detected, using local secrets..."; ./Scripts/generate-secrets-local.sh; fi
 
 .PHONY: secrets-local
 secrets-local: ## Generate Secrets.swift with auto-detected local IP
@@ -65,14 +58,6 @@ version: ## Get current version from Xcode project
 .PHONY: clean
 clean: ## Clean generated files
 	rm -f Convos/Config/Secrets.swift
-	rm -f Convos/Convos.entitlements
-	rm -f .env
-
-.PHONY: clean-all
-clean-all: ## Clean all generated files and build artifacts
-	rm -f Convos/Config/Secrets.swift
-	rm -f Convos/Convos.entitlements
-	rm -f .env
 	rm -rf build/
 	rm -rf DerivedData/
 	rm -rf *.xcarchive
