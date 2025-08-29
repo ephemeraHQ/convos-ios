@@ -130,8 +130,6 @@ workflows:
 
             echo ""
             echo "🏷️ Source: Git tag $VERSION message"
-        outputs:
-          - RELEASE_NOTES
     - deploy-to-itunesconnect-deliver@2:
         inputs:
         - connection: api_key
@@ -268,8 +266,6 @@ workflows:
 
             echo ""
             echo "🏷️ Source: Git tag $VERSION message"
-        outputs:
-          - RELEASE_NOTES
     - deploy-to-itunesconnect-deliver@2:
         inputs:
         - connection: api_key
