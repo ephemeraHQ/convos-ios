@@ -8,6 +8,7 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   auto-release-pr:
@@ -20,7 +21,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -49,8 +50,23 @@ jobs:
           client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
 
           # Get commits since last tag
-          result = subprocess.run(['git', 'log', '--oneline', '--no-merges', 'HEAD~20..HEAD'],
-                                capture_output=True, text=True)
+          last_tag_result = subprocess.run(['git', 'describe', '--tags', '--abbrev=0'], capture_output=True, text=True)
+          if last_tag_result.returncode != 0:
+              print(f"❌ Failed to get last tag: {last_tag_result.stderr}")
+              exit(1)
+
+          last_tag = last_tag_result.stdout.strip()
+          if not last_tag:
+              print("❌ No previous tags found")
+              exit(1)
+
+          print(f"📝 Getting commits since last tag: {last_tag}")
+
+          result = subprocess.run(['git', 'log', '--oneline', '--no-merges', f'{last_tag}..HEAD'], capture_output=True, text=True)
+          if result.returncode != 0:
+              print(f"❌ Failed to get commits: {result.stderr}")
+              exit(1)
+
           commits = result.stdout.strip().split('\n')
 
           # Filter and categorize commits
@@ -99,7 +115,7 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
 
-      - name: Create annotated tag with release notes
+      - name: Create annotated tag with release notes (skip if exists)
         run: |
           # Create a simple tag message with release notes
           cat > tag-message.txt << EOF
@@ -110,20 +126,25 @@ jobs:
           Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
           EOF
 
-          # Create annotated tag with the message
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git tag -a "${{ steps.version.outputs.version }}" -F tag-message.txt
-
-          # Push the tag
-          git push origin "${{ steps.version.outputs.version }}"
+          # Skip if tag already exists (this workflow runs on tag push)
+          if git rev-parse -q --verify "refs/tags/${{ steps.version.outputs.version }}"; then
+            echo "Tag exists; skipping retag/push."
+          else
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git tag -a "${{ steps.version.outputs.version }}" -F tag-message.txt
+            git push origin "${{ steps.version.outputs.version }}"
+          fi
 
           echo "✅ Annotated tag created with short release notes"
 
       - name: Verify version in dev branch
         run: |
           # Verify that the version in dev branch matches the tag
-          current_version=$(grep -o 'MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*;' Convos.xcodeproj/project.pbxproj | head -1 | sed 's/MARKETING_VERSION = \([0-9]*\.[0-9]*\.[0-9]*\);/\1/')
+          git fetch --no-tags --prune origin dev
+          current_version=$(git show origin/dev:Convos.xcodeproj/project.pbxproj | \
+            grep -o 'MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*;' | head -1 | \
+            sed 's/MARKETING_VERSION = \([0-9]*\.[0-9]*\.[0-9]*\);/\1/')
           tag_version="${{ steps.version.outputs.version }}"
 
           if [ "$current_version" != "$tag_version" ]; then
@@ -141,7 +162,7 @@ jobs:
           git fetch origin dev
 
           # Check if dev is ahead of main
-          if git rev-list --count origin/main..origin/dev > /dev/null 2>&1; then
+          if [ $(git rev-list --count origin/main..origin/dev) -gt 0 ]; then
             echo "✅ Rebase merge is possible"
             echo "   Dev branch has new commits to bring to main"
           else
