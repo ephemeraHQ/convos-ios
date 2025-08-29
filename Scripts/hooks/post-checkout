@@ -18,10 +18,8 @@ cd "${git_root}" && git submodule update --init --recursive
 # Install gems via bundler
 bundle install
 
-# ensure secrets file exists (minimal version)
+# Ensure minimal Secrets.swift exists first (important for first-time setup)
 ./Scripts/generate-secrets-local.sh --ensure-only
 
-# generate secrets from .env file if available
-if [ -f ".env" ]; then
-    ./Scripts/generate-secrets-local.sh
-fi
+# Generate full secrets (smart detection: local vs CI)
+make secrets
