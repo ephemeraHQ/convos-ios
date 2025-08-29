@@ -10,6 +10,7 @@ help: ## Print comprehensive help for all commands
 	@echo ""
 	@echo "📱 Version Management:"
 	@echo "   make version        - Show current version from Xcode project"
+	@echo "   make tag-release    - Create and push a release tag (triggers auto-PR with rebase merge)"
 	@echo ""
 	@echo "🔧 Setup & Maintenance:"
 	@echo "   make setup          - Setup development environment"
@@ -28,8 +29,9 @@ help: ## Print comprehensive help for all commands
 	@echo ""
 	@echo "🔄 Release Process:"
 	@echo "   1. Feature branches → dev (merge on dev triggers a dev TestFlight build)"
-	@echo "   2. Manual PR: dev → main (triggers production build)"
-	@echo "   3. Main → App Store (after review and approval)"
+	@echo "   2. Create release: git tag 1.0.1 && git push origin 1.0.1 (auto-creates PR)"
+	@echo "   3. Review and merge PR: dev → main (rebase merge, linear history)"
+	@echo "   4. Main → App Store (after review and approval)"
 
 .PHONY: setup
 setup: ## Setup dependencies and developer environment
@@ -78,3 +80,6 @@ status: ## Show project status (version, secrets, git)
 	@echo "   • Dev: org.convos.ios-preview (TestFlight internal, CI: dev branch)"
 	@echo "   • Prod: org.convos.ios (App Store, CI: main branch)"
 
+.PHONY: tag-release
+tag-release: ## Create and push a release tag (triggers auto-PR creation)
+	./Scripts/create-release-tag.sh

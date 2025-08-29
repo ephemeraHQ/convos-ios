@@ -1,0 +1,211 @@
+name: Auto Create Release PR
+
+on:
+  push:
+    tags:
+      - '*.*.*'  # Triggers on semantic version tags (with or without v)
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+jobs:
+  auto-release-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install anthropic
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          # Remove 'v' prefix if present (handles both v1.0.1 and 1.0.1)
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Generate short release notes
+        id: release-notes
+        run: |
+          python3 -c "
+          import anthropic
+          import os
+          import subprocess
+
+          # Setup Anthropic Claude
+          client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
+
+          # Get commits since last tag
+          result = subprocess.run(['git', 'log', '--oneline', '--no-merges', 'HEAD~20..HEAD'],
+                                capture_output=True, text=True)
+          commits = result.stdout.strip().split('\n')
+
+          # Filter and categorize commits
+          features = []
+          bugfixes = []
+
+          for commit in commits:
+              if commit:
+                  msg = commit.split(' ', 1)[1] if ' ' in commit else commit
+                  if msg.startswith('feat:') or msg.startswith('✨'):
+                      features.append(msg)
+                  elif msg.startswith('fix:') or msg.startswith('🐛'):
+                      bugfixes.append(msg)
+
+          # Generate short, customer-friendly release notes
+          prompt = f'''Generate SHORT, customer-friendly release notes for iOS app version {os.environ['VERSION']}.
+
+          Key changes:
+          Features: {features[:3]}  # Top 3 features only
+          Bugfixes: {bugfixes[:2]}  # Top 2 bugfixes only
+
+          Requirements:
+          - MAXIMUM 5 bullet points total
+          - Use warm, friendly language
+          - Focus on user benefits
+          - Keep each point under 15 words
+          - No technical jargon
+
+          Format as simple bullet points, no headers or markdown.'''
+
+          response = client.messages.create(
+              model='claude-4',
+              max_tokens=200,
+              temperature=0.8,
+              messages=[{'role': 'user', 'content': prompt}]
+          )
+
+          release_notes = response.content[0].text.strip()
+
+          # Save to file
+          with open('release-notes.txt', 'w') as f:
+              f.write(release_notes)
+
+          print('Short release notes generated successfully!')
+          "
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Create annotated tag with release notes
+        run: |
+          # Create a simple tag message with release notes
+          cat > tag-message.txt << EOF
+          Release v${{ steps.version.outputs.version }}
+
+          $(cat release-notes.txt)
+
+          Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          EOF
+
+          # Create annotated tag with the message
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a "${{ steps.version.outputs.version }}" -F tag-message.txt
+
+          # Push the tag
+          git push origin "${{ steps.version.outputs.version }}"
+
+          echo "✅ Annotated tag created with short release notes"
+
+      - name: Verify version in dev branch
+        run: |
+          # Verify that the version in dev branch matches the tag
+          current_version=$(grep -o 'MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*;' Convos.xcodeproj/project.pbxproj | head -1 | sed 's/MARKETING_VERSION = \([0-9]*\.[0-9]*\.[0-9]*\);/\1/')
+          tag_version="${{ steps.version.outputs.version }}"
+
+          if [ "$current_version" != "$tag_version" ]; then
+            echo "❌ Version mismatch: dev branch has $current_version, but tag is $tag_version"
+            echo "This suggests the version wasn't properly updated in dev branch before tagging"
+            exit 1
+          fi
+
+          echo "✅ Version verified: dev branch has $current_version, tag is $tag_version"
+
+      - name: Verify rebase merge compatibility
+        run: |
+          # Check if dev has commits that main doesn't have
+          git fetch origin main
+          git fetch origin dev
+
+          # Check if dev is ahead of main
+          if git rev-list --count origin/main..origin/dev > /dev/null 2>&1; then
+            echo "✅ Rebase merge is possible"
+            echo "   Dev branch has new commits to bring to main"
+          else
+            echo "❌ No new commits to merge"
+            echo "   Dev branch is already up to date with main"
+            exit 1
+          fi
+
+      - name: Create Pull Request
+        id: create-pr
+        run: |
+          python3 -c "
+          import os
+          import subprocess
+
+          # Read release notes
+          with open('release-notes.txt', 'r') as f:
+              release_notes = f.read()
+
+          # Create PR description
+          pr_body = f'''# 🚀 Release v{os.environ['VERSION']}
+
+          {release_notes}
+
+          ---
+          *Generated automatically by GitHub Actions*'''
+
+          # Create PR using GitHub CLI
+          pr_result = subprocess.run([
+              'gh', 'pr', 'create',
+              '--title', f'Release v{os.environ[\"VERSION\"]}',
+              '--body', pr_body,
+              '--base', 'main',
+              '--head', 'dev',
+              '--label', 'release',
+              '--label', 'production'
+          ], capture_output=True, text=True)
+
+          if pr_result.returncode == 0:
+              print('✅ Pull Request created successfully!')
+              print(pr_result.stdout)
+          else:
+              print('❌ Failed to create PR:')
+              print(pr_result.stderr)
+              exit(1)
+          "
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+
+
+
+      - name: Output summary
+        run: |
+          echo "🎉 Auto-release PR workflow completed!"
+          echo "Version: ${{ steps.version.outputs.version }}"
+          echo "Version updated in dev branch"
+          echo "Pull Request: Created from dev to main"
+          echo ""
+          echo "📝 Short release notes generated and stored in git tag:"
+          echo "  - release-notes.txt (short, customer-friendly notes)"
+          echo "  - git tag message (accessible to Bitrise)"
+          echo ""
+          echo "🚀 Next steps:"
+          echo "1. Review the generated PR"
+          echo "2. Use 'Rebase and merge' button (linear history)"
+          echo "3. Bitrise will build and deploy automatically"
+          echo "4. Bitrise can read release notes from git tag"
