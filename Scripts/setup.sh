@@ -103,14 +103,33 @@ if ! command -v swiftformat &> /dev/null; then
     fi
 fi
 
-# Check and install GitHub CLI
-if ! command -v gh &> /dev/null; then
-    echo "Installing GitHub CLI..."
-    if ! brew install gh; then
-        echo "❌ Failed to install GitHub CLI. Please try installing manually:"
-        echo "  brew install gh"
-        exit 1
+# Check and install GitHub CLI (skip installing in CI)
+if [ ! "${CI}" = true ]; then
+    if ! command -v gh >/dev/null 2>&1; then
+        echo "Installing GitHub CLI..."
+        if ! brew install gh; then
+            echo "❌ Failed to install GitHub CLI. Please try installing manually:"
+            echo "  brew install gh"
+            exit 1
+        fi
     fi
+    # Verify gh is working
+    if ! gh --version >/dev/null 2>&1; then
+        echo "⚠️ gh installed but not working properly"
+        echo "Try reinstalling: brew uninstall gh && brew install gh"
+    else
+        echo "✅ GitHub CLI is working"
+        # Check authentication status
+        if ! gh auth status >/dev/null 2>&1; then
+            echo "ℹ️ GitHub CLI is not authenticated"
+            echo "Run: gh auth login (to enable release automation)"
+            echo "Or set GITHUB_TOKEN environment variable"
+        else
+            echo "✅ GitHub CLI is authenticated"
+        fi
+    fi
+else
+    echo "ℹ️ CI environment detected - GitHub CLI should be pre-installed in CI image"
 fi
 
 # Check Ruby version (require Ruby 3.3.3)

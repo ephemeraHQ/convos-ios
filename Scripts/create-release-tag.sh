@@ -283,6 +283,15 @@ main() {
         exit 1
     fi
 
+    # Enforce monotonic bump when current version is known
+    if [ "$current_version" != "unknown" ]; then
+        if [ "$(printf '%s\n%s\n' "$current_version" "$NEW_VERSION" | sort -V | tail -1)" != "$NEW_VERSION" ]; then
+            print_error "New version ($NEW_VERSION) must be greater than current ($current_version)"
+            exit 1
+        fi
+        print_success "Version bump validation passed ✓"
+    fi
+
     # Confirm action
     echo ""
     if [ "$DRY_RUN" = true ]; then
