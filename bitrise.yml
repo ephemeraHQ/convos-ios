@@ -22,7 +22,8 @@ app:
       is_expand: false
 workflows:
   archive_and_export_dev:
-    summary: Create a dev build and upload it to App Store Connect for TestFlight internal testing
+    summary: Create a dev build and upload it to App Store Connect for TestFlight
+      internal testing
     steps:
     - git-clone@8: {}
     - restore-spm-cache@2: {}
@@ -79,57 +80,98 @@ workflows:
     - script@1:
         title: Read Release Notes from Git Tag
         inputs:
-        - content: |
-            #!/bin/bash
+        - content: "#!/bin/bash
+
             set -e
+
             set -o pipefail
 
-            # Get the version from Xcode project
-            VERSION=$(grep -o 'MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*;' Convos.xcodeproj/project.pbxproj | head -1 | sed 's/MARKETING_VERSION = \([0-9]*\.[0-9]*\.[0-9]*\);/\1/')
 
-            echo "🔍 Reading release notes from git tag: $VERSION"
+            # Get the version from Xcode project
+
+            VERSION=$(grep -o 'MARKETING_VERSION = [0-9]*\\.[0-9]*\\.[0-9]*;'
+            Convos.xcodeproj/project.pbxproj | head -1 | sed
+            's/MARKETING_VERSION = \\([0-9]*\\.[0-9]*\\.[0-9]*\\);/\\1/')
+
+
+            echo \"🔍 Reading release notes from git tag: $VERSION\"
+
 
             # Check if the tag exists
-            if ! git tag -l | grep -q "^$VERSION$"; then
-              echo "❌ Git tag $VERSION not found"
-              echo "Make sure you've run the release workflow and the tag exists"
-              exit 1
+
+            if ! git tag -l | grep -q \"^$VERSION$\"; then
+
+            \  echo \"❌ Git tag $VERSION not found\"
+
+            \  echo \"Make sure you've run the release workflow and the tag
+            exists\"
+
+            \  exit 1
+
             fi
 
-            echo "✅ Git tag $VERSION found"
+
+            echo \"✅ Git tag $VERSION found\"
+
 
             # Extract release notes from the tag message
-            TAG_MESSAGE=$(git show --no-patch --format=%B "$VERSION")
 
-            if [ -z "$TAG_MESSAGE" ]; then
-              echo "❌ No release notes found in tag $VERSION"
-              exit 1
+            TAG_MESSAGE=$(git show --no-patch --format=%B \"$VERSION\")
+
+
+            if [ -z \"$TAG_MESSAGE\" ]; then
+
+            \  echo \"❌ No release notes found in tag $VERSION\"
+
+            \  exit 1
+
             fi
 
-            echo "✅ Release notes extracted from tag"
 
-            # Extract release notes from tag message (after "Release vX.X.X" line)
-            RELEASE_NOTES=$(echo "$TAG_MESSAGE" | sed -n '3,/^Generated:/p' | sed '$d')
+            echo \"✅ Release notes extracted from tag\"
+
+
+            # Extract release notes from tag message (after \"Release vX.X.X\"
+            line)
+
+            RELEASE_NOTES=$(echo \"$TAG_MESSAGE\" | sed -n '3,/^Generated:/p' |
+            sed '$d')
+
 
             # Display the notes
-            echo ""
-            echo "📝 Release Notes (for App Store):"
-            echo "=================================="
-            echo "$RELEASE_NOTES"
+
+            echo \"\"
+
+            echo \"📝 Release Notes (for App Store):\"
+
+            echo \"==================================\"
+
+            echo \"$RELEASE_NOTES\"
+
 
             # Make notes available for App Store submission
-            envman add --key RELEASE_NOTES --value "$RELEASE_NOTES"
+
+            envman add --key RELEASE_NOTES --value \"$RELEASE_NOTES\"
+
 
             # Create App Store formatted version (clean text)
-            echo "$RELEASE_NOTES" > app-store-notes.txt
 
-            echo ""
-            echo "🎯 Release notes are now available as environment variable:"
-            echo "  - RELEASE_NOTES: For App Store submission"
-            echo "  - app-store-notes.txt: Clean text file for App Store"
+            echo \"$RELEASE_NOTES\" > app-store-notes.txt
 
-            echo ""
-            echo "🏷️ Source: Git tag $VERSION message"
+
+            echo \"\"
+
+            echo \"🎯 Release notes are now available as environment variable:\"
+
+            echo \"  - RELEASE_NOTES: For App Store submission\"
+
+            echo \"  - app-store-notes.txt: Clean text file for App Store\"
+
+
+            echo \"\"
+
+            echo \"🏷️ Source: Git tag $VERSION message\"\n"
+        is_skippable: true
     - deploy-to-itunesconnect-deliver@2:
         inputs:
         - connection: api_key
@@ -215,57 +257,98 @@ workflows:
     - script@1:
         title: Read Release Notes from Git Tag
         inputs:
-        - content: |
-            #!/bin/bash
+        - content: "#!/bin/bash
+
             set -e
+
             set -o pipefail
 
-            # Get the version from Xcode project
-            VERSION=$(grep -o 'MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*;' Convos.xcodeproj/project.pbxproj | head -1 | sed 's/MARKETING_VERSION = \([0-9]*\.[0-9]*\.[0-9]*\);/\1/')
 
-            echo "🔍 Reading release notes from git tag: $VERSION"
+            # Get the version from Xcode project
+
+            VERSION=$(grep -o 'MARKETING_VERSION = [0-9]*\\.[0-9]*\\.[0-9]*;'
+            Convos.xcodeproj/project.pbxproj | head -1 | sed
+            's/MARKETING_VERSION = \\([0-9]*\\.[0-9]*\\.[0-9]*\\);/\\1/')
+
+
+            echo \"🔍 Reading release notes from git tag: $VERSION\"
+
 
             # Check if the tag exists
-            if ! git tag -l | grep -q "^$VERSION$"; then
-              echo "❌ Git tag $VERSION not found"
-              echo "Make sure you've run the release workflow and the tag exists"
-              exit 1
+
+            if ! git tag -l | grep -q \"^$VERSION$\"; then
+
+            \  echo \"❌ Git tag $VERSION not found\"
+
+            \  echo \"Make sure you've run the release workflow and the tag
+            exists\"
+
+            \  exit 1
+
             fi
 
-            echo "✅ Git tag $VERSION found"
+
+            echo \"✅ Git tag $VERSION found\"
+
 
             # Extract release notes from the tag message
-            TAG_MESSAGE=$(git show --no-patch --format=%B "$VERSION")
 
-            if [ -z "$TAG_MESSAGE" ]; then
-              echo "❌ No release notes found in tag $VERSION"
-              exit 1
+            TAG_MESSAGE=$(git show --no-patch --format=%B \"$VERSION\")
+
+
+            if [ -z \"$TAG_MESSAGE\" ]; then
+
+            \  echo \"❌ No release notes found in tag $VERSION\"
+
+            \  exit 1
+
             fi
 
-            echo "✅ Release notes extracted from tag"
 
-            # Extract release notes from tag message (after "Release vX.X.X" line)
-            RELEASE_NOTES=$(echo "$TAG_MESSAGE" | sed -n '3,/^Generated:/p' | sed '$d')
+            echo \"✅ Release notes extracted from tag\"
+
+
+            # Extract release notes from tag message (after \"Release vX.X.X\"
+            line)
+
+            RELEASE_NOTES=$(echo \"$TAG_MESSAGE\" | sed -n '3,/^Generated:/p' |
+            sed '$d')
+
 
             # Display the notes
-            echo ""
-            echo "📝 Release Notes (for App Store):"
-            echo "=================================="
-            echo "$RELEASE_NOTES"
+
+            echo \"\"
+
+            echo \"📝 Release Notes (for App Store):\"
+
+            echo \"==================================\"
+
+            echo \"$RELEASE_NOTES\"
+
 
             # Make notes available for App Store submission
-            envman add --key RELEASE_NOTES --value "$RELEASE_NOTES"
+
+            envman add --key RELEASE_NOTES --value \"$RELEASE_NOTES\"
+
 
             # Create App Store formatted version (clean text)
-            echo "$RELEASE_NOTES" > app-store-notes.txt
 
-            echo ""
-            echo "🎯 Release notes are now available as environment variable:"
-            echo "  - RELEASE_NOTES: For App Store submission"
-            echo "  - app-store-notes.txt: Clean text file for App Store"
+            echo \"$RELEASE_NOTES\" > app-store-notes.txt
 
-            echo ""
-            echo "🏷️ Source: Git tag $VERSION message"
+
+            echo \"\"
+
+            echo \"🎯 Release notes are now available as environment variable:\"
+
+            echo \"  - RELEASE_NOTES: For App Store submission\"
+
+            echo \"  - app-store-notes.txt: Clean text file for App Store\"
+
+
+            echo \"\"
+
+            echo \"🏷️ Source: Git tag $VERSION message\"\n"
+        is_skippable: true
     - deploy-to-itunesconnect-deliver@2:
         inputs:
         - connection: api_key
