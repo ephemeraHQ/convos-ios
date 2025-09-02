@@ -4,9 +4,15 @@ set -e
 set -o pipefail
 
 # Get the version from Xcode project
-VERSION=$(grep -o 'MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*;' Convos.xcodeproj/project.pbxproj | head -1 | sed 's/MARKETING_VERSION = \([0-9]*\.[0-9]*\.[0-9]*\);/\1/')
+VERSION=$(grep -o 'MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*;' Convos.xcodeproj/project.pbxproj | head -1 | sed 's/MARKETING_VERSION = \([0-9]*\.[0-9]*\.[0-9]*\);/\1/' || echo "")
 
-echo "🔍 Reading release notes for version: $VERSION"
+# Check if VERSION extraction failed and provide fallback
+if [ -z "$VERSION" ]; then
+    VERSION="0.0.0"
+    echo "⚠️ Failed to extract version from Xcode project, using fallback: $VERSION"
+else
+    echo "🔍 Reading release notes for version: $VERSION"
+fi
 
 # Try to get release notes from GitHub Release
 if command -v gh &> /dev/null; then

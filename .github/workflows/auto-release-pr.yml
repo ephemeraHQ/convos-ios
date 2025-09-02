@@ -13,7 +13,7 @@ jobs:
   auto-release-pr:
     runs-on: ubuntu-latest
     permissions:
-      contents: read        # Read repository contents and tags
+      contents: write       # Read/write repository contents, tags, and releases
       pull-requests: write  # Create pull requests
     steps:
       - name: Checkout code
@@ -41,24 +41,24 @@ jobs:
       - name: Generate short release notes
         id: release-notes
         run: |
-          python3 -c "
+          python3 -c '
           import anthropic
           import os
           import subprocess
 
           # Setup Anthropic Claude
-          client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
+          client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
           # Get current tag from the trigger event
-          current_tag = os.environ['GITHUB_REF'].replace('refs/tags/', '')
+          current_tag = os.environ["GITHUB_REF"].replace("refs/tags/", "")
 
           # Get the previous tag (the one before current)
-          tags_result = subprocess.run(['git', 'tag', '--sort=-version:refname'], capture_output=True, text=True)
+          tags_result = subprocess.run(["git", "tag", "--sort=-version:refname"], capture_output=True, text=True)
           if tags_result.returncode != 0:
-              print(f"❌ Failed to get tags: {tags_result.stderr}")
+              print(f"Failed to get tags: {tags_result.stderr}")
               exit(1)
 
-          tags = tags_result.stdout.strip().split('\n')
+          tags = tags_result.stdout.strip().split("\n")
           previous_tag = None
 
           # Find the tag before the current one
@@ -68,21 +68,21 @@ jobs:
                   break
 
           if previous_tag:
-              print(f"📝 Getting commits between {previous_tag} and {current_tag}")
-              result = subprocess.run(['git', 'log', '--oneline', '--no-merges', f'{previous_tag}..{current_tag}'], capture_output=True, text=True)
+              print(f"Getting commits between {previous_tag} and {current_tag}")
+              result = subprocess.run(["git", "log", "--oneline", "--no-merges", f"{previous_tag}..{current_tag}"], capture_output=True, text=True)
           else:
-              print(f"📝 First release - getting all commits up to {current_tag}")
-              result = subprocess.run(['git', 'log', '--oneline', '--no-merges', current_tag], capture_output=True, text=True)
+              print(f"First release - getting all commits up to {current_tag}")
+              result = subprocess.run(["git", "log", "--oneline", "--no-merges", current_tag], capture_output=True, text=True)
           if result.returncode != 0:
-              print(f"❌ Failed to get commits: {result.stderr}")
+              print(f"Failed to get commits: {result.stderr}")
               exit(1)
 
-          commits = result.stdout.strip().split('\n')
+          commits = result.stdout.strip().split("\n")
 
           # Handle empty commit list
           if not commits or (len(commits) == 1 and not commits[0]):
-              print('⚠️ No commits found in range, using generic message')
-              commits = ['General improvements and updates']
+              print("No commits found in range, using generic message")
+              commits = ["General improvements and updates"]
 
           # Filter and categorize commits
           features = []
@@ -91,64 +91,48 @@ jobs:
 
           for commit in commits:
               if commit:
-                  msg = commit.split(' ', 1)[1] if ' ' in commit else commit
-                  if msg.startswith('feat') or msg.startswith('✨'):
+                  msg = commit.split(" ", 1)[1] if " " in commit else commit
+                  if msg.startswith("feat"):
                       features.append(msg)
-                  elif msg.startswith('fix') or msg.startswith('🐛'):
+                  elif msg.startswith("fix"):
                       bugfixes.append(msg)
                   else:
                       other_changes.append(msg)
 
           # Generate short, customer-friendly release notes
-          prompt = f'''Generate SHORT, customer-friendly release notes for iOS app version {os.environ['VERSION']}.
-
-          Key changes:
-          Features: {features[:3] if features else []}  # Top 3 features only
-          Bugfixes: {bugfixes[:2] if bugfixes else []}  # Top 2 bugfixes only
-          Other: {other_changes[:2] if other_changes and not features and not bugfixes else []}  # Only if no features/bugfixes
-
-          Requirements:
-          - MAXIMUM 5 bullet points total
-          - Use warm, friendly language
-          - Focus on user benefits
-          - Keep each point under 15 words
-          - No technical jargon
-
-          Format as simple bullet points, no headers or markdown.'''
+          version = os.environ["VERSION"]
+          prompt = f"Generate SHORT, customer-friendly release notes for iOS app version {version}. Key changes: Features: {features[:3] if features else []}, Bugfixes: {bugfixes[:2] if bugfixes else []}, Other: {other_changes[:2] if other_changes and not features and not bugfixes else []}. Requirements: MAXIMUM 5 bullet points total, use warm friendly language, focus on user benefits, keep each point under 15 words, no technical jargon. Format as simple bullet points, no headers or markdown."
 
           try:
               response = client.messages.create(
-                  model='claude-3-5-sonnet-20241022',
+                  model="claude-3-5-sonnet-20241022",
                   max_tokens=200,
                   temperature=0.8,
-                  messages=[{'role': 'user', 'content': prompt}]
+                  messages=[{"role": "user", "content": prompt}]
               )
 
               release_notes = response.content[0].text.strip()
 
           except Exception as e:
-              print(f'⚠️ Claude API failed: {e}')
-              print('Using fallback release notes...')
+              print(f"Claude API failed: {e}")
+              print("Using fallback release notes...")
 
               # Fallback release notes if API fails
-              release_notes = f'''Version {os.environ['VERSION']}
-              • Bug fixes and performance improvements
-              • Enhanced user experience
-              • Updated for latest iOS compatibility'''
+              release_notes = f"Version {version}\n- Bug fixes and performance improvements\n- Enhanced user experience\n- Updated for latest iOS compatibility"
 
           # Save to file
-          with open('release-notes.txt', 'w') as f:
+          with open("release-notes.txt", "w") as f:
               f.write(release_notes)
 
-          print('Release notes saved successfully!')
-          "
+          print("Release notes saved successfully!")
+          '
         env:
           VERSION: ${{ steps.version.outputs.version }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Store release notes for later use
         run: |
-          echo "✅ Release notes generated and stored in release-notes.txt"
+          echo "Release notes generated and stored in release-notes.txt"
           echo "These will be used in the PR description and GitHub Release"
 
       - name: Create GitHub Release
@@ -158,19 +142,19 @@ jobs:
 
           # Check if release already exists
           if gh release view "$VERSION" > /dev/null 2>&1; then
-            echo "ℹ️ Release $VERSION already exists, updating it..."
+            echo "Release $VERSION already exists, updating it..."
             gh release edit "$VERSION" \
               --title "Release $VERSION" \
               --notes "$RELEASE_NOTES"
           else
-            echo "📝 Creating GitHub Release $VERSION..."
+            echo "Creating GitHub Release $VERSION..."
             gh release create "$VERSION" \
               --title "Release $VERSION" \
               --notes "$RELEASE_NOTES" \
               --target "$GITHUB_SHA"
           fi
 
-          echo "✅ GitHub Release created/updated with release notes"
+          echo "GitHub Release created/updated with release notes"
           echo "   Bitrise will read from: https://github.com/${{ github.repository }}/releases/tag/$VERSION"
 
       - name: Verify version in dev branch
@@ -183,12 +167,12 @@ jobs:
           tag_version="${{ steps.version.outputs.version }}"
 
           if [ "$current_version" != "$tag_version" ]; then
-            echo "❌ Version mismatch: dev branch has $current_version, but tag is $tag_version"
+            echo "Version mismatch: dev branch has $current_version, but tag is $tag_version"
             echo "This suggests the version wasn't properly updated in dev branch before tagging"
             exit 1
           fi
 
-          echo "✅ Version verified: dev branch has $current_version, tag is $tag_version"
+          echo "Version verified: dev branch has $current_version, tag is $tag_version"
 
       - name: Verify rebase merge compatibility
         run: |
@@ -198,10 +182,10 @@ jobs:
 
           # Check if dev is ahead of main
           if [ $(git rev-list --count origin/main..origin/dev) -gt 0 ]; then
-            echo "✅ Rebase merge is possible"
+            echo "Rebase merge is possible"
             echo "   Dev branch has new commits to bring to main"
           else
-            echo "❌ No new commits to merge"
+            echo "No new commits to merge"
             echo "   Dev branch is already up to date with main"
             exit 1
           fi
@@ -209,58 +193,52 @@ jobs:
       - name: Create Pull Request
         id: create-pr
         run: |
-          python3 -c "
+          python3 -c '
           import os
           import subprocess
 
           # Read release notes
-          with open('release-notes.txt', 'r') as f:
+          with open("release-notes.txt", "r") as f:
               release_notes = f.read()
 
           # Create PR description
-          pr_body = f'''# 📦 Release {os.environ['VERSION']}
-
-          {release_notes}
-
-          ---
-          *Generated automatically by GitHub Actions*'''
+          version = os.environ["VERSION"]
+          pr_body = f"# Release {version}\n\n{release_notes}\n\n---\n*Generated automatically by GitHub Actions*"
 
           # Check if PR already exists
           pr_check = subprocess.run(
-              ['gh', 'pr', 'list', '--base', 'main', '--head', 'dev', '--state', 'open', '--json', 'number'],
+              ["gh", "pr", "list", "--base", "main", "--head", "dev", "--state", "open", "--json", "number"],
               capture_output=True, text=True
           )
 
-          if pr_check.returncode == 0 and pr_check.stdout.strip() != '[]':
-              print('ℹ️ PR from dev to main already exists; skipping creation.')
+          if pr_check.returncode == 0 and pr_check.stdout.strip() != "[]":
+              print("PR from dev to main already exists; skipping creation.")
               print(pr_check.stdout)
               exit(0)
 
           # Create PR using GitHub CLI
           pr_result = subprocess.run([
-              'gh', 'pr', 'create',
-              '--title', f'Release {os.environ[\"VERSION\"]}',
-              '--body', pr_body,
-              '--base', 'main',
-              '--head', 'dev',
-              '--label', 'release',
-              '--label', 'production'
+              "gh", "pr", "create",
+              "--title", f"Release {version}",
+              "--body", pr_body,
+              "--base", "main",
+              "--head", "dev"
           ], capture_output=True, text=True)
 
           if pr_result.returncode == 0:
-              print('✅ Pull Request created successfully!')
+              print("Pull Request created successfully!")
               print(pr_result.stdout)
           else:
-              print('❌ Failed to create PR:')
+              print("Failed to create PR:")
               print(pr_result.stderr)
               exit(1)
-          "
+          '
         env:
           VERSION: ${{ steps.version.outputs.version }}
 
       - name: Output summary
         run: |
-          echo "🎉 Auto-release PR workflow completed!"
+          echo "Auto-release PR workflow completed!"
           echo "Version: ${{ steps.version.outputs.version }}"
           echo "GitHub Release: Created/updated with release notes"
           echo "Pull Request: Created from dev to main"
