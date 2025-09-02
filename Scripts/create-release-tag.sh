@@ -179,52 +179,36 @@ commit_version_update() {
     fi
 }
 
-# Function to create and push tag
-create_and_push_tag() {
+# Function to create tag and push atomically
+create_tag_and_push_atomic() {
     local new_version="$1"
 
     if [ "$DRY_RUN" = true ]; then
         print_status "DRY RUN: Would create tag $new_version..."
-        print_status "DRY RUN: Would push tag $new_version to origin..."
-        print_success "DRY RUN: Tag creation simulation completed ✓"
+        print_status "DRY RUN: Would push dev branch and tag atomically to origin..."
+        print_success "DRY RUN: Atomic push simulation completed ✓"
         return 0
     fi
 
     print_status "Creating tag $new_version..."
 
-    # Create the tag (lightweight - GitHub Actions will enhance it)
+    # Create lightweight tag (GitHub Actions will create a release with notes)
     if git tag "$new_version"; then
-        print_success "Tag $new_version created ✓"
+        print_success "Tag $new_version created locally ✓"
     else
         print_error "Failed to create tag $new_version"
         exit 1
     fi
 
-    print_status "Pushing tag $new_version to origin..."
+    print_status "Pushing dev branch and tag atomically to origin..."
 
-    # Push the tag
-    if git push origin "$new_version"; then
-        print_success "Tag $new_version pushed to origin ✓"
+    # Push both the branch and tag atomically in one operation
+    if git push --atomic origin dev "$new_version"; then
+        print_success "Dev branch and tag $new_version pushed atomically ✓"
     else
-        print_error "Failed to push tag $new_version"
-        exit 1
-    fi
-}
-
-# Function to push dev branch
-push_dev_branch() {
-    if [ "$DRY_RUN" = true ]; then
-        print_status "DRY RUN: Would push dev branch to origin..."
-        print_success "DRY RUN: Push simulation completed ✓"
-        return 0
-    fi
-
-    print_status "Pushing dev branch to origin..."
-
-    if git push origin dev; then
-        print_success "Dev branch pushed to origin ✓"
-    else
-        print_error "Failed to push dev branch"
+        print_error "Failed to push dev branch and tag atomically"
+        # Clean up the local tag if push failed
+        git tag -d "$new_version" 2>/dev/null
         exit 1
     fi
 }
@@ -254,13 +238,13 @@ done
 # Main execution
 main() {
     if [ "$DRY_RUN" = true ]; then
-        echo "🔍 Convos iOS Release Tag Creator (DRY RUN MODE)"
+        echo "📦 Convos iOS Release Tag Creator (DRY RUN MODE)"
         echo "================================================"
         echo ""
         print_warning "DRY RUN MODE: No actual changes will be made!"
         echo ""
     else
-        echo "🚀 Convos iOS Release Tag Creator"
+        echo "📦 Convos iOS Release Tag Creator"
         echo "=================================="
         echo ""
     fi
@@ -333,11 +317,7 @@ main() {
     # Execute the release workflow
     update_xcode_version "$NEW_VERSION"
     commit_version_update "$NEW_VERSION"
-
-
-
-    create_and_push_tag "$NEW_VERSION"
-    push_dev_branch
+    create_tag_and_push_atomic "$NEW_VERSION"
 
     echo ""
     if [ "$DRY_RUN" = true ]; then
