@@ -20,6 +20,9 @@ app:
   - SENTRY_PROJECT: apple-ios
     opts:
       is_expand: false
+  - GITHUB_REPOSITORY: ephemeraHQ/convos-ios
+    opts:
+      is_expand: false
 workflows:
   archive_and_export_dev:
     summary: Create a dev build and upload it to App Store Connect for TestFlight
@@ -28,6 +31,7 @@ workflows:
     - git-clone@8: {}
     - restore-spm-cache@2: {}
     - bundle::Setup: {}
+    - bundle::ReleaseNotes: {}
     - set-xcode-build-number@2:
         title: Set Build Number - Main App
         inputs:
@@ -77,11 +81,6 @@ workflows:
         - automatic_code_signing: api-key
         - scheme: "$BITRISE_SCHEME"
         - configuration: "$BITRISE_BUILD_CONFIG"
-    - script@1:
-        title: Read Release Notes from GitHub Release
-        inputs:
-        - content: "./Scripts/read-release-notes.sh"
-        is_skippable: true
     - deploy-to-itunesconnect-deliver@2:
         inputs:
         - connection: api_key
@@ -93,9 +92,6 @@ workflows:
     meta:
       bitrise.io:
         stack: osx-xcode-26.0.x-edge
-    triggers:
-      push:
-      - branch: dev
     envs:
     - BITRISE_SCHEME: Convos (Dev)
       opts:
@@ -109,12 +105,16 @@ workflows:
     - BITRISE_BUILD_CONFIG: Dev
       opts:
         is_expand: false
+    triggers:
+      tag:
+      - name: "*"
   archive_and_export_prod:
     summary: Create a production build and upload it to App Store Connect
     steps:
     - git-clone@8: {}
     - restore-spm-cache@2: {}
     - bundle::Setup: {}
+    - bundle::ReleaseNotes: {}
     - set-xcode-build-number@2:
         title: Set Build Number - Main App
         inputs:
@@ -164,11 +164,6 @@ workflows:
         - automatic_code_signing: api-key
         - scheme: "$BITRISE_SCHEME"
         - configuration: "$BITRISE_BUILD_CONFIG"
-    - script@1:
-        title: Read Release Notes from GitHub Release
-        inputs:
-        - content: "./Scripts/read-release-notes.sh"
-        is_skippable: true
     - deploy-to-itunesconnect-deliver@2:
         inputs:
         - connection: api_key
@@ -340,3 +335,10 @@ step_bundles:
             # bash ./path/to/script.sh
             # not just bash, e.g.:
             # ruby ./path/to/script.rb
+  ReleaseNotes:
+    steps:
+    - script@1:
+        title: Read Release Notes from GitHub Release
+        inputs:
+        - content: "./Scripts/read-release-notes.sh"
+        is_skippable: true
