@@ -3,29 +3,16 @@ import Foundation
 import UserNotifications
 
 class NotificationService: UNNotificationServiceExtension {
-    private var pushHandler: CachedPushNotificationHandler?
-    private var contentHandler: ((UNNotificationContent) -> Void)?
-    private var bestAttemptContent: UNMutableNotificationContent?
-    private var pendingTask: Task<Void, Never>?
-    private var requestId: String = ""
-    private var didDeliverNotification: Bool = false
-    private let deliveryQueue: DispatchQueue = DispatchQueue(label: "org.convos.nse.delivery")
-
-    private func logWithRequestId(_ message: String) {
-        Logger.info("[RequestID: \(requestId)] \(message)")
-    }
-
-    private func performDelivery(_ content: UNNotificationContent?) {
-        deliveryQueue.sync {
-            guard !didDeliverNotification, let contentHandler = contentHandler else { return }
-            didDeliverNotification = true
-            // Cancel and clear any in-flight task before delivering
-            pendingTask?.cancel()
-            pendingTask = nil
-            let payload = content ?? UNMutableNotificationContent()
-            contentHandler(payload)
+    private lazy var pushHandler: CachedPushNotificationHandler? = {
+        do {
+            return try NotificationExtensionEnvironment.createPushNotificationHandler()
+        } catch {
+            Logger.error("Error initializing push notification handler: \(error.localizedDescription)")
+            return nil
         }
-    }
+    }()
+
+    private var pendingTask: Task<Void, Never>?
 
     private func configureLogging() {
         // Configure Logger with environment from stored configuration
@@ -39,7 +26,7 @@ class NotificationService: UNNotificationServiceExtension {
             Logger.configure(environment: environment, isProduction: isProd)
         } catch {
             // Fallback: just log the error but continue
-            print("NSE: Failed to configure logging with environment: \(error)")
+            print("Failed to configure logging with environment: \(error)")
         }
     }
 
@@ -47,179 +34,85 @@ class NotificationService: UNNotificationServiceExtension {
         _ request: UNNotificationRequest,
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
     ) {
-        self.requestId = request.identifier
+        let requestId = request.identifier
         let processId = ProcessInfo.processInfo.processIdentifier
-
-        // Reset per-request state (serialized)
-        deliveryQueue.sync {
-            didDeliverNotification = false
-            pendingTask?.cancel()
-            pendingTask = nil
-            pushHandler = nil
-        }
 
         // Configure Logger with environment from stored configuration
         configureLogging()
 
         Logger.info("[PID: \(processId)] [RequestID: \(requestId)] didReceive notification request")
 
-        self.contentHandler = contentHandler
-        bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
-
-        do {
-            pushHandler = try NotificationExtensionEnvironment.createPushNotificationHandler()
-            logWithRequestId("NSE: Push notification handler created successfully")
-        } catch {
-            logWithRequestId("NSE: Error creating push notification handler: \(error.localizedDescription)")
+        guard let pushHandler else {
+            Logger.error("No push notification handler available")
+            contentHandler(UNMutableNotificationContent())
+            return
         }
 
         // Handle the push notification asynchronously and wait for completion
-        logWithRequestId("NSE: Starting async notification processing")
+        Logger.info("Starting async notification processing")
         pendingTask = Task {
-            await handlePushNotification(userInfo: request.content.userInfo)
+            do {
+                let payload = PushNotificationPayload(userInfo: request.content.userInfo)
+                let decodedContent = try await pushHandler.handlePushNotification(
+                    payload: payload
+                )
+                let shouldDropMessage = decodedContent?.isDroppedMessage ?? false
+                if shouldDropMessage {
+                    contentHandler(UNMutableNotificationContent())
+                } else {
+                    let notificationContent = decodedContent?.notificationContent ?? payload.undecodedNotificationContent
+                    contentHandler(notificationContent)
+                }
+            } catch {
+                Logger.error("Error processing notification: \(error.localizedDescription)")
+                contentHandler(UNMutableNotificationContent())
+            }
         }
     }
 
     override func serviceExtensionTimeWillExpire() {
         // Called just before the extension will be terminated by the system
         // Cancel any ongoing async work to prevent multiple contentHandler calls
-        logWithRequestId("serviceExtensionTimeWillExpire called - extension about to be terminated")
-
-        deliveryQueue.sync {
-            pendingTask?.cancel()
-            pendingTask = nil
-            logWithRequestId("Extension time expiring, cleaning up XMTP resources")
-            pushHandler?.cleanup()
-        }
-
+        Logger.info("serviceExtensionTimeWillExpire called - extension about to be terminated")
         // With notification filtering entitlement, deliver an empty notification to suppress display
-        logWithRequestId("Timeout - delivering empty notification")
-        performDelivery(UNMutableNotificationContent())
+        Logger.info("Timeout - delivering empty notification")
+//        contentHandler(UNMutableNotificationContent())
     }
+}
 
-    private func handlePushNotification(userInfo: [AnyHashable: Any]) async {
-        // Don't set initial content yet - wait to see if we should drop the notification
-        logWithRequestId("NSE: Starting handlePushNotification processing")
-
-        do {
-            logWithRequestId("NSE: Calling pushHandler.handlePushNotification")
-            try await pushHandler?.handlePushNotification(userInfo: userInfo)
-            logWithRequestId("NSE: Push handler processing completed successfully")
-
-            // Only set initial content if we're going to show the notification
-            updateNotificationContent(userInfo: userInfo)
-        } catch {
-            // Check if this is a message that should be dropped
-            if let error = error as? NotificationError, error == .messageShouldBeDropped {
-                logWithRequestId("NSE: Notification dropped - message from self or non-text")
-                logWithRequestId("NSE: Cleaning up XMTP resources after dropping notification")
-                deliveryQueue.sync { pushHandler?.cleanup() }
-                // Deliver empty notification (suppresses display)
-                performDelivery(UNMutableNotificationContent())
-                return
-            }
-            // For any other errors, also drop the notification
-            // Better to show nothing than generic/incorrect content
-            logWithRequestId("NSE: Push notification processing error: \(error)")
-            logWithRequestId("NSE: Dropping notification due to processing error")
-            deliveryQueue.sync { pushHandler?.cleanup() }
-            performDelivery(UNMutableNotificationContent())
-            return
+extension DecodedNotificationContent {
+    var notificationContent: UNNotificationContent {
+        let content = UNMutableNotificationContent()
+        if let title {
+            content.title = title
         }
-
-        // Check if the task was cancelled before calling contentHandler
-        guard !Task.isCancelled else {
-            logWithRequestId("NSE: Task cancelled, cleaning up XMTP resources")
-            deliveryQueue.sync { pushHandler?.cleanup() }
-            logWithRequestId("NSE: Dropping notification - task was cancelled")
-            performDelivery(UNMutableNotificationContent())
-            return
+        content.body = body
+        if let conversationId {
+            content.threadIdentifier = conversationId
         }
-
-        // After processing, update with decoded content if available
-        logWithRequestId("NSE: Updating notification content with decoded data")
-        updateNotificationContentWithDecodedData(userInfo: userInfo)
-
-        // Processing complete - cleanup resources before delivering notification
-        logWithRequestId("NSE: Cleaning up XMTP resources after successful notification processing")
-        deliveryQueue.sync { pushHandler?.cleanup() }
-
-        // Deliver the notification
-        if let bestAttemptContent = bestAttemptContent {
-            logWithRequestId("NSE: Delivering notification to system")
-            performDelivery(bestAttemptContent)
-        } else {
-            logWithRequestId("NSE: Warning - contentHandler or bestAttemptContent is nil, delivering empty notification")
-            performDelivery(UNMutableNotificationContent())
-        }
+        return content
     }
+}
 
-    private func updateNotificationContent(userInfo: [AnyHashable: Any]) {
-        guard let bestAttemptContent = bestAttemptContent else {
-            logWithRequestId("NSE: updateNotificationContent - bestAttemptContent is nil")
-            return
-        }
-
-        logWithRequestId("NSE: Updating notification content with basic payload data")
-        let payload = PushNotificationPayload(userInfo: userInfo)
+// What we show when the notification fails to decode/process
+extension PushNotificationPayload {
+    var undecodedNotificationContent: UNNotificationContent {
+        let content = UNMutableNotificationContent()
 
         // Use the basic display logic first
-        if let displayTitle = payload.displayTitle {
-            bestAttemptContent.title = displayTitle
-            let length = displayTitle.count
-            logWithRequestId("NSE: Notification title present=true length=\(length)")
+        if let displayTitle = displayTitle {
+            content.title = displayTitle
         }
 
-        if let displayBody = payload.displayBody {
-            bestAttemptContent.body = displayBody
-            let length = displayBody.count
-            logWithRequestId("NSE: Notification body present=true length=\(length)")
+        if let displayBody = displayBody {
+            content.body = displayBody
         }
 
         // Set thread identifier for conversation grouping
-        if let conversationId = payload.notificationData?.protocolData?.conversationId {
-            bestAttemptContent.threadIdentifier = conversationId
-            logWithRequestId("NSE: Set thread identifier: \(conversationId)")
-        }
-    }
-
-    private func updateNotificationContentWithDecodedData(userInfo: [AnyHashable: Any]) {
-        guard let bestAttemptContent = bestAttemptContent else {
-            logWithRequestId("NSE: updateNotificationContentWithDecodedData - bestAttemptContent is nil")
-            return
+        if let conversationId = notificationData?.protocolData?.conversationId {
+            content.threadIdentifier = conversationId
         }
 
-        // Get the processed payload with decoded content from the push handler
-        if let processedPayload = pushHandler?.getProcessedPayload() {
-            logWithRequestId("NSE: Using processed payload with decoded content")
-            // Use the processed payload that contains decoded content
-            if let title = processedPayload.displayTitleWithDecodedContent() {
-                bestAttemptContent.title = title
-                logWithRequestId("NSE: Decoded title present=true length=\(title.count)")
-            }
-
-            if let body = processedPayload.displayBodyWithDecodedContent() {
-                bestAttemptContent.body = body
-                logWithRequestId("NSE: Decoded body present=true length=\(body.count)")
-            }
-
-            logWithRequestId("NSE: Applied decoded notification content")
-        } else {
-            logWithRequestId("NSE: No processed payload available, using fallback")
-            // Fallback to creating new payload if processed payload not available
-            let payload = PushNotificationPayload(userInfo: userInfo)
-
-            if let title = payload.displayTitleWithDecodedContent() {
-                bestAttemptContent.title = title
-                logWithRequestId("NSE: Fallback title present=true length=\(title.count)")
-            }
-
-            if let body = payload.displayBodyWithDecodedContent() {
-                bestAttemptContent.body = body
-                logWithRequestId("NSE: Fallback body present=true length=\(body.count)")
-            }
-
-            logWithRequestId("NSE: Applied fallback notification content")
-        }
+        return content
     }
 }
