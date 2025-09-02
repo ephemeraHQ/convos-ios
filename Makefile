@@ -1,3 +1,10 @@
+# Set default goal
+.DEFAULT_GOAL := help
+
+# Configure shell for safer execution
+SHELL := /bin/bash
+.SHELLFLAGS := -euo pipefail -c
+
 .PHONY: help
 help: ## Print comprehensive help for all commands
 	@echo "🔧 Convos iOS Development Commands"

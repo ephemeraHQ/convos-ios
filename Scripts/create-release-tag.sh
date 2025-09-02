@@ -90,7 +90,8 @@ update_xcode_version() {
     fi
 
     # Create temporary file for atomic update
-    temp_file=$(mktemp "${project_file}.tmp.XXXXXXXXXX")
+    temp_file=$(mktemp -p "$(dirname "$project_file")" "$(basename "$project_file").tmp.XXXXXXXXXX" 2>/dev/null) || \
+              temp_file=$(mktemp "${project_file}.tmp.XXXXXXXXXX")
     if [ ! -f "$temp_file" ]; then
         print_error "Failed to create temporary file"
         exit 1
@@ -285,7 +286,13 @@ main() {
 
     # Enforce monotonic bump when current version is known
     if [ "$current_version" != "unknown" ]; then
-        if [ "$(printf '%s\n%s\n' "$current_version" "$NEW_VERSION" | sort -V | tail -1)" != "$NEW_VERSION" ]; then
+        # Simple version comparison using IFS
+        IFS='.' read -r curr_major curr_minor curr_patch <<< "$current_version"
+        IFS='.' read -r new_major new_minor new_patch <<< "$NEW_VERSION"
+
+        if [ "$new_major" -lt "$curr_major" ] || \
+           ([ "$new_major" -eq "$curr_major" ] && [ "$new_minor" -lt "$curr_minor" ]) || \
+           ([ "$new_major" -eq "$curr_major" ] && [ "$new_minor" -eq "$curr_minor" ] && [ "$new_patch" -le "$curr_patch" ]); then
             print_error "New version ($NEW_VERSION) must be greater than current ($current_version)"
             exit 1
         fi

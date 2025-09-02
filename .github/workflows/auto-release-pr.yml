@@ -49,20 +49,30 @@ jobs:
           # Setup Anthropic Claude
           client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])
 
-          # Get commits since last tag
-          last_tag_result = subprocess.run(['git', 'describe', '--tags', '--abbrev=0'], capture_output=True, text=True)
-          if last_tag_result.returncode != 0:
-              print(f"❌ Failed to get last tag: {last_tag_result.stderr}")
+          # Get current tag from the trigger event
+          current_tag = os.environ['GITHUB_REF'].replace('refs/tags/', '')
+          
+          # Get the previous tag (the one before current)
+          tags_result = subprocess.run(['git', 'tag', '--sort=-version:refname'], capture_output=True, text=True)
+          if tags_result.returncode != 0:
+              print(f"❌ Failed to get tags: {tags_result.stderr}")
               exit(1)
-
-          last_tag = last_tag_result.stdout.strip()
-          if not last_tag:
-              print("❌ No previous tags found")
-              exit(1)
-
-          print(f"📝 Getting commits since last tag: {last_tag}")
-
-          result = subprocess.run(['git', 'log', '--oneline', '--no-merges', f'{last_tag}..HEAD'], capture_output=True, text=True)
+          
+          tags = tags_result.stdout.strip().split('\\n')
+          previous_tag = None
+          
+          # Find the tag before the current one
+          for i, tag in enumerate(tags):
+              if tag == current_tag and i + 1 < len(tags):
+                  previous_tag = tags[i + 1]
+                  break
+          
+          if previous_tag:
+              print(f"📝 Getting commits between {previous_tag} and {current_tag}")
+              result = subprocess.run(['git', 'log', '--oneline', '--no-merges', f'{previous_tag}..{current_tag}'], capture_output=True, text=True)
+          else:
+              print(f"📝 First release - getting all commits up to {current_tag}")
+              result = subprocess.run(['git', 'log', '--oneline', '--no-merges', current_tag], capture_output=True, text=True)
           if result.returncode != 0:
               print(f"❌ Failed to get commits: {result.stderr}")
               exit(1)
