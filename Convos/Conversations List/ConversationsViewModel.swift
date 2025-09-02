@@ -121,6 +121,15 @@ final class ConversationsViewModel {
             }
             .store(in: &cancellables)
 
+        // Observe conversation notification taps
+        NotificationCenter.default
+            .publisher(for: .conversationNotificationTapped)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] notification in
+                self?.handleConversationNotificationTap(notification)
+            }
+            .store(in: &cancellables)
+
         conversationsCountRepository.conversationsCount
             .receive(on: DispatchQueue.main)
             .sink { [weak self] conversationsCount in
@@ -133,6 +142,24 @@ final class ConversationsViewModel {
                 self?.conversations = conversations
             }
             .store(in: &cancellables)
+    }
+
+    private func handleConversationNotificationTap(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let inboxId = userInfo["inboxId"] as? String,
+              let conversationId = userInfo["conversationId"] as? String else {
+            Logger.warning("Conversation notification tapped but missing required userInfo")
+            return
+        }
+
+        Logger.info("Handling conversation notification tap for inboxId: \(inboxId), conversationId: \(conversationId)")
+
+        if let conversation = conversations.first(where: { $0.id == conversationId }) {
+            Logger.info("Found conversation, selecting it")
+            selectedConversation = conversation
+        } else {
+            Logger.warning("Conversation \(conversationId) not found in current conversation list")
+        }
     }
 }
 
