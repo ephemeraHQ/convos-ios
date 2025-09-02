@@ -8,9 +8,6 @@ app:
   - BITRISE_PROJECT_PATH: Convos.xcodeproj
     opts:
       is_expand: false
-  - BITRISE_SCHEME: Convos (Dev)
-    opts:
-      is_expand: false
   - BITRISE_DISTRIBUTION_METHOD: app-store
     opts:
       is_expand: false
@@ -24,89 +21,181 @@ app:
     opts:
       is_expand: false
 workflows:
-  archive_and_export_preview:
-    summary: Run your Xcode tests and create an IPA file to install your app on a
-      device or share it with your team.
-    description: The workflow will first clone your Git repository, cache and
-      install your project's dependencies if any, run your Xcode tests, export
-      an IPA file from the project and save it.
+  archive_and_export_dev:
+    summary: Create a dev build and upload it to App Store Connect for TestFlight
+      internal testing
     steps:
     - git-clone@8: {}
+    - restore-spm-cache@2: {}
     - bundle::Setup: {}
     - set-xcode-build-number@2:
-        title: Set Build Number - Convos (Dev)
+        title: Set Build Number - Main App
         inputs:
         - verbose: true
-        - scheme: Convos (Dev)
         - target: Convos
+        - scheme: "$BITRISE_SCHEME"
     - set-xcode-build-number@2:
-        title: Set Build Number - NotificationService (Dev)
+        title: Set Build Number - NSE
         inputs:
         - verbose: true
-        - scheme: NotificationService (Dev)
+        - scheme: "$BITRISE_SCHEME_NSE"
         - target: NotificationService
     - set-xcode-build-number@2:
-        title: Set Build Number - AppClip (Dev)
+        title: Set Build Number - AppClip
         inputs:
         - verbose: true
-        - scheme: ConvosAppClip
         - target: ConvosAppClip
+        - scheme: "$BITRISE_SCHEME_APPCLIP"
     - manage-ios-code-signing@2:
         inputs:
         - distribution_method: app-store
-        - scheme: Convos (Dev)
         - verbose_log: 'yes'
-        - configuration: Dev
-        title: iOS Code Signing - Convos (Dev)
+        - scheme: "$BITRISE_SCHEME"
+        - configuration: "$BITRISE_BUILD_CONFIG"
+        title: iOS Code Signing - Main App
     - manage-ios-code-signing@2:
         inputs:
         - distribution_method: app-store
-        - scheme: NotificationService (Dev)
-        - configuration: Dev
-        title: iOS Code Signing - NotificationService (Dev)
+        - scheme: "$BITRISE_SCHEME_NSE"
+        - configuration: "$BITRISE_BUILD_CONFIG"
+        title: iOS Code Signing - NSE
+    - manage-ios-code-signing@2:
+        inputs:
+        - distribution_method: app-store
+        - scheme: "$BITRISE_SCHEME_APPCLIP"
+        - configuration: "$BITRISE_BUILD_CONFIG"
+        - verbose_log: 'yes'
+        title: iOS Code Signing - AppClip
     - xcode-archive@5:
         inputs:
         - project_path: "$BITRISE_PROJECT_PATH"
-        - scheme: Convos (Dev)
-        - configuration: Dev
         - cache_level: none
         - verbose_log: 'yes'
         - distribution_method: app-store
         - platform: iOS
         - perform_clean_action: 'yes'
-        - export_development_team: FY4NZR34Z3
         - automatic_code_signing: api-key
-    - deploy-to-itunesconnect-application-loader@1:
+        - scheme: "$BITRISE_SCHEME"
+        - configuration: "$BITRISE_BUILD_CONFIG"
+    - script@1:
+        title: Read Release Notes from GitHub Release
+        inputs:
+        - content: "./Scripts/read-release-notes.sh"
+        is_skippable: true
+    - deploy-to-itunesconnect-deliver@2:
         inputs:
         - connection: api_key
+        - bundle_id: org.convos.ios-preview
+        - release_notes: "$RELEASE_NOTES"
+        - whats_new: "$RELEASE_NOTES"
+        title: Deploy to App Store Connect (org.convos.ios-preview)
+    - save-spm-cache@1: {}
     meta:
       bitrise.io:
         stack: osx-xcode-26.0.x-edge
-  archive_and_export_app:
-    summary: Run your Xcode tests and create an IPA file to install your app on a
-      device or share it with your team.
-    description: The workflow will first clone your Git repository, cache and
-      install your project's dependencies if any, run your Xcode tests, export
-      an IPA file from the project and save it.
+    triggers:
+      push:
+      - branch: dev
+    envs:
+    - BITRISE_SCHEME: Convos (Dev)
+      opts:
+        is_expand: false
+    - BITRISE_SCHEME_NSE: NotificationService (Dev)
+      opts:
+        is_expand: false
+    - BITRISE_SCHEME_APPCLIP: ConvosAppClip
+      opts:
+        is_expand: false
+    - BITRISE_BUILD_CONFIG: Dev
+      opts:
+        is_expand: false
+  archive_and_export_prod:
+    summary: Create a production build and upload it to App Store Connect
     steps:
     - git-clone@8: {}
-    - xcode-test@6:
+    - restore-spm-cache@2: {}
+    - bundle::Setup: {}
+    - set-xcode-build-number@2:
+        title: Set Build Number - Main App
         inputs:
-        - project_path: "$BITRISE_PROJECT_PATH"
+        - verbose: true
+        - target: Convos
         - scheme: "$BITRISE_SCHEME"
-        - test_repetition_mode: retry_on_failure
-        - cache_level: none
+    - set-xcode-build-number@2:
+        title: Set Build Number - NSE
+        inputs:
+        - verbose: true
+        - scheme: "$BITRISE_SCHEME_NSE"
+        - target: NotificationService
+    - set-xcode-build-number@2:
+        title: Set Build Number - AppClip
+        inputs:
+        - verbose: true
+        - target: ConvosAppClip
+        - scheme: "$BITRISE_SCHEME_APPCLIP"
+    - manage-ios-code-signing@2:
+        inputs:
+        - distribution_method: app-store
+        - verbose_log: 'yes'
+        - scheme: "$BITRISE_SCHEME"
+        - configuration: "$BITRISE_BUILD_CONFIG"
+        title: iOS Code Signing - Main App
+    - manage-ios-code-signing@2:
+        inputs:
+        - distribution_method: app-store
+        - scheme: "$BITRISE_SCHEME_NSE"
+        - configuration: "$BITRISE_BUILD_CONFIG"
+        title: iOS Code Signing - NSE
+    - manage-ios-code-signing@2:
+        inputs:
+        - distribution_method: app-store
+        - scheme: "$BITRISE_SCHEME_APPCLIP"
+        - configuration: "$BITRISE_BUILD_CONFIG"
+        - verbose_log: 'yes'
+        title: iOS Code Signing - AppClip
     - xcode-archive@5:
         inputs:
         - project_path: "$BITRISE_PROJECT_PATH"
-        - scheme: "$BITRISE_SCHEME"
-        - distribution_method: "$BITRISE_DISTRIBUTION_METHOD"
-        - automatic_code_signing: api-key
         - cache_level: none
-    - deploy-to-bitrise-io@2: {}
+        - verbose_log: 'yes'
+        - distribution_method: app-store
+        - platform: iOS
+        - perform_clean_action: 'yes'
+        - automatic_code_signing: api-key
+        - scheme: "$BITRISE_SCHEME"
+        - configuration: "$BITRISE_BUILD_CONFIG"
+    - script@1:
+        title: Read Release Notes from GitHub Release
+        inputs:
+        - content: "./Scripts/read-release-notes.sh"
+        is_skippable: true
+    - deploy-to-itunesconnect-deliver@2:
+        inputs:
+        - connection: api_key
+        - bundle_id: org.convos.ios
+        - release_notes: "$RELEASE_NOTES"
+        - whats_new: "$RELEASE_NOTES"
+        title: Deploy to App Store Connect (org.convos.ios)
+    - save-spm-cache@1: {}
     meta:
       bitrise.io:
         stack: osx-xcode-26.0.x-edge
+    triggers:
+      push:
+      - branch: main
+    envs:
+    - BITRISE_SCHEME: Convos (Prod)
+      opts:
+        is_expand: false
+    - BITRISE_SCHEME_NSE: NotificationService (Prod)
+      opts:
+        is_expand: false
+    - BITRISE_SCHEME_APPCLIP: ConvosAppClip
+      opts:
+        is_expand: false
+    - BITRISE_BUILD_CONFIG: Release
+      opts:
+        is_expand: false
   build_for_testing:
     steps:
     - git-clone@8: {}
@@ -132,47 +221,6 @@ workflows:
     triggers:
       pull_request:
       - source_branch: "*"
-      push:
-      - branch: main
-      enabled: false
-  run_tests:
-    summary: Run your Xcode tests and get the test report.
-    description: The workflow will first clone your Git repository, cache and
-      install your project's dependencies if any, run your Xcode tests and save
-      the test results.
-    steps:
-    - git-clone@8: {}
-    - restore-spm-cache@1: {}
-    - xcode-test@6:
-        inputs:
-        - project_path: "$BITRISE_PROJECT_PATH"
-        - scheme: "$BITRISE_SCHEME"
-        - test_repetition_mode: retry_on_failure
-        - cache_level: none
-    - save-spm-cache@1: {}
-    - deploy-to-bitrise-io@2: {}
-    triggers:
-      push:
-      - branch: main
-        enabled: false
-      pull_request:
-      - source_branch: "*"
-        enabled: false
-      enabled: false
-    meta:
-      bitrise.io:
-        stack: osx-xcode-26.0.x-edge
-  test_without_building:
-    steps:
-    - pull-intermediate-files@1: {}
-    - xcode-test-without-building@0:
-        inputs:
-        - only_testing: "$BITRISE_TEST_SHARDS_PATH/$BITRISE_IO_PARALLEL_INDEX"
-        - xctestrun: "$BITRISE_TEST_BUNDLE_PATH/all_tests.xctestrun"
-    meta:
-      bitrise.io:
-        stack: osx-xcode-26.0.x-edge
-    triggers:
       enabled: false
 meta:
   bitrise.io:
@@ -182,6 +230,7 @@ step_bundles:
   Setup:
     steps:
     - script@1:
+        title: Setup Development Environment (Secure)
         inputs:
         - content: "#!/usr/bin/env bash
 
@@ -235,7 +284,6 @@ step_bundles:
 
 
             echo \"✅ Development environment configured securely\""
-        title: Setup Development Environment (Secure)
     - script@1:
         inputs:
         - content: |-
