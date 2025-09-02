@@ -35,9 +35,12 @@ if command -v gh &> /dev/null; then
 
     if [ -n "$REPO" ]; then
         echo "🔍 Checking GitHub Release $VERSION in repository: $REPO"
-        if gh release view "$VERSION" --repo "$REPO" > /dev/null 2>&1; then
+
+        # Try the exact tag as provided (no v prefix handling)
+        RELEASE_BODY=$(gh release view "$VERSION" --repo "$REPO" --json body -q .body 2>/dev/null)
+        if [ -n "$RELEASE_BODY" ] && [ "$RELEASE_BODY" != "null" ]; then
             echo "✅ GitHub Release $VERSION found in $REPO"
-            RELEASE_NOTES=$(gh release view "$VERSION" --repo "$REPO" --json body -q .body)
+            RELEASE_NOTES="$RELEASE_BODY"
             echo "✅ Release notes extracted from GitHub Release"
         else
             echo "⚠️ GitHub Release $VERSION not found in $REPO, using fallback notes"
@@ -57,13 +60,6 @@ echo ""
 echo "📝 Release Notes (for App Store):"
 echo "=================================="
 echo "$RELEASE_NOTES"
-
-# Make notes available for Bitrise App Store submission
-if command -v envman &> /dev/null; then
-    envman add --key RELEASE_NOTES --value "$RELEASE_NOTES"
-    echo ""
-    echo "✅ Release notes exported to RELEASE_NOTES environment variable"
-fi
 
 # Release notes are ready for App Store submission via environment variable
 
