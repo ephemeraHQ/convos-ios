@@ -92,9 +92,9 @@ jobs:
           for commit in commits:
               if commit:
                   msg = commit.split(' ', 1)[1] if ' ' in commit else commit
-                  if msg.startswith('feat:') or msg.startswith('✨'):
+                  if msg.startswith('feat') or msg.startswith('✨'):
                       features.append(msg)
-                  elif msg.startswith('fix:') or msg.startswith('🐛'):
+                  elif msg.startswith('fix') or msg.startswith('🐛'):
                       bugfixes.append(msg)
                   else:
                       other_changes.append(msg)
