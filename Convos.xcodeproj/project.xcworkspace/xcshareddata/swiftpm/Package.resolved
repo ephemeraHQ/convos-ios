@@ -1,5 +1,5 @@
 {
-  "originHash" : "932fc76dd249f72425c49c133fa7ec109107b4c6b5b0da84cd4f804ae4accb32",
+  "originHash" : "b4920d300cf744d1a9d8f8f11fdc565bf1bacce5a4ecb3cc07bc24f137b85748",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -152,6 +152,24 @@
       "state" : {
         "revision" : "6bbb0aacd82070cdef041e808402836c768e2f0e",
         "version" : "4.4.0"
+      }
+    },
+    {
+      "identity" : "nanopb",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/firebase/nanopb.git",
+      "state" : {
+        "revision" : "b7e1104502eca3a213b46303391ca4d3bc8ddec1",
+        "version" : "2.30910.0"
+      }
+    },
+    {
+      "identity" : "promises",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/google/promises.git",
+      "state" : {
+        "revision" : "540318ecedd63d883069ae7f1ed811a2df00b6ac",
+        "version" : "2.4.0"
       }
     },
     {
