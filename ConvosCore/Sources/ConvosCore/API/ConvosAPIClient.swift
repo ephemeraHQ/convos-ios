@@ -368,8 +368,10 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 decoder.dateDecodingStrategy = .iso8601
                 return try decoder.decode(T.self, from: data)
             case 204, 205, 304:
-                // No content responses - return empty object for expected type
-                if let emptyDict = [:] as? T {
+                // Handle no content responses
+                if T.self == Void.self {
+                    return unsafeBitCast((), to: T.self)
+                } else if let emptyDict = [:] as? T {
                     return emptyDict
                 } else if let emptyArray = [] as? T {
                     return emptyArray
