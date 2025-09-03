@@ -206,6 +206,10 @@ public enum ConvosAPI {
         public let updatedAt: String
         public let pushFailures: Int
     }
+
+    public struct AuthCheckResponse: Codable {
+        public let success: Bool
+    }
 }
 
 public extension ConvosAPI.InitRequest.Profile {

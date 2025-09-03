@@ -355,8 +355,8 @@ public actor InboxStateMachine {
     private func handleClientInitialized(_ client: any XMTPClientProvider) async throws {
         emitStateChange(.authorizing)
 
-        Logger.info("Authorizing backend...")
-        let apiClient = try await authorizeConvosBackend(client: client)
+        Logger.info("Initializing API client...")
+        let apiClient = initializeApiClient(client: client)
 
         enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
     }
@@ -477,24 +477,22 @@ public actor InboxStateMachine {
         return client
     }
 
-    private func authorizeConvosBackend(client: any XMTPClientProvider) async throws -> any ConvosAPIClientProtocol {
-        Logger.info("Retrieving installation ID and Firebase App Check token...")
-        let installationId = client.installationId
-        let inboxId = client.inboxId
-        let appCheckToken = try await FirebaseHelperCore.getAppCheckToken()
-        let signatureData = try client.signWithInstallationKey(message: appCheckToken)
-        let signature = signatureData.hexEncodedString()
-        Logger.info("Attempting to authenticate with Convos backend...")
-        let apiClient = ConvosAPIClientFactory.authenticatedClient(
+    private func initializeApiClient(client: any XMTPClientProvider) -> any ConvosAPIClientProtocol {
+        Logger.info("Initializing API client...")
+        return ConvosAPIClientFactory.authenticatedClient(
             client: client,
             environment: environment
         )
-        _ = try await apiClient.authenticate(
-            inboxId: inboxId,
-            installationId: installationId,
-            appCheckToken: appCheckToken,
-            signature: signature
-        )
+    }
+
+    private func authorizeConvosBackend(client: any XMTPClientProvider) async throws -> any ConvosAPIClientProtocol {
+        Logger.info("Authorizing backend with lazy authentication...")
+        let apiClient = initializeApiClient(client: client)
+
+        // Make a test call to trigger (re)authentication if needed
+        Logger.info("Testing authentication with /auth-check...")
+        _ = try await apiClient.checkAuth()
+
         return apiClient
     }
 
