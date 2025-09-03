@@ -10,6 +10,10 @@ struct ConvosApp: App {
     init() {
         // Configure Logger based on environment
         let environment = ConfigManager.shared.currentEnvironment
+
+        // Configure Logger with proper environment for app group access
+        Logger.configure(environment: environment)
+
         switch environment {
         case .production:
             Logger.Default.configureForProduction(true)

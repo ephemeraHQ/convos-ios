@@ -21,7 +21,7 @@ final class SyncingManager: SyncingManagerProtocol {
 
     // Track last sync times for member profiles per conversation
     private var lastMemberProfileSync: [String: Date] = [:]
-    private let memberProfileSyncInterval: TimeInterval = 10 // seconds
+    private let memberProfileSyncInterval: TimeInterval = 120 // seconds
 
     init(databaseWriter: any DatabaseWriter) {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
@@ -32,7 +32,8 @@ final class SyncingManager: SyncingManagerProtocol {
     }
 
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
-        listConversationsTask = Task { [weak self, consentStates] in
+        // each client (currently) has one conversation
+        listConversationsTask = Task { [weak self] in
             do {
                 guard let self else { return }
                 do {
@@ -67,17 +68,60 @@ final class SyncingManager: SyncingManagerProtocol {
                 Logger.error("Error syncing conversations: \(error)")
             }
         }
-        streamMessagesTask = Task { [weak self, consentStates] in
+        // Start the streaming tasks
+        startMessageStream(client: client, apiClient: apiClient)
+        startConversationStream(client: client, apiClient: apiClient)
+    }
+
+    func stop() {
+        listConversationsTask?.cancel()
+        listConversationsTask = nil
+        streamMessagesTask?.cancel()
+        streamMessagesTask = nil
+        streamConversationsTask?.cancel()
+        streamConversationsTask = nil
+        syncMemberProfilesTasks.forEach { $0.cancel() }
+        syncMemberProfilesTasks.removeAll()
+    }
+
+    // MARK: - Private
+
+    private let maxStreamRetries: Int = 5
+
+    private func startMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int = 0) {
+        guard retryCount < maxStreamRetries else {
+            Logger.error("Messages stream max retries (\(maxStreamRetries)) reached for inbox: \(client.inboxId). Giving up.")
+            return
+        }
+
+        Logger.info("Starting messages stream for inbox: \(client.inboxId) (retry: \(retryCount))")
+        streamMessagesTask = Task { [weak self] in
             do {
-                for try await message in await client.conversationsProvider
+                guard let self else { return }
+                for try await message in client.conversationsProvider
                     .streamAllMessages(
                         type: .groups,
                         consentStates: consentStates,
-                        onClose: {
-                            Logger.warning("Closing messages stream for inboxId: \(client.inboxId)...")
+                        onClose: { [weak self] in
+                            guard let self, !Task.isCancelled else { return }
+                            // Check if the stream task is still active before scheduling retry
+                            guard let streamTask = self.streamMessagesTask, !streamTask.isCancelled else {
+                                Logger.info("Messages stream task was cancelled, not restarting")
+                                return
+                            }
+                            let nextRetry = retryCount + 1
+                            Logger.warning("Messages stream closed for inboxId: \(client.inboxId). Restarting (retry \(nextRetry)/\(self.maxStreamRetries))...")
+                            Task { [weak self] in
+                                guard let self else { return }
+                                // Double-check the stream task is still active
+                                guard let streamTask = self.streamMessagesTask, !streamTask.isCancelled else {
+                                    Logger.info("Messages stream task was cancelled, not restarting")
+                                    return
+                                }
+                                self.startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
+                            }
                         }
                     ) {
-                    guard let self else { return }
                     guard let conversation = try await client.conversationsProvider.findConversation(
                         conversationId: message.conversationId
                     ) else {
@@ -93,14 +137,56 @@ final class SyncingManager: SyncingManagerProtocol {
                 }
             } catch {
                 Logger.error("Error streaming all messages: \(error)")
+                // Restart on error as well
+                guard !Task.isCancelled else { return }
+                // Check if the stream task is still active before scheduling retry
+                guard let streamTask = self?.streamMessagesTask, !streamTask.isCancelled else {
+                    Logger.info("Messages stream task was cancelled, not restarting after error")
+                    return
+                }
+                let nextRetry = retryCount + 1
+                Task { [weak self] in
+                    guard let self else { return }
+                    // Double-check the stream task is still active
+                    guard let streamTask = self.streamMessagesTask, !streamTask.isCancelled else {
+                        Logger.info("Messages stream task was cancelled, not restarting after error")
+                        return
+                    }
+                    self.startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
+                }
             }
         }
+    }
+
+    private func startConversationStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int = 0) {
+        guard retryCount < maxStreamRetries else {
+            Logger.error("Conversations stream max retries (\(maxStreamRetries)) reached for inbox: \(client.inboxId). Giving up.")
+            return
+        }
+
+        Logger.info("Starting conversations stream for inbox: \(client.inboxId) (retry: \(retryCount))")
         streamConversationsTask = Task { [weak self] in
             do {
-                for try await conversation in await client.conversationsProvider.stream(
+                for try await conversation in client.conversationsProvider.stream(
                     type: .groups,
-                    onClose: {
-                        Logger.warning("Closing conversations stream for inboxId: \(client.inboxId)...")
+                    onClose: { [weak self] in
+                        guard let self, !Task.isCancelled else { return }
+                        // Check if the stream task is still active before scheduling retry
+                        guard let streamTask = self.streamConversationsTask, !streamTask.isCancelled else {
+                            Logger.info("Conversations stream task was cancelled, not restarting")
+                            return
+                        }
+                        let nextRetry = retryCount + 1
+                        Logger.warning("Conversations stream closed for inboxId: \(client.inboxId). Restarting (retry \(nextRetry)/\(self.maxStreamRetries))...")
+                        Task { [weak self] in
+                            guard let self else { return }
+                            // Double-check the stream task is still active
+                            guard let streamTask = self.streamConversationsTask, !streamTask.isCancelled else {
+                                Logger.info("Conversations stream task was cancelled, not restarting")
+                                return
+                            }
+                            self.startConversationStream(client: client, apiClient: apiClient, retryCount: nextRetry)
+                        }
                     }
                 ) {
                     guard let self else { return }
@@ -110,22 +196,26 @@ final class SyncingManager: SyncingManagerProtocol {
                 }
             } catch {
                 Logger.error("Error streaming conversations: \(error)")
+                // Restart on error as well
+                guard !Task.isCancelled else { return }
+                // Check if the stream task is still active before scheduling retry
+                guard let streamTask = self?.streamConversationsTask, !streamTask.isCancelled else {
+                    Logger.info("Conversations stream task was cancelled, not restarting after error")
+                    return
+                }
+                let nextRetry = retryCount + 1
+                Task { [weak self] in
+                    guard let self else { return }
+                    // Double-check the stream task is still active
+                    guard let streamTask = self.streamConversationsTask, !streamTask.isCancelled else {
+                        Logger.info("Conversations stream task was cancelled, not restarting after error")
+                        return
+                    }
+                    self.startConversationStream(client: client, apiClient: apiClient, retryCount: nextRetry)
+                }
             }
         }
     }
-
-    func stop() {
-        listConversationsTask?.cancel()
-        listConversationsTask = nil
-        streamMessagesTask?.cancel()
-        streamMessagesTask = nil
-        streamConversationsTask?.cancel()
-        streamConversationsTask = nil
-        syncMemberProfilesTasks.forEach { $0.cancel() }
-        syncMemberProfilesTasks.removeAll()
-    }
-
-    // MARK: - Private
 
     private func syncMemberProfiles(
         apiClient: any ConvosAPIClientProtocol,

@@ -55,7 +55,7 @@ extension Conversation {
             isMuted: false,
             lastMessage: nil,
             imageURL: nil,
-            isDraft: false,
+            isDraft: true,
             invite: nil
         )
     }

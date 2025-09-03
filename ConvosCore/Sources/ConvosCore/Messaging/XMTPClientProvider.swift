@@ -14,7 +14,7 @@ public protocol ConversationSender {
     func publish() async throws
 }
 
-public protocol ConversationsProvider: Actor {
+public protocol ConversationsProvider {
     func listGroups(
         createdAfter: Date?,
         createdBefore: Date?,
@@ -58,7 +58,7 @@ public protocol XMTPClientProvider: AnyObject {
                          name: String,
                          description: String,
                          imageUrl: String) async throws -> String
-    func newConversation(with memberInboxId: String) async throws -> String
+    func newConversation(with memberInboxId: String) async throws -> (any MessageSender)
     func conversation(with id: String) async throws -> XMTPiOS.Conversation?
     func inboxId(for ethereumAddress: String) async throws -> String?
     func update(consent: Consent, for conversationId: String) async throws
@@ -113,7 +113,7 @@ extension XMTPiOS.Client: XMTPClientProvider {
     }
 
     public func prepareConversation() async throws -> ConversationSender {
-        return try await conversations.newGroupOptimistic()
+        return try conversations.newGroupOptimistic()
     }
 
     public func newConversation(with memberInboxIds: [String],
@@ -129,12 +129,12 @@ extension XMTPiOS.Client: XMTPClientProvider {
         return group.id
     }
 
-    public func newConversation(with memberInboxId: String) async throws -> String {
+    public func newConversation(with memberInboxId: String) async throws -> (any MessageSender) {
         let group = try await conversations.newConversation(
             with: memberInboxId,
             disappearingMessageSettings: nil
         )
-        return group.id
+        return group
     }
 
     public func conversation(with id: String) async throws -> XMTPiOS.Conversation? {

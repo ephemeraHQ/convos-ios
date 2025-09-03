@@ -24,7 +24,7 @@ struct ConvosToolbarButton: View {
 // swiftlint:disable force_unwrapping
 
 struct AppSettingsView: View {
-    let viewModel: ConversationsViewModel
+    let onDeleteAllInboxes: () -> Void
     @State private var showingDeleteAllDataConfirmation: Bool = false
     @Environment(\.openURL) private var openURL: OpenURLAction
     @Environment(\.dismiss) private var dismiss: DismissAction
@@ -97,6 +97,13 @@ struct AppSettingsView: View {
                     }
                     .foregroundStyle(.colorTextPrimary)
 
+                    NavigationLink {
+                        DebugExportView()
+                    } label: {
+                        Text("Debug")
+                    }
+                    .foregroundStyle(.colorTextPrimary)
+
                     Button {
                         openURL(URL(string: "https://convos.org/terms-and-privacy")!)
                     } label: {
@@ -134,7 +141,7 @@ struct AppSettingsView: View {
                     }
                     .confirmationDialog("", isPresented: $showingDeleteAllDataConfirmation) {
                         Button("Delete", role: .destructive) {
-                            viewModel.deleteAllInboxes()
+                            onDeleteAllInboxes()
                             dismiss()
                         }
 
@@ -143,8 +150,6 @@ struct AppSettingsView: View {
                         }
                     }
                 }
-
-                DebugViewSection()
             }
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -178,6 +183,6 @@ struct AppSettingsView: View {
 
 #Preview {
     NavigationStack {
-        AppSettingsView(viewModel: .mock)
+        AppSettingsView {}
     }
 }

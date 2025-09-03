@@ -10,16 +10,7 @@ protocol NewConversationsViewModelDelegate: AnyObject {
 }
 
 @Observable
-class NewConversationViewModel: SelectableConversationViewModelType, Identifiable {
-    override var selectedConversationViewModel: ConversationViewModel? {
-        get {
-            conversationViewModel
-        }
-        set {
-            conversationViewModel = newValue
-        }
-    }
-
+class NewConversationViewModel: Identifiable {
     // MARK: - Public
 
     let session: any SessionManagerProtocol
@@ -29,6 +20,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
     private(set) var shouldConfirmDeletingConversation: Bool = true
     private(set) var showScannerOnAppear: Bool
     var presentingJoinConversationSheet: Bool = false
+    private var initializationTask: Task<Void, Never>?
 
     // MARK: - Private
 
@@ -48,44 +40,55 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         self.session = session
         self.showScannerOnAppear = showScannerOnAppear
         self.delegate = delegate
-        super.init()
+
+        // Start async initialization
+        initializationTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.initializeAsyncDependencies()
+            } catch {
+                Logger.error("Error initializing: \(error)")
+            }
+        }
     }
 
     deinit {
         Logger.info("🧹 deinit")
+        initializationTask?.cancel()
         cancellables.removeAll()
         newConversationTask?.cancel()
         joinConversationTask?.cancel()
         conversationViewModel = nil
     }
 
+    @MainActor
+    private func initializeAsyncDependencies() async throws {
+        let messagingService = try await session.addInbox()
+        self.messagingService = messagingService
+        let draftConversationComposer = messagingService.draftConversationComposer()
+        self.draftConversationComposer = draftConversationComposer
+        let draftConversation = try draftConversationComposer.draftConversationRepository.fetchConversation() ?? .empty(
+            id: draftConversationComposer.draftConversationRepository.conversationId
+        )
+        self.conversationViewModel = .init(
+            conversation: draftConversation,
+            session: session,
+            draftConversationComposer: draftConversationComposer,
+            myProfileRepository: messagingService.myProfileRepository()
+        )
+        self.conversationViewModel?.untitledConversationPlaceholder = "New convo"
+        if showScannerOnAppear {
+            self.conversationViewModel?.showsInfoView = false
+        }
+        if !showScannerOnAppear {
+            try await draftConversationComposer.draftConversationWriter.createConversation()
+        }
+    }
+
     // MARK: - Actions
 
     func onScanInviteCode() {
         presentingJoinConversationSheet = true
-    }
-
-    func newConversation() {
-        guard messagingService == nil else { return }
-        newConversationTask?.cancel()
-        newConversationTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                let messagingService = try await session.addInbox()
-                self.messagingService = messagingService
-                guard !Task.isCancelled else { return }
-                let draftConversationComposer = messagingService.draftConversationComposer()
-                self.draftConversationComposer = draftConversationComposer
-                self.conversationViewModel = try conversationViewModel(
-                    for: messagingService,
-                    from: draftConversationComposer
-                )
-                guard !Task.isCancelled else { return }
-                try await draftConversationComposer.draftConversationWriter.createConversation()
-            } catch {
-                Logger.error("Error starting new conversation: \(error.localizedDescription)")
-            }
-        }
     }
 
     func join(inviteUrlString: String) -> Bool {
@@ -96,6 +99,7 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         Logger.info("Scanned inviteCode: \(inviteCode)")
         presentingJoinConversationSheet = false
         joinConversation(inviteCode: inviteCode)
+        conversationViewModel?.showsInfoView = true
         return true
     }
 
@@ -120,49 +124,18 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
             do {
-                // Ensure we have a messaging service
-                if self.messagingService == nil {
-                    Logger.info("No messaging service found, starting one while joining conversation...")
-                    let messagingService = try await session.addInbox()
-                    self.messagingService = messagingService
-                }
-
-                guard let messagingService else {
-                    Logger.error("Failed adding account while joining conversation")
-                    return
-                }
-
-                // Ensure we have a draft conversation composer
-                if self.draftConversationComposer == nil {
-                    Logger.info("Setting up draft composer for joining conversation...")
-                    let draftConversationComposer = messagingService.draftConversationComposer()
-                    self.draftConversationComposer = draftConversationComposer
-                }
-
-                guard let draftConversationComposer else {
-                    Logger.error("Failed getting conversation composer while joining conversation")
-                    return
-                }
-
-                // Ensure we have a conversation view model
-                if self.conversationViewModel == nil {
-                    Logger.info("ConversationViewModel is `nil`... creating a new one.")
-                    self.conversationViewModel = try conversationViewModel(
-                        for: messagingService,
-                        from: draftConversationComposer
-                    )
-                }
-
                 // Request to join
                 do {
-                    try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
+                    try await draftConversationComposer?.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
                 } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
                     Logger.info("Invite already redeeemed, showing existing conversation...")
-                    presentingJoinConversationSheet = false
-                    delegate?.newConversationsViewModel(
-                        self,
-                        attemptedJoiningExistingConversationWithId: conversationId
-                    )
+                    await MainActor.run {
+                        self.presentingJoinConversationSheet = false
+                        self.delegate?.newConversationsViewModel(
+                            self,
+                            attemptedJoiningExistingConversationWithId: conversationId
+                        )
+                    }
                 }
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
@@ -193,29 +166,5 @@ class NewConversationViewModel: SelectableConversationViewModelType, Identifiabl
             conversationViewModel?.untitledConversationPlaceholder = "Untitled"
         }
         .store(in: &cancellables)
-    }
-
-    func conversationViewModel(
-        for messagingService: AnyMessagingService,
-        from draftConversationComposer: any DraftConversationComposerProtocol
-    ) throws -> ConversationViewModel {
-        let draftConversation = try draftConversationComposer.draftConversationRepository.fetchConversation() ?? .empty(
-            id: draftConversationComposer.draftConversationRepository.conversationId
-        )
-        let viewModel: ConversationViewModel = .init(
-            conversation: draftConversation,
-            session: session,
-            myProfileWriter: draftConversationComposer.myProfileWriter,
-            myProfileRepository: messagingService.myProfileRepository(),
-            conversationRepository: draftConversationComposer.draftConversationRepository,
-            messagesRepository: draftConversationComposer.draftConversationRepository.messagesRepository,
-            outgoingMessageWriter: draftConversationComposer.draftConversationWriter,
-            consentWriter: draftConversationComposer.conversationConsentWriter,
-            localStateWriter: draftConversationComposer.conversationLocalStateWriter,
-            metadataWriter: draftConversationComposer.conversationMetadataWriter,
-            inviteRepository: draftConversationComposer.draftConversationRepository.inviteRepository
-        )
-        viewModel.untitledConversationPlaceholder = "New convo"
-        return viewModel
     }
 }

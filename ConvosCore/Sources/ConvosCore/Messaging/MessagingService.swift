@@ -23,6 +23,7 @@ final class MessagingService: MessagingServiceProtocol {
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
         environment: AppEnvironment,
+        startsStreamingServices: Bool,
         registersForPushNotifications: Bool = true
     ) -> MessagingService {
         let authorizationOperation = AuthorizeInboxOperation.authorize(
@@ -30,6 +31,7 @@ final class MessagingService: MessagingServiceProtocol {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
+            startsStreamingServices: startsStreamingServices,
             registersForPushNotifications: registersForPushNotifications
         )
         return .init(
@@ -40,7 +42,7 @@ final class MessagingService: MessagingServiceProtocol {
         )
     }
 
-        static func registeredMessagingService(
+    static func registeredMessagingService(
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
         environment: AppEnvironment
@@ -76,6 +78,15 @@ final class MessagingService: MessagingServiceProtocol {
 
     func stopAndDelete() async {
         await authorizationOperation.stopAndDelete()
+    }
+
+    // MARK: Push Notifications
+
+    /// Registers for push notifications once the inbox is in a ready state.
+    /// If already in ready state, registration happens immediately.
+    /// If not ready, waits for the ready state before registering.
+    func registerForPushNotifications() async {
+        await authorizationOperation.registerForPushNotifications()
     }
 
     // MARK: Invites
@@ -204,7 +215,7 @@ final class MessagingService: MessagingServiceProtocol {
         databaseReader: any DatabaseReader,
         environment: AppEnvironment
     ) {
-        Task {
+        Task(priority: .background) {
             await UnusedInboxCache.shared.prepareUnusedInboxIfNeeded(
                 databaseWriter: databaseWriter,
                 databaseReader: databaseReader,

@@ -1,11 +1,5 @@
 import Foundation
 
-extension ConvosAPI.CreateUserRequest.Profile {
-    static var empty: Self {
-        .init(name: nil, username: nil, description: nil, avatar: nil)
-    }
-}
-
 public enum ConvosAPI {
     public enum AuthenticatorTransport: String, Codable {
         case ble = "AUTHENTICATOR_TRANSPORT_BLE"
@@ -36,27 +30,10 @@ public enum ConvosAPI {
         public let walletAddress: String
     }
 
-    public struct UserResponse: Decodable {
-        public let id: String
-        public let identities: [Identity]
-        public struct Identity: Decodable {
-            public let id: String
-            public let identityAddress: String?
-            public let xmtpId: String
-        }
-    }
-
-    public struct CreateUserRequest: Encodable {
-        public let userId: String
-        public let userType: UserType
+    public struct InitRequest: Encodable {
         public let device: Device
         public let identity: Identity
         public let profile: Profile
-
-        public enum UserType: String, Encodable {
-            case onDevice
-            case turnkey
-        }
         public struct Device: Encodable {
             public let os: String
             public let name: String?
@@ -70,6 +47,28 @@ public enum ConvosAPI {
         public struct Profile: Encodable {
             public let name: String?
             public let username: String?
+            public let description: String?
+            public let avatar: String?
+        }
+    }
+
+    public struct InitResponse: Decodable {
+        public let device: Device
+        public let identity: Identity
+        public let profile: Profile
+        public struct Device: Decodable {
+            public let id: String
+            public let os: String
+            public let name: String?
+        }
+        public struct Identity: Decodable {
+            public let id: String
+            public let identityAddress: String?
+            public let xmtpId: String?
+        }
+        public struct Profile: Decodable {
+            public let id: String
+            public let name: String?
             public let description: String?
             public let avatar: String?
         }
@@ -149,6 +148,7 @@ public enum ConvosAPI {
         public let imageUrl: String?
         public let inviteLinkURL: String
         public let groupId: String
+        public let inviterInboxId: String
     }
 
     public struct PublicInviteDetailsResponse: Decodable {
@@ -157,34 +157,6 @@ public enum ConvosAPI {
         public let description: String?
         public let imageUrl: String?
         public let inviteLinkURL: String
-    }
-
-    public struct CreatedUserResponse: Decodable {
-        public let id: String
-        public let userId: String
-        public let device: Device
-        public let identity: Identity
-        public let profile: Profile
-        public struct Device: Decodable {
-            public let id: String
-            public let os: String
-            public let name: String?
-        }
-        public struct Identity: Decodable {
-            public let id: String
-            public let identityAddress: String?
-            public let xmtpId: String?
-        }
-        public struct Profile: Decodable {
-            public let id: String
-            public let name: String?
-            public let description: String?
-            public let avatar: String?
-        }
-    }
-
-    public struct UsernameCheckResponse: Decodable {
-        public let taken: Bool
     }
 
     public struct BatchProfilesResponse: Decodable {
@@ -236,7 +208,13 @@ public enum ConvosAPI {
     }
 }
 
-extension ConvosAPI.CreateUserRequest.Device {
+public extension ConvosAPI.InitRequest.Profile {
+    static var empty: Self {
+        .init(name: nil, username: nil, description: nil, avatar: nil)
+    }
+}
+
+extension ConvosAPI.InitRequest.Device {
     static func current() -> Self {
         return .init(
             os: DeviceInfo.osString,

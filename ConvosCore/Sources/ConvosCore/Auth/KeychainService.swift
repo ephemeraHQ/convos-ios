@@ -25,7 +25,8 @@ final class KeychainService<T: KeychainItemProtocol> {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: T.service,
             kSecAttrAccount as String: item.account,
-            kSecValueData as String: data
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         ]
 
         let status = SecItemAdd(query as CFDictionary, nil)

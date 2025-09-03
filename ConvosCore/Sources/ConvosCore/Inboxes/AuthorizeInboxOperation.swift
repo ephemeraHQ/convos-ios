@@ -17,6 +17,7 @@ protocol AuthorizeInboxOperationProtocol {
     func stopAndDelete() async
     func stopAndDelete()
     func stop()
+    func registerForPushNotifications() async
 }
 
 final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
@@ -29,12 +30,14 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
+        startsStreamingServices: Bool,
         registersForPushNotifications: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
+            startsStreamingServices: startsStreamingServices,
             registersForPushNotifications: registersForPushNotifications
         )
         operation.authorize(inboxId: inboxId)
@@ -51,6 +54,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
+            startsStreamingServices: true,
             registersForPushNotifications: registersForPushNotifications
         )
         operation.register()
@@ -61,24 +65,24 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
+        startsStreamingServices: Bool,
         registersForPushNotifications: Bool
     ) {
         let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
-
-        // Create push notification registrar only if not in notification service extension
-        let pushNotificationRegistrar: PushNotificationRegistrarProtocol? = registersForPushNotifications ? PushNotificationRegistrar(
-            environment: environment
+        let syncingManager = startsStreamingServices ? SyncingManager(databaseWriter: databaseWriter) : nil
+        let inviteJoinRequestsManager = startsStreamingServices ? InviteJoinRequestsManager(
+            databaseReader: databaseReader,
+            databaseWriter: databaseWriter
         ) : nil
-
         stateMachine = InboxStateMachine(
             identityStore: environment.defaultIdentityStore,
             inboxWriter: inboxWriter,
-            syncingManager: SyncingManager(databaseWriter: databaseWriter),
-            inviteJoinRequestsManager: InviteJoinRequestsManager(
-                databaseReader: databaseReader,
-                databaseWriter: databaseWriter
+            syncingManager: syncingManager,
+            inviteJoinRequestsManager: inviteJoinRequestsManager,
+            pushNotificationRegistrar: PushNotificationRegistrar(
+                environment: environment
             ),
-            pushNotificationRegistrar: pushNotificationRegistrar,
+            autoRegistersForPushNotifications: registersForPushNotifications,
             environment: environment,
         )
     }
@@ -90,21 +94,24 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     private func authorize(inboxId: String) {
         task?.cancel()
-        task = Task { [stateMachine] in
+        task = Task { [weak self] in
+            guard let self else { return }
             await stateMachine.authorize(inboxId: inboxId)
         }
     }
 
     private func register() {
         task?.cancel()
-        task = Task { [stateMachine] in
+        task = Task { [weak self] in
+            guard let self else { return }
             await stateMachine.register()
         }
     }
 
     func stopAndDelete() {
         task?.cancel()
-        task = Task { [stateMachine] in
+        task = Task { [weak self] in
+            guard let self else { return }
             await stateMachine.stopAndDelete()
         }
     }
@@ -116,8 +123,13 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     func stop() {
         task?.cancel()
-        task = Task { [stateMachine] in
+        task = Task { [weak self] in
+            guard let self else { return }
             await stateMachine.stop()
         }
+    }
+
+    func registerForPushNotifications() async {
+        await stateMachine.registerForPushNotifications()
     }
 }

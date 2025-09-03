@@ -34,7 +34,7 @@ class MockBaseAPIClient: ConvosAPIBaseProtocol {
 }
 
 class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
-    func getDevice(userId: String, deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse {
+    func getDevice(deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse {
         return ConvosAPI.DeviceUpdateResponse(
             id: deviceId,
             pushToken: "existing-push-token",
@@ -64,34 +64,19 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         return "mock-jwt-token"
     }
 
-    func getUser() async throws -> ConvosAPI.UserResponse {
-        return ConvosAPI.UserResponse(
-            id: "user_123",
-            identities: [
-                ConvosAPI.UserResponse.Identity(
-                    id: "identity_1",
-                    identityAddress: "0xMOCKADDRESS1",
-                    xmtpId: "mock-xmtp-id"
-                )
-            ]
-        )
-    }
-
-    func createUser(_ requestBody: ConvosAPI.CreateUserRequest) async throws -> ConvosAPI.CreatedUserResponse {
-        return ConvosAPI.CreatedUserResponse(
-            id: "created_user_123",
-            userId: requestBody.userId,
-            device: ConvosAPI.CreatedUserResponse.Device(
+    func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse {
+        return ConvosAPI.InitResponse(
+            device: ConvosAPI.InitResponse.Device(
                 id: "device_1",
                 os: requestBody.device.os,
                 name: requestBody.device.name
             ),
-            identity: ConvosAPI.CreatedUserResponse.Identity(
+            identity: ConvosAPI.InitResponse.Identity(
                 id: "identity_1",
                 identityAddress: requestBody.identity.identityAddress,
                 xmtpId: requestBody.identity.xmtpId
             ),
-            profile: ConvosAPI.CreatedUserResponse.Profile(
+            profile: ConvosAPI.InitResponse.Profile(
                 id: "profile_1",
                 name: requestBody.profile.name,
                 description: requestBody.profile.description,
@@ -143,12 +128,9 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
             description: nil,
             imageUrl: nil,
             inviteLinkURL: "http://convos.org/join/invite_123",
-            groupId: "my_group_123"
+            groupId: "my_group_123",
+            inviterInboxId: "0x12345"
         )
-    }
-
-    func checkUsername(_ username: String) async throws -> ConvosAPI.UsernameCheckResponse {
-        return ConvosAPI.UsernameCheckResponse(taken: username == "takenusername")
     }
 
     func updateProfile(

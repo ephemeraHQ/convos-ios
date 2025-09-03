@@ -141,20 +141,6 @@ public actor ConversationStateMachine {
         enqueueAction(.stop)
     }
 
-    func waitForReadyState() async throws -> ConversationReadyResult {
-        for await state in stateSequence {
-            switch state {
-            case .ready(let result):
-                return result
-            case .error(let error):
-                throw error
-            default:
-                continue
-            }
-        }
-        throw ConversationStateMachineError.unexpectedTermination
-    }
-
     // MARK: - Private Action Processing
 
     private func enqueueAction(_ action: Action) {
@@ -318,10 +304,21 @@ public actor ConversationStateMachine {
             try DBConversation.fetchCount(db) > 0
         }
 
-        if hasExistingConversations {
-            let inviteWithGroup = try await apiClient.inviteDetailsWithGroup(inviteCode)
-            let groupId = inviteWithGroup.groupId
+        let inviteWithGroup = try await apiClient.inviteDetailsWithGroup(inviteCode)
+        // @jarodl temporary backup to get around push notif delays
+        Task {
+            do {
+                let inviterInboxId = inviteWithGroup.inviterInboxId
+                let dm = try await client.newConversation(with: inviterInboxId)
+                _ = try await dm.prepare(text: inviteCode)
+                try await dm.publish()
+            } catch {
+                Logger.error("Failed sending backup invite request over XMTP: \(error)")
+            }
+        }
 
+        if hasExistingConversations {
+            let groupId = inviteWithGroup.groupId
             // Check local database for existing group membership
             if let existingConversation: DBConversation = try await databaseReader.read({ db in
                 try DBConversation.fetchOne(db, key: groupId)
@@ -339,7 +336,7 @@ public actor ConversationStateMachine {
         streamConversationsTask = Task { [weak self] in
             do {
                 Logger.info("Started streaming conversations for inboxId: \(client.inboxId), looking for convo: \(conversationId)...")
-                for try await conversation in await client.conversationsProvider.stream(
+                for try await conversation in client.conversationsProvider.stream(
                     type: .groups,
                     onClose: {
                         Logger.warning("Closing conversations stream...")

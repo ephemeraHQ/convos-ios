@@ -3,7 +3,7 @@ import SwiftUI
 
 struct ConversationsView: View {
     let session: any SessionManagerProtocol
-    @State var viewModel: ConversationsViewModel
+    @Bindable var viewModel: ConversationsViewModel
 
     @Namespace private var namespace: Namespace.ID
     @State private var presentingExplodeConfirmation: Bool = false
@@ -48,7 +48,7 @@ struct ConversationsView: View {
 
     var body: some View {
         ConversationInfoPresenter(
-            viewModel: viewModel,
+            viewModel: viewModel.selectedConversationViewModel,
             focusState: $focusState,
             sidebarColumnWidth: $sidebarWidth,
         ) {
@@ -58,13 +58,7 @@ struct ConversationsView: View {
                         emptyConversationsView
                     } else {
                         List(viewModel.unpinnedConversations, id: \.self, selection: $viewModel.selectedConversation) { conversation in
-                            ZStack {
-                                ConversationsListItem(conversation: conversation)
-                                NavigationLink(value: conversation) {
-                                    EmptyView()
-                                }
-                                .opacity(0.0) // zstack hides disclosure indicator
-                            }
+                            ConversationsListItem(conversation: conversation)
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button(role: .destructive) {
                                     viewModel.leave(conversation: conversation)
@@ -136,7 +130,11 @@ struct ConversationsView: View {
                 if let conversationViewModel = viewModel.selectedConversationViewModel {
                     ConversationView(
                         viewModel: conversationViewModel,
-                        focusState: $focusState
+                        focusState: $focusState,
+                        onScanInviteCode: {},
+                        onDeleteConversation: {},
+                        confirmDeletionBeforeDismissal: false,
+                        messagesTopBarTrailingItem: .share
                     )
                 } else if horizontalSizeClass != .compact {
                     emptyConversationsView
@@ -146,7 +144,7 @@ struct ConversationsView: View {
             }
         }
         .sheet(isPresented: $presentingAppSettings) {
-            AppSettingsView(viewModel: viewModel)
+            AppSettingsView(onDeleteAllInboxes: viewModel.deleteAllInboxes)
                 .navigationTransition(
                     .zoom(
                         sourceID: "app-settings-transition-source",

@@ -49,7 +49,6 @@ struct ImagePickerButton: View {
     @State var showsCurrentImage: Bool = true
     @State var imageState: ImagePickerImage.State = .empty
     @State var symbolSize: CGFloat = 24.0
-    @State var symbolName: String = "camera.fill"
     @State private var imageLoadingTask: Task<Void, Never>?
     @State private var imageSelection: PhotosPickerItem?
 
@@ -70,7 +69,7 @@ struct ImagePickerButton: View {
                         ZStack {
                             Circle()
                                 .fill(.black)
-                            Image(systemName: symbolName)
+                            Image(systemName: "photo.on.rectangle.angled")
                                 .font(.system(size: symbolSize))
                                 .foregroundColor(.white)
                         }

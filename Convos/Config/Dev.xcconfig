@@ -1,4 +1,6 @@
 // Development/TestFlight Configuration
+// Note: This configuration uses Release-level optimizations for App Store compliance
+// even though it's for TestFlight, as TestFlight builds must meet App Store requirements
 CONFIG_FILE = config.dev.json
 DEVELOPMENT_TEAM = FY4NZR34Z3
 
@@ -24,3 +26,14 @@ APNS_ENVIRONMENT = production
 // Info.plist preprocessing for Dev builds
 INFOPLIST_PREPROCESS = YES
 INFOPLIST_PREFIX_HEADER = $(SRCROOT)/Convos/Config/InfoPlistPrefix.Dev.h
+
+// Release-level build settings for App Store compliance (TestFlight)
+// These override the base configuration to ensure App Store-ready builds
+SWIFT_OPTIMIZATION_LEVEL = -O
+SWIFT_COMPILATION_MODE = wholemodule
+ENABLE_NS_ASSERTIONS = NO
+ENABLE_TESTABILITY = NO
+COPY_PHASE_STRIP = YES
+STRIP_INSTALLED_PRODUCT = YES
+STRIP_STYLE = all
+DEAD_CODE_STRIPPING = YES

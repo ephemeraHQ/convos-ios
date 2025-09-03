@@ -7,7 +7,7 @@ import UIKit
 
 final class MessagesViewController: UIViewController {
     struct MessagesState {
-        let conversationViewModel: ConversationViewModel
+        let conversation: Conversation
         let messages: [AnyMessage]
         let invite: Invite
     }
@@ -59,7 +59,7 @@ final class MessagesViewController: UIViewController {
         didSet {
             guard let state = state else {
                 processUpdates(
-                    for: nil,
+                    for: .empty(),
                     with: [],
                     invite: .empty,
                     animated: true,
@@ -67,9 +67,9 @@ final class MessagesViewController: UIViewController {
                 return
             }
 
-            let animated = oldValue?.conversationViewModel.conversation.id == state.conversationViewModel.conversation.id
+            let animated = oldValue?.conversation.id == state.conversation.id
             processUpdates(
-                for: state.conversationViewModel,
+                for: state.conversation,
                 with: state.messages,
                 invite: state.invite,
                 animated: animated,
@@ -315,7 +315,7 @@ final class MessagesViewController: UIViewController {
 // MARK: - MessagesControllerDelegate
 
 extension MessagesViewController {
-    private func processUpdates(for conversation: ConversationViewModel?,
+    private func processUpdates(for conversation: Conversation,
                                 with messages: [AnyMessage],
                                 invite: Invite,
                                 animated: Bool = true,
@@ -363,8 +363,8 @@ extension MessagesViewController {
             return cells
         }
 
-        if let conversation {
-            if conversation.conversation.creator.isCurrentUser {
+        if !conversation.isDraft {
+            if conversation.creator.isCurrentUser {
                 cells.insert(.invite(invite), at: 0)
             } else {
                 cells.insert(.conversationInfo(conversation), at: 0)
@@ -397,7 +397,7 @@ extension MessagesViewController {
                       completion: completion)
     }
 
-    private func scheduleDelayedUpdate(for conversation: ConversationViewModel?,
+    private func scheduleDelayedUpdate(for conversation: Conversation,
                                        with messages: [AnyMessage],
                                        invite: Invite,
                                        animated: Bool,
