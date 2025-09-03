@@ -40,6 +40,8 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
                       installationId: String,
                       signature: String) async throws -> String
 
+    func checkAuth() async throws
+
     func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse
 
     func createInvite(_ requestBody: ConvosAPI.CreateInviteCode) async throws -> ConvosAPI.InviteDetailsResponse
@@ -246,6 +248,11 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         return authResponse.token
     }
 
+    func checkAuth() async throws {
+        let request = try authenticatedRequest(for: "v1/auth-check")
+        let _: ConvosAPI.AuthCheckResponse = try await performRequest(request)
+    }
+
     // MARK: - Init
 
     func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse {
@@ -334,11 +341,14 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         method: String = "GET",
         queryParameters: [String: String]? = nil
     ) throws -> URLRequest {
-        guard let jwt = try keychainService.retrieveString(.init(inboxId: client.inboxId)) else {
-            throw APIError.notAuthenticated
-        }
         var request = try request(for: path, method: method, queryParameters: queryParameters)
-        request.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
+
+        // Try to get JWT from keychain
+        if let jwt = try? keychainService.retrieveString(.init(inboxId: client.inboxId)) {
+            request.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
+        }
+        // If no JWT, send request anyway - server will respond 401 and performRequest() will handle reauth
+
         return request
     }
 
@@ -353,10 +363,20 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             }
 
             switch httpResponse.statusCode {
-            case 200...299:
+            case 200...203, 206...299:
                 let decoder = JSONDecoder()
                 decoder.dateDecodingStrategy = .iso8601
                 return try decoder.decode(T.self, from: data)
+            case 204, 205, 304:
+                // No content responses - return empty object for expected type
+                if let emptyDict = [:] as? T {
+                    return emptyDict
+                } else if let emptyArray = [] as? T {
+                    return emptyArray
+                } else {
+                    // For other types, try to decode empty data or throw appropriate error
+                    throw APIError.invalidResponse
+                }
             case 400:
                 // Parse error message from response if available
                 let errorMessage: String?
