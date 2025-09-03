@@ -121,7 +121,7 @@ public actor InboxStateMachine {
 
     var stateSequence: AsyncStream<State> {
         AsyncStream { continuation in
-            Task { @MainActor [weak self] in
+            Task { [weak self] in
                 guard let self else { return }
                 await self.addStateContinuation(continuation)
             }
