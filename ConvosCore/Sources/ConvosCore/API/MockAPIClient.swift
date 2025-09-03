@@ -64,6 +64,10 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         return "mock-jwt-token"
     }
 
+    func checkAuth() async throws {
+        // Mock implementation - always succeeds
+    }
+
     func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse {
         return ConvosAPI.InitResponse(
             device: ConvosAPI.InitResponse.Device(
