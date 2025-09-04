@@ -192,7 +192,7 @@ actor SessionManager: SessionManagerProtocol {
         }
     }
 
-    // MARK: Public
+    // MARK: - Inbox Management
 
     func addInbox() async throws -> AnyMessagingService {
         let messagingService = await MessagingService.registeredMessagingService(
@@ -240,10 +240,11 @@ actor SessionManager: SessionManagerProtocol {
         messagingServices.removeAll()
     }
 
-    // MARK: Messaging
+    // MARK: - Messaging Services
 
     func messagingService(for inboxId: String) async -> AnyMessagingService {
         if let existingService = messagingServices.first(where: { $0.identifier == inboxId }) {
+            Logger.info("Existing messaging service found")
             return existingService
         }
 
@@ -251,7 +252,29 @@ actor SessionManager: SessionManagerProtocol {
         return startMessagingService(for: inboxId)
     }
 
-    // MARK: Displaying All Conversations
+    // MARK: - Factory methods for repositories
+
+    nonisolated func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {
+        InviteRepository(
+            databaseReader: databaseReader,
+            conversationId: conversationId,
+            conversationIdPublisher: Just(conversationId).eraseToAnyPublisher()
+        )
+    }
+
+    nonisolated func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
+        ConversationRepository(
+            conversationId: conversationId,
+            dbReader: databaseReader
+        )
+    }
+
+    nonisolated func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
+        MessagesRepository(
+            dbReader: databaseReader,
+            conversationId: conversationId
+        )
+    }
 
     nonisolated func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
         ConversationsRepository(dbReader: databaseReader, consent: consent)

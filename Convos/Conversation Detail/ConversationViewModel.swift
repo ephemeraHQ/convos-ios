@@ -12,13 +12,14 @@ class ConversationViewModel {
     // These will be loaded asynchronously
     private var myProfileWriter: (any MyProfileWriterProtocol)?
     private var myProfileRepository: (any MyProfileRepositoryProtocol)?
-    private var conversationRepository: (any ConversationRepositoryProtocol)?
-    private var messagesRepository: (any MessagesRepositoryProtocol)?
     private var outgoingMessageWriter: (any OutgoingMessageWriterProtocol)?
     private var consentWriter: (any ConversationConsentWriterProtocol)?
     private var localStateWriter: (any ConversationLocalStateWriterProtocol)?
     private var metadataWriter: (any ConversationMetadataWriterProtocol)?
-    private var inviteRepository: (any InviteRepositoryProtocol)?
+
+    private let conversationRepository: any ConversationRepositoryProtocol
+    private let messagesRepository: any MessagesRepositoryProtocol
+    private let inviteRepository: any InviteRepositoryProtocol
 
     private var cancellables: Set<AnyCancellable> = []
     private var loadProfileImageTask: Task<Void, Never>?
@@ -36,7 +37,7 @@ class ConversationViewModel {
             conversationDescription = conversation.description ?? ""
         }
     }
-    var messages: [AnyMessage] = []
+    var messages: [AnyMessage]
     var invite: Invite = .empty
     private(set) var profile: Profile = .empty(inboxId: "") {
         didSet {
@@ -88,6 +89,18 @@ class ConversationViewModel {
         self.conversationName = conversation.name ?? ""
         self.conversationDescription = conversation.description ?? ""
         self.profile = .empty(inboxId: conversation.inboxId)
+        self.conversationRepository = session.conversationRepository(for: conversation.id)
+        self.messagesRepository = session.messagesRepository(for: conversation.id)
+        self.inviteRepository = session.inviteRepository(for: conversation.id)
+        do {
+            self.messages = try messagesRepository.fetchAll()
+            self.conversation = try conversationRepository.fetchConversation() ?? conversation
+        } catch {
+            Logger.error("Error fetching messages or conversation: \(error.localizedDescription)")
+            self.messages = []
+        }
+
+        observe()
 
         Logger.info("🔄 created for conversation: \(conversation.id)")
 
@@ -123,11 +136,18 @@ class ConversationViewModel {
         self.localStateWriter = draftConversationComposer.conversationLocalStateWriter
         self.metadataWriter = draftConversationComposer.conversationMetadataWriter
         self.inviteRepository = draftConversationComposer.draftConversationRepository.inviteRepository
+        do {
+            self.messages = try messagesRepository.fetchAll()
+            self.conversation = try conversationRepository.fetchConversation() ?? conversation
+        } catch {
+            Logger.error("Error fetching messages or conversation: \(error.localizedDescription)")
+            self.messages = []
+        }
 
         Logger.info("🔄 created for draft conversation: \(conversation.id)")
 
-        fetchLatest()
         observe()
+        setupMyProfileRepository()
 
         // Update UI state
         self.displayName = profile.name ?? ""
@@ -145,19 +165,12 @@ class ConversationViewModel {
         // Store all the dependencies
         myProfileWriter = messagingService.myProfileWriter()
         myProfileRepository = messagingService.myProfileRepository()
-        conversationRepository = messagingService.conversationRepository(for: conversation.id)
-        messagesRepository = messagingService.messagesRepository(for: conversation.id)
         outgoingMessageWriter = messagingService.messageWriter(for: conversation.id)
         consentWriter = messagingService.conversationConsentWriter()
         localStateWriter = messagingService.conversationLocalStateWriter()
         metadataWriter = messagingService.groupMetadataWriter()
-        inviteRepository = messagingService.inviteRepository(for: conversation.id)
 
-        // Fetch initial data
-        fetchLatest()
-
-        // Start observing
-        observe()
+        setupMyProfileRepository()
 
         // Update UI state
         displayName = profile.name ?? ""
@@ -178,46 +191,43 @@ class ConversationViewModel {
 
     // MARK: - Private
 
-    private func fetchLatest() {
-        do {
-            if let myProfileRepository {
-                self.profile = try myProfileRepository.fetch(inboxId: conversation.inboxId)
-            }
-            if let conversationRepository {
-                self.conversation = try conversationRepository.fetchConversation() ?? conversation
-            }
-            if let messagesRepository {
-                self.messages = try messagesRepository.fetchAll()
-            }
-        } catch {
-            Logger.error("Error fetching latest: \(error.localizedDescription)")
+    private func setupMyProfileRepository() {
+        guard let myProfileRepository else {
+            Logger.warning("My profile repository is not available, skipping setup...")
+            return
         }
-    }
 
-    private func observe() {
-        myProfileRepository?.myProfilePublisher
+        do {
+            self.profile = try myProfileRepository.fetch(inboxId: conversation.inboxId)
+        } catch {
+            Logger.error("Failed fetching my profile: \(error.localizedDescription)")
+        }
+
+        myProfileRepository.myProfilePublisher
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] profile in
                 self?.profile = profile
             }
             .store(in: &cancellables)
-        messagesRepository?.messagesPublisher
+    }
+
+    private func observe() {
+        messagesRepository.messagesPublisher
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] messages in
                 self?.messages = messages
             }
             .store(in: &cancellables)
-        inviteRepository?.invitePublisher
-            .dropFirst()
+        inviteRepository.invitePublisher
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
             .sink { [weak self] invite in
                 self?.invite = invite
             }
             .store(in: &cancellables)
-        conversationRepository?.conversationPublisher
+        conversationRepository.conversationPublisher
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }

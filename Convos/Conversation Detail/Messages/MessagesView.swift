@@ -29,7 +29,6 @@ struct MessagesView: View {
     let onDisplayNameEndedEditing: () -> Void
     let onProfileSettings: () -> Void
 
-    @State private var topBarHeight: CGFloat = 0.0
     @State private var bottomBarHeight: CGFloat = 0.0
     var body: some View {
         Group {
@@ -38,7 +37,6 @@ struct MessagesView: View {
                 messages: messages,
                 invite: invite,
                 onTapMessage: onTapMessage,
-                topBarHeight: topBarHeight,
                 bottomBarHeight: bottomBarHeight
             )
             .ignoresSafeArea()

@@ -44,6 +44,18 @@ public class MockInboxesService: SessionManagerProtocol {
     public func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
         self
     }
+
+    public func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {
+        MockInviteRepository()
+    }
+
+    public func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
+        MockConversationRepository()
+    }
+
+    public func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
+        MockMessagesRepository(conversation: .mock(id: conversationId))
+    }
 }
 
 extension MockInboxesService: ConversationsCountRepositoryProtocol {

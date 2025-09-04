@@ -60,33 +60,7 @@ public class MockMessagingService: MessagingServiceProtocol {
         Just(self).eraseToAnyPublisher()
     }
 
-    public func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
-        self
-    }
-
-    public func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
-        self
-    }
-
-    public func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
-        if let found = _conversations.first(where: { $0.id == conversationId }) {
-            currentConversation = found
-        }
-        return self
-    }
-
     public func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
-        self
-    }
-
-    public func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
-        if let found = _conversations.first(where: { $0.id == conversationId }) {
-            currentConversation = found
-        }
-        return self
-    }
-
-    public func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {
         self
     }
 
