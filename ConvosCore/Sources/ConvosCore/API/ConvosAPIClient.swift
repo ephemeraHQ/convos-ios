@@ -48,6 +48,7 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     func createInvite(_ requestBody: ConvosAPI.CreateInviteCode) async throws -> ConvosAPI.InviteDetailsResponse
     func inviteDetails(_ inviteCode: String) async throws -> ConvosAPI.InviteDetailsResponse
     func inviteDetailsWithGroup(_ inviteCode: String) async throws -> ConvosAPI.InviteDetailsWithGroupResponse
+    func deleteInvite(_ inviteCode: String) async throws -> ConvosAPI.DeleteInviteResponse
     func publicInviteDetails(_ code: String) async throws -> ConvosAPI.PublicInviteDetailsResponse
     func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse
     func deleteRequestToJoin(_ requestId: String) async throws -> ConvosAPI.DeleteRequestToJoinResponse
@@ -321,6 +322,11 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         let request = try authenticatedRequest(for: "v1/invites/\(code)/with-group")
         let invite: ConvosAPI.InviteDetailsWithGroupResponse = try await performRequest(request)
         return invite
+    }
+
+    func deleteInvite(_ inviteCode: String) async throws -> ConvosAPI.DeleteInviteResponse {
+        let request = try authenticatedRequest(for: "v1/invites/\(inviteCode)", method: "DELETE")
+        return try await performRequest(request)
     }
 
     func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse {

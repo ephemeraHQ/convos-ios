@@ -341,6 +341,10 @@ public actor ConversationStateMachine {
                     type: .groups,
                     onClose: {
                         Logger.warning("Closing conversations stream...")
+                        Task { [weak self] in
+                            await self?.streamConversationsTask?.cancel()
+                            await self?.emitStateChange(.error(ConversationStateMachineError.timedOut))
+                        }
                     }
                 ) where conversation.id == conversationId {
                     guard let self else { return }
@@ -582,4 +586,5 @@ public enum ConversationStateMachineError: Error {
     case stateMachineError(Error)
     case unexpectedTermination
     case alreadyRedeemedInviteForConversation(String)
+    case timedOut
 }
