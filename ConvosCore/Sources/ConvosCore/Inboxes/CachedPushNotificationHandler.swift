@@ -15,7 +15,7 @@ public actor CachedPushNotificationHandler {
     // Track last access time for cleanup
     private var lastAccessTime: [String: Date] = [:]
 
-    // Maximum age for cached services (5 minutes)
+    // Maximum age for cached services (10 minutes)
     private let maxServiceAge: TimeInterval = 600
 
     // Store the processed payload for NSE access
