@@ -83,7 +83,7 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     func subscribeToTopics(installationId: String, topics: [String]) async throws
     func unsubscribeFromTopics(installationId: String, topics: [String]) async throws
     func unregisterInstallation(xmtpInstallationId: String) async throws
-    
+
     func overrideJWTToken(_ token: String)
 }
 
@@ -191,7 +191,7 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
 final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     private let client: any XMTPClientProvider
     private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
-    
+
     private var _overrideJWTToken: String?
 
     private let maxRetryCount: Int = 3
@@ -296,7 +296,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         let request = try authenticatedRequest(for: "v1/auth-check")
         let _: ConvosAPI.AuthCheckResponse = try await performRequest(request)
     }
-    
+
     /// Sets a JWT token in RAM for use in notification service extension.
     /// This token will be prioritized over the keychain-stored JWT for authenticated requests.
     /// - Parameter token: The JWT token to use for authentication
@@ -449,7 +449,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                     Logger.error("Authentication failed with override JWT token - cannot re-authenticate in notification service extension")
                     throw APIError.notAuthenticated
                 }
-                
+
                 // Check if we've exceeded max retries
                 guard retryCount < maxRetryCount else {
                     Logger.error("Max retry count (\(maxRetryCount)) exceeded for request")
