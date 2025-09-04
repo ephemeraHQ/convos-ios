@@ -93,16 +93,6 @@ final class MessagingService: MessagingServiceProtocol {
         await authorizationOperation.registerForPushNotifications()
     }
 
-    // MARK: Invites
-
-    func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {
-        InviteRepository(
-            databaseReader: databaseReader,
-            conversationId: conversationId,
-            conversationIdPublisher: Just(conversationId).eraseToAnyPublisher()
-        )
-    }
-
     // MARK: My Profile
 
     func myProfileRepository() -> any MyProfileRepositoryProtocol {
@@ -138,19 +128,6 @@ final class MessagingService: MessagingServiceProtocol {
 
     // MARK: Conversations
 
-    func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
-        ConversationsRepository(dbReader: databaseReader, consent: consent)
-    }
-
-    func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
-        ConversationsCountRepository(databaseReader: databaseReader, consent: consent, kinds: kinds)
-    }
-
-    func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
-        ConversationRepository(conversationId: conversationId,
-                               dbReader: databaseReader)
-    }
-
     func conversationConsentWriter() -> any ConversationConsentWriterProtocol {
         ConversationConsentWriter(
             inboxStateManager: inboxStateManager,
@@ -163,11 +140,6 @@ final class MessagingService: MessagingServiceProtocol {
     }
 
     // MARK: Getting/Sending Messages
-
-    func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
-        MessagesRepository(dbReader: databaseReader,
-                           conversationId: conversationId)
-    }
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol {
         OutgoingMessageWriter(inboxStateManager: inboxStateManager,

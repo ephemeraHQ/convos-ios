@@ -24,7 +24,7 @@ struct ConversationsView: View {
             for: .allowed
         )
         let conversationsCountRepository = session.conversationsCountRepo(
-            for: .all,
+            for: .allowed,
             kinds: .groups
         )
         self.viewModel = ConversationsViewModel(
