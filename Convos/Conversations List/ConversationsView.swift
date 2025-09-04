@@ -13,7 +13,6 @@ struct ConversationsView: View {
 
     @FocusState private var focusState: MessagesViewInputFocus?
     @State private var sidebarWidth: CGFloat = 0.0
-    @State private var infoSheetHeight: CGFloat = 0.0
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
 
     init(
@@ -163,21 +162,11 @@ struct ConversationsView: View {
                     )
                 )
         }
-        .sheet(isPresented: $viewModel.presentingExplodeInfo) {
+        .selfSizingSheet(isPresented: $viewModel.presentingExplodeInfo) {
             ExplodeInfoView()
-                .fixedSize(horizontal: false, vertical: true)
-                .readHeight { sheetHeight in
-                    infoSheetHeight = sheetHeight
-                }
-                .presentationDetents([.height(infoSheetHeight)])
         }
-        .sheet(isPresented: $viewModel.presentingMaxNumberOfConvosReachedInfo) {
+        .selfSizingSheet(isPresented: $viewModel.presentingMaxNumberOfConvosReachedInfo) {
             MaxedOutInfoView(maxNumberOfConvos: viewModel.maxNumberOfConvos)
-                .fixedSize(horizontal: false, vertical: true)
-                .readHeight { sheetHeight in
-                    infoSheetHeight = sheetHeight
-                }
-                .presentationDetents([.height(infoSheetHeight)])
         }
     }
 }

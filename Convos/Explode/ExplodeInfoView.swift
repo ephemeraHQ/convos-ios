@@ -54,7 +54,6 @@ struct ExplodeInfoView: View {
 
 #Preview {
     @Previewable @State var presentingExplodeInfo: Bool = false
-    @Previewable @State var explodeInfoSheetHeight: CGFloat = 0.0
     VStack {
         Button {
             presentingExplodeInfo.toggle()
@@ -62,12 +61,7 @@ struct ExplodeInfoView: View {
             Text("Toggle")
         }
     }
-    .sheet(isPresented: $presentingExplodeInfo) {
+    .selfSizingSheet(isPresented: $presentingExplodeInfo) {
         ExplodeInfoView()
-            .fixedSize(horizontal: false, vertical: true)
-            .readHeight { sheetHeight in
-                explodeInfoSheetHeight = sheetHeight
-            }
-            .presentationDetents([.height(explodeInfoSheetHeight)])
     }
 }

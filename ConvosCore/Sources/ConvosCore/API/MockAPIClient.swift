@@ -125,6 +125,10 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
             )
     }
 
+    func deleteInvite(_ inviteCode: String) async throws -> ConvosAPI.DeleteInviteResponse {
+        return ConvosAPI.DeleteInviteResponse(id: "invite_123", deleted: true)
+    }
+
     func inviteDetailsWithGroup(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsWithGroupResponse {
         return ConvosAPI.InviteDetailsWithGroupResponse(
             id: "invite_123",

@@ -169,7 +169,6 @@
 				"_Archive/Convos Client/Auth/Turnkey/TurnkeyAuthService.swift",
 				"_Archive/Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
 				"_Archive/Convos Client/Auth/Turnkey/TurnkeyPresentationAnchorProvider.swift",
-				"Conversation Detail/AddMemberView.swift",
 				"Design System/Animation/DraggableSpringyView.swift",
 				"Design System/Components/LabeledTextField.swift",
 				Info.plist,

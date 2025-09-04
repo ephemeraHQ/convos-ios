@@ -100,7 +100,8 @@ final class ConversationsViewModel {
 
     func deleteAllInboxes() {
         selectedConversation = nil
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 try await session.deleteAllInboxes()
                 await MainActor.run { self.localStateWriters.removeAll() }
@@ -115,7 +116,8 @@ final class ConversationsViewModel {
             selectedConversation = nil
         }
 
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
                 _ = await MainActor.run { self.localStateWriters.removeValue(forKey: conversation.inboxId) }
