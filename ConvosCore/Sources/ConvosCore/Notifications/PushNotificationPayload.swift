@@ -3,11 +3,26 @@ import Foundation
 /// Represents decoded notification content from NSE processing
 public struct DecodedNotificationContent {
     public let title: String?
-    public let body: String?
+    public let body: String
+    public let conversationId: String?
+    public let isDroppedMessage: Bool
 
-    public init(title: String?, body: String?) {
+    init(title: String?, body: String, conversationId: String?) {
         self.title = title
         self.body = body
+        self.conversationId = conversationId
+        self.isDroppedMessage = false
+    }
+
+    init(isDroppedMessage: Bool) {
+        self.title = nil
+        self.body = ""
+        self.conversationId = nil
+        self.isDroppedMessage = isDroppedMessage
+    }
+
+    static var droppedMessage: DecodedNotificationContent {
+        .init(isDroppedMessage: true)
     }
 }
 

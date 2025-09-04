@@ -45,7 +45,8 @@ actor UnusedInboxCache {
 
         // No unused inbox exists, create a new one
         Logger.info("No unused inbox found, creating new one")
-        Task(priority: .background) {
+        Task(priority: .background) { [weak self] in
+            guard let self else { return }
             await createNewUnusedInbox(
                 databaseWriter: databaseWriter,
                 databaseReader: databaseReader,
@@ -71,7 +72,8 @@ actor UnusedInboxCache {
             clearUnusedInboxFromKeychain()
 
             // Schedule creation of a new unused inbox for next time
-            Task(priority: .background) {
+            Task(priority: .background) { [weak self] in
+                guard let self else { return }
                 await createNewUnusedInbox(
                     databaseWriter: databaseWriter,
                     databaseReader: databaseReader,
@@ -92,7 +94,8 @@ actor UnusedInboxCache {
             clearUnusedInboxFromKeychain()
 
             // Schedule creation of a new unused inbox for next time
-            Task(priority: .background) {
+            Task(priority: .background) { [weak self] in
+                guard let self else { return }
                 await createNewUnusedInbox(
                     databaseWriter: databaseWriter,
                     databaseReader: databaseReader,
@@ -121,7 +124,8 @@ actor UnusedInboxCache {
         Logger.info("No unused inbox available, creating new one")
 
         // Schedule creation of an unused inbox for next time
-        Task(priority: .background) {
+        Task(priority: .background) { [weak self] in
+            guard let self else { return }
             await createNewUnusedInbox(
                 databaseWriter: databaseWriter,
                 databaseReader: databaseReader,
@@ -185,7 +189,8 @@ actor UnusedInboxCache {
             await messagingService.stopAndDelete()
 
             // Create a new unused inbox
-            Task(priority: .background) {
+            Task(priority: .background) { [weak self] in
+                guard let self else { return }
                 await createNewUnusedInbox(
                     databaseWriter: databaseWriter,
                     databaseReader: databaseReader,
