@@ -53,8 +53,10 @@ class NotificationService: UNNotificationServiceExtension {
         guard let pushHandler = globalPushHandler else {
             Logger.error("No global push handler available - suppressing notification")
             // Deliver empty notification to suppress display
-            contentHandler(UNMutableNotificationContent())
-            self.contentHandler = nil
+            if let handler = self.contentHandler {
+                handler(UNMutableNotificationContent())
+                self.contentHandler = nil
+            }
             return
         }
 
@@ -82,15 +84,20 @@ class NotificationService: UNNotificationServiceExtension {
                 let shouldDropMessage = decodedContent?.isDroppedMessage ?? false
                 if shouldDropMessage {
                     Logger.info("Dropping notification as requested")
-                    contentHandler(UNMutableNotificationContent())
+                    // Use self.contentHandler to avoid race condition with serviceExtensionTimeWillExpire
+                    if let handler = self.contentHandler {
+                        handler(UNMutableNotificationContent())
+                        self.contentHandler = nil
+                    }
                 } else {
                     let notificationContent = decodedContent?.notificationContent ?? payload.undecodedNotificationContent
                     Logger.info("Delivering processed notification")
-                    contentHandler(notificationContent)
+                    // Use self.contentHandler to avoid race condition with serviceExtensionTimeWillExpire
+                    if let handler = self.contentHandler {
+                        handler(notificationContent)
+                        self.contentHandler = nil
+                    }
                 }
-
-                                // Clear stored reference after successful delivery
-                self.contentHandler = nil
             } catch is CancellationError {
                 Logger.info("Notification processing was cancelled")
                 // Don't call contentHandler here - serviceExtensionTimeWillExpire will handle it
@@ -98,8 +105,11 @@ class NotificationService: UNNotificationServiceExtension {
             } catch {
                 Logger.error("Error processing notification: \(error)")
                 // On error, suppress the notification by delivering empty content
-                contentHandler(UNMutableNotificationContent())
-                self.contentHandler = nil
+                // Use self.contentHandler to avoid race condition with serviceExtensionTimeWillExpire
+                if let handler = self.contentHandler {
+                    handler(UNMutableNotificationContent())
+                    self.contentHandler = nil
+                }
             }
         }
     }
