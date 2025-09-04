@@ -264,9 +264,13 @@ actor SessionManager: SessionManagerProtocol {
     // MARK: Notification Display Logic
 
     func shouldDisplayNotification(for conversationId: String) async -> Bool {
+        // Don't display notification if we're in the conversations list
+        guard let activeConversationId else {
+            return false
+        }
+
         // Don't display notification if it's for the currently active conversation
-        if let activeConversationId = activeConversationId,
-           activeConversationId == conversationId {
+        if activeConversationId == conversationId {
             Logger.info("Suppressing notification for active conversation: \(conversationId)")
             return false
         }
