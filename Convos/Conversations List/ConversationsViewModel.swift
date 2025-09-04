@@ -35,7 +35,7 @@ final class ConversationsViewModel {
     let maxNumberOfConvos: Int = 20
     var presentingMaxNumberOfConvosReachedInfo: Bool = false
     private var maxNumberOfConvosReached: Bool {
-        conversationsCount > maxNumberOfConvos
+        conversationsCount >= maxNumberOfConvos
     }
     private(set) var conversations: [Conversation] = []
     private var conversationsCount: Int = 0
