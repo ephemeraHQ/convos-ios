@@ -11,7 +11,6 @@ echo "🔑 Generating $SECRETS_FILE from environment variables"
 # Sensitive secrets (checked but not displayed)
 SENSITIVE_SECRETS=(
     "POSTHOG_API_KEY"
-    "FIREBASE_APP_CHECK_TOKEN"
     "SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN"
     "SLACK_URL_WITH_KEY"
     "SENTRY_DSN"
@@ -68,7 +67,6 @@ import Foundation
 enum Secrets {
     // API Keys and Tokens
     static let POSTHOG_API_KEY = #"${POSTHOG_API_KEY}"#
-    static let FIREBASE_APP_CHECK_TOKEN = #"${FIREBASE_APP_CHECK_TOKEN}"#
     static let SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN = #"${SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN}"#
     static let SLACK_URL_WITH_KEY = #"${SLACK_URL_WITH_KEY}"#
     static let SENTRY_DSN = #"${SENTRY_DSN}"#

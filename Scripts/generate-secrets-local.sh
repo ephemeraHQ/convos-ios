@@ -32,7 +32,6 @@ import Foundation
 enum Secrets {
     static let CONVOS_API_BASE_URL = ""
     static let XMTP_CUSTOM_HOST = ""
-    static let FIREBASE_APP_CHECK_TOKEN = ""
     static let TURNKEY_PUBLIC_ORGANIZATION_ID = ""
     static let TURNKEY_API_PUBLIC_KEY = ""
     static let TURNKEY_API_PRIVATE_KEY = ""
