@@ -259,4 +259,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
     func unregisterInstallation(xmtpInstallationId: String) async throws {
         // no-op in mock
     }
+    func overrideJWTToken(_ token: String) {
+        // no-op in mock
+    }
 }

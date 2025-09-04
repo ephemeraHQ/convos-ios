@@ -16,6 +16,7 @@ public final class PushNotificationPayload {
     public let inboxId: String?
     public let notificationType: NotificationType?
     public let notificationData: NotificationData?
+    public let apiJWT: String?
 
     // Decoded content properties (mutable for NSE processing)
     public var decodedTitle: String?
@@ -25,6 +26,7 @@ public final class PushNotificationPayload {
         self.inboxId = userInfo["inboxId"] as? String
         self.notificationType = NotificationType(rawValue: userInfo["notificationType"] as? String ?? "")
         self.notificationData = NotificationData(dictionary: userInfo["notificationData"] as? [String: Any])
+        self.apiJWT = userInfo["apiJWT"] as? String
         self.decodedTitle = nil
         self.decodedBody = nil
     }

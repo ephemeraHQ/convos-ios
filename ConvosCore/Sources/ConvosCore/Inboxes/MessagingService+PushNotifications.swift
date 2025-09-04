@@ -45,6 +45,14 @@ extension MessagingService {
         let client = inboxReadyResult.client
         let apiClient = inboxReadyResult.apiClient
 
+        // If the payload contains an apiJWT token, use it as override for this NSE process
+        if let apiJWT = payload.apiJWT {
+            Logger.info("Using apiJWT from notification payload")
+            apiClient.overrideJWTToken(apiJWT)
+        } else {
+            Logger.warning("No apiJWT in payload, might not be able to use the Convos API")
+        }
+
         Logger.info("🔍 DEBUG: Processing notification type: \(payload.notificationType?.rawValue ?? "nil")")
         Logger.info("🔍 DEBUG: Payload notification data: \(payload.notificationData != nil ? "present" : "nil")")
 
