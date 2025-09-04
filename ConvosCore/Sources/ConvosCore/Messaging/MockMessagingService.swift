@@ -34,6 +34,8 @@ public class MockMessagingService: MessagingServiceProtocol {
 
     // MARK: - Protocol Conformance
 
+    public func stop() {}
+
     public func stopAndDelete() {}
 
     public func stopAndDelete() async {}

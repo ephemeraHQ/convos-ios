@@ -5,6 +5,7 @@ import UserNotifications
 
 public extension Notification.Name {
     static let leftConversationNotification: Notification.Name = Notification.Name("LeftConversationNotification")
+    static let activeConversationChanged: Notification.Name = Notification.Name("ActiveConversationChanged")
 }
 
 public typealias AnyMessagingService = any MessagingServiceProtocol
@@ -16,7 +17,9 @@ enum SessionManagerError: Error {
 
 actor SessionManager: SessionManagerProtocol {
     private var leftConversationObserver: Any?
+    private var activeConversationObserver: Any?
     private var messagingServices: [AnyMessagingService] = []
+    private var activeConversationId: String?
 
     private let databaseWriter: any DatabaseWriter
     private let databaseReader: any DatabaseReader
@@ -54,6 +57,9 @@ actor SessionManager: SessionManagerProtocol {
     deinit {
         if let leftConversationObserver {
             NotificationCenter.default.removeObserver(leftConversationObserver)
+        }
+        if let activeConversationObserver {
+            NotificationCenter.default.removeObserver(activeConversationObserver)
         }
         messagingServices.removeAll()
     }
@@ -101,6 +107,20 @@ actor SessionManager: SessionManagerProtocol {
                     }
                 }
             }
+
+        activeConversationObserver = NotificationCenter.default
+            .addObserver(forName: .activeConversationChanged, object: nil, queue: .main) { notification in
+                Task { [weak self] in
+                    guard let self else { return }
+                    let conversationId = notification.userInfo?["conversationId"] as? String
+                    await self.setActiveConversationId(conversationId)
+                    Logger.info("Active conversation changed to: \(conversationId ?? "none")")
+                }
+            }
+    }
+
+    private func setActiveConversationId(_ conversationId: String?) {
+        activeConversationId = conversationId
     }
 
     // MARK: - Local Notification
@@ -239,5 +259,21 @@ actor SessionManager: SessionManagerProtocol {
 
     nonisolated func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
         ConversationsCountRepository(databaseReader: databaseReader, consent: consent, kinds: kinds)
+    }
+
+    // MARK: Notification Display Logic
+
+    func shouldDisplayNotification(for conversationId: String) async -> Bool {
+        // Don't display notification if we're in the conversations list
+        guard let activeConversationId else {
+            return false
+        }
+
+        // Don't display notification if it's for the currently active conversation
+        if activeConversationId == conversationId {
+            Logger.info("Suppressing notification for active conversation: \(conversationId)")
+            return false
+        }
+        return true
     }
 }

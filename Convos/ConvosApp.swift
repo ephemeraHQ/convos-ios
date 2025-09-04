@@ -22,6 +22,9 @@ struct ConvosApp: App {
         }
 
         Logger.info("🚀 App starting with environment: \(environment)")
+
+        // Pass the session to the app delegate for notification handling
+        appDelegate.session = convos.session
     }
 
     var body: some Scene {

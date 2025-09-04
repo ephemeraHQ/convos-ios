@@ -2,8 +2,21 @@ import Combine
 import Foundation
 import GRDB
 
-public class CachedPushNotificationHandler {
+// MARK: - Errors
+public enum NotificationProcessingError: Error {
+    case timeout
+    case invalidPayload
+    case missingInboxId
+}
+
+public actor CachedPushNotificationHandler {
     private var messagingServices: [String: MessagingService] = [:]
+
+    // Track last access time for cleanup
+    private var lastAccessTime: [String: Date] = [:]
+
+    // Maximum age for cached services (10 minutes)
+    private let maxServiceAge: TimeInterval = 600
 
     // Store the processed payload for NSE access
     private var processedPayload: PushNotificationPayload?
@@ -22,52 +35,97 @@ public class CachedPushNotificationHandler {
         self.environment = environment
     }
 
-    /// Handles a push notification using the structured payload
-    /// - Parameter userInfo: The raw notification userInfo dictionary
-    public func handlePushNotification(userInfo: [AnyHashable: Any]) async throws {
-        Logger.info("🔍 Processing raw push notification")
-        let payload = PushNotificationPayload(userInfo: userInfo)
+    /// Handles a push notification using the structured payload with timeout protection
+    /// - Parameters:
+    ///   - payload: The push notification payload to process
+    ///   - timeout: Maximum time to process (default: 25 seconds for NSE's 30 second limit)
+    /// - Returns: Decoded notification content if successful
+    public func handlePushNotification(
+        payload: PushNotificationPayload,
+        timeout: TimeInterval = 25
+    ) async throws -> DecodedNotificationContent? {
+        Logger.info("Processing push notification")
+
+        // Clean up old services before processing
+        cleanupStaleServices()
 
         guard payload.isValid else {
             Logger.error("Invalid push notification payload: \(payload)")
-            return
+            return nil
         }
 
         guard let inboxId = payload.inboxId else {
             Logger.error("Push notification missing inboxId")
-            return
+            return nil
         }
 
-        Logger.info("Processing push notification for inbox: \(inboxId), type: \(payload.notificationType?.displayName ?? "unknown")")
-        Logger.info("🔍 PARSED PAYLOAD: notificationType=\(payload.notificationType?.rawValue ?? "nil"), hasNotificationData=\(payload.notificationData != nil)")
+        Logger.info("Processing for inbox: \(inboxId), type: \(payload.notificationType?.displayName ?? "unknown")")
 
-        // Store the payload for NSE to retrieve after processing
-        processedPayload = payload
+        // Process with timeout
+        return try await withThrowingTaskGroup(of: DecodedNotificationContent?.self) { group in
+            // Add the main processing task
+            group.addTask {
+                // Get or create messaging service for this inbox
+                let messagingService = await self.getOrCreateMessagingService(for: inboxId)
+                return try await messagingService.processPushNotification(payload: payload)
+            }
 
-        // Get or create messaging service for this inbox
-        let messagingService = getOrCreateMessagingService(for: inboxId)
-        try await messagingService.processPushNotification(payload: payload)
-    }
+            // Add timeout task
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                throw NotificationProcessingError.timeout
+            }
 
-    /// Gets the processed payload with decoded content for NSE use
-    public func getProcessedPayload() -> PushNotificationPayload? {
-        return processedPayload
+            // Return first result (either success or timeout)
+            if let result = try await group.next() {
+                group.cancelAll() // Cancel the other task
+                return result
+            }
+
+            return nil
+        }
     }
 
     /// Cleans up all resources
     public func cleanup() {
-        Logger.info("Starting cleanup of \(messagingServices.count) messaging services")
+        Logger.info("Cleaning up \(messagingServices.count) messaging services")
+        messagingServices.values.forEach { $0.stop() }
         messagingServices.removeAll()
-        processedPayload = nil // Clear processed payload
+        lastAccessTime.removeAll()
+        processedPayload = nil
+    }
+
+    /// Cleans up stale services that haven't been used recently
+    private func cleanupStaleServices() {
+        let now = Date()
+        var staleInboxIds: [String] = []
+
+        for (inboxId, accessTime) in lastAccessTime where now.timeIntervalSince(accessTime) > maxServiceAge {
+            staleInboxIds.append(inboxId)
+        }
+
+        if !staleInboxIds.isEmpty {
+            Logger.info("Cleaning up \(staleInboxIds.count) stale messaging services")
+            for inboxId in staleInboxIds {
+                let removedService = messagingServices.removeValue(forKey: inboxId)
+                removedService?.stop()
+                lastAccessTime.removeValue(forKey: inboxId)
+            }
+        }
     }
 
     // MARK: - Private Methods
 
     private func getOrCreateMessagingService(for inboxId: String) -> MessagingService {
+        // Update access time
+        lastAccessTime[inboxId] = Date()
+
         if let existing = messagingServices[inboxId] {
+            Logger.info("Reusing existing messaging service for inbox: \(inboxId)")
             return existing
         }
 
+        Logger.info("Creating new messaging service for inbox: \(inboxId)")
         let messagingService = MessagingService.authorizedMessagingService(
             for: inboxId,
             databaseWriter: databaseWriter,

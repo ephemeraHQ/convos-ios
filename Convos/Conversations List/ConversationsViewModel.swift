@@ -20,6 +20,13 @@ final class ConversationsViewModel {
             } else {
                 selectedConversationViewModel = nil
             }
+
+            // Notify that active conversation has changed
+            NotificationCenter.default.post(
+                name: .activeConversationChanged,
+                object: nil,
+                userInfo: ["conversationId": newValue?.id as Any]
+            )
         }
     }
     private(set) var selectedConversationViewModel: ConversationViewModel?

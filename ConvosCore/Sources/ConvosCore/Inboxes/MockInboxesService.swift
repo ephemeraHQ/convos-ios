@@ -2,6 +2,10 @@ import Combine
 import Foundation
 
 public class MockInboxesService: SessionManagerProtocol {
+    public func shouldDisplayNotification(for conversationId: String) async -> Bool {
+        true
+    }
+
     public init() {
     }
 

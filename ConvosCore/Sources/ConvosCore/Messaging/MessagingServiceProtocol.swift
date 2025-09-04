@@ -4,6 +4,7 @@ import Foundation
 public protocol MessagingServiceProtocol: AnyObject {
     var identifier: String { get }
 
+    func stop()
     func stopAndDelete()
     func stopAndDelete() async
 

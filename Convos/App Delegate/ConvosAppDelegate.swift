@@ -7,6 +7,8 @@ import UserNotifications
 
 @MainActor
 class ConvosAppDelegate: NSObject, UIApplicationDelegate {
+    var session: (any SessionManagerProtocol)?
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
 
@@ -39,6 +41,18 @@ extension ConvosAppDelegate: UNUserNotificationCenterDelegate {
     // Handle notifications when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        // Check if we should display this notification based on the active conversation
+        let conversationId = notification.request.content.threadIdentifier
+
+        if !conversationId.isEmpty,
+           let session = session {
+            let shouldDisplay = await session.shouldDisplayNotification(for: conversationId)
+            if !shouldDisplay {
+                Logger.info("Suppressing notification for active conversation: \(conversationId)")
+                return []
+            }
+        }
+
         // Show notification banner when app is in foreground
         // NSE processes all notifications regardless of app state
         Logger.info("App in foreground - showing notification banner")
