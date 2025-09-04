@@ -1,0 +1,253 @@
+name: Auto Create Release PR
+
+on:
+  push:
+    tags:
+      - '*.*.*' # Triggers on semantic version tags (e.g., 1.0.0, no v prefix)
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  auto-release-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # Read/write repository contents, tags, and releases
+      pull-requests: write  # Create pull requests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install anthropic
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Generate short release notes
+        id: release-notes
+        run: |
+          python3 -c '
+          import anthropic
+          import os
+          import subprocess
+
+          # Setup Anthropic Claude
+          client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+          # Get current tag from the trigger event
+          current_tag = os.environ["GITHUB_REF"].replace("refs/tags/", "")
+
+          # Get the previous tag (the one before current)
+          tags_result = subprocess.run(["git", "tag", "--sort=-version:refname"], capture_output=True, text=True)
+          if tags_result.returncode != 0:
+              print(f"Failed to get tags: {tags_result.stderr}")
+              exit(1)
+
+          tags = tags_result.stdout.strip().split("\n")
+          previous_tag = None
+
+          # Find the tag before the current one
+          for i, tag in enumerate(tags):
+              if tag == current_tag and i + 1 < len(tags):
+                  previous_tag = tags[i + 1]
+                  break
+
+          if previous_tag:
+              print(f"Getting commits between {previous_tag} and {current_tag}")
+              result = subprocess.run(["git", "log", "--oneline", "--no-merges", f"{previous_tag}..{current_tag}"], capture_output=True, text=True)
+          else:
+              print(f"First release - getting all commits up to {current_tag}")
+              result = subprocess.run(["git", "log", "--oneline", "--no-merges", current_tag], capture_output=True, text=True)
+          if result.returncode != 0:
+              print(f"Failed to get commits: {result.stderr}")
+              exit(1)
+
+          commits = result.stdout.strip().split("\n")
+
+          # Handle empty commit list
+          if not commits or (len(commits) == 1 and not commits[0]):
+              print("No commits found in range, using generic message")
+              commits = ["General improvements and updates"]
+
+          # Filter and categorize commits
+          features = []
+          bugfixes = []
+          other_changes = []
+
+          for commit in commits:
+              if commit:
+                  msg = commit.split(" ", 1)[1] if " " in commit else commit
+                  if msg.startswith("feat"):
+                      features.append(msg)
+                  elif msg.startswith("fix"):
+                      bugfixes.append(msg)
+                  else:
+                      other_changes.append(msg)
+
+          # Generate short, customer-friendly release notes
+          version = os.environ["VERSION"]
+          prompt = f"Generate SHORT, customer-friendly release notes for iOS app version {version}. Key changes: Features: {features[:3] if features else []}, Bugfixes: {bugfixes[:2] if bugfixes else []}, Other: {other_changes[:2] if other_changes and not features and not bugfixes else []}. Requirements: MAXIMUM 5 bullet points total, use warm friendly language, focus on user benefits, keep each point under 15 words, no technical jargon. Format as simple bullet points, no headers or markdown."
+
+          try:
+              response = client.messages.create(
+                  model="claude-sonnet-4-20250514",
+                  max_tokens=200,
+                  temperature=0.8,
+                  messages=[{"role": "user", "content": prompt}]
+              )
+
+              release_notes = response.content[0].text.strip()
+
+          except Exception as e:
+              print(f"Claude API failed: {e}")
+              print("Using fallback release notes...")
+
+              # Fallback release notes if API fails
+              release_notes = f"Version {version}\n- Bug fixes and performance improvements\n- Enhanced user experience\n- Updated for latest iOS compatibility"
+
+          # Save to file
+          with open("release-notes.txt", "w") as f:
+              f.write(release_notes)
+
+          print("Release notes saved successfully!")
+          '
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Store release notes for later use
+        run: |
+          echo "Release notes generated and stored in release-notes.txt"
+          echo "These will be used in the PR description and GitHub Release"
+
+      - name: Create GitHub Release
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          RELEASE_NOTES=$(cat release-notes.txt)
+
+          # Check if release already exists
+          if gh release view "$VERSION" > /dev/null 2>&1; then
+            echo "Release $VERSION already exists, updating it..."
+            gh release edit "$VERSION" \
+              --title "Release $VERSION" \
+              --notes "$RELEASE_NOTES"
+          else
+            echo "Creating GitHub Release $VERSION..."
+            gh release create "$VERSION" \
+              --title "Release $VERSION" \
+              --notes "$RELEASE_NOTES" \
+              --target "$GITHUB_SHA"
+          fi
+
+          echo "GitHub Release created/updated with release notes"
+          echo "   Bitrise will read from: https://github.com/${{ github.repository }}/releases/tag/$VERSION"
+
+      - name: Verify version in dev branch
+        run: |
+          # Verify that the version in dev branch matches the tag
+          git fetch --no-tags --prune origin dev
+          current_version=$(git show origin/dev:Convos.xcodeproj/project.pbxproj | \
+            grep -o 'MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*;' | head -1 | \
+            sed 's/MARKETING_VERSION = \([0-9]*\.[0-9]*\.[0-9]*\);/\1/')
+          tag_version="${{ steps.version.outputs.version }}"
+
+          if [ "$current_version" != "$tag_version" ]; then
+            echo "Version mismatch: dev branch has $current_version, but tag is $tag_version"
+            echo "This suggests the version wasn't properly updated in dev branch before tagging"
+            exit 1
+          fi
+
+          echo "Version verified: dev branch has $current_version, tag is $tag_version"
+
+      - name: Verify rebase merge compatibility
+        run: |
+          # Check if dev has commits that main doesn't have
+          git fetch origin main
+          git fetch origin dev
+
+          # Check if dev is ahead of main
+          if [ $(git rev-list --count origin/main..origin/dev) -gt 0 ]; then
+            echo "Rebase merge is possible"
+            echo "   Dev branch has new commits to bring to main"
+          else
+            echo "No new commits to merge"
+            echo "   Dev branch is already up to date with main"
+            exit 1
+          fi
+
+      - name: Create Pull Request
+        id: create-pr
+        run: |
+          python3 -c '
+          import os
+          import subprocess
+
+          # Read release notes
+          with open("release-notes.txt", "r") as f:
+              release_notes = f.read()
+
+          # Create PR description
+          version = os.environ["VERSION"]
+          pr_body = f"# Release {version}\n\n{release_notes}\n\n---\n*Generated automatically by GitHub Actions*"
+
+          # Check if PR already exists
+          pr_check = subprocess.run(
+              ["gh", "pr", "list", "--base", "main", "--head", "dev", "--state", "open", "--json", "number"],
+              capture_output=True, text=True
+          )
+
+          if pr_check.returncode == 0 and pr_check.stdout.strip() != "[]":
+              print("PR from dev to main already exists; skipping creation.")
+              print(pr_check.stdout)
+              exit(0)
+
+          # Create PR using GitHub CLI
+          pr_result = subprocess.run([
+              "gh", "pr", "create",
+              "--title", f"Release {version}",
+              "--body", pr_body,
+              "--base", "main",
+              "--head", "dev"
+          ], capture_output=True, text=True)
+
+          if pr_result.returncode == 0:
+              print("Pull Request created successfully!")
+              print(pr_result.stdout)
+          else:
+              print("Failed to create PR:")
+              print(pr_result.stderr)
+              exit(1)
+          '
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Output summary
+        run: |
+          echo "Auto-release PR workflow completed!"
+          echo "Version: ${{ steps.version.outputs.version }}"
+          echo "GitHub Release: Created/updated with release notes"
+          echo "Pull Request: Created from dev to main"
+          echo ""
+          echo "Release pipeline created:"
+          echo "  - GitHub Release available for Bitrise"
+          echo "  - Release notes will be used by Bitrise for App Store submission"
+          echo ""
+          echo "Next steps:"
+          echo "1. Review the generated PR"
+          echo "2. Use 'Rebase and merge' button (linear history)"
+          echo "3. Bitrise will build and deploy automatically"
