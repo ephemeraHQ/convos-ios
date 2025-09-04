@@ -12,4 +12,5 @@ public protocol SessionManagerProtocol {
         for consent: [Consent],
         kinds: [ConversationKind]
     ) -> any ConversationsCountRepositoryProtocol
+    func shouldDisplayNotification(for conversationId: String) async -> Bool
 }
