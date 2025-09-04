@@ -24,13 +24,9 @@ final class DeepLinkHandler {
             return false
         }
 
-        let validHosts = [
-            "convos.org",
-            "otr-preview.convos.org",
-            "local.convos.org"
-        ]
+        let validDomain = ConfigManager.shared.associatedDomain
 
-        guard validHosts.contains(host) || validHosts.contains(where: { host.hasSuffix($0) }) else {
+        guard host == validDomain else {
             return false
         }
 
@@ -38,9 +34,7 @@ final class DeepLinkHandler {
         // URL format: https://domain.com/join/[inviteCode]
         if pathComponents[0] == "join" && pathComponents.count > 1 {
             let inviteCode = pathComponents[1]
-            pendingDeepLink = .requestToJoin(inviteCode: inviteCode)
-            inviteCodeToProcess = inviteCode
-            shouldPresentRequestToJoin = true
+            updatePendingState(inviteCode: inviteCode)
             return true
         }
 
@@ -54,5 +48,13 @@ final class DeepLinkHandler {
         pendingDeepLink = nil
         inviteCodeToProcess = nil
         shouldPresentRequestToJoin = false
+    }
+
+    // MARK: - Private Methods
+
+    private func updatePendingState(inviteCode: String) {
+        pendingDeepLink = .requestToJoin(inviteCode: inviteCode)
+        inviteCodeToProcess = inviteCode
+        shouldPresentRequestToJoin = true
     }
 }
