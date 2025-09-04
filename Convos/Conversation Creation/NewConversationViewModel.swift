@@ -21,6 +21,7 @@ class NewConversationViewModel: Identifiable {
     private(set) var showScannerOnAppear: Bool
     var presentingJoinConversationSheet: Bool = false
     private var initializationTask: Task<Void, Never>?
+    private var prefilledInviteCode: String?
 
     // MARK: - Private
 
@@ -36,10 +37,11 @@ class NewConversationViewModel: Identifiable {
 
     // MARK: - Init
 
-    init(session: any SessionManagerProtocol, showScannerOnAppear: Bool = false, delegate: NewConversationsViewModelDelegate? = nil) {
+    init(session: any SessionManagerProtocol, showScannerOnAppear: Bool = false, delegate: NewConversationsViewModelDelegate? = nil, prefilledInviteCode: String? = nil) {
         self.session = session
         self.showScannerOnAppear = showScannerOnAppear
         self.delegate = delegate
+        self.prefilledInviteCode = prefilledInviteCode
 
         // Start async initialization
         initializationTask = Task { [weak self] in
@@ -79,6 +81,10 @@ class NewConversationViewModel: Identifiable {
         self.conversationViewModel?.untitledConversationPlaceholder = "New convo"
         if showScannerOnAppear {
             self.conversationViewModel?.showsInfoView = false
+            if let prefilledInviteCode {
+                _ = join(inviteUrlString: prefilledInviteCode)
+            }
+            // Don't set presentingJoinConversationSheet here - the view handles it
         }
         if !showScannerOnAppear {
             try await draftConversationComposer.draftConversationWriter.createConversation()
