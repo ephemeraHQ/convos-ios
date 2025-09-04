@@ -64,9 +64,7 @@ public actor CachedPushNotificationHandler {
         // Process with timeout
         return try await withThrowingTaskGroup(of: DecodedNotificationContent?.self) { group in
             // Add the main processing task
-            group.addTask { [weak self] in
-                guard let self = self else { return nil }
-
+            group.addTask {
                 // Get or create messaging service for this inbox
                 let messagingService = await self.getOrCreateMessagingService(for: inboxId)
                 return try await messagingService.processPushNotification(payload: payload)
