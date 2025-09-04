@@ -2,81 +2,127 @@ import ConvosCore
 import Foundation
 import UserNotifications
 
-class NotificationService: UNNotificationServiceExtension {
-    private lazy var pushHandler: CachedPushNotificationHandler? = {
-        do {
-            return try NotificationExtensionEnvironment.createPushNotificationHandler()
-        } catch {
-            Logger.error("Error initializing push notification handler: \(error.localizedDescription)")
-            return nil
+// MARK: - Global Push Handler Singleton
+// Shared across all NSE process instances for efficiency and thread safety
+// The actor ensures thread-safe access from multiple notification deliveries
+private let globalPushHandler: CachedPushNotificationHandler? = {
+    do {
+        // Configure logging first
+        let environment = try NotificationExtensionEnvironment.getEnvironment()
+        let isProd: Bool
+        switch environment {
+        case .production: isProd = true
+        default: isProd = false
         }
-    }()
+        Logger.configure(environment: environment, isProduction: isProd)
+        Logger.info("[NotificationService] Initializing global push handler for environment: \(environment.name)")
 
-    private var pendingTask: Task<Void, Never>?
-
-    private func configureLogging() {
-        // Configure Logger with environment from stored configuration
-        do {
-            let environment = try NotificationExtensionEnvironment.getEnvironment()
-            let isProd: Bool
-            switch environment {
-            case .production: isProd = true
-            default: isProd = false
-            }
-            Logger.configure(environment: environment, isProduction: isProd)
-        } catch {
-            // Fallback: just log the error but continue
-            print("Failed to configure logging with environment: \(error)")
-        }
+        // Create the handler
+        return try NotificationExtensionEnvironment.createPushNotificationHandler()
+    } catch {
+        // Log to both console and Logger in case Logger isn't configured
+        let errorMsg = "[NotificationService] Failed to initialize global push handler: \(error.localizedDescription)"
+        print(errorMsg)
+        Logger.error(errorMsg)
+        return nil
     }
+}()
 
-    override func didReceive(
+class NotificationService: UNNotificationServiceExtension {
+    // Keep track of the current processing task for cancellation
+    private var currentProcessingTask: Task<Void, Never>?
+
+    // Store content handler for timeout scenario
+    private var contentHandler: ((UNNotificationContent) -> Void)?
+
+    // Track lifecycle for debugging
+    private let instanceId: Substring = UUID().uuidString.prefix(8)
+    private let processId: Int32 = ProcessInfo.processInfo.processIdentifier
+
+        override func didReceive(
         _ request: UNNotificationRequest,
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
     ) {
         let requestId = request.identifier
-        let processId = ProcessInfo.processInfo.processIdentifier
 
-        // Configure Logger with environment from stored configuration
-        configureLogging()
+        // Store content handler for timeout scenario
+        self.contentHandler = contentHandler
 
-        Logger.info("[PID: \(processId)] [RequestID: \(requestId)] didReceive notification request")
+        Logger.info("[PID: \(processId)] [Instance: \(instanceId)] [Request: \(requestId)] Starting notification processing")
 
-        guard let pushHandler else {
-            Logger.error("No push notification handler available")
+        guard let pushHandler = globalPushHandler else {
+            Logger.error("No global push handler available - suppressing notification")
+            // Deliver empty notification to suppress display
             contentHandler(UNMutableNotificationContent())
             return
         }
 
-        // Handle the push notification asynchronously and wait for completion
-        Logger.info("Starting async notification processing")
-        pendingTask = Task {
+        // Cancel any previous task if still running (shouldn't happen but be safe)
+        currentProcessingTask?.cancel()
+
+        // Create a new processing task
+        currentProcessingTask = Task { [weak self] in
+            guard let self = self else { return }
+
             do {
+                // Check for early cancellation
+                try Task.checkCancellation()
+
                 let payload = PushNotificationPayload(userInfo: request.content.userInfo)
-                let decodedContent = try await pushHandler.handlePushNotification(
-                    payload: payload
-                )
+                Logger.info("Processing notification: type=\(payload.notificationType?.rawValue ?? "unknown"), inboxId=\(payload.inboxId ?? "none")")
+
+                // Process the notification with the global handler
+                let decodedContent = try await pushHandler.handlePushNotification(payload: payload)
+
+                // Check for cancellation before delivering
+                try Task.checkCancellation()
+
+                // Determine what content to deliver
                 let shouldDropMessage = decodedContent?.isDroppedMessage ?? false
                 if shouldDropMessage {
+                    Logger.info("Dropping notification as requested")
                     contentHandler(UNMutableNotificationContent())
                 } else {
                     let notificationContent = decodedContent?.notificationContent ?? payload.undecodedNotificationContent
+                    Logger.info("Delivering processed notification")
                     contentHandler(notificationContent)
                 }
+
+                                // Clear stored reference after successful delivery
+                self.contentHandler = nil
+            } catch is CancellationError {
+                Logger.info("Notification processing was cancelled")
+                // Don't call contentHandler here - serviceExtensionTimeWillExpire will handle it
+
             } catch {
-                Logger.error("Error processing notification: \(error.localizedDescription)")
+                Logger.error("Error processing notification: \(error)")
+                // On error, suppress the notification by delivering empty content
                 contentHandler(UNMutableNotificationContent())
+                self.contentHandler = nil
             }
         }
     }
 
-    override func serviceExtensionTimeWillExpire() {
+        override func serviceExtensionTimeWillExpire() {
         // Called just before the extension will be terminated by the system
-        // Cancel any ongoing async work to prevent multiple contentHandler calls
-        Logger.info("serviceExtensionTimeWillExpire called - extension about to be terminated")
-        // With notification filtering entitlement, deliver an empty notification to suppress display
-        Logger.info("Timeout - delivering empty notification")
-//        contentHandler(UNMutableNotificationContent())
+        Logger.warning("[Instance: \(instanceId)] Service extension time expiring")
+
+        // Cancel any ongoing processing
+        currentProcessingTask?.cancel()
+        currentProcessingTask = nil
+
+        // Always deliver empty notification on timeout to suppress display
+        if let contentHandler = contentHandler {
+            Logger.info("Timeout - suppressing notification with empty content")
+            contentHandler(UNMutableNotificationContent())
+            self.contentHandler = nil
+        }
+    }
+
+        // MARK: - Helper Methods
+
+    deinit {
+        Logger.info("[Instance: \(instanceId)] NotificationService instance deallocated")
     }
 }
 
