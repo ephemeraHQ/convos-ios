@@ -88,8 +88,8 @@ extension ConvosAppDelegate: UNUserNotificationCenterDelegate {
         }
 
         // Handle regular conversation notifications (Protocol messages)
-        if let inboxId = payload.inboxId,
-           let conversationId = payload.notificationData?.protocolData?.conversationId {
+        let conversationId = response.notification.request.content.threadIdentifier
+        if let inboxId = payload.inboxId {
             Logger.info("Handling conversation notification tap for inboxId: \(inboxId), conversationId: \(conversationId)")
             DispatchQueue.main.async {
                 NotificationCenter.default.post(

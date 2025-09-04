@@ -6,23 +6,26 @@ public struct DecodedNotificationContent {
     public let body: String
     public let conversationId: String?
     public let isDroppedMessage: Bool
+    public let userInfo: [AnyHashable: Any]
 
-    init(title: String?, body: String, conversationId: String?) {
+    init(title: String?, body: String, conversationId: String?, userInfo: [AnyHashable: Any]) {
         self.title = title
         self.body = body
         self.conversationId = conversationId
         self.isDroppedMessage = false
+        self.userInfo = userInfo
     }
 
-    init(isDroppedMessage: Bool) {
+    init(isDroppedMessage: Bool, userInfo: [AnyHashable: Any]) {
         self.title = nil
         self.body = ""
         self.conversationId = nil
         self.isDroppedMessage = isDroppedMessage
+        self.userInfo = userInfo
     }
 
     static var droppedMessage: DecodedNotificationContent {
-        .init(isDroppedMessage: true)
+        .init(isDroppedMessage: true, userInfo: [:])
     }
 }
 
@@ -31,12 +34,14 @@ public final class PushNotificationPayload {
     public let inboxId: String?
     public let notificationType: NotificationType?
     public let notificationData: NotificationData?
+    public let userInfo: [AnyHashable: Any]
 
     // Decoded content properties (mutable for NSE processing)
     public var decodedTitle: String?
     public var decodedBody: String?
 
     public init(userInfo: [AnyHashable: Any]) {
+        self.userInfo = userInfo
         self.inboxId = userInfo["inboxId"] as? String
         self.notificationType = NotificationType(rawValue: userInfo["notificationType"] as? String ?? "")
         self.notificationData = NotificationData(dictionary: userInfo["notificationData"] as? [String: Any])
