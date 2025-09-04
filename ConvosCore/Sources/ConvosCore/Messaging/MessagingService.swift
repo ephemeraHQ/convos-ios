@@ -72,6 +72,10 @@ final class MessagingService: MessagingServiceProtocol {
 
     // MARK: State
 
+    func stop() {
+        authorizationOperation.stop()
+    }
+
     func stopAndDelete() {
         authorizationOperation.stopAndDelete()
     }

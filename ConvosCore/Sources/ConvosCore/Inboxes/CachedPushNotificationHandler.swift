@@ -99,16 +99,17 @@ public actor CachedPushNotificationHandler {
     /// Cleans up stale services that haven't been used recently
     private func cleanupStaleServices() {
         let now = Date()
-        var stalInboxIds: [String] = []
+        var staleInboxIds: [String] = []
 
         for (inboxId, accessTime) in lastAccessTime where now.timeIntervalSince(accessTime) > maxServiceAge {
-            stalInboxIds.append(inboxId)
+            staleInboxIds.append(inboxId)
         }
 
-        if !stalInboxIds.isEmpty {
-            Logger.info("Cleaning up \(stalInboxIds.count) stale messaging services")
-            for inboxId in stalInboxIds {
-                messagingServices.removeValue(forKey: inboxId)
+        if !staleInboxIds.isEmpty {
+            Logger.info("Cleaning up \(staleInboxIds.count) stale messaging services")
+            for inboxId in staleInboxIds {
+                let removedService = messagingServices.removeValue(forKey: inboxId)
+                removedService?.stop()
                 lastAccessTime.removeValue(forKey: inboxId)
             }
         }
