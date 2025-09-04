@@ -54,6 +54,7 @@ class NotificationService: UNNotificationServiceExtension {
             Logger.error("No global push handler available - suppressing notification")
             // Deliver empty notification to suppress display
             contentHandler(UNMutableNotificationContent())
+            self.contentHandler = nil
             return
         }
 
