@@ -82,9 +82,11 @@ class NewConversationViewModel: Identifiable {
         if showScannerOnAppear {
             self.conversationViewModel?.showsInfoView = false
             if let prefilledInviteCode {
-                _ = join(inviteUrlString: prefilledInviteCode)
+                let success = join(inviteUrlString: prefilledInviteCode)
+                if !success {
+                    Logger.warning("Failed to join with prefilled invite code: \(prefilledInviteCode)")
+                }
             }
-            // Don't set presentingJoinConversationSheet here - the view handles it
         }
         if !showScannerOnAppear {
             try await draftConversationComposer.draftConversationWriter.createConversation()
