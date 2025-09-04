@@ -3,5 +3,16 @@
 <plist version="1.0">
 <dict>
 	ATS_DICTIONARY
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>$(MAIN_BUNDLE_ID).deeplinks</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(URL_SCHEME)</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
