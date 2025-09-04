@@ -39,7 +39,8 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     func authenticate(inboxId: String,
                       installationId: String,
                       appCheckToken: String,
-                      signature: String) async throws -> String
+                      signature: String,
+                      retryCount: Int) async throws -> String
 
     func checkAuth() async throws
 
@@ -218,7 +219,8 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             inboxId: inboxId,
             installationId: installationId,
             appCheckToken: firebaseAppCheckToken,
-            signature: signature
+            signature: signature,
+            retryCount: 0
         )
     }
 
@@ -227,7 +229,8 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     func authenticate(inboxId: String,
                       installationId: String,
                       appCheckToken: String,
-                      signature: String) async throws -> String {
+                      signature: String,
+                      retryCount: Int = 0) async throws -> String {
         let url = baseURL.appendingPathComponent("v1/authenticate")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -240,8 +243,43 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
         let (data, response) = try await session.data(for: request)
 
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.authenticationFailed
+        }
+
+        // Special handling for installation ID errors
+        if httpResponse.statusCode == 400 {
+            if let errorMessage = parseErrorMessage(from: data),
+               errorMessage.lowercased().contains("invalid installation id") {
+                throw APIError.invalidInstallationId(
+                    inboxId: inboxId,
+                    installationId: installationId,
+                    message: errorMessage
+                )
+            } else {
+                throw APIError.badRequest(parseErrorMessage(from: data))
+            }
+        }
+
+        // Handle auth rate limiting
+        if httpResponse.statusCode == 429 {
+            guard retryCount < maxRetryCount else {
+                throw APIError.rateLimitExceeded
+            }
+            // Use exponential backoff for rate limit retries
+            let delay = calculateExponentialBackoff(retryCount: retryCount)
+            Logger.info("Auth rate limited - retrying in \(delay)s (attempt \(retryCount + 1) of \(maxRetryCount))")
+
+            // Sleep and then retry
+            try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            return try await authenticate(inboxId: inboxId,
+                                          installationId: installationId,
+                                          appCheckToken: appCheckToken,
+                                          signature: signature,
+                                          retryCount: retryCount + 1)
+        }
+
+        guard httpResponse.statusCode == 200 else {
             throw APIError.authenticationFailed
         }
 
@@ -619,6 +657,23 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             throw APIError.serverError("Failed DELETE notifications/unregister: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
         }
     }
+
+    // MARK: - Helper Methods
+
+    private func parseErrorMessage(from data: Data) -> String? {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let message = json["message"] as? String {
+            return message
+        }
+        return String(data: data, encoding: .utf8)
+    }
+
+    private func calculateExponentialBackoff(retryCount: Int) -> TimeInterval {
+        let baseDelay: TimeInterval = 1.0
+        let exponentialDelay = baseDelay * pow(2.0, Double(retryCount))
+        let jitter = Double.random(in: 0...0.1) * exponentialDelay
+        return min(exponentialDelay + jitter, 30.0) // Cap at 30 seconds
+    }
 }
 
 // MARK: - Error Handling
@@ -633,4 +688,6 @@ enum APIError: Error {
     case invalidResponse
     case invalidRequest
     case serverError(String?)
+    case rateLimitExceeded
+    case invalidInstallationId(inboxId: String, installationId: String, message: String)
 }
