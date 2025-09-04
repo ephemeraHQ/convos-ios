@@ -89,6 +89,7 @@ public actor CachedPushNotificationHandler {
     /// Cleans up all resources
     public func cleanup() {
         Logger.info("Cleaning up \(messagingServices.count) messaging services")
+        messagingServices.values.forEach { $0.stop() }
         messagingServices.removeAll()
         lastAccessTime.removeAll()
         processedPayload = nil
