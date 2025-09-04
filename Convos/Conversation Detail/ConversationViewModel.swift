@@ -96,7 +96,7 @@ class ConversationViewModel {
             self.messages = try messagesRepository.fetchAll()
             self.conversation = try conversationRepository.fetchConversation() ?? conversation
         } catch {
-            Logger.error("Error fetching latest: \(error.localizedDescription)")
+            Logger.error("Error fetching messages or conversation: \(error.localizedDescription)")
             self.messages = []
         }
 
