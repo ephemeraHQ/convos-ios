@@ -9,6 +9,7 @@ enum ConversationWriterError: Error {
 public protocol ConversationWriterProtocol {
     @discardableResult
     func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation
+    @discardableResult
     func storeWithLatestMessages(conversation: XMTPiOS.Conversation) async throws -> DBConversation
     func store(conversation: XMTPiOS.Conversation,
                clientConversationId: String) async throws -> DBConversation
