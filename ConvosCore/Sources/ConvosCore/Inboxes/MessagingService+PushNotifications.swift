@@ -83,6 +83,7 @@ extension MessagingService {
             encryptedMessage: encryptedMessage,
             contentTopic: contentTopic,
             currentInboxId: currentInboxId,
+            userInfo: payload.userInfo,
             client: client
         )
     }
@@ -92,6 +93,7 @@ extension MessagingService {
         encryptedMessage: String,
         contentTopic: String,
         currentInboxId: String,
+        userInfo: [AnyHashable: Any],
         client: any XMTPClientProvider
     ) async throws -> DecodedNotificationContent? {
         // Extract conversation ID from topic path
@@ -124,6 +126,11 @@ extension MessagingService {
             return .droppedMessage
         }
 
+        let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
+        let conversationWriter = ConversationWriter(databaseWriter: databaseWriter, messageWriter: messageWriter)
+        let dbConversation = try await conversationWriter.store(conversation: conversation)
+        try await messageWriter.store(message: decodedMessage, for: dbConversation)
+
         // Only handle text content type
         let encodedContentType = try decodedMessage.encodedContent.type
         guard encodedContentType == ContentTypeText else {
@@ -148,7 +155,12 @@ extension MessagingService {
             notificationTitle = nil
         }
 
-        return .init(title: notificationTitle, body: notificationBody, conversationId: conversationId)
+        return .init(
+            title: notificationTitle,
+            body: notificationBody,
+            conversationId: conversationId,
+            userInfo: userInfo
+        )
     }
 
     /// Handles invite join request notifications
@@ -258,7 +270,12 @@ extension MessagingService {
 
             let conversationName = dBConversation.name ?? ""
             let title = conversationName.isEmpty ? "Untitled" : conversationName
-            return .init(title: title, body: "Someone accepted your invite", conversationId: groupId)
+            return .init(
+                title: title,
+                body: "Someone accepted your invite",
+                conversationId: groupId,
+                userInfo: payload.userInfo
+            )
         } catch {
             Logger.error("Failed to add member to group: \(error.localizedDescription)")
             throw error

@@ -32,8 +32,13 @@ final class ConversationsViewModel {
     private(set) var selectedConversationViewModel: ConversationViewModel?
     var newConversationViewModel: NewConversationViewModel?
     var presentingExplodeInfo: Bool = false
+    let maxNumberOfConvos: Int = 20
+    var presentingMaxNumberOfConvosReachedInfo: Bool = false
+    private var maxNumberOfConvosReached: Bool {
+        conversationsCount >= maxNumberOfConvos
+    }
     private(set) var conversations: [Conversation] = []
-    private(set) var conversationsCount: Int = 0
+    private var conversationsCount: Int = 0
 
     var pinnedConversations: [Conversation] {
         conversations.filter { $0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
@@ -76,10 +81,18 @@ final class ConversationsViewModel {
     }
 
     func onStartConvo() {
+        guard !maxNumberOfConvosReached else {
+            presentingMaxNumberOfConvosReachedInfo = true
+            return
+        }
         newConversationViewModel = .init(session: session, delegate: self)
     }
 
     func onJoinConvo() {
+        guard !maxNumberOfConvosReached else {
+            presentingMaxNumberOfConvosReachedInfo = true
+            return
+        }
         newConversationViewModel = .init(session: session, showScannerOnAppear: true, delegate: self)
     }
 

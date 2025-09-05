@@ -13,7 +13,7 @@ struct ConversationsView: View {
 
     @FocusState private var focusState: MessagesViewInputFocus?
     @State private var sidebarWidth: CGFloat = 0.0
-    @State private var explodeInfoSheetHeight: CGFloat = 0.0
+    @State private var infoSheetHeight: CGFloat = 0.0
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
 
     init(
@@ -24,7 +24,7 @@ struct ConversationsView: View {
             for: .allowed
         )
         let conversationsCountRepository = session.conversationsCountRepo(
-            for: .all,
+            for: .allowed,
             kinds: .groups
         )
         self.viewModel = ConversationsViewModel(
@@ -167,9 +167,17 @@ struct ConversationsView: View {
             ExplodeInfoView()
                 .fixedSize(horizontal: false, vertical: true)
                 .readHeight { sheetHeight in
-                    explodeInfoSheetHeight = sheetHeight
+                    infoSheetHeight = sheetHeight
                 }
-                .presentationDetents([.height(explodeInfoSheetHeight)])
+                .presentationDetents([.height(infoSheetHeight)])
+        }
+        .sheet(isPresented: $viewModel.presentingMaxNumberOfConvosReachedInfo) {
+            MaxedOutInfoView(maxNumberOfConvos: viewModel.maxNumberOfConvos)
+                .fixedSize(horizontal: false, vertical: true)
+                .readHeight { sheetHeight in
+                    infoSheetHeight = sheetHeight
+                }
+                .presentationDetents([.height(infoSheetHeight)])
         }
     }
 }

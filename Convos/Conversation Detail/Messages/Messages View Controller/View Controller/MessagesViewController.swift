@@ -25,7 +25,7 @@ final class MessagesViewController: UIViewController {
         case scrollingToBottom
         case updatingCollectionInIsolation
         case showingReactionsMenu
-        case determiningBarHeights
+        case determiningBottomBarHeight
     }
 
     private enum ControllerActions {
@@ -85,19 +85,6 @@ final class MessagesViewController: UIViewController {
         }
     }
 
-    var topBarHeight: CGFloat = 0.0 {
-        didSet {
-            // @jarodl fix this
-//            if topBarHeight != oldValue {
-                updateCollectionViewInsets(to: topBarHeight)
-//            }
-//
-//            if bottomBarHeight > 0.0 && topBarHeight > 0.0 {
-//                currentInterfaceActions.options.remove(.determiningBarHeights)
-//            }
-        }
-    }
-
     var bottomBarHeight: CGFloat = 0.0 {
         didSet {
             if bottomBarHeight != oldValue {
@@ -105,7 +92,7 @@ final class MessagesViewController: UIViewController {
             }
 
             if bottomBarHeight > 0.0 {
-                currentInterfaceActions.options.remove(.determiningBarHeights)
+                currentInterfaceActions.options.remove(.determiningBottomBarHeight)
             }
         }
     }
@@ -120,8 +107,8 @@ final class MessagesViewController: UIViewController {
             frame: .zero,
             collectionViewLayout: messagesLayout
         )
-        currentControllerActions.options.remove(.loadingInitialMessages)
-        currentInterfaceActions.options.insert(.determiningBarHeights)
+        currentControllerActions.options.insert(.loadingInitialMessages)
+        currentInterfaceActions.options.insert(.determiningBottomBarHeight)
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -208,7 +195,7 @@ final class MessagesViewController: UIViewController {
         messagesLayout.delegate = dataSource
         collectionView.keyboardDismissMode = .interactive
 
-        collectionView.contentInset = .init(top: 76.0, left: 0.0, bottom: 0.0, right: 0.0)
+        collectionView.contentInset = .init(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
         collectionView.scrollIndicatorInsets = collectionView.contentInset
         collectionView.contentInsetAdjustmentBehavior = .always
         collectionView.automaticallyAdjustsScrollIndicatorInsets = true

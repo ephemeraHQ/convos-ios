@@ -140,6 +140,7 @@ class NotificationService: UNNotificationServiceExtension {
 extension DecodedNotificationContent {
     var notificationContent: UNNotificationContent {
         let content = UNMutableNotificationContent()
+        content.userInfo = userInfo
         if let title {
             content.title = title
         }
@@ -164,6 +165,8 @@ extension PushNotificationPayload {
         if let displayBody = displayBody {
             content.body = displayBody
         }
+
+        content.userInfo = userInfo
 
         // Set thread identifier for conversation grouping
         if let conversationId = notificationData?.protocolData?.conversationId {
