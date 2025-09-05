@@ -40,11 +40,7 @@ struct NewConversationView: View {
                 Group {
                     if viewModel.showingFullScreenScanner {
                         JoinConversationView { inviteCode in
-                            if viewModel.join(inviteUrlString: inviteCode) {
-                                return true
-                            } else {
-                                return false
-                            }
+                            viewModel.join(inviteUrlString: inviteCode)
                         }
                     } else {
                         Group {
@@ -96,6 +92,13 @@ struct NewConversationView: View {
                 }
                 .selfSizingSheet(isPresented: $viewModel.presentingInvalidInviteSheet) {
                     InfoView(title: "No convo here", description: "Maybe it already exploded.")
+                }
+                .alert("Join Error", isPresented: $viewModel.presentingJoinError) {
+                    Button("OK") {
+                        viewModel.dismissJoinError()
+                    }
+                } message: {
+                    Text(viewModel.joinError ?? "Unknown error occurred")
                 }
             }
         }
