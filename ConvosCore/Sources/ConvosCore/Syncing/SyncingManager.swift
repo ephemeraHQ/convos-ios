@@ -139,7 +139,7 @@ final class SyncingManager: SyncingManagerProtocol {
                 for message in messagesSinceLastProcessed {
                     try await messageWriter.store(message: message, for: dbConversation)
                     // Update last processed message timestamp for these catch-up messages
-                    self.lastProcessedMessageAt = Date()
+                    self.lastProcessedMessageAt = max(self.lastProcessedMessageAt ?? message.sentAt, message.sentAt)
                 }
             }
         }
