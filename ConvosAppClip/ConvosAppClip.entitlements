@@ -6,12 +6,11 @@
 	<array>
 		<string>webcredentials:$(ASSOCIATED_DOMAIN)</string>
 		<string>applinks:$(ASSOCIATED_DOMAIN)</string>
-		<string>applinks:*.$(ASSOCIATED_DOMAIN)</string>
 		<string>appclips:$(ASSOCIATED_DOMAIN)</string>
 	</array>
 	<key>com.apple.developer.parent-application-identifiers</key>
 	<array>
-		<string>$(AppIdentifierPrefix)$(KEYCHAIN_GROUP_IDENTIFIER)</string>
+		<string>$(AppIdentifierPrefix)$(MAIN_BUNDLE_ID)</string>
 	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
