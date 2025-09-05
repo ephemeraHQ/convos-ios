@@ -1,3 +1,4 @@
+import ConvosCore
 import Foundation
 import SwiftUI
 
@@ -13,46 +14,38 @@ final class DeepLinkHandler {
     var inviteCodeToProcess: String?
 
     func handleURL(_ url: URL) -> Bool {
-        // Handle both URL schemes (convos-local://) and universal links (https://)
-        if url.scheme?.hasPrefix("convos") == true {
-            return handleCustomScheme(url)
-        } else if url.scheme == "https" {
-            return handleUniversalLink(url)
-        }
-        return false
+        // Validate both appscheme://join/code and https://domain.com/join/code
+        let isValidScheme = url.scheme == "https" ?
+            url.host == ConfigManager.shared.associatedDomain :
+            url.scheme == ConfigManager.shared.appUrlScheme
+
+        return isValidScheme ? extractInviteCode(from: url) : false
     }
 
-    private func handleCustomScheme(_ url: URL) -> Bool {
-        return processJoinPath(from: url)
-    }
+    private func extractInviteCode(from url: URL) -> Bool {
+        // Handle both formats:
+        // Format 1: convos-local://join/code (host="join", pathComponents=["code"])
+        // Format 2: https://domain.com/join/code (host="domain.com", pathComponents=["join", "code"])
 
-    private func handleUniversalLink(_ url: URL) -> Bool {
-        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let host = components.host else {
-            return false
-        }
-
-        let validDomain = ConfigManager.shared.associatedDomain
-        guard host == validDomain else {
-            return false
-        }
-
-        return processJoinPath(from: url)
-    }
-
-    private func processJoinPath(from url: URL) -> Bool {
         let pathComponents = url.pathComponents.filter { $0 != "/" }
-        guard !pathComponents.isEmpty else {
+        var inviteCode: String?
+
+        if url.host == "join" && !pathComponents.isEmpty {
+            // App scheme: convos-local://join/code
+            inviteCode = pathComponents[0]
+        } else if pathComponents.count >= 2 && pathComponents[0] == "join" {
+            // Universal link: https://domain.com/join/code
+            inviteCode = pathComponents[1]
+        } else {
             return false
         }
-        // Handle invite code redemption (request to join)
-        // URL format: [scheme]://[domain]/join/[inviteCode]
-        if pathComponents[0] == "join" && pathComponents.count > 1 {
-            let inviteCode = pathComponents[1]
-            updatePendingState(inviteCode: inviteCode)
-            return true
+
+        guard let inviteCode = inviteCode, !inviteCode.isEmpty else {
+            return false
         }
-        return false
+
+        updatePendingState(inviteCode: inviteCode)
+        return true
     }
 
     func clearPendingDeepLink() {
