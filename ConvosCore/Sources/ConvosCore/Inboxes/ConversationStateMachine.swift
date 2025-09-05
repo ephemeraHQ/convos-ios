@@ -272,10 +272,9 @@ public actor ConversationStateMachine {
 
             // Get the inbox state to access the API client for unsubscribing
             let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
-
-            try await cleanUp(
-                conversationId: previousResult.conversationId,
-                externalConversationId: previousResult.externalConversationId,
+            await scheduleCleanupOnNextReady(
+                previousConversationId: previousResult.conversationId,
+                previousExternalId: previousResult.externalConversationId,
                 apiClient: inboxReady.apiClient,
                 installationId: inboxReady.client.installationId
             )
@@ -534,6 +533,32 @@ public actor ConversationStateMachine {
         )
 
         emitStateChange(.uninitialized)
+    }
+
+    // Runs once: after the next .ready for a different conversation, clean up the previous convo.
+    private func scheduleCleanupOnNextReady(
+        previousConversationId: String,
+        previousExternalId: String,
+        apiClient: any ConvosAPIClientProtocol,
+        installationId: String
+    ) async {
+        for await state in self.stateSequence {
+            guard case .ready(let newReady) = state else { continue }
+            // Only clean up if we actually moved to a different external conversation
+            if newReady.externalConversationId != previousExternalId {
+                do {
+                    try await self.cleanUp(
+                        conversationId: previousConversationId,
+                        externalConversationId: previousExternalId,
+                        apiClient: apiClient,
+                        installationId: installationId
+                    )
+                } catch {
+                    Logger.error("Deferred cleanup of previous conversation failed: \(error)")
+                }
+                break
+            }
+        }
     }
 
     private func cleanUp(
