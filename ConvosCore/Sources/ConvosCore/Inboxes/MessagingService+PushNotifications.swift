@@ -118,6 +118,11 @@ extension MessagingService {
             return .droppedMessage
         }
 
+        let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
+        let conversationWriter = ConversationWriter(databaseWriter: databaseWriter, messageWriter: messageWriter)
+        let dbConversation = try await conversationWriter.store(conversation: conversation)
+        try await messageWriter.store(message: decodedMessage, for: dbConversation)
+
         // Only handle text content type
         let encodedContentType = try decodedMessage.encodedContent.type
         guard encodedContentType == ContentTypeText else {
