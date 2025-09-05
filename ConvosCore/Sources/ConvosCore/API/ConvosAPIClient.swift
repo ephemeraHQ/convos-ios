@@ -261,7 +261,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 throw APIError.rateLimitExceeded
             }
             // Use exponential backoff for rate limit retries
-            let delay = calculateExponentialBackoff(retryCount: retryCount)
+            let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
             Logger.info("Auth rate limited - retrying in \(delay)s (attempt \(retryCount + 1) of \(maxRetryCount))")
 
             // Sleep and then retry
@@ -643,13 +643,6 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         }
         return String(data: data, encoding: .utf8)
     }
-
-    private func calculateExponentialBackoff(retryCount: Int) -> TimeInterval {
-        let baseDelay: TimeInterval = 1.0
-        let exponentialDelay = baseDelay * pow(2.0, Double(retryCount))
-        let jitter = Double.random(in: 0...0.1) * exponentialDelay
-        return min(exponentialDelay + jitter, 30.0) // Cap at 30 seconds
-    }
 }
 
 // MARK: - Error Handling
@@ -666,4 +659,14 @@ enum APIError: Error {
     case serverError(String?)
     case rateLimitExceeded
     case invalidInstallationId(inboxId: String, installationId: String, message: String)
+}
+
+extension TimeInterval {
+    public static func calculateExponentialBackoff(for retryCount: Int) -> TimeInterval {
+        guard retryCount >= 0 else { return 0.0 }
+        let baseDelay: TimeInterval = 1.0
+        let exponentialDelay = baseDelay * pow(2.0, Double(retryCount))
+        let jitter = Double.random(in: 0...0.1) * exponentialDelay
+        return min(exponentialDelay + jitter, 30.0) // Cap at 30 seconds
+    }
 }

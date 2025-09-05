@@ -197,6 +197,7 @@ fileprivate extension Database {
         let conversation = dbConversationDetails.hydrateConversation()
         let dbMessages = try DBMessage
             .filter(Column("conversationId") == conversationId)
+            .order(\.date.asc)
             .including(
                 required: DBMessage.sender
                     .forKey("messageSender")

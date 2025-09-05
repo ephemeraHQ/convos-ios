@@ -9,6 +9,7 @@ enum ConversationWriterError: Error {
 public protocol ConversationWriterProtocol {
     @discardableResult
     func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation
+    func storeWithLatestMessages(conversation: XMTPiOS.Conversation) async throws -> DBConversation
     func store(conversation: XMTPiOS.Conversation,
                clientConversationId: String) async throws -> DBConversation
 }
@@ -27,11 +28,16 @@ class ConversationWriter: ConversationWriterProtocol {
         return try await _store(conversation: conversation)
     }
 
+    func storeWithLatestMessages(conversation: XMTPiOS.Conversation) async throws -> DBConversation {
+        return try await _store(conversation: conversation, withLatestMessages: true)
+    }
+
     func store(conversation: XMTPiOS.Conversation, clientConversationId: String) async throws -> DBConversation {
         return try await _store(conversation: conversation, clientConversationId: clientConversationId)
     }
 
     private func _store(conversation: XMTPiOS.Conversation,
+                        withLatestMessages: Bool = false,
                         clientConversationId: String? = nil) async throws -> DBConversation {
         let members = try await conversation.members()
         let dbMembers: [DBConversationMember] = members
@@ -131,6 +137,37 @@ class ConversationWriter: ConversationWriterProtocol {
                     avatar: nil
                 )
                 try? memberProfile.insert(db, onConflict: .ignore)
+            }
+        }
+
+        if withLatestMessages {
+            Logger.info("Attempting to fetch latest messages...")
+            let lastMessageDate: Date? = try await databaseWriter.read { db in
+                let lastMessage = DBConversation.association(
+                    to: DBConversation.lastMessageCTE,
+                    on: { conversation, lastMessage in
+                        conversation.id == lastMessage.conversationId
+                    }
+                ).forKey("latestMessage").order(\.date.desc)
+                let result = try DBConversation
+                    .filter(Column("id") == conversation.id)
+                    .with(DBConversation.lastMessageCTE)
+                    .including(optional: lastMessage)
+                    .asRequest(of: DBConversationLatestMessage.self)
+                    .fetchOne(db)
+                return result?.latestMessage?.date
+            }
+            let afterNs: Int64?
+            if let lastMessageDate {
+                afterNs = lastMessageDate.nanosecondsSince1970
+                Logger.info("Saving conversation with latest messages since: \(afterNs ?? 0)")
+            } else {
+                afterNs = nil
+                Logger.info("Latest message not found, fetching all messages...")
+            }
+            let messages = try await conversation.messages(afterNs: afterNs)
+            for message in messages {
+                try await messageWriter.store(message: message, for: dbConversation)
             }
         }
 

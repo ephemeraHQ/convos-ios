@@ -55,7 +55,9 @@ final class SyncingManager: SyncingManagerProtocol {
                             group.addTask { [weak self] in
                                 guard let self else { return }
                                 if case .group = conversation {
-                                    try await conversationWriter.store(conversation: conversation)
+                                    _ = try await conversationWriter.storeWithLatestMessages(
+                                        conversation: conversation
+                                    )
                                 } else {
                                     Logger.info("Listed DM, ignoring...")
                                 }
@@ -98,6 +100,19 @@ final class SyncingManager: SyncingManagerProtocol {
         streamMessagesTask = Task { [weak self] in
             do {
                 guard let self else { return }
+
+                let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
+                try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+
+                // if we're coming from the stream calling `onClose`, syncAll before re-starting
+                if retryCount > 0 {
+                    do {
+                        _ = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
+                    } catch {
+                        Logger.error("Error syncing all conversations: \(error)")
+                    }
+                }
+
                 for try await message in client.conversationsProvider
                     .streamAllMessages(
                         type: .groups,
@@ -167,6 +182,9 @@ final class SyncingManager: SyncingManagerProtocol {
         Logger.info("Starting conversations stream for inbox: \(client.inboxId) (retry: \(retryCount))")
         streamConversationsTask = Task { [weak self] in
             do {
+                let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
+                try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+
                 for try await conversation in client.conversationsProvider.stream(
                     type: .groups,
                     onClose: { [weak self] in
