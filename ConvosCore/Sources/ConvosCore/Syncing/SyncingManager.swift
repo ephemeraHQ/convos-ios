@@ -23,6 +23,9 @@ final class SyncingManager: SyncingManagerProtocol {
     private var lastMemberProfileSync: [String: Date] = [:]
     private let memberProfileSyncInterval: TimeInterval = 120 // seconds
 
+    // Track when the last message was processed
+    private var lastProcessedMessageAt: Date?
+
     init(databaseWriter: any DatabaseWriter) {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
@@ -90,7 +93,7 @@ final class SyncingManager: SyncingManagerProtocol {
 
     private let maxStreamRetries: Int = 5
 
-    private func startMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int = 0, lastStreamDate: Date? = nil) {
+    private func startMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int = 0) {
         guard retryCount < maxStreamRetries else {
             Logger.error("Messages stream max retries (\(maxStreamRetries)) reached for inbox: \(client.inboxId). Giving up.")
             return
@@ -106,14 +109,13 @@ final class SyncingManager: SyncingManagerProtocol {
                     error: error,
                     client: client,
                     apiClient: apiClient,
-                    retryCount: retryCount,
-                    lastStreamDate: Date()
+                    retryCount: retryCount
                 )
             }
         }
     }
 
-    private func processMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, lastStreamDate: Date? = nil) async throws {
+    private func processMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) async throws {
         let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
         try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
 
@@ -122,8 +124,8 @@ final class SyncingManager: SyncingManagerProtocol {
             await syncAllConversationsBeforeRestart(client: client)
         }
 
-        if let lastStreamDate {
-            let lastStreamDateNs = lastStreamDate.nanosecondsSince1970
+        if let lastProcessedMessageAt {
+            let lastProcessedMessageNs = lastProcessedMessageAt.nanosecondsSince1970
             let conversations = try await client.conversationsProvider.list(
                 createdAfter: nil,
                 createdBefore: nil,
@@ -132,10 +134,12 @@ final class SyncingManager: SyncingManagerProtocol {
             )
             for conversation in conversations {
                 guard case .group = conversation else { continue }
-                let messagesSinceLastStream = try await conversation.messages(afterNs: lastStreamDateNs)
+                let messagesSinceLastProcessed = try await conversation.messages(afterNs: lastProcessedMessageNs)
                 let dbConversation = try await conversationWriter.store(conversation: conversation)
-                for message in messagesSinceLastStream {
+                for message in messagesSinceLastProcessed {
                     try await messageWriter.store(message: message, for: dbConversation)
+                    // Update last processed message timestamp for these catch-up messages
+                    self.lastProcessedMessageAt = Date()
                 }
             }
         }
@@ -145,7 +149,7 @@ final class SyncingManager: SyncingManagerProtocol {
                 type: .groups,
                 consentStates: consentStates,
                 onClose: { [weak self] in
-                    self?.scheduleMessageStreamRetry(client: client, apiClient: apiClient, retryCount: retryCount, lastStreamDate: Date())
+                    self?.scheduleMessageStreamRetry(client: client, apiClient: apiClient, retryCount: retryCount)
                 }
             ) {
             await processStreamedMessage(
@@ -175,12 +179,15 @@ final class SyncingManager: SyncingManagerProtocol {
             syncMemberProfiles(apiClient: apiClient, for: conversation)
             let dbConversation = try await conversationWriter.store(conversation: conversation)
             try await messageWriter.store(message: message, for: dbConversation)
+
+            // Update the last processed message timestamp
+            lastProcessedMessageAt = Date()
         } catch {
             Logger.error("Error processing streamed message: \(error)")
         }
     }
 
-    private func scheduleMessageStreamRetry(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, lastStreamDate: Date) {
+    private func scheduleMessageStreamRetry(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) {
         guard !Task.isCancelled else { return }
         guard isMessageStreamTaskActive() else {
             Logger.info("Messages stream task was cancelled, not restarting")
@@ -199,13 +206,12 @@ final class SyncingManager: SyncingManagerProtocol {
             self.startMessageStream(
                 client: client,
                 apiClient: apiClient,
-                retryCount: nextRetry,
-                lastStreamDate: lastStreamDate
+                retryCount: nextRetry
             )
         }
     }
 
-    private func handleMessageStreamError(error: Error, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, lastStreamDate: Date) {
+    private func handleMessageStreamError(error: Error, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) {
         Logger.error("Error streaming all messages: \(error)")
         guard !Task.isCancelled else { return }
         guard isMessageStreamTaskActive() else {
@@ -223,8 +229,7 @@ final class SyncingManager: SyncingManagerProtocol {
             self.startMessageStream(
                 client: client,
                 apiClient: apiClient,
-                retryCount: nextRetry,
-                lastStreamDate: lastStreamDate
+                retryCount: nextRetry
             )
         }
     }
