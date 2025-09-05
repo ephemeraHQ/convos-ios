@@ -23,6 +23,10 @@ class NewConversationViewModel: Identifiable {
     private var initializationTask: Task<Void, Never>?
     private var prefilledInviteCode: String?
 
+    // Error handling
+    var joinError: String?
+    var presentingJoinError: Bool = false
+
     // MARK: - Private
 
     private var draftConversationComposer: (any DraftConversationComposerProtocol)? {
@@ -79,16 +83,20 @@ class NewConversationViewModel: Identifiable {
             myProfileRepository: messagingService.myProfileRepository()
         )
         self.conversationViewModel?.untitledConversationPlaceholder = "New convo"
-        if showScannerOnAppear {
+
+        // Handle prefilled invite code (from deep links)
+        if let prefilledInviteCode {
             self.conversationViewModel?.showsInfoView = false
-            if let prefilledInviteCode {
-                let success = join(inviteUrlString: prefilledInviteCode)
-                if !success {
-                    Logger.warning("Failed to join with prefilled invite code: \(prefilledInviteCode)")
-                }
+            let success = joinWithErrorHandling(inviteUrlString: prefilledInviteCode)
+            if !success {
+                Logger.warning("Failed to join with prefilled invite code: \(prefilledInviteCode)")
+                return
             }
-        }
-        if !showScannerOnAppear {
+        } else if showScannerOnAppear {
+            // Only show scanner when manually joining (no prefilled code)
+            self.conversationViewModel?.showsInfoView = false
+        } else {
+            // Create new conversation when not joining
             try await draftConversationComposer.draftConversationWriter.createConversation()
         }
     }
@@ -99,16 +107,41 @@ class NewConversationViewModel: Identifiable {
         presentingJoinConversationSheet = true
     }
 
+    func dismissJoinError() {
+        joinError = nil
+        presentingJoinError = false
+    }
+
     func join(inviteUrlString: String) -> Bool {
-        guard let inviteCode = inviteUrlString.inviteCodeFromJoinURL else {
-            Logger.warning("Invalid invite URL")
-            return false
+        let inviteCode: String
+
+        // Try to extract invite code from URL first
+        if let extractedCode = inviteUrlString.inviteCodeFromJoinURL {
+            inviteCode = extractedCode
+        } else {
+            // If it's not a valid URL, treat as direct invite code
+            // Only accept if it looks like a valid invite code (no spaces, reasonable length)
+            guard !inviteUrlString.contains(" "), inviteUrlString.count >= 8 else {
+                Logger.warning("Invalid invite code format: \(inviteUrlString)")
+                return false
+            }
+            inviteCode = inviteUrlString
         }
-        Logger.info("Scanned inviteCode: \(inviteCode)")
+
+        Logger.info("Processing inviteCode: \(inviteCode)")
         presentingJoinConversationSheet = false
         joinConversation(inviteCode: inviteCode)
         conversationViewModel?.showsInfoView = true
         return true
+    }
+
+    func joinWithErrorHandling(inviteUrlString: String) -> Bool {
+        let success = join(inviteUrlString: inviteUrlString)
+        if !success {
+            joinError = "Invalid invite code. Please check the link and try again."
+            presentingJoinError = true
+        }
+        return success
     }
 
     func deleteConversation() {
@@ -131,22 +164,26 @@ class NewConversationViewModel: Identifiable {
         joinConversationTask?.cancel()
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
-            do {
-                // Request to join
-                do {
-                    try await draftConversationComposer?.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
-                } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
-                    Logger.info("Invite already redeeemed, showing existing conversation...")
-                    await MainActor.run {
-                        self.presentingJoinConversationSheet = false
-                        self.delegate?.newConversationsViewModel(
-                            self,
-                            attemptedJoiningExistingConversationWithId: conversationId
-                        )
-                    }
+
+            // First check if we've already joined this conversation
+            if let existingConversationId = await draftConversationComposer?.draftConversationWriter.checkIfAlreadyJoined(inviteCode: inviteCode) {
+                Logger.info("Invite already redeeemed, showing existing conversation... conversationId: \(existingConversationId)")
+                await MainActor.run {
+                    self.presentingJoinConversationSheet = false
+                    self.delegate?.newConversationsViewModel(
+                        self,
+                        attemptedJoiningExistingConversationWithId: existingConversationId
+                    )
                 }
+                return
+            }
+
+            // If not already joined, proceed with joining
+            do {
+                try await draftConversationComposer?.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
+                Logger.info("Successfully joined conversation")
             } catch {
-                Logger.error("Error joining new conversation: \(error.localizedDescription)")
+                Logger.error("Error joining conversation: \(error.localizedDescription)")
             }
         }
     }

@@ -195,10 +195,12 @@ struct ConversationsView: View {
     }
 
     private func handleRequestToJoin(_ inviteCode: String) {
-        // This creates a request to join via invite code (not automatic approval)
+        // This creates a request to join via invite code
+        // For deep links, we want to directly join without showing the scanner
+        // All validation (already joined, invalid codes, etc.) is handled by ConversationStateMachine
         viewModel.newConversationViewModel = NewConversationViewModel(
             session: session,
-            showScannerOnAppear: true,
+            showScannerOnAppear: false,
             delegate: viewModel,
             prefilledInviteCode: inviteCode
         )
