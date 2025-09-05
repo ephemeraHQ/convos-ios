@@ -406,15 +406,22 @@ public actor InboxStateMachine {
         syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         try await inboxWriter.deleteInbox(inboxId: client.inboxId)
-        let identity = try await identityStore.identity(for: client.inboxId)
-        let keys = identity.clientKeys
-        try await client.revokeInstallations(
-            signingKey: keys.signingKey,
-            installationIds: [client.installationId]
-        )
+        if let identity = try? await identityStore.identity(for: client.inboxId) {
+            let keys = identity.clientKeys
+            do {
+                try await client.revokeInstallations(
+                    signingKey: keys.signingKey,
+                    installationIds: [client.installationId]
+                )
+            } catch {
+                Logger.error("Failed revoking installation: \(error.localizedDescription)")
+            }
+        } else {
+            Logger.warning("Identity not found, skipping revoking installation...")
+        }
         try await identityStore.delete(inboxId: client.inboxId)
         try client.deleteLocalDatabase()
-        Logger.info("Successfully deleted inbox \(client.inboxId)")
+        Logger.info("Deleted inbox \(client.inboxId)")
         enqueueAction(.stop)
     }
 
@@ -426,7 +433,7 @@ public actor InboxStateMachine {
         if let inboxId = inboxId {
             try await inboxWriter.deleteInbox(inboxId: inboxId)
             try await identityStore.delete(inboxId: inboxId)
-            Logger.info("Successfully deleted inbox \(inboxId)")
+            Logger.info("Deleted inbox \(inboxId)")
         }
         enqueueAction(.stop)
     }
