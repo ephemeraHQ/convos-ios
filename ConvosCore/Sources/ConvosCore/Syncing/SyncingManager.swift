@@ -90,7 +90,7 @@ final class SyncingManager: SyncingManagerProtocol {
 
     private let maxStreamRetries: Int = 5
 
-    private func startMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int = 0) {
+    private func startMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int = 0, lastStreamDate: Date? = nil) {
         guard retryCount < maxStreamRetries else {
             Logger.error("Messages stream max retries (\(maxStreamRetries)) reached for inbox: \(client.inboxId). Giving up.")
             return
@@ -102,12 +102,18 @@ final class SyncingManager: SyncingManagerProtocol {
                 guard let self else { return }
                 try await self.processMessageStream(client: client, apiClient: apiClient, retryCount: retryCount)
             } catch {
-                self?.handleMessageStreamError(error: error, client: client, apiClient: apiClient, retryCount: retryCount)
+                self?.handleMessageStreamError(
+                    error: error,
+                    client: client,
+                    apiClient: apiClient,
+                    retryCount: retryCount,
+                    lastStreamDate: Date()
+                )
             }
         }
     }
 
-    private func processMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) async throws {
+    private func processMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, lastStreamDate: Date? = nil) async throws {
         let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
         try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
 
@@ -116,15 +122,36 @@ final class SyncingManager: SyncingManagerProtocol {
             await syncAllConversationsBeforeRestart(client: client)
         }
 
+        if let lastStreamDate {
+            let lastStreamDateNs = lastStreamDate.nanosecondsSince1970
+            let conversations = try await client.conversationsProvider.list(
+                createdAfter: nil,
+                createdBefore: nil,
+                limit: nil,
+                consentStates: consentStates
+            )
+            for conversation in conversations {
+                let messagesSinceLastStream = try await conversation.messages(afterNs: lastStreamDateNs)
+                let dbConversation = try await conversationWriter.store(conversation: conversation)
+                for message in messagesSinceLastStream {
+                    try await messageWriter.store(message: message, for: dbConversation)
+                }
+            }
+        }
+
         for try await message in client.conversationsProvider
             .streamAllMessages(
                 type: .groups,
                 consentStates: consentStates,
                 onClose: { [weak self] in
-                    self?.scheduleMessageStreamRetry(client: client, apiClient: apiClient, retryCount: retryCount)
+                    self?.scheduleMessageStreamRetry(client: client, apiClient: apiClient, retryCount: retryCount, lastStreamDate: Date())
                 }
             ) {
-            await processStreamedMessage(message: message, client: client, apiClient: apiClient)
+            await processStreamedMessage(
+                message: message,
+                client: client,
+                apiClient: apiClient
+            )
         }
     }
 
@@ -152,7 +179,7 @@ final class SyncingManager: SyncingManagerProtocol {
         }
     }
 
-    private func scheduleMessageStreamRetry(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) {
+    private func scheduleMessageStreamRetry(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, lastStreamDate: Date) {
         guard !Task.isCancelled else { return }
         guard isMessageStreamTaskActive() else {
             Logger.info("Messages stream task was cancelled, not restarting")
@@ -168,11 +195,16 @@ final class SyncingManager: SyncingManagerProtocol {
                 Logger.info("Messages stream task was cancelled, not restarting")
                 return
             }
-            self.startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
+            self.startMessageStream(
+                client: client,
+                apiClient: apiClient,
+                retryCount: nextRetry,
+                lastStreamDate: lastStreamDate
+            )
         }
     }
 
-    private func handleMessageStreamError(error: Error, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) {
+    private func handleMessageStreamError(error: Error, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, lastStreamDate: Date) {
         Logger.error("Error streaming all messages: \(error)")
         guard !Task.isCancelled else { return }
         guard isMessageStreamTaskActive() else {
@@ -187,7 +219,12 @@ final class SyncingManager: SyncingManagerProtocol {
                 Logger.info("Messages stream task was cancelled, not restarting after error")
                 return
             }
-            self.startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
+            self.startMessageStream(
+                client: client,
+                apiClient: apiClient,
+                retryCount: nextRetry,
+                lastStreamDate: lastStreamDate
+            )
         }
     }
 
