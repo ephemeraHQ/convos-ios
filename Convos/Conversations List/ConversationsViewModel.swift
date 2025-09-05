@@ -17,6 +17,7 @@ final class ConversationsViewModel {
                     conversation: selectedConversation,
                     session: session
                 )
+                markConversationAsRead(selectedConversation)
             } else {
                 selectedConversationViewModel = nil
             }
@@ -52,6 +53,7 @@ final class ConversationsViewModel {
     private let session: any SessionManagerProtocol
     private let conversationsRepository: any ConversationsRepositoryProtocol
     private let conversationsCountRepository: any ConversationsCountRepositoryProtocol
+    private var localStateWriters: [String: any ConversationLocalStateWriterProtocol] = [:]
     private var cancellables: Set<AnyCancellable> = .init()
     private var leftConversationObserver: Any?
 
@@ -179,6 +181,25 @@ final class ConversationsViewModel {
             selectedConversation = conversation
         } else {
             Logger.warning("Conversation \(conversationId) not found in current conversation list")
+        }
+    }
+
+    private func markConversationAsRead(_ conversation: Conversation) {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                // Get or create the local state writer for this inbox
+                if localStateWriters[conversation.inboxId] == nil {
+                    let messagingService = await session.messagingService(for: conversation.inboxId)
+                    localStateWriters[conversation.inboxId] = messagingService.conversationLocalStateWriter()
+                }
+
+                if let localStateWriter = localStateWriters[conversation.inboxId] {
+                    try await localStateWriter.setUnread(false, for: conversation.id)
+                }
+            } catch {
+                Logger.warning("Failed marking conversation as read: \(error.localizedDescription)")
+            }
         }
     }
 }

@@ -12,6 +12,7 @@ final class SyncingManager: SyncingManagerProtocol {
     private let conversationWriter: any ConversationWriterProtocol
     private let messageWriter: any IncomingMessageWriterProtocol
     private let profileWriter: any MemberProfileWriterProtocol
+    private let localStateWriter: any ConversationLocalStateWriterProtocol
 
     private var listConversationsTask: Task<Void, Never>?
     private var streamMessagesTask: Task<Void, Never>?
@@ -26,12 +27,32 @@ final class SyncingManager: SyncingManagerProtocol {
     // Track when the last message was processed
     private var lastProcessedMessageAt: Date?
 
+    // Track the currently active conversation
+    private var activeConversationId: String?
+    private var activeConversationObserver: Any?
+
     init(databaseWriter: any DatabaseWriter) {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
                                                      messageWriter: messageWriter)
         self.messageWriter = messageWriter
         self.profileWriter = MemberProfileWriter(databaseWriter: databaseWriter)
+        self.localStateWriter = ConversationLocalStateWriter(databaseWriter: databaseWriter)
+
+        setupObservers()
+    }
+
+    deinit {
+        if let activeConversationObserver {
+            NotificationCenter.default.removeObserver(activeConversationObserver)
+        }
+    }
+
+    private func setupObservers() {
+        activeConversationObserver = NotificationCenter.default
+            .addObserver(forName: .activeConversationChanged, object: nil, queue: .main) { [weak self] notification in
+                self?.activeConversationId = notification.userInfo?["conversationId"] as? String
+            }
     }
 
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
@@ -140,6 +161,15 @@ final class SyncingManager: SyncingManagerProtocol {
                     try await messageWriter.store(message: message, for: dbConversation)
                     // Update last processed message timestamp for these catch-up messages
                     self.lastProcessedMessageAt = max(self.lastProcessedMessageAt ?? message.sentAt, message.sentAt)
+
+                    // Mark conversation as unread if it's not the active conversation and not from current user
+                    if conversation.id != activeConversationId && message.senderInboxId != client.inboxId {
+                        do {
+                            try await localStateWriter.setUnread(true, for: conversation.id)
+                        } catch {
+                            Logger.warning("Failed marking conversation as unread: \(error)")
+                        }
+                    }
                 }
             }
         }
@@ -182,6 +212,15 @@ final class SyncingManager: SyncingManagerProtocol {
 
             // Update the last processed message timestamp
             lastProcessedMessageAt = Date()
+
+            // Mark conversation as unread if it's not the active conversation and not from current user
+            if conversation.id != activeConversationId && message.senderInboxId != client.inboxId {
+                do {
+                    try await localStateWriter.setUnread(true, for: conversation.id)
+                } catch {
+                    Logger.warning("Failed marking conversation as unread: \(error)")
+                }
+            }
         } catch {
             Logger.error("Error processing streamed message: \(error)")
         }
