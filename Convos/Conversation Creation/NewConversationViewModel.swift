@@ -178,17 +178,15 @@ class NewConversationViewModel: Identifiable {
         joinConversationTask?.cancel()
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
-            do {
-                // Request to join
-                self.showingFullScreenScanner = false
-                try await draftConversationComposer?.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
-            } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
-                Logger.info("Invite already redeeemed, showing existing conversation...")
+
+            // First check if we've already joined this conversation
+            if let existingConversationId = await draftConversationComposer?.draftConversationWriter.checkIfAlreadyJoined(inviteCode: inviteCode) {
+                Logger.info("Invite already redeeemed, showing existing conversation... conversationId: \(existingConversationId)")
                 await MainActor.run {
                     self.presentingJoinConversationSheet = false
                     self.delegate?.newConversationsViewModel(
                         self,
-                        attemptedJoiningExistingConversationWithId: conversationId
+                        attemptedJoiningExistingConversationWithId: existingConversationId
                     )
                 }
                 return
@@ -196,6 +194,7 @@ class NewConversationViewModel: Identifiable {
 
             // If not already joined, proceed with joining
             do {
+                self.showingFullScreenScanner = false
                 try await draftConversationComposer?.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
                 Logger.info("Successfully joined conversation")
                 await MainActor.run {
