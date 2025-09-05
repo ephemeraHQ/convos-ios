@@ -128,7 +128,7 @@ class NewConversationViewModel: Identifiable {
             inviteCode = inviteUrlString
         }
 
-        Logger.info("Processing inviteCode: \(inviteCode)")
+        Logger.info("Processing inviteCode")
         presentingJoinConversationSheet = false
         joinConversation(inviteCode: inviteCode)
         conversationViewModel?.showsInfoView = true

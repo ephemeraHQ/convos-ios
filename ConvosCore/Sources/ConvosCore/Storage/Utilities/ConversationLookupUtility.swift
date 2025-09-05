@@ -13,16 +13,16 @@ public struct ConversationLookupUtility {
     /// - Parameter inviteCode: The invite code to look up
     /// - Returns: The conversation ID if found, nil otherwise
     public func findExistingConversationForInviteCode(_ inviteCode: String) async throws -> String? {
-        let existingInvite = try await databaseReader.read { db in
-            try DBInvite.fetchOne(db, key: inviteCode)
+        let trimmedInviteCode = inviteCode.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return try await databaseReader.read { db in
+            guard let existingInvite = try DBInvite.fetchOne(db, key: trimmedInviteCode) else {
+                return nil
+            }
+            guard let existingConversation = try DBConversation.fetchOne(db, key: existingInvite.conversationId) else {
+                return nil
+            }
+            return existingConversation.id
         }
-
-        guard let existingInvite else { return nil }
-
-        let existingConversation = try await databaseReader.read { db in
-            try DBConversation.fetchOne(db, key: existingInvite.conversationId)
-        }
-
-        return existingConversation?.id
     }
 }
