@@ -18,14 +18,18 @@ class NewConversationViewModel: Identifiable {
     private weak var delegate: NewConversationsViewModelDelegate?
     private(set) var messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .scan
     private(set) var shouldConfirmDeletingConversation: Bool = true
-    private(set) var showScannerOnAppear: Bool
+    private let startedWithFullscreenScanner: Bool
+    private(set) var showingFullScreenScanner: Bool
     var presentingJoinConversationSheet: Bool = false
+    var presentingInvalidInviteSheet: Bool = false
     private var initializationTask: Task<Void, Never>?
     private var prefilledInviteCode: String?
 
     // Error handling
     var joinError: String?
     var presentingJoinError: Bool = false
+
+    private(set) var initializationError: Error?
 
     // MARK: - Private
 
@@ -36,26 +40,19 @@ class NewConversationViewModel: Identifiable {
     }
     private var messagingService: AnyMessagingService?
     private var newConversationTask: Task<Void, Never>?
-    private var joinConversationTask: Task<Void, Never>?
+    private var joinConversationTask: Task<Void, Error>?
     private var cancellables: Set<AnyCancellable> = []
 
     // MARK: - Init
 
     init(session: any SessionManagerProtocol, showScannerOnAppear: Bool = false, delegate: NewConversationsViewModelDelegate? = nil, prefilledInviteCode: String? = nil) {
         self.session = session
-        self.showScannerOnAppear = showScannerOnAppear
+        self.startedWithFullscreenScanner = showScannerOnAppear
+        self.showingFullScreenScanner = showScannerOnAppear
         self.delegate = delegate
         self.prefilledInviteCode = prefilledInviteCode
 
-        // Start async initialization
-        initializationTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                try await self.initializeAsyncDependencies()
-            } catch {
-                Logger.error("Error initializing: \(error)")
-            }
-        }
+        start()
     }
 
     deinit {
@@ -67,37 +64,50 @@ class NewConversationViewModel: Identifiable {
         conversationViewModel = nil
     }
 
-    @MainActor
-    private func initializeAsyncDependencies() async throws {
-        let messagingService = try await session.addInbox()
-        self.messagingService = messagingService
-        let draftConversationComposer = messagingService.draftConversationComposer()
-        self.draftConversationComposer = draftConversationComposer
-        let draftConversation = try draftConversationComposer.draftConversationRepository.fetchConversation() ?? .empty(
-            id: draftConversationComposer.draftConversationRepository.conversationId
-        )
-        self.conversationViewModel = .init(
-            conversation: draftConversation,
-            session: session,
-            draftConversationComposer: draftConversationComposer,
-            myProfileRepository: messagingService.myProfileRepository()
-        )
-        self.conversationViewModel?.untitledConversationPlaceholder = "New convo"
+    func start() {
+        // Start async initialization
+        initializationTask = Task { [weak self] in
+            guard let self else { return }
+            await self.initializeAsyncDependencies()
+        }
+    }
 
-        // Handle prefilled invite code (from deep links)
-        if let prefilledInviteCode {
-            self.conversationViewModel?.showsInfoView = false
-            let success = joinWithErrorHandling(inviteUrlString: prefilledInviteCode)
-            if !success {
-                Logger.warning("Failed to join with prefilled invite code: \(prefilledInviteCode)")
-                return
+    @MainActor
+    private func initializeAsyncDependencies() async {
+        do {
+            let messagingService = try await session.addInbox()
+            self.messagingService = messagingService
+            let draftConversationComposer = messagingService.draftConversationComposer()
+            self.draftConversationComposer = draftConversationComposer
+            let draftConversation = try draftConversationComposer.draftConversationRepository.fetchConversation() ?? .empty(
+                id: draftConversationComposer.draftConversationRepository.conversationId
+            )
+            self.conversationViewModel = .init(
+                conversation: draftConversation,
+                session: session,
+                draftConversationComposer: draftConversationComposer,
+                myProfileRepository: messagingService.myProfileRepository()
+            )
+            self.conversationViewModel?.untitledConversationPlaceholder = "New convo"
+
+            // Handle prefilled invite code (from deep links)
+            if let prefilledInviteCode {
+                self.conversationViewModel?.showsInfoView = false
+                let success = joinWithErrorHandling(inviteUrlString: prefilledInviteCode)
+                if !success {
+                    Logger.warning("Failed to join with prefilled invite code: \(prefilledInviteCode)")
+                    return
+                }
+            } else if showingFullScreenScanner {
+                // Only show scanner when manually joining (no prefilled code)
+                self.conversationViewModel?.showsInfoView = false
+            } else {
+                // Create new conversation when not joining
+                try await draftConversationComposer.draftConversationWriter.createConversation()
             }
-        } else if showScannerOnAppear {
-            // Only show scanner when manually joining (no prefilled code)
-            self.conversationViewModel?.showsInfoView = false
-        } else {
-            // Create new conversation when not joining
-            try await draftConversationComposer.draftConversationWriter.createConversation()
+        } catch {
+            Logger.error("Error initializing: \(error)")
+            self.initializationError = error
         }
     }
 
@@ -113,6 +123,10 @@ class NewConversationViewModel: Identifiable {
     }
 
     func join(inviteUrlString: String) -> Bool {
+        // Clear any previous errors when starting a new join attempt
+        joinError = nil
+        presentingJoinError = false
+
         let inviteCode: String
 
         // Try to extract invite code from URL first
@@ -164,15 +178,17 @@ class NewConversationViewModel: Identifiable {
         joinConversationTask?.cancel()
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
-
-            // First check if we've already joined this conversation
-            if let existingConversationId = await draftConversationComposer?.draftConversationWriter.checkIfAlreadyJoined(inviteCode: inviteCode) {
-                Logger.info("Invite already redeeemed, showing existing conversation... conversationId: \(existingConversationId)")
+            do {
+                // Request to join
+                self.showingFullScreenScanner = false
+                try await draftConversationComposer?.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
+            } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
+                Logger.info("Invite already redeeemed, showing existing conversation...")
                 await MainActor.run {
                     self.presentingJoinConversationSheet = false
                     self.delegate?.newConversationsViewModel(
                         self,
-                        attemptedJoiningExistingConversationWithId: existingConversationId
+                        attemptedJoiningExistingConversationWithId: conversationId
                     )
                 }
                 return
@@ -182,8 +198,25 @@ class NewConversationViewModel: Identifiable {
             do {
                 try await draftConversationComposer?.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
                 Logger.info("Successfully joined conversation")
+                await MainActor.run {
+                    // Clear any previous errors on success
+                    self.joinError = nil
+                    self.presentingJoinError = false
+                    self.conversationViewModel?.showsInfoView = true
+                }
             } catch {
                 Logger.error("Error joining conversation: \(error.localizedDescription)")
+                await MainActor.run {
+                    self.joinError = error.localizedDescription.isEmpty ?
+                        "Failed to join conversation. Please check your connection and try again." :
+                        error.localizedDescription
+                    self.presentingJoinError = true
+
+                    if self.startedWithFullscreenScanner {
+                        self.showingFullScreenScanner = true
+                        self.conversationViewModel?.showsInfoView = false
+                    }
+                }
             }
         }
     }

@@ -91,6 +91,11 @@ public enum ConvosAPI {
         public let createdAt: String
     }
 
+    public struct DeleteInviteResponse: Decodable {
+        public let id: String
+        public let deleted: Bool
+    }
+
     public struct DeleteRequestToJoinResponse: Decodable {
         public let id: String
         public let deleted: Bool

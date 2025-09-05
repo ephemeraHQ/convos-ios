@@ -97,7 +97,8 @@ final class ConversationsViewModel {
     }
 
     func deleteAllInboxes() {
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 try await session.deleteAllInboxes()
             } catch {
@@ -107,7 +108,8 @@ final class ConversationsViewModel {
     }
 
     func leave(conversation: Conversation) {
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
             } catch {
