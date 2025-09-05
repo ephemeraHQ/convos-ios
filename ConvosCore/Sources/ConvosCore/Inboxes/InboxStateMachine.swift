@@ -406,6 +406,12 @@ public actor InboxStateMachine {
         syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         try await inboxWriter.deleteInbox(inboxId: client.inboxId)
+        let identity = try await identityStore.identity(for: client.inboxId)
+        let keys = identity.clientKeys
+        try await client.revokeInstallations(
+            signingKey: keys.signingKey,
+            installationIds: [client.installationId]
+        )
         try await identityStore.delete(inboxId: client.inboxId)
         try client.deleteLocalDatabase()
         Logger.info("Successfully deleted inbox \(client.inboxId)")
