@@ -3,5 +3,6 @@
   "bundleId": "org.convos.ios-local",
   "appGroupIdentifier": "group.org.convos.ios-local",
   "relyingPartyIdentifier": "local.convos.org",
-  "associatedDomain": "local.convos.org"
+  "associatedDomain": "local.convos.org",
+  "appUrlScheme": "convos-local"
 }
