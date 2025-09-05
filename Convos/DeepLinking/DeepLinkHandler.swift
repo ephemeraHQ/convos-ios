@@ -4,7 +4,6 @@ import SwiftUI
 
 enum DeepLinkDestination {
     case requestToJoin(inviteCode: String)
-    // Future: case viewJoinRequests(inviteCode: String) for inviters to see pending requests
 }
 
 @Observable
