@@ -543,20 +543,26 @@ public actor ConversationStateMachine {
         installationId: String
     ) async {
         for await state in self.stateSequence {
-            guard case .ready(let newReady) = state else { continue }
-            // Only clean up if we actually moved to a different external conversation
-            if newReady.externalConversationId != previousExternalId {
-                do {
-                    try await self.cleanUp(
-                        conversationId: previousConversationId,
-                        externalConversationId: previousExternalId,
-                        apiClient: apiClient,
-                        installationId: installationId
-                    )
-                } catch {
-                    Logger.error("Deferred cleanup of previous conversation failed: \(error)")
-                }
+            switch state {
+            case .error:
                 break
+            case .ready(let newReady):
+                // Only clean up if we actually moved to a different external conversation
+                if newReady.externalConversationId != previousExternalId {
+                    do {
+                        try await self.cleanUp(
+                            conversationId: previousConversationId,
+                            externalConversationId: previousExternalId,
+                            apiClient: apiClient,
+                            installationId: installationId
+                        )
+                    } catch {
+                        Logger.error("Deferred cleanup of previous conversation failed: \(error)")
+                    }
+                    break
+                }
+            default:
+                continue
             }
         }
     }
