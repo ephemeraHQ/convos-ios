@@ -131,6 +131,7 @@ final class SyncingManager: SyncingManagerProtocol {
                 consentStates: consentStates
             )
             for conversation in conversations {
+                guard case .group = conversation else { continue }
                 let messagesSinceLastStream = try await conversation.messages(afterNs: lastStreamDateNs)
                 let dbConversation = try await conversationWriter.store(conversation: conversation)
                 for message in messagesSinceLastStream {
