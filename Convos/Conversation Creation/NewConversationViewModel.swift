@@ -40,7 +40,7 @@ class NewConversationViewModel: Identifiable {
     }
     private var messagingService: AnyMessagingService?
     private var newConversationTask: Task<Void, Never>?
-    private var joinConversationTask: Task<Void, Error>?
+    private var joinConversationTask: Task<Void, Never>?
     private var cancellables: Set<AnyCancellable> = []
 
     // MARK: - Init
@@ -129,18 +129,8 @@ class NewConversationViewModel: Identifiable {
 
         let inviteCode: String
 
-        // Try to extract invite code from URL first
-        if let extractedCode = inviteUrlString.inviteCodeFromJoinURL {
-            inviteCode = extractedCode
-        } else {
-            // If it's not a valid URL, treat as direct invite code
-            // Only accept if it looks like a valid invite code (no spaces, reasonable length)
-            guard !inviteUrlString.contains(" "), inviteUrlString.count >= 8 else {
-                Logger.warning("Invalid invite code format: \(inviteUrlString)")
-                return false
-            }
-            inviteCode = inviteUrlString
-        }
+        // Extract invite code from URL, or use the string directly
+        inviteCode = inviteUrlString.inviteCodeFromJoinURL ?? inviteUrlString
 
         Logger.info("Processing inviteCode")
         presentingJoinConversationSheet = false
