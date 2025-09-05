@@ -192,6 +192,11 @@ public actor ConversationStateMachine {
 
     // MARK: - Action Handlers
 
+    private func findExistingConversationForInviteCode(_ inviteCode: String) async throws -> String? {
+        let lookupUtility = ConversationLookupUtility(databaseReader: databaseReader)
+        return try await lookupUtility.findExistingConversationForInviteCode(inviteCode)
+    }
+
     private func handleCreate() async throws {
         emitStateChange(.creating)
 
@@ -287,15 +292,10 @@ public actor ConversationStateMachine {
         let apiClient = inboxReady.apiClient
         let client = inboxReady.client
 
-        // check if we've already joined this conversation (invite code)
-        let existingInvite: DBInvite? = try await databaseReader.read { db in
-            try DBInvite.fetchOne(db, key: inviteCode)
-        }
-        if let existingInvite, let existingConversation: DBConversation = try await databaseReader.read ({ db in
-            try DBConversation.fetchOne(db, key: existingInvite.conversationId)
-        }) {
+        // Check if we've already joined this conversation (invite code)
+        if let existingConversationId = try await findExistingConversationForInviteCode(inviteCode) {
             Logger.info("Existing conversation found locally, cancelling join...")
-            throw ConversationStateMachineError.alreadyRedeemedInviteForConversation(existingConversation.id)
+            throw ConversationStateMachineError.alreadyRedeemedInviteForConversation(existingConversationId)
         }
 
         // Check if we're already a member of this group (groupId check)

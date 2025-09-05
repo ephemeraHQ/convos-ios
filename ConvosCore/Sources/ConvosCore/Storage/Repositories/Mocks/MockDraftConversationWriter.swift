@@ -8,6 +8,10 @@ class MockDraftConversationWriter: DraftConversationWriterProtocol {
     func requestToJoin(inviteCode: String) async throws {
     }
 
+    func checkIfAlreadyJoined(inviteCode: String) async -> String? {
+        return nil
+    }
+
     var conversationMetadataWriter: any ConversationMetadataWriterProtocol {
         MockGroupMetadataWriter()
     }
