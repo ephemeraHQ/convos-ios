@@ -275,8 +275,8 @@ public actor ConversationStateMachine {
             await scheduleCleanupOnNextReady(
                 previousConversationId: previousResult.conversationId,
                 previousExternalId: previousResult.externalConversationId,
+                client: inboxReady.client,
                 apiClient: inboxReady.apiClient,
-                installationId: inboxReady.client.installationId
             )
         }
     }
@@ -528,8 +528,8 @@ public actor ConversationStateMachine {
         try await cleanUp(
             conversationId: conversationId,
             externalConversationId: externalConversationId,
-            apiClient: inboxReady.apiClient,
-            installationId: inboxReady.client.installationId
+            client: inboxReady.client,
+            apiClient: inboxReady.apiClient
         )
 
         emitStateChange(.uninitialized)
@@ -539,8 +539,8 @@ public actor ConversationStateMachine {
     private func scheduleCleanupOnNextReady(
         previousConversationId: String,
         previousExternalId: String,
+        client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol,
-        installationId: String
     ) async {
         for await state in self.stateSequence {
             switch state {
@@ -553,8 +553,8 @@ public actor ConversationStateMachine {
                         try await self.cleanUp(
                             conversationId: previousConversationId,
                             externalConversationId: previousExternalId,
-                            apiClient: apiClient,
-                            installationId: installationId
+                            client: client,
+                            apiClient: apiClient
                         )
                     } catch {
                         Logger.error("Deferred cleanup of previous conversation failed: \(error)")
@@ -570,14 +570,19 @@ public actor ConversationStateMachine {
     private func cleanUp(
         conversationId: String,
         externalConversationId: String?,
+        client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol,
-        installationId: String
     ) async throws {
         // Unsubscribe from push notifications if we have an external conversation ID
         if let externalConversationId = externalConversationId {
+            // @jarod until we have self removal, we need to deny the conversation
+            // so it doesn't show up in the list
+            let externalConversation = try await client.conversationsProvider.findConversation(conversationId: externalConversationId)
+            try await externalConversation?.updateConsentState(state: .denied)
+
             let topic = externalConversationId.xmtpGroupTopicFormat
             do {
-                try await apiClient.unsubscribeFromTopics(installationId: installationId, topics: [topic])
+                try await apiClient.unsubscribeFromTopics(installationId: client.installationId, topics: [topic])
                 Logger.info("Unsubscribed from push topic: \(topic)")
             } catch {
                 Logger.error("Failed unsubscribing from topic \(topic): \(error)")

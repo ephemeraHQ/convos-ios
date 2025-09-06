@@ -65,8 +65,6 @@ struct ConversationView: View {
                     }
             }
         }
-        .onAppear(perform: viewModel.onAppear)
-        .onDisappear(perform: viewModel.onDisappear)
         .onChange(of: viewModel.focus) {
             focusState = viewModel.focus
         }

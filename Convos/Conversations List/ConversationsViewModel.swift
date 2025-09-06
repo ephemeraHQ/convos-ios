@@ -17,6 +17,7 @@ final class ConversationsViewModel {
                     conversation: selectedConversation,
                     session: session
                 )
+                markConversationAsRead(selectedConversation)
             } else {
                 selectedConversationViewModel = nil
             }
@@ -52,6 +53,7 @@ final class ConversationsViewModel {
     private let session: any SessionManagerProtocol
     private let conversationsRepository: any ConversationsRepositoryProtocol
     private let conversationsCountRepository: any ConversationsCountRepositoryProtocol
+    private var localStateWriters: [String: any ConversationLocalStateWriterProtocol] = [:]
     private var cancellables: Set<AnyCancellable> = .init()
     private var leftConversationObserver: Any?
 
@@ -97,9 +99,11 @@ final class ConversationsViewModel {
     }
 
     func deleteAllInboxes() {
+        selectedConversation = nil
         Task {
             do {
                 try await session.deleteAllInboxes()
+                await MainActor.run { self.localStateWriters.removeAll() }
             } catch {
                 Logger.error("Error deleting all accounts: \(error)")
             }
@@ -107,9 +111,14 @@ final class ConversationsViewModel {
     }
 
     func leave(conversation: Conversation) {
+        if selectedConversation == conversation {
+            selectedConversation = nil
+        }
+
         Task {
             do {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
+                _ = await MainActor.run { self.localStateWriters.removeValue(forKey: conversation.inboxId) }
             } catch {
                 Logger.error("Error leaving convo: \(error.localizedDescription)")
             }
@@ -179,6 +188,45 @@ final class ConversationsViewModel {
             selectedConversation = conversation
         } else {
             Logger.warning("Conversation \(conversationId) not found in current conversation list")
+        }
+    }
+
+    private func markConversationAsRead(_ conversation: Conversation) {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                // Get or create the local state writer for this inbox
+                // Wrap dictionary access in MainActor.run to prevent race conditions
+                let localStateWriter: (any ConversationLocalStateWriterProtocol)? = await MainActor.run {
+                    if let existingWriter = self.localStateWriters[conversation.inboxId] {
+                        return existingWriter
+                    }
+                    return nil
+                }
+
+                let writer: any ConversationLocalStateWriterProtocol
+                if let localStateWriter {
+                    writer = localStateWriter
+                } else {
+                    // Create new writer outside of MainActor context
+                    let messagingService = await session.messagingService(for: conversation.inboxId)
+                    let newWriter = messagingService.conversationLocalStateWriter()
+
+                    // Store it atomically on MainActor
+                    await MainActor.run {
+                        // Check again in case another task created it while we were waiting
+                        if self.localStateWriters[conversation.inboxId] == nil {
+                            self.localStateWriters[conversation.inboxId] = newWriter
+                        }
+                    }
+
+                    writer = newWriter
+                }
+
+                try await writer.setUnread(false, for: conversation.id)
+            } catch {
+                Logger.warning("Failed marking conversation as read: \(error.localizedDescription)")
+            }
         }
     }
 }

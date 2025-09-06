@@ -63,7 +63,7 @@ class ConversationWriter: ConversationWriterProtocol {
         let localState = ConversationLocalState(
             conversationId: conversation.id,
             isPinned: false,
-            isUnread: true,
+            isUnread: false,
             isUnreadUpdatedAt: Date.distantPast,
             isMuted: false
         )
