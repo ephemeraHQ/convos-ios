@@ -103,6 +103,7 @@ final class ConversationsViewModel {
         Task {
             do {
                 try await session.deleteAllInboxes()
+                await MainActor.run { self.localStateWriters.removeAll() }
             } catch {
                 Logger.error("Error deleting all accounts: \(error)")
             }
@@ -117,6 +118,7 @@ final class ConversationsViewModel {
         Task {
             do {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
+                _ = await MainActor.run { self.localStateWriters.removeValue(forKey: conversation.inboxId) }
             } catch {
                 Logger.error("Error leaving convo: \(error.localizedDescription)")
             }
