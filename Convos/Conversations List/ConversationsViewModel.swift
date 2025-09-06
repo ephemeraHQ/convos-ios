@@ -194,14 +194,34 @@ final class ConversationsViewModel {
             guard let self else { return }
             do {
                 // Get or create the local state writer for this inbox
-                if localStateWriters[conversation.inboxId] == nil {
-                    let messagingService = await session.messagingService(for: conversation.inboxId)
-                    localStateWriters[conversation.inboxId] = messagingService.conversationLocalStateWriter()
+                // Wrap dictionary access in MainActor.run to prevent race conditions
+                let localStateWriter: (any ConversationLocalStateWriterProtocol)? = await MainActor.run {
+                    if let existingWriter = self.localStateWriters[conversation.inboxId] {
+                        return existingWriter
+                    }
+                    return nil
                 }
 
-                if let localStateWriter = localStateWriters[conversation.inboxId] {
-                    try await localStateWriter.setUnread(false, for: conversation.id)
+                let writer: any ConversationLocalStateWriterProtocol
+                if let localStateWriter {
+                    writer = localStateWriter
+                } else {
+                    // Create new writer outside of MainActor context
+                    let messagingService = await session.messagingService(for: conversation.inboxId)
+                    let newWriter = messagingService.conversationLocalStateWriter()
+
+                    // Store it atomically on MainActor
+                    await MainActor.run {
+                        // Check again in case another task created it while we were waiting
+                        if self.localStateWriters[conversation.inboxId] == nil {
+                            self.localStateWriters[conversation.inboxId] = newWriter
+                        }
+                    }
+
+                    writer = newWriter
                 }
+
+                try await writer.setUnread(false, for: conversation.id)
             } catch {
                 Logger.warning("Failed marking conversation as read: \(error.localizedDescription)")
             }
