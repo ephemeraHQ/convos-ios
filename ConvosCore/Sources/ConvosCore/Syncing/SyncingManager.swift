@@ -18,7 +18,7 @@ final class SyncingManager: SyncingManagerProtocol {
     private var streamMessagesTask: Task<Void, Never>?
     private var streamConversationsTask: Task<Void, Never>?
     private var syncMemberProfilesTasks: [Task<Void, Error>] = []
-    private let consentStates: [ConsentState] = [.allowed, .unknown]
+    private let consentStates: [ConsentState] = [.allowed]
 
     // Track last sync times for member profiles per conversation
     private var lastMemberProfileSync: [String: Date] = [:]

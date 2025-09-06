@@ -99,6 +99,7 @@ final class ConversationsViewModel {
     }
 
     func deleteAllInboxes() {
+        selectedConversation = nil
         Task {
             do {
                 try await session.deleteAllInboxes()
@@ -109,6 +110,10 @@ final class ConversationsViewModel {
     }
 
     func leave(conversation: Conversation) {
+        if selectedConversation == conversation {
+            selectedConversation = nil
+        }
+
         Task {
             do {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
