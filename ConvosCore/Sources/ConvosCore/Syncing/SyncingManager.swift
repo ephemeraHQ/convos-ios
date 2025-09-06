@@ -211,7 +211,7 @@ final class SyncingManager: SyncingManagerProtocol {
             try await messageWriter.store(message: message, for: dbConversation)
 
             // Update the last processed message timestamp
-            lastProcessedMessageAt = Date()
+            lastProcessedMessageAt = max(self.lastProcessedMessageAt ?? message.sentAt, message.sentAt)
 
             // Mark conversation as unread if it's not the active conversation and not from current user
             if conversation.id != activeConversationId && message.senderInboxId != client.inboxId {
