@@ -149,11 +149,13 @@ class NewConversationViewModel: Identifiable {
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
                 await MainActor.run {
-                    if self.startedWithFullscreenScanner {
-                        self.showingFullScreenScanner = true
-                        self.conversationViewModel?.showsInfoView = false
+                    withAnimation {
+                        if self.startedWithFullscreenScanner {
+                            self.showingFullScreenScanner = true
+                            self.conversationViewModel?.showsInfoView = false
+                        }
+                        self.presentingInvalidInviteSheet = true
                     }
-                    self.presentingInvalidInviteSheet = true
                 }
             }
         }
