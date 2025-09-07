@@ -62,27 +62,9 @@ public actor CachedPushNotificationHandler {
         Logger.info("Processing for inbox: \(inboxId), type: \(payload.notificationType?.displayName ?? "unknown")")
 
         // Process with timeout
-        return try await withThrowingTaskGroup(of: DecodedNotificationContent?.self) { group in
-            // Add the main processing task
-            group.addTask {
-                // Get or create messaging service for this inbox
-                let messagingService = await self.getOrCreateMessagingService(for: inboxId)
-                return try await messagingService.processPushNotification(payload: payload)
-            }
-
-            // Add timeout task
-            group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-                throw NotificationProcessingError.timeout
-            }
-
-            // Return first result (either success or timeout)
-            if let result = try await group.next() {
-                group.cancelAll() // Cancel the other task
-                return result
-            }
-
-            return nil
+        return try await withTimeout(seconds: timeout, timeoutError: NotificationProcessingError.timeout) {
+            let messagingService = await self.getOrCreateMessagingService(for: inboxId)
+            return try await messagingService.processPushNotification(payload: payload)
         }
     }
 

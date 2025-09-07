@@ -82,6 +82,27 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         }
     }
 
+    private func waitForConversationReadyResult() async throws -> ConversationReadyResult {
+        let timeoutDuration: TimeInterval = 5.0 // 5 seconds timeout
+
+        return try await withTimeout(
+            seconds: timeoutDuration,
+            timeoutError: ConversationStateMachineError.timedOut
+        ) {
+            for await state in await self.stateMachine.stateSequence {
+                switch state {
+                case .ready(let result):
+                    return result
+                case .error(let error):
+                    throw error
+                default:
+                    continue
+                }
+            }
+            throw ConversationStateMachineError.timedOut
+        }
+    }
+
     @MainActor
     private func handleStateChange(_ state: ConversationStateMachine.State) {
         switch state {
@@ -97,10 +118,12 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
     func createConversation() async throws {
         await stateMachine.create()
+        _ = try await waitForConversationReadyResult()
     }
 
     func requestToJoin(inviteCode: String) async throws {
         await stateMachine.join(inviteCode: inviteCode)
+        _ = try await waitForConversationReadyResult()
     }
 
     func send(text: String) async throws {

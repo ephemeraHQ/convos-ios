@@ -1,0 +1,82 @@
+import Foundation
+
+// MARK: - Async Timeout Utility
+
+/// Executes an async operation with a timeout
+/// - Parameters:
+///   - seconds: The timeout duration in seconds
+///   - operation: The async operation to execute
+/// - Returns: The result of the operation
+/// - Throws: The error from the operation or a timeout error
+public func withTimeout<T: Sendable>(
+    seconds: TimeInterval,
+    operation: @escaping @Sendable () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        // Ensure the other task is always cancelled
+        defer { group.cancelAll() }
+
+        // Add the main operation task
+        group.addTask {
+            try await operation()
+        }
+
+        // Add timeout task
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw TimeoutError()
+        }
+
+        // Wait for first to complete
+        guard let result = try await group.next() else {
+            throw TimeoutError()
+        }
+
+        return result
+    }
+}
+
+/// Error thrown when an async operation times out
+public struct TimeoutError: LocalizedError, Sendable {
+    public var errorDescription: String? {
+        "The operation timed out"
+    }
+}
+
+// MARK: - Alternative with custom timeout error
+
+/// Executes an async operation with a timeout and custom error
+/// - Parameters:
+///   - seconds: The timeout duration in seconds
+///   - timeoutError: The error to throw on timeout
+///   - operation: The async operation to execute
+/// - Returns: The result of the operation
+/// - Throws: The error from the operation or the specified timeout error
+public func withTimeout<T: Sendable, E: Error & Sendable>(
+    seconds: TimeInterval,
+    timeoutError: E,
+    operation: @escaping @Sendable () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        // Ensure the other task is always cancelled
+        defer { group.cancelAll() }
+
+        // Add the main operation task
+        group.addTask {
+            try await operation()
+        }
+
+        // Add timeout task with custom error
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw timeoutError
+        }
+
+        // Wait for first to complete
+        guard let result = try await group.next() else {
+            throw timeoutError
+        }
+
+        return result
+    }
+}

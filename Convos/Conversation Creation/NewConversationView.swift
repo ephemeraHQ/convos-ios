@@ -38,10 +38,9 @@ struct NewConversationView: View {
             NavigationStack {
                 @Bindable var viewModel = viewModel
                 Group {
-                    if viewModel.showScannerOnAppear && !hasShownScannerOnAppear {
+                    if viewModel.showingFullScreenScanner {
                         JoinConversationView { inviteCode in
                             if viewModel.join(inviteUrlString: inviteCode) {
-                                hasShownScannerOnAppear = true
                                 return true
                             } else {
                                 return false
@@ -58,6 +57,10 @@ struct NewConversationView: View {
                                     confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
                                     messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
                                 )
+                            } else if let initializationError = viewModel.initializationError {
+                                ErrorView(error: initializationError) {
+                                    viewModel.start()
+                                }
                             } else {
                                 EmptyView()
                             }
@@ -90,6 +93,12 @@ struct NewConversationView: View {
                     JoinConversationView { inviteCode in
                         viewModel.join(inviteUrlString: inviteCode)
                     }
+                }
+                .selfSizingSheet(isPresented: $viewModel.presentingInvalidInviteSheet) {
+                    InfoView(title: "No convo here", description: "Maybe it already exploded.")
+                }
+                .selfSizingSheet(isPresented: $viewModel.presentingFailedToJoinSheet) {
+                    InfoView(title: "Try again", description: "Joining the convo failed.")
                 }
             }
         }
