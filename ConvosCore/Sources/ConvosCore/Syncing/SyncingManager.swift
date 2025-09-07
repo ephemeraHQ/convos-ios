@@ -155,7 +155,10 @@ final class SyncingManager: SyncingManagerProtocol {
             )
             for conversation in conversations {
                 guard case .group = conversation else { continue }
-                let messagesSinceLastProcessed = try await conversation.messages(afterNs: lastProcessedMessageNs)
+                let messagesSinceLastProcessed = try await conversation.messages(
+                    afterNs: lastProcessedMessageNs,
+                    direction: .ascending
+                )
                 let dbConversation = try await conversationWriter.store(conversation: conversation)
                 for message in messagesSinceLastProcessed {
                     try await messageWriter.store(message: message, for: dbConversation)
