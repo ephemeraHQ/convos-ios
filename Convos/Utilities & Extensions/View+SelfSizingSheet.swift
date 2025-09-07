@@ -10,7 +10,10 @@ private struct SelfSizingSheetModifier<SheetContent: View>: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .sheet(isPresented: $isPresented) {
+            .sheet(isPresented: $isPresented, onDismiss: {
+                // Reset height to avoid stale values on next presentation
+                sheetHeight = 0
+            }) {
                 sheetContent()
                     .fixedSize(horizontal: false, vertical: true)
                     .readHeight { height in
@@ -50,7 +53,12 @@ private struct SelfSizingSheetWithDismissModifier<SheetContent: View>: ViewModif
 
     func body(content: Content) -> some View {
         content
-            .sheet(isPresented: $isPresented, onDismiss: onDismiss) {
+            .sheet(isPresented: $isPresented, onDismiss: {
+                // Reset height to avoid stale values on next presentation
+                sheetHeight = 0
+                // Call the original onDismiss if provided
+                onDismiss?()
+            }) {
                 sheetContent()
                     .fixedSize(horizontal: false, vertical: true)
                     .readHeight { height in
@@ -91,7 +99,12 @@ private struct ItemBasedSelfSizingSheetModifier<Item: Identifiable, SheetContent
 
     func body(content: Content) -> some View {
         content
-            .sheet(item: $item, onDismiss: onDismiss) { item in
+            .sheet(item: $item, onDismiss: {
+                // Reset height to avoid stale values on next presentation
+                sheetHeight = 0
+                // Call the original onDismiss if provided
+                onDismiss?()
+            }) { item in
                 sheetContent(item)
                     .fixedSize(horizontal: false, vertical: true)
                     .readHeight { height in
