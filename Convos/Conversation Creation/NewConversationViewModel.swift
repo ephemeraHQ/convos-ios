@@ -60,6 +60,8 @@ class NewConversationViewModel: Identifiable {
 
     func start() {
         // Start async initialization
+        initializationTask?.cancel()
+        initializationError = nil
         initializationTask = Task { [weak self] in
             guard let self else { return }
             await self.initializeAsyncDependencies()
@@ -69,8 +71,13 @@ class NewConversationViewModel: Identifiable {
     @MainActor
     private func initializeAsyncDependencies() async {
         do {
-            let messagingService = try await session.addInbox()
-            self.messagingService = messagingService
+            let messagingService: AnyMessagingService
+            if let existing = self.messagingService {
+                messagingService = existing
+            } else {
+                messagingService = try await session.addInbox()
+                self.messagingService = messagingService
+            }
             let draftConversationComposer = messagingService.draftConversationComposer()
             self.draftConversationComposer = draftConversationComposer
             let draftConversation = try draftConversationComposer.draftConversationRepository.fetchConversation() ?? .empty(
@@ -91,7 +98,10 @@ class NewConversationViewModel: Identifiable {
             }
         } catch {
             Logger.error("Error initializing: \(error)")
-            self.initializationError = error
+            withAnimation {
+                self.initializationError = error
+                self.conversationViewModel = nil
+            }
         }
     }
 
