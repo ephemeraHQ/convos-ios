@@ -3,6 +3,11 @@ import GRDB
 
 // MARK: - DBConversationDetails
 
+struct DBConversationLatestMessage: Decodable, FetchableRecord {
+    let conversation: DBConversation
+    let latestMessage: DBMessage?
+}
+
 struct DBConversationDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
     let conversation: DBConversation
     let conversationCreator: ConversationMemberProfileWithRole

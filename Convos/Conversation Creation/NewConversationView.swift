@@ -93,12 +93,8 @@ struct NewConversationView: View {
                 .selfSizingSheet(isPresented: $viewModel.presentingInvalidInviteSheet) {
                     InfoView(title: "No convo here", description: "Maybe it already exploded.")
                 }
-                .alert("Join Error", isPresented: $viewModel.presentingJoinError) {
-                    Button("OK") {
-                        viewModel.dismissJoinError()
-                    }
-                } message: {
-                    Text(viewModel.joinError ?? "Unknown error occurred")
+                .selfSizingSheet(isPresented: $viewModel.presentingFailedToJoinSheet) {
+                    InfoView(title: "Try again", description: "Joining the convo failed.")
                 }
             }
         }

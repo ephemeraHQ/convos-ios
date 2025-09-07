@@ -22,12 +22,8 @@ class NewConversationViewModel: Identifiable {
     private(set) var showingFullScreenScanner: Bool
     var presentingJoinConversationSheet: Bool = false
     var presentingInvalidInviteSheet: Bool = false
+    var presentingFailedToJoinSheet: Bool = false
     private var initializationTask: Task<Void, Never>?
-
-    // Error handling
-    var joinError: String?
-    var presentingJoinError: Bool = false
-
     private(set) var initializationError: Error?
 
     // MARK: - Private
@@ -68,6 +64,8 @@ class NewConversationViewModel: Identifiable {
 
     func start() {
         // Start async initialization
+        initializationTask?.cancel()
+        initializationError = nil
         initializationTask = Task { [weak self] in
             guard let self else { return }
             await self.initializeAsyncDependencies()
@@ -77,8 +75,13 @@ class NewConversationViewModel: Identifiable {
     @MainActor
     private func initializeAsyncDependencies() async {
         do {
-            let messagingService = try await session.addInbox()
-            self.messagingService = messagingService
+            let messagingService: AnyMessagingService
+            if let existing = self.messagingService {
+                messagingService = existing
+            } else {
+                messagingService = try await session.addInbox()
+                self.messagingService = messagingService
+            }
             let draftConversationComposer = messagingService.draftConversationComposer()
             self.draftConversationComposer = draftConversationComposer
             let draftConversation = try draftConversationComposer.draftConversationRepository.fetchConversation() ?? .empty(
@@ -91,16 +94,20 @@ class NewConversationViewModel: Identifiable {
                 myProfileRepository: messagingService.myProfileRepository()
             )
             self.conversationViewModel?.untitledConversationPlaceholder = "New convo"
-
             if showingFullScreenScanner {
                 self.conversationViewModel?.showsInfoView = false
-            } else {
-                // Create new conversation when not in full screen scanning
+            }
+            if !showingFullScreenScanner {
                 try await draftConversationComposer.draftConversationWriter.createConversation()
             }
+        } catch is CancellationError {
+            return
         } catch {
             Logger.error("Error initializing: \(error)")
-            self.initializationError = error
+            withAnimation {
+                self.initializationError = error
+                self.conversationViewModel = nil
+            }
         }
     }
 
@@ -110,15 +117,8 @@ class NewConversationViewModel: Identifiable {
         presentingJoinConversationSheet = true
     }
 
-    func dismissJoinError() {
-        joinError = nil
-        presentingJoinError = false
-    }
-
     func join(inviteUrlString: String) -> Bool {
         // Clear any previous errors when starting a new join attempt
-        joinError = nil
-        presentingJoinError = false
         presentingInvalidInviteSheet = false
 
         let inviteCode: String
@@ -165,8 +165,16 @@ class NewConversationViewModel: Identifiable {
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
 
-            // First check if we've already joined this conversation
-            if let existingConversationId = await draftConversationComposer?.draftConversationWriter.checkIfAlreadyJoined(inviteCode: inviteCode) {
+            // wait for init
+            await initializationTask?.value
+
+            guard let draftConversationComposer else {
+                Logger.error("Join attempted before initialization finished")
+                await MainActor.run { self.presentingFailedToJoinSheet = true }
+                return
+            }
+
+            if let existingConversationId = await draftConversationComposer.draftConversationWriter.checkIfAlreadyJoined(inviteCode: inviteCode) {
                 Logger.info("Invite already redeeemed, showing existing conversation... conversationId: \(existingConversationId)")
                 await MainActor.run {
                     self.presentingJoinConversationSheet = false
@@ -178,27 +186,28 @@ class NewConversationViewModel: Identifiable {
                 return
             }
 
-            // If not already joined, proceed with joining
             do {
-                try await draftConversationComposer?.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
-                Logger.info("Successfully joined conversation")
+                // Request to join
+                await MainActor.run { self.showingFullScreenScanner = false }
+                try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
+            } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
+                Logger.info("Invite already redeeemed, showing existing conversation...")
                 await MainActor.run {
-                    // Clear any previous errors on success
-                    self.joinError = nil
-                    self.presentingJoinError = false
-                    self.conversationViewModel?.showsInfoView = true
+                    self.presentingJoinConversationSheet = false
+                    self.delegate?.newConversationsViewModel(
+                        self,
+                        attemptedJoiningExistingConversationWithId: conversationId
+                    )
                 }
             } catch {
-                Logger.error("Error joining conversation: \(error.localizedDescription)")
+                Logger.error("Error joining new conversation: \(error.localizedDescription)")
                 await MainActor.run {
-                    self.joinError = error.localizedDescription.isEmpty ?
-                        "Failed to join conversation. Please check your connection and try again." :
-                        error.localizedDescription
-                    self.presentingJoinError = true
-
-                    if self.startedWithFullscreenScanner {
-                        self.showingFullScreenScanner = true
-                        self.conversationViewModel?.showsInfoView = false
+                    withAnimation {
+                        if self.startedWithFullscreenScanner {
+                            self.showingFullScreenScanner = true
+                            self.conversationViewModel?.showsInfoView = false
+                        }
+                        self.presentingInvalidInviteSheet = true
                     }
                 }
             }
@@ -211,6 +220,18 @@ class NewConversationViewModel: Identifiable {
         guard let draftConversationComposer else {
             return
         }
+
+        draftConversationComposer.draftConversationWriter.conversationIdPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { conversationId in
+                Logger.info("Active conversation changed: \(conversationId)")
+                NotificationCenter.default.post(
+                    name: .activeConversationChanged,
+                    object: nil,
+                    userInfo: ["conversationId": conversationId as Any]
+                )
+            }
+            .store(in: &cancellables)
 
         Publishers.Merge(
             draftConversationComposer.draftConversationWriter.sentMessage.map { _ in () },

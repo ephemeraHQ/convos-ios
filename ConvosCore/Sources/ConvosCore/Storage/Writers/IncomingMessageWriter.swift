@@ -62,24 +62,6 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
                     Logger.error("Failed saving incoming message \(message.id): \(error)")
                 }
             }
-
-            if let localState = try ConversationLocalState
-                .filter(Column("conversationId") == conversation.id)
-                .fetchOne(db) {
-                Logger.info("Marking conversation as unread: \(conversation.id)")
-                if localState.isUnreadUpdatedAt < message.date {
-                    try localState.with(isUnread: true).save(db)
-                }
-            } else {
-                Logger.info("Creating local state for conversation: \(conversation.id)")
-                try ConversationLocalState(
-                    conversationId: conversation.id,
-                    isPinned: false,
-                    isUnread: true,
-                    isUnreadUpdatedAt: Date(),
-                    isMuted: false
-                ).save(db)
-            }
         }
     }
 }

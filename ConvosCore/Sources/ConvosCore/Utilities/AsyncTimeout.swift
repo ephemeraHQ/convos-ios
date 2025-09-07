@@ -8,11 +8,14 @@ import Foundation
 ///   - operation: The async operation to execute
 /// - Returns: The result of the operation
 /// - Throws: The error from the operation or a timeout error
-public func withTimeout<T>(
+public func withTimeout<T: Sendable>(
     seconds: TimeInterval,
-    operation: @escaping () async throws -> T
+    operation: @escaping @Sendable () async throws -> T
 ) async throws -> T {
     try await withThrowingTaskGroup(of: T.self) { group in
+        // Ensure the other task is always cancelled
+        defer { group.cancelAll() }
+
         // Add the main operation task
         group.addTask {
             try await operation()
@@ -29,15 +32,12 @@ public func withTimeout<T>(
             throw TimeoutError()
         }
 
-        // Cancel the other task
-        group.cancelAll()
-
         return result
     }
 }
 
 /// Error thrown when an async operation times out
-public struct TimeoutError: LocalizedError {
+public struct TimeoutError: LocalizedError, Sendable {
     public var errorDescription: String? {
         "The operation timed out"
     }
@@ -52,12 +52,15 @@ public struct TimeoutError: LocalizedError {
 ///   - operation: The async operation to execute
 /// - Returns: The result of the operation
 /// - Throws: The error from the operation or the specified timeout error
-public func withTimeout<T, E: Error>(
+public func withTimeout<T: Sendable, E: Error & Sendable>(
     seconds: TimeInterval,
     timeoutError: E,
-    operation: @escaping () async throws -> T
+    operation: @escaping @Sendable () async throws -> T
 ) async throws -> T {
     try await withThrowingTaskGroup(of: T.self) { group in
+        // Ensure the other task is always cancelled
+        defer { group.cancelAll() }
+
         // Add the main operation task
         group.addTask {
             try await operation()
@@ -73,9 +76,6 @@ public func withTimeout<T, E: Error>(
         guard let result = try await group.next() else {
             throw timeoutError
         }
-
-        // Cancel the other task
-        group.cancelAll()
 
         return result
     }

@@ -1,26 +1,5 @@
 import SwiftUI
 
-// MARK: - Self-Sizing Sheet Modifier
-
-/// A view modifier that presents a sheet that automatically sizes itself to its content
-private struct SelfSizingSheetModifier<SheetContent: View>: ViewModifier {
-    @Binding var isPresented: Bool
-    @State private var sheetHeight: CGFloat = 0
-    let sheetContent: () -> SheetContent
-
-    func body(content: Content) -> some View {
-        content
-            .sheet(isPresented: $isPresented) {
-                sheetContent()
-                    .fixedSize(horizontal: false, vertical: true)
-                    .readHeight { height in
-                        sheetHeight = height
-                    }
-                    .presentationDetents([.height(sheetHeight)])
-            }
-    }
-}
-
 // MARK: - View Extension
 
 extension View {
@@ -34,15 +13,16 @@ extension View {
     ) -> some View {
         modifier(SelfSizingSheetModifier(
             isPresented: isPresented,
+            onDismiss: nil,
             sheetContent: content
         ))
     }
 }
 
-// MARK: - Alternative with onDismiss
+// MARK: - Self-Sizing Sheet Modifier
 
-/// A view modifier that presents a self-sizing sheet with onDismiss callback
-private struct SelfSizingSheetWithDismissModifier<SheetContent: View>: ViewModifier {
+/// A view modifier that presents a sheet that automatically sizes itself to its content
+private struct SelfSizingSheetModifier<SheetContent: View>: ViewModifier {
     @Binding var isPresented: Bool
     @State private var sheetHeight: CGFloat = 0
     let onDismiss: (() -> Void)?
@@ -50,14 +30,23 @@ private struct SelfSizingSheetWithDismissModifier<SheetContent: View>: ViewModif
 
     func body(content: Content) -> some View {
         content
-            .sheet(isPresented: $isPresented, onDismiss: onDismiss) {
-                sheetContent()
-                    .fixedSize(horizontal: false, vertical: true)
-                    .readHeight { height in
-                        sheetHeight = height
-                    }
-                    .presentationDetents([.height(sheetHeight)])
-            }
+            .sheet(
+                isPresented: $isPresented,
+                onDismiss: {
+                    // Reset height to avoid stale values on next presentation
+                    sheetHeight = 0
+                    // Call the original onDismiss if provided
+                    onDismiss?()
+                },
+                content: {
+                    sheetContent()
+                        .fixedSize(horizontal: false, vertical: true)
+                        .readHeight { height in
+                            sheetHeight = height
+                        }
+                        .presentationDetents(sheetHeight > 0.0 ? [.height(sheetHeight)] : [.medium])
+                }
+            )
     }
 }
 
@@ -72,7 +61,7 @@ extension View {
         onDismiss: (() -> Void)? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        modifier(SelfSizingSheetWithDismissModifier(
+        modifier(SelfSizingSheetModifier(
             isPresented: isPresented,
             onDismiss: onDismiss,
             sheetContent: content
@@ -91,14 +80,22 @@ private struct ItemBasedSelfSizingSheetModifier<Item: Identifiable, SheetContent
 
     func body(content: Content) -> some View {
         content
-            .sheet(item: $item, onDismiss: onDismiss) { item in
-                sheetContent(item)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .readHeight { height in
-                        sheetHeight = height
-                    }
-                    .presentationDetents([.height(sheetHeight)])
-            }
+            .sheet(
+                item: $item,
+                onDismiss: {
+                    // Reset height to avoid stale values on next presentation
+                    sheetHeight = 0
+                    // Call the original onDismiss if provided
+                    onDismiss?()
+                }, content: { item in
+                    sheetContent(item)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .readHeight { height in
+                            sheetHeight = height
+                        }
+                        .presentationDetents(sheetHeight > 0.0 ? [.height(sheetHeight)] : [.medium])
+                }
+            )
     }
 }
 

@@ -237,17 +237,6 @@ class ConversationViewModel {
             .store(in: &cancellables)
     }
 
-    private func markConversationAsRead() {
-        Task { [weak self] in
-            guard let self, let localStateWriter = self.localStateWriter else { return }
-            do {
-                try await localStateWriter.setUnread(false, for: self.conversation.id)
-            } catch {
-                Logger.warning("Failed marking conversation as read: \(error.localizedDescription)")
-            }
-        }
-    }
-
     // MARK: - Public
 
     func onConversationInfoTap() {
@@ -377,14 +366,6 @@ class ConversationViewModel {
 
     func onProfileSettings() {
         presentingProfileSettings = true
-    }
-
-    func onAppear() {
-        markConversationAsRead()
-    }
-
-    func onDisappear() {
-        markConversationAsRead()
     }
 
     func remove(member: ConversationMember) {

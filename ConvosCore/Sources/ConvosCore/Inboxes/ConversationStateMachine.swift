@@ -268,18 +268,21 @@ public actor ConversationStateMachine {
             nil
         }
 
-        do {
-            try await handleJoin(inviteCode: inviteCode)
-        } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
-            // if the join succeeds, clean up `previousConversationId`
-            if let previousResult {
-                try await cleanUp(
-                    conversationId: previousResult.conversationId,
-                    externalConversationId: previousResult.externalConversationId
-                )
-            }
+        // Try to join the new conversation
+        try await handleJoin(inviteCode: inviteCode)
 
-            throw ConversationStateMachineError.alreadyRedeemedInviteForConversation(conversationId)
+        // If the join succeeded, clean up the previous conversation
+        if let previousResult {
+            Logger.info("Join succeeded, cleaning up previous conversation: \(previousResult.conversationId)")
+
+            // Get the inbox state to access the API client for unsubscribing
+            let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
+            await scheduleCleanupOnNextReady(
+                previousConversationId: previousResult.conversationId,
+                previousExternalId: previousResult.externalConversationId,
+                client: inboxReady.client,
+                apiClient: inboxReady.apiClient,
+            )
         }
     }
 
@@ -523,15 +526,75 @@ public actor ConversationStateMachine {
         // We always use draftConversationId for the local database records
         let conversationId = draftConversationId
 
+        // Get the inbox state to access the API client for unsubscribing
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
+
         try await cleanUp(
             conversationId: conversationId,
-            externalConversationId: externalConversationId
+            externalConversationId: externalConversationId,
+            client: inboxReady.client,
+            apiClient: inboxReady.apiClient
         )
 
         emitStateChange(.uninitialized)
     }
 
-    private func cleanUp(conversationId: String, externalConversationId: String?) async throws {
+    // Runs once: after the next .ready for a different conversation, clean up the previous convo.
+    private func scheduleCleanupOnNextReady(
+        previousConversationId: String,
+        previousExternalId: String,
+        client: any XMTPClientProvider,
+        apiClient: any ConvosAPIClientProtocol,
+    ) async {
+        for await state in self.stateSequence {
+            switch state {
+            case .ready(let newReady):
+                // Only clean up if we actually moved to a different external conversation
+                if newReady.externalConversationId != previousExternalId {
+                    do {
+                        try await self.cleanUp(
+                            conversationId: previousConversationId,
+                            externalConversationId: previousExternalId,
+                            client: client,
+                            apiClient: apiClient
+                        )
+                    } catch {
+                        Logger.error("Deferred cleanup of previous conversation failed: \(error)")
+                    }
+                    return
+                }
+            case .error:
+                return
+            default:
+                continue
+            }
+        }
+    }
+
+    private func cleanUp(
+        conversationId: String,
+        externalConversationId: String?,
+        client: any XMTPClientProvider,
+        apiClient: any ConvosAPIClientProtocol,
+    ) async throws {
+        // Unsubscribe from push notifications if we have an external conversation ID
+        if let externalConversationId = externalConversationId {
+            // @jarod until we have self removal, we need to deny the conversation
+            // so it doesn't show up in the list
+            let externalConversation = try await client.conversationsProvider.findConversation(conversationId: externalConversationId)
+            try await externalConversation?.updateConsentState(state: .denied)
+
+            let topic = externalConversationId.xmtpGroupTopicFormat
+            do {
+                try await apiClient.unsubscribeFromTopics(installationId: client.installationId, topics: [topic])
+                Logger.info("Unsubscribed from push topic: \(topic)")
+            } catch {
+                Logger.error("Failed unsubscribing from topic \(topic): \(error)")
+                // Continue with cleanup even if unsubscribe fails
+            }
+        }
+
+        // Clean up database records
         try await databaseWriter.write { db in
             // Delete messages first (due to foreign key constraints)
             try DBMessage

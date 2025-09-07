@@ -2,7 +2,7 @@ import Foundation
 
 extension Date {
     /// Returns a short relative string like "1h", "12h", "1w", etc.
-    func relativeShort(to referenceDate: Date = .init()) -> String {
+    public func relativeShort(to referenceDate: Date = .init()) -> String {
         let seconds = Int(referenceDate.timeIntervalSince(self))
         let minute = 60
         let hour   = 60 * minute
@@ -23,5 +23,9 @@ extension Date {
         default:
             return "\(seconds / week)w"
         }
+    }
+
+    public var nanosecondsSince1970: Int64 {
+        Int64(timeIntervalSince1970 * 1_000_000_000)
     }
 }
