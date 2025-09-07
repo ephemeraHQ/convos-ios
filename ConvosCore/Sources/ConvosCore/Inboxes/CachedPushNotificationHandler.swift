@@ -63,7 +63,7 @@ public actor CachedPushNotificationHandler {
 
         // Process with timeout
         return try await withTimeout(seconds: timeout, timeoutError: NotificationProcessingError.timeout) {
-            let messagingService = self.getOrCreateMessagingService(for: inboxId)
+            let messagingService = await self.getOrCreateMessagingService(for: inboxId)
             return try await messagingService.processPushNotification(payload: payload)
         }
     }
