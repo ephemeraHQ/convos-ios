@@ -37,7 +37,7 @@ public func withTimeout<T>(
 }
 
 /// Error thrown when an async operation times out
-public struct TimeoutError: LocalizedError {
+public struct TimeoutError: LocalizedError, Sendable {
     public var errorDescription: String? {
         "The operation timed out"
     }

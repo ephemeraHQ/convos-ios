@@ -544,8 +544,6 @@ public actor ConversationStateMachine {
     ) async {
         for await state in self.stateSequence {
             switch state {
-            case .error:
-                break
             case .ready(let newReady):
                 // Only clean up if we actually moved to a different external conversation
                 if newReady.externalConversationId != previousExternalId {
@@ -559,8 +557,10 @@ public actor ConversationStateMachine {
                     } catch {
                         Logger.error("Deferred cleanup of previous conversation failed: \(error)")
                     }
-                    break
+                    return
                 }
+            case .error:
+                return
             default:
                 continue
             }
