@@ -4,7 +4,6 @@ import SwiftUI
 struct ConversationsView: View {
     let session: any SessionManagerProtocol
     @Bindable var viewModel: ConversationsViewModel
-    @State private var deepLinkHandler: DeepLinkHandler = DeepLinkHandler()
 
     @Namespace private var namespace: Namespace.ID
     @State private var presentingExplodeConfirmation: Bool = false
@@ -170,30 +169,8 @@ struct ConversationsView: View {
             MaxedOutInfoView(maxNumberOfConvos: viewModel.maxNumberOfConvos)
         }
         .onOpenURL { url in
-            handleDeepLink(url)
+            viewModel.handleURL(url)
         }
-        .onChange(of: deepLinkHandler.shouldPresentRequestToJoin) { _, shouldPresent in
-            if shouldPresent, let inviteCode = deepLinkHandler.inviteCodeToProcess {
-                handleRequestToJoin(inviteCode)
-            }
-        }
-    }
-
-    private func handleDeepLink(_ url: URL) {
-        _ = deepLinkHandler.handleURL(url)
-    }
-
-    private func handleRequestToJoin(_ inviteCode: String) {
-        // This creates a request to join via invite code
-        // For deep links, we want to directly join without showing the scanner
-        // All validation (already joined, invalid codes, etc.) is handled by ConversationStateMachine
-        viewModel.newConversationViewModel = NewConversationViewModel(
-            session: session,
-            showScannerOnAppear: false,
-            delegate: viewModel,
-            prefilledInviteCode: inviteCode
-        )
-        deepLinkHandler.clearPendingDeepLink()
     }
 }
 
