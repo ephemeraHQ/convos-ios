@@ -22,6 +22,7 @@ class NewConversationViewModel: Identifiable {
     private(set) var showingFullScreenScanner: Bool
     var presentingJoinConversationSheet: Bool = false
     var presentingInvalidInviteSheet: Bool = false
+    var presentingFailedToJoinSheet: Bool = false
     private var initializationTask: Task<Void, Never>?
 
     private(set) var initializationError: Error?
@@ -143,10 +144,20 @@ class NewConversationViewModel: Identifiable {
         joinConversationTask?.cancel()
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
+
+            // wait for init
+            await initializationTask?.value
+
+            guard let draftConversationComposer else {
+                Logger.error("Join attempted before initialization finished")
+                await MainActor.run { self.presentingFailedToJoinSheet = true }
+                return
+            }
+
             do {
                 // Request to join
-                self.showingFullScreenScanner = false
-                try await draftConversationComposer?.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
+                await MainActor.run { self.showingFullScreenScanner = false }
+                try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
             } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
                 Logger.info("Invite already redeeemed, showing existing conversation...")
                 await MainActor.run {
