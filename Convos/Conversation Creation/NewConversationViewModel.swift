@@ -169,7 +169,6 @@ class NewConversationViewModel: Identifiable {
         draftConversationComposer.draftConversationWriter.conversationIdPublisher
             .receive(on: DispatchQueue.main)
             .sink { conversationId in
-                // Notify that active conversation has changed
                 Logger.info("Active conversation changed: \(conversationId)")
                 NotificationCenter.default.post(
                     name: .activeConversationChanged,

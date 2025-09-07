@@ -134,7 +134,7 @@ final class ConversationsViewModel {
                 guard let conversationId: String = notification.userInfo?["conversationId"] as? String else {
                     return
                 }
-                Logger.info("📢 Left conversation notification received for conversation: \(conversationId)")
+                Logger.info("Left conversation notification received for conversation: \(conversationId)")
                 if selectedConversation?.id == conversationId {
                     selectedConversation = nil
                 }
