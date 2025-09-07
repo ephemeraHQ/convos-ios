@@ -82,6 +82,17 @@ final class ConversationsViewModel {
         cancellables.removeAll()
     }
 
+    func handleURL(_ url: URL) {
+        guard let destination = DeepLinkHandler.destination(for: url) else {
+            return
+        }
+
+        switch destination {
+        case .requestToJoin(inviteCode: let inviteCode):
+            join(from: inviteCode)
+        }
+    }
+
     func onStartConvo() {
         guard !maxNumberOfConvosReached else {
             presentingMaxNumberOfConvosReachedInfo = true
@@ -96,6 +107,22 @@ final class ConversationsViewModel {
             return
         }
         newConversationViewModel = .init(session: session, showScannerOnAppear: true, delegate: self)
+    }
+
+    private func join(from inviteCode: String) {
+        guard !maxNumberOfConvosReached else {
+            presentingMaxNumberOfConvosReachedInfo = true
+            return
+        }
+        // This creates a request to join via invite code
+        // For deep links, we want to directly join without showing the scanner
+        // All validation (already joined, invalid codes, etc.) is handled by ConversationStateMachine
+        newConversationViewModel = .init(
+            session: session,
+            showScannerOnAppear: false,
+            delegate: self,
+        )
+        _ = newConversationViewModel?.join(inviteUrlString: inviteCode)
     }
 
     func deleteAllInboxes() {

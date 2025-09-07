@@ -100,4 +100,20 @@ final class ConfigManager {
         }
         return id
     }
+
+    /// Associated domain from config (matches ASSOCIATED_DOMAIN from xcconfig)
+    var associatedDomain: String {
+        guard let domain = config["associatedDomain"] as? String else {
+            fatalError("Missing 'associatedDomain' in config.json")
+        }
+        return domain
+    }
+
+    /// App URL scheme from config
+    var appUrlScheme: String {
+        guard let scheme = config["appUrlScheme"] as? String else {
+            fatalError("Missing 'appUrlScheme' in config.json")
+        }
+        return scheme
+    }
 }

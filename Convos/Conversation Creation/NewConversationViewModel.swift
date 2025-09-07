@@ -24,7 +24,6 @@ class NewConversationViewModel: Identifiable {
     var presentingInvalidInviteSheet: Bool = false
     var presentingFailedToJoinSheet: Bool = false
     private var initializationTask: Task<Void, Never>?
-
     private(set) var initializationError: Error?
 
     // MARK: - Private
@@ -36,12 +35,16 @@ class NewConversationViewModel: Identifiable {
     }
     private var messagingService: AnyMessagingService?
     private var newConversationTask: Task<Void, Never>?
-    private var joinConversationTask: Task<Void, Never>?
+    private var joinConversationTask: Task<Void, Error>?
     private var cancellables: Set<AnyCancellable> = []
 
     // MARK: - Init
 
-    init(session: any SessionManagerProtocol, showScannerOnAppear: Bool = false, delegate: NewConversationsViewModelDelegate? = nil) {
+    init(
+        session: any SessionManagerProtocol,
+        showScannerOnAppear: Bool = false,
+        delegate: NewConversationsViewModelDelegate? = nil
+    ) {
         self.session = session
         self.startedWithFullscreenScanner = showScannerOnAppear
         self.showingFullScreenScanner = showScannerOnAppear
@@ -115,11 +118,26 @@ class NewConversationViewModel: Identifiable {
     }
 
     func join(inviteUrlString: String) -> Bool {
-        guard let inviteCode = inviteUrlString.inviteCodeFromJoinURL else {
-            Logger.warning("Invalid invite URL")
-            return false
+        // Clear any previous errors when starting a new join attempt
+        presentingInvalidInviteSheet = false
+
+        let inviteCode: String
+
+        // Try to extract invite code from URL first
+        if let extractedCode = inviteUrlString.inviteCodeFromJoinURL {
+            inviteCode = extractedCode
+        } else {
+            // If it's not a valid URL, treat as direct invite code
+            // Only accept if it looks like a valid invite code (no spaces, reasonable length)
+            guard !inviteUrlString.contains(" "), inviteUrlString.count >= 8 else {
+                Logger.warning("Invalid invite code format: \(inviteUrlString)")
+                presentingInvalidInviteSheet = true
+                return false
+            }
+            inviteCode = inviteUrlString
         }
-        Logger.info("Scanned inviteCode: \(inviteCode)")
+
+        Logger.info("Processing inviteCode")
         presentingJoinConversationSheet = false
         joinConversation(inviteCode: inviteCode)
         conversationViewModel?.showsInfoView = true
@@ -153,6 +171,18 @@ class NewConversationViewModel: Identifiable {
             guard let draftConversationComposer else {
                 Logger.error("Join attempted before initialization finished")
                 await MainActor.run { self.presentingFailedToJoinSheet = true }
+                return
+            }
+
+            if let existingConversationId = await draftConversationComposer.draftConversationWriter.checkIfAlreadyJoined(inviteCode: inviteCode) {
+                Logger.info("Invite already redeeemed, showing existing conversation... conversationId: \(existingConversationId)")
+                await MainActor.run {
+                    self.presentingJoinConversationSheet = false
+                    self.delegate?.newConversationsViewModel(
+                        self,
+                        attemptedJoiningExistingConversationWithId: existingConversationId
+                    )
+                }
                 return
             }
 

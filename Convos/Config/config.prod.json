@@ -3,5 +3,7 @@
   "backendUrl": "https://api.convos-otr-prod.convos-api.xyz/api/",
   "bundleId": "org.convos.ios",
   "appGroupIdentifier": "group.org.convos.ios",
-  "relyingPartyIdentifier": "convos.org"
+  "relyingPartyIdentifier": "convos.org",
+  "associatedDomain": "convos.org",
+  "appUrlScheme": "convos"
 }

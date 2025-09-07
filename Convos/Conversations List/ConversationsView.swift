@@ -168,6 +168,9 @@ struct ConversationsView: View {
         .selfSizingSheet(isPresented: $viewModel.presentingMaxNumberOfConvosReachedInfo) {
             MaxedOutInfoView(maxNumberOfConvos: viewModel.maxNumberOfConvos)
         }
+        .onOpenURL { url in
+            viewModel.handleURL(url)
+        }
     }
 }
 

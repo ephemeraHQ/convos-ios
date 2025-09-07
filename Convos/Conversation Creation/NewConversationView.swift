@@ -40,11 +40,7 @@ struct NewConversationView: View {
                 Group {
                     if viewModel.showingFullScreenScanner {
                         JoinConversationView { inviteCode in
-                            if viewModel.join(inviteUrlString: inviteCode) {
-                                return true
-                            } else {
-                                return false
-                            }
+                            viewModel.join(inviteUrlString: inviteCode)
                         }
                     } else {
                         Group {
