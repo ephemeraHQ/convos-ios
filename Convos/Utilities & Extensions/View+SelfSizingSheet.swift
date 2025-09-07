@@ -44,7 +44,7 @@ private struct SelfSizingSheetModifier<SheetContent: View>: ViewModifier {
                         .readHeight { height in
                             sheetHeight = height
                         }
-                        .presentationDetents([.height(sheetHeight)])
+                        .presentationDetents(sheetHeight > 0.0 ? [.height(sheetHeight)] : [.medium])
                 }
             )
     }
@@ -93,7 +93,7 @@ private struct ItemBasedSelfSizingSheetModifier<Item: Identifiable, SheetContent
                         .readHeight { height in
                             sheetHeight = height
                         }
-                        .presentationDetents([.height(sheetHeight)])
+                        .presentationDetents(sheetHeight > 0.0 ? [.height(sheetHeight)] : [.medium])
                 }
             )
     }
