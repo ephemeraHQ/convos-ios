@@ -94,8 +94,8 @@ final class ConversationsViewModel {
                 session: session,
                 showScannerOnAppear: false,
                 delegate: self,
-                prefilledInviteCode: inviteCode
             )
+            _ = newConversationViewModel?.join(inviteUrlString: inviteCode)
         }
     }
 

@@ -23,7 +23,6 @@ class NewConversationViewModel: Identifiable {
     var presentingJoinConversationSheet: Bool = false
     var presentingInvalidInviteSheet: Bool = false
     private var initializationTask: Task<Void, Never>?
-    private var prefilledInviteCode: String?
 
     // Error handling
     var joinError: String?
@@ -45,12 +44,15 @@ class NewConversationViewModel: Identifiable {
 
     // MARK: - Init
 
-    init(session: any SessionManagerProtocol, showScannerOnAppear: Bool = false, delegate: NewConversationsViewModelDelegate? = nil, prefilledInviteCode: String? = nil) {
+    init(
+        session: any SessionManagerProtocol,
+        showScannerOnAppear: Bool = false,
+        delegate: NewConversationsViewModelDelegate? = nil
+    ) {
         self.session = session
         self.startedWithFullscreenScanner = showScannerOnAppear
         self.showingFullScreenScanner = showScannerOnAppear
         self.delegate = delegate
-        self.prefilledInviteCode = prefilledInviteCode
 
         start()
     }
@@ -90,19 +92,10 @@ class NewConversationViewModel: Identifiable {
             )
             self.conversationViewModel?.untitledConversationPlaceholder = "New convo"
 
-            // Handle prefilled invite code (from deep links)
-            if let prefilledInviteCode {
-                self.conversationViewModel?.showsInfoView = false
-                let success = join(inviteUrlString: prefilledInviteCode)
-                if !success {
-                    Logger.warning("Failed to join with prefilled invite code: \(prefilledInviteCode)")
-                    return
-                }
-            } else if showingFullScreenScanner {
-                // Only show scanner when manually joining (no prefilled code)
+            if showingFullScreenScanner {
                 self.conversationViewModel?.showsInfoView = false
             } else {
-                // Create new conversation when not joining
+                // Create new conversation when not in full screen scanning
                 try await draftConversationComposer.draftConversationWriter.createConversation()
             }
         } catch {
