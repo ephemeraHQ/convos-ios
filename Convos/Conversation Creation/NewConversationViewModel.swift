@@ -97,6 +97,8 @@ class NewConversationViewModel: Identifiable {
             if !showingFullScreenScanner {
                 try await draftConversationComposer.draftConversationWriter.createConversation()
             }
+        } catch is CancellationError {
+            return
         } catch {
             Logger.error("Error initializing: \(error)")
             withAnimation {
