@@ -98,7 +98,11 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        newConversationViewModel = .init(session: session, delegate: self)
+        newConversationViewModel = .init(
+            session: session,
+            autoCreateConversation: true,
+            delegate: self
+        )
     }
 
     func onJoinConvo() {
@@ -106,7 +110,11 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        newConversationViewModel = .init(session: session, showScannerOnAppear: true, delegate: self)
+        newConversationViewModel = .init(
+            session: session,
+            showingFullScreenScanner: true,
+            delegate: self
+        )
     }
 
     private func join(from inviteCode: String) {
@@ -119,7 +127,6 @@ final class ConversationsViewModel {
         // All validation (already joined, invalid codes, etc.) is handled by ConversationStateMachine
         newConversationViewModel = .init(
             session: session,
-            showScannerOnAppear: false,
             delegate: self,
         )
         _ = newConversationViewModel?.join(inviteUrlString: inviteCode)
