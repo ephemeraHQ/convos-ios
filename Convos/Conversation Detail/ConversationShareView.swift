@@ -36,10 +36,7 @@ struct ConversationShareView: View {
                         Color(.black.opacity(0.5))
                             .background(.ultraThinMaterial)
                             .ignoresSafeArea()
-                            .transition(.opacity)
-                    }
 
-                    if hasAppeared {
                         VStack(spacing: 0.0) {
                             VStack(spacing: 0.0) {
                                 HStack(alignment: .center) {
@@ -72,10 +69,10 @@ struct ConversationShareView: View {
 
                             Spacer()
                         }
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                        .animation(.bouncy(duration: 0.4, extraBounce: 0.15), value: hasAppeared)
                     }
                 }
+                .transition(.opacity)
+                .animation(.default, value: hasAppeared)
                 .cachedImage(for: conversation) { image in
                     if let image {
                         conversationImage = Image(uiImage: image)
