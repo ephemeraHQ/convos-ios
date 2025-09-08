@@ -2,7 +2,7 @@ import ConvosCore
 import SwiftUI
 
 struct QRCodeView: View {
-    let identifier: String
+    let url: URL
     let backgroundColor: Color
     let foregroundColor: Color
     let centerImage: Image?
@@ -11,11 +11,11 @@ struct QRCodeView: View {
     @Environment(\.displayScale) private var displayScale: CGFloat
     private let displaySize: CGFloat = 220.0
 
-    init(identifier: String,
+    init(url: URL,
          backgroundColor: Color = .colorBackgroundPrimary,
          foregroundColor: Color = .colorTextPrimary,
          centerImage: Image? = nil) {
-        self.identifier = identifier
+        self.url = url
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
         self.centerImage = centerImage
@@ -28,7 +28,7 @@ struct QRCodeView: View {
             foregroundColor: UIColor(foregroundColor),
             backgroundColor: UIColor(backgroundColor),
         )
-        return await QRCodeGenerator.generate(from: identifier, options: options)
+        return await QRCodeGenerator.generate(from: url.absoluteString, options: options)
     }
 
     var background: some View {
@@ -60,7 +60,7 @@ struct QRCodeView: View {
                         .frame(width: 50.0, height: 50.0)
                         .clipShape(RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.small))
                     } else {
-                        ShareLink(item: identifier) {
+                        ShareLink(item: url) {
                             Image(systemName: "square.and.arrow.up")
                                 .font(.system(size: 24.0, weight: .medium))
                                 .foregroundStyle(foregroundColor)
@@ -102,14 +102,14 @@ struct QRCodeView: View {
     }
 }
 
+// swiftlint:disable force_unwrapping
+
 #Preview("Automatic Colors") {
-    @Previewable @State var identifier: String = UUID().uuidString
+    @Previewable @State var url: URL = URL(string: "https://local.convos.org/join/12346")!
 
     VStack(spacing: 40.0) {
-        QRCodeView(identifier: identifier, centerImage: Image("convosIcon"))
-
-        Button("Refresh", systemImage: "shuffle.circle.fill") {
-            identifier = UUID().uuidString
-        }
+        QRCodeView(url: url, centerImage: Image("convosIcon"))
     }
 }
+
+// swiftlint:enable force_unwrapping

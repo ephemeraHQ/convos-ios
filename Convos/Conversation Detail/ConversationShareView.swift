@@ -22,7 +22,7 @@ struct ConversationShareView: View {
 
     var body: some View {
         AutoShareSheetView(
-            items: ["Sample text to share"],
+            items: [invite.inviteURL ?? invite.inviteUrlString],
             onDismiss: {
                 withAnimation {
                     hasAppeared = false
@@ -58,11 +58,13 @@ struct ConversationShareView: View {
                                 .font(.system(size: 8.0))
                                 .frame(height: DesignConstants.Spacing.step10x)
 
-                                QRCodeView(
-                                    identifier: invite.inviteUrlString,
-                                    centerImage: conversationImage
-                                )
-                                .padding([.leading, .trailing, .bottom], DesignConstants.Spacing.step10x)
+                                if let inviteURL = invite.inviteURL {
+                                    QRCodeView(
+                                        url: inviteURL,
+                                        centerImage: conversationImage
+                                    )
+                                    .padding([.leading, .trailing, .bottom], DesignConstants.Spacing.step10x)
+                                }
                             }
                             .background(.white)
                             .clipShape(RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.large))
