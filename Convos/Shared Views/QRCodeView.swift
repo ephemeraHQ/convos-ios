@@ -87,7 +87,7 @@ struct QRCodeView: View {
             }
             .transition(.opacity)
             .animation(.default, value: currentQRCode)
-            .task {
+            .task(id: url) {
                 let newQRCode = await generateQRCode()
 
                 if !Task.isCancelled {
