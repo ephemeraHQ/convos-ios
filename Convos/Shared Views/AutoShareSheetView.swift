@@ -133,7 +133,7 @@ extension AutoShareSheetView where Content == AnyView {
             onDismiss: nil
         ) {
             ZStack {
-                Color(.black.opacity(0.5))
+                Color.black.opacity(0.5)
                     .background(.ultraThinMaterial)
                     .ignoresSafeArea()
 

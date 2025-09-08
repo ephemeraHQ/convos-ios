@@ -33,7 +33,7 @@ struct ConversationShareView: View {
                     BackgroundClearView()
 
                     if hasAppeared {
-                        Color(.black.opacity(0.5))
+                        Color.black.opacity(0.5)
                             .background(.ultraThinMaterial)
                             .ignoresSafeArea()
 
