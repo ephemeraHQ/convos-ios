@@ -19,6 +19,7 @@ class NewConversationViewModel: Identifiable {
     private(set) var messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .scan
     private(set) var shouldConfirmDeletingConversation: Bool = true
     private let startedWithFullscreenScanner: Bool
+    private let autoCreateConversation: Bool
     private(set) var showingFullScreenScanner: Bool
     var presentingJoinConversationSheet: Bool = false
     var presentingInvalidInviteSheet: Bool = false
@@ -42,12 +43,14 @@ class NewConversationViewModel: Identifiable {
 
     init(
         session: any SessionManagerProtocol,
-        showScannerOnAppear: Bool = false,
+        autoCreateConversation: Bool = false,
+        showingFullScreenScanner: Bool = false,
         delegate: NewConversationsViewModelDelegate? = nil
     ) {
         self.session = session
-        self.startedWithFullscreenScanner = showScannerOnAppear
-        self.showingFullScreenScanner = showScannerOnAppear
+        self.autoCreateConversation = autoCreateConversation
+        self.startedWithFullscreenScanner = showingFullScreenScanner
+        self.showingFullScreenScanner = showingFullScreenScanner
         self.delegate = delegate
 
         start()
@@ -97,7 +100,7 @@ class NewConversationViewModel: Identifiable {
             if showingFullScreenScanner {
                 self.conversationViewModel?.showsInfoView = false
             }
-            if !showingFullScreenScanner {
+            if autoCreateConversation {
                 try await draftConversationComposer.draftConversationWriter.createConversation()
             }
         } catch is CancellationError {

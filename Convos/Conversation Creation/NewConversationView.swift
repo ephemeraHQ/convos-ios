@@ -104,7 +104,7 @@ struct NewConversationView: View {
 #Preview {
     @Previewable @State var viewModel: NewConversationViewModel = .init(
         session: ConvosClient.mock().session,
-        showScannerOnAppear: false
+        showingFullScreenScanner: false
     )
     @Previewable @State var presented: Bool = true
     VStack {
