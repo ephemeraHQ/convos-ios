@@ -1,3 +1,4 @@
+import ConvosCore
 import SwiftUI
 
 struct ConvosToolbarButton: View {
@@ -28,10 +29,6 @@ struct AppSettingsView: View {
     @State private var showingDeleteAllDataConfirmation: Bool = false
     @Environment(\.openURL) private var openURL: OpenURLAction
     @Environment(\.dismiss) private var dismiss: DismissAction
-
-    private var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
-    }
 
     var body: some View {
         NavigationStack {
@@ -124,7 +121,7 @@ struct AppSettingsView: View {
 
                         Spacer()
 
-                        Text("Version \(appVersion)")
+                        Text("Version \(Bundle.appVersion)")
                             .font(.caption)
                             .foregroundStyle(.colorTextTertiary)
                     }
