@@ -454,7 +454,8 @@ public actor InboxStateMachine {
         ClientOptions(
             api: .init(
                 env: environment.xmtpEnv,
-                isSecure: environment.isSecure
+                isSecure: environment.isSecure,
+                appVersion: "convos/\(Bundle.appVersion)"
             ),
             codecs: [
                 TextCodec(),
@@ -474,7 +475,7 @@ public actor InboxStateMachine {
                                   options: ClientOptions) async throws -> any XMTPClientProvider {
         Logger.info("Creating XMTP client...")
         let client = try await Client.create(account: signingKey, options: options)
-        Logger.info("XMTP Client created.")
+        Logger.info("XMTP Client created with app version: convos/\(Bundle.appVersion)")
         return client
     }
 

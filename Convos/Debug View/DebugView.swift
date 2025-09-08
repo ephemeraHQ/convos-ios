@@ -83,10 +83,6 @@ struct DebugViewSection: View {
         Bundle.main.bundleIdentifier ?? "Unknown"
     }
 
-    private var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
-    }
-
     private var buildNumber: String {
         Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
     }
@@ -101,7 +97,7 @@ struct DebugViewSection: View {
         Convos Debug Information
 
         Bundle ID: \(bundleIdentifier)
-        Version: \(appVersion)
+        Version: \(Bundle.appVersion)
         Environment: \(ConfigManager.shared.currentEnvironment)
 
         \(logs)
@@ -195,7 +191,7 @@ struct DebugViewSection: View {
                 HStack {
                     Text("Version")
                     Spacer()
-                    Text(appVersion)
+                    Text(Bundle.appVersion)
                         .foregroundStyle(.colorTextSecondary)
                 }
 
