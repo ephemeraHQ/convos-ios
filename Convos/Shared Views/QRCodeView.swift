@@ -9,6 +9,7 @@ struct QRCodeView: View {
     @State private var currentQRCode: UIImage?
     @State private var generationTask: Task<Void, Never>?
     @Environment(\.displayScale) private var displayScale: CGFloat
+    @Environment(\.colorScheme) private var colorScheme: ColorScheme
     private let displaySize: CGFloat = 220.0
 
     init(url: URL,
@@ -95,6 +96,9 @@ struct QRCodeView: View {
                         currentQRCode = newQRCode
                     }
                 }
+            }
+            .onChange(of: colorScheme) {
+                Task { currentQRCode = await generateQRCode() }
             }
             .onDisappear {
                 generationTask?.cancel()
