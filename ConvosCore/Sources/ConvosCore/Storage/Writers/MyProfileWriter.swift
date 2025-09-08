@@ -25,16 +25,17 @@ class MyProfileWriter: MyProfileWriterProtocol {
 
     func update(displayName: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
-        let displayName: String? = displayName.isEmpty ? nil : displayName
+        let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedDisplayName.isEmpty else { return }
         let inboxId = inboxReady.client.inboxId
         let profile = try await databaseWriter.write { db in
             let member = Member(inboxId: inboxId)
             try member.save(db)
             let profile = (try MemberProfile.fetchOne(db, key: inboxId) ?? .init(
                 inboxId: inboxId,
-                name: displayName,
+                name: trimmedDisplayName,
                 avatar: nil
-            )).with(name: displayName)
+            )).with(name: trimmedDisplayName)
             try profile.save(db)
             return profile
         }

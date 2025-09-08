@@ -250,13 +250,16 @@ class ConversationViewModel {
     func onConversationNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
         focus = nextFocus
 
-        if conversationName != (conversation.name ?? "") {
+        let trimmedConversationName = conversationName.trimmingCharacters(in: .whitespacesAndNewlines)
+        conversationName = trimmedConversationName
+
+        if !trimmedConversationName.isEmpty && trimmedConversationName != (conversation.name ?? "") {
             Task { [weak self] in
                 guard let self, let metadataWriter = self.metadataWriter else { return }
                 do {
                     try await metadataWriter.updateGroupName(
                         groupId: conversation.id,
-                        name: conversationName
+                        name: trimmedConversationName
                     )
                 } catch {
                     Logger.error("Failed updating group name: \(error)")
@@ -280,13 +283,16 @@ class ConversationViewModel {
             }
         }
 
-        if conversationDescription != (conversation.description ?? "") {
+        let trimmedConversationDescription = conversationDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        conversationDescription = trimmedConversationDescription
+
+        if !trimmedConversationDescription.isEmpty && trimmedConversationDescription != (conversation.description ?? "") {
             Task { [weak self] in
                 guard let self, let metadataWriter = self.metadataWriter else { return }
                 do {
                     try await metadataWriter.updateGroupDescription(
                         groupId: conversation.id,
-                        description: conversationDescription
+                        description: trimmedConversationDescription
                     )
                 } catch {
                     Logger.error("Failed updating group description: \(error)")
@@ -301,7 +307,6 @@ class ConversationViewModel {
     }
 
     func onConversationSettingsDismissed() {
-        onConversationNameEndedEditing(nextFocus: nil)
         presentingConversationSettings = false
     }
 
@@ -310,7 +315,6 @@ class ConversationViewModel {
     }
 
     func onProfileSettingsDismissed() {
-        onDisplayNameEndedEditing(nextFocus: nil)
         presentingProfileSettings = false
     }
 
@@ -338,11 +342,14 @@ class ConversationViewModel {
     private func onDisplayNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
         focus = nextFocus
 
-        if (profile.name ?? "") != displayName {
+        let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        displayName = trimmedDisplayName
+
+        if !trimmedDisplayName.isEmpty && (profile.name ?? "") != trimmedDisplayName {
             Task { [weak self] in
                 guard let self, let myProfileWriter = self.myProfileWriter else { return }
                 do {
-                    try await myProfileWriter.update(displayName: displayName)
+                    try await myProfileWriter.update(displayName: trimmedDisplayName)
                 } catch {
                     Logger.error("Error updating profile display name: \(error.localizedDescription)")
                 }
