@@ -30,8 +30,8 @@ public enum QRCodeGenerator {
             displaySize: CGFloat = 220,
             roundedMarkers: Bool = true,
             roundedData: Bool = false,
-            centerSpaceSize: Float = 0.3,
-            correctionLevel: String = "H",
+            centerSpaceSize: Float = 0.25,
+            correctionLevel: String = "Q",
             foregroundColor: UIColor = .black,
             backgroundColor: UIColor = .white
         ) {

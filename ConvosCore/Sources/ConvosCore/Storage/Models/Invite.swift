@@ -18,6 +18,10 @@ public struct Invite: Codable, Hashable, Identifiable, Equatable {
     public let maxUses: Int?
     public let usesCount: Int
     public let autoApprove: Bool
+
+    public var inviteURL: URL? {
+        URL(string: inviteUrlString)
+    }
 }
 
 public extension Invite {

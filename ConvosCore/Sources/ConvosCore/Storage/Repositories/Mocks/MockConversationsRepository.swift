@@ -33,7 +33,7 @@ extension Conversation {
             lastMessage: lastMessage,
             imageURL: nil,
             isDraft: false,
-            invite: nil
+            invite: .mock()
         )
     }
 

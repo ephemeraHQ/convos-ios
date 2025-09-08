@@ -138,9 +138,11 @@ struct ConversationInfoView: View {
 
                         Spacer()
 
-                        ShareLink(item: viewModel.invite.inviteUrlString) {
-                            Image(systemName: "square.and.arrow.up")
-                                .foregroundStyle(.colorTextSecondary)
+                        if let inviteURL = viewModel.invite.inviteURL {
+                            ShareLink(item: inviteURL) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .foregroundStyle(.colorTextSecondary)
+                            }
                         }
                     }
 

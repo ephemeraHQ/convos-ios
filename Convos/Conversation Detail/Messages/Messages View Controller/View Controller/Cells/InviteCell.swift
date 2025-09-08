@@ -22,9 +22,11 @@ struct InviteView: View {
     var body: some View {
         VStack {
             Group {
-                QRCodeView(identifier: invite.inviteUrlString)
-                .frame(maxWidth: 220, maxHeight: 220)
-                .padding(DesignConstants.Spacing.step12x)
+                if let inviteURL = invite.inviteURL {
+                    QRCodeView(url: inviteURL, backgroundColor: .colorFillMinimal)
+                        .frame(maxWidth: 220, maxHeight: 220)
+                        .padding(DesignConstants.Spacing.step12x)
+                }
             }
             .background(.colorFillMinimal)
             .mask(RoundedRectangle(cornerRadius: 38.0))

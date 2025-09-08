@@ -8,6 +8,7 @@ struct ConversationView: View {
     let confirmDeletionBeforeDismissal: Bool
     let messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem
 
+    @State private var presentingShareView: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     var body: some View {
@@ -42,7 +43,19 @@ struct ConversationView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 switch messagesTopBarTrailingItem {
                 case .share:
-                    InviteShareLink(invite: viewModel.invite)
+                    Button {
+                        presentingShareView = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundStyle(.colorTextPrimary)
+                    }
+                    .fullScreenCover(isPresented: $presentingShareView) {
+                        ConversationShareView(conversation: viewModel.conversation, invite: viewModel.invite)
+                            .presentationBackground(.clear)
+                    }
+                    .transaction { transaction in
+                        transaction.disablesAnimations = true
+                    }
                 case .scan:
                     Button {
                         onScanInviteCode()
@@ -77,12 +90,14 @@ struct ConversationView: View {
 #Preview {
     @Previewable @State var viewModel: ConversationViewModel = .mock
     @Previewable @FocusState var focusState: MessagesViewInputFocus?
-    ConversationView(
-        viewModel: viewModel,
-        focusState: $focusState,
-        onScanInviteCode: {},
-        onDeleteConversation: {},
-        confirmDeletionBeforeDismissal: true,
-        messagesTopBarTrailingItem: .scan
-    )
+    NavigationStack {
+        ConversationView(
+            viewModel: viewModel,
+            focusState: $focusState,
+            onScanInviteCode: {},
+            onDeleteConversation: {},
+            confirmDeletionBeforeDismissal: true,
+            messagesTopBarTrailingItem: .share
+        )
+    }
 }

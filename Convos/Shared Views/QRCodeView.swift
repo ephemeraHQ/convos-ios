@@ -2,114 +2,118 @@ import ConvosCore
 import SwiftUI
 
 struct QRCodeView: View {
-    let identifier: String
+    let url: URL
     let backgroundColor: Color
     let foregroundColor: Color
-    @State private var isRegenerating: Bool = false
+    let centerImage: Image?
     @State private var currentQRCode: UIImage?
     @State private var generationTask: Task<Void, Never>?
     @Environment(\.displayScale) private var displayScale: CGFloat
+    @Environment(\.colorScheme) private var colorScheme: ColorScheme
+    private let displaySize: CGFloat = 220.0
 
-    init(identifier: String,
+    init(url: URL,
          backgroundColor: Color = .colorBackgroundPrimary,
-         foregroundColor: Color = .colorTextPrimary) {
-        self.identifier = identifier
+         foregroundColor: Color = .colorTextPrimary,
+         centerImage: Image? = nil) {
+        self.url = url
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
+        self.centerImage = centerImage
     }
 
     private func generateQRCode() async -> UIImage? {
         let options: QRCodeGenerator.Options = QRCodeGenerator.Options(
             scale: displayScale,
-            displaySize: 220,
+            displaySize: displaySize,
             foregroundColor: UIColor(foregroundColor),
-            backgroundColor: .clear,
+            backgroundColor: UIColor(backgroundColor),
         )
-        return await QRCodeGenerator.generate(from: identifier, options: options)
+        return await QRCodeGenerator.generate(from: url.absoluteString, options: options)
     }
 
-    private func updateQRCode() {
-        generationTask?.cancel()
+    var background: some View {
+        Group {
+            if let qrCodeImage = currentQRCode {
+                Image(uiImage: qrCodeImage)
+                    .resizable()
+                    .aspectRatio(1.0, contentMode: .fit)
+            } else {
+                EmptyView()
+            }
+        }
+    }
 
-        guard !identifier.isEmpty else { return }
-
-        isRegenerating = true
-
-        generationTask = Task {
-            let newQRCode = await generateQRCode()
-
-            if !Task.isCancelled {
-                await MainActor.run {
-                    currentQRCode = newQRCode
-                    isRegenerating = false
+    var overlay: some View {
+        Group {
+            if currentQRCode == nil {
+                EmptyView()
+            } else {
+                ZStack {
+                    if let centerImage {
+                        ZStack {
+                            Rectangle()
+                                .fill(foregroundColor)
+                            centerImage
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        }
+                        .frame(width: 50.0, height: 50.0)
+                        .clipShape(RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.small))
+                    } else {
+                        ShareLink(item: url) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 24.0, weight: .medium))
+                                .foregroundStyle(foregroundColor)
+                                .frame(width: 50, height: 50)
+                                .padding(DesignConstants.Spacing.step2x)
+                        }
+                    }
                 }
             }
         }
     }
 
     var body: some View {
-        ZStack {
-            if let qrCodeImage = currentQRCode {
-                Image(uiImage: qrCodeImage)
-                    .interpolation(.none)
-                    .resizable()
-                    .aspectRatio(1.0, contentMode: .fit)
-                    .frame(maxWidth: 220, maxHeight: 220)
-            } else {
-                RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.medium)
-                    .fill(.colorFillMinimal)
-                    .frame(width: 220, height: 220)
-            }
+        Rectangle()
+            .fill(.clear)
+            .frame(width: displaySize, height: displaySize)
+            .background(background)
+            .overlay(alignment: .center) {
+                Rectangle()
+                    .fill(backgroundColor)
+                    .frame(width: 55.0, height: 55.0)
 
-            ShareLink(item: identifier) {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 24.0, weight: .medium))
-                    .foregroundStyle(.colorTextPrimaryInverted)
-                    .frame(width: 60, height: 60)
-                    .padding(DesignConstants.Spacing.step2x)
+                overlay
             }
-            .opacity(currentQRCode == nil ? 0.0 : 1.0)
-            .disabled(isRegenerating)
-            .animation(.easeInOut(duration: 0.95), value: isRegenerating)
-        }
-        .animation(.easeInOut(duration: 0.95), value: isRegenerating)
-        .onChange(of: identifier) { oldIdentifier, newIdentifier in
-            guard oldIdentifier != newIdentifier else { return }
-            updateQRCode()
-        }
-        .onAppear {
-            updateQRCode()
-        }
-        .onDisappear {
-            generationTask?.cancel()
-        }
+            .transition(.opacity)
+            .animation(.default, value: currentQRCode)
+            .task(id: url) {
+                let newQRCode = await generateQRCode()
+
+                if !Task.isCancelled {
+                    await MainActor.run {
+                        currentQRCode = newQRCode
+                    }
+                }
+            }
+            .onChange(of: colorScheme) {
+                Task { currentQRCode = await generateQRCode() }
+            }
+            .onDisappear {
+                generationTask?.cancel()
+            }
     }
 }
+
+// swiftlint:disable force_unwrapping
 
 #Preview("Automatic Colors") {
-    @Previewable @State var identifier: String = UUID().uuidString
+    @Previewable @State var url: URL = URL(string: "https://local.convos.org/join/12346")!
 
     VStack(spacing: 40.0) {
-        QRCodeView(identifier: identifier)
-
-        Button("Refresh", systemImage: "shuffle.circle.fill") {
-            identifier = UUID().uuidString
-        }
+        QRCodeView(url: url, centerImage: Image("convosIcon"))
     }
 }
 
-#Preview("Custom Colors") {
-    @Previewable @State var identifier: String = UUID().uuidString
-
-    VStack(spacing: 40.0) {
-        QRCodeView(
-            identifier: identifier,
-            backgroundColor: .purple,
-            foregroundColor: .white
-        )
-
-        Button("Refresh", systemImage: "shuffle.circle.fill") {
-            identifier = UUID().uuidString
-        }
-    }
-}
+// swiftlint:enable force_unwrapping
