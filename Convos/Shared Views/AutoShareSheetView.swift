@@ -1,4 +1,3 @@
-import LinkPresentation
 import SwiftUI
 import UIKit
 
@@ -6,19 +5,16 @@ struct AutoShareSheetView<Content: View>: View {
     let itemsToShare: [Any]
     let backgroundContent: Content
     let onDismiss: (() -> Void)?
-    let linkMetadata: LPLinkMetadata?
 
     @State private var isShareSheetPresented: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     init(
         items: [Any],
-        linkMetadata: LPLinkMetadata? = nil,
         onDismiss: (() -> Void)? = nil,
         @ViewBuilder backgroundContent: () -> Content
     ) {
         self.itemsToShare = items
-        self.linkMetadata = linkMetadata
         self.onDismiss = onDismiss
         self.backgroundContent = backgroundContent()
     }
@@ -35,7 +31,6 @@ struct AutoShareSheetView<Content: View>: View {
                 .background(
                     ActivityViewController(
                         activityItems: itemsToShare,
-                        linkMetadata: linkMetadata,
                         isPresented: $isShareSheetPresented,
                         onDismiss: {
                             onDismiss?()
@@ -58,13 +53,8 @@ struct AutoShareSheetView<Content: View>: View {
 // UIViewControllerRepresentable wrapper for UIActivityViewController
 private struct ActivityViewController: UIViewControllerRepresentable {
     let activityItems: [Any]
-    let linkMetadata: LPLinkMetadata?
     @Binding var isPresented: Bool
     let onDismiss: (() -> Void)?
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(linkMetadata: linkMetadata)
-    }
 
     func makeUIViewController(context: Context) -> UIViewController {
         UIViewController()
@@ -72,14 +62,8 @@ private struct ActivityViewController: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
         if isPresented && uiViewController.presentedViewController == nil {
-            // Create activity items with coordinator if we have custom metadata
-            var finalActivityItems = activityItems
-            if linkMetadata != nil {
-                finalActivityItems.append(context.coordinator)
-            }
-
             let activityVC = UIActivityViewController(
-                activityItems: finalActivityItems,
+                activityItems: activityItems,
                 applicationActivities: nil
             )
 
@@ -103,41 +87,18 @@ private struct ActivityViewController: UIViewControllerRepresentable {
             uiViewController.present(activityVC, animated: true)
         }
     }
-
-    // Coordinator to handle link metadata
-    class Coordinator: NSObject, UIActivityItemSource {
-        let linkMetadata: LPLinkMetadata?
-
-        init(linkMetadata: LPLinkMetadata?) {
-            self.linkMetadata = linkMetadata
-        }
-
-        func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
-            return ""
-        }
-
-        func activityViewController(_ activityViewController: UIActivityViewController, itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
-            return nil
-        }
-
-        func activityViewControllerLinkMetadata(_ activityViewController: UIActivityViewController) -> LPLinkMetadata? {
-            return linkMetadata
-        }
-    }
 }
 
 // Alternative simplified initializer for common use cases
 extension AutoShareSheetView where Content == AnyView {
     init(
         items: [Any],
-        linkMetadata: LPLinkMetadata? = nil,
         title: String = "Sharing...",
         subtitle: String? = nil,
         icon: Image = Image(systemName: "square.and.arrow.up.circle.fill"),
         onDismiss: (() -> Void)? = nil
     ) {
         self.itemsToShare = items
-        self.linkMetadata = linkMetadata
         self.onDismiss = onDismiss
         self.backgroundContent = AnyView(
             VStack(spacing: 16) {
