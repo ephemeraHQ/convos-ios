@@ -5,17 +5,19 @@ struct QRCodeView: View {
     let identifier: String
     let backgroundColor: Color
     let foregroundColor: Color
-    @State private var isRegenerating: Bool = false
+    let centerImage: Image?
     @State private var currentQRCode: UIImage?
     @State private var generationTask: Task<Void, Never>?
     @Environment(\.displayScale) private var displayScale: CGFloat
 
     init(identifier: String,
          backgroundColor: Color = .colorBackgroundPrimary,
-         foregroundColor: Color = .colorTextPrimary) {
+         foregroundColor: Color = .colorTextPrimary,
+         centerImage: Image? = nil) {
         self.identifier = identifier
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
+        self.centerImage = centerImage
     }
 
     private func generateQRCode() async -> UIImage? {
@@ -23,62 +25,59 @@ struct QRCodeView: View {
             scale: displayScale,
             displaySize: 220,
             foregroundColor: UIColor(foregroundColor),
-            backgroundColor: .clear,
+            backgroundColor: UIColor(backgroundColor),
         )
         return await QRCodeGenerator.generate(from: identifier, options: options)
     }
 
-    private func updateQRCode() {
-        generationTask?.cancel()
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(.clear)
+                .frame(width: 220, height: 220)
 
-        guard !identifier.isEmpty else { return }
+            if let qrCodeImage = currentQRCode {
+                Image(uiImage: qrCodeImage)
+                    .resizable()
+                    .aspectRatio(1.0, contentMode: .fit)
+                    .frame(maxWidth: 220, maxHeight: 220)
+            }
 
-        isRegenerating = true
+            // removes center rounded rect
+            Rectangle()
+                .fill(backgroundColor)
+                .frame(width: 55.0, height: 55.0)
 
-        generationTask = Task {
+            if let centerImage {
+                ZStack {
+                    Rectangle()
+                        .fill(foregroundColor)
+
+                    centerImage
+                        .resizable()
+                }
+                .frame(width: 50.0, height: 50.0)
+                .clipShape(RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.small))
+            } else {
+                ShareLink(item: identifier) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 24.0, weight: .medium))
+                        .foregroundStyle(foregroundColor)
+                        .frame(width: 50, height: 50)
+                        .padding(DesignConstants.Spacing.step2x)
+                }
+                .opacity(currentQRCode == nil ? 0.0 : 1.0)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: currentQRCode)
+        .task {
             let newQRCode = await generateQRCode()
 
             if !Task.isCancelled {
                 await MainActor.run {
                     currentQRCode = newQRCode
-                    isRegenerating = false
                 }
             }
-        }
-    }
-
-    var body: some View {
-        ZStack {
-            if let qrCodeImage = currentQRCode {
-                Image(uiImage: qrCodeImage)
-                    .interpolation(.none)
-                    .resizable()
-                    .aspectRatio(1.0, contentMode: .fit)
-                    .frame(maxWidth: 220, maxHeight: 220)
-            } else {
-                RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.medium)
-                    .fill(.colorFillMinimal)
-                    .frame(width: 220, height: 220)
-            }
-
-            ShareLink(item: identifier) {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 24.0, weight: .medium))
-                    .foregroundStyle(.colorTextPrimaryInverted)
-                    .frame(width: 60, height: 60)
-                    .padding(DesignConstants.Spacing.step2x)
-            }
-            .opacity(currentQRCode == nil ? 0.0 : 1.0)
-            .disabled(isRegenerating)
-            .animation(.easeInOut(duration: 0.95), value: isRegenerating)
-        }
-        .animation(.easeInOut(duration: 0.95), value: isRegenerating)
-        .onChange(of: identifier) { oldIdentifier, newIdentifier in
-            guard oldIdentifier != newIdentifier else { return }
-            updateQRCode()
-        }
-        .onAppear {
-            updateQRCode()
         }
         .onDisappear {
             generationTask?.cancel()
@@ -90,23 +89,7 @@ struct QRCodeView: View {
     @Previewable @State var identifier: String = UUID().uuidString
 
     VStack(spacing: 40.0) {
-        QRCodeView(identifier: identifier)
-
-        Button("Refresh", systemImage: "shuffle.circle.fill") {
-            identifier = UUID().uuidString
-        }
-    }
-}
-
-#Preview("Custom Colors") {
-    @Previewable @State var identifier: String = UUID().uuidString
-
-    VStack(spacing: 40.0) {
-        QRCodeView(
-            identifier: identifier,
-            backgroundColor: .purple,
-            foregroundColor: .white
-        )
+        QRCodeView(identifier: identifier, centerImage: Image("convosIcon"))
 
         Button("Refresh", systemImage: "shuffle.circle.fill") {
             identifier = UUID().uuidString
