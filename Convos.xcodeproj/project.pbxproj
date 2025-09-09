@@ -178,6 +178,13 @@
 			);
 			target = D8A2B6902DA4BA4B00EF8577 /* Convos */;
 		};
+		DAE6B1002E70955E0062483A /* Exceptions for "Convos" folder in "ConvosAppClip" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"AppIcon-Prod.icon",
+			);
+			target = 7ADC0C6D2E2977800053978A /* ConvosAppClip */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -227,6 +234,7 @@
 			exceptions = (
 				D8A2B6A32DA4BA4C00EF8577 /* Exceptions for "Convos" folder in "Convos" target */,
 				7ACA8BD52DE180B800848799 /* Exceptions for "Convos" folder in "ConvosTests" target */,
+				DAE6B1002E70955E0062483A /* Exceptions for "Convos" folder in "ConvosAppClip" target */,
 			);
 			path = Convos;
 			sourceTree = "<group>";
