@@ -72,8 +72,6 @@ struct LinkDetectingTextView: View {
 
         LinkDetectingTextView("Visit www.example.com or email us at hello@example.com")
 
-        LinkDetectingTextView("Here's a [markdown link](https://xmtp.org) in the message")
-
         LinkDetectingTextView("No links in this text")
     }
     .padding()
