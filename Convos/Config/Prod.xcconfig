@@ -23,12 +23,15 @@ KEYCHAIN_GROUP_IDENTIFIER = $(MAIN_BUNDLE_ID)
 APP_DISPLAY_NAME = Convos
 APNS_ENVIRONMENT = production
 
+// App Icon Configuration
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon-Prod
+
 // Info.plist preprocessing for Prod builds
 INFOPLIST_PREPROCESS = YES
 INFOPLIST_PREFIX_HEADER = $(SRCROOT)/Convos/Config/InfoPlistPrefix.Prod.h
 
 // Release-level build settings for App Store compliance
-// These ensure production builds are fully optimized
+// These ensure builds are fully optimized
 SWIFT_OPTIMIZATION_LEVEL = -O
 SWIFT_COMPILATION_MODE = wholemodule
 ENABLE_NS_ASSERTIONS = NO
