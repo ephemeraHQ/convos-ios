@@ -15,7 +15,7 @@ class InvitesRepository: InvitesRepositoryProtocol {
 
     func fetchInvites(for creatorInboxId: String) async throws -> [Invite] {
         try await databaseReader.read { db in
-            try DBInvite.filter(DBInvite.Columns.creatorInboxId)
+            try DBInvite.filter(DBInvite.Columns.creatorInboxId == creatorInboxId)
                 .fetchAll(db)
                 .map { $0.hydrateInvite() }
         }
