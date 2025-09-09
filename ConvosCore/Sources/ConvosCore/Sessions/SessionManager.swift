@@ -95,11 +95,6 @@ actor SessionManager: SessionManagerProtocol {
                         return
                     }
 
-                    // Schedule explosion notification if conversationId is provided
-                    if let conversationId: String = notification.userInfo?["conversationId"] as? String {
-                        await self.scheduleExplosionNotification(inboxId: inboxId, conversationId: conversationId)
-                    }
-
                     do {
                         try await self.deleteInbox(inboxId: inboxId)
                     } catch {

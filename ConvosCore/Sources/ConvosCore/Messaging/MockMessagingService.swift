@@ -195,6 +195,8 @@ extension MockMessagingService: OutgoingMessageWriterProtocol {
         _ = try await prepare(text: text)
         try await publish()
     }
+
+    public func sendExplode() async throws {}
 }
 
 extension MockMessagingService: ConversationSender {
@@ -337,6 +339,14 @@ extension MockMessagingService: MessageSender {
         messages.append(contentsOf: unpublishedMessages)
         unpublishedMessages.removeAll()
         messagesSubject.send(messages)
+    }
+
+    public func send<T>(content: T) async throws -> String {
+        return UUID().uuidString
+    }
+
+    public func send<T>(content: T, options: SendOptions?, fallback _: String?) async throws -> String {
+        return UUID().uuidString
     }
 }
 

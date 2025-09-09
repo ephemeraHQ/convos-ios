@@ -6,6 +6,8 @@ import XMTPiOS
 public protocol OutgoingMessageWriterProtocol {
     var sentMessage: AnyPublisher<String, Never> { get }
     func send(text: String) async throws
+
+    func sendExplode() async throws
 }
 
 class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
@@ -78,5 +80,23 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
             sentMessageSubject.send(text)
             Logger.info("Sent local message with local id: \(clientMessageId)")
         }
+    }
+
+    func sendExplode() async throws {
+        let inboxReady = try await self.inboxStateManager.waitForInboxReadyResult()
+        let client = inboxReady.client
+
+        guard let sender = try await client.messageSender(
+            for: conversationId
+        ) else {
+            throw OutgoingMessageWriterError.missingClientProvider
+        }
+
+        let explodeNow = ExplodeSettings(expiresAt: Date())
+        _ = try await sender.send(
+            content: explodeNow,
+            options: .init(contentType: ContentTypeExplodeSettings),
+            fallback: nil
+        )
     }
 }

@@ -185,7 +185,8 @@ extension XMTPiOS.DecodedMessage {
                         oldValue: $0.hasOldValue ? $0.oldValue : nil,
                         newValue: $0.hasNewValue ? $0.newValue : nil
                     )
-                }
+                },
+            explodeSettings: nil
         )
         return DBMessageComponents(
             messageType: .original,
@@ -205,12 +206,12 @@ extension XMTPiOS.DecodedMessage {
         }
 
         Logger.info("Received explode settings: \(explodeSettings)")
-        // @jarod Create an update that represents the conversation expiration
         let update = DBMessage.Update(
             initiatedByInboxId: senderInboxId,
             addedInboxIds: [],
             removedInboxIds: [],
-            metadataChanges: []
+            metadataChanges: [],
+            explodeSettings: explodeSettings
         )
 
         return DBMessageComponents(

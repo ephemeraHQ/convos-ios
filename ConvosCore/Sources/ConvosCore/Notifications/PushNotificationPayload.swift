@@ -2,17 +2,29 @@ import Foundation
 
 /// Represents decoded notification content from NSE processing
 public struct DecodedNotificationContent {
+    public enum Category: String {
+        case message, acceptedInvite, explodeSettingsChanged
+    }
+
     public let title: String?
     public let body: String
     public let conversationId: String?
     public let isDroppedMessage: Bool
+    public let category: Category
     public let userInfo: [AnyHashable: Any]
 
-    init(title: String?, body: String, conversationId: String?, userInfo: [AnyHashable: Any]) {
+    init(
+        title: String?,
+        body: String,
+        conversationId: String?,
+        category: Category,
+        userInfo: [AnyHashable: Any]
+    ) {
         self.title = title
         self.body = body
         self.conversationId = conversationId
         self.isDroppedMessage = false
+        self.category = category
         self.userInfo = userInfo
     }
 
@@ -21,6 +33,7 @@ public struct DecodedNotificationContent {
         self.body = ""
         self.conversationId = nil
         self.isDroppedMessage = isDroppedMessage
+        self.category = .message
         self.userInfo = userInfo
     }
 

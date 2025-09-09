@@ -112,6 +112,50 @@ extension MessagingService {
             return nil
         }
 
+        let conversationName: String?
+        switch conversation {
+        case .group(let group):
+            conversationName = try group.name()
+        case .dm:
+            conversationName = nil
+        }
+
+        let encodedContentType = try decodedMessage.encodedContent.type
+        // Handle explode settings change
+        if encodedContentType == ContentTypeExplodeSettings,
+           let conversationName {
+            Logger.info("Handling explode settings change")
+
+            let content = try decodedMessage.content() as Any
+            guard let explodeSettings = content as? ExplodeSettings else {
+                Logger.warning("Mis-matched content type for explode settings change")
+                return .droppedMessage
+            }
+
+            if explodeSettings.expiresAt < Date() {
+                Logger.info("Conversation has already exploded")
+                await stopAndDelete()
+
+                return .init(
+                    title: "💥 \(conversationName) 💥",
+                    body: "A convo exploded",
+                    conversationId: conversationId,
+                    category: .explodeSettingsChanged,
+                    userInfo: userInfo
+                )
+            } else {
+                Logger.info("Conversation will explode")
+                // @jarodl show the time here and who made the change
+                return .init(
+                    title: "\(conversationName)",
+                    body: "Someone set the convo to explode 💥",
+                    conversationId: conversationId,
+                    category: .explodeSettingsChanged,
+                    userInfo: userInfo
+                )
+            }
+        }
+
         // Check if message is from self - if so, drop it
         if decodedMessage.senderInboxId == currentInboxId {
             Logger.info("Dropping notification - message from self")
@@ -124,7 +168,6 @@ extension MessagingService {
         try await messageWriter.store(message: decodedMessage, for: dbConversation)
 
         // Only handle text content type
-        let encodedContentType = try decodedMessage.encodedContent.type
         guard encodedContentType == ContentTypeText else {
             Logger.info("Skipping non-text content type: \(encodedContentType.description)")
             return .droppedMessage
@@ -137,20 +180,14 @@ extension MessagingService {
             return nil
         }
 
-        let notificationTitle: String?
+        let notificationTitle: String? = conversationName
         let notificationBody = textContent // Just the decoded text
-
-        switch conversation {
-        case .group(let group):
-            notificationTitle = try group.name()
-        case .dm:
-            notificationTitle = nil
-        }
 
         return .init(
             title: notificationTitle,
             body: notificationBody,
             conversationId: conversationId,
+            category: .message,
             userInfo: userInfo
         )
     }
@@ -266,6 +303,7 @@ extension MessagingService {
                 title: title,
                 body: "Someone accepted your invite",
                 conversationId: groupId,
+                category: .acceptedInvite,
                 userInfo: payload.userInfo
             )
         } catch {

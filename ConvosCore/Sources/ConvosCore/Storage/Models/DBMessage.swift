@@ -37,6 +37,7 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
         let addedInboxIds: [String]
         let removedInboxIds: [String]
         let metadataChanges: [MetadataChange]
+        let explodeSettings: ExplodeSettings?
     }
 
     enum Columns {

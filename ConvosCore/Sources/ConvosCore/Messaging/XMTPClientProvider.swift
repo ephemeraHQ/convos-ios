@@ -4,6 +4,8 @@ import XMTPiOS
 public protocol MessageSender {
     func prepare(text: String) async throws -> String
     func publish() async throws
+    func send<T>(content: T) async throws -> String
+    func send<T>(content: T, options: SendOptions?, fallback _: String?) async throws -> String
 }
 
 public protocol ConversationSender {
@@ -172,5 +174,9 @@ extension XMTPiOS.Conversation: MessageSender {
 
     public func publish() async throws {
         try await publishMessages()
+    }
+
+    public func send<T>(content: T) async throws -> String {
+        try await send(content: content, options: nil, fallback: nil)
     }
 }

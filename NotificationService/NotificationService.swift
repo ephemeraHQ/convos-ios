@@ -144,6 +144,7 @@ extension DecodedNotificationContent {
         if let title {
             content.title = title
         }
+        content.categoryIdentifier = category.rawValue
         content.body = body
         if let conversationId {
             content.threadIdentifier = conversationId

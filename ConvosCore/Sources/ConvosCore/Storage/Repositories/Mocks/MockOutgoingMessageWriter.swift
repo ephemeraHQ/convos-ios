@@ -10,4 +10,7 @@ public class MockOutgoingMessageWriter: OutgoingMessageWriterProtocol {
 
     public func send(text: String) async throws {
     }
+
+    public func sendExplode() async throws {
+    }
 }
