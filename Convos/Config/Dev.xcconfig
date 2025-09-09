@@ -24,6 +24,9 @@ KEYCHAIN_GROUP_IDENTIFIER = $(MAIN_BUNDLE_ID)
 APP_DISPLAY_NAME = Convos Dev
 APNS_ENVIRONMENT = production
 
+// App Icon Configuration
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon-Dev
+
 // Info.plist preprocessing for Dev builds
 INFOPLIST_PREPROCESS = YES
 INFOPLIST_PREFIX_HEADER = $(SRCROOT)/Convos/Config/InfoPlistPrefix.Dev.h
