@@ -70,7 +70,6 @@ extension QueryInterfaceRequest where RowDecoder == DBConversation {
                 conversation.id == lastMessage.conversationId
             }
         ).forKey("conversationLastMessage")
-         .order(\.date.desc)
 
         return self
             .including(optional: DBConversation.invite)
@@ -90,6 +89,8 @@ extension QueryInterfaceRequest where RowDecoder == DBConversation {
                     .including(required: DBConversationMember.memberProfile)
             )
             .group(Column("id"))
+            // Sort by last message date if available, otherwise by conversation createdAt
+            .order(sql: "COALESCE(conversationLastMessage.date, conversation.createdAt) DESC")
             .asRequest(of: DBConversationDetails.self)
     }
 }
