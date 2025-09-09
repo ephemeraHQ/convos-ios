@@ -4,7 +4,7 @@ default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 project_type: ios
 app:
   envs:
-  - ENABLE_APPCLIP: "false"
+  - ENABLE_APPCLIP: 'false'
     opts:
       is_expand: false
   - TEST_SHARD_COUNT: 2
@@ -92,6 +92,7 @@ workflows:
         - bundle_id: org.convos.ios-preview
         - release_notes: "$RELEASE_NOTES"
         - whats_new: "$RELEASE_NOTES"
+        - verbose_log: 'yes'
         title: Deploy to App Store Connect (org.convos.ios-preview)
     - save-spm-cache@1: {}
     meta:
