@@ -96,6 +96,7 @@ public actor InboxStateMachine {
 
     private let identityStore: any KeychainIdentityStoreProtocol
     private let inboxWriter: any InboxWriterProtocol
+    private let invitesRepository: any InvitesRepositoryProtocol
     private let environment: AppEnvironment
     private let syncingManager: AnySyncingManager?
     private let inviteJoinRequestsManager: AnyInviteJoinRequestsManager?
@@ -163,6 +164,7 @@ public actor InboxStateMachine {
     init(
         identityStore: any KeychainIdentityStoreProtocol,
         inboxWriter: any InboxWriterProtocol,
+        invitesRepository: any InvitesRepositoryProtocol,
         syncingManager: AnySyncingManager?,
         inviteJoinRequestsManager: AnyInviteJoinRequestsManager?,
         pushNotificationRegistrar: any PushNotificationRegistrarProtocol,
@@ -171,6 +173,7 @@ public actor InboxStateMachine {
     ) {
         self.identityStore = identityStore
         self.inboxWriter = inboxWriter
+        self.invitesRepository = invitesRepository
         self.syncingManager = syncingManager
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
@@ -405,6 +408,8 @@ public actor InboxStateMachine {
         emitStateChange(.deleting)
         syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
+        // before deleting, delete invites from backend
+        try await deleteAllInvites(for: client, apiClient: apiClient)
         try await inboxWriter.deleteInbox(inboxId: client.inboxId)
         if let identity = try? await identityStore.identity(for: client.inboxId) {
             let keys = identity.clientKeys
@@ -509,6 +514,13 @@ public actor InboxStateMachine {
         _ = try await apiClient.checkAuth()
 
         return apiClient
+    }
+
+    private func deleteAllInvites(for client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
+        let invites = try await invitesRepository.fetchInvites(for: client.inboxId)
+        for invite in invites {
+            _ = try await apiClient.deleteInvite(invite.code)
+        }
     }
 
     // MARK: - Backend Init
