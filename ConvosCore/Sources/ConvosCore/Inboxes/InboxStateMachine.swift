@@ -403,13 +403,14 @@ public actor InboxStateMachine {
         Logger.info("Deleting inbox '\(client.inboxId)'...")
 
         removePushNotificationObservers()
+
+        // before unregistering, delete invites from backend
+        try await deleteAllInvites(for: client, apiClient: apiClient)
         await pushNotificationRegistrar.unregisterInstallation(client: client, apiClient: apiClient)
 
         emitStateChange(.deleting)
         syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
-        // before deleting, delete invites from backend
-        try await deleteAllInvites(for: client, apiClient: apiClient)
         try await inboxWriter.deleteInbox(inboxId: client.inboxId)
         if let identity = try? await identityStore.identity(for: client.inboxId) {
             let keys = identity.clientKeys
