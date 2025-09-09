@@ -4,6 +4,9 @@ default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 project_type: ios
 app:
   envs:
+  - ENABLE_APPCLIP: 'false'
+    opts:
+      is_expand: false
   - TEST_SHARD_COUNT: 2
   - BITRISE_PROJECT_PATH: Convos.xcodeproj
     opts:
@@ -46,6 +49,7 @@ workflows:
         - target: NotificationService
     - set-xcode-build-number@2:
         title: Set Build Number - AppClip
+        run_if: '{{enveq "ENABLE_APPCLIP" "true"}}'
         inputs:
         - verbose: true
         - target: ConvosAppClip
@@ -64,12 +68,13 @@ workflows:
         - configuration: "$BITRISE_BUILD_CONFIG"
         title: iOS Code Signing - NSE
     - manage-ios-code-signing@2:
+        title: iOS Code Signing - AppClip
+        run_if: '{{enveq "ENABLE_APPCLIP" "true"}}'
         inputs:
         - distribution_method: app-store
         - scheme: "$BITRISE_SCHEME_APPCLIP"
         - configuration: "$BITRISE_BUILD_CONFIG"
         - verbose_log: 'yes'
-        title: iOS Code Signing - AppClip
     - xcode-archive@5:
         inputs:
         - project_path: "$BITRISE_PROJECT_PATH"
@@ -126,6 +131,7 @@ workflows:
         - target: NotificationService
     - set-xcode-build-number@2:
         title: Set Build Number - AppClip
+        run_if: '{{enveq "ENABLE_APPCLIP" "true"}}'
         inputs:
         - verbose: true
         - target: ConvosAppClip
@@ -144,12 +150,13 @@ workflows:
         - configuration: "$BITRISE_BUILD_CONFIG"
         title: iOS Code Signing - NSE
     - manage-ios-code-signing@2:
+        title: iOS Code Signing - AppClip
+        run_if: '{{enveq "ENABLE_APPCLIP" "true"}}'
         inputs:
         - distribution_method: app-store
         - scheme: "$BITRISE_SCHEME_APPCLIP"
         - configuration: "$BITRISE_BUILD_CONFIG"
         - verbose_log: 'yes'
-        title: iOS Code Signing - AppClip
     - xcode-archive@5:
         inputs:
         - project_path: "$BITRISE_PROJECT_PATH"
