@@ -74,9 +74,11 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter
         ) : nil
+        let invitesRepository = InvitesRepository(databaseReader: databaseReader)
         stateMachine = InboxStateMachine(
             identityStore: environment.defaultIdentityStore,
             inboxWriter: inboxWriter,
+            invitesRepository: invitesRepository,
             syncingManager: syncingManager,
             inviteJoinRequestsManager: inviteJoinRequestsManager,
             pushNotificationRegistrar: PushNotificationRegistrar(
