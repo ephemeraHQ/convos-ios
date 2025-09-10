@@ -30,6 +30,8 @@ public struct ExplodeSettingsCodec: ContentCodec {
 
     public var contentType: ContentTypeID = ContentTypeExplodeSettings
 
+    public init() {}
+
     public func encode(content: ExplodeSettings) throws -> EncodedContent {
         var encodedContent = EncodedContent()
         encodedContent.type = ContentTypeExplodeSettings
@@ -61,6 +63,7 @@ public struct ExplodeSettingsCodec: ContentCodec {
     }
 
     public func shouldPush(content: ExplodeSettings) throws -> Bool {
-        true
+        Logger.info("Calling should push for content: \(content)")
+        return true
     }
 }
