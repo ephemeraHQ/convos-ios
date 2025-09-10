@@ -45,6 +45,8 @@ final class ConversationsViewModel {
             if conversationsCount > 1 {
                 hasCreatedMoreThanOneConvo = true
             }
+
+            hasEarlyAccess = conversationsCount > 0
         }
     }
 
