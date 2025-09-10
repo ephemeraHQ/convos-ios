@@ -76,6 +76,8 @@ struct ConversationsListEmptyCTA: View {
             .padding(.vertical, DesignConstants.Spacing.step4x)
             .padding(.horizontal, DesignConstants.Spacing.step6x)
         }
+        .padding(DesignConstants.Spacing.step6x)
+        .background(.colorBackgroundPrimary)
     }
 }
 

@@ -33,19 +33,44 @@ final class ConversationsViewModel {
     private(set) var selectedConversationViewModel: ConversationViewModel?
     var newConversationViewModel: NewConversationViewModel?
     var presentingExplodeInfo: Bool = false
+    var presentingEarlyAccessInfo: Bool = false
     let maxNumberOfConvos: Int = 20
     var presentingMaxNumberOfConvosReachedInfo: Bool = false
     private var maxNumberOfConvosReached: Bool {
         conversationsCount >= maxNumberOfConvos
     }
     private(set) var conversations: [Conversation] = []
-    private var conversationsCount: Int = 0
+    private var conversationsCount: Int = 0 {
+        didSet {
+            if conversationsCount > 1 {
+                hasCreatedMoreThanOneConvo = true
+            }
+        }
+    }
 
     var pinnedConversations: [Conversation] {
         conversations.filter { $0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
     }
     var unpinnedConversations: [Conversation] {
         conversations.filter { !$0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
+    }
+
+    private(set) var hasCreatedMoreThanOneConvo: Bool {
+        get {
+            UserDefaults.standard.bool(forKey: "hasCreatedMoreThanOneConvo")
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "hasCreatedMoreThanOneConvo")
+        }
+    }
+
+    private var hasSeenEarlyAccessInfo: Bool {
+        get {
+            UserDefaults.standard.bool(forKey: "hasSeenEarlyAccessInfo")
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "hasSeenEarlyAccessInfo")
+        }
     }
 
     // MARK: - Private
@@ -82,6 +107,10 @@ final class ConversationsViewModel {
         cancellables.removeAll()
     }
 
+    func onAppear() {
+        checkShouldShowEarlyAccessInfo()
+    }
+
     func handleURL(_ url: URL) {
         guard let destination = DeepLinkHandler.destination(for: url) else {
             return
@@ -115,6 +144,13 @@ final class ConversationsViewModel {
             showingFullScreenScanner: true,
             delegate: self
         )
+    }
+
+    private func checkShouldShowEarlyAccessInfo() {
+        if !hasSeenEarlyAccessInfo {
+            presentingEarlyAccessInfo = true
+            hasSeenEarlyAccessInfo = true
+        }
     }
 
     private func join(from inviteCode: String) {
