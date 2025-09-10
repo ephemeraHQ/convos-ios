@@ -3,10 +3,9 @@ import SwiftUI
 
 struct ConversationsView: View {
     let session: any SessionManagerProtocol
-    @Bindable var viewModel: ConversationsViewModel
+    @State var viewModel: ConversationsViewModel
 
     @Namespace private var namespace: Namespace.ID
-    @State private var presentingExplodeConfirmation: Bool = false
     @State private var presentingDebugView: Bool = false
     @State private var presentingAppSettings: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
@@ -19,33 +18,25 @@ struct ConversationsView: View {
         session: any SessionManagerProtocol
     ) {
         self.session = session
-        let conversationsRepository = session.conversationsRepository(
-            for: .allowed
-        )
-        let conversationsCountRepository = session.conversationsCountRepo(
-            for: .allowed,
-            kinds: .groups
-        )
-        self.viewModel = ConversationsViewModel(
-            session: session,
-            conversationsRepository: conversationsRepository,
-            conversationsCountRepository: conversationsCountRepository
-        )
+        self.viewModel = ConversationsViewModel(session: session)
     }
 
-    var emptyConversationsView: some View {
+    var emptyConversationsViewScrollable: some View {
         ScrollView {
-            LazyVStack(spacing: 0) {
-                ConversationsListEmptyCTA(
-                    onStartConvo: viewModel.onStartConvo,
-                    onJoinConvo: viewModel.onJoinConvo
-                )
-                .padding(DesignConstants.Spacing.step6x)
+            LazyVStack(spacing: 0.0) {
+                emptyConversationsView
             }
         }
     }
 
-    var body: some View {
+    var emptyConversationsView: some View {
+        ConversationsListEmptyCTA(
+            onStartConvo: viewModel.onStartConvo,
+            onJoinConvo: viewModel.onJoinConvo
+        )
+    }
+
+    var hasEarlyAccessView: some View {
         ConversationInfoPresenter(
             viewModel: viewModel.selectedConversationViewModel,
             focusState: $focusState,
@@ -54,19 +45,41 @@ struct ConversationsView: View {
             NavigationSplitView {
                 Group {
                     if viewModel.unpinnedConversations.isEmpty && horizontalSizeClass == .compact {
-                        emptyConversationsView
+                        emptyConversationsViewScrollable
                     } else {
                         List(viewModel.unpinnedConversations, id: \.self, selection: $viewModel.selectedConversation) { conversation in
-                            ConversationsListItem(conversation: conversation)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    viewModel.leave(conversation: conversation)
-                                } label: {
-                                    Image(systemName: "trash")
-                                }
+                            if viewModel.unpinnedConversations.first == conversation,
+                               viewModel.unpinnedConversations.count == 1 && !viewModel.hasCreatedMoreThanOneConvo &&
+                                horizontalSizeClass == .compact {
+                                emptyConversationsView
+                                    .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
+                                    .listRowSeparator(.hidden)
                             }
-                            .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
-                            .listRowSeparator(.hidden)
+
+                            ConversationsListItem(conversation: conversation)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        viewModel.leave(conversation: conversation)
+                                    } label: {
+                                        Image(systemName: "trash")
+                                    }
+                                }
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(
+                                    RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.mediumLarge)
+                                        .fill(
+                                            conversation == viewModel.selectedConversation ? .colorFillMinimal : .clear
+                                        )
+                                        .padding(.horizontal, DesignConstants.Spacing.step3x)
+                                )
+                                .listRowInsets(
+                                    .init(
+                                        top: 0,
+                                        leading: 0,
+                                        bottom: 0,
+                                        trailing: 0
+                                    )
+                                )
                         }
                         .listStyle(.plain)
                     }
@@ -136,7 +149,7 @@ struct ConversationsView: View {
                         messagesTopBarTrailingItem: .share
                     )
                 } else if horizontalSizeClass != .compact {
-                    emptyConversationsView
+                    emptyConversationsViewScrollable
                 } else {
                     EmptyView()
                 }
@@ -165,8 +178,25 @@ struct ConversationsView: View {
         .selfSizingSheet(isPresented: $viewModel.presentingExplodeInfo) {
             ExplodeInfoView()
         }
+        .selfSizingSheet(isPresented: $viewModel.presentingEarlyAccessInfo) {
+            EarlyAccessInfoView()
+        }
         .selfSizingSheet(isPresented: $viewModel.presentingMaxNumberOfConvosReachedInfo) {
             MaxedOutInfoView(maxNumberOfConvos: viewModel.maxNumberOfConvos)
+        }
+        .onAppear {
+            viewModel.onAppear()
+        }
+    }
+
+    var body: some View {
+        Group {
+            if !viewModel.hasEarlyAccess,
+               let joinViewModel = viewModel.newConversationViewModel {
+                NewConversationView(viewModel: joinViewModel)
+            } else {
+                hasEarlyAccessView
+            }
         }
         .onOpenURL { url in
             viewModel.handleURL(url)

@@ -13,6 +13,7 @@ struct SoonLabel: View {
             )
     }
 }
+
 struct ExplodeInfoView: View {
     @Environment(\.dismiss) var dismiss: DismissAction
 

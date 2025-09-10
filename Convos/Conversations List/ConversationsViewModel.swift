@@ -33,19 +33,55 @@ final class ConversationsViewModel {
     private(set) var selectedConversationViewModel: ConversationViewModel?
     var newConversationViewModel: NewConversationViewModel?
     var presentingExplodeInfo: Bool = false
+    var presentingEarlyAccessInfo: Bool = false
     let maxNumberOfConvos: Int = 20
     var presentingMaxNumberOfConvosReachedInfo: Bool = false
     private var maxNumberOfConvosReached: Bool {
         conversationsCount >= maxNumberOfConvos
     }
     private(set) var conversations: [Conversation] = []
-    private var conversationsCount: Int = 0
+    private var conversationsCount: Int = 0 {
+        didSet {
+            if conversationsCount > 1 {
+                hasCreatedMoreThanOneConvo = true
+            }
+
+            hasEarlyAccess = conversationsCount > 0
+        }
+    }
 
     var pinnedConversations: [Conversation] {
         conversations.filter { $0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
     }
     var unpinnedConversations: [Conversation] {
         conversations.filter { !$0.isPinned }.filter { $0.kind == .group } // @jarodl temporarily filtering out dms
+    }
+
+    private(set) var hasCreatedMoreThanOneConvo: Bool {
+        get {
+            UserDefaults.standard.bool(forKey: "hasCreatedMoreThanOneConvo")
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "hasCreatedMoreThanOneConvo")
+        }
+    }
+
+    private var hasSeenEarlyAccessInfo: Bool {
+        get {
+            UserDefaults.standard.bool(forKey: "hasSeenEarlyAccessInfo")
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "hasSeenEarlyAccessInfo")
+        }
+    }
+
+    private(set) var hasEarlyAccess: Bool {
+        get {
+            UserDefaults.standard.bool(forKey: "hasEarlyAccess")
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "hasEarlyAccess")
+        }
     }
 
     // MARK: - Private
@@ -57,20 +93,31 @@ final class ConversationsViewModel {
     private var cancellables: Set<AnyCancellable> = .init()
     private var leftConversationObserver: Any?
 
-    init(
-        session: any SessionManagerProtocol,
-        conversationsRepository: any ConversationsRepositoryProtocol,
-        conversationsCountRepository: any ConversationsCountRepositoryProtocol
-    ) {
+    init(session: any SessionManagerProtocol) {
         self.session = session
-        self.conversationsRepository = conversationsRepository
-        self.conversationsCountRepository = conversationsCountRepository
+        self.conversationsRepository = session.conversationsRepository(
+            for: .allowed
+        )
+        self.conversationsCountRepository = session.conversationsCountRepo(
+            for: .allowed,
+            kinds: .groups
+        )
         do {
             self.conversations = try conversationsRepository.fetchAll()
             self.conversationsCount = try conversationsCountRepository.fetchCount()
+            self.hasEarlyAccess = conversationsCount > 0
         } catch {
             Logger.error("Error fetching conversations: \(error)")
             self.conversations = []
+            self.conversationsCount = 0
+            self.hasEarlyAccess = false
+        }
+        if !hasEarlyAccess {
+            self.newConversationViewModel = .init(
+                session: session,
+                showingFullScreenScanner: true,
+                allowsDismissingScanner: false
+            )
         }
         observe()
     }
@@ -80,6 +127,10 @@ final class ConversationsViewModel {
             NotificationCenter.default.removeObserver(leftConversationObserver)
         }
         cancellables.removeAll()
+    }
+
+    func onAppear() {
+        checkShouldShowEarlyAccessInfo()
     }
 
     func handleURL(_ url: URL) {
@@ -115,6 +166,13 @@ final class ConversationsViewModel {
             showingFullScreenScanner: true,
             delegate: self
         )
+    }
+
+    private func checkShouldShowEarlyAccessInfo() {
+        if !hasSeenEarlyAccessInfo {
+            presentingEarlyAccessInfo = true
+            hasSeenEarlyAccessInfo = true
+        }
     }
 
     private func join(from inviteCode: String) {
@@ -288,10 +346,6 @@ extension ConversationsViewModel: NewConversationsViewModelDelegate {
 extension ConversationsViewModel {
     static var mock: ConversationsViewModel {
         let client = ConvosClient.mock()
-        return .init(
-            session: client.session,
-            conversationsRepository: client.session.conversationsRepository(for: .all),
-            conversationsCountRepository: client.session.conversationsCountRepo(for: .all, kinds: .groups)
-        )
+        return .init(session: client.session)
     }
 }

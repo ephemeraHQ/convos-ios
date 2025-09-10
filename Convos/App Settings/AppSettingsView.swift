@@ -34,6 +34,15 @@ struct AppSettingsView: View {
         NavigationStack {
             List {
                 Section {
+                    Text("Thanks for being here early. Expect changes and sometimes a hiccup. \n\nAll convos are temporary for now.")
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(nil)
+                } header: {
+                    Text("Early Access")
+                        .foregroundStyle(.colorTextSecondary)
+                }
+
+                Section {
                     NavigationLink {
                         EmptyView()
                     } label: {
