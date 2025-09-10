@@ -1,0 +1,143 @@
+# Fastfile for Convos iOS App
+
+default_platform(:ios)
+
+platform :ios do
+
+  # Setup
+  before_all do
+    setup_ci if ENV['CI']
+
+    # Set up code signing for CI
+    if ENV['CI']
+      setup_code_signing
+    end
+  end
+
+  # Code signing setup
+  private_lane :setup_code_signing do
+    # Create App Store Connect API Key
+    app_store_connect_api_key(
+      key_id: ENV['FASTLANE_APP_STORE_CONNECT_API_KEY_ID'],
+      issuer_id: ENV['FASTLANE_APP_STORE_CONNECT_ISSUER_ID'],
+      key_content: ENV['FASTLANE_APP_STORE_CONNECT_API_KEY_CONTENT'],
+      duration: 1200,
+      in_house: false
+    )
+
+    UI.message("🔐 Setting up code signing...")
+    UI.message("📱 App identifiers: org.convos.ios-preview, org.convos.ios")
+    UI.message("🏢 Team ID: #{ENV['DEVELOPER_TEAM_ID']}")
+
+    # Use match to sync certificates and provisioning profiles
+    bundle_ids = []
+    if ENV['BUILD_ENVIRONMENT'] == 'prod'
+      bundle_ids = ["org.convos.ios", "org.convos.ios.ConvosNSE", "org.convos.ios.Clip"]
+    else
+      bundle_ids = ["org.convos.ios-preview", "org.convos.ios-preview.ConvosNSE", "org.convos.ios-preview.Clip"]
+    end
+
+    UI.message("📋 Using match to sync certificates and profiles for: #{bundle_ids.join(', ')}")
+    match(
+      type: "appstore",
+      app_identifier: bundle_ids,
+      readonly: true,
+      git_url: "https://github.com/ephemeraHQ/convos-ios-secrets",
+      git_branch: "main"
+    )
+
+    UI.success("✅ Code signing setup complete!")
+  end
+
+  # Test lane
+  desc "Run tests"
+  lane :test do
+    run_tests(
+      project: "Convos.xcodeproj",
+      scheme: "Convos (Dev)",
+      configuration: "Dev",
+      destination: "platform=iOS Simulator,name=iPhone 16,OS=latest"
+    )
+  end
+
+  # Development build lane
+  desc "Build and upload development version to TestFlight"
+  lane :dev do |options|
+    ENV['BUILD_ENVIRONMENT'] = 'dev'
+
+    # Set build number only in CI environment
+    if ENV['CI'] && ENV['BUILD_NUMBER']
+      UI.message("📦 Setting build number to: #{ENV['BUILD_NUMBER']}")
+      increment_build_number(
+        build_number: ENV['BUILD_NUMBER'],
+        xcodeproj: "Convos.xcodeproj"
+      )
+    else
+      UI.message("🏠 Local build - keeping existing build number")
+    end
+
+    # Build and sign
+    build_app(
+      project: "Convos.xcodeproj",
+      scheme: "Convos (Dev)",
+      configuration: "Dev",
+      export_method: "app-store-connect",
+      output_directory: "./build",
+      output_name: "Convos-Dev.ipa"
+    )
+
+    # Upload to TestFlight only in CI
+    if ENV['CI']
+      upload_to_testflight(
+        app_identifier: "org.convos.ios-preview",
+        skip_waiting_for_build_processing: true,
+        changelog: ENV['RELEASE_NOTES'] || "Development build from CI"
+      )
+    else
+      UI.success("🏠 Local build complete - skipping TestFlight upload")
+    end
+  end
+
+  # Production build lane
+  desc "Build and upload production version to TestFlight"
+  lane :prod do |options|
+    ENV['BUILD_ENVIRONMENT'] = 'prod'
+
+    # Set build number only in CI environment
+    if ENV['CI'] && ENV['BUILD_NUMBER']
+      UI.message("📦 Setting build number to: #{ENV['BUILD_NUMBER']}")
+      increment_build_number(
+        build_number: ENV['BUILD_NUMBER'],
+        xcodeproj: "Convos.xcodeproj"
+      )
+    else
+      UI.message("🏠 Local build - keeping existing build number")
+    end
+
+    # Build and sign
+    build_app(
+      project: "Convos.xcodeproj",
+      scheme: "Convos (Prod)",
+      configuration: "Release",
+      export_method: "app-store-connect",
+      output_directory: "./build",
+      output_name: "Convos-Prod.ipa"
+    )
+
+    # Upload to TestFlight only in CI
+    if ENV['CI']
+      upload_to_testflight(
+        app_identifier: "org.convos.ios",
+        skip_waiting_for_build_processing: true,
+        changelog: ENV['RELEASE_NOTES'] || "Production build from CI"
+      )
+    else
+      UI.success("🏠 Local build complete - skipping TestFlight upload")
+    end
+  end
+
+  # Error handling
+  error do |lane, exception|
+    UI.error("Error in lane #{lane}: #{exception}")
+  end
+end

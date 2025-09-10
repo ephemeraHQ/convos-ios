@@ -1,0 +1,17 @@
+# Appfile for Convos iOS App
+
+# App Store Connect Team ID (if you have multiple teams)
+itc_team_id(ENV["APP_STORE_CONNECT_TEAM_ID"])
+
+# Developer Portal Team ID
+team_id(ENV["DEVELOPER_TEAM_ID"])
+
+# Default app identifiers
+app_identifier("org.convos.ios") # Production app
+
+# For development builds, we'll override this in the Fastfile
+for_platform :ios do
+  for_lane :dev do
+    app_identifier("org.convos.ios-preview")
+  end
+end
