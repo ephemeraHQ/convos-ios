@@ -10,11 +10,7 @@ echo "🔑 Generating $SECRETS_FILE from environment variables"
 
 # Sensitive secrets (checked but not displayed)
 SENSITIVE_SECRETS=(
-    "POSTHOG_API_KEY"
-    "FIREBASE_APP_CHECK_TOKEN"
-    "SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN"
-    "SLACK_URL_WITH_KEY"
-    "SENTRY_DSN"
+    "FIREBASE_APP_CHECK_TOKEN"  # @lourou: Remove after AppCheck/AppAttest merge
     "TURNKEY_PUBLIC_ORGANIZATION_ID"
     "TURNKEY_API_PUBLIC_KEY"
     "TURNKEY_API_PRIVATE_KEY"
@@ -24,9 +20,6 @@ SENSITIVE_SECRETS=(
 ENV_VARS=(
     "CONVOS_API_BASE_URL"
     "XMTP_CUSTOM_HOST"
-    "POSTHOG_HOST"
-    "SENTRY_ORG"
-    "SENTRY_PROJECT"
 )
 
 # Check that all secrets are present (but allow CONVOS_API_BASE_URL and XMTP_CUSTOM_HOST to be empty)
@@ -38,11 +31,7 @@ for secret in "${SENSITIVE_SECRETS[@]}"; do
 done
 
 # Check non-required ENV_VARS (excluding CONVOS_API_BASE_URL and XMTP_CUSTOM_HOST)
-for secret in "POSTHOG_HOST" "SENTRY_ORG" "SENTRY_PROJECT"; do
-    if [[ -z "${!secret}" ]]; then
-        missing_secrets+=("$secret")
-    fi
-done
+# No additional required ENV_VARS currently
 
 if [[ ${#missing_secrets[@]} -gt 0 ]]; then
     echo "❌ Missing required environment variables:"
@@ -67,11 +56,7 @@ import Foundation
 /// Secrets are generated from environment variables by ./Scripts/generate-secrets-secure.sh
 enum Secrets {
     // API Keys and Tokens
-    static let POSTHOG_API_KEY = #"${POSTHOG_API_KEY}"#
-    static let FIREBASE_APP_CHECK_TOKEN = #"${FIREBASE_APP_CHECK_TOKEN}"#
-    static let SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN = #"${SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN}"#
-    static let SLACK_URL_WITH_KEY = #"${SLACK_URL_WITH_KEY}"#
-    static let SENTRY_DSN = #"${SENTRY_DSN}"#
+    static let FIREBASE_APP_CHECK_TOKEN = #"${FIREBASE_APP_CHECK_TOKEN}"#  // @lourou: Remove after AppCheck/AppAttest merge
     static let TURNKEY_PUBLIC_ORGANIZATION_ID = #"${TURNKEY_PUBLIC_ORGANIZATION_ID}"#
     static let TURNKEY_API_PUBLIC_KEY = #"${TURNKEY_API_PUBLIC_KEY}"#
     static let TURNKEY_API_PRIVATE_KEY = #"${TURNKEY_API_PRIVATE_KEY}"#
@@ -79,10 +64,6 @@ enum Secrets {
     // Configuration URLs and IDs
     static let CONVOS_API_BASE_URL = #"${CONVOS_API_BASE_URL:-}"#
     static let XMTP_CUSTOM_HOST = #"${XMTP_CUSTOM_HOST:-}"#
-    static let POSTHOG_HOST = #"${POSTHOG_HOST}"#
-    static let API_RP_ID = #"${API_RP_ID}"#
-    static let SENTRY_ORG = #"${SENTRY_ORG}"#
-    static let SENTRY_PROJECT = #"${SENTRY_PROJECT}"#
 }
 
 // swiftlint:enable all

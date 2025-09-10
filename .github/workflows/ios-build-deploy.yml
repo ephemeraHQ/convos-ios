@@ -1,0 +1,564 @@
+name: iOS Build and Deploy
+
+on:
+  # Automatic testing on pushes and PRs
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+  # Manual deployment triggers
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+        - 'dev'
+        - 'prod'
+        default: 'dev'
+
+env:
+  RUBY_VERSION: 3.3.3
+
+jobs:
+  # Test job - runs automatically on pushes and PRs
+  test:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - name: Job Information
+        run: |
+          echo "Starting test job for PR #${{ github.event.number }}"
+          echo "Building iOS app for testing"
+          echo "Xcode version: $(xcodebuild -version | head -1)"
+          echo "macOS version: $(sw_vers -productVersion)"
+          echo "Runner: ${{ runner.name }}"
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup SPM Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+            ~/Library/Developer/Xcode/DerivedData/*/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Setup Ruby Environment
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Setup Xcode 26 RC
+        run: |
+          echo "Configuring Xcode 26 Release Candidate"
+          sudo xcode-select -s /Applications/Xcode_26.0.app/Contents/Developer
+
+          # Work around Xcode 26 RC pipe issue
+          echo "Checking Xcode version..."
+          (xcodebuild -version 2>&1 || true) > /tmp/xcode_version.txt
+          if [ -f /tmp/xcode_version.txt ]; then
+            echo "Xcode version: $(head -1 /tmp/xcode_version.txt | grep -o 'Xcode [0-9.]*' || echo 'Xcode 26.0')"
+            echo "Build version: $(tail -1 /tmp/xcode_version.txt | grep -o 'Build version [A-Za-z0-9]*' || echo 'Build version available')"
+          fi
+
+          echo "Checking available SDKs..."
+          (xcodebuild -showsdks 2>&1 || true) | grep -E "(iOS|Simulator)" | head -10
+
+          # Check if iOS 26.0 runtime is available, if not suggest using available SDK
+          if ! (xcodebuild -showsdks 2>/dev/null | grep -q "iphoneos26"); then
+            echo "Note: iOS 26.0 SDK may not be available - builds will use highest available iOS SDK"
+            AVAILABLE_SDK=$(xcodebuild -showsdks 2>/dev/null | grep 'iphoneos' | tail -1 || echo "iOS SDK available")
+            echo "Highest available iOS SDK: $AVAILABLE_SDK"
+          fi
+
+          echo "Ready for iOS development!"
+
+      - name: Setup Development Environment
+        env:
+          FIREBASE_APP_CHECK_TOKEN: "mock_firebase_token_for_testing"
+          TURNKEY_PUBLIC_ORGANIZATION_ID: "mock_turnkey_org_for_testing"
+          TURNKEY_API_PUBLIC_KEY: "mock_turnkey_public_key_for_testing"
+          TURNKEY_API_PRIVATE_KEY: "mock_turnkey_private_key_for_testing"
+        run: |
+          echo "Setting up development environment for testing"
+          echo "Using mock values for required secrets"
+
+          # Generate secrets using secure script
+          ./Scripts/generate-secrets-secure.sh
+
+          echo "Development environment configured securely"
+
+      - name: Run Setup
+        run: |
+          echo "Running project setup..."
+          make setup
+          echo "Setup completed successfully"
+
+      - name: Build for Testing
+        run: |
+          echo "Building for compilation validation..."
+          echo "Scheme: Convos (Dev)"
+          echo "Configuration: Dev"
+
+          # Check available destinations
+          echo "Available destinations:"
+          (xcodebuild -project "${{ vars.XCODE_PROJECT }}" -scheme "Convos (Dev)" -showdestinations 2>&1 || true) | head -20
+
+          # Use generic iOS device destination (no specific simulator required)
+          echo "Destination: generic/platform=iOS"
+
+          xcodebuild build \
+            -project "${{ vars.XCODE_PROJECT }}" \
+            -scheme "Convos (Dev)" \
+            -destination "generic/platform=iOS" \
+            -configuration Dev \
+            -quiet \
+            | xcbeautify
+
+          echo "Build validation completed successfully"
+
+  # Build and deploy job for releases
+  build-and-deploy:
+    # Only run on manual trigger (workflow_dispatch)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    timeout-minutes: 120
+    environment: ${{ matrix.environment }}
+
+    strategy:
+      matrix:
+        include:
+          - environment: ${{ github.event.inputs.environment == 'prod' && 'convos-prod' || 'convos-dev' }}
+            scheme: ${{ github.event.inputs.environment == 'prod' && 'Convos (Prod)' || 'Convos (Dev)' }}
+            nse_scheme: ${{ github.event.inputs.environment == 'prod' && 'NotificationService (Prod)' || 'NotificationService (Dev)' }}
+            appclip_scheme: "ConvosAppClip"
+            configuration: ${{ github.event.inputs.environment == 'prod' && 'Prod' || 'Dev' }}
+            bundle_id: ${{ github.event.inputs.environment == 'prod' && 'org.convos.ios' || 'org.convos.ios-preview' }}
+            build_config: ${{ github.event.inputs.environment == 'prod' && 'Prod' || 'Dev' }}
+            input_env: ${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Job Information
+        run: |
+          echo "Manual deployment triggered"
+          echo "Selected environment: ${{ github.event.inputs.environment }}"
+          echo "Building for: ${{ matrix.environment }}"
+          echo "Bundle ID: ${{ matrix.bundle_id }}"
+          echo "Scheme: ${{ matrix.scheme }}"
+          echo "Build Configuration: ${{ matrix.configuration }} (matches ${{ matrix.build_config }}.xcconfig)"
+          echo "Build Config: ${{ matrix.build_config }}"
+          echo "Xcode version: $(xcodebuild -version | head -1)"
+          echo "macOS version: $(sw_vers -productVersion)"
+          echo "Runner: ${{ runner.name }}"
+          echo "GitHub Run Number: ${{ github.run_number }}"
+
+      - name: Validate Manual Trigger
+        run: |
+          echo "Environment validation:"
+          echo "- Selected: ${{ github.event.inputs.environment }}"
+          echo "- Building for: ${{ matrix.environment }}"
+          echo "- Bundle ID: ${{ matrix.bundle_id }}"
+          echo "✅ Environment configuration confirmed"
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup SPM Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+            ~/Library/Developer/Xcode/DerivedData/*/SourcePackages
+          key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Setup Ruby Environment
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Setup Xcode 26 RC
+        run: |
+          echo "Configuring Xcode 26 Release Candidate"
+          sudo xcode-select -s /Applications/Xcode_26.0.app/Contents/Developer
+
+          # Work around Xcode 26 RC pipe issue
+          echo "Checking Xcode version..."
+          (xcodebuild -version 2>&1 || true) > /tmp/xcode_version.txt
+          if [ -f /tmp/xcode_version.txt ]; then
+            echo "Xcode version: $(head -1 /tmp/xcode_version.txt | grep -o 'Xcode [0-9.]*' || echo 'Xcode 26.0')"
+            echo "Build version: $(tail -1 /tmp/xcode_version.txt | grep -o 'Build version [A-Za-z0-9]*' || echo 'Build version available')"
+          fi
+
+          echo "Checking iOS SDK..."
+          (xcodebuild -showsdks 2>&1 || true) | grep 'iOS ' | tail -1 || echo "iOS SDK: iOS 26.0 available"
+          echo "Ready for iOS 26 development!"
+
+      - name: Setup Development Environment
+        env:
+          FIREBASE_APP_CHECK_TOKEN: ${{ secrets.FIREBASE_APP_CHECK_TOKEN }}  # TODO: Remove after AppCheck/AppAttest merge
+          TURNKEY_PUBLIC_ORGANIZATION_ID: ${{ secrets.TURNKEY_PUBLIC_ORGANIZATION_ID }}
+          TURNKEY_API_PUBLIC_KEY: ${{ secrets.TURNKEY_API_PUBLIC_KEY }}
+          TURNKEY_API_PRIVATE_KEY: ${{ secrets.TURNKEY_API_PRIVATE_KEY }}
+        run: |
+          echo "Setting up development environment for ${{ matrix.environment }}"
+
+          # Generate secrets using secure script
+          ./Scripts/generate-secrets-secure.sh
+
+          echo "Development environment configured securely"
+
+      - name: Run Setup
+        run: |
+          echo "Running project setup..."
+          make setup
+          echo "Setup completed successfully"
+
+      - name: Generate Release Notes
+        id: release_notes
+        run: |
+          echo "Generating release notes..."
+
+          # Run the release notes script (make it non-failing)
+          if ./Scripts/read-release-notes.sh; then
+            echo "Release notes generated successfully"
+          else
+            echo "Warning: Release notes script failed, using default notes"
+            echo "RELEASE_NOTES=Automated build from commit ${{ github.sha }}" >> $GITHUB_ENV
+          fi
+
+      - name: Calculate Build Number
+        id: build_number
+        run: |
+          # Calculate build number using GitHub run number with offset
+          # This ensures unique, incrementing build numbers
+          # BASE_BUILD_NUMBER is defined as a Repository Variable for easy management
+          CALCULATED_BUILD_NUMBER=$((${{ vars.BASE_BUILD_NUMBER }} + ${{ github.run_number }}))
+
+          echo "Calculating build number for ${{ matrix.environment }}"
+          echo "GitHub Run Number: ${{ github.run_number }}"
+          echo "Base Build Number: ${{ vars.BASE_BUILD_NUMBER }}"
+          echo "Calculated Build Number: $CALCULATED_BUILD_NUMBER"
+
+          echo "BUILD_NUMBER=$CALCULATED_BUILD_NUMBER" >> $GITHUB_ENV
+          echo "build_number=$CALCULATED_BUILD_NUMBER" >> $GITHUB_OUTPUT
+
+      - name: Set Build Number - All Targets
+        run: |
+          echo "Setting build number for all targets"
+          echo "Main App: Convos"
+          echo "NSE: NotificationService"
+          echo "App Clip: ConvosAppClip"
+          echo "Build Number: ${{ env.BUILD_NUMBER }}"
+
+          # Set build number for all targets at once
+          xcrun agvtool new-version -all ${{ env.BUILD_NUMBER }}
+
+          # Verify the build numbers were set
+          echo "Build numbers configured for all targets"
+          echo "Verifying build numbers:"
+          xcrun agvtool what-version || echo "Build number verification completed"
+
+      - name: Setup Code Signing
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+        run: |
+          echo "Setting up code signing for all targets"
+          echo "Main App Bundle ID: ${{ matrix.bundle_id }}"
+          echo "NSE Bundle ID: ${{ matrix.bundle_id }}.ConvosNSE"
+          echo "App Clip Bundle ID: ${{ matrix.bundle_id }}.Clip"
+          echo "Team ID: ${{ vars.DEVELOPER_TEAM_ID }}"
+          echo "Using Automatic Code Signing with App Store Connect API"
+
+          # Create API key file for App Store Connect authentication
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APP_STORE_CONNECT_API_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_$APP_STORE_CONNECT_API_KEY_ID.p8
+
+          echo "Code signing configured for all targets"
+
+      - name: Check Provisioning Profile Status
+        run: |
+          echo "Checking provisioning profile status before build:"
+          echo "==============================================="
+
+          # Check if any local profiles exist (unlikely on fresh runner)
+          PROFILE_COUNT=$(find ~/Library/MobileDevice/Provisioning\ Profiles -name "*.mobileprovision" 2>/dev/null | wc -l || echo "0")
+          echo "Local provisioning profiles found: $PROFILE_COUNT"
+
+          if [ "$PROFILE_COUNT" -gt 0 ]; then
+            echo "Existing local profiles:"
+            find ~/Library/MobileDevice/Provisioning\ Profiles -name "*.mobileprovision" 2>/dev/null | while read profile; do
+              echo "Profile: $(basename "$profile")"
+              security cms -D -i "$profile" | plutil -p - | grep -E "(Name|application-identifier)" 2>/dev/null || true
+              echo "---"
+            done
+          else
+            echo "No local profiles found (expected on fresh CI runner)"
+            echo "Profiles will be downloaded from App Store Connect during xcodebuild"
+          fi
+
+          echo "==============================================="
+
+      - name: Archive Application
+        run: |
+          echo "Starting archive process"
+          echo "Project: ${{ vars.XCODE_PROJECT }}"
+          echo "Scheme: ${{ matrix.scheme }}"
+          echo "Configuration: ${{ matrix.configuration }}"
+          echo "📦 Build Number: ${{ env.BUILD_NUMBER }}"
+          echo "Distribution Method: app-store"
+
+          # Create archive with detailed logging
+          echo "Starting xcodebuild archive with provisioning profile logging..."
+
+          # Debug signing setup before archiving
+          echo "=== SIGNING DEBUG ==="
+          echo "Bundle ID for this build: ${{ matrix.bundle_id }}"
+          echo "Development Team: ${{ vars.DEVELOPER_TEAM_ID }}"
+          echo "App Store Connect Key ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}"
+          echo "Checking if API key file exists:"
+          ls -la ~/.appstoreconnect/private_keys/ || echo "API key directory not found"
+
+          # Try to list available certificates
+          echo "=== Available Code Signing Certificates ==="
+          security find-identity -v -p codesigning || echo "No certificates found"
+
+          # For archiving, we don't need to specify a destination - it builds for "Any iOS Device"
+          xcodebuild archive \
+            -project "${{ vars.XCODE_PROJECT }}" \
+            -scheme "${{ matrix.scheme }}" \
+            -configuration "${{ matrix.configuration }}" \
+            -archivePath "./build/Convos.xcarchive" \
+            -destination "generic/platform=iOS" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8 \
+            -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM=${{ vars.DEVELOPER_TEAM_ID }} \
+            PRODUCT_BUNDLE_IDENTIFIER=${{ matrix.bundle_id }} \
+            -verbose \
+            | tee build_log.txt
+
+          # Check if archive was actually created
+          if [ -d "./build/Convos.xcarchive" ]; then
+            echo "✅ Archive created successfully at: ./build/Convos.xcarchive"
+            echo "Archive size: $(du -sh ./build/Convos.xcarchive | cut -f1)"
+          else
+            echo "❌ Archive creation failed - checking build log for errors..."
+            echo "Build log errors:"
+            grep -i "error\|failed\|denied" build_log.txt || echo "No obvious errors found in build log"
+            echo "Signing-related messages:"
+            grep -i "sign\|provision\|certificate" build_log.txt || echo "No signing messages found"
+            exit 1
+          fi
+
+      - name: Check Downloaded Provisioning Profiles
+        run: |
+          echo "Checking provisioning profiles downloaded during build:"
+          echo "===================================================="
+
+          # Check if profiles were downloaded during the build
+          PROFILE_COUNT=$(find ~/Library/MobileDevice/Provisioning\ Profiles -name "*.mobileprovision" 2>/dev/null | wc -l || echo "0")
+          echo "Provisioning profiles now available: $PROFILE_COUNT"
+
+          if [ "$PROFILE_COUNT" -gt 0 ]; then
+            echo ""
+            echo "Downloaded profiles from App Store Connect:"
+            find ~/Library/MobileDevice/Provisioning\ Profiles -name "*.mobileprovision" 2>/dev/null | while read profile; do
+              echo "Profile: $(basename "$profile")"
+              security cms -D -i "$profile" | plutil -p - | grep -E "(Name|application-identifier|TeamName|ExpirationDate)" 2>/dev/null || echo "Could not read profile details"
+              echo "---"
+            done
+          else
+            echo "No profiles found - this might indicate an issue with App Store Connect authentication"
+          fi
+
+          echo "===================================================="
+
+      - name: Analyze Provisioning Profiles Used
+        if: always()  # Run even if archive fails
+        run: |
+          echo "Analyzing provisioning profiles used during build:"
+          echo "================================================="
+
+          if [ -f build_log.txt ]; then
+            echo "Extracting provisioning profile information from build log:"
+            echo ""
+
+            # Extract provisioning profile selections
+            grep -i "provisioning profile" build_log.txt | head -20 || echo "No provisioning profile mentions found"
+            echo ""
+
+            # Extract code signing information
+            echo "Code signing information:"
+            grep -i "signing identity" build_log.txt | head -10 || echo "No signing identity info found"
+            echo ""
+
+            # Extract bundle ID and profile mappings
+            echo "Bundle ID to Profile mappings:"
+            grep -E "(bundle identifier|provisioning profile)" build_log.txt | head -20 || echo "No bundle ID mappings found"
+            echo ""
+
+            # Show any code signing errors
+            echo "Code signing warnings/errors:"
+            grep -i "code sign\|provisioning" build_log.txt | grep -i "error\|warning" | head -10 || echo "No code signing errors found"
+          else
+            echo "Build log file not found"
+          fi
+
+          echo "================================================="
+
+      - name: Show Archive Contents
+        run: |
+          echo "Archive contents and embedded provisioning profiles:"
+          echo "=================================================="
+
+          if [ -d "./build/Convos.xcarchive" ]; then
+            # Show archive structure
+            echo "Archive structure:"
+            find ./build/Convos.xcarchive -name "*.app" -o -name "*.appex" | head -10
+            echo ""
+
+            # Extract provisioning profiles from the archive
+            echo "Embedded provisioning profiles:"
+            find ./build/Convos.xcarchive -name "embedded.mobileprovision" | while read profile; do
+              echo "Found profile at: $profile"
+              if [ -f "$profile" ]; then
+                echo "Profile details:"
+                security cms -D -i "$profile" | plutil -p - | grep -E "(Name|application-identifier|TeamName|TeamIdentifier|ExpirationDate)" 2>/dev/null || echo "Could not read profile details"
+                echo "---"
+              fi
+            done
+          else
+            echo "Archive not found at ./build/Convos.xcarchive"
+          fi
+
+          echo "=================================================="
+
+      - name: Export Archive for App Store
+        run: |
+          echo "Exporting archive for App Store distribution"
+          echo "Method: app-store"
+          echo "Bundle ID: ${{ matrix.bundle_id }}"
+
+          # Create export options plist
+          cat > ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>teamID</key>
+              <string>${{ vars.DEVELOPER_TEAM_ID }}</string>
+              <key>uploadBitcode</key>
+              <false/>
+              <key>uploadSymbols</key>
+              <true/>
+              <key>compileBitcode</key>
+              <false/>
+              <key>signingStyle</key>
+              <string>automatic</string>
+              <key>destination</key>
+              <string>upload</string>
+          </dict>
+          </plist>
+          EOF
+
+          # Export archive
+          xcodebuild -exportArchive \
+            -archivePath "./build/Convos.xcarchive" \
+            -exportPath "./build/export" \
+            -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8 \
+            -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
+            -quiet \
+            | xcbeautify
+
+          echo "Archive exported successfully"
+
+      - name: Deploy to App Store Connect
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+        run: |
+          echo "Deploying to App Store Connect"
+          echo "Bundle ID: ${{ matrix.bundle_id }}"
+          echo "Environment: ${{ matrix.environment }}"
+          echo "Release Notes: ${{ env.RELEASE_NOTES }}"
+
+          # Find the IPA file
+          IPA_PATH=$(find ./build/export -name "*.ipa" | head -1)
+          echo "IPA Path: $IPA_PATH"
+
+          if [ -z "$IPA_PATH" ]; then
+            echo "❌ No IPA file found in export directory"
+            exit 1
+          fi
+
+          # Upload to App Store Connect using xcrun altool
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey $APP_STORE_CONNECT_API_KEY_ID \
+            --apiIssuer $APP_STORE_CONNECT_ISSUER_ID \
+            --verbose
+
+          echo "Successfully uploaded to App Store Connect"
+          echo "Build ${{ env.BUILD_NUMBER }} for ${{ matrix.environment }} deployed!"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "Cleaning up temporary files"
+
+          # Remove API key file
+          rm -f ~/.appstoreconnect/private_keys/AuthKey_*.p8
+
+          # Clean up build artifacts
+          rm -rf ./build
+          rm -f ExportOptions.plist
+
+          echo "Cleanup completed"
+
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "Build Summary for ${{ matrix.environment }}"
+          echo "======================================"
+          echo "Scheme: ${{ matrix.scheme }}"
+          echo "Configuration: ${{ matrix.configuration }}"
+          echo "Bundle ID: ${{ matrix.bundle_id }}"
+          echo "Build Number: ${{ env.BUILD_NUMBER }}"
+          echo "GitHub Run: ${{ github.run_number }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch/Tag: ${{ github.ref }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Timestamp: $(date)"
+
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "Status: SUCCESS"
+          else
+            echo "❌ Status: FAILED"
+          fi
