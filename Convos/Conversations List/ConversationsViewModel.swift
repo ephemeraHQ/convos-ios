@@ -107,6 +107,8 @@ final class ConversationsViewModel {
         } catch {
             Logger.error("Error fetching conversations: \(error)")
             self.conversations = []
+            self.conversationsCount = 0
+            self.hasEarlyAccess = false
         }
         if !hasEarlyAccess {
             self.newConversationViewModel = .init(
