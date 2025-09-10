@@ -77,6 +77,7 @@ struct MessageBubble: View {
         HStack {
             MessageContainer(style: style, isOutgoing: isOutgoing) {
                 LinkDetectingTextView(message, linkColor: textColor)
+                    .foregroundStyle(textColor)
                     .padding(.horizontal, DesignConstants.Spacing.step3x)
                     .padding(.vertical, DesignConstants.Spacing.step2x)
             } avatarView: {
@@ -106,20 +107,14 @@ struct MessageBubble: View {
                 profile: .mock()
             )
             MessageBubble(
-                style: .tailed,
+                style: .normal,
                 message: "Check out https://convos.org for more info",
                 isOutgoing: type == .outgoing,
                 profile: .mock()
             )
             MessageBubble(
-                style: .normal,
-                message: "Visit www.example.com or email us at hello@example.com",
-                isOutgoing: type == .outgoing,
-                profile: .mock()
-            )
-            MessageBubble(
                 style: .tailed,
-                message: "Here's a [markdown link](https://xmtp.org) in the message",
+                message: "Visit www.example.com or email us at hello@example.com",
                 isOutgoing: type == .outgoing,
                 profile: .mock()
             )
