@@ -30,7 +30,7 @@ struct EarlyAccessInfoView: View {
             }
             .padding(.top, DesignConstants.Spacing.step4x)
         }
-        .padding([.leading, .top, .trailing], DesignConstants.Spacing.step10x)
+        .padding(DesignConstants.Spacing.step10x)
     }
 }
 

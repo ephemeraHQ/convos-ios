@@ -73,6 +73,15 @@ final class ConversationsViewModel {
         }
     }
 
+    private(set) var hasEarlyAccess: Bool {
+        get {
+            UserDefaults.standard.bool(forKey: "hasEarlyAccess")
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "hasEarlyAccess")
+        }
+    }
+
     // MARK: - Private
 
     private let session: any SessionManagerProtocol
@@ -82,20 +91,29 @@ final class ConversationsViewModel {
     private var cancellables: Set<AnyCancellable> = .init()
     private var leftConversationObserver: Any?
 
-    init(
-        session: any SessionManagerProtocol,
-        conversationsRepository: any ConversationsRepositoryProtocol,
-        conversationsCountRepository: any ConversationsCountRepositoryProtocol
-    ) {
+    init(session: any SessionManagerProtocol) {
         self.session = session
-        self.conversationsRepository = conversationsRepository
-        self.conversationsCountRepository = conversationsCountRepository
+        self.conversationsRepository = session.conversationsRepository(
+            for: .allowed
+        )
+        self.conversationsCountRepository = session.conversationsCountRepo(
+            for: .allowed,
+            kinds: .groups
+        )
         do {
             self.conversations = try conversationsRepository.fetchAll()
             self.conversationsCount = try conversationsCountRepository.fetchCount()
+            self.hasEarlyAccess = conversationsCount > 0
         } catch {
             Logger.error("Error fetching conversations: \(error)")
             self.conversations = []
+        }
+        if !hasEarlyAccess {
+            self.newConversationViewModel = .init(
+                session: session,
+                showingFullScreenScanner: true,
+                allowsDismissingScanner: false
+            )
         }
         observe()
     }
@@ -324,10 +342,6 @@ extension ConversationsViewModel: NewConversationsViewModelDelegate {
 extension ConversationsViewModel {
     static var mock: ConversationsViewModel {
         let client = ConvosClient.mock()
-        return .init(
-            session: client.session,
-            conversationsRepository: client.session.conversationsRepository(for: .all),
-            conversationsCountRepository: client.session.conversationsCountRepo(for: .all, kinds: .groups)
-        )
+        return .init(session: client.session)
     }
 }

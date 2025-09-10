@@ -18,18 +18,7 @@ struct ConversationsView: View {
         session: any SessionManagerProtocol
     ) {
         self.session = session
-        let conversationsRepository = session.conversationsRepository(
-            for: .allowed
-        )
-        let conversationsCountRepository = session.conversationsCountRepo(
-            for: .allowed,
-            kinds: .groups
-        )
-        self.viewModel = ConversationsViewModel(
-            session: session,
-            conversationsRepository: conversationsRepository,
-            conversationsCountRepository: conversationsCountRepository
-        )
+        self.viewModel = ConversationsViewModel(session: session)
     }
 
     var emptyConversationsViewScrollable: some View {
@@ -47,7 +36,7 @@ struct ConversationsView: View {
         )
     }
 
-    var body: some View {
+    var hasEarlyAccessView: some View {
         ConversationInfoPresenter(
             viewModel: viewModel.selectedConversationViewModel,
             focusState: $focusState,
@@ -55,12 +44,13 @@ struct ConversationsView: View {
         ) {
             NavigationSplitView {
                 Group {
-                    if viewModel.unpinnedConversations.isEmpty {
+                    if viewModel.unpinnedConversations.isEmpty && horizontalSizeClass == .compact {
                         emptyConversationsViewScrollable
                     } else {
                         List(viewModel.unpinnedConversations, id: \.self, selection: $viewModel.selectedConversation) { conversation in
                             if viewModel.unpinnedConversations.first == conversation,
-                               viewModel.unpinnedConversations.count == 1 && !viewModel.hasCreatedMoreThanOneConvo {
+                               viewModel.unpinnedConversations.count == 1 && !viewModel.hasCreatedMoreThanOneConvo &&
+                                horizontalSizeClass == .compact {
                                 emptyConversationsView
                                     .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
                                     .listRowSeparator(.hidden)
@@ -74,8 +64,22 @@ struct ConversationsView: View {
                                         Image(systemName: "trash")
                                     }
                                 }
-                                .listRowInsets(.init(top: 0, leading: 0, bottom: 0, trailing: 0))
                                 .listRowSeparator(.hidden)
+                                .listRowBackground(
+                                    RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.mediumLarge)
+                                        .fill(
+                                            conversation == viewModel.selectedConversation ? .colorFillMinimal : .clear
+                                        )
+                                        .padding(.horizontal, DesignConstants.Spacing.step3x)
+                                )
+                                .listRowInsets(
+                                    .init(
+                                        top: 0,
+                                        leading: 0,
+                                        bottom: 0,
+                                        trailing: 0
+                                    )
+                                )
                         }
                         .listStyle(.plain)
                     }
@@ -180,11 +184,22 @@ struct ConversationsView: View {
         .selfSizingSheet(isPresented: $viewModel.presentingMaxNumberOfConvosReachedInfo) {
             MaxedOutInfoView(maxNumberOfConvos: viewModel.maxNumberOfConvos)
         }
-        .onOpenURL { url in
-            viewModel.handleURL(url)
-        }
         .onAppear {
             viewModel.onAppear()
+        }
+    }
+
+    var body: some View {
+        Group {
+            if !viewModel.hasEarlyAccess,
+               let joinViewModel = viewModel.newConversationViewModel {
+                NewConversationView(viewModel: joinViewModel)
+            } else {
+                hasEarlyAccessView
+            }
+        }
+        .onOpenURL { url in
+            viewModel.handleURL(url)
         }
     }
 }
