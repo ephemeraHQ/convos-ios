@@ -352,7 +352,11 @@ final class SyncingManager: SyncingManagerProtocol {
             task = streamConversationsTask
         }
 
-        return task != nil && !task!.isCancelled
+        guard let task else {
+            return false
+        }
+
+        return !task.isCancelled
     }
 
     private func isStreamTaskCancelled(_ streamType: StreamType) -> Bool {
