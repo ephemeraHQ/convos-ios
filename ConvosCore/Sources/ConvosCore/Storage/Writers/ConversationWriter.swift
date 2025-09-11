@@ -39,146 +39,37 @@ class ConversationWriter: ConversationWriterProtocol {
         return try await _store(conversation: conversation, clientConversationId: clientConversationId)
     }
 
-    private func _store(conversation: XMTPiOS.Conversation,
-                        withLatestMessages: Bool = false,
-                        clientConversationId: String? = nil) async throws -> DBConversation {
+    private func _store(
+        conversation: XMTPiOS.Conversation,
+        withLatestMessages: Bool = false,
+        clientConversationId: String? = nil
+    ) async throws -> DBConversation {
+        // Extract conversation metadata
+        let metadata = try extractConversationMetadata(from: conversation)
         let members = try await conversation.members()
-        let dbMembers: [DBConversationMember] = members
-            .map { $0.dbRepresentation(conversationId: conversation.id) }
-        let kind: ConversationKind
-        let imageURLString: String?
-        let name: String?
-        let description: String?
-        switch conversation {
-        case .dm:
-            kind = .dm
-            imageURLString = nil
-            name = nil
-            description = nil
-        case .group(let group):
-            kind = .group
-            name = try? group.name()
-            description = try? group.description()
-            imageURLString = try? group.imageUrl()
-        }
+        let dbMembers = members.map { $0.dbRepresentation(conversationId: conversation.id) }
 
-        let localState = ConversationLocalState(
-            conversationId: conversation.id,
-            isPinned: false,
-            isUnread: false,
-            isUnreadUpdatedAt: Date.distantPast,
-            isMuted: false
+        // Create database representation
+        let dbConversation = try await createDBConversation(
+            from: conversation,
+            metadata: metadata,
+            clientConversationId: clientConversationId
         )
 
-        let lastMessage = try await conversation.lastMessage()
-        let dbConversation = DBConversation(
-            id: conversation.id,
-            inboxId: conversation.client.inboxID,
-            clientConversationId: clientConversationId ?? conversation.id,
-            creatorId: try await conversation.creatorInboxId,
-            kind: kind,
-            consent: try conversation.consentState().consent,
-            createdAt: conversation.createdAt,
-            name: name,
-            description: description,
-            imageURLString: imageURLString
+        // Save to database
+        try await saveConversationToDatabase(
+            dbConversation: dbConversation,
+            dbMembers: dbMembers,
+            clientConversationId: clientConversationId
         )
 
-        let creator = Member(inboxId: dbConversation.creatorId)
-
-        let creatorProfile = MemberProfile(
-            inboxId: dbConversation.creatorId,
-            name: nil,
-            avatar: nil,
-        )
-
-        try await databaseWriter.write { db in
-            try creator.save(db)
-            try creatorProfile.insert(db, onConflict: .ignore)
-
-            // Ensure the inbox exists before saving the conversation
-            let existingInbox = try DBInbox.filter(DBInbox.Columns.inboxId == dbConversation.inboxId).fetchOne(db)
-            if existingInbox == nil {
-                Logger.error("Inbox \(dbConversation.inboxId) does not exist, cannot save conversation \(conversation.id)")
-                throw ConversationWriterError.inboxNotFound(dbConversation.inboxId)
-            }
-
-            // Save the conversation first (conversation_members need to reference it)
-            if let localConversation = try DBConversation
-                .filter(Column("id") == conversation.id)
-                .filter(Column("clientConversationId") != clientConversationId)
-                .fetchOne(db) {
-                // keep using the same local id
-                Logger.info(
-                    "Found local conversation \(localConversation.clientConversationId) for incoming \(conversation.id)"
-                )
-                let updatedConversation = dbConversation.with(
-                    clientConversationId: localConversation.clientConversationId
-                )
-                try updatedConversation.save(db)
-                Logger
-                    .info(
-                        "Updated incoming conversation with local \(localConversation.clientConversationId)"
-                    )
-            } else {
-                do {
-                    try dbConversation.save(db)
-                } catch {
-                    Logger.error("Failed saving incoming conversation \(conversation.id): \(error)")
-                    throw error
-                }
-            }
-
-            try localState.insert(db, onConflict: .ignore)
-
-            for member in dbMembers {
-                try Member(inboxId: member.inboxId).save(db)
-                try member.save(db)
-                let memberProfile = MemberProfile(
-                    inboxId: member.inboxId,
-                    name: nil,
-                    avatar: nil
-                )
-                try? memberProfile.insert(db, onConflict: .ignore)
-            }
-        }
-
+        // Fetch and store latest messages if requested
         if withLatestMessages {
-            Logger.info("Attempting to fetch latest messages...")
-            let lastMessageNs: Int64? = try await databaseWriter.read { db in
-                let lastMessage = DBConversation.association(
-                    to: DBConversation.lastMessageCTE,
-                    on: { conversation, lastMessage in
-                        conversation.id == lastMessage.conversationId
-                    }
-                ).forKey("latestMessage")
-                let result = try DBConversation
-                    .filter(Column("id") == conversation.id)
-                    .with(DBConversation.lastMessageCTE)
-                    .including(optional: lastMessage)
-                    .asRequest(of: DBConversationLatestMessage.self)
-                    .fetchOne(db)
-                return result?.latestMessage?.dateNs
-            }
-            let messages = try await conversation.messages(afterNs: lastMessageNs)
-            if !messages.isEmpty {
-                Logger.info("Found \(messages.count) new messages, catching up...")
-                var marksConversationAsUnread = false
-                for message in messages {
-                    Logger.info("Catching up with message: \(message) sent at: \(message.sentAt.nanosecondsSince1970)")
-                    let result = try await messageWriter.store(message: message, for: dbConversation)
-                    if result.contentType.marksConversationAsUnread {
-                        marksConversationAsUnread = true
-                    }
-                    Logger.info("Saved message: \(result)")
-                }
-
-                if marksConversationAsUnread {
-                    try await localStateWriter.setUnread(true, for: conversation.id)
-                }
-            }
+            try await fetchAndStoreLatestMessages(for: conversation, dbConversation: dbConversation)
         }
 
+        // Store last message
+        let lastMessage = try await conversation.lastMessage()
         if let lastMessage {
             let result = try await messageWriter.store(
                 message: lastMessage,
@@ -188,6 +79,184 @@ class ConversationWriter: ConversationWriterProtocol {
         }
 
         return dbConversation
+    }
+
+    // MARK: - Helper Methods
+
+    private struct ConversationMetadata {
+        let kind: ConversationKind
+        let name: String?
+        let description: String?
+        let imageURLString: String?
+    }
+
+    private func extractConversationMetadata(from conversation: XMTPiOS.Conversation) throws -> ConversationMetadata {
+        switch conversation {
+        case .dm:
+            return ConversationMetadata(
+                kind: .dm,
+                name: nil,
+                description: nil,
+                imageURLString: nil
+            )
+        case .group(let group):
+            return ConversationMetadata(
+                kind: .group,
+                name: try group.name(),
+                description: try group.description(),
+                imageURLString: try group.imageUrl()
+            )
+        }
+    }
+
+    private func createDBConversation(
+        from conversation: XMTPiOS.Conversation,
+        metadata: ConversationMetadata,
+        clientConversationId: String?
+    ) async throws -> DBConversation {
+        return DBConversation(
+            id: conversation.id,
+            inboxId: conversation.client.inboxID,
+            clientConversationId: clientConversationId ?? conversation.id,
+            creatorId: try await conversation.creatorInboxId,
+            kind: metadata.kind,
+            consent: try conversation.consentState().consent,
+            createdAt: conversation.createdAt,
+            name: metadata.name,
+            description: metadata.description,
+            imageURLString: metadata.imageURLString
+        )
+    }
+
+    private func saveConversationToDatabase(
+        dbConversation: DBConversation,
+        dbMembers: [DBConversationMember],
+        clientConversationId: String?
+    ) async throws {
+        try await databaseWriter.write { [weak self] db in
+            guard let self else { return }
+            // Save creator
+            let creator = Member(inboxId: dbConversation.creatorId)
+            try creator.save(db)
+            let creatorProfile = MemberProfile(
+                inboxId: dbConversation.creatorId,
+                name: nil,
+                avatar: nil
+            )
+            try creatorProfile.insert(db, onConflict: .ignore)
+
+            // Validate inbox exists
+            try validateInboxExists(dbConversation.inboxId, conversationId: dbConversation.id, in: db)
+
+            // Save conversation (handle local conversation updates)
+            try saveConversation(dbConversation, clientConversationId: clientConversationId, in: db)
+
+            // Save local state
+            let localState = ConversationLocalState(
+                conversationId: dbConversation.id,
+                isPinned: false,
+                isUnread: false,
+                isUnreadUpdatedAt: Date.distantPast,
+                isMuted: false
+            )
+            try localState.insert(db, onConflict: .ignore)
+
+            // Save members
+            try saveMembers(dbMembers, in: db)
+        }
+    }
+
+    private func validateInboxExists(_ inboxId: String, conversationId: String, in db: Database) throws {
+        let existingInbox = try DBInbox.filter(DBInbox.Columns.inboxId == inboxId).fetchOne(db)
+        if existingInbox == nil {
+            Logger.error("Inbox \(inboxId) does not exist, cannot save conversation \(conversationId)")
+            throw ConversationWriterError.inboxNotFound(inboxId)
+        }
+    }
+
+    private func saveConversation(_ dbConversation: DBConversation, clientConversationId: String?, in db: Database) throws {
+        if let localConversation = try DBConversation
+            .filter(Column("id") == dbConversation.id)
+            .filter(Column("clientConversationId") != clientConversationId)
+            .fetchOne(db) {
+            // Keep using the same local id
+            Logger.info("Found local conversation \(localConversation.clientConversationId) for incoming \(dbConversation.id)")
+            let updatedConversation = dbConversation.with(
+                clientConversationId: localConversation.clientConversationId
+            )
+            try updatedConversation.save(db)
+            Logger.info("Updated incoming conversation with local \(localConversation.clientConversationId)")
+        } else {
+            do {
+                try dbConversation.save(db)
+            } catch {
+                Logger.error("Failed saving incoming conversation \(dbConversation.id): \(error)")
+                throw error
+            }
+        }
+    }
+
+    private func saveMembers(_ dbMembers: [DBConversationMember], in db: Database) throws {
+        for member in dbMembers {
+            try Member(inboxId: member.inboxId).save(db)
+            try member.save(db)
+            let memberProfile = MemberProfile(
+                inboxId: member.inboxId,
+                name: nil,
+                avatar: nil
+            )
+            try? memberProfile.insert(db, onConflict: .ignore)
+        }
+    }
+
+    private func fetchAndStoreLatestMessages(
+        for conversation: XMTPiOS.Conversation,
+        dbConversation: DBConversation
+    ) async throws {
+        Logger.info("Attempting to fetch latest messages...")
+
+        // Get the timestamp of the last stored message
+        let lastMessageNs = try await getLastMessageTimestamp(for: conversation.id)
+
+        // Fetch new messages
+        let messages = try await conversation.messages(afterNs: lastMessageNs)
+        guard !messages.isEmpty else { return }
+
+        Logger.info("Found \(messages.count) new messages, catching up...")
+
+        // Store messages and track if conversation should be marked unread
+        var marksConversationAsUnread = false
+        for message in messages {
+            Logger.info("Catching up with message: \(message) sent at: \(message.sentAt.nanosecondsSince1970)")
+            let result = try await messageWriter.store(message: message, for: dbConversation)
+            if result.contentType.marksConversationAsUnread {
+                marksConversationAsUnread = true
+            }
+            Logger.info("Saved message: \(result)")
+        }
+
+        // Update unread status if needed
+        if marksConversationAsUnread {
+            try await localStateWriter.setUnread(true, for: conversation.id)
+        }
+    }
+
+    private func getLastMessageTimestamp(for conversationId: String) async throws -> Int64? {
+        try await databaseWriter.read { db in
+            let lastMessage = DBConversation.association(
+                to: DBConversation.lastMessageCTE,
+                on: { conversation, lastMessage in
+                    conversation.id == lastMessage.conversationId
+                }
+            ).forKey("latestMessage")
+            let result = try DBConversation
+                .filter(Column("id") == conversationId)
+                .with(DBConversation.lastMessageCTE)
+                .including(optional: lastMessage)
+                .asRequest(of: DBConversationLatestMessage.self)
+                .fetchOne(db)
+            return result?.latestMessage?.dateNs
+        }
     }
 }
 
