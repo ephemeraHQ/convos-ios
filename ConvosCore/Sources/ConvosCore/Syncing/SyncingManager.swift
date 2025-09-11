@@ -198,6 +198,12 @@ final class SyncingManager: SyncingManagerProtocol {
             return
         }
 
+        // Single-flight guard: don't start if already running
+        guard !isStreamTaskActive(.messages) else {
+            Logger.info("Messages stream already active, skipping start")
+            return
+        }
+
         Logger.info("Starting messages stream for inbox: \(client.inboxId) (retry: \(retryCount))")
         streamMessagesTask = Task { [weak self] in
             do {
@@ -313,8 +319,8 @@ final class SyncingManager: SyncingManagerProtocol {
         apiClient: any ConvosAPIClientProtocol,
         retryCount: Int
     ) {
-        guard !Task.isCancelled else { return }
-        guard isStreamTaskActive(streamType) else {
+        // Only check if the stream task itself was cancelled, not the current context
+        guard !isStreamTaskCancelled(streamType) else {
             Logger.info("\(streamType.name) stream task was cancelled, not restarting")
             return
         }
@@ -324,15 +330,14 @@ final class SyncingManager: SyncingManagerProtocol {
 
         Task { [weak self] in
             guard let self else { return }
-            guard self.isStreamTaskActive(streamType) else {
-                Logger.info("\(streamType.name) stream task was cancelled, not restarting")
-                return
-            }
 
+            // Clear the task reference before restarting to avoid race conditions
             switch streamType {
             case .messages:
+                self.streamMessagesTask = nil
                 self.startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
             case .conversations:
+                self.streamConversationsTask = nil
                 self.startConversationStream(client: client, apiClient: apiClient, retryCount: nextRetry)
             }
         }
@@ -347,15 +352,30 @@ final class SyncingManager: SyncingManagerProtocol {
             task = streamConversationsTask
         }
 
-        guard let task, !task.isCancelled else {
-            return false
+        return task != nil && !task!.isCancelled
+    }
+
+    private func isStreamTaskCancelled(_ streamType: StreamType) -> Bool {
+        let task: Task<Void, Never>?
+        switch streamType {
+        case .messages:
+            task = streamMessagesTask
+        case .conversations:
+            task = streamConversationsTask
         }
-        return true
+
+        return task?.isCancelled ?? true
     }
 
     private func startConversationStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int = 0) {
         guard retryCount < maxStreamRetries else {
             Logger.error("Conversations stream max retries (\(maxStreamRetries)) reached for inbox: \(client.inboxId). Giving up.")
+            return
+        }
+
+        // Single-flight guard: don't start if already running
+        guard !isStreamTaskActive(.conversations) else {
+            Logger.info("Conversations stream already active, skipping start")
             return
         }
 
@@ -508,10 +528,8 @@ final class SyncingManager: SyncingManagerProtocol {
             for message in messages {
                 try await messageWriter.store(message: message, for: dbConversation)
 
-                // Update last processed message timestamp if applicable
-                if lastProcessedMessageAt != nil {
-                    lastProcessedMessageAt = max(lastProcessedMessageAt ?? message.sentAt, message.sentAt)
-                }
+                // Update last processed message timestamp
+                lastProcessedMessageAt = max(lastProcessedMessageAt ?? message.sentAt, message.sentAt)
 
                 // Mark conversation as unread if needed
                 await markConversationUnreadIfNeeded(
