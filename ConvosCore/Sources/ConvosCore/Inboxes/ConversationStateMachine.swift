@@ -346,7 +346,6 @@ public actor ConversationStateMachine {
                         Logger.warning("Closing conversations stream...")
                         Task { [weak self] in
                             await self?.streamConversationsTask?.cancel()
-//                            await self?.emitStateChange(.error(ConversationStateMachineError.timedOut))
                         }
                     }
                 ) where conversation.id == conversationId {
