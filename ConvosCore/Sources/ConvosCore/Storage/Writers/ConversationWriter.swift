@@ -18,11 +18,13 @@ public protocol ConversationWriterProtocol {
 class ConversationWriter: ConversationWriterProtocol {
     private let databaseWriter: any DatabaseWriter
     private let messageWriter: any IncomingMessageWriterProtocol
+    private let localStateWriter: any ConversationLocalStateWriterProtocol
 
     init(databaseWriter: any DatabaseWriter,
          messageWriter: any IncomingMessageWriterProtocol) {
         self.databaseWriter = databaseWriter
         self.messageWriter = messageWriter
+        self.localStateWriter = ConversationLocalStateWriter(databaseWriter: databaseWriter)
     }
 
     func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation {
@@ -143,40 +145,46 @@ class ConversationWriter: ConversationWriterProtocol {
 
         if withLatestMessages {
             Logger.info("Attempting to fetch latest messages...")
-            let lastMessageDate: Date? = try await databaseWriter.read { db in
+            let lastMessageNs: Int64? = try await databaseWriter.read { db in
                 let lastMessage = DBConversation.association(
                     to: DBConversation.lastMessageCTE,
                     on: { conversation, lastMessage in
                         conversation.id == lastMessage.conversationId
                     }
-                ).forKey("latestMessage").order(\.date.desc)
+                ).forKey("latestMessage")
                 let result = try DBConversation
                     .filter(Column("id") == conversation.id)
                     .with(DBConversation.lastMessageCTE)
                     .including(optional: lastMessage)
                     .asRequest(of: DBConversationLatestMessage.self)
                     .fetchOne(db)
-                return result?.latestMessage?.date
+                return result?.latestMessage?.dateNs
             }
-            let afterNs: Int64?
-            if let lastMessageDate {
-                afterNs = lastMessageDate.nanosecondsSince1970
-                Logger.info("Saving conversation with latest messages since: \(afterNs ?? 0)")
-            } else {
-                afterNs = nil
-                Logger.info("Latest message not found, fetching all messages...")
-            }
-            let messages = try await conversation.messages(afterNs: afterNs)
-            for message in messages {
-                try await messageWriter.store(message: message, for: dbConversation)
+            let messages = try await conversation.messages(afterNs: lastMessageNs)
+            if !messages.isEmpty {
+                Logger.info("Found \(messages.count) new messages, catching up...")
+                var marksConversationAsUnread = false
+                for message in messages {
+                    Logger.info("Catching up with message: \(message) sent at: \(message.sentAt.nanosecondsSince1970)")
+                    let result = try await messageWriter.store(message: message, for: dbConversation)
+                    if result.contentType.marksConversationAsUnread {
+                        marksConversationAsUnread = true
+                    }
+                    Logger.info("Saved message: \(result)")
+                }
+
+                if marksConversationAsUnread {
+                    try await localStateWriter.setUnread(true, for: conversation.id)
+                }
             }
         }
 
         if let lastMessage {
-            try await messageWriter.store(
+            let result = try await messageWriter.store(
                 message: lastMessage,
                 for: dbConversation
             )
+            Logger.info("Saved last message: \(result)")
         }
 
         return dbConversation

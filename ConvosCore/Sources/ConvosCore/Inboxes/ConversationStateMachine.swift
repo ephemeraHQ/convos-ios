@@ -426,6 +426,7 @@ public actor ConversationStateMachine {
             try await ensureDraftConversationExists(inboxId: client.inboxId)
 
             // Save the message locally
+            let date = Date()
             try await databaseWriter.write { db in
                 let clientMessageId = UUID().uuidString
                 let localMessage = DBMessage(
@@ -433,7 +434,8 @@ public actor ConversationStateMachine {
                     clientMessageId: clientMessageId,
                     conversationId: self.draftConversationId,
                     senderId: client.inboxId,
-                    date: Date(),
+                    dateNs: date.nanosecondsSince1970,
+                    date: date,
                     status: .unpublished,
                     messageType: .original,
                     contentType: .text,
