@@ -180,6 +180,18 @@ final class SyncingManager: SyncingManagerProtocol {
 
     private let maxStreamRetries: Int = 5
 
+    private enum StreamType {
+        case messages
+        case conversations
+
+        var name: String {
+            switch self {
+            case .messages: return "Messages"
+            case .conversations: return "Conversations"
+            }
+        }
+    }
+
     private func startMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int = 0) {
         guard retryCount < maxStreamRetries else {
             Logger.error("Messages stream max retries (\(maxStreamRetries)) reached for inbox: \(client.inboxId). Giving up.")
@@ -278,55 +290,64 @@ final class SyncingManager: SyncingManagerProtocol {
 
     private func scheduleMessageStreamRetry(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) {
         scheduleStreamRetry(
-            streamName: "Messages",
+            streamType: .messages,
             client: client,
             apiClient: apiClient,
-            retryCount: retryCount,
-            isTaskActive: isMessageStreamTaskActive,
-            startStream: startMessageStream
+            retryCount: retryCount
         )
     }
 
     private func handleMessageStreamError(error: Error, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) {
         Logger.error("Error streaming all messages: \(error)")
         scheduleStreamRetry(
-            streamName: "Messages",
+            streamType: .messages,
             client: client,
             apiClient: apiClient,
-            retryCount: retryCount,
-            isTaskActive: isMessageStreamTaskActive,
-            startStream: startMessageStream
+            retryCount: retryCount
         )
     }
 
     private func scheduleStreamRetry(
-        streamName: String,
+        streamType: StreamType,
         client: AnyClientProvider,
         apiClient: any ConvosAPIClientProtocol,
-        retryCount: Int,
-        isTaskActive: @escaping () -> Bool,
-        startStream: @escaping (AnyClientProvider, any ConvosAPIClientProtocol, Int) -> Void
+        retryCount: Int
     ) {
         guard !Task.isCancelled else { return }
-        guard isTaskActive() else {
-            Logger.info("\(streamName) stream task was cancelled, not restarting")
+        guard isStreamTaskActive(streamType) else {
+            Logger.info("\(streamType.name) stream task was cancelled, not restarting")
             return
         }
 
         let nextRetry = retryCount + 1
-        Logger.warning("\(streamName) stream closed for inboxId: \(client.inboxId). Restarting (retry \(nextRetry)/\(maxStreamRetries))...")
+        Logger.warning("\(streamType.name) stream closed for inboxId: \(client.inboxId). Restarting (retry \(nextRetry)/\(maxStreamRetries))...")
 
-        Task {
-            guard isTaskActive() else {
-                Logger.info("\(streamName) stream task was cancelled, not restarting")
+        Task { [weak self] in
+            guard let self else { return }
+            guard self.isStreamTaskActive(streamType) else {
+                Logger.info("\(streamType.name) stream task was cancelled, not restarting")
                 return
             }
-            startStream(client, apiClient, nextRetry)
+
+            switch streamType {
+            case .messages:
+                self.startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
+            case .conversations:
+                self.startConversationStream(client: client, apiClient: apiClient, retryCount: nextRetry)
+            }
         }
     }
 
-    private func isMessageStreamTaskActive() -> Bool {
-        guard let streamTask = streamMessagesTask, !streamTask.isCancelled else {
+    private func isStreamTaskActive(_ streamType: StreamType) -> Bool {
+        let task: Task<Void, Never>?
+        switch streamType {
+        case .messages:
+            task = streamMessagesTask
+        case .conversations:
+            task = streamConversationsTask
+        }
+
+        guard let task, !task.isCancelled else {
             return false
         }
         return true
@@ -363,32 +384,21 @@ final class SyncingManager: SyncingManagerProtocol {
 
     private func scheduleConversationStreamRetry(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) {
         scheduleStreamRetry(
-            streamName: "Conversations",
+            streamType: .conversations,
             client: client,
             apiClient: apiClient,
-            retryCount: retryCount,
-            isTaskActive: isConversationStreamTaskActive,
-            startStream: startConversationStream
+            retryCount: retryCount
         )
     }
 
     private func handleConversationStreamError(error: Error, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) {
         Logger.error("Error streaming conversations: \(error)")
         scheduleStreamRetry(
-            streamName: "Conversations",
+            streamType: .conversations,
             client: client,
             apiClient: apiClient,
-            retryCount: retryCount,
-            isTaskActive: isConversationStreamTaskActive,
-            startStream: startConversationStream
+            retryCount: retryCount
         )
-    }
-
-    private func isConversationStreamTaskActive() -> Bool {
-        guard let streamTask = streamConversationsTask, !streamTask.isCancelled else {
-            return false
-        }
-        return true
     }
 
     private func syncMemberProfiles(

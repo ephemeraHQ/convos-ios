@@ -346,7 +346,7 @@ public actor ConversationStateMachine {
                         Logger.warning("Closing conversations stream...")
                         Task { [weak self] in
                             await self?.streamConversationsTask?.cancel()
-                            await self?.emitStateChange(.error(ConversationStateMachineError.timedOut))
+//                            await self?.emitStateChange(.error(ConversationStateMachineError.timedOut))
                         }
                     }
                 ) where conversation.id == conversationId {
@@ -645,9 +645,7 @@ public actor ConversationStateMachine {
 
 public enum ConversationStateMachineError: Error {
     case failedFindingConversation
-    case notReady
     case stateMachineError(Error)
-    case unexpectedTermination
     case alreadyRedeemedInviteForConversation(String)
     case timedOut
 }
