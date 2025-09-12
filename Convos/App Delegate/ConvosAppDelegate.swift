@@ -12,6 +12,12 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
 
+        if let url = ConfigManager.shared.currentEnvironment.firebaseConfigURL {
+            FirebaseHelperCore.configure(with: url)
+        } else {
+            Logger.error("Missing Firebase plist URL for current environment")
+        }
+
         return true
     }
 
