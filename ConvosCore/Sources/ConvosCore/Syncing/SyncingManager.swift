@@ -30,6 +30,10 @@ actor SyncingManager: SyncingManagerProtocol {
     private let maxStreamRetries: Int = 5
     private let memberProfileSyncInterval: TimeInterval = 120.0
 
+    // Notification handling
+    private var notificationObservers: [NSObjectProtocol] = []
+    private var notificationTask: Task<Void, Never>?
+
     // App lifecycle tracking
     private var lastActiveAt: Date? {
         get {
@@ -52,17 +56,26 @@ actor SyncingManager: SyncingManagerProtocol {
         self.messageWriter = messageWriter
         self.profileWriter = MemberProfileWriter(databaseWriter: databaseWriter)
         self.localStateWriter = ConversationLocalStateWriter(databaseWriter: databaseWriter)
-
-        setupNotificationObservers()
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self)
+        // Clean up notification task
+        notificationTask?.cancel()
+
+        // Remove observers (safe to do from deinit)
+        for observer in notificationObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     // MARK: - Public Interface
 
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
+        // Setup notifications if not already done
+        if notificationObservers.isEmpty {
+            setupNotificationObservers()
+        }
+
         // Cancel existing sync
         syncTask?.cancel()
         syncTask = Task { [weak self] in
@@ -88,8 +101,16 @@ actor SyncingManager: SyncingManagerProtocol {
         Logger.info("Stopping...")
         // Save timestamp for catch-up on next start
         lastActiveAt = Date()
+
+        // Cancel sync tasks
         syncTask?.cancel()
         syncTask = nil
+
+        // Clean up notification observers
+        for observer in notificationObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        notificationObservers.removeAll()
     }
 
     // MARK: - Stream Management
@@ -419,34 +440,32 @@ actor SyncingManager: SyncingManagerProtocol {
 
     // MARK: - Notification Observers
 
-    private nonisolated func setupNotificationObservers() {
-        // Active conversation tracking
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleActiveConversationChanged),
-            name: .activeConversationChanged,
-            object: nil
-        )
-
-        // App lifecycle
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleAppWillResignActive),
-            name: UIApplication.willResignActiveNotification,
-            object: nil
-        )
-    }
-
-    @objc nonisolated private func handleActiveConversationChanged(_ notification: Notification) {
-        Task {
-            await setActiveConversationId(notification.userInfo?["conversationId"] as? String)
+    private func setupNotificationObservers() {
+        let activeConversationObserver = NotificationCenter.default.addObserver(
+            forName: .activeConversationChanged,
+            object: nil,
+            queue: nil
+        ) { [weak self] notification in
+            guard let self else { return }
+            Task { [weak self] in
+                guard let self else { return }
+                await self.setActiveConversationId(notification.userInfo?["conversationId"] as? String)
+            }
         }
-    }
+        notificationObservers.append(activeConversationObserver)
 
-    @objc nonisolated private func handleAppWillResignActive() {
-        Task {
-            await markLastActiveAtAsNow()
+        let appLifecycleObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willResignActiveNotification,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            guard let self else { return }
+            Task { [weak self] in
+                guard let self else { return }
+                await self.markLastActiveAtAsNow()
+            }
         }
+        notificationObservers.append(appLifecycleObserver)
     }
 }
 
