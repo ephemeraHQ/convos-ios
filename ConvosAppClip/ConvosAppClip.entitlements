@@ -4,7 +4,7 @@
 <dict>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>webcredentials:$(ASSOCIATED_DOMAIN)</string>
+		<string>webcredentials:$(WEB_CREDENTIALS_DOMAIN)</string>
 		<string>applinks:$(ASSOCIATED_DOMAIN)</string>
 		<string>appclips:$(ASSOCIATED_DOMAIN)</string>
 	</array>

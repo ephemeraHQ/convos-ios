@@ -66,7 +66,7 @@ extension Invite {
         .init(
             code: "invite_code_123",
             conversationId: "conversation_123",
-            inviteUrlString: "http://convos.org/join/invite_code_123",
+            inviteUrlString: "https://popup.convos.org/invite_code_123",
             status: .active,
             createdAt: Date(),
             maxUses: 0,

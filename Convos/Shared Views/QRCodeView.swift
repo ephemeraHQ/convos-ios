@@ -109,7 +109,7 @@ struct QRCodeView: View {
 // swiftlint:disable force_unwrapping
 
 #Preview("Automatic Colors") {
-    @Previewable @State var url: URL = URL(string: "https://local.convos.org/join/12346")!
+    @Previewable @State var url: URL = URL(string: "https://local.convos.org/12346")!
 
     VStack(spacing: 40.0) {
         QRCodeView(url: url, centerImage: Image("convosIcon"))

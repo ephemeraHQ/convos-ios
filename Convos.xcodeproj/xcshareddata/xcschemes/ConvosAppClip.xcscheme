@@ -77,7 +77,7 @@
       <EnvironmentVariables>
          <EnvironmentVariable
             key = "_XCAppClipURL"
-            value = "https://preview.convos.org/join/123456"
+            value = "https://dev.convos.org/123456"
             isEnabled = "YES">
          </EnvironmentVariable>
       </EnvironmentVariables>
