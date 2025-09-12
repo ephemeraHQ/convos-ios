@@ -516,6 +516,8 @@ public actor ConversationStateMachine {
         // Cancel any ongoing tasks
         streamConversationsTask?.cancel()
 
+        try await cleanUp(draftConversationId: draftConversationId)
+
         if let externalConversationId {
             // Get the inbox state to access the API client for unsubscribing
             let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
@@ -557,6 +559,18 @@ public actor ConversationStateMachine {
             default:
                 continue
             }
+        }
+    }
+
+    private func cleanUp(draftConversationId: String) async throws {
+        try await databaseWriter.write { db in
+            try ConversationLocalState
+                .filter(Column("conversationId") == draftConversationId)
+                .deleteAll(db)
+            try DBConversation
+                .filter(DBConversation.Columns.id == draftConversationId)
+                .deleteAll(db)
+            Logger.info("Cleaned up conversation data for draftConversationId: \(draftConversationId)")
         }
     }
 
