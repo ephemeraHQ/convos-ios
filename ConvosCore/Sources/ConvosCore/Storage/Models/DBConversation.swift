@@ -110,7 +110,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
 
     static let lastMessageRequest: QueryInterfaceRequest<DBMessage> = DBMessage
         .filter(DBMessage.Columns.contentType != MessageContentType.update.rawValue)
-        .annotated { max($0.date) }
+        .annotated { max($0.dateNs) }
         .group(\.conversationId)
 
     static let lastMessageCTE: CommonTableExpression<DBMessage> = CommonTableExpression<DBMessage>(

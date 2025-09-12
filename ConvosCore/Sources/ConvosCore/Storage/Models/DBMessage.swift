@@ -19,8 +19,17 @@ public enum DBMessageType: String, Codable {
          reaction
 }
 
-enum MessageContentType: String, Codable {
+public enum MessageContentType: String, Codable {
     case text, emoji, attachments, update
+
+    var marksConversationAsUnread: Bool {
+        switch self {
+        case .update:
+            false
+        default:
+            true
+        }
+    }
 }
 
 struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
@@ -45,6 +54,7 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
         static let conversationId: Column = Column(CodingKeys.conversationId)
         static let senderId: Column = Column(CodingKeys.senderId)
         static let date: Column = Column(CodingKeys.date)
+        static let dateNs: Column = Column(CodingKeys.dateNs)
         static let status: Column = Column(CodingKeys.status)
         static let messageType: Column = Column(CodingKeys.messageType)
         static let contentType: Column = Column(CodingKeys.contentType)
@@ -58,6 +68,7 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
     let clientMessageId: String // always the same, used for optimistic send
     let conversationId: String
     let senderId: String
+    let dateNs: Int64
     let date: Date
     let status: MessageStatus
 
@@ -132,6 +143,7 @@ extension DBMessage {
             clientMessageId: clientMessageId,
             conversationId: conversationId,
             senderId: senderId,
+            dateNs: dateNs,
             date: date,
             status: status,
             messageType: messageType,
@@ -150,6 +162,26 @@ extension DBMessage {
             clientMessageId: clientMessageId,
             conversationId: conversationId,
             senderId: senderId,
+            dateNs: dateNs,
+            date: date,
+            status: status,
+            messageType: messageType,
+            contentType: contentType,
+            text: text,
+            emoji: emoji,
+            sourceMessageId: sourceMessageId,
+            attachmentUrls: attachmentUrls,
+            update: update
+        )
+    }
+
+    func with(date: Date) -> DBMessage {
+        .init(
+            id: id,
+            clientMessageId: clientMessageId,
+            conversationId: conversationId,
+            senderId: senderId,
+            dateNs: dateNs,
             date: date,
             status: status,
             messageType: messageType,
@@ -168,6 +200,7 @@ extension DBMessage {
             clientMessageId: clientMessageId,
             conversationId: conversationId,
             senderId: senderId,
+            dateNs: dateNs,
             date: date,
             status: status,
             messageType: messageType,

@@ -46,6 +46,7 @@ extension XMTPiOS.DecodedMessage {
             clientMessageId: id,
             conversationId: conversationId,
             senderId: senderInboxId,
+            dateNs: sentAtNs,
             date: sentAt,
             status: status,
             messageType: components.messageType,

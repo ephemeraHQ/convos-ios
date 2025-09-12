@@ -252,8 +252,6 @@ step_bundles:
 
             export POSTHOG_API_KEY=\"ph_test_mock_key_for_ci\"
 
-            export FIREBASE_APP_CHECK_TOKEN=\"mock_firebase_token_for_testing\"
-
             export
             SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN=\"mock_sentry_token_for_testing\"
 

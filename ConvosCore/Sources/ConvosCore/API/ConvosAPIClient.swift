@@ -38,6 +38,7 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
 
     func authenticate(inboxId: String,
                       installationId: String,
+                      appCheckToken: String,
                       signature: String,
                       retryCount: Int) async throws -> String
 
@@ -83,6 +84,8 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     func subscribeToTopics(installationId: String, topics: [String]) async throws
     func unsubscribeFromTopics(installationId: String, topics: [String]) async throws
     func unregisterInstallation(xmtpInstallationId: String) async throws
+
+    func overrideJWTToken(_ token: String)
 }
 
 internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
@@ -107,7 +110,6 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue(environment.appCheckToken, forHTTPHeaderField: "X-Firebase-AppCheck")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let requestBody: [String: Any] = [
@@ -191,6 +193,9 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     private let client: any XMTPClientProvider
     private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
 
+    private var _overrideJWTToken: String?
+    private let tokenAccessQueue: DispatchQueue = DispatchQueue(label: "org.convos.api.tokenAccess")
+
     private let maxRetryCount: Int = 3
 
     var identifier: String {
@@ -208,13 +213,14 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     private func reAuthenticate() async throws -> String {
         let installationId = client.installationId
         let inboxId = client.inboxId
-        let firebaseAppCheckToken = environment.appCheckToken
+        let firebaseAppCheckToken = try await FirebaseHelperCore.getAppCheckToken()
         let signatureData = try client.signWithInstallationKey(message: firebaseAppCheckToken)
         let signature = signatureData.hexEncodedString()
 
         return try await authenticate(
             inboxId: inboxId,
             installationId: installationId,
+            appCheckToken: firebaseAppCheckToken,
             signature: signature,
             retryCount: 0
         )
@@ -224,6 +230,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
     func authenticate(inboxId: String,
                       installationId: String,
+                      appCheckToken: String,
                       signature: String,
                       retryCount: Int = 0) async throws -> String {
         let url = baseURL.appendingPathComponent("v1/authenticate")
@@ -233,7 +240,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         request.setValue(installationId, forHTTPHeaderField: "X-XMTP-InstallationId")
         request.setValue(inboxId, forHTTPHeaderField: "X-XMTP-InboxId")
         request.setValue("0x\(signature)", forHTTPHeaderField: "X-XMTP-Signature")
-        request.setValue(environment.appCheckToken, forHTTPHeaderField: "X-Firebase-AppCheck")
+        request.setValue(appCheckToken, forHTTPHeaderField: "X-Firebase-AppCheck")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         let (data, response) = try await session.data(for: request)
@@ -269,6 +276,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             return try await authenticate(inboxId: inboxId,
                                           installationId: installationId,
+                                          appCheckToken: appCheckToken,
                                           signature: signature,
                                           retryCount: retryCount + 1)
         }
@@ -289,6 +297,15 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     func checkAuth() async throws {
         let request = try authenticatedRequest(for: "v1/auth-check")
         let _: ConvosAPI.AuthCheckResponse = try await performRequest(request)
+    }
+
+    /// Sets a JWT token in RAM for use in notification service extension.
+    /// This token will be prioritized over the keychain-stored JWT for authenticated requests.
+    /// - Parameter token: The JWT token to use for authentication
+    func overrideJWTToken(_ token: String) {
+        tokenAccessQueue.sync {
+            _overrideJWTToken = token
+        }
     }
 
     // MARK: - Init
@@ -385,9 +402,14 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     ) throws -> URLRequest {
         var request = try request(for: path, method: method, queryParameters: queryParameters)
 
-        // Try to get JWT from keychain
-        if let jwt = try? keychainService.retrieveString(.init(inboxId: client.inboxId)) {
-            request.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
+        // Prioritize override JWT token (from notification payload) over keychain JWT
+        // Capture the override token in a synchronized block to avoid race conditions
+        let overrideToken = tokenAccessQueue.sync { _overrideJWTToken }
+
+        if let overridenJWT = overrideToken {
+            request.setValue(overridenJWT, forHTTPHeaderField: "X-Convos-AuthToken")
+        } else if let keychainJWT = try? keychainService.retrieveString(.init(inboxId: client.inboxId)) {
+            request.setValue(keychainJWT, forHTTPHeaderField: "X-Convos-AuthToken")
         }
         // If no JWT, send request anyway - server will respond 401 and performRequest() will handle reauth
 
@@ -432,6 +454,14 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 }
                 throw APIError.badRequest(errorMessage)
             case 401:
+                // If using override JWT token (notification service extension), don't attempt re-auth
+                // since app attest is not available in notification service extension
+                let hasOverrideToken = tokenAccessQueue.sync { _overrideJWTToken != nil }
+                guard !hasOverrideToken else {
+                    Logger.error("Authentication failed with override JWT token - cannot re-authenticate in notification service extension")
+                    throw APIError.notAuthenticated
+                }
+
                 // Check if we've exceeded max retries
                 guard retryCount < maxRetryCount else {
                     Logger.error("Max retry count (\(maxRetryCount)) exceeded for request")

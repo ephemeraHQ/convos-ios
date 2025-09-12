@@ -19,13 +19,16 @@ let package = Package(
         .package(url: "https://github.com/groue/GRDB.swift.git", exact: "7.5.0"),
         .package(url: "https://github.com/xmtp/xmtp-ios.git", from: "4.4.0"),
         .package(url: "https://github.com/SimplyDanny/SwiftLintPlugins", from: "0.61.0")
+        .package(url: "https://github.com/firebase/firebase-ios-sdk", from: "12.1.0")
     ],
     targets: [
         .target(
             name: "ConvosCore",
             dependencies: [
                 .product(name: "XMTPiOS", package: "xmtp-ios"),
-                .product(name: "GRDB", package: "GRDB.swift")
+                .product(name: "GRDB", package: "GRDB.swift"),
+                .product(name: "FirebaseCore", package: "firebase-ios-sdk"),
+                .product(name: "FirebaseAppCheck", package: "firebase-ios-sdk")
             ],
             swiftSettings: [
                 .swiftLanguageMode(.v5),

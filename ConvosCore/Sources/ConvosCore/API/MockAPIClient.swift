@@ -60,7 +60,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         super.init()
     }
 
-    func authenticate(inboxId: String, installationId: String, signature: String, retryCount: Int = 0) async throws -> String {
+    func authenticate(inboxId: String, installationId: String, appCheckToken: String, signature: String, retryCount: Int = 0) async throws -> String {
         return "mock-jwt-token"
     }
 
@@ -261,6 +261,9 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
     }
 
     func unregisterInstallation(xmtpInstallationId: String) async throws {
+        // no-op in mock
+    }
+    func overrideJWTToken(_ token: String) {
         // no-op in mock
     }
 }

@@ -2,9 +2,13 @@ import Foundation
 import GRDB
 import XMTPiOS
 
+public struct IncomingMessageWriterResult {
+    public let contentType: MessageContentType
+}
+
 public protocol IncomingMessageWriterProtocol {
     func store(message: XMTPiOS.DecodedMessage,
-               for conversation: DBConversation) async throws
+               for conversation: DBConversation) async throws -> IncomingMessageWriterResult
 }
 
 class IncomingMessageWriter: IncomingMessageWriterProtocol {
@@ -15,7 +19,7 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
     }
 
     func store(message: DecodedMessage,
-               for conversation: DBConversation) async throws {
+               for conversation: DBConversation) async throws -> IncomingMessageWriterResult {
         try await databaseWriter.write { db in
             let sender = Member(inboxId: message.senderInboxId)
             try sender.save(db)
@@ -27,6 +31,8 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
             try? senderProfile.insert(db)
             let message = try message.dbRepresentation()
 
+            let result: IncomingMessageWriterResult = .init(contentType: message.contentType)
+
             // @jarodl temporary, this should happen somewhere else more explicitly
             let wasRemovedFromConversation = message.update?.removedInboxIds.contains(conversation.inboxId) ?? false
             guard !wasRemovedFromConversation else {
@@ -36,7 +42,7 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
                     object: nil,
                     userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
                 )
-                return
+                return result
             }
 
             Logger.info("Storing incoming message \(message.id) localId \(message.clientMessageId)")
@@ -51,17 +57,20 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
                     clientMessageId: localMessage.clientMessageId
                 )
                 try updatedMessage.save(db)
-                Logger
-                    .info(
-                        "Updated incoming message with local message \(localMessage.clientMessageId)"
-                    )
+                Logger.info(
+                    "Updated incoming message with local message \(localMessage.clientMessageId)"
+                )
             } else {
                 do {
                     try message.save(db)
+                    Logger.info("Saved incoming message: \(message.id)")
                 } catch {
                     Logger.error("Failed saving incoming message \(message.id): \(error)")
+                    throw error
                 }
             }
+
+            return result
         }
     }
 }

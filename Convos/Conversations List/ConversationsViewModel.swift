@@ -31,7 +31,17 @@ final class ConversationsViewModel {
         }
     }
     private(set) var selectedConversationViewModel: ConversationViewModel?
-    var newConversationViewModel: NewConversationViewModel?
+    var newConversationViewModel: NewConversationViewModel? {
+        didSet {
+            if newConversationViewModel == nil {
+                NotificationCenter.default.post(
+                    name: .activeConversationChanged,
+                    object: nil,
+                    userInfo: ["conversationId": nil]
+                )
+            }
+        }
+    }
     var presentingExplodeInfo: Bool = false
     var presentingEarlyAccessInfo: Bool = false
     let maxNumberOfConvos: Int = 20
