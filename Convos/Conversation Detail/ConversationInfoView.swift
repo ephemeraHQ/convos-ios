@@ -177,7 +177,8 @@ struct ConversationInfoView: View {
                         title: "Notifications",
                         subtitle: nil
                     ) {
-                        Toggle("", isOn: $viewModel.notificationsEnabled)
+                        SoonLabel()
+//                        Toggle("", isOn: $viewModel.notificationsEnabled)
                     }
 
                     FeatureRowItem(
@@ -260,6 +261,7 @@ struct ConversationInfoView: View {
                             SoonLabel()
                         }
                     }
+                    .disabled(true)
                 } footer: {
                     Text("Choose who can manage the group")
                         .foregroundStyle(.colorTextSecondary)

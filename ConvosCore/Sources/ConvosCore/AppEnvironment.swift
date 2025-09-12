@@ -141,6 +141,15 @@ public enum AppEnvironment {
         }
     }
 
+    public var isProduction: Bool {
+        switch self {
+        case .production:
+            true
+        default:
+            false
+        }
+    }
+
     var defaultDatabasesDirectoryURL: URL {
         guard !isTestingEnvironment else {
             return FileManager.default.temporaryDirectory
