@@ -289,6 +289,7 @@ actor SessionManager: SessionManagerProtocol {
     func shouldDisplayNotification(for conversationId: String) async -> Bool {
         // Don't display notification if we're in the conversations list
         guard let activeConversationId else {
+            Logger.info("Suppressing notification from conversations list: \(conversationId)")
             return false
         }
 

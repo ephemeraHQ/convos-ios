@@ -3,296 +3,269 @@ import GRDB
 import UIKit
 import XMTPiOS
 
+// MARK: - Protocol
+
 protocol SyncingManagerProtocol {
-    func start(with client: AnyClientProvider,
-               apiClient: any ConvosAPIClientProtocol)
+    func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol)
     func stop() async
 }
 
+// MARK: - Implementation using Apple's Structured Concurrency
+
 final class SyncingManager: SyncingManagerProtocol {
-    // MARK: - Thread-Safe State Management
+    // MARK: - Properties (Greatly Simplified)
 
-    // Wrapper class to enable identity comparison for Tasks
-    private final class TaskWrapper {
-        let task: Task<Void, Never>
-
-        init(_ task: Task<Void, Never>) {
-            self.task = task
-        }
-    }
-
-    private actor State {
-        var listConversationsTask: Task<Void, Never>?
-        var streamMessagesTask: TaskWrapper?
-        var streamConversationsTask: TaskWrapper?
-        // Store tasks by ID instead of an array for efficient removal
-        private var syncMemberProfilesTasks: [UUID: Task<Void, Error>] = [:]
-
-        // Track last sync times for member profiles per conversation
-        var lastMemberProfileSync: [String: Date] = [:]
-
-        // Track when the last message was processed
-        var lastProcessedMessageAt: Date?
-
-        // Track the currently active conversation
-        var activeConversationId: String?
-
-        func updateActiveConversationId(_ id: String?) {
-            activeConversationId = id
-        }
-
-        func updateLastProcessedMessageAt(_ date: Date) {
-            lastProcessedMessageAt = max(lastProcessedMessageAt ?? date, date)
-        }
-
-        func shouldSyncMemberProfile(for conversationId: String, interval: TimeInterval) -> Bool {
-            let now = Date()
-            if let lastSync = lastMemberProfileSync[conversationId],
-               now.timeIntervalSince(lastSync) < interval {
-                return false
-            }
-            lastMemberProfileSync[conversationId] = now
-            return true
-        }
-
-        func addSyncMemberProfileTask(_ task: Task<Void, Error>) {
-            let id = UUID()
-            syncMemberProfilesTasks[id] = task
-
-            // Create a cleanup task that removes the task from the dictionary when it completes
-            Task {
-                // Wait for the task to complete (successfully or with error)
-                _ = try? await task.value
-                removeSyncMemberProfileTask(id: id)
-            }
-        }
-
-        private func removeSyncMemberProfileTask(id: UUID) {
-            syncMemberProfilesTasks[id] = nil
-        }
-
-        func clearTasks() {
-            listConversationsTask?.cancel()
-            listConversationsTask = nil
-            streamMessagesTask?.task.cancel()
-            streamMessagesTask = nil
-            streamConversationsTask?.task.cancel()
-            streamConversationsTask = nil
-            // Cancel all tasks and clear the dictionary
-            syncMemberProfilesTasks.values.forEach { $0.cancel() }
-            syncMemberProfilesTasks.removeAll()
-        }
-
-        func setListConversationsTask(_ task: Task<Void, Never>?) {
-            listConversationsTask = task
-        }
-
-        func setStreamMessagesTask(_ task: Task<Void, Never>?) {
-            streamMessagesTask = task.map(TaskWrapper.init)
-        }
-
-        func setStreamConversationsTask(_ task: Task<Void, Never>?) {
-            streamConversationsTask = task.map(TaskWrapper.init)
-        }
-
-        // Atomic check-and-set methods to prevent race conditions
-        func startStreamMessagesTaskIfInactive(_ task: Task<Void, Never>) -> (started: Bool, taskWrapper: TaskWrapper?) {
-            // Check if already active
-            if let existingWrapper = streamMessagesTask, !existingWrapper.task.isCancelled {
-                task.cancel() // Cancel the new task since we won't use it
-                return (false, nil)
-            }
-            // Set the new task atomically
-            let taskWrapper = TaskWrapper(task)
-            streamMessagesTask = taskWrapper
-            return (true, taskWrapper)
-        }
-
-        func startStreamConversationsTaskIfInactive(_ task: Task<Void, Never>) -> (started: Bool, taskWrapper: TaskWrapper?) {
-            // Check if already active
-            if let existingWrapper = streamConversationsTask, !existingWrapper.task.isCancelled {
-                task.cancel() // Cancel the new task since we won't use it
-                return (false, nil)
-            }
-            // Set the new task atomically
-            let taskWrapper = TaskWrapper(task)
-            streamConversationsTask = taskWrapper
-            return (true, taskWrapper)
-        }
-
-        // Clear stream task only if it matches the provided task wrapper (to avoid clearing newer tasks)
-        func clearStreamMessagesTaskIfMatches(_ taskWrapperToMatch: TaskWrapper?) {
-            if let taskWrapperToMatch = taskWrapperToMatch, let currentWrapper = streamMessagesTask {
-                // Use identity comparison on the wrapper classes
-                if taskWrapperToMatch === currentWrapper {
-                    streamMessagesTask = nil
-                }
-            }
-        }
-
-        func clearStreamConversationsTaskIfMatches(_ taskWrapperToMatch: TaskWrapper?) {
-            if let taskWrapperToMatch = taskWrapperToMatch, let currentWrapper = streamConversationsTask {
-                // Use identity comparison on the wrapper classes
-                if taskWrapperToMatch === currentWrapper {
-                    streamConversationsTask = nil
-                }
-            }
-        }
-
-        // Get the current stream task wrapper for comparison
-        func getStreamTaskWrapper(_ streamType: StreamType) -> TaskWrapper? {
-            switch streamType {
-            case .messages:
-                return streamMessagesTask
-            case .conversations:
-                return streamConversationsTask
-            }
-        }
-
-        func isStreamTaskActive(_ streamType: StreamType) -> Bool {
-            let wrapper: TaskWrapper?
-            switch streamType {
-            case .messages:
-                wrapper = streamMessagesTask
-            case .conversations:
-                wrapper = streamConversationsTask
-            }
-            guard let wrapper else { return false }
-            return !wrapper.task.isCancelled
-        }
-
-        func isStreamTaskCancelled(_ streamType: StreamType) -> Bool {
-            let wrapper: TaskWrapper?
-            switch streamType {
-            case .messages:
-                wrapper = streamMessagesTask
-            case .conversations:
-                wrapper = streamConversationsTask
-            }
-            return wrapper?.task.isCancelled ?? true
-        }
-    }
-
-    // MARK: - Properties
-    private let state: State = State()
     private let conversationWriter: any ConversationWriterProtocol
     private let messageWriter: any IncomingMessageWriterProtocol
     private let profileWriter: any MemberProfileWriterProtocol
     private let localStateWriter: any ConversationLocalStateWriterProtocol
     private let consentStates: [ConsentState] = [.allowed]
 
-    // Track the start task to ensure proper cleanup
-    private var startTask: Task<Void, Never>?
+    // Single parent task that manages everything
+    private var syncTask: Task<Void, Never>?
 
-    // Track when the app was last active (for connectivity changes)
-    // This uses UserDefaults which is thread-safe, so doesn't need to be in the actor
+    // Simple state tracking (no complex actor needed)
+    private var lastProcessedMessageAt: Date?
+    private var activeConversationId: String?
+    private var lastMemberProfileSync: [String: Date] = [:]
+
+    // Configuration
+    private let maxStreamRetries: Int = 5
+    private let memberProfileSyncInterval: TimeInterval = 120.0
+
+    // App lifecycle tracking
     private var lastActiveAt: Date? {
         get {
-            let timestamp = UserDefaults.standard.double(forKey: lastActiveTimestampKey)
-            guard timestamp > 0 else {
-                return nil
-            }
-            return Date(timeIntervalSince1970: timestamp)
+            let timestamp = UserDefaults.standard.double(forKey: "org.convos.SyncingManager.lastActiveTimestamp")
+            return timestamp > 0 ? Date(timeIntervalSince1970: timestamp) : nil
         }
         set {
-            UserDefaults.standard.set(newValue?.timeIntervalSince1970 ?? 0, forKey: lastActiveTimestampKey)
+            UserDefaults.standard.set(newValue?.timeIntervalSince1970 ?? 0, forKey: "org.convos.SyncingManager.lastActiveTimestamp")
         }
     }
-    private let lastActiveTimestampKey: String = "org.convos.SyncingManager.lastActiveTimestamp"
 
-    // Notification observers (kept outside actor for simpler lifecycle management)
-    private var activeConversationObserver: Any?
-    private var appLifecycleObservers: [Any] = []
+    // MARK: - Initialization
 
     init(databaseWriter: any DatabaseWriter) {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-        self.conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
-                                                     messageWriter: messageWriter)
+        self.conversationWriter = ConversationWriter(
+            databaseWriter: databaseWriter,
+            messageWriter: messageWriter
+        )
         self.messageWriter = messageWriter
         self.profileWriter = MemberProfileWriter(databaseWriter: databaseWriter)
         self.localStateWriter = ConversationLocalStateWriter(databaseWriter: databaseWriter)
 
-        setupObservers()
+        setupNotificationObservers()
     }
 
     deinit {
-        if let activeConversationObserver {
-            NotificationCenter.default.removeObserver(activeConversationObserver)
-        }
-        appLifecycleObservers.forEach { NotificationCenter.default.removeObserver($0) }
+        NotificationCenter.default.removeObserver(self)
     }
 
-    private func setupObservers() {
-        activeConversationObserver = NotificationCenter.default
-            .addObserver(forName: .activeConversationChanged, object: nil, queue: .main) { [weak self] notification in
-                guard let self = self else { return }
-                let conversationId = notification.userInfo?["conversationId"] as? String
-                Task {
-                    await self.state.updateActiveConversationId(conversationId)
-                }
-            }
-
-        // Set up app lifecycle observers
-        let willResignActiveObserver = NotificationCenter.default
-            .addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
-                self?.handleAppWillResignActive()
-            }
-
-        let willTerminateObserver = NotificationCenter.default
-            .addObserver(forName: UIApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
-                self?.handleAppWillTerminate()
-            }
-
-        let didBecomeActiveObserver = NotificationCenter.default
-            .addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
-                self?.handleAppDidBecomeActive()
-            }
-
-        appLifecycleObservers = [willResignActiveObserver, willTerminateObserver, didBecomeActiveObserver]
-    }
+    // MARK: - Public Interface
 
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
-        // Cancel any existing start task before starting a new one
-        startTask?.cancel()
-
-        // Store the start task so it can be cancelled in stop()
-        startTask = Task.detached { [weak self] in
+        // Cancel existing sync
+        syncTask?.cancel()
+        syncTask = Task { [weak self] in
             guard let self else { return }
 
-            // Check for cancellation before proceeding
-            guard !Task.isCancelled else {
-                Logger.info("Start task was cancelled before setting listConversationsTask")
-                return
-            }
+            // Use TaskGroup for parallel execution with automatic cancellation
+            await withTaskGroup(of: Void.self) { group in
+                // Initial sync
+                group.addTask {
+                    await self.syncAllConversations(client: client, apiClient: apiClient)
+                }
 
-            let task = Task { [weak self] in
-                guard let self = self else { return }
-                await self.syncAllConversations(client: client, apiClient: apiClient)
-            }
+                // Message stream with built-in retry
+                group.addTask {
+                    await self.runMessageStream(client: client, apiClient: apiClient)
+                }
 
-            // Check for cancellation again before setting the task
-            guard !Task.isCancelled else {
-                task.cancel()  // Cancel the created task to prevent leaks
-                Logger.info("Start task was cancelled before setting listConversationsTask")
-                return
+                // Conversation stream with built-in retry
+                group.addTask {
+                    await self.runConversationStream(client: client, apiClient: apiClient)
+                }
             }
-
-            await state.setListConversationsTask(task)
         }
-        // Start the streaming tasks
-        startMessageStream(client: client, apiClient: apiClient)
-        startConversationStream(client: client, apiClient: apiClient)
     }
 
-    private func syncAllConversations(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) async {
-        do {
-            // Sync all conversations first
+    func stop() async {
+        Logger.info("Stopping...")
+        // Save timestamp for catch-up on next start
+        lastActiveAt = Date()
+
+        // Cancelling parent cancels all children automatically
+        syncTask?.cancel()
+        syncTask = nil
+    }
+
+    // MARK: - Stream Management (Using Apple's Pattern)
+
+    private func runMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) async {
+        var retryCount = 0
+
+        while !Task.isCancelled && retryCount < maxStreamRetries {
             do {
-                _ = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
+                // Exponential backoff
+                if retryCount > 0 {
+                    let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
+                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+
+                    // Sync before restart
+                    await syncAllConversationsQuick(client: client)
+                }
+
+                Logger.info("Starting message stream (attempt \(retryCount + 1)/\(maxStreamRetries))")
+
+                // Catch up if needed
+                if let lastProcessedAt = lastProcessedMessageAt {
+                    await catchUpMessages(client: client, since: lastProcessedAt, apiClient: apiClient)
+                }
+
+                // Stream messages - the loop will exit when onClose is called and continuation.finish() happens
+                for try await message in client.conversationsProvider.streamAllMessages(
+                    type: .groups,
+                    consentStates: consentStates,
+                    onClose: {
+                        Logger.info("Message stream closed via onClose callback")
+                    }
+                ) {
+                    // Check cancellation
+                    try Task.checkCancellation()
+
+                    // Process message
+                    await processMessage(message, client: client, apiClient: apiClient)
+                }
+
+                // Stream ended (onClose was called and continuation finished)
+                retryCount += 1
+                Logger.info("Message stream ended...")
+            } catch is CancellationError {
+                Logger.info("Message stream cancelled")
+                break
             } catch {
-                Logger.error("Error syncing all conversations: \(error)")
+                retryCount += 1
+                Logger.error("Message stream error: \(error)")
+            }
+        }
+
+        if retryCount >= maxStreamRetries {
+            Logger.error("Message stream max retries reached")
+        }
+    }
+
+    private func runConversationStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) async {
+        var retryCount = 0
+
+        while !Task.isCancelled && retryCount < maxStreamRetries {
+            do {
+                if retryCount > 0 {
+                    let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
+                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                }
+
+                Logger.info("Starting conversation stream (attempt \(retryCount + 1)/\(maxStreamRetries))")
+
+                // Stream conversations - the loop will exit when onClose is called
+                for try await conversation in client.conversationsProvider.stream(
+                    type: .groups,
+                    onClose: {
+                        Logger.info("Conversation stream closed via onClose callback")
+                    }
+                ) {
+                    // Check cancellation
+                    try Task.checkCancellation()
+
+                    // Process conversation
+                    await processConversation(conversation, apiClient: apiClient)
+                }
+
+                // Stream ended (onClose was called and continuation finished)
+                retryCount += 1
+                Logger.info("Conversation stream ended, will retry...")
+            } catch is CancellationError {
+                Logger.info("Conversation stream cancelled")
+                break
+            } catch {
+                retryCount += 1
+                Logger.error("Conversation stream error: \(error)")
+            }
+        }
+
+        if retryCount >= maxStreamRetries {
+            Logger.error("Conversation stream max retries reached")
+        }
+    }
+
+    // MARK: - Processing
+
+    private func processMessage(
+        _ message: DecodedMessage,
+        client: AnyClientProvider,
+        apiClient: any ConvosAPIClientProtocol
+    ) async {
+        do {
+            // Update timestamp
+            lastProcessedMessageAt = max(lastProcessedMessageAt ?? message.sentAt, message.sentAt)
+
+            // Find conversation
+            guard let conversation = try await client.conversationsProvider.findConversation(
+                conversationId: message.conversationId
+            ) else {
+                Logger.error("Conversation not found for message")
+                return
             }
 
+            // Sync profiles if needed
+            if shouldSyncMemberProfiles(for: conversation.id) {
+                await syncMemberProfiles(apiClient: apiClient, for: [conversation])
+            }
+
+            // Store conversation and message
+            let dbConversation = try await conversationWriter.store(conversation: conversation)
+            let result = try await messageWriter.store(message: message, for: dbConversation)
+
+            // Mark unread if needed
+            if result.contentType.marksConversationAsUnread,
+               conversation.id != activeConversationId,
+               message.senderInboxId != client.inboxId {
+                try await localStateWriter.setUnread(true, for: conversation.id)
+            }
+
+            Logger.info("Processed message: \(message.id)")
+        } catch {
+            Logger.error("Error processing message: \(error)")
+        }
+    }
+
+    private func processConversation(
+        _ conversation: XMTPiOS.Conversation,
+        apiClient: any ConvosAPIClientProtocol
+    ) async {
+        do {
+            // Sync member profiles
+            if shouldSyncMemberProfiles(for: conversation.id) {
+                await syncMemberProfiles(apiClient: apiClient, for: [conversation])
+            }
+
+            // Store with latest messages
+            Logger.info("Syncing conversation: \(conversation.id)")
+            try await conversationWriter.storeWithLatestMessages(conversation: conversation)
+        } catch {
+            Logger.error("Error processing conversation: \(error)")
+        }
+    }
+
+    // MARK: - Sync Operations
+
+    private func syncAllConversations(
+        client: AnyClientProvider,
+        apiClient: any ConvosAPIClientProtocol
+    ) async {
+        do {
+            _ = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
             // List all conversations
             let conversations = try await client.conversationsProvider.list(
                 createdAfter: nil,
@@ -301,472 +274,176 @@ final class SyncingManager: SyncingManagerProtocol {
                 consentStates: consentStates
             )
 
-            // Sync member profiles
-            await syncMemberProfiles(apiClient: apiClient, for: conversations)
+            Logger.info("Syncing \(conversations.count) conversations")
+
+            // Process in parallel using TaskGroup
+            await withTaskGroup(of: Void.self) { group in
+                // Store conversations
+                for conversation in conversations {
+                    guard case .group = conversation else { continue }
+
+                    group.addTask { [weak self] in
+                        guard let self else { return }
+                        do {
+                            try await self.conversationWriter.storeWithLatestMessages(
+                                conversation: conversation
+                            )
+                        } catch {
+                            Logger.error("Error storing conversation: \(error)")
+                        }
+                    }
+                }
+
+                // Sync profiles
+                group.addTask { [weak self] in
+                    guard let self else { return }
+                    await self.syncMemberProfiles(apiClient: apiClient, for: conversations)
+                }
+            }
 
             // Catch up on messages if we have a last active timestamp
             if let lastActiveAt = self.lastActiveAt {
-                await catchUpMessages(
-                    for: conversations,
-                    since: lastActiveAt,
-                    client: client
-                )
+                await catchUpMessages(client: client, since: lastActiveAt, apiClient: apiClient)
                 self.lastActiveAt = nil
             }
 
-            // Store conversations with latest messages
-            await storeConversationsWithLatestMessages(conversations)
+            Logger.info("Completed initial sync")
         } catch {
             Logger.error("Error syncing conversations: \(error)")
         }
     }
 
-    private func storeConversationsWithLatestMessages(_ conversations: [XMTPiOS.Conversation]) async {
-        let maxConcurrentTasks = 5
-        for chunk in conversations.chunked(into: maxConcurrentTasks) {
-            do {
-                try await withThrowingTaskGroup(of: Void.self) { group in
-                    for conversation in chunk {
-                        group.addTask { [weak self] in
-                            guard let self else { return }
-                            if case .group = conversation {
-                                try await conversationWriter.storeWithLatestMessages(
-                                    conversation: conversation
-                                )
-                            } else {
-                                Logger.info("Listed DM, ignoring...")
-                            }
-                        }
-                    }
-                    try await group.waitForAll()
-                }
-            } catch {
-                Logger.error("Error storing conversations with latest messages: \(error)")
-            }
+    private func syncAllConversationsQuick(client: AnyClientProvider) async {
+        do {
+            _ = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
+        } catch {
+            Logger.error("Error in quick sync: \(error)")
         }
     }
 
-    func stop() async {
-        // Save the current timestamp when stopping
-        lastActiveAt = Date()
-
-        // Cancel the start task to prevent it from restarting streams
-        startTask?.cancel()
-        startTask = nil
-
-        // Clear all tracked tasks
-        await state.clearTasks()
-    }
-
-    // MARK: - Private
-
-    private let maxStreamRetries: Int = 5
-
-    enum StreamType {
-        case messages
-        case conversations
-
-        var name: String {
-            switch self {
-            case .messages: return "Messages"
-            case .conversations: return "Conversations"
-            }
-        }
-    }
-
-    private func startMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int = 0) {
-        Task {
-            guard retryCount < maxStreamRetries else {
-                Logger.error("Messages stream max retries (\(maxStreamRetries)) reached for inbox: \(client.inboxId). Giving up.")
-                return
-            }
-
-            // Create the task first, then atomically check-and-set
-            let task = Task { [weak self] in
-                // Capture the current stream task wrapper for later comparison
-                let currentStreamTaskWrapper = await self?.state.getStreamTaskWrapper(.messages)
-
-                do {
-                    guard let self else { return }
-                    try await self.processMessageStream(client: client, apiClient: apiClient, retryCount: retryCount, currentStreamTaskWrapper: currentStreamTaskWrapper)
-                } catch {
-                    guard let self = self else { return }
-                    await self.handleMessageStreamError(
-                        error: error,
-                        client: client,
-                        apiClient: apiClient,
-                        retryCount: retryCount,
-                        currentStreamTaskWrapper: currentStreamTaskWrapper
-                    )
-                }
-            }
-
-            // Atomic check-and-set to prevent race conditions
-            let result = await state.startStreamMessagesTaskIfInactive(task)
-            guard result.started else {
-                Logger.info("Messages stream already active, skipping start")
-                return
-            }
-
-            Logger.info("Starting messages stream for inbox: \(client.inboxId) (retry: \(retryCount))")
-        }
-    }
-
-    private func processMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, currentStreamTaskWrapper: TaskWrapper?) async throws {
-        let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
-        try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-
-        // if we're coming from the stream calling `onClose`, syncAll before re-starting
-        if retryCount > 0 {
-            await syncAllConversationsBeforeRestart(client: client)
-        }
-
-        // Catch up on messages since last processed
-        if let lastProcessedMessageAt = await state.lastProcessedMessageAt {
+    private func catchUpMessages(
+        client: AnyClientProvider,
+        since timestamp: Date,
+        apiClient: any ConvosAPIClientProtocol
+    ) async {
+        do {
             let conversations = try await client.conversationsProvider.list(
                 createdAfter: nil,
                 createdBefore: nil,
                 limit: nil,
                 consentStates: consentStates
             )
-            await catchUpMessages(
-                for: conversations,
-                since: lastProcessedMessageAt,
-                client: client
-            )
-        }
 
-        for try await message in client.conversationsProvider
-            .streamAllMessages(
-                type: .groups,
-                consentStates: consentStates,
-                onClose: { [weak self] in
-                    self?.scheduleMessageStreamRetry(client: client, apiClient: apiClient, retryCount: retryCount, currentStreamTaskWrapper: currentStreamTaskWrapper)
-                }
-            ) {
-            await processStreamedMessage(
-                message: message,
-                client: client,
-                apiClient: apiClient
-            )
-        }
-    }
+            let timestampNs = timestamp.nanosecondsSince1970
 
-    private func syncAllConversationsBeforeRestart(client: AnyClientProvider) async {
-        do {
-            _ = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
-        } catch {
-            Logger.error("Error syncing all conversations: \(error)")
-        }
-    }
+            // Process catch-up in parallel
+            await withTaskGroup(of: Void.self) { group in
+                for conversation in conversations {
+                    guard case .group = conversation else { continue }
 
-    private func processStreamedMessage(message: DecodedMessage, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) async {
-        do {
-            guard let conversation = try await client.conversationsProvider.findConversation(
-                conversationId: message.conversationId
-            ) else {
-                Logger.error("Failed finding conversation for message in `streamAllMessages()`")
-                return
-            }
-            await syncMemberProfiles(apiClient: apiClient, for: conversation)
-            let dbConversation = try await conversationWriter.store(conversation: conversation)
-            let result = try await messageWriter.store(message: message, for: dbConversation)
+                    group.addTask { [weak self] in
+                        guard let self else { return }
+                        do {
+                            let messages = try await conversation.messages(
+                                afterNs: timestampNs,
+                                direction: .ascending
+                            )
 
-            // Update the last processed message timestamp
-            await state.updateLastProcessedMessageAt(message.sentAt)
+                            for message in messages {
+                                await self.processMessage(message, client: client, apiClient: apiClient)
+                            }
 
-            // Mark conversation as unread if needed
-            await markConversationUnreadIfNeeded(
-                for: result,
-                conversationId: conversation.id,
-                messageInboxId: message.senderInboxId,
-                clientInboxId: client.inboxId
-            )
-        } catch {
-            Logger.error("Error processing streamed message: \(error)")
-        }
-    }
-
-    private func scheduleMessageStreamRetry(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, currentStreamTaskWrapper: TaskWrapper?) {
-        scheduleStreamRetry(
-            streamType: .messages,
-            client: client,
-            apiClient: apiClient,
-            retryCount: retryCount,
-            currentStreamTaskWrapper: currentStreamTaskWrapper
-        )
-    }
-
-    private func handleMessageStreamError(error: Error, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, currentStreamTaskWrapper: TaskWrapper?) async {
-        Logger.error("Error streaming all messages: \(error)")
-        scheduleStreamRetry(
-            streamType: .messages,
-            client: client,
-            apiClient: apiClient,
-            retryCount: retryCount,
-            currentStreamTaskWrapper: currentStreamTaskWrapper
-        )
-    }
-
-    private func scheduleStreamRetry(
-        streamType: StreamType,
-        client: AnyClientProvider,
-        apiClient: any ConvosAPIClientProtocol,
-        retryCount: Int,
-        currentStreamTaskWrapper: TaskWrapper?
-    ) {
-        Task {
-            // Only check if the stream task itself was cancelled, not the current context
-            guard await !state.isStreamTaskCancelled(streamType) else {
-                Logger.info("\(streamType.name) stream task was cancelled, not restarting")
-                return
-            }
-
-            let nextRetry = retryCount + 1
-            Logger.warning("\(streamType.name) stream closed for inboxId: \(client.inboxId). Restarting (retry \(nextRetry)/\(maxStreamRetries))...")
-
-            // Only clear the task reference if it matches the one that ended
-            if let taskWrapper = currentStreamTaskWrapper {
-                switch streamType {
-                case .messages:
-                    await state.clearStreamMessagesTaskIfMatches(taskWrapper)
-                case .conversations:
-                    await state.clearStreamConversationsTaskIfMatches(taskWrapper)
-                }
-            }
-
-            // Start the new stream
-            switch streamType {
-            case .messages:
-                startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
-            case .conversations:
-                startConversationStream(client: client, apiClient: apiClient, retryCount: nextRetry)
-            }
-        }
-    }
-
-    // These methods have been moved into the State actor
-    // and are accessed through state.isStreamTaskActive() and state.isStreamTaskCancelled()
-
-    private func startConversationStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int = 0) {
-        Task {
-            guard retryCount < maxStreamRetries else {
-                Logger.error("Conversations stream max retries (\(maxStreamRetries)) reached for inbox: \(client.inboxId). Giving up.")
-                return
-            }
-
-            // Create the task first, then atomically check-and-set
-            let task = Task { [weak self] in
-                // Capture the current stream task wrapper for later comparison
-                let currentStreamTaskWrapper = await self?.state.getStreamTaskWrapper(.conversations)
-
-                guard let self else { return }
-                do {
-                    let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
-                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-
-                    for try await conversation in client.conversationsProvider.stream(
-                        type: .groups,
-                        onClose: { [weak self] in
-                            self?.scheduleConversationStreamRetry(client: client, apiClient: apiClient, retryCount: retryCount, currentStreamTaskWrapper: currentStreamTaskWrapper)
+                            if !messages.isEmpty {
+                                Logger.info("Caught up \(messages.count) messages for conversation")
+                            }
+                        } catch {
+                            Logger.error("Error catching up messages: \(error)")
                         }
-                    ) {
-                        await self.syncMemberProfiles(apiClient: apiClient, for: [conversation])
-                        Logger.info("Syncing conversation with id: \(conversation.id)")
-                        try await self.conversationWriter.storeWithLatestMessages(conversation: conversation)
                     }
-                } catch {
-                    await self.handleConversationStreamError(error: error, client: client, apiClient: apiClient, retryCount: retryCount, currentStreamTaskWrapper: currentStreamTaskWrapper)
                 }
             }
-
-            // Atomic check-and-set to prevent race conditions
-            let result = await state.startStreamConversationsTaskIfInactive(task)
-            guard result.started else {
-                Logger.info("Conversations stream already active, skipping start")
-                return
-            }
-
-            Logger.info("Starting conversations stream for inbox: \(client.inboxId) (retry: \(retryCount))")
+        } catch {
+            Logger.error("Error in catch-up: \(error)")
         }
     }
 
-    private func scheduleConversationStreamRetry(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, currentStreamTaskWrapper: TaskWrapper?) {
-        scheduleStreamRetry(
-            streamType: .conversations,
-            client: client,
-            apiClient: apiClient,
-            retryCount: retryCount,
-            currentStreamTaskWrapper: currentStreamTaskWrapper
-        )
-    }
+    // MARK: - Member Profile Sync
 
-    private func handleConversationStreamError(error: Error, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, currentStreamTaskWrapper: TaskWrapper?) async {
-        Logger.error("Error streaming conversations: \(error)")
-        scheduleStreamRetry(
-            streamType: .conversations,
-            client: client,
-            apiClient: apiClient,
-            retryCount: retryCount,
-            currentStreamTaskWrapper: currentStreamTaskWrapper
-        )
-    }
-
-    private func syncMemberProfiles(
-        apiClient: any ConvosAPIClientProtocol,
-        for conversation: XMTPiOS.Conversation,
-        interval: TimeInterval = 120.0, // seconds
-    ) async {
-        let conversationId = conversation.id
-        let shouldSync = await state.shouldSyncMemberProfile(for: conversationId, interval: interval)
-        if shouldSync {
-            await syncMemberProfiles(apiClient: apiClient, for: [conversation])
+    private func shouldSyncMemberProfiles(for conversationId: String) -> Bool {
+        let now = Date()
+        if let lastSync = lastMemberProfileSync[conversationId],
+           now.timeIntervalSince(lastSync) < memberProfileSyncInterval {
+            return false
         }
+        lastMemberProfileSync[conversationId] = now
+        return true
     }
 
     private func syncMemberProfiles(
         apiClient: any ConvosAPIClientProtocol,
         for conversations: [XMTPiOS.Conversation]
     ) async {
-        let syncProfilesTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                let allMemberIds = try await withThrowingTaskGroup(
-                    of: [XMTPiOS.Member].self,
-                    returning: [String].self
-                ) { group in
-                    for conversation in conversations {
-                        group.addTask {
-                            try await conversation.members()
-                        }
-                    }
-                    var allMemberIds: Set<InboxId> = .init()
-                    for try await members in group {
-                        allMemberIds.formUnion(members.map(\.inboxId))
-                    }
-                    return allMemberIds.map { $0 as String }
-                }
-                let maxMembersPerChunk = 100
-                for chunk in allMemberIds.chunked(into: maxMembersPerChunk) {
-                    let chunkTask = Task { [weak self] in
-                        guard let self else { return }
-                        do {
-                            Logger.info("Starting batch profiles update...")
-                            let batchProfiles = try await apiClient.getProfiles(for: chunk)
-                            let profiles = Array(batchProfiles.profiles.values)
-                            try await profileWriter.store(profiles: profiles)
-                        } catch {
-                            Logger.error("Error syncing member profiles: \(error)")
-                            throw error
-                        }
-                    }
-                    await state.addSyncMemberProfileTask(chunkTask)
-                }
-            } catch {
-                Logger.error("Error syncing member profiles: \(error)")
-                throw error
-            }
-        }
-        await state.addSyncMemberProfileTask(syncProfilesTask)
-    }
-
-    // MARK: - Helper Methods
-
-    private func catchUpMessages(
-        for conversations: [XMTPiOS.Conversation],
-        since timestamp: Date,
-        client: AnyClientProvider
-    ) async {
-        let timestampNs = timestamp.nanosecondsSince1970
-        Logger.info("Fetching messages since \(timestamp)")
+        // Collect member IDs
+        var memberIds = Set<String>()
 
         for conversation in conversations {
-            guard case .group = conversation else {
-                Logger.info("Skipping DM for catch-up messages...")
-                continue
+            if let members = try? await conversation.members() {
+                memberIds.formUnion(members.map { $0.inboxId })
             }
+        }
 
-            do {
-                let messages = try await conversation.messages(
-                    afterNs: timestampNs,
-                    direction: .ascending
-                )
+        guard !memberIds.isEmpty else { return }
 
-                if !messages.isEmpty {
-                    Logger.info("Found \(messages.count) messages since timestamp for conversation \(conversation.id)")
-                    await storeMessages(
-                        messages,
-                        for: conversation,
-                        client: client
-                    )
+        // Batch fetch profiles
+        let chunks = Array(memberIds).chunked(into: 50)
+
+        await withTaskGroup(of: Void.self) { group in
+            for chunk in chunks {
+                group.addTask { [weak self] in
+                    guard let self else { return }
+                    do {
+                        let batchProfiles = try await apiClient.getProfiles(for: chunk)
+                        let profiles = Array(batchProfiles.profiles.values)
+                        try await self.profileWriter.store(profiles: profiles)
+                        Logger.info("Synced \(profiles.count) profiles")
+                    } catch {
+                        Logger.error("Error syncing profiles: \(error)")
+                    }
                 }
-            } catch {
-                Logger.error("Error fetching messages since timestamp for conversation \(conversation.id): \(error)")
             }
         }
     }
 
-    private func storeMessages(
-        _ messages: [DecodedMessage],
-        for conversation: XMTPiOS.Conversation,
-        client: AnyClientProvider
-    ) async {
-        do {
-            let dbConversation = try await conversationWriter.store(conversation: conversation)
-            for message in messages {
-                let result = try await messageWriter.store(message: message, for: dbConversation)
+    // MARK: - Notification Observers
 
-                // Update last processed message timestamp
-                await state.updateLastProcessedMessageAt(message.sentAt)
+    private func setupNotificationObservers() {
+        // Active conversation tracking
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleActiveConversationChanged),
+            name: .activeConversationChanged,
+            object: nil
+        )
 
-                // Mark conversation as unread if needed
-                await markConversationUnreadIfNeeded(
-                    for: result,
-                    conversationId: conversation.id,
-                    messageInboxId: message.senderInboxId,
-                    clientInboxId: client.inboxId
-                )
-            }
-        } catch {
-            Logger.error("Error storing messages: \(error)")
-        }
+        // App lifecycle
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAppWillResignActive),
+            name: UIApplication.willResignActiveNotification,
+            object: nil
+        )
     }
 
-    private func markConversationUnreadIfNeeded(
-        for result: IncomingMessageWriterResult,
-        conversationId: String,
-        messageInboxId: String,
-        clientInboxId: String
-    ) async {
-        guard result.contentType.marksConversationAsUnread else { return }
-        // Mark conversation as unread if it's not the active conversation and not from current user
-        let activeConversationId = await state.activeConversationId
-        if conversationId != activeConversationId && messageInboxId != clientInboxId {
-            do {
-                try await localStateWriter.setUnread(true, for: conversationId)
-            } catch {
-                Logger.warning("Failed marking conversation as unread: \(error)")
-            }
-        }
+    @objc private func handleActiveConversationChanged(_ notification: Notification) {
+        activeConversationId = notification.userInfo?["conversationId"] as? String
     }
 
-    // MARK: - App Lifecycle Handlers
-
-    private func handleAppWillResignActive() {
-        Logger.info("App will resign active - saving timestamp")
+    @objc private func handleAppWillResignActive() {
         lastActiveAt = Date()
-    }
-
-    private func handleAppWillTerminate() {
-        Logger.info("App will terminate - saving timestamp")
-        lastActiveAt = Date()
-    }
-
-    private func handleAppDidBecomeActive() {
-        Logger.info("App did become active - last active was: \(lastActiveAt ?? Date())")
-        // The timestamp will be used in the next sync cycle
     }
 }
+
+// MARK: - Extensions
 
 extension Array {
     func chunked(into size: Int) -> [[Element]] {
