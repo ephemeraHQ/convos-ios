@@ -49,6 +49,7 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
 
         let clientMessageId: String = try await sender.prepare(text: text)
 
+        let date = Date()
         try await databaseWriter.write { [weak self] db in
             guard let self else { return }
 
@@ -57,7 +58,8 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
                 clientMessageId: clientMessageId,
                 conversationId: conversationId,
                 senderId: client.inboxId,
-                date: Date(),
+                dateNs: date.nanosecondsSince1970,
+                date: date,
                 status: .unpublished,
                 messageType: .original,
                 contentType: .text,

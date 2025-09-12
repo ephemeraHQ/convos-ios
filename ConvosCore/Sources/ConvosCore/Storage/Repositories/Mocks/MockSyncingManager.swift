@@ -1,6 +1,6 @@
 import Foundation
 
-class MockSyncingManager: SyncingManagerProtocol {
+actor MockSyncingManager: SyncingManagerProtocol {
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
     }
 

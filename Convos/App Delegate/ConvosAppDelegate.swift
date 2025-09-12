@@ -54,7 +54,6 @@ extension ConvosAppDelegate: UNUserNotificationCenterDelegate {
            let session = session {
             let shouldDisplay = await session.shouldDisplayNotification(for: conversationId)
             if !shouldDisplay {
-                Logger.info("Suppressing notification for active conversation: \(conversationId)")
                 return []
             }
         }

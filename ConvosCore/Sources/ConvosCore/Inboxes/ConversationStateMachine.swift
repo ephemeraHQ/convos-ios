@@ -278,7 +278,6 @@ public actor ConversationStateMachine {
             // Get the inbox state to access the API client for unsubscribing
             let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
             await scheduleCleanupOnNextReady(
-                previousConversationId: previousResult.conversationId,
                 previousExternalId: previousResult.externalConversationId,
                 client: inboxReady.client,
                 apiClient: inboxReady.apiClient,
@@ -338,19 +337,12 @@ public actor ConversationStateMachine {
 
         // Stream conversations to wait for the joined conversation
         streamConversationsTask = Task { [weak self] in
+            guard let self else { return }
             do {
                 Logger.info("Started streaming conversations for inboxId: \(client.inboxId), looking for convo: \(conversationId)...")
-                for try await conversation in client.conversationsProvider.stream(
-                    type: .groups,
-                    onClose: {
-                        Logger.warning("Closing conversations stream...")
-                        Task { [weak self] in
-                            await self?.streamConversationsTask?.cancel()
-                            await self?.emitStateChange(.error(ConversationStateMachineError.timedOut))
-                        }
-                    }
-                ) where conversation.id == conversationId {
-                    guard let self else { return }
+                if let conversation = try await client.conversationsProvider
+                    .stream(type: .groups, onClose: nil)
+                    .first(where: { $0.id == conversationId }) {
                     guard !Task.isCancelled else { return }
 
                     // Accept consent and store the conversation
@@ -395,13 +387,13 @@ public actor ConversationStateMachine {
                         externalConversationId: conversation.id,
                         invite: invite
                     )))
-
-                    await streamConversationsTask?.cancel()
-                    break
+                } else {
+                    Logger.error("Error waiting for conversation to join")
+                    await self.emitStateChange(.error(ConversationStateMachineError.timedOut))
                 }
             } catch {
                 Logger.error("Error streaming conversations: \(error)")
-                await self?.emitStateChange(.error(error))
+                await self.emitStateChange(.error(error))
             }
         }
     }
@@ -426,6 +418,7 @@ public actor ConversationStateMachine {
             try await ensureDraftConversationExists(inboxId: client.inboxId)
 
             // Save the message locally
+            let date = Date()
             try await databaseWriter.write { db in
                 let clientMessageId = UUID().uuidString
                 let localMessage = DBMessage(
@@ -433,7 +426,8 @@ public actor ConversationStateMachine {
                     clientMessageId: clientMessageId,
                     conversationId: self.draftConversationId,
                     senderId: client.inboxId,
-                    date: Date(),
+                    dateNs: date.nanosecondsSince1970,
+                    date: date,
                     status: .unpublished,
                     messageType: .original,
                     contentType: .text,
@@ -522,26 +516,24 @@ public actor ConversationStateMachine {
         // Cancel any ongoing tasks
         streamConversationsTask?.cancel()
 
-        // Clean up conversation data from database
-        // We always use draftConversationId for the local database records
-        let conversationId = draftConversationId
+        try await cleanUp(draftConversationId: draftConversationId)
 
-        // Get the inbox state to access the API client for unsubscribing
-        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
+        if let externalConversationId {
+            // Get the inbox state to access the API client for unsubscribing
+            let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
-        try await cleanUp(
-            conversationId: conversationId,
-            externalConversationId: externalConversationId,
-            client: inboxReady.client,
-            apiClient: inboxReady.apiClient
-        )
+            try await cleanUp(
+                externalConversationId: externalConversationId,
+                client: inboxReady.client,
+                apiClient: inboxReady.apiClient
+            )
+        }
 
         emitStateChange(.uninitialized)
     }
 
     // Runs once: after the next .ready for a different conversation, clean up the previous convo.
     private func scheduleCleanupOnNextReady(
-        previousConversationId: String,
         previousExternalId: String,
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol,
@@ -553,7 +545,6 @@ public actor ConversationStateMachine {
                 if newReady.externalConversationId != previousExternalId {
                     do {
                         try await self.cleanUp(
-                            conversationId: previousConversationId,
                             externalConversationId: previousExternalId,
                             client: client,
                             apiClient: apiClient
@@ -571,67 +562,62 @@ public actor ConversationStateMachine {
         }
     }
 
+    private func cleanUp(draftConversationId: String) async throws {
+        try await databaseWriter.write { db in
+            try ConversationLocalState
+                .filter(Column("conversationId") == draftConversationId)
+                .deleteAll(db)
+            try DBConversation
+                .filter(DBConversation.Columns.id == draftConversationId)
+                .deleteAll(db)
+            Logger.info("Cleaned up conversation data for draftConversationId: \(draftConversationId)")
+        }
+    }
+
     private func cleanUp(
-        conversationId: String,
-        externalConversationId: String?,
+        externalConversationId: String,
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol,
     ) async throws {
-        // Unsubscribe from push notifications if we have an external conversation ID
-        if let externalConversationId = externalConversationId {
-            // @jarod until we have self removal, we need to deny the conversation
-            // so it doesn't show up in the list
-            let externalConversation = try await client.conversationsProvider.findConversation(conversationId: externalConversationId)
-            try await externalConversation?.updateConsentState(state: .denied)
+        // @jarod until we have self removal, we need to deny the conversation
+        // so it doesn't show up in the list
+        let externalConversation = try await client.conversationsProvider.findConversation(conversationId: externalConversationId)
+        try await externalConversation?.updateConsentState(state: .denied)
 
-            let topic = externalConversationId.xmtpGroupTopicFormat
-            do {
-                try await apiClient.unsubscribeFromTopics(installationId: client.installationId, topics: [topic])
-                Logger.info("Unsubscribed from push topic: \(topic)")
-            } catch {
-                Logger.error("Failed unsubscribing from topic \(topic): \(error)")
-                // Continue with cleanup even if unsubscribe fails
-            }
+        let topic = externalConversationId.xmtpGroupTopicFormat
+        do {
+            try await apiClient.unsubscribeFromTopics(installationId: client.installationId, topics: [topic])
+            Logger.info("Unsubscribed from push topic: \(topic)")
+        } catch {
+            Logger.error("Failed unsubscribing from topic \(topic): \(error)")
+            // Continue with cleanup even if unsubscribe fails
         }
 
         // Clean up database records
         try await databaseWriter.write { db in
             // Delete messages first (due to foreign key constraints)
             try DBMessage
-                .filter(DBMessage.Columns.conversationId == conversationId)
+                .filter(DBMessage.Columns.conversationId == externalConversationId)
                 .deleteAll(db)
 
-            // Delete conversation local state
+            // Delete conversation members
+            try DBConversationMember
+                .filter(DBConversationMember.Columns.conversationId == externalConversationId)
+                .deleteAll(db)
+
             try ConversationLocalState
-                .filter(Column("conversationId") == conversationId)
+                .filter(Column("conversationId") == externalConversationId)
                 .deleteAll(db)
 
-            // Delete the conversation
+            try DBInvite
+                .filter(DBInvite.Columns.conversationId == externalConversationId)
+                .deleteAll(db)
+
             try DBConversation
-                .filter(DBConversation.Columns.clientConversationId == conversationId)
+                .filter(DBConversation.Columns.id == externalConversationId)
                 .deleteAll(db)
 
-            // Delete anything with an external id
-            if let externalConversationId = externalConversationId {
-                // Delete conversation members
-                try DBConversationMember
-                    .filter(DBConversationMember.Columns.conversationId == externalConversationId)
-                    .deleteAll(db)
-
-                try ConversationLocalState
-                    .filter(Column("conversationId") == externalConversationId)
-                    .deleteAll(db)
-
-                try DBInvite
-                    .filter(DBInvite.Columns.conversationId == externalConversationId)
-                    .deleteAll(db)
-
-                try DBConversation
-                    .filter(DBConversation.Columns.id == externalConversationId)
-                    .deleteAll(db)
-            }
-
-            Logger.info("Cleaned up conversation data for id: \(conversationId), externalId: \(externalConversationId ?? "none")")
+            Logger.info("Cleaned up conversation data for externalId: \(externalConversationId)")
         }
     }
 
@@ -645,9 +631,7 @@ public actor ConversationStateMachine {
 
 public enum ConversationStateMachineError: Error {
     case failedFindingConversation
-    case notReady
     case stateMachineError(Error)
-    case unexpectedTermination
     case alreadyRedeemedInviteForConversation(String)
     case timedOut
 }

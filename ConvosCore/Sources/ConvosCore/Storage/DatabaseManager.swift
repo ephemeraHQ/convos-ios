@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import SQLite3
 
 public protocol DatabaseManagerProtocol {
     var dbWriter: DatabaseWriter { get }
@@ -37,17 +38,6 @@ public final class DatabaseManager: DatabaseManagerProtocol {
         // Ensure the App Group directory exists
         try fileManager.createDirectory(at: groupDirURL, withIntermediateDirectories: true)
 
-        // Migrate legacy DB from Application Support → App Group on first run (if needed)
-        let legacyURL = try fileManager
-            .url(for: .applicationSupportDirectory,
-                 in: .userDomainMask,
-                 appropriateFor: nil,
-                 create: true)
-            .appendingPathComponent("convos.sqlite")
-        if !fileManager.fileExists(atPath: dbURL.path), fileManager.fileExists(atPath: legacyURL.path) {
-            try fileManager.copyItem(at: legacyURL, to: dbURL)
-        }
-
         var config = Configuration()
         // Add process identifier to help with debugging concurrent access issues
         let isNSE = Bundle.main.bundleIdentifier?.contains("NotificationService") ?? false
@@ -56,11 +46,28 @@ public final class DatabaseManager: DatabaseManagerProtocol {
         // Improve concurrent access handling for multi-process scenarios (NSE + Main App)
         config.maximumReaderCount = 5  // Allow multiple readers
         config.busyMode = .timeout(10.0)  // Wait up to 10 seconds for locks
+
+        config.journalMode = .wal
+
+        config.prepareDatabase { db in
+            // Activate the persistent WAL mode so that
+            // read-only processes can access the database.
+            //
+            // See https://www.sqlite.org/walformat.html#operations_that_require_locks_and_which_locks_those_operations_use
+            // and https://www.sqlite.org/c3ref/c_fcntl_begin_atomic_write.html#sqlitefcntlpersistwal
+            if db.configuration.readonly == false {
+                var flag: CInt = 1
+                let code = withUnsafeMutablePointer(to: &flag) { flagP in
+                    sqlite3_file_control(db.sqliteConnection, nil, SQLITE_FCNTL_PERSIST_WAL, flagP)
+                }
+                guard code == SQLITE_OK else {
+                    throw DatabaseError(resultCode: ResultCode(rawValue: code))
+                }
+            }
 #if DEBUG
-//        config.prepareDatabase { db in
-//            db.trace { Logger.info("\($0)") }
-//        }
+            db.trace { Logger.info("\($0)") }
 #endif
+        }
 
         let dbPool = try DatabasePool(path: dbURL.path, configuration: config)
         let migrator = SharedDatabaseMigrator.shared
