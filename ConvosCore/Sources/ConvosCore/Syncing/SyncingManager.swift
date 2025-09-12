@@ -69,9 +69,7 @@ final class SyncingManager: SyncingManagerProtocol {
             guard let self else { return }
             await withTaskGroup(of: Void.self) { group in
                 // Initial sync
-                group.addTask {
-                    await self.syncAllConversations(client: client, apiClient: apiClient)
-                }
+                await self.syncAllConversations(client: client, apiClient: apiClient)
 
                 // Message stream with built-in retry
                 group.addTask {
