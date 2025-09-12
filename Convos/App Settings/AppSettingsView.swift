@@ -9,13 +9,19 @@ struct ConvosToolbarButton: View {
         Button {
             action()
         } label: {
-            HStack(spacing: DesignConstants.Spacing.step2x) {
+            HStack(spacing: DesignConstants.Spacing.stepX) {
                 Image("convosOrangeIcon")
                     .frame(width: 24.0, height: 24.0)
+                    .padding(.trailing, DesignConstants.Spacing.stepX)
 
                 Text("Convos")
                     .font(.system(size: 16.0, weight: .medium))
                     .foregroundStyle(.colorTextPrimary)
+
+                Text("Early")
+                    .font(.system(size: 16.0))
+                    .foregroundStyle(.colorTextSecondary)
+                    .padding(.trailing, DesignConstants.Spacing.step2x)
             }
             .padding(padding ? DesignConstants.Spacing.step2x : 0)
         }
@@ -57,9 +63,14 @@ struct AppSettingsView: View {
                                 .foregroundStyle(.colorTextPrimary)
                         }
                     }
+                    .disabled(true)
                 } header: {
-                    Text("Names")
-                        .foregroundStyle(.colorTextSecondary)
+                    HStack {
+                        Text("Names")
+                            .foregroundStyle(.colorTextSecondary)
+                        Spacer()
+                        SoonLabel()
+                    }
                 } footer: {
                     Text("Each time you join a convo, you'll choose a name")
                         .foregroundStyle(.colorTextSecondary)
@@ -69,15 +80,24 @@ struct AppSettingsView: View {
                     NavigationLink {
                         EmptyView()
                     } label: {
-                        Text("Customize new convos")
-                            .foregroundStyle(.colorTextPrimary)
+                        HStack {
+                            Text("Customize new convos")
+                                .foregroundStyle(.colorTextPrimary)
+                            SoonLabel()
+                        }
                     }
+                    .disabled(true)
+
                     NavigationLink {
                         EmptyView()
                     } label: {
-                        Text("Notifications")
-                            .foregroundStyle(.colorTextPrimary)
+                        HStack {
+                            Text("Notifications")
+                                .foregroundStyle(.colorTextPrimary)
+                            SoonLabel()
+                        }
                     }
+                    .disabled(true)
                 } header: {
                     Text("Preferences")
                         .foregroundStyle(.colorTextSecondary)
@@ -103,12 +123,14 @@ struct AppSettingsView: View {
                     }
                     .foregroundStyle(.colorTextPrimary)
 
-                    NavigationLink {
-                        DebugExportView()
-                    } label: {
-                        Text("Debug")
+                    if !ConfigManager.shared.currentEnvironment.isProduction {
+                        NavigationLink {
+                            DebugExportView()
+                        } label: {
+                            Text("Debug")
+                        }
+                        .foregroundStyle(.colorTextPrimary)
                     }
-                    .foregroundStyle(.colorTextPrimary)
 
                     Button {
                         openURL(URL(string: "https://convos.org/terms-and-privacy")!)
