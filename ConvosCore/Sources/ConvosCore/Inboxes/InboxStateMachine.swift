@@ -409,7 +409,7 @@ public actor InboxStateMachine {
         await pushNotificationRegistrar.unregisterInstallation(client: client, apiClient: apiClient)
 
         emitStateChange(.deleting)
-        await syncingManager?.stop()
+        syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         try await inboxWriter.deleteInbox(inboxId: client.inboxId)
         if let identity = try? await identityStore.identity(for: client.inboxId) {
@@ -434,7 +434,7 @@ public actor InboxStateMachine {
     private func handleDeleteFromError() async throws {
         Logger.info("Deleting inbox from error state...")
         emitStateChange(.deleting)
-        await syncingManager?.stop()
+        syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         if let inboxId = inboxId {
             try await inboxWriter.deleteInbox(inboxId: inboxId)
@@ -447,7 +447,7 @@ public actor InboxStateMachine {
     private func handleStop() async throws {
         Logger.info("Stopping inbox...")
         emitStateChange(.stopping)
-        await syncingManager?.stop()
+        syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         removePushNotificationObservers()
         inboxId = nil

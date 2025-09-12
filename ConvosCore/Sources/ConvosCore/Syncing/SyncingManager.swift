@@ -7,7 +7,7 @@ import XMTPiOS
 
 protocol SyncingManagerProtocol {
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol)
-    func stop() async
+    func stop()
 }
 
 final class SyncingManager: SyncingManagerProtocol {
@@ -86,7 +86,7 @@ final class SyncingManager: SyncingManagerProtocol {
         }
     }
 
-    func stop() async {
+    func stop() {
         Logger.info("Stopping...")
         // Save timestamp for catch-up on next start
         lastActiveAt = Date()
