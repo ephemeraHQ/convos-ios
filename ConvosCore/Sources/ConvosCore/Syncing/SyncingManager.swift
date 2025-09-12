@@ -29,10 +29,16 @@ actor SyncingManager: SyncingManagerProtocol {
     // Configuration
     private let maxStreamRetries: Int = 5
     private let memberProfileSyncInterval: TimeInterval = 120.0
+    private let activeConversationProfileSyncInterval: TimeInterval = 10.0 // Sync more frequently for active conversation
 
     // Notification handling
     private var notificationObservers: [NSObjectProtocol] = []
     private var notificationTask: Task<Void, Never>?
+
+    // Active conversation profile sync
+    private var activeConversationProfileTask: Task<Void, Never>?
+    private weak var currentClient: AnyClientProvider?
+    private weak var currentApiClient: (any ConvosAPIClientProtocol)?
 
     // App lifecycle tracking
     private var lastActiveAt: Date? {
@@ -59,8 +65,9 @@ actor SyncingManager: SyncingManagerProtocol {
     }
 
     deinit {
-        // Clean up notification task
+        // Clean up tasks
         notificationTask?.cancel()
+        activeConversationProfileTask?.cancel()
 
         // Remove observers (safe to do from deinit)
         for observer in notificationObservers {
@@ -71,6 +78,10 @@ actor SyncingManager: SyncingManagerProtocol {
     // MARK: - Public Interface
 
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
+        // Store references for profile syncing
+        currentClient = client
+        currentApiClient = apiClient
+
         // Setup notifications if not already done
         if notificationObservers.isEmpty {
             setupNotificationObservers()
@@ -106,11 +117,19 @@ actor SyncingManager: SyncingManagerProtocol {
         syncTask?.cancel()
         syncTask = nil
 
+        // Cancel active conversation profile sync
+        activeConversationProfileTask?.cancel()
+        activeConversationProfileTask = nil
+
         // Clean up notification observers
         for observer in notificationObservers {
             NotificationCenter.default.removeObserver(observer)
         }
         notificationObservers.removeAll()
+
+        // Clear client references
+        currentClient = nil
+        currentApiClient = nil
     }
 
     // MARK: - Stream Management
@@ -385,22 +404,37 @@ actor SyncingManager: SyncingManagerProtocol {
 
     private func shouldSyncMemberProfiles(for conversationId: String) -> Bool {
         let now = Date()
-        if let lastSync = lastMemberProfileSync[conversationId],
-           now.timeIntervalSince(lastSync) < memberProfileSyncInterval {
+
+        guard let lastSync = lastMemberProfileSync[conversationId] else {
+            lastMemberProfileSync[conversationId] = now
+            return true
+        }
+
+        guard now.timeIntervalSince(lastSync) >= memberProfileSyncInterval else {
             return false
         }
+
         lastMemberProfileSync[conversationId] = now
         return true
     }
 
     private func syncMemberProfiles(
         apiClient: any ConvosAPIClientProtocol,
-        for conversations: [XMTPiOS.Conversation]
+        for conversations: [XMTPiOS.Conversation],
+        force: Bool = false
     ) async {
         // Collect member IDs
         var memberIds = Set<String>()
 
         for conversation in conversations {
+            // Skip if recently synced (unless forced)
+            if !force && conversation.id == activeConversationId {
+                // For active conversation, we use a different check since it syncs more frequently
+                continue
+            } else if !force && !shouldSyncMemberProfiles(for: conversation.id) {
+                continue
+            }
+
             if let members = try? await conversation.members() {
                 memberIds.formUnion(members.map { $0.inboxId })
             }
@@ -435,7 +469,65 @@ actor SyncingManager: SyncingManagerProtocol {
     }
 
     func setActiveConversationId(_ conversationId: String?) {
+        // Update the active conversation
+        let previousId = activeConversationId
         activeConversationId = conversationId
+
+        // Cancel existing profile sync task if conversation changed
+        if previousId != conversationId {
+            activeConversationProfileTask?.cancel()
+            activeConversationProfileTask = nil
+
+            // Start new profile sync task if we have a conversation
+            if let conversationId = conversationId,
+               let client = currentClient,
+               let apiClient = currentApiClient {
+                Logger.info("Starting periodic profile sync for conversation: \(conversationId)")
+                activeConversationProfileTask = Task { [weak self] in
+                    await self?.runActiveConversationProfileSync(
+                        conversationId: conversationId,
+                        client: client,
+                        apiClient: apiClient
+                    )
+                }
+            }
+        }
+    }
+
+    // MARK: - Active Conversation Profile Sync
+
+    private func runActiveConversationProfileSync(
+        conversationId: String,
+        client: AnyClientProvider,
+        apiClient: any ConvosAPIClientProtocol
+    ) async {
+        while !Task.isCancelled {
+            do {
+                // Check if this is still the active conversation
+                guard activeConversationId == conversationId else {
+                    Logger.info("Active conversation changed, stopping profile sync")
+                    break
+                }
+
+                // Find and sync profiles for the active conversation
+                if let conversation = try await client.conversationsProvider.findConversation(
+                    conversationId: conversationId
+                ) {
+                    await syncMemberProfiles(apiClient: apiClient, for: [conversation], force: true)
+                    Logger.info("Synced profiles for active conversation: \(conversationId)")
+                }
+
+                // Wait for the interval before next sync
+                try await Task.sleep(nanoseconds: UInt64(activeConversationProfileSyncInterval * 1_000_000_000))
+            } catch is CancellationError {
+                Logger.info("Active conversation profile sync cancelled")
+                break
+            } catch {
+                Logger.error("Error syncing profiles for active conversation: \(error)")
+                // Continue trying after a delay
+                try? await Task.sleep(nanoseconds: UInt64(activeConversationProfileSyncInterval * 1_000_000_000))
+            }
+        }
     }
 
     // MARK: - Notification Observers
