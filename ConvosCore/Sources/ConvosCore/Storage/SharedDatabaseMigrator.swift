@@ -167,7 +167,7 @@ extension SharedDatabaseMigrator {
         migrator.registerMigration("addDateNsColumn") { db in
             // First, add the dateNs column to the message table
             try db.alter(table: "message") { t in
-                t.add(column: "dateNs", .integer)
+                t.add(column: "dateNs", .integer).notNull().defaults(to: 0)
             }
 
             // Then update all existing messages to set dateNs based on their date column
@@ -178,6 +178,10 @@ extension SharedDatabaseMigrator {
                 SET dateNs = CAST((julianday(date) - 2440587.5) * 86400 * 1000000000 AS INTEGER)
                 WHERE dateNs IS NULL OR dateNs = 0
             """)
+
+            // Indexes for ordering and last-message computations
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_message_conversationId_dateNs ON message (conversationId, dateNs)")
+            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_message_dateNs ON message (dateNs)")
         }
 
         return migrator
