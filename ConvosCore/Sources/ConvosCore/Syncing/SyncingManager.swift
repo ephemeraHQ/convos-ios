@@ -27,7 +27,6 @@ actor SyncingManager: SyncingManagerProtocol {
     private var lastMemberProfileSync: [String: Date] = [:]
 
     // Configuration
-    private let maxStreamRetries: Int = 5
     private let memberProfileSyncInterval: TimeInterval = 120.0
     private let activeConversationProfileSyncInterval: TimeInterval = 10.0 // Sync more frequently for active conversation
 
@@ -138,7 +137,7 @@ actor SyncingManager: SyncingManagerProtocol {
     private func runMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) async {
         var retryCount = 0
 
-        while !Task.isCancelled && retryCount < maxStreamRetries {
+        while !Task.isCancelled {
             do {
                 // Exponential backoff
                 if retryCount > 0 {
@@ -149,7 +148,7 @@ actor SyncingManager: SyncingManagerProtocol {
                     await syncAllConversationsQuick(client: client)
                 }
 
-                Logger.info("Starting message stream (attempt \(retryCount + 1)/\(maxStreamRetries))")
+                Logger.info("Starting message stream (attempt \(retryCount + 1)")
 
                 // Catch up if needed
                 if let lastProcessedAt = lastProcessedMessageAt {
@@ -182,23 +181,19 @@ actor SyncingManager: SyncingManagerProtocol {
                 Logger.error("Message stream error: \(error)")
             }
         }
-
-        if retryCount >= maxStreamRetries {
-            Logger.error("Message stream max retries reached")
-        }
     }
 
     private func runConversationStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) async {
         var retryCount = 0
 
-        while !Task.isCancelled && retryCount < maxStreamRetries {
+        while !Task.isCancelled {
             do {
                 if retryCount > 0 {
                     let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 }
 
-                Logger.info("Starting conversation stream (attempt \(retryCount + 1)/\(maxStreamRetries))")
+                Logger.info("Starting conversation stream (attempt \(retryCount + 1)")
 
                 // Stream conversations - the loop will exit when onClose is called
                 for try await conversation in client.conversationsProvider.stream(
@@ -224,10 +219,6 @@ actor SyncingManager: SyncingManagerProtocol {
                 retryCount += 1
                 Logger.error("Conversation stream error: \(error)")
             }
-        }
-
-        if retryCount >= maxStreamRetries {
-            Logger.error("Conversation stream max retries reached")
         }
     }
 
