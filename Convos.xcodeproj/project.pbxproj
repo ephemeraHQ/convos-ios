@@ -13,7 +13,6 @@
 		7AD545902E4EA8BE00500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD5458F2E4EA8BE00500ADF /* ConvosCore */; };
 		7AD545922E4EA8D200500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545912E4EA8D200500ADF /* ConvosCore */; };
 		7AD545942E4EA8F300500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545932E4EA8F300500ADF /* ConvosCore */; };
-		7ADC0C902E2977820053978A /* ConvosAppClip.app in Embed App Clips */ = {isa = PBXBuildFile; fileRef = 7ADC0C6E2E2977800053978A /* ConvosAppClip.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -47,13 +46,6 @@
 			remoteGlobalIDString = 7ADC0C6D2E2977800053978A;
 			remoteInfo = ConvosAppClip;
 		};
-		7ADC0C8E2E2977820053978A /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D8A2B6892DA4BA4B00EF8577 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 7ADC0C6D2E2977800053978A;
-			remoteInfo = ConvosAppClip;
-		};
 		D80850392DC94F4C00E708B0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D8A2B6892DA4BA4B00EF8577 /* Project object */;
@@ -72,17 +64,6 @@
 			files = (
 			);
 			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		7ADC0C632E2976210053978A /* Embed App Clips */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/AppClips";
-			dstSubfolderSpec = 16;
-			files = (
-				7ADC0C902E2977820053978A /* ConvosAppClip.app in Embed App Clips */,
-			);
-			name = "Embed App Clips";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D808503B2DC94F4C00E708B0 /* Embed Foundation Extensions */ = {
@@ -539,14 +520,12 @@
 				D8A2B68F2DA4BA4B00EF8577 /* Resources */,
 				D808503B2DC94F4C00E708B0 /* Embed Foundation Extensions */,
 				D85B9BA02DD26BC400831D58 /* Embed Frameworks */,
-				7ADC0C632E2976210053978A /* Embed App Clips */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				D8084C1C2DC91F1300E708B0 /* PBXTargetDependency */,
 				D808503A2DC94F4C00E708B0 /* PBXTargetDependency */,
-				7ADC0C8F2E2977820053978A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D8A2B6932DA4BA4B00EF8577 /* Convos */,
@@ -826,11 +805,6 @@
 			isa = PBXTargetDependency;
 			target = 7ADC0C6D2E2977800053978A /* ConvosAppClip */;
 			targetProxy = 7ADC0C872E2977810053978A /* PBXContainerItemProxy */;
-		};
-		7ADC0C8F2E2977820053978A /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 7ADC0C6D2E2977800053978A /* ConvosAppClip */;
-			targetProxy = 7ADC0C8E2E2977820053978A /* PBXContainerItemProxy */;
 		};
 		D8084C1C2DC91F1300E708B0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
