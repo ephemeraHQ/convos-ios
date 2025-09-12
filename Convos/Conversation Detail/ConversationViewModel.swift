@@ -19,7 +19,6 @@ class ConversationViewModel {
 
     private let conversationRepository: any ConversationRepositoryProtocol
     private let messagesRepository: any MessagesRepositoryProtocol
-    private let inviteRepository: any InviteRepositoryProtocol
 
     private var cancellables: Set<AnyCancellable> = []
     private var loadProfileImageTask: Task<Void, Never>?
@@ -91,7 +90,6 @@ class ConversationViewModel {
         self.profile = .empty(inboxId: conversation.inboxId)
         self.conversationRepository = session.conversationRepository(for: conversation.id)
         self.messagesRepository = session.messagesRepository(for: conversation.id)
-        self.inviteRepository = session.inviteRepository(for: conversation.id)
         do {
             self.messages = try messagesRepository.fetchAll()
             self.conversation = try conversationRepository.fetchConversation() ?? conversation
@@ -135,7 +133,6 @@ class ConversationViewModel {
         self.consentWriter = draftConversationComposer.conversationConsentWriter
         self.localStateWriter = draftConversationComposer.conversationLocalStateWriter
         self.metadataWriter = draftConversationComposer.conversationMetadataWriter
-        self.inviteRepository = draftConversationComposer.draftConversationRepository.inviteRepository
         do {
             self.messages = try messagesRepository.fetchAll()
             self.conversation = try conversationRepository.fetchConversation() ?? conversation
@@ -220,19 +217,13 @@ class ConversationViewModel {
                 self?.messages = messages
             }
             .store(in: &cancellables)
-        inviteRepository.invitePublisher
-            .receive(on: DispatchQueue.main)
-            .compactMap { $0 }
-            .sink { [weak self] invite in
-                self?.invite = invite
-            }
-            .store(in: &cancellables)
         conversationRepository.conversationPublisher
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
             .sink { [weak self] conversation in
                 self?.conversation = conversation
+                self?.invite = conversation.invite ?? .empty
             }
             .store(in: &cancellables)
     }
