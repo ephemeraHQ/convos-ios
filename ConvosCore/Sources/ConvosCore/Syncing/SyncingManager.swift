@@ -120,6 +120,7 @@ actor SyncingManager: SyncingManagerProtocol {
         // Cancel active conversation profile sync
         activeConversationProfileTask?.cancel()
         activeConversationProfileTask = nil
+        activeConversationId = nil
 
         // Clean up notification observers
         for observer in notificationObservers {
