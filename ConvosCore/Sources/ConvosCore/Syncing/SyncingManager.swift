@@ -121,15 +121,15 @@ actor SyncingManager: SyncingManagerProtocol {
         activeConversationProfileTask = nil
         activeConversationId = nil
 
+        // Clear client references
+        currentClient = nil
+        currentApiClient = nil
+
         // Clean up notification observers
         for observer in notificationObservers {
             NotificationCenter.default.removeObserver(observer)
         }
         notificationObservers.removeAll()
-
-        // Clear client references
-        currentClient = nil
-        currentApiClient = nil
     }
 
     // MARK: - Stream Management
