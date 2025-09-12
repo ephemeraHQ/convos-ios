@@ -387,7 +387,7 @@ public actor InboxStateMachine {
         // in SessionManager's observation of inboxes
         try await inboxWriter.storeInbox(inboxId: client.inboxId)
 
-        syncingManager?.start(with: client, apiClient: apiClient)
+        await syncingManager?.start(with: client, apiClient: apiClient)
         inviteJoinRequestsManager?.start(with: client, apiClient: apiClient)
 
         // Setup push notification observers if registrar is provided
@@ -409,7 +409,7 @@ public actor InboxStateMachine {
         await pushNotificationRegistrar.unregisterInstallation(client: client, apiClient: apiClient)
 
         emitStateChange(.deleting)
-        syncingManager?.stop()
+        await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         try await inboxWriter.deleteInbox(inboxId: client.inboxId)
         if let identity = try? await identityStore.identity(for: client.inboxId) {
@@ -434,7 +434,7 @@ public actor InboxStateMachine {
     private func handleDeleteFromError() async throws {
         Logger.info("Deleting inbox from error state...")
         emitStateChange(.deleting)
-        syncingManager?.stop()
+        await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         if let inboxId = inboxId {
             try await inboxWriter.deleteInbox(inboxId: inboxId)
@@ -447,7 +447,7 @@ public actor InboxStateMachine {
     private func handleStop() async throws {
         Logger.info("Stopping inbox...")
         emitStateChange(.stopping)
-        syncingManager?.stop()
+        await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         removePushNotificationObservers()
         inboxId = nil

@@ -5,12 +5,12 @@ import XMTPiOS
 
 // MARK: - Protocol
 
-protocol SyncingManagerProtocol {
+protocol SyncingManagerProtocol: Actor {
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol)
     func stop()
 }
 
-final class SyncingManager: SyncingManagerProtocol {
+actor SyncingManager: SyncingManagerProtocol {
     // MARK: - Properties
 
     private let conversationWriter: any ConversationWriterProtocol
@@ -92,7 +92,7 @@ final class SyncingManager: SyncingManagerProtocol {
         syncTask = nil
     }
 
-    // MARK: - Stream Management (Using Apple's Pattern)
+    // MARK: - Stream Management
 
     private func runMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) async {
         var retryCount = 0
@@ -407,9 +407,19 @@ final class SyncingManager: SyncingManagerProtocol {
         }
     }
 
+    // MARK: - Mutation
+
+    func markLastActiveAtAsNow() {
+        lastActiveAt = Date()
+    }
+
+    func setActiveConversationId(_ conversationId: String?) {
+        activeConversationId = conversationId
+    }
+
     // MARK: - Notification Observers
 
-    private func setupNotificationObservers() {
+    private nonisolated func setupNotificationObservers() {
         // Active conversation tracking
         NotificationCenter.default.addObserver(
             self,
@@ -427,12 +437,16 @@ final class SyncingManager: SyncingManagerProtocol {
         )
     }
 
-    @objc private func handleActiveConversationChanged(_ notification: Notification) {
-        activeConversationId = notification.userInfo?["conversationId"] as? String
+    @objc nonisolated private func handleActiveConversationChanged(_ notification: Notification) {
+        Task {
+            await setActiveConversationId(notification.userInfo?["conversationId"] as? String)
+        }
     }
 
-    @objc private func handleAppWillResignActive() {
-        lastActiveAt = Date()
+    @objc nonisolated private func handleAppWillResignActive() {
+        Task {
+            await markLastActiveAtAsNow()
+        }
     }
 }
 
