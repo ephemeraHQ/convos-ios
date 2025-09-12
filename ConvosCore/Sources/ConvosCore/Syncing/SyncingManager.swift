@@ -46,6 +46,15 @@ final class SyncingManager: SyncingManagerProtocol {
 
         func addSyncMemberProfileTask(_ task: Task<Void, Error>) {
             syncMemberProfilesTasks.append(task)
+
+            // Create a cleanup task that removes the task from the array when it completes
+            Task {
+                // Wait for the task to complete (successfully or with error)
+                _ = try? await task.value
+
+                // Remove the completed task from the array
+                syncMemberProfilesTasks.removeAll { $0 === task }
+            }
         }
 
         func clearTasks() {
