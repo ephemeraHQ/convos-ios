@@ -466,7 +466,7 @@ actor SyncingManager: SyncingManagerProtocol {
         activeConversationId = conversationId
 
         // Cancel existing profile sync task if conversation changed
-        if previousId != conversationId {
+        if previousId != conversationId || (conversationId != nil && activeConversationProfileTask == nil) {
             activeConversationProfileTask?.cancel()
             activeConversationProfileTask = nil
 
