@@ -14,8 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install SwiftLint
-        run: brew install swiftlint
+      - name: Install SwiftLint 0.61.0
+        run: |
+          brew uninstall swiftlint || true
+          brew install swiftlint@0.61.0
+          brew link --overwrite swiftlint@0.61.0
 
       - name: Run SwiftLint
         # --strict makes warnings fail the job
