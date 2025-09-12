@@ -385,6 +385,7 @@ class ConversationViewModel {
             guard let self else { return }
             do {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
+                focus = nil
                 presentingConversationSettings = false
                 NotificationCenter.default.post(
                     name: .leftConversationNotification,
@@ -400,15 +401,21 @@ class ConversationViewModel {
     func explodeConvo() {
         guard canRemoveMembers else { return }
 
-        NotificationCenter.default.post(
-            name: .leftConversationNotification,
-            object: nil,
-            userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
-        )
-
+        let inboxId = conversation.inboxId
+        let conversationId = conversation.id
         Task { [weak self] in
-            guard let self, let metadataWriter = self.metadataWriter else { return }
+            guard let self,
+                  let metadataWriter = self.metadataWriter,
+                  let outgoingMessageWriter = self.outgoingMessageWriter else {
+                return
+            }
+
+            focus = nil
+            presentingConversationSettings = false
+
             do {
+                try await outgoingMessageWriter.sendExplode()
+
                 let memberIdsToRemove = conversation.members
                     .filter { !$0.isCurrentUser } // @jarodl fix when we have self removal
                     .map { $0.profile.inboxId }
@@ -416,8 +423,14 @@ class ConversationViewModel {
                     groupId: conversation.id,
                     memberInboxIds: memberIdsToRemove
                 )
-                try await session.deleteInbox(inboxId: conversation.inboxId)
-                presentingConversationSettings = false
+
+                await MainActor.run {
+                    NotificationCenter.default.post(
+                        name: .leftConversationNotification,
+                        object: nil,
+                        userInfo: ["inboxId": inboxId, "conversationId": conversationId]
+                    )
+                }
             } catch {
                 Logger.error("Error exploding convo: \(error.localizedDescription)")
             }

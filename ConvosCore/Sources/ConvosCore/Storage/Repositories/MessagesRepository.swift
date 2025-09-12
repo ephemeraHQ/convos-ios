@@ -144,7 +144,8 @@ extension Array where Element == MessageWithDetails {
                                         oldValue: $0.oldValue,
                                         newValue: $0.newValue
                                     )
-                                }
+                                },
+                            explodeSettings: update.explodeSettings
                         )
                     )
                 }

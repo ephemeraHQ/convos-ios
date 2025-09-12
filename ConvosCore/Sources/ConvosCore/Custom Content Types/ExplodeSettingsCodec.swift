@@ -1,7 +1,7 @@
 import Foundation
 import XMTPiOS
 
-public struct ExplodeSettings: Codable {
+public struct ExplodeSettings: Codable, Hashable {
     public let expiresAt: Date
 
     public init(expiresAt: Date) {
@@ -29,6 +29,8 @@ public struct ExplodeSettingsCodec: ContentCodec {
     public typealias T = ExplodeSettings
 
     public var contentType: ContentTypeID = ContentTypeExplodeSettings
+
+    public init() {}
 
     public func encode(content: ExplodeSettings) throws -> EncodedContent {
         var encodedContent = EncodedContent()
@@ -61,6 +63,7 @@ public struct ExplodeSettingsCodec: ContentCodec {
     }
 
     public func shouldPush(content: ExplodeSettings) throws -> Bool {
-        false
+        Logger.info("Calling should push for content: \(content)")
+        return true
     }
 }

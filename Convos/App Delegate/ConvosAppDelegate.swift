@@ -68,28 +68,20 @@ extension ConvosAppDelegate: UNUserNotificationCenterDelegate {
         // Parse the push notification payload to extract conversation info
         let payload = PushNotificationPayload(userInfo: userInfo)
 
-        // Check if this is an explosion notification
-        if let notificationType = userInfo["notificationType"] as? String,
-           notificationType == "explosion",
-           let inboxId = userInfo["inboxId"] as? String,
-           let conversationId = userInfo["conversationId"] as? String {
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(
-                    name: .explosionNotificationTapped,
-                    object: nil,
-                    userInfo: [
-                        "inboxId": inboxId,
-                        "conversationId": conversationId,
-                        "notificationType": notificationType
-                    ]
-                )
-            }
+        let categoryIdentifier = response.notification.request.content.categoryIdentifier
+        guard let notificationCategory = DecodedNotificationContent.Category(rawValue: categoryIdentifier) else {
+            Logger.warning("Unknown category identifier for notification: \(categoryIdentifier)")
             return
         }
 
-        // Handle regular conversation notifications (Protocol messages)
+        guard let inboxId = payload.inboxId else {
+            Logger.warning("inboxId not found for notification")
+            return
+        }
+
         let conversationId = response.notification.request.content.threadIdentifier
-        if let inboxId = payload.inboxId {
+        switch notificationCategory {
+        case .message, .acceptedInvite:
             Logger.info("Handling conversation notification tap for inboxId: \(inboxId), conversationId: \(conversationId)")
             DispatchQueue.main.async {
                 NotificationCenter.default.post(
@@ -101,8 +93,17 @@ extension ConvosAppDelegate: UNUserNotificationCenterDelegate {
                     ]
                 )
             }
-        } else {
-            Logger.warning("Notification tapped but could not extract conversation info from payload")
+        case .explodeSettingsChanged:
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .explosionNotificationTapped,
+                    object: nil,
+                    userInfo: [
+                        "inboxId": inboxId,
+                        "conversationId": conversationId
+                    ]
+                )
+            }
         }
     }
 }

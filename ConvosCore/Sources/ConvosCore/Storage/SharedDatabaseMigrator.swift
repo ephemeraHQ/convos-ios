@@ -160,6 +160,7 @@ extension SharedDatabaseMigrator {
                 t.column("sourceMessageId", .text)
                 t.column("attachmentUrls", .text)
                 t.column("update", .jsonText)
+                t.column("explodeSettings", .jsonText)
             }
         }
 

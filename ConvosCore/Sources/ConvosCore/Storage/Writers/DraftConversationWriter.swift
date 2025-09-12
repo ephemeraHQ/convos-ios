@@ -142,6 +142,10 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         sentMessageSubject.send(text)
     }
 
+    func sendExplode() async throws {
+        Logger.warning("Attempting to explode draft conversation")
+    }
+
     func delete() async {
         await stateMachine.delete()
     }

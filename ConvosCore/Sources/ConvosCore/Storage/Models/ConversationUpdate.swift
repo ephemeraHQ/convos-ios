@@ -17,28 +17,33 @@ public struct ConversationUpdate: Hashable, Codable {
     public let addedMembers: [Profile]
     public let removedMembers: [Profile]
     public let metadataChanges: [MetadataChange]
+    public let explodeSettings: ExplodeSettings?
 
     public var summary: String {
-        if !addedMembers.isEmpty && !removedMembers.isEmpty {
-            "\(creator.displayName) added and removed members from the convo"
-        } else if !addedMembers.isEmpty {
-            "\(addedMembers.formattedNamesString) joined the convo"
-        } else if !removedMembers.isEmpty {
-            "\(removedMembers.formattedNamesString) left the convo"
-        } else if let metadataChange = metadataChanges.first,
-                  metadataChange.field == .name,
-                  let updatedName = metadataChange.newValue {
-            "\(creator.displayName) changed the convo name to \"\(updatedName)\""
-        } else if let metadataChange = metadataChanges.first,
-                  metadataChange.field == .image,
-                  metadataChange.newValue != nil {
-            "\(creator.displayName) changed the convo photo"
-        } else if let metadataChange = metadataChanges.first,
-                  metadataChange.field == .description,
-                  metadataChange.newValue != nil {
-            "\(creator.displayName) changed the convo description"
+        if let explodeSettings {
+            "\(creator.displayName) set the convo to explode"
         } else {
-            "Unknown update"
+            if !addedMembers.isEmpty && !removedMembers.isEmpty {
+                "\(creator.displayName) added and removed members from the convo"
+            } else if !addedMembers.isEmpty {
+                "\(addedMembers.formattedNamesString) joined the convo"
+            } else if !removedMembers.isEmpty {
+                "\(removedMembers.formattedNamesString) left the convo"
+            } else if let metadataChange = metadataChanges.first,
+                      metadataChange.field == .name,
+                      let updatedName = metadataChange.newValue {
+                "\(creator.displayName) changed the convo name to \"\(updatedName)\""
+            } else if let metadataChange = metadataChanges.first,
+                      metadataChange.field == .image,
+                      metadataChange.newValue != nil {
+                "\(creator.displayName) changed the convo photo"
+            } else if let metadataChange = metadataChanges.first,
+                      metadataChange.field == .description,
+                      metadataChange.newValue != nil {
+                "\(creator.displayName) changed the convo description"
+            } else {
+                "Unknown update"
+            }
         }
     }
 }
