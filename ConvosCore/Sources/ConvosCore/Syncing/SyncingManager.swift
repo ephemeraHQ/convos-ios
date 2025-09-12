@@ -53,7 +53,7 @@ final class SyncingManager: SyncingManagerProtocol {
                 _ = try? await task.value
 
                 // Remove the completed task from the array
-                syncMemberProfilesTasks.removeAll { $0 === task }
+                syncMemberProfilesTasks.removeAll { $0 == task }
             }
         }
 
@@ -78,6 +78,29 @@ final class SyncingManager: SyncingManagerProtocol {
 
         func setStreamConversationsTask(_ task: Task<Void, Never>?) {
             streamConversationsTask = task
+        }
+
+        // Atomic check-and-set methods to prevent race conditions
+        func startStreamMessagesTaskIfInactive(_ task: Task<Void, Never>) -> Bool {
+            // Check if already active
+            if let existingTask = streamMessagesTask, !existingTask.isCancelled {
+                task.cancel() // Cancel the new task since we won't use it
+                return false
+            }
+            // Set the new task atomically
+            streamMessagesTask = task
+            return true
+        }
+
+        func startStreamConversationsTaskIfInactive(_ task: Task<Void, Never>) -> Bool {
+            // Check if already active
+            if let existingTask = streamConversationsTask, !existingTask.isCancelled {
+                task.cancel() // Cancel the new task since we won't use it
+                return false
+            }
+            // Set the new task atomically
+            streamConversationsTask = task
+            return true
         }
 
         func isStreamTaskActive(_ streamType: StreamType) -> Bool {
@@ -111,7 +134,7 @@ final class SyncingManager: SyncingManagerProtocol {
     private let profileWriter: any MemberProfileWriterProtocol
     private let localStateWriter: any ConversationLocalStateWriterProtocol
     private let consentStates: [ConsentState] = [.allowed]
-    private let memberProfileSyncInterval: TimeInterval = 120 // seconds
+    private let memberProfileSyncInterval: TimeInterval = 10 // seconds
 
     // Track when the app was last active (for connectivity changes)
     // This uses UserDefaults which is thread-safe, so doesn't need to be in the actor
@@ -284,13 +307,7 @@ final class SyncingManager: SyncingManagerProtocol {
                 return
             }
 
-            // Single-flight guard: don't start if already running
-            guard await !state.isStreamTaskActive(.messages) else {
-                Logger.info("Messages stream already active, skipping start")
-                return
-            }
-
-            Logger.info("Starting messages stream for inbox: \(client.inboxId) (retry: \(retryCount))")
+            // Create the task first, then atomically check-and-set
             let task = Task { [weak self] in
                 do {
                     guard let self else { return }
@@ -304,7 +321,14 @@ final class SyncingManager: SyncingManagerProtocol {
                     )
                 }
             }
-            await state.setStreamMessagesTask(task)
+
+            // Atomic check-and-set to prevent race conditions
+            guard await state.startStreamMessagesTaskIfInactive(task) else {
+                Logger.info("Messages stream already active, skipping start")
+                return
+            }
+
+            Logger.info("Starting messages stream for inbox: \(client.inboxId) (retry: \(retryCount))")
         }
     }
 
@@ -440,13 +464,7 @@ final class SyncingManager: SyncingManagerProtocol {
                 return
             }
 
-            // Single-flight guard: don't start if already running
-            guard await !state.isStreamTaskActive(.conversations) else {
-                Logger.info("Conversations stream already active, skipping start")
-                return
-            }
-
-            Logger.info("Starting conversations stream for inbox: \(client.inboxId) (retry: \(retryCount))")
+            // Create the task first, then atomically check-and-set
             let task = Task { [weak self] in
                 guard let self else { return }
                 do {
@@ -467,7 +485,14 @@ final class SyncingManager: SyncingManagerProtocol {
                     await self.handleConversationStreamError(error: error, client: client, apiClient: apiClient, retryCount: retryCount)
                 }
             }
-            await state.setStreamConversationsTask(task)
+
+            // Atomic check-and-set to prevent race conditions
+            guard await state.startStreamConversationsTaskIfInactive(task) else {
+                Logger.info("Conversations stream already active, skipping start")
+                return
+            }
+
+            Logger.info("Starting conversations stream for inbox: \(client.inboxId) (retry: \(retryCount))")
         }
     }
 
@@ -528,6 +553,7 @@ final class SyncingManager: SyncingManagerProtocol {
                     let chunkTask = Task { [weak self] in
                         guard let self else { return }
                         do {
+                            Logger.info("Starting batch profiles update...")
                             let batchProfiles = try await apiClient.getProfiles(for: chunk)
                             let profiles = Array(batchProfiles.profiles.values)
                             try await profileWriter.store(profiles: profiles)
