@@ -11,10 +11,20 @@ protocol SyncingManagerProtocol {
 
 final class SyncingManager: SyncingManagerProtocol {
     // MARK: - Thread-Safe State Management
+
+    // Wrapper class to enable identity comparison for Tasks
+    private final class TaskWrapper {
+        let task: Task<Void, Never>
+
+        init(_ task: Task<Void, Never>) {
+            self.task = task
+        }
+    }
+
     private actor State {
         var listConversationsTask: Task<Void, Never>?
-        var streamMessagesTask: Task<Void, Never>?
-        var streamConversationsTask: Task<Void, Never>?
+        var streamMessagesTask: TaskWrapper?
+        var streamConversationsTask: TaskWrapper?
         // Store tasks by ID instead of an array for efficient removal
         private var syncMemberProfilesTasks: [UUID: Task<Void, Error>] = [:]
 
@@ -64,9 +74,9 @@ final class SyncingManager: SyncingManagerProtocol {
         func clearTasks() {
             listConversationsTask?.cancel()
             listConversationsTask = nil
-            streamMessagesTask?.cancel()
+            streamMessagesTask?.task.cancel()
             streamMessagesTask = nil
-            streamConversationsTask?.cancel()
+            streamConversationsTask?.task.cancel()
             streamConversationsTask = nil
             // Cancel all tasks and clear the dictionary
             syncMemberProfilesTasks.values.forEach { $0.cancel() }
@@ -78,57 +88,88 @@ final class SyncingManager: SyncingManagerProtocol {
         }
 
         func setStreamMessagesTask(_ task: Task<Void, Never>?) {
-            streamMessagesTask = task
+            streamMessagesTask = task.map(TaskWrapper.init)
         }
 
         func setStreamConversationsTask(_ task: Task<Void, Never>?) {
-            streamConversationsTask = task
+            streamConversationsTask = task.map(TaskWrapper.init)
         }
 
         // Atomic check-and-set methods to prevent race conditions
-        func startStreamMessagesTaskIfInactive(_ task: Task<Void, Never>) -> Bool {
+        func startStreamMessagesTaskIfInactive(_ task: Task<Void, Never>) -> (started: Bool, taskWrapper: TaskWrapper?) {
             // Check if already active
-            if let existingTask = streamMessagesTask, !existingTask.isCancelled {
+            if let existingWrapper = streamMessagesTask, !existingWrapper.task.isCancelled {
                 task.cancel() // Cancel the new task since we won't use it
-                return false
+                return (false, nil)
             }
             // Set the new task atomically
-            streamMessagesTask = task
-            return true
+            let taskWrapper = TaskWrapper(task)
+            streamMessagesTask = taskWrapper
+            return (true, taskWrapper)
         }
 
-        func startStreamConversationsTaskIfInactive(_ task: Task<Void, Never>) -> Bool {
+        func startStreamConversationsTaskIfInactive(_ task: Task<Void, Never>) -> (started: Bool, taskWrapper: TaskWrapper?) {
             // Check if already active
-            if let existingTask = streamConversationsTask, !existingTask.isCancelled {
+            if let existingWrapper = streamConversationsTask, !existingWrapper.task.isCancelled {
                 task.cancel() // Cancel the new task since we won't use it
-                return false
+                return (false, nil)
             }
             // Set the new task atomically
-            streamConversationsTask = task
-            return true
+            let taskWrapper = TaskWrapper(task)
+            streamConversationsTask = taskWrapper
+            return (true, taskWrapper)
+        }
+
+        // Clear stream task only if it matches the provided task wrapper (to avoid clearing newer tasks)
+        func clearStreamMessagesTaskIfMatches(_ taskWrapperToMatch: TaskWrapper?) {
+            if let taskWrapperToMatch = taskWrapperToMatch, let currentWrapper = streamMessagesTask {
+                // Use identity comparison on the wrapper classes
+                if taskWrapperToMatch === currentWrapper {
+                    streamMessagesTask = nil
+                }
+            }
+        }
+
+        func clearStreamConversationsTaskIfMatches(_ taskWrapperToMatch: TaskWrapper?) {
+            if let taskWrapperToMatch = taskWrapperToMatch, let currentWrapper = streamConversationsTask {
+                // Use identity comparison on the wrapper classes
+                if taskWrapperToMatch === currentWrapper {
+                    streamConversationsTask = nil
+                }
+            }
+        }
+
+        // Get the current stream task wrapper for comparison
+        func getStreamTaskWrapper(_ streamType: StreamType) -> TaskWrapper? {
+            switch streamType {
+            case .messages:
+                return streamMessagesTask
+            case .conversations:
+                return streamConversationsTask
+            }
         }
 
         func isStreamTaskActive(_ streamType: StreamType) -> Bool {
-            let task: Task<Void, Never>?
+            let wrapper: TaskWrapper?
             switch streamType {
             case .messages:
-                task = streamMessagesTask
+                wrapper = streamMessagesTask
             case .conversations:
-                task = streamConversationsTask
+                wrapper = streamConversationsTask
             }
-            guard let task else { return false }
-            return !task.isCancelled
+            guard let wrapper else { return false }
+            return !wrapper.task.isCancelled
         }
 
         func isStreamTaskCancelled(_ streamType: StreamType) -> Bool {
-            let task: Task<Void, Never>?
+            let wrapper: TaskWrapper?
             switch streamType {
             case .messages:
-                task = streamMessagesTask
+                wrapper = streamMessagesTask
             case .conversations:
-                task = streamConversationsTask
+                wrapper = streamConversationsTask
             }
-            return task?.isCancelled ?? true
+            return wrapper?.task.isCancelled ?? true
         }
     }
 
@@ -217,10 +258,25 @@ final class SyncingManager: SyncingManagerProtocol {
         // Store the start task so it can be cancelled in stop()
         startTask = Task.detached { [weak self] in
             guard let self else { return }
+
+            // Check for cancellation before proceeding
+            guard !Task.isCancelled else {
+                Logger.info("Start task was cancelled before setting listConversationsTask")
+                return
+            }
+
             let task = Task { [weak self] in
                 guard let self = self else { return }
                 await self.syncAllConversations(client: client, apiClient: apiClient)
             }
+
+            // Check for cancellation again before setting the task
+            guard !Task.isCancelled else {
+                task.cancel()  // Cancel the created task to prevent leaks
+                Logger.info("Start task was cancelled before setting listConversationsTask")
+                return
+            }
+
             await state.setListConversationsTask(task)
         }
         // Start the streaming tasks
@@ -327,21 +383,27 @@ final class SyncingManager: SyncingManagerProtocol {
 
             // Create the task first, then atomically check-and-set
             let task = Task { [weak self] in
+                // Capture the current stream task wrapper for later comparison
+                let currentStreamTaskWrapper = await self?.state.getStreamTaskWrapper(.messages)
+
                 do {
                     guard let self else { return }
-                    try await self.processMessageStream(client: client, apiClient: apiClient, retryCount: retryCount)
+                    try await self.processMessageStream(client: client, apiClient: apiClient, retryCount: retryCount, currentStreamTaskWrapper: currentStreamTaskWrapper)
                 } catch {
-                    await self?.handleMessageStreamError(
+                    guard let self = self else { return }
+                    await self.handleMessageStreamError(
                         error: error,
                         client: client,
                         apiClient: apiClient,
-                        retryCount: retryCount
+                        retryCount: retryCount,
+                        currentStreamTaskWrapper: currentStreamTaskWrapper
                     )
                 }
             }
 
             // Atomic check-and-set to prevent race conditions
-            guard await state.startStreamMessagesTaskIfInactive(task) else {
+            let result = await state.startStreamMessagesTaskIfInactive(task)
+            guard result.started else {
                 Logger.info("Messages stream already active, skipping start")
                 return
             }
@@ -350,7 +412,7 @@ final class SyncingManager: SyncingManagerProtocol {
         }
     }
 
-    private func processMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) async throws {
+    private func processMessageStream(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, currentStreamTaskWrapper: TaskWrapper?) async throws {
         let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
         try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
 
@@ -379,7 +441,7 @@ final class SyncingManager: SyncingManagerProtocol {
                 type: .groups,
                 consentStates: consentStates,
                 onClose: { [weak self] in
-                    self?.scheduleMessageStreamRetry(client: client, apiClient: apiClient, retryCount: retryCount)
+                    self?.scheduleMessageStreamRetry(client: client, apiClient: apiClient, retryCount: retryCount, currentStreamTaskWrapper: currentStreamTaskWrapper)
                 }
             ) {
             await processStreamedMessage(
@@ -425,22 +487,24 @@ final class SyncingManager: SyncingManagerProtocol {
         }
     }
 
-    private func scheduleMessageStreamRetry(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) {
+    private func scheduleMessageStreamRetry(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, currentStreamTaskWrapper: TaskWrapper?) {
         scheduleStreamRetry(
             streamType: .messages,
             client: client,
             apiClient: apiClient,
-            retryCount: retryCount
+            retryCount: retryCount,
+            currentStreamTaskWrapper: currentStreamTaskWrapper
         )
     }
 
-    private func handleMessageStreamError(error: Error, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) async {
+    private func handleMessageStreamError(error: Error, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, currentStreamTaskWrapper: TaskWrapper?) async {
         Logger.error("Error streaming all messages: \(error)")
         scheduleStreamRetry(
             streamType: .messages,
             client: client,
             apiClient: apiClient,
-            retryCount: retryCount
+            retryCount: retryCount,
+            currentStreamTaskWrapper: currentStreamTaskWrapper
         )
     }
 
@@ -448,7 +512,8 @@ final class SyncingManager: SyncingManagerProtocol {
         streamType: StreamType,
         client: AnyClientProvider,
         apiClient: any ConvosAPIClientProtocol,
-        retryCount: Int
+        retryCount: Int,
+        currentStreamTaskWrapper: TaskWrapper?
     ) {
         Task {
             // Only check if the stream task itself was cancelled, not the current context
@@ -460,13 +525,21 @@ final class SyncingManager: SyncingManagerProtocol {
             let nextRetry = retryCount + 1
             Logger.warning("\(streamType.name) stream closed for inboxId: \(client.inboxId). Restarting (retry \(nextRetry)/\(maxStreamRetries))...")
 
-            // Clear the task reference before restarting to avoid race conditions
+            // Only clear the task reference if it matches the one that ended
+            if let taskWrapper = currentStreamTaskWrapper {
+                switch streamType {
+                case .messages:
+                    await state.clearStreamMessagesTaskIfMatches(taskWrapper)
+                case .conversations:
+                    await state.clearStreamConversationsTaskIfMatches(taskWrapper)
+                }
+            }
+
+            // Start the new stream
             switch streamType {
             case .messages:
-                await state.setStreamMessagesTask(nil)
                 startMessageStream(client: client, apiClient: apiClient, retryCount: nextRetry)
             case .conversations:
-                await state.setStreamConversationsTask(nil)
                 startConversationStream(client: client, apiClient: apiClient, retryCount: nextRetry)
             }
         }
@@ -484,6 +557,9 @@ final class SyncingManager: SyncingManagerProtocol {
 
             // Create the task first, then atomically check-and-set
             let task = Task { [weak self] in
+                // Capture the current stream task wrapper for later comparison
+                let currentStreamTaskWrapper = await self?.state.getStreamTaskWrapper(.conversations)
+
                 guard let self else { return }
                 do {
                     let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
@@ -492,7 +568,7 @@ final class SyncingManager: SyncingManagerProtocol {
                     for try await conversation in client.conversationsProvider.stream(
                         type: .groups,
                         onClose: { [weak self] in
-                            self?.scheduleConversationStreamRetry(client: client, apiClient: apiClient, retryCount: retryCount)
+                            self?.scheduleConversationStreamRetry(client: client, apiClient: apiClient, retryCount: retryCount, currentStreamTaskWrapper: currentStreamTaskWrapper)
                         }
                     ) {
                         await self.syncMemberProfiles(apiClient: apiClient, for: [conversation])
@@ -500,12 +576,13 @@ final class SyncingManager: SyncingManagerProtocol {
                         try await self.conversationWriter.storeWithLatestMessages(conversation: conversation)
                     }
                 } catch {
-                    await self.handleConversationStreamError(error: error, client: client, apiClient: apiClient, retryCount: retryCount)
+                    await self.handleConversationStreamError(error: error, client: client, apiClient: apiClient, retryCount: retryCount, currentStreamTaskWrapper: currentStreamTaskWrapper)
                 }
             }
 
             // Atomic check-and-set to prevent race conditions
-            guard await state.startStreamConversationsTaskIfInactive(task) else {
+            let result = await state.startStreamConversationsTaskIfInactive(task)
+            guard result.started else {
                 Logger.info("Conversations stream already active, skipping start")
                 return
             }
@@ -514,22 +591,24 @@ final class SyncingManager: SyncingManagerProtocol {
         }
     }
 
-    private func scheduleConversationStreamRetry(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) {
+    private func scheduleConversationStreamRetry(client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, currentStreamTaskWrapper: TaskWrapper?) {
         scheduleStreamRetry(
             streamType: .conversations,
             client: client,
             apiClient: apiClient,
-            retryCount: retryCount
+            retryCount: retryCount,
+            currentStreamTaskWrapper: currentStreamTaskWrapper
         )
     }
 
-    private func handleConversationStreamError(error: Error, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int) async {
+    private func handleConversationStreamError(error: Error, client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol, retryCount: Int, currentStreamTaskWrapper: TaskWrapper?) async {
         Logger.error("Error streaming conversations: \(error)")
         scheduleStreamRetry(
             streamType: .conversations,
             client: client,
             apiClient: apiClient,
-            retryCount: retryCount
+            retryCount: retryCount,
+            currentStreamTaskWrapper: currentStreamTaskWrapper
         )
     }
 
