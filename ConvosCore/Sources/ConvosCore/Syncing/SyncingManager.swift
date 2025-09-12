@@ -342,7 +342,10 @@ final class SyncingManager: SyncingManagerProtocol {
                                 direction: .ascending
                             )
 
+                            try Task.checkCancellation()
+
                             for message in messages {
+                                try Task.checkCancellation()
                                 await self.processMessage(message, client: client, apiClient: apiClient)
                             }
 
