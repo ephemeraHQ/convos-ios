@@ -140,6 +140,9 @@ final class SyncingManager: SyncingManagerProtocol {
     private let localStateWriter: any ConversationLocalStateWriterProtocol
     private let consentStates: [ConsentState] = [.allowed]
 
+    // Track the start task to ensure proper cleanup
+    private var startTask: Task<Void, Never>?
+
     // Track when the app was last active (for connectivity changes)
     // This uses UserDefaults which is thread-safe, so doesn't need to be in the actor
     private var lastActiveAt: Date? {
@@ -208,7 +211,11 @@ final class SyncingManager: SyncingManagerProtocol {
     }
 
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
-        Task.detached { [weak self] in
+        // Cancel any existing start task before starting a new one
+        startTask?.cancel()
+
+        // Store the start task so it can be cancelled in stop()
+        startTask = Task.detached { [weak self] in
             guard let self else { return }
             let task = Task { [weak self] in
                 guard let self = self else { return }
@@ -286,6 +293,12 @@ final class SyncingManager: SyncingManagerProtocol {
     func stop() async {
         // Save the current timestamp when stopping
         lastActiveAt = Date()
+
+        // Cancel the start task to prevent it from restarting streams
+        startTask?.cancel()
+        startTask = nil
+
+        // Clear all tracked tasks
         await state.clearTasks()
     }
 
