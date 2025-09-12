@@ -15,7 +15,8 @@ final class SyncingManager: SyncingManagerProtocol {
         var listConversationsTask: Task<Void, Never>?
         var streamMessagesTask: Task<Void, Never>?
         var streamConversationsTask: Task<Void, Never>?
-        var syncMemberProfilesTasks: [Task<Void, Error>] = []
+        // Store tasks by ID instead of an array for efficient removal
+        private var syncMemberProfilesTasks: [UUID: Task<Void, Error>] = [:]
 
         // Track last sync times for member profiles per conversation
         var lastMemberProfileSync: [String: Date] = [:]
@@ -45,16 +46,19 @@ final class SyncingManager: SyncingManagerProtocol {
         }
 
         func addSyncMemberProfileTask(_ task: Task<Void, Error>) {
-            syncMemberProfilesTasks.append(task)
+            let id = UUID()
+            syncMemberProfilesTasks[id] = task
 
-            // Create a cleanup task that removes the task from the array when it completes
+            // Create a cleanup task that removes the task from the dictionary when it completes
             Task {
                 // Wait for the task to complete (successfully or with error)
                 _ = try? await task.value
-
-                // Remove the completed task from the array
-                syncMemberProfilesTasks.removeAll { $0 == task }
+                removeSyncMemberProfileTask(id: id)
             }
+        }
+
+        private func removeSyncMemberProfileTask(id: UUID) {
+            syncMemberProfilesTasks[id] = nil
         }
 
         func clearTasks() {
@@ -64,7 +68,8 @@ final class SyncingManager: SyncingManagerProtocol {
             streamMessagesTask = nil
             streamConversationsTask?.cancel()
             streamConversationsTask = nil
-            syncMemberProfilesTasks.forEach { $0.cancel() }
+            // Cancel all tasks and clear the dictionary
+            syncMemberProfilesTasks.values.forEach { $0.cancel() }
             syncMemberProfilesTasks.removeAll()
         }
 
@@ -134,7 +139,6 @@ final class SyncingManager: SyncingManagerProtocol {
     private let profileWriter: any MemberProfileWriterProtocol
     private let localStateWriter: any ConversationLocalStateWriterProtocol
     private let consentStates: [ConsentState] = [.allowed]
-    private let memberProfileSyncInterval: TimeInterval = 10 // seconds
 
     // Track when the app was last active (for connectivity changes)
     // This uses UserDefaults which is thread-safe, so doesn't need to be in the actor
@@ -204,7 +208,8 @@ final class SyncingManager: SyncingManagerProtocol {
     }
 
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
-        Task {
+        Task.detached { [weak self] in
+            guard let self else { return }
             let task = Task { [weak self] in
                 guard let self = self else { return }
                 await self.syncAllConversations(client: client, apiClient: apiClient)
@@ -517,10 +522,11 @@ final class SyncingManager: SyncingManagerProtocol {
 
     private func syncMemberProfiles(
         apiClient: any ConvosAPIClientProtocol,
-        for conversation: XMTPiOS.Conversation
+        for conversation: XMTPiOS.Conversation,
+        interval: TimeInterval = 120.0, // seconds
     ) async {
         let conversationId = conversation.id
-        let shouldSync = await state.shouldSyncMemberProfile(for: conversationId, interval: memberProfileSyncInterval)
+        let shouldSync = await state.shouldSyncMemberProfile(for: conversationId, interval: interval)
         if shouldSync {
             await syncMemberProfiles(apiClient: apiClient, for: [conversation])
         }
