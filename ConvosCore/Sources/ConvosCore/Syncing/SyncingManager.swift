@@ -216,6 +216,8 @@ final class SyncingManager: SyncingManagerProtocol {
             // Store conversation and message
             let dbConversation = try await conversationWriter.store(conversation: conversation)
             let result = try await messageWriter.store(message: message, for: dbConversation)
+            // Update timestamp
+            lastProcessedMessageAt = max(lastProcessedMessageAt ?? message.sentAt, message.sentAt)
 
             // Mark unread if needed
             if result.contentType.marksConversationAsUnread,
@@ -223,9 +225,6 @@ final class SyncingManager: SyncingManagerProtocol {
                message.senderInboxId != client.inboxId {
                 try await localStateWriter.setUnread(true, for: conversation.id)
             }
-
-            // Update timestamp
-            lastProcessedMessageAt = max(lastProcessedMessageAt ?? message.sentAt, message.sentAt)
 
             Logger.info("Processed message: \(message.id)")
         } catch {
