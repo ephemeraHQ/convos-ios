@@ -130,7 +130,7 @@ class NewConversationViewModel: Identifiable {
         let inviteCode: String
 
         // Try to extract invite code from URL first
-        if let extractedCode = inviteUrlString.inviteCodeFromJoinURL {
+        if let url = URL(string: inviteUrlString), let extractedCode = url.convosInviteCode {
             inviteCode = extractedCode
         } else {
             // If it's not a valid URL, treat as direct invite code

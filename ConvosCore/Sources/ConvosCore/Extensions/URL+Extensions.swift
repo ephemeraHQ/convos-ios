@@ -2,21 +2,23 @@ import Foundation
 
 extension URL {
     public var convosInviteCode: String? {
-        // Handle both formats:
-        // Format 1: convos-local://join/code (host="join", pathComponents=["code"])
-        // Format 2: https://domain.com/join/code (host="domain.com", pathComponents=["join", "code"])
+        // Handle formats:
+        // Format 1: convos://code (host=code for direct invite codes)
+        // Format 2: https://domain.com/code (host="domain.com", pathComponents=["code"])
 
         let pathComponents = pathComponents.filter { $0 != "/" }
         var inviteCode: String?
 
-        if host == "join" && !pathComponents.isEmpty {
-            // App scheme: convos-local://join/code
-            inviteCode = pathComponents[0]
-        } else if pathComponents.count >= 2 && pathComponents[0] == "join" {
-            // Universal link: https://domain.com/join/code
-            inviteCode = pathComponents[1]
-        } else {
-            return nil
+        if scheme?.hasPrefix("convos") == true {
+            // App scheme: convos://code or convos-dev://code
+            if let host = host, !host.isEmpty {
+                inviteCode = host
+            }
+        } else if scheme == "https" {
+            // Universal link: https://domain.com/code
+            if pathComponents.count == 1 {
+                inviteCode = pathComponents[0]
+            }
         }
 
         guard let inviteCode = inviteCode, !inviteCode.isEmpty else {

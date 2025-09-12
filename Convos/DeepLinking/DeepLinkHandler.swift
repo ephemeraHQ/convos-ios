@@ -9,7 +9,7 @@ enum DeepLinkDestination {
 final class DeepLinkHandler {
     static func destination(for url: URL) -> DeepLinkDestination? {
         let isValidScheme = url.scheme == "https" ?
-            url.host == ConfigManager.shared.associatedDomain :
+            isValidHost(url.host) :
             url.scheme == ConfigManager.shared.appUrlScheme
 
         guard isValidScheme else {
@@ -21,5 +21,12 @@ final class DeepLinkHandler {
         }
 
         return .requestToJoin(inviteCode: inviteCode)
+    }
+
+    private static func isValidHost(_ host: String?) -> Bool {
+        guard let host = host else { return false }
+
+        // Check against the configured associated domain
+        return host == ConfigManager.shared.associatedDomain
     }
 }

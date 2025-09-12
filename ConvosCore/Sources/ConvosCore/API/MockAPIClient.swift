@@ -46,7 +46,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
     }
 
     func publicInviteDetails(_ code: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
-        .init(id: "invite_123", name: "My Invite", description: "My fun group chat", imageUrl: nil, inviteLinkURL: "http://convos.org/join/123456")
+        .init(id: "invite_123", name: "My Invite", description: "My fun group chat", imageUrl: nil, inviteLinkURL: "https://popup.convos.org/123456")
     }
 
     var identifier: String {
@@ -103,7 +103,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
                 autoApprove: false,
                 groupId: "my_group_123",
                 createdAt: Date(),
-                inviteLinkURL: "http://convos.org/join/my_group_123"
+                inviteLinkURL: "https://popup.convos.org/my_group_123"
             )
     }
 
@@ -121,7 +121,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
                 autoApprove: false,
                 groupId: "my_group_123",
                 createdAt: Date(),
-                inviteLinkURL: "http://convos.org/join/my_group_123"
+                inviteLinkURL: "https://popup.convos.org/my_group_123"
             )
     }
 
@@ -135,7 +135,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
             name: "My Group",
             description: nil,
             imageUrl: nil,
-            inviteLinkURL: "http://convos.org/join/invite_123",
+            inviteLinkURL: "https://popup.convos.org/invite_123",
             groupId: "my_group_123",
             inviterInboxId: "0x12345"
         )
@@ -215,7 +215,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
                 autoApprove: false,
                 groupId: "my_group_123",
                 createdAt: Date(),
-                inviteLinkURL: "http://convos.org/join/my_group_123"
+                inviteLinkURL: "https://popup.convos.org/my_group_123"
             ),
             createdAt: Date().ISO8601Format()
         )
