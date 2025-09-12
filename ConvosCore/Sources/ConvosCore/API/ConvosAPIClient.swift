@@ -193,6 +193,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
 
     private var _overrideJWTToken: String?
+    private let tokenAccessQueue: DispatchQueue = DispatchQueue(label: "org.convos.api.tokenAccess")
 
     private let maxRetryCount: Int = 3
 
@@ -301,7 +302,9 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     /// This token will be prioritized over the keychain-stored JWT for authenticated requests.
     /// - Parameter token: The JWT token to use for authentication
     func overrideJWTToken(_ token: String) {
-        _overrideJWTToken = token
+        tokenAccessQueue.sync {
+            _overrideJWTToken = token
+        }
     }
 
     // MARK: - Init
@@ -394,7 +397,10 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         var request = try request(for: path, method: method, queryParameters: queryParameters)
 
         // Prioritize override JWT token (from notification payload) over keychain JWT
-        if let overridenJWT = _overrideJWTToken {
+        // Capture the override token in a synchronized block to avoid race conditions
+        let overrideToken = tokenAccessQueue.sync { _overrideJWTToken }
+
+        if let overridenJWT = overrideToken {
             request.setValue(overridenJWT, forHTTPHeaderField: "X-Convos-AuthToken")
         } else if let keychainJWT = try? keychainService.retrieveString(.init(inboxId: client.inboxId)) {
             request.setValue(keychainJWT, forHTTPHeaderField: "X-Convos-AuthToken")
@@ -444,7 +450,8 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             case 401:
                 // If using override JWT token (notification service extension), don't attempt re-auth
                 // since app attest is not available in notification service extension
-                guard _overrideJWTToken == nil else {
+                let hasOverrideToken = tokenAccessQueue.sync { _overrideJWTToken != nil }
+                guard !hasOverrideToken else {
                     Logger.error("Authentication failed with override JWT token - cannot re-authenticate in notification service extension")
                     throw APIError.notAuthenticated
                 }
