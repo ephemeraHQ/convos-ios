@@ -200,9 +200,6 @@ final class SyncingManager: SyncingManagerProtocol {
         apiClient: any ConvosAPIClientProtocol
     ) async {
         do {
-            // Update timestamp
-            lastProcessedMessageAt = max(lastProcessedMessageAt ?? message.sentAt, message.sentAt)
-
             // Find conversation
             guard let conversation = try await client.conversationsProvider.findConversation(
                 conversationId: message.conversationId
@@ -226,6 +223,9 @@ final class SyncingManager: SyncingManagerProtocol {
                message.senderInboxId != client.inboxId {
                 try await localStateWriter.setUnread(true, for: conversation.id)
             }
+
+            // Update timestamp
+            lastProcessedMessageAt = max(lastProcessedMessageAt ?? message.sentAt, message.sentAt)
 
             Logger.info("Processed message: \(message.id)")
         } catch {
