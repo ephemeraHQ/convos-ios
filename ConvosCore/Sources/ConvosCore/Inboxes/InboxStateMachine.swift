@@ -275,13 +275,13 @@ public actor InboxStateMachine {
             case (.uninitialized, let .authorize(inboxId)):
                 try await handleAuthorize(inboxId: inboxId)
             case (.error, let .authorize(inboxId)):
-                try handleStop()
+                try await handleStop()
                 try await handleAuthorize(inboxId: inboxId)
 
             case (.uninitialized, .register):
                 try await handleRegister()
             case (.error, .register):
-                try handleStop()
+                try await handleStop()
                 try await handleRegister()
 
             case (.initializing, let .clientInitialized(client)):
@@ -301,7 +301,7 @@ public actor InboxStateMachine {
             case (.error, .delete):
                 try await handleDeleteFromError()
             case (.ready, .stop), (.error, .stop), (.deleting, .stop):
-                try handleStop()
+                try await handleStop()
 
             case (.uninitialized, .stop):
                 break
@@ -409,7 +409,7 @@ public actor InboxStateMachine {
         await pushNotificationRegistrar.unregisterInstallation(client: client, apiClient: apiClient)
 
         emitStateChange(.deleting)
-        syncingManager?.stop()
+        await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         try await inboxWriter.deleteInbox(inboxId: client.inboxId)
         if let identity = try? await identityStore.identity(for: client.inboxId) {
@@ -434,7 +434,7 @@ public actor InboxStateMachine {
     private func handleDeleteFromError() async throws {
         Logger.info("Deleting inbox from error state...")
         emitStateChange(.deleting)
-        syncingManager?.stop()
+        await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         if let inboxId = inboxId {
             try await inboxWriter.deleteInbox(inboxId: inboxId)
@@ -444,10 +444,10 @@ public actor InboxStateMachine {
         enqueueAction(.stop)
     }
 
-    private func handleStop() throws {
+    private func handleStop() async throws {
         Logger.info("Stopping inbox...")
         emitStateChange(.stopping)
-        syncingManager?.stop()
+        await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         removePushNotificationObservers()
         inboxId = nil
