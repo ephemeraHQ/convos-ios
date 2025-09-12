@@ -18,7 +18,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", exact: "7.5.0"),
         .package(url: "https://github.com/xmtp/xmtp-ios.git", from: "4.4.0"),
-        .package(url: "https://github.com/SimplyDanny/SwiftLintPlugins", from: "0.59.1")
+        .package(url: "https://github.com/SimplyDanny/SwiftLintPlugins", from: "0.61.0")
     ],
     targets: [
         .target(
