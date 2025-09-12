@@ -61,8 +61,6 @@ struct ListItemView<LeadingContent: View, SubtitleContent: View, AccessoryConten
         .padding(.horizontal, DesignConstants.Spacing.step6x)
         .padding(.vertical, DesignConstants.Spacing.step3x)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.colorBackgroundPrimary)
-        .contentShape(Rectangle())
     }
 }
 
@@ -90,16 +88,6 @@ struct ConversationsListItem: View {
             },
             accessoryContent: {}
         )
-    }
-}
-
-struct ConversationsListItemButtonStyle: ButtonStyle {
-    @State private var isPressed: Bool = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background(configuration.isPressed ? Color(.systemGray6) : Color(.clear))
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 

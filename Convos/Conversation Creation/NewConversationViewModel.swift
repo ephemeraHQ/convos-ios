@@ -19,6 +19,7 @@ class NewConversationViewModel: Identifiable {
     private(set) var messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .scan
     private(set) var shouldConfirmDeletingConversation: Bool = true
     private let startedWithFullscreenScanner: Bool
+    let allowsDismissingScanner: Bool
     private let autoCreateConversation: Bool
     private(set) var showingFullScreenScanner: Bool
     var presentingJoinConversationSheet: Bool = false
@@ -45,12 +46,14 @@ class NewConversationViewModel: Identifiable {
         session: any SessionManagerProtocol,
         autoCreateConversation: Bool = false,
         showingFullScreenScanner: Bool = false,
+        allowsDismissingScanner: Bool = true,
         delegate: NewConversationsViewModelDelegate? = nil
     ) {
         self.session = session
         self.autoCreateConversation = autoCreateConversation
         self.startedWithFullscreenScanner = showingFullScreenScanner
         self.showingFullScreenScanner = showingFullScreenScanner
+        self.allowsDismissingScanner = allowsDismissingScanner
         self.delegate = delegate
 
         start()

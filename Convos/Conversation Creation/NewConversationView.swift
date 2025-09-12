@@ -39,7 +39,7 @@ struct NewConversationView: View {
                 @Bindable var viewModel = viewModel
                 Group {
                     if viewModel.showingFullScreenScanner {
-                        JoinConversationView { inviteCode in
+                        JoinConversationView(allowsDismissal: viewModel.allowsDismissingScanner) { inviteCode in
                             viewModel.join(inviteUrlString: inviteCode)
                         }
                     } else {

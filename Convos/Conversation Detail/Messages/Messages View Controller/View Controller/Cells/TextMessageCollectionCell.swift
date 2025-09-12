@@ -63,10 +63,21 @@ struct MessageBubble: View {
     let message: String
     let isOutgoing: Bool
     let profile: Profile
+
+    private var textColor: Color {
+        // Match the text color based on message type (same as MessageContainer)
+        if isOutgoing {
+            return Color.colorTextPrimaryInverted
+        } else {
+            return Color.colorTextPrimary
+        }
+    }
+
     var body: some View {
         HStack {
             MessageContainer(style: style, isOutgoing: isOutgoing) {
-                Text(message)
+                LinkDetectingTextView(message, linkColor: textColor)
+                    .foregroundStyle(textColor)
                     .padding(.horizontal, DesignConstants.Spacing.step3x)
                     .padding(.vertical, DesignConstants.Spacing.step2x)
             } avatarView: {
@@ -96,8 +107,14 @@ struct MessageBubble: View {
                 profile: .mock()
             )
             MessageBubble(
+                style: .normal,
+                message: "Check out https://convos.org for more info",
+                isOutgoing: type == .outgoing,
+                profile: .mock()
+            )
+            MessageBubble(
                 style: .tailed,
-                message: "Hello world!",
+                message: "Visit www.example.com or email us at hello@example.com",
                 isOutgoing: type == .outgoing,
                 profile: .mock()
             )

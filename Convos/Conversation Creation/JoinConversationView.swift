@@ -8,12 +8,14 @@ struct JoinConversationView: View {
     @State private var qrScannerCoordinator: QRScannerView.Coordinator?
     @State private var showingExplanation: Bool = false
     @State private var showingScanFailedForInviteCode: String?
+    let allowsDismissal: Bool
     let onScannedCode: (String) -> Bool
 
     @Environment(\.dismiss) private var dismiss: DismissAction
     @Environment(\.openURL) private var openURL: OpenURLAction
 
-    init(onScannedCode: @escaping (String) -> Bool) {
+    init(allowsDismissal: Bool = true, onScannedCode: @escaping (String) -> Bool) {
+        self.allowsDismissal = allowsDismissal
         self.onScannedCode = onScannedCode
     }
 
@@ -129,9 +131,11 @@ struct JoinConversationView: View {
             }
             .ignoresSafeArea()
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(role: .close) {
-                        dismiss()
+                if allowsDismissal {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(role: .close) {
+                            dismiss()
+                        }
                     }
                 }
             }

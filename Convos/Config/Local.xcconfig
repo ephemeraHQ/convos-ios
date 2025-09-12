@@ -28,3 +28,6 @@ ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon-Local
 // Info.plist preprocessing for Local builds
 INFOPLIST_PREPROCESS = YES
 INFOPLIST_PREFIX_HEADER = $(SRCROOT)/Convos/Config/InfoPlistPrefix.Local.h
+
+// Debug information format for local development (faster builds)
+DEBUG_INFORMATION_FORMAT = dwarf
