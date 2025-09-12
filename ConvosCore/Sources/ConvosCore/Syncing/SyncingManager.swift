@@ -10,10 +10,8 @@ protocol SyncingManagerProtocol {
     func stop() async
 }
 
-// MARK: - Implementation using Apple's Structured Concurrency
-
 final class SyncingManager: SyncingManagerProtocol {
-    // MARK: - Properties (Greatly Simplified)
+    // MARK: - Properties
 
     private let conversationWriter: any ConversationWriterProtocol
     private let messageWriter: any IncomingMessageWriterProtocol
@@ -24,7 +22,6 @@ final class SyncingManager: SyncingManagerProtocol {
     // Single parent task that manages everything
     private var syncTask: Task<Void, Never>?
 
-    // Simple state tracking (no complex actor needed)
     private var lastProcessedMessageAt: Date?
     private var activeConversationId: String?
     private var lastMemberProfileSync: [String: Date] = [:]
@@ -70,8 +67,6 @@ final class SyncingManager: SyncingManagerProtocol {
         syncTask?.cancel()
         syncTask = Task { [weak self] in
             guard let self else { return }
-
-            // Use TaskGroup for parallel execution with automatic cancellation
             await withTaskGroup(of: Void.self) { group in
                 // Initial sync
                 group.addTask {
@@ -95,8 +90,6 @@ final class SyncingManager: SyncingManagerProtocol {
         Logger.info("Stopping...")
         // Save timestamp for catch-up on next start
         lastActiveAt = Date()
-
-        // Cancelling parent cancels all children automatically
         syncTask?.cancel()
         syncTask = nil
     }
