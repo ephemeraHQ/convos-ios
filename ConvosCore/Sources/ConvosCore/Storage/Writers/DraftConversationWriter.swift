@@ -127,7 +127,10 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
     func checkIfAlreadyJoined(inviteCode: String) async -> String? {
         do {
-            let lookupUtility = ConversationLookupUtility(databaseReader: databaseReader)
+            let lookupUtility = ConversationLookupUtility(
+                inboxStateManager: inboxStateManager,
+                databaseReader: databaseReader
+            )
             return try await lookupUtility.findExistingConversationForInviteCode(inviteCode)
         } catch {
             Logger.error("Error checking if already joined: \(error.localizedDescription)")

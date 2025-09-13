@@ -5,7 +5,7 @@ public protocol InboxStateObserver: AnyObject {
     func inboxStateDidChange(_ state: InboxStateMachine.State)
 }
 
-protocol InboxStateManagerProtocol {
+public protocol InboxStateManagerProtocol {
     var currentState: InboxStateMachine.State { get }
 
     func addObserver(_ observer: InboxStateObserver)

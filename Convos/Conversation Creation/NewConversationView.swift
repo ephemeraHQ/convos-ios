@@ -40,7 +40,7 @@ struct NewConversationView: View {
                 Group {
                     if viewModel.showingFullScreenScanner {
                         JoinConversationView(allowsDismissal: viewModel.allowsDismissingScanner) { inviteCode in
-                            viewModel.join(inviteUrlString: inviteCode)
+                            viewModel.validateAndJoin(inviteUrlString: inviteCode)
                         }
                     } else {
                         let conversationViewModel = viewModel.conversationViewModel
@@ -78,7 +78,7 @@ struct NewConversationView: View {
                 .background(.colorBackgroundPrimary)
                 .sheet(isPresented: $viewModel.presentingJoinConversationSheet) {
                     JoinConversationView { inviteCode in
-                        viewModel.join(inviteUrlString: inviteCode)
+                        viewModel.validateAndJoin(inviteUrlString: inviteCode)
                     }
                 }
                 .selfSizingSheet(isPresented: $viewModel.presentingInvalidInviteSheet) {

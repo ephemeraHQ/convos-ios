@@ -202,6 +202,15 @@ struct DebugViewSection: View {
                         .foregroundStyle(.colorTextSecondary)
                 }
             }
+
+            Section {
+                Button {
+                    resetUserDefaults()
+                } label: {
+                    Text("Reset User Defaults")
+                        .foregroundStyle(.colorTextPrimary)
+                }
+            }
         }
         .task {
             await refreshNotificationStatus()
@@ -246,6 +255,12 @@ extension DebugViewSection {
             await refreshNotificationStatus()
         } catch {
             Logger.error("Debug push request failed: \(error)")
+        }
+    }
+
+    private func resetUserDefaults() {
+        if let appDomain = Bundle.main.bundleIdentifier {
+            UserDefaults.standard.removePersistentDomain(forName: appDomain)
         }
     }
 }
