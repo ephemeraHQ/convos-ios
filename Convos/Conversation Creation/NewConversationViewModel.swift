@@ -123,29 +123,33 @@ class NewConversationViewModel: Identifiable {
         presentingJoinConversationSheet = true
     }
 
-    func join(inviteUrlString: String) -> Bool {
-        // Clear any previous errors when starting a new join attempt
-        presentingInvalidInviteSheet = false
-
+    func validate(inviteUrlString: String) -> String? {
         let inviteCode: String
-
         // Try to extract invite code from URL first
         if let url = URL(string: inviteUrlString), let extractedCode = url.convosInviteCode {
             inviteCode = extractedCode
-        } else {
-            // If it's not a valid URL, treat as direct invite code
-            // Only accept if it looks like a valid invite code (no spaces, reasonable length)
-            guard !inviteUrlString.contains(" "), inviteUrlString.count >= 8 else {
-                Logger.warning("Invalid invite code format: \(inviteUrlString)")
-                presentingInvalidInviteSheet = true
-                return false
-            }
+        } else if !inviteUrlString.contains(" "), inviteUrlString.count >= 8 {
             inviteCode = inviteUrlString
+        } else {
+            return nil
+        }
+        Logger.info("Validated invite code: \(inviteCode)")
+        return inviteCode
+    }
+
+    func validateAndJoin(inviteUrlString: String) -> Bool {
+        // Clear any previous errors when starting a new join attempt
+        presentingInvalidInviteSheet = false
+
+        let validatedInviteCode = validate(inviteUrlString: inviteUrlString)
+        guard let validatedInviteCode else {
+            Logger.warning("Invalid invite code format: \(inviteUrlString)")
+            presentingInvalidInviteSheet = true
+            return false
         }
 
-        Logger.info("Processing inviteCode")
         presentingJoinConversationSheet = false
-        joinConversation(inviteCode: inviteCode)
+        joinConversation(inviteCode: validatedInviteCode, checkForExistingConversation: true)
         conversationViewModel?.showsInfoView = true
         return true
     }
@@ -164,9 +168,28 @@ class NewConversationViewModel: Identifiable {
         }
     }
 
+    func existingConversationId(for inviteCode: String) async -> String? {
+        // wait for init
+        await initializationTask?.value
+
+        guard let draftConversationComposer else {
+            Logger.error("Join attempted before initialization finished")
+            return nil
+        }
+
+        let writer = draftConversationComposer.draftConversationWriter
+        guard let existingConversationId = await writer.checkIfAlreadyJoined(
+            inviteCode: inviteCode
+        ) else {
+            return nil
+        }
+
+        return existingConversationId
+    }
+
     // MARK: - Private
 
-    private func joinConversation(inviteCode: String) {
+    private func joinConversation(inviteCode: String, checkForExistingConversation: Bool) {
         joinConversationTask?.cancel()
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
@@ -180,7 +203,7 @@ class NewConversationViewModel: Identifiable {
                 return
             }
 
-            if let existingConversationId = await draftConversationComposer.draftConversationWriter.checkIfAlreadyJoined(inviteCode: inviteCode) {
+            if checkForExistingConversation, let existingConversationId = await existingConversationId(for: inviteCode) {
                 Logger.info("Invite already redeeemed, showing existing conversation... conversationId: \(existingConversationId)")
                 await MainActor.run {
                     self.presentingJoinConversationSheet = false

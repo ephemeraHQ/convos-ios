@@ -103,6 +103,8 @@ final class ConversationsViewModel {
     private var cancellables: Set<AnyCancellable> = .init()
     private var leftConversationObserver: Any?
 
+    private var joinConversationTask: Task<Void, Error>?
+
     init(session: any SessionManagerProtocol) {
         self.session = session
         self.conversationsRepository = session.conversationsRepository(
@@ -133,6 +135,7 @@ final class ConversationsViewModel {
     }
 
     deinit {
+        joinConversationTask?.cancel()
         if let leftConversationObserver {
             NotificationCenter.default.removeObserver(leftConversationObserver)
         }
@@ -193,11 +196,25 @@ final class ConversationsViewModel {
         // This creates a request to join via invite code
         // For deep links, we want to directly join without showing the scanner
         // All validation (already joined, invalid codes, etc.) is handled by ConversationStateMachine
-        newConversationViewModel = .init(
+        let viewModel = NewConversationViewModel(
             session: session,
             delegate: self,
         )
-        _ = newConversationViewModel?.join(inviteUrlString: inviteCode)
+        let validatedInviteCode = viewModel.validate(inviteUrlString: inviteCode)
+        guard let validatedInviteCode else {
+            return
+        }
+        joinConversationTask?.cancel()
+        joinConversationTask = Task {
+            if let existingConversationId = await viewModel.existingConversationId(for: validatedInviteCode),
+               let conversation = conversations.first(where: { $0.id == existingConversationId }) {
+                selectedConversation = conversation
+            } else {
+                // here we only want to set the view model if we haven't already joined the convo
+                // this prevents the modal from presenting and then dismissing
+                newConversationViewModel = viewModel
+            }
+        }
     }
 
     func deleteAllInboxes() {

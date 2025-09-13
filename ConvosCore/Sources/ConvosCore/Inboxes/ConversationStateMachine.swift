@@ -193,7 +193,10 @@ public actor ConversationStateMachine {
     // MARK: - Action Handlers
 
     private func findExistingConversationForInviteCode(_ inviteCode: String) async throws -> String? {
-        let lookupUtility = ConversationLookupUtility(databaseReader: databaseReader)
+        let lookupUtility = ConversationLookupUtility(
+            inboxStateManager: inboxStateManager,
+            databaseReader: databaseReader
+        )
         return try await lookupUtility.findExistingConversationForInviteCode(inviteCode)
     }
 
