@@ -1,6 +1,7 @@
 import ConvosCore
 import PhotosUI
 import SwiftUI
+import SwiftUIIntrospect
 
 struct ConversationInfoEditView: View {
     @Bindable var viewModel: ConversationViewModel
@@ -39,10 +40,8 @@ struct ConversationInfoEditView: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(maxWidth: 166.0)
-                        .onChange(of: viewModel.conversationName) { _, newValue in
-                            if newValue.count > NameLimits.maxConversationNameLength {
-                                viewModel.conversationName = String(newValue.prefix(NameLimits.maxConversationNameLength))
-                            }
+                        .introspect(.textField, on: .iOS(.v26)) { textField in
+                            textField.convos_setMaxLength(NameLimits.maxConversationNameLength)
                         }
                     TextField(
                         viewModel.conversationDescriptionPlaceholder,
