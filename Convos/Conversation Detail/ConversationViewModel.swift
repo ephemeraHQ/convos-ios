@@ -33,15 +33,22 @@ class ConversationViewModel {
     var showsInfoView: Bool = true
     private(set) var conversation: Conversation {
         didSet {
-            conversationName = conversation.name ?? ""
-            conversationDescription = conversation.description ?? ""
+            // Only update if the actual name changed (not just last message)
+            if oldValue.name != conversation.name {
+                conversationName = conversation.name ?? ""
+            }
+            // Only update if the actual description changed
+            if oldValue.description != conversation.description {
+                conversationDescription = conversation.description ?? ""
+            }
         }
     }
     var messages: [AnyMessage]
     var invite: Invite = .empty
     private(set) var profile: Profile = .empty(inboxId: "") {
         didSet {
-            displayName = profile.name ?? ""
+            // Don't update displayName here - it should only change when user edits it
+            // The profile update from the repository shouldn't overwrite user's input
         }
     }
     var untitledConversationPlaceholder: String = "Untitled"
@@ -52,8 +59,22 @@ class ConversationViewModel {
     var conversationDescriptionPlaceholder: String = "Description"
     var joinEnabled: Bool = true
     var notificationsEnabled: Bool = true
-    var displayName: String = ""
-    var conversationName: String = ""
+    var displayName: String = "" {
+        didSet {
+            // Limit to 50 characters
+            if displayName.count > 50 {
+                displayName = String(displayName.prefix(50))
+            }
+        }
+    }
+    var conversationName: String = "" {
+        didSet {
+            // Limit to 50 characters
+            if conversationName.count > 50 {
+                conversationName = String(conversationName.prefix(50))
+            }
+        }
+    }
     var conversationDescription: String = ""
     var conversationImage: UIImage?
     var messageText: String = "" {
@@ -149,10 +170,16 @@ class ConversationViewModel {
         observe()
         setupMyProfileRepository()
 
-        // Update UI state
-        self.displayName = profile.name ?? ""
-        self.conversationName = conversation.name ?? ""
-        self.conversationDescription = conversation.description ?? ""
+        // Initialize UI state only if not already set
+        if displayName.isEmpty {
+            self.displayName = profile.name ?? ""
+        }
+        if conversationName.isEmpty {
+            self.conversationName = conversation.name ?? ""
+        }
+        if conversationDescription.isEmpty {
+            self.conversationDescription = conversation.description ?? ""
+        }
 
         KeyboardListener.shared.add(delegate: self)
     }
@@ -172,10 +199,16 @@ class ConversationViewModel {
 
         setupMyProfileRepository()
 
-        // Update UI state
-        displayName = profile.name ?? ""
-        conversationName = conversation.name ?? ""
-        conversationDescription = conversation.description ?? ""
+        // Initialize UI state only if not already set
+        if displayName.isEmpty {
+            displayName = profile.name ?? ""
+        }
+        if conversationName.isEmpty {
+            conversationName = conversation.name ?? ""
+        }
+        if conversationDescription.isEmpty {
+            conversationDescription = conversation.description ?? ""
+        }
 
         loadingError = nil
     }

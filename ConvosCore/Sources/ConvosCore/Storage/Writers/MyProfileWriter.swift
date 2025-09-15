@@ -25,7 +25,11 @@ class MyProfileWriter: MyProfileWriterProtocol {
 
     func update(displayName: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
-        let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        var trimmedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Limit to 50 characters
+        if trimmedDisplayName.count > 50 {
+            trimmedDisplayName = String(trimmedDisplayName.prefix(50))
+        }
         guard !trimmedDisplayName.isEmpty else { return }
         let inboxId = inboxReady.client.inboxId
         let profile = try await databaseWriter.write { db in
