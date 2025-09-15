@@ -32,19 +32,21 @@ class ConversationViewModel {
     var showsInfoView: Bool = true
     private(set) var conversation: Conversation {
         didSet {
-            conversationName = conversation.name ?? ""
-            conversationDescription = conversation.description ?? ""
+            // Only update if the actual name changed (not just last message)
+            if oldValue.name != conversation.name {
+                conversationName = conversation.name ?? ""
+            }
+            // Only update if the actual description changed
+            if oldValue.description != conversation.description {
+                conversationDescription = conversation.description ?? ""
+            }
         }
     }
     var messages: [AnyMessage]
     var invite: Invite {
         conversation.invite ?? .empty
     }
-    private(set) var profile: Profile = .empty(inboxId: "") {
-        didSet {
-            displayName = profile.name ?? ""
-        }
-    }
+    private(set) var profile: Profile = .empty(inboxId: "")
     var untitledConversationPlaceholder: String = "Untitled"
     var conversationInfoSubtitle: String {
         conversation.members.count > 1 ? conversation.membersCountString : "Customize"
@@ -148,10 +150,16 @@ class ConversationViewModel {
         observe()
         setupMyProfileRepository()
 
-        // Update UI state
-        self.displayName = profile.name ?? ""
-        self.conversationName = conversation.name ?? ""
-        self.conversationDescription = conversation.description ?? ""
+        // Initialize UI state only if not already set
+        if displayName.isEmpty {
+            self.displayName = profile.name ?? ""
+        }
+        if conversationName.isEmpty {
+            self.conversationName = conversation.name ?? ""
+        }
+        if conversationDescription.isEmpty {
+            self.conversationDescription = conversation.description ?? ""
+        }
 
         KeyboardListener.shared.add(delegate: self)
     }
@@ -171,10 +179,16 @@ class ConversationViewModel {
 
         setupMyProfileRepository()
 
-        // Update UI state
-        displayName = profile.name ?? ""
-        conversationName = conversation.name ?? ""
-        conversationDescription = conversation.description ?? ""
+        // Initialize UI state only if not already set
+        if displayName.isEmpty {
+            displayName = profile.name ?? ""
+        }
+        if conversationName.isEmpty {
+            conversationName = conversation.name ?? ""
+        }
+        if conversationDescription.isEmpty {
+            conversationDescription = conversation.description ?? ""
+        }
 
         loadingError = nil
     }
@@ -242,13 +256,16 @@ class ConversationViewModel {
     func onConversationNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
         focus = nextFocus
 
-        if conversationName != (conversation.name ?? "") {
+        let trimmedConversationName = conversationName.trimmingCharacters(in: .whitespacesAndNewlines)
+        conversationName = trimmedConversationName
+
+        if trimmedConversationName != (conversation.name ?? "") {
             Task { [weak self] in
                 guard let self, let metadataWriter = self.metadataWriter else { return }
                 do {
                     try await metadataWriter.updateGroupName(
                         groupId: conversation.id,
-                        name: conversationName
+                        name: trimmedConversationName
                     )
                 } catch {
                     Logger.error("Failed updating group name: \(error)")
@@ -272,13 +289,16 @@ class ConversationViewModel {
             }
         }
 
-        if conversationDescription != (conversation.description ?? "") {
+        let trimmedConversationDescription = conversationDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        conversationDescription = trimmedConversationDescription
+
+        if trimmedConversationDescription != (conversation.description ?? "") {
             Task { [weak self] in
                 guard let self, let metadataWriter = self.metadataWriter else { return }
                 do {
                     try await metadataWriter.updateGroupDescription(
                         groupId: conversation.id,
-                        description: conversationDescription
+                        description: trimmedConversationDescription
                     )
                 } catch {
                     Logger.error("Failed updating group description: \(error)")
@@ -330,11 +350,14 @@ class ConversationViewModel {
     private func onDisplayNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
         focus = nextFocus
 
-        if (profile.name ?? "") != displayName {
+        let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        displayName = trimmedDisplayName
+
+        if (profile.name ?? "") != trimmedDisplayName {
             Task { [weak self] in
                 guard let self, let myProfileWriter = self.myProfileWriter else { return }
                 do {
-                    try await myProfileWriter.update(displayName: displayName)
+                    try await myProfileWriter.update(displayName: trimmedDisplayName)
                 } catch {
                     Logger.error("Error updating profile display name: \(error.localizedDescription)")
                 }

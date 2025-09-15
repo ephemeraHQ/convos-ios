@@ -40,24 +40,26 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     func updateGroupName(groupId: String, name: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
+        let truncatedName = name.count > NameLimits.maxConversationNameLength ? String(name.prefix(NameLimits.maxConversationNameLength)) : name
+
         guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
         }
 
-        try await group.updateName(name: name)
+        try await group.updateName(name: truncatedName)
 
         try await databaseWriter.write { db in
             if let localConversation = try DBConversation
                 .filter(DBConversation.Columns.id == groupId)
                 .fetchOne(db) {
-                let updatedConversation = localConversation.with(name: name)
+                let updatedConversation = localConversation.with(name: truncatedName)
                 try updatedConversation.save(db)
-                Logger.info("Updated local group name for \(groupId): \(name)")
+                Logger.info("Updated local group name for \(groupId): \(truncatedName)")
             }
         }
 
-        Logger.info("Updated group name for \(groupId): \(name)")
+        Logger.info("Updated group name for \(groupId): \(truncatedName)")
     }
 
     func updateGroupDescription(groupId: String, description: String) async throws {
