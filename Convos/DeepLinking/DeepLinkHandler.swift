@@ -3,7 +3,7 @@ import Foundation
 import SwiftUI
 
 enum DeepLinkDestination {
-    case requestToJoin(inviteCode: String)
+    case joinConversation(inviteCode: String)
 }
 
 final class DeepLinkHandler {
@@ -20,7 +20,7 @@ final class DeepLinkHandler {
             return nil
         }
 
-        return .requestToJoin(inviteCode: inviteCode)
+        return .joinConversation(inviteCode: inviteCode)
     }
 
     private static func isValidHost(_ host: String?) -> Bool {

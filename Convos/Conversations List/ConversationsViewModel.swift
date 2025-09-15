@@ -151,7 +151,7 @@ final class ConversationsViewModel {
         }
 
         switch destination {
-        case .requestToJoin(inviteCode: let inviteCode):
+        case .joinConversation(inviteCode: let inviteCode):
             join(from: inviteCode)
         }
     }
@@ -192,19 +192,16 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        // This creates a request to join via invite code
-        // For deep links, we want to directly join without showing the scanner
-        // All validation (already joined, invalid codes, etc.) is handled by ConversationStateMachine
         let viewModel = NewConversationViewModel(
             session: session,
             delegate: self,
         )
-        let validatedInviteCode = viewModel.validate(inviteUrlString: inviteCode)
-        guard let validatedInviteCode else {
-            return
+        joinConversationTask?.cancel()
+        joinConversationTask = Task {
+            viewModel.joinConversation(inviteCode: inviteCode)
+            // before setting the view model, make sure we do not encounter validation errors
+            newConversationViewModel = viewModel
         }
-        viewModel.joinConversation(inviteCode: validatedInviteCode)
-        newConversationViewModel = viewModel
     }
 
     func deleteAllInboxes() {

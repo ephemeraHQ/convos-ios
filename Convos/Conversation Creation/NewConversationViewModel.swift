@@ -15,6 +15,7 @@ class NewConversationViewModel: Identifiable {
 
     let session: any SessionManagerProtocol
     let conversationViewModel: ConversationViewModel
+    let qrScannerViewModel: QRScannerViewModel
     private weak var delegate: NewConversationsViewModelDelegate?
     private(set) var messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .scan
     private(set) var shouldConfirmDeletingConversation: Bool = true
@@ -23,7 +24,13 @@ class NewConversationViewModel: Identifiable {
     private let autoCreateConversation: Bool
     private(set) var showingFullScreenScanner: Bool
     var presentingJoinConversationSheet: Bool = false
-    var presentingInvalidInviteSheet: Bool = false
+    var presentingInvalidInviteSheet: Bool = false {
+        willSet {
+            if !newValue {
+                qrScannerViewModel.resetScanning()
+            }
+        }
+    }
     var presentingFailedToJoinSheet: Bool = false
     private var initializationTask: Task<Void, Never>?
     private(set) var initializationError: Error?
@@ -46,6 +53,7 @@ class NewConversationViewModel: Identifiable {
         delegate: NewConversationsViewModelDelegate? = nil
     ) {
         self.session = session
+        self.qrScannerViewModel = QRScannerViewModel()
         self.autoCreateConversation = autoCreateConversation
         self.startedWithFullscreenScanner = showingFullScreenScanner
         self.showingFullScreenScanner = showingFullScreenScanner
@@ -89,50 +97,22 @@ class NewConversationViewModel: Identifiable {
         presentingJoinConversationSheet = true
     }
 
-    func validate(inviteUrlString: String) -> String? {
-        let inviteCode: String
-        // Try to extract invite code from URL first
-        if let url = URL(string: inviteUrlString), let extractedCode = url.convosInviteCode {
-            inviteCode = extractedCode
-        } else if !inviteUrlString.contains(" "), inviteUrlString.count >= 8 {
-            inviteCode = inviteUrlString
-        } else {
-            return nil
-        }
-        Logger.info("Validated invite code: \(inviteCode)")
-        return inviteCode
-    }
-
-    func validateAndJoin(inviteUrlString: String) -> Bool {
-        // Clear any previous errors when starting a new join attempt
-        presentingInvalidInviteSheet = false
-
-        let validatedInviteCode = validate(inviteUrlString: inviteUrlString)
-        guard let validatedInviteCode else {
-            Logger.warning("Invalid invite code format: \(inviteUrlString)")
-            presentingInvalidInviteSheet = true
-            return false
-        }
-
-        presentingJoinConversationSheet = false
-        joinConversation(inviteCode: validatedInviteCode)
-        conversationViewModel.showsInfoView = true
-        return true
-    }
-
-    func deleteConversation() {
-        Logger.info("Deleting conversation")
-        newConversationTask?.cancel()
-        joinConversationTask?.cancel()
-        Task { [weak self] in
-            guard let self else { return }
-//            try await session.deleteInbox(for: messagingService)
-            await draftConversationComposer.draftConversationWriter.delete()
-//            self.messagingService = nil
-        }
-    }
-
-    // MARK: - Private
+//    func validateAndJoin(inviteUrlString: String) -> Bool {
+//        // Clear any previous errors when starting a new join attempt
+////        presentingInvalidInviteSheet = false
+//
+//        let validatedInviteCode = validate(inviteUrlString: inviteUrlString)
+//        guard let validatedInviteCode else {
+//            Logger.warning("Invalid invite code format: \(inviteUrlString)")
+//            qrScannerViewModel.invalidInviteCode = inviteUrlString
+//            qrScannerViewModel.showInvalidInviteCodeFormat = true
+//            return false
+//        }
+//
+//        presentingJoinConversationSheet = false
+//        joinConversation(inviteCode: validatedInviteCode)
+//        return true
+//    }
 
     func joinConversation(inviteCode: String) {
         joinConversationTask?.cancel()
@@ -144,16 +124,11 @@ class NewConversationViewModel: Identifiable {
 
             do {
                 // Request to join
-                await MainActor.run { self.showingFullScreenScanner = false }
-                try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
-            } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
-                Logger.info("Invite already redeeemed, showing existing conversation...")
+                try await draftConversationComposer.draftConversationWriter.joinConversation(inviteCode: inviteCode)
                 await MainActor.run {
-                    self.presentingJoinConversationSheet = false
-                    self.delegate?.newConversationsViewModel(
-                        self,
-                        attemptedJoiningExistingConversationWithId: conversationId
-                    )
+                    self.presentingInvalidInviteSheet = false
+                    self.conversationViewModel.showsInfoView = true
+                    self.showingFullScreenScanner = false
                 }
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
@@ -169,6 +144,20 @@ class NewConversationViewModel: Identifiable {
             }
         }
     }
+
+    func deleteConversation() {
+        Logger.info("Deleting conversation")
+        newConversationTask?.cancel()
+        joinConversationTask?.cancel()
+        Task { [weak self] in
+            guard let self else { return }
+//            try await session.deleteInbox(for: messagingService)
+            await draftConversationComposer.draftConversationWriter.delete()
+//            self.messagingService = nil
+        }
+    }
+
+    // MARK: - Private
 
     private func setupObservations() {
         cancellables.removeAll()
