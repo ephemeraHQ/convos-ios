@@ -43,6 +43,7 @@ struct QuickEditView: View {
             .textInputAutocapitalization(.words)
             .truncationMode(.tail)
             .submitLabel(.done)
+            .characterLimit(DesignConstants.CharacterLimits.maxDisplayNameLength, text: $text)
             .frame(minWidth: 166.0)
             .frame(height: 52.0)
             .background(

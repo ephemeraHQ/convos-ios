@@ -40,7 +40,6 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     func updateGroupName(groupId: String, name: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
-        // Limit to 50 characters
         let truncatedName = name.count > 50 ? String(name.prefix(50)) : name
 
         guard let conversation = try await inboxReady.client.conversation(with: groupId),

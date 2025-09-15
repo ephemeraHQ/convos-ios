@@ -59,22 +59,8 @@ class ConversationViewModel {
     var conversationDescriptionPlaceholder: String = "Description"
     var joinEnabled: Bool = true
     var notificationsEnabled: Bool = true
-    var displayName: String = "" {
-        didSet {
-            // Limit to 50 characters
-            if displayName.count > 50 {
-                displayName = String(displayName.prefix(50))
-            }
-        }
-    }
-    var conversationName: String = "" {
-        didSet {
-            // Limit to 50 characters
-            if conversationName.count > 50 {
-                conversationName = String(conversationName.prefix(50))
-            }
-        }
-    }
+    var displayName: String = ""
+    var conversationName: String = ""
     var conversationDescription: String = ""
     var conversationImage: UIImage?
     var messageText: String = "" {
