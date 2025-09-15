@@ -35,7 +35,6 @@ struct ConversationInfoEditView: View {
 
                 Section {
                     TextField(viewModel.conversationNamePlaceholder, text: $viewModel.conversationName)
-                        .textInputAutocapitalization(.words)
                         .lineLimit(1)
                         .characterLimit(DesignConstants.CharacterLimits.maxConversationNameLength, text: $viewModel.conversationName)
                     TextField(

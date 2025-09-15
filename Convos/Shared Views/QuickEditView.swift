@@ -40,7 +40,6 @@ struct QuickEditView: View {
             .tint(.colorTextPrimary)
             .foregroundStyle(.colorTextPrimary)
             .multilineTextAlignment(.center)
-            .textInputAutocapitalization(.words)
             .truncationMode(.tail)
             .submitLabel(.done)
             .characterLimit(DesignConstants.CharacterLimits.maxDisplayNameLength, text: $text)
