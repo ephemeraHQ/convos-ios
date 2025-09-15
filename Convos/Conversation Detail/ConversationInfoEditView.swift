@@ -36,7 +36,13 @@ struct ConversationInfoEditView: View {
                 Section {
                     TextField(viewModel.conversationNamePlaceholder, text: $viewModel.conversationName)
                         .lineLimit(1)
-                        .characterLimit(DesignConstants.CharacterLimits.maxConversationNameLength, text: $viewModel.conversationName)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity)
+                        .onChange(of: viewModel.conversationName) { _, newValue in
+                            if newValue.count > DesignConstants.CharacterLimits.maxConversationNameLength {
+                                viewModel.conversationName = String(newValue.prefix(DesignConstants.CharacterLimits.maxConversationNameLength))
+                            }
+                        }
                     TextField(
                         viewModel.conversationDescriptionPlaceholder,
                         text: $viewModel.conversationDescription

@@ -272,7 +272,7 @@ class ConversationViewModel {
         let trimmedConversationName = conversationName.trimmingCharacters(in: .whitespacesAndNewlines)
         conversationName = trimmedConversationName
 
-        if !trimmedConversationName.isEmpty && trimmedConversationName != (conversation.name ?? "") {
+        if trimmedConversationName != (conversation.name ?? "") {
             Task { [weak self] in
                 guard let self, let metadataWriter = self.metadataWriter else { return }
                 do {
@@ -305,7 +305,7 @@ class ConversationViewModel {
         let trimmedConversationDescription = conversationDescription.trimmingCharacters(in: .whitespacesAndNewlines)
         conversationDescription = trimmedConversationDescription
 
-        if !trimmedConversationDescription.isEmpty && trimmedConversationDescription != (conversation.description ?? "") {
+        if trimmedConversationDescription != (conversation.description ?? "") {
             Task { [weak self] in
                 guard let self, let metadataWriter = self.metadataWriter else { return }
                 do {
@@ -364,7 +364,7 @@ class ConversationViewModel {
         let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         displayName = trimmedDisplayName
 
-        if !trimmedDisplayName.isEmpty && (profile.name ?? "") != trimmedDisplayName {
+        if (profile.name ?? "") != trimmedDisplayName {
             Task { [weak self] in
                 guard let self, let myProfileWriter = self.myProfileWriter else { return }
                 do {
