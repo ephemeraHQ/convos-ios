@@ -37,7 +37,9 @@ class ConversationViewModel {
         }
     }
     var messages: [AnyMessage]
-    var invite: Invite = .empty
+    var invite: Invite {
+        conversation.invite ?? .empty
+    }
     private(set) var profile: Profile = .empty(inboxId: "") {
         didSet {
             displayName = profile.name ?? ""
@@ -223,7 +225,6 @@ class ConversationViewModel {
             .compactMap { $0 }
             .sink { [weak self] conversation in
                 self?.conversation = conversation
-                self?.invite = conversation.invite ?? .empty
             }
             .store(in: &cancellables)
     }
