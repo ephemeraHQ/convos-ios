@@ -1,7 +1,6 @@
 import ConvosCore
 import PhotosUI
 import SwiftUI
-import SwiftUIIntrospect
 
 struct ConversationInfoEditView: View {
     @Bindable var viewModel: ConversationViewModel
