@@ -1,3 +1,4 @@
+import ConvosCore
 import SwiftUI
 import SwiftUIIntrospect
 
@@ -40,11 +41,15 @@ struct QuickEditView: View {
             .tint(.colorTextPrimary)
             .foregroundStyle(.colorTextPrimary)
             .multilineTextAlignment(.center)
-            .textInputAutocapitalization(.words)
             .truncationMode(.tail)
             .submitLabel(.done)
-            .frame(minWidth: 166.0)
+            .frame(width: 166.0)
             .frame(height: 52.0)
+            .onChange(of: text) { _, newValue in
+                if newValue.count > NameLimits.maxDisplayNameLength {
+                    text = String(newValue.prefix(NameLimits.maxDisplayNameLength))
+                }
+            }
             .background(
                 Capsule()
                     .stroke(.gray.opacity(0.2), lineWidth: 1.0)

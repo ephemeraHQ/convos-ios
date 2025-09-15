@@ -1,3 +1,4 @@
+import ConvosCore
 import PhotosUI
 import SwiftUI
 
@@ -35,8 +36,14 @@ struct ConversationInfoEditView: View {
 
                 Section {
                     TextField(viewModel.conversationNamePlaceholder, text: $viewModel.conversationName)
-                        .textInputAutocapitalization(.words)
                         .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: 166.0)
+                        .onChange(of: viewModel.conversationName) { _, newValue in
+                            if newValue.count > NameLimits.maxConversationNameLength {
+                                viewModel.conversationName = String(newValue.prefix(NameLimits.maxConversationNameLength))
+                            }
+                        }
                     TextField(
                         viewModel.conversationDescriptionPlaceholder,
                         text: $viewModel.conversationDescription
