@@ -27,8 +27,8 @@ class MyProfileWriter: MyProfileWriterProtocol {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
         let trimmedDisplayName = {
             var name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-            if name.count > 50 {
-                name = String(name.prefix(50))
+            if name.count > NameLimits.maxDisplayNameLength {
+                name = String(name.prefix(NameLimits.maxDisplayNameLength))
             }
             return name
         }()

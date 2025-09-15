@@ -1,3 +1,4 @@
+import ConvosCore
 import SwiftUI
 import SwiftUIIntrospect
 
@@ -43,8 +44,8 @@ struct QuickEditView: View {
             .truncationMode(.tail)
             .submitLabel(.done)
             .onChange(of: text) { _, newValue in
-                if newValue.count > DesignConstants.CharacterLimits.maxDisplayNameLength {
-                    text = String(newValue.prefix(DesignConstants.CharacterLimits.maxDisplayNameLength))
+                if newValue.count > NameLimits.maxDisplayNameLength {
+                    text = String(newValue.prefix(NameLimits.maxDisplayNameLength))
                 }
             }
             .frame(width: 166.0)

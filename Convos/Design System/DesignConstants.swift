@@ -46,9 +46,4 @@ enum DesignConstants {
         static let small: Font = .system(size: 12.0)
         static let buttonText: Font = .system(size: 14.0)
     }
-
-    enum CharacterLimits {
-        static let maxDisplayNameLength: Int = 50
-        static let maxConversationNameLength: Int = 50
-    }
 }

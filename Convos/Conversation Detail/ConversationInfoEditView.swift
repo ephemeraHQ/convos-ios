@@ -1,3 +1,4 @@
+import ConvosCore
 import PhotosUI
 import SwiftUI
 
@@ -39,8 +40,8 @@ struct ConversationInfoEditView: View {
                         .truncationMode(.tail)
                         .frame(maxWidth: 166.0)
                         .onChange(of: viewModel.conversationName) { _, newValue in
-                            if newValue.count > DesignConstants.CharacterLimits.maxConversationNameLength {
-                                viewModel.conversationName = String(newValue.prefix(DesignConstants.CharacterLimits.maxConversationNameLength))
+                            if newValue.count > NameLimits.maxConversationNameLength {
+                                viewModel.conversationName = String(newValue.prefix(NameLimits.maxConversationNameLength))
                             }
                         }
                     TextField(
