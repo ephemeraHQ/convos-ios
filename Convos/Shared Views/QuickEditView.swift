@@ -35,7 +35,6 @@ struct QuickEditView: View {
             .introspect(.textField, on: .iOS(.v26)) { textField in
                 textFieldDelegate.action = onSubmit
                 textField.delegate = textFieldDelegate
-                textField.convos_setMaxLength(NameLimits.maxDisplayNameLength)
             }
             .padding(.horizontal, 16.0)
             .font(.system(size: 17.0))
@@ -46,6 +45,11 @@ struct QuickEditView: View {
             .submitLabel(.done)
             .frame(width: 166.0)
             .frame(height: 52.0)
+            .onChange(of: text) { _, newValue in
+                if newValue.count > NameLimits.maxDisplayNameLength {
+                    text = String(newValue.prefix(NameLimits.maxDisplayNameLength))
+                }
+            }
             .background(
                 Capsule()
                     .stroke(.gray.opacity(0.2), lineWidth: 1.0)

@@ -45,12 +45,7 @@ class ConversationViewModel {
     }
     var messages: [AnyMessage]
     var invite: Invite = .empty
-    private(set) var profile: Profile = .empty(inboxId: "") {
-        didSet {
-            // Don't update displayName here - it should only change when user edits it
-            // The profile update from the repository shouldn't overwrite user's input
-        }
-    }
+    private(set) var profile: Profile = .empty(inboxId: "")
     var untitledConversationPlaceholder: String = "Untitled"
     var conversationInfoSubtitle: String {
         conversation.members.count > 1 ? conversation.membersCountString : "Customize"

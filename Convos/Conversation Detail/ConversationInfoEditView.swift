@@ -40,8 +40,10 @@ struct ConversationInfoEditView: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(maxWidth: 166.0)
-                        .introspect(.textField, on: .iOS(.v26)) { textField in
-                            textField.convos_setMaxLength(NameLimits.maxConversationNameLength)
+                        .onChange(of: viewModel.conversationName) { _, newValue in
+                            if newValue.count > NameLimits.maxConversationNameLength {
+                                viewModel.conversationName = String(newValue.prefix(NameLimits.maxConversationNameLength))
+                            }
                         }
                     TextField(
                         viewModel.conversationDescriptionPlaceholder,
