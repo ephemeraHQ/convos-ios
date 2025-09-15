@@ -47,7 +47,7 @@ struct QuickEditView: View {
                     text = String(newValue.prefix(DesignConstants.CharacterLimits.maxDisplayNameLength))
                 }
             }
-            .frame(minWidth: 166.0)
+            .frame(width: 166.0)
             .frame(height: 52.0)
             .background(
                 Capsule()

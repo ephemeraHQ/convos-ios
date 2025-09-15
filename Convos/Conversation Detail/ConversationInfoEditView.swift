@@ -37,7 +37,7 @@ struct ConversationInfoEditView: View {
                     TextField(viewModel.conversationNamePlaceholder, text: $viewModel.conversationName)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: 166.0)
                         .onChange(of: viewModel.conversationName) { _, newValue in
                             if newValue.count > DesignConstants.CharacterLimits.maxConversationNameLength {
                                 viewModel.conversationName = String(newValue.prefix(DesignConstants.CharacterLimits.maxConversationNameLength))
