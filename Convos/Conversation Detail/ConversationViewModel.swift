@@ -321,6 +321,7 @@ class ConversationViewModel {
     }
 
     func onConversationSettingsDismissed() {
+        onConversationNameEndedEditing(nextFocus: nil)
         presentingConversationSettings = false
     }
 
@@ -329,6 +330,7 @@ class ConversationViewModel {
     }
 
     func onProfileSettingsDismissed() {
+        onDisplayNameEndedEditing(nextFocus: nil)
         presentingProfileSettings = false
     }
 
