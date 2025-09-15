@@ -4,6 +4,7 @@ import GRDB
 import XMTPiOS
 
 public struct ConversationReadyResult {
+    let inboxId: String
     public let conversationId: String
     public let externalConversationId: String
     public let invite: Invite?
@@ -207,14 +208,6 @@ public actor ConversationStateMachine {
 
     // MARK: - Action Handlers
 
-    private func findExistingConversationForInviteCode(_ inviteCode: String) async throws -> String? {
-        let lookupUtility = ConversationLookupUtility(
-            inboxStateManager: inboxStateManager,
-            databaseReader: databaseReader
-        )
-        return try await lookupUtility.findExistingConversationForInviteCode(inviteCode)
-    }
-
     private func handleCreate() async throws {
         emitStateChange(.creating)
 
@@ -272,6 +265,7 @@ public actor ConversationStateMachine {
 
         // Transition directly to ready state
         emitStateChange(.ready(ConversationReadyResult(
+            inboxId: client.inboxId,
             conversationId: draftConversationId,
             externalConversationId: externalConversationId,
             invite: invite
@@ -297,6 +291,7 @@ public actor ConversationStateMachine {
             let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
             await scheduleCleanupOnNextReady(
                 previousExternalId: previousResult.externalConversationId,
+                previousInboxId: previousResult.inboxId,
                 client: inboxReady.client,
                 apiClient: inboxReady.apiClient,
             )
@@ -330,6 +325,7 @@ public actor ConversationStateMachine {
                 return nil
             }
             return .init(
+                inboxId: existingConversation.inboxId,
                 conversationId: draftConversationId,
                 externalConversationId: existingConversation.id,
                 invite: existingInvite.hydrateInvite()
@@ -338,7 +334,7 @@ public actor ConversationStateMachine {
 
         if let resultByInviteCode {
             Logger.info("Found existing convo by invite code, returning...")
-            emitStateChange(.ready(resultByInviteCode))
+            await transitionToExistingInbox(using: resultByInviteCode)
             return
         }
 
@@ -366,6 +362,7 @@ public actor ConversationStateMachine {
                 return nil
             }
             return .init(
+                inboxId: existingConversation.inboxId,
                 conversationId: draftConversationId,
                 externalConversationId: existingConversation.id,
                 invite: existingInvite.hydrateInvite()
@@ -374,7 +371,7 @@ public actor ConversationStateMachine {
 
         if let resultByConversationId {
             Logger.info("Found existing convo by id, returning...")
-            emitStateChange(.ready(resultByConversationId))
+            await transitionToExistingInbox(using: resultByConversationId)
             return
         }
 
@@ -456,6 +453,7 @@ public actor ConversationStateMachine {
 
                     // Transition directly to ready state
                     await self.emitStateChange(.ready(ConversationReadyResult(
+                        inboxId: client.inboxId,
                         conversationId: draftConversationId,
                         externalConversationId: conversation.id,
                         invite: invite
@@ -475,6 +473,7 @@ public actor ConversationStateMachine {
         switch _state {
         case .ready(let result):
             // For ready conversations, use the regular message writer
+            Logger.info("Sending message for ready result: \(result)")
             let messageWriter = OutgoingMessageWriter(
                 inboxStateManager: inboxStateManager,
                 databaseWriter: databaseWriter,
@@ -605,15 +604,31 @@ public actor ConversationStateMachine {
         emitStateChange(.uninitialized)
     }
 
+    private func transitionToExistingInbox(using readyResult: ConversationReadyResult) async {
+        // lookup session by result
+//        let messagingService = await session.messagingService(for: readyResult.inboxId)
+//        let previousInboxStateManager = self.inboxStateManager
+//        inboxStateManager = messagingService.inboxStateManager
+
+        // clean up previous inbox manager
+        emitStateChange(.ready(readyResult))
+    }
+
     // After the next .ready, if the conversation changed, clean up the previously created convo.
     private func scheduleCleanupOnNextReady(
         previousExternalId: String,
+        previousInboxId: String,
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol,
     ) async {
         for await state in self.stateSequence {
             switch state {
             case .ready(let newReady):
+                guard previousInboxId == client.inboxId else {
+                    Logger.info("inboxId changed, skipping scheduled cleanup...")
+                    return
+                }
+
                 // Only clean up if we actually moved to a different external conversation
                 if newReady.externalConversationId != previousExternalId {
                     do {

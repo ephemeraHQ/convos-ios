@@ -106,8 +106,8 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         switch state {
         case .ready(let result):
             conversationIdSubject.send(result.externalConversationId)
-        case .creating, .joining:
-            // Keep using draft ID during creation/joining
+        case .creating, .validating, .validated, .joining:
+            // Keep using draft ID during creation/validation/joining
             conversationIdSubject.send(draftConversationId)
         default:
             break

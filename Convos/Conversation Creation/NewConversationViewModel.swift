@@ -126,6 +126,7 @@ class NewConversationViewModel: Identifiable {
                 // Request to join
                 try await draftConversationComposer.draftConversationWriter.joinConversation(inviteCode: inviteCode)
                 await MainActor.run {
+                    self.presentingJoinConversationSheet = false
                     self.presentingInvalidInviteSheet = false
                     self.conversationViewModel.showsInfoView = true
                     self.showingFullScreenScanner = false
