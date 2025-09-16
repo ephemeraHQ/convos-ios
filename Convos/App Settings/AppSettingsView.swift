@@ -15,20 +15,6 @@ struct EarlyLabel: View {
     }
 }
 
-struct NewLabel: View {
-    var body: some View {
-        Text("New")
-            .font(.system(size: 14.0))
-            .foregroundStyle(.colorTextSecondary)
-            .padding(.vertical, DesignConstants.Spacing.stepX)
-            .padding(.horizontal, DesignConstants.Spacing.step2x)
-            .background(
-                Capsule()
-                    .fill(.colorFillMinimal)
-            )
-    }
-}
-
 struct ConvosToolbarButton: View {
     let padding: Bool
     let action: () -> Void

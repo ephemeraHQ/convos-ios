@@ -53,7 +53,7 @@ struct FeatureRowItem<AccessoryView: View>: View {
 
 #Preview {
     FeatureRowItem(imageName: nil, symbolName: "eyeglasses", title: "Peek-a-boo", subtitle: "Blur when people peek") {
-        EmptyView()
+        SoonLabel()
     }
     .padding(DesignConstants.Spacing.step4x)
 }
