@@ -99,7 +99,6 @@ final class ConversationsViewModel {
     private let session: any SessionManagerProtocol
     private let conversationsRepository: any ConversationsRepositoryProtocol
     private let conversationsCountRepository: any ConversationsCountRepositoryProtocol
-    private var localStateWriters: [String: any ConversationLocalStateWriterProtocol] = [:]
     private var cancellables: Set<AnyCancellable> = .init()
     private var leftConversationObserver: Any?
 
@@ -201,8 +200,7 @@ final class ConversationsViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await session.deleteAllInboxes()
-                await MainActor.run { self.localStateWriters.removeAll() }
+//                try await session.deleteAllInboxes()
             } catch {
                 Logger.error("Error deleting all accounts: \(error)")
             }
@@ -217,8 +215,7 @@ final class ConversationsViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await session.deleteInbox(inboxId: conversation.inboxId)
-                _ = await MainActor.run { self.localStateWriters.removeValue(forKey: conversation.inboxId) }
+//                try await session.deleteInbox(inboxId: conversation.inboxId)
             } catch {
                 Logger.error("Error leaving convo: \(error.localizedDescription)")
             }
@@ -236,7 +233,7 @@ final class ConversationsViewModel {
                 if selectedConversation?.id == conversationId {
                     selectedConversation = nil
                 }
-                if newConversationViewModel?.conversationViewModel?.conversation.id == conversationId {
+                if newConversationViewModel?.conversationViewModel.conversation.id == conversationId {
                     newConversationViewModel = nil
                 }
             }
@@ -295,34 +292,8 @@ final class ConversationsViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                // Get or create the local state writer for this inbox
-                // Wrap dictionary access in MainActor.run to prevent race conditions
-                let localStateWriter: (any ConversationLocalStateWriterProtocol)? = await MainActor.run {
-                    if let existingWriter = self.localStateWriters[conversation.inboxId] {
-                        return existingWriter
-                    }
-                    return nil
-                }
-
-                let writer: any ConversationLocalStateWriterProtocol
-                if let localStateWriter {
-                    writer = localStateWriter
-                } else {
-                    // Create new writer outside of MainActor context
-                    let messagingService = await session.messagingService(for: conversation.inboxId)
-                    let newWriter = messagingService.conversationLocalStateWriter()
-
-                    // Store it atomically on MainActor
-                    await MainActor.run {
-                        // Check again in case another task created it while we were waiting
-                        if self.localStateWriters[conversation.inboxId] == nil {
-                            self.localStateWriters[conversation.inboxId] = newWriter
-                        }
-                    }
-
-                    writer = newWriter
-                }
-
+                let messagingService = session.messagingService
+                let writer = messagingService.conversationLocalStateWriter()
                 try await writer.setUnread(false, for: conversation.id)
             } catch {
                 Logger.warning("Failed marking conversation as read: \(error.localizedDescription)")

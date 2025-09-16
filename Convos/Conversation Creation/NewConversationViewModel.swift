@@ -14,7 +14,7 @@ class NewConversationViewModel: Identifiable {
     // MARK: - Public
 
     let session: any SessionManagerProtocol
-    var conversationViewModel: ConversationViewModel?
+    let conversationViewModel: ConversationViewModel
     private weak var delegate: NewConversationsViewModelDelegate?
     private(set) var messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .scan
     private(set) var shouldConfirmDeletingConversation: Bool = true
@@ -30,12 +30,8 @@ class NewConversationViewModel: Identifiable {
 
     // MARK: - Private
 
-    private var draftConversationComposer: (any DraftConversationComposerProtocol)? {
-        didSet {
-            setupObservations()
-        }
-    }
-    private var messagingService: AnyMessagingService?
+    private let draftConversationComposer: any DraftConversationComposerProtocol
+    private let messagingService: AnyMessagingService
     private var newConversationTask: Task<Void, Never>?
     private var joinConversationTask: Task<Void, Error>?
     private var cancellables: Set<AnyCancellable> = []
@@ -56,65 +52,34 @@ class NewConversationViewModel: Identifiable {
         self.allowsDismissingScanner = allowsDismissingScanner
         self.delegate = delegate
 
-        start()
+        self.messagingService = session.messagingService
+        let draftConversationComposer = messagingService.draftConversationComposer()
+        self.draftConversationComposer = draftConversationComposer
+        let draftConversation: Conversation = .empty(
+            id: draftConversationComposer.draftConversationRepository.conversationId
+        )
+        self.conversationViewModel = .init(
+            conversation: draftConversation,
+            session: session,
+            draftConversationComposer: draftConversationComposer,
+            myProfileRepository: messagingService.myProfileRepository()
+        )
+        self.conversationViewModel.untitledConversationPlaceholder = "New convo"
+        if showingFullScreenScanner {
+            self.conversationViewModel.showsInfoView = false
+        }
+        if autoCreateConversation {
+            Task {
+                try await draftConversationComposer.draftConversationWriter.createConversation()
+            }
+        }
     }
 
     deinit {
-        Logger.info("🧹 deinit")
-        initializationTask?.cancel()
+        Logger.info("deinit")
         cancellables.removeAll()
         newConversationTask?.cancel()
         joinConversationTask?.cancel()
-        conversationViewModel = nil
-    }
-
-    func start() {
-        // Start async initialization
-        initializationTask?.cancel()
-        initializationError = nil
-        initializationTask = Task { [weak self] in
-            guard let self else { return }
-            await self.initializeAsyncDependencies()
-        }
-    }
-
-    @MainActor
-    private func initializeAsyncDependencies() async {
-        do {
-            let messagingService: AnyMessagingService
-            if let existing = self.messagingService {
-                messagingService = existing
-            } else {
-                messagingService = try await session.addInbox()
-                self.messagingService = messagingService
-            }
-            let draftConversationComposer = messagingService.draftConversationComposer()
-            self.draftConversationComposer = draftConversationComposer
-            let draftConversation = try draftConversationComposer.draftConversationRepository.fetchConversation() ?? .empty(
-                id: draftConversationComposer.draftConversationRepository.conversationId
-            )
-            self.conversationViewModel = .init(
-                conversation: draftConversation,
-                session: session,
-                draftConversationComposer: draftConversationComposer,
-                myProfileRepository: messagingService.myProfileRepository()
-            )
-            self.conversationViewModel?.untitledConversationPlaceholder = "New convo"
-            if showingFullScreenScanner {
-                self.conversationViewModel?.showsInfoView = false
-            }
-            if autoCreateConversation {
-                try await draftConversationComposer.draftConversationWriter.createConversation()
-            }
-        } catch is CancellationError {
-            return
-        } catch {
-            Logger.error("Error initializing: \(error)")
-            withAnimation {
-                self.initializationError = error
-                self.conversationViewModel = nil
-            }
-        }
     }
 
     // MARK: - Actions
@@ -146,7 +111,7 @@ class NewConversationViewModel: Identifiable {
         Logger.info("Processing inviteCode")
         presentingJoinConversationSheet = false
         joinConversation(inviteCode: inviteCode)
-        conversationViewModel?.showsInfoView = true
+        conversationViewModel.showsInfoView = true
         return true
     }
 
@@ -154,13 +119,11 @@ class NewConversationViewModel: Identifiable {
         Logger.info("Deleting conversation")
         newConversationTask?.cancel()
         joinConversationTask?.cancel()
-        conversationViewModel = nil
         Task { [weak self] in
             guard let self else { return }
-            guard let messagingService else { return }
-            try await session.deleteInbox(for: messagingService)
-            await draftConversationComposer?.draftConversationWriter.delete()
-            self.messagingService = nil
+//            try await session.deleteInbox(for: messagingService)
+            await draftConversationComposer.draftConversationWriter.delete()
+//            self.messagingService = nil
         }
     }
 
@@ -173,13 +136,6 @@ class NewConversationViewModel: Identifiable {
 
             // wait for init
             await initializationTask?.value
-
-            guard let draftConversationComposer else {
-                Logger.error("Join attempted before initialization finished")
-                guard !Task.isCancelled else { return }
-                await MainActor.run { self.presentingFailedToJoinSheet = true }
-                return
-            }
 
             if let existingConversationId = await draftConversationComposer.draftConversationWriter.checkIfAlreadyJoined(inviteCode: inviteCode) {
                 Logger.info("Invite already redeeemed, showing existing conversation... conversationId: \(existingConversationId)")
@@ -219,7 +175,7 @@ class NewConversationViewModel: Identifiable {
                     withAnimation {
                         if self.startedWithFullscreenScanner {
                             self.showingFullScreenScanner = true
-                            self.conversationViewModel?.showsInfoView = false
+                            self.conversationViewModel.showsInfoView = false
                         }
                         self.presentingInvalidInviteSheet = true
                     }
@@ -230,10 +186,6 @@ class NewConversationViewModel: Identifiable {
 
     private func setupObservations() {
         cancellables.removeAll()
-
-        guard let draftConversationComposer else {
-            return
-        }
 
         draftConversationComposer.draftConversationWriter.conversationIdPublisher
             .receive(on: DispatchQueue.main)
@@ -260,7 +212,7 @@ class NewConversationViewModel: Identifiable {
             guard let self else { return }
             messagesTopBarTrailingItem = .share
             shouldConfirmDeletingConversation = false
-            conversationViewModel?.untitledConversationPlaceholder = "Untitled"
+            conversationViewModel.untitledConversationPlaceholder = "Untitled"
         }
         .store(in: &cancellables)
     }
