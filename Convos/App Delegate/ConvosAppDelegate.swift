@@ -1,16 +1,50 @@
 import ConvosCore
 import Foundation
+import SwiftUI
 import UIKit
 import UserNotifications
 
-// MARK: - UIApplication Delegate Adapter
+// MARK: - UIApplication Delegate
 
+@main
 @MainActor
-class ConvosAppDelegate: NSObject, UIApplicationDelegate {
+class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
+    var window: UIWindow?
     var session: (any SessionManagerProtocol)?
     static var pendingDeepLink: URL?
 
+    override init() {
+        super.init()
+    }
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // Configure Logger based on environment
+        let environment = ConfigManager.shared.currentEnvironment
+        Logger.configure(environment: environment)
+
+        switch environment {
+        case .production:
+            Logger.Default.configureForProduction(true)
+        default:
+            Logger.Default.configureForProduction(false)
+        }
+
+        Logger.info("🚀 App starting with environment: \(environment)")
+
+        // Initialize ConvosClient
+        let convos: ConvosClient = .client(environment: environment)
+        self.session = convos.session
+
+        // Create the SwiftUI window
+        let window = UIWindow()
+        self.window = window
+        window.rootViewController = UIHostingController(rootView: ConversationsView(session: convos.session).withSafeAreaEnvironment())
+        window.makeKeyAndVisible()
+
+        if let url = launchOptions?[.url] as? URL {
+            ConvosAppDelegate.pendingDeepLink = url
+        }
+
         UNUserNotificationCenter.current().delegate = self
 
         if let url = ConfigManager.shared.currentEnvironment.firebaseConfigURL {
@@ -20,6 +54,20 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate {
         }
 
         return true
+    }
+
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        // Process pending deep link when app becomes active
+        if let pendingURL = ConvosAppDelegate.pendingDeepLink {
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .deepLinkReceived,
+                    object: nil,
+                    userInfo: ["url": pendingURL]
+                )
+                ConvosAppDelegate.pendingDeepLink = nil
+            }
+        }
     }
 
     func application(_ application: UIApplication,
@@ -41,9 +89,8 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate {
         Logger.error("Failed to register for remote notifications: \(error)")
     }
 
-    // Handle URL opening when app is launched or brought to foreground
+    // Handle custom URL scheme deep links
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        Logger.info("AppDelegate: Received URL: \(url)")
         // Store the URL for processing
         ConvosAppDelegate.pendingDeepLink = url
         // Post notification that URL was received
@@ -64,7 +111,6 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate {
             return false
         }
 
-        Logger.info("AppDelegate: Received Universal Link: \(url)")
         // Store the URL for processing
         ConvosAppDelegate.pendingDeepLink = url
         // Post notification that URL was received
