@@ -26,10 +26,10 @@ enum ConversationMetadataWriterError: Error {
 }
 
 final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
-    private let inboxStateManager: InboxStateManager
+    private let inboxStateManager: any InboxStateManagerProtocol
     private let databaseWriter: any DatabaseWriter
 
-    init(inboxStateManager: InboxStateManager,
+    init(inboxStateManager: any InboxStateManagerProtocol,
          databaseWriter: any DatabaseWriter) {
         self.inboxStateManager = inboxStateManager
         self.databaseWriter = databaseWriter

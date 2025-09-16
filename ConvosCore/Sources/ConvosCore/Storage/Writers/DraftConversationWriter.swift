@@ -16,7 +16,7 @@ public protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
 class DraftConversationWriter: DraftConversationWriterProtocol {
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
-    private let inboxStateManager: InboxStateManager
+    private let inboxStateManager: any InboxStateManagerProtocol
     private let sentMessageSubject: PassthroughSubject<String, Never> = .init()
     let conversationMetadataWriter: any ConversationMetadataWriterProtocol
 
@@ -36,7 +36,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         conversationIdSubject.eraseToAnyPublisher()
     }
 
-    init(inboxStateManager: InboxStateManager,
+    init(inboxStateManager: any InboxStateManagerProtocol,
          databaseReader: any DatabaseReader,
          databaseWriter: any DatabaseWriter) {
         self.inboxStateManager = inboxStateManager

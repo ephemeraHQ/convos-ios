@@ -12,11 +12,11 @@ enum MyProfileWriterError: Error {
 }
 
 class MyProfileWriter: MyProfileWriterProtocol {
-    private let inboxStateManager: InboxStateManager
+    private let inboxStateManager: any InboxStateManagerProtocol
     private let databaseWriter: any DatabaseWriter
 
     init(
-        inboxStateManager: InboxStateManager,
+        inboxStateManager: any InboxStateManagerProtocol,
         databaseWriter: any DatabaseWriter
     ) {
         self.inboxStateManager = inboxStateManager
