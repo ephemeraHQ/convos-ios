@@ -1,20 +1,6 @@
 import ConvosCore
 import SwiftUI
 
-struct EarlyLabel: View {
-    var body: some View {
-        Text("Early")
-            .font(.system(size: 14.0))
-            .foregroundStyle(.colorTextSecondary)
-            .padding(.vertical, DesignConstants.Spacing.stepX)
-            .padding(.horizontal, DesignConstants.Spacing.step2x)
-            .background(
-                Capsule()
-                    .fill(.colorFillMinimal)
-            )
-    }
-}
-
 struct ConvosToolbarButton: View {
     let padding: Bool
     let action: () -> Void
@@ -30,8 +16,6 @@ struct ConvosToolbarButton: View {
                 Text("Convos")
                     .font(.system(size: 16.0, weight: .medium))
                     .foregroundStyle(.colorTextPrimary)
-
-                EarlyLabel()
             }
             .padding(padding ? DesignConstants.Spacing.step2x : 0)
         }
