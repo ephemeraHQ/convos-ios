@@ -8,15 +8,16 @@ struct EarlyAccessInfoView: View {
             Text("Real life is off the record.™")
                 .font(.caption)
                 .foregroundColor(.colorTextSecondary)
-            Text("Early Access")
+
+            Text("Convos aren't forever")
                 .font(.system(.largeTitle))
                 .fontWeight(.bold)
 
-            Text("Thanks for being here early. Expect changes and sometimes a hiccup.")
+            Text("You can explode a convo as soon you're done with it.")
                 .font(.body)
                 .foregroundStyle(.colorTextPrimary)
 
-            Text("All convos are temporary for now.")
+            Text("All convos will explode 30 days after they're created.")
                 .font(.body)
                 .foregroundStyle(.colorTextSecondary)
 

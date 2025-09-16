@@ -36,16 +36,6 @@ struct ExplodeInfoView: View {
                     Text("Got it")
                 }
                 .convosButtonStyle(.rounded(fullWidth: true))
-
-                Button {
-                } label: {
-                    HStack {
-                        Text("Learn more")
-
-                        SoonLabel()
-                    }
-                }
-                .convosButtonStyle(.text)
             }
             .padding(.top, DesignConstants.Spacing.step4x)
         }
