@@ -10,7 +10,7 @@ struct MaxedOutInfoView: View {
             Text("Maxed out")
                 .font(.system(.largeTitle))
                 .fontWeight(.bold)
-            Text("This early version of the app supports up to \(maxNumberOfConvos) convos. Consider exploding some to make room for new ones.")
+            Text("The app currently supports up to \(maxNumberOfConvos) convos. Consider exploding some to make room for new ones.")
                 .font(.body)
                 .foregroundStyle(.colorTextSecondary)
 

@@ -179,10 +179,11 @@ final class ConversationsViewModel {
     }
 
     private func checkShouldShowEarlyAccessInfo() {
-        if !hasSeenEarlyAccessInfo {
-            presentingEarlyAccessInfo = true
-            hasSeenEarlyAccessInfo = true
-        }
+        // Disabled for App Store release
+        // if !hasSeenEarlyAccessInfo {
+        //     presentingEarlyAccessInfo = true
+        //     hasSeenEarlyAccessInfo = true
+        // }
     }
 
     private func join(from inviteCode: String) {

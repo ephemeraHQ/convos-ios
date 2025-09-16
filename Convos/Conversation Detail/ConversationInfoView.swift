@@ -1,6 +1,13 @@
 import ConvosCore
 import SwiftUI
 
+// Temporary placeholder - remove when features are ready
+struct SoonLabel: View {
+    var body: some View {
+        EmptyView()
+    }
+}
+
 struct FeatureRowItem<AccessoryView: View>: View {
     let imageName: String?
     let symbolName: String
@@ -53,7 +60,7 @@ struct FeatureRowItem<AccessoryView: View>: View {
 
 #Preview {
     FeatureRowItem(imageName: nil, symbolName: "eyeglasses", title: "Peek-a-boo", subtitle: "Blur when people peek") {
-        SoonLabel()
+        EmptyView()
     }
     .padding(DesignConstants.Spacing.step4x)
 }
@@ -170,6 +177,8 @@ struct ConversationInfoView: View {
                         .foregroundStyle(.colorTextSecondary)
                 }
 
+                // Hidden for App Store release - features not ready yet
+                /*
                 Section {
                     FeatureRowItem(
                         imageName: nil,
@@ -178,7 +187,7 @@ struct ConversationInfoView: View {
                         subtitle: nil
                     ) {
                         SoonLabel()
-//                        Toggle("", isOn: $viewModel.notificationsEnabled)
+                        // Toggle("", isOn: $viewModel.notificationsEnabled)
                     }
 
                     FeatureRowItem(
@@ -212,7 +221,10 @@ struct ConversationInfoView: View {
                         .font(.system(size: 14.0, weight: .semibold))
                         .foregroundStyle(.colorTextSecondary)
                 }
+                */
 
+                // Hidden for App Store release - features not ready yet
+                /*
                 Section {
                     FeatureRowItem(
                         imageName: "explodeIcon",
@@ -236,7 +248,10 @@ struct ConversationInfoView: View {
                         .font(.system(size: 14.0, weight: .semibold))
                         .foregroundStyle(.colorTextSecondary)
                 }
+                */
 
+                // Hidden for App Store release - features not ready yet
+                /*
                 Section {
                     HStack {
                         Text("Vanish")
@@ -266,6 +281,7 @@ struct ConversationInfoView: View {
                     Text("Choose who can manage the group")
                         .foregroundStyle(.colorTextSecondary)
                 }
+                */
 
                 if viewModel.canRemoveMembers {
                     Section {

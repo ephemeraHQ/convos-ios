@@ -1,20 +1,6 @@
 import ConvosCore
 import SwiftUI
 
-struct EarlyLabel: View {
-    var body: some View {
-        Text("Early")
-            .font(.system(size: 14.0))
-            .foregroundStyle(.colorTextSecondary)
-            .padding(.vertical, DesignConstants.Spacing.stepX)
-            .padding(.horizontal, DesignConstants.Spacing.step2x)
-            .background(
-                Capsule()
-                    .fill(.colorFillMinimal)
-            )
-    }
-}
-
 struct ConvosToolbarButton: View {
     let padding: Bool
     let action: () -> Void
@@ -30,8 +16,6 @@ struct ConvosToolbarButton: View {
                 Text("Convos")
                     .font(.system(size: 16.0, weight: .medium))
                     .foregroundStyle(.colorTextPrimary)
-
-                EarlyLabel()
             }
             .padding(padding ? DesignConstants.Spacing.step2x : 0)
         }
@@ -49,70 +33,6 @@ struct AppSettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    Text("Thanks for being here early. Expect changes and sometimes a hiccup. \n\nAll convos are temporary for now.")
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(nil)
-                } header: {
-                    Text("Early Access")
-                        .foregroundStyle(.colorTextSecondary)
-                }
-
-                Section {
-                    NavigationLink {
-                        EmptyView()
-                    } label: {
-                        HStack {
-                            Text("Quickname")
-                                .foregroundStyle(.colorTextPrimary)
-
-                            Spacer()
-                            ProfileAvatarView(profile: .empty(), profileImage: nil)
-                                .frame(width: 16.0, height: 16.0)
-                            Text("Somebody")
-                                .foregroundStyle(.colorTextPrimary)
-                        }
-                    }
-                    .disabled(true)
-                } header: {
-                    HStack {
-                        Text("Names")
-                            .foregroundStyle(.colorTextSecondary)
-                        Spacer()
-                        SoonLabel()
-                    }
-                } footer: {
-                    Text("Each time you join a convo, you'll choose a name")
-                        .foregroundStyle(.colorTextSecondary)
-                }
-
-                Section {
-                    NavigationLink {
-                        EmptyView()
-                    } label: {
-                        HStack {
-                            Text("Customize new convos")
-                                .foregroundStyle(.colorTextPrimary)
-                            SoonLabel()
-                        }
-                    }
-                    .disabled(true)
-
-                    NavigationLink {
-                        EmptyView()
-                    } label: {
-                        HStack {
-                            Text("Notifications")
-                                .foregroundStyle(.colorTextPrimary)
-                            SoonLabel()
-                        }
-                    }
-                    .disabled(true)
-                } header: {
-                    Text("Preferences")
-                        .foregroundStyle(.colorTextSecondary)
-                }
-
                 Section {
                     Button {
                         openURL(URL(string: "https://xmtp.org")!)
