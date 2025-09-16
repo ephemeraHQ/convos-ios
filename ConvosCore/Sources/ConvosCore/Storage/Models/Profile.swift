@@ -5,7 +5,6 @@ public struct Profile: Codable, Identifiable, Hashable {
     public var id: String { inboxId }
     public let inboxId: String
     public let name: String?
-    public let username: String?
     public let avatar: String?
 
     public var avatarURL: URL? {
@@ -23,8 +22,15 @@ public struct Profile: Codable, Identifiable, Hashable {
         .init(
             inboxId: inboxId,
             name: nil,
-            username: nil,
             avatar: nil
+        )
+    }
+
+    public static func mock(inboxId: String = "", name: String = "Jane Doe") -> Profile {
+        .init(
+            inboxId: inboxId,
+            name: name,
+            avatar: "https://example.com/avatar.jpg"
         )
     }
 }

@@ -4,22 +4,13 @@ import GRDB
 import XMTPiOS
 
 final class MessagingService: MessagingServiceProtocol {
-    var identifier: String {
-        guard case .ready(let result) = inboxStateManager.currentState else {
-            return internalIdentifier
-        }
-        return result.client.inboxId
-    }
-    private let inboxId: String?
-    private let internalIdentifier: String
     private let authorizationOperation: any AuthorizeInboxOperationProtocol
-    internal let inboxStateManager: InboxStateManager
+    internal let inboxStateManager: any InboxStateManagerProtocol
     private let databaseReader: any DatabaseReader
     internal let databaseWriter: any DatabaseWriter
     private var cancellables: Set<AnyCancellable> = []
 
     static func authorizedMessagingService(
-        for inboxId: String,
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
         environment: AppEnvironment,
@@ -27,7 +18,6 @@ final class MessagingService: MessagingServiceProtocol {
         registersForPushNotifications: Bool = true
     ) -> MessagingService {
         let authorizationOperation = AuthorizeInboxOperation.authorize(
-            inboxId: inboxId,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
@@ -35,31 +25,15 @@ final class MessagingService: MessagingServiceProtocol {
             registersForPushNotifications: registersForPushNotifications
         )
         return .init(
-            inboxId: inboxId,
             authorizationOperation: authorizationOperation,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader
         )
     }
 
-    static func registeredMessagingService(
-        databaseWriter: any DatabaseWriter,
-        databaseReader: any DatabaseReader,
-        environment: AppEnvironment
-    ) async -> MessagingService {
-        return await UnusedInboxCache.shared.consumeOrCreateMessagingService(
-            databaseWriter: databaseWriter,
-            databaseReader: databaseReader,
-            environment: environment
-        )
-    }
-
-    internal init(inboxId: String?,
-                  authorizationOperation: AuthorizeInboxOperation,
+    internal init(authorizationOperation: AuthorizeInboxOperation,
                   databaseWriter: any DatabaseWriter,
                   databaseReader: any DatabaseReader) {
-        self.inboxId = inboxId
-        self.internalIdentifier = inboxId ?? UUID().uuidString
         self.authorizationOperation = authorizationOperation
         self.inboxStateManager = InboxStateManager(stateMachine: authorizationOperation.stateMachine)
         self.databaseReader = databaseReader
@@ -182,21 +156,5 @@ final class MessagingService: MessagingServiceProtocol {
             filename: filename,
             afterUpload: afterUpload
         )
-    }
-
-    // MARK: - Public Unused Inbox Methods
-
-    static func createUnusedInboxIfNeeded(
-        databaseWriter: any DatabaseWriter,
-        databaseReader: any DatabaseReader,
-        environment: AppEnvironment
-    ) {
-        Task(priority: .background) {
-            await UnusedInboxCache.shared.prepareUnusedInboxIfNeeded(
-                databaseWriter: databaseWriter,
-                databaseReader: databaseReader,
-                environment: environment
-            )
-        }
     }
 }

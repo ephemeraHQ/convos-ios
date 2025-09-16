@@ -26,7 +26,6 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     private var task: Task<Void, Never>?
 
     static func authorize(
-        inboxId: String,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
@@ -40,24 +39,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             startsStreamingServices: startsStreamingServices,
             registersForPushNotifications: registersForPushNotifications
         )
-        operation.authorize(inboxId: inboxId)
-        return operation
-    }
-
-    static func register(
-        databaseReader: any DatabaseReader,
-        databaseWriter: any DatabaseWriter,
-        environment: AppEnvironment,
-        registersForPushNotifications: Bool = true
-    ) -> AuthorizeInboxOperation {
-        let operation = AuthorizeInboxOperation(
-            databaseReader: databaseReader,
-            databaseWriter: databaseWriter,
-            environment: environment,
-            startsStreamingServices: true,
-            registersForPushNotifications: registersForPushNotifications
-        )
-        operation.register()
+        operation.authorize()
         return operation
     }
 
@@ -68,7 +50,6 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         startsStreamingServices: Bool,
         registersForPushNotifications: Bool
     ) {
-        let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
         let syncingManager = startsStreamingServices ? SyncingManager(databaseWriter: databaseWriter) : nil
         let inviteJoinRequestsManager = startsStreamingServices ? InviteJoinRequestsManager(
             databaseReader: databaseReader,
@@ -77,7 +58,6 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         let invitesRepository = InvitesRepository(databaseReader: databaseReader)
         stateMachine = InboxStateMachine(
             identityStore: environment.defaultIdentityStore,
-            inboxWriter: inboxWriter,
             invitesRepository: invitesRepository,
             syncingManager: syncingManager,
             inviteJoinRequestsManager: inviteJoinRequestsManager,
@@ -94,19 +74,11 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         task = nil
     }
 
-    private func authorize(inboxId: String) {
+    private func authorize() {
         task?.cancel()
         task = Task { [weak self] in
             guard let self else { return }
-            await stateMachine.authorize(inboxId: inboxId)
-        }
-    }
-
-    private func register() {
-        task?.cancel()
-        task = Task { [weak self] in
-            guard let self else { return }
-            await stateMachine.register()
+            await stateMachine.authorize()
         }
     }
 

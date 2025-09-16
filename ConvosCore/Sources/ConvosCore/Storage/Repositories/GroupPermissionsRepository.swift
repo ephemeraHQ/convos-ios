@@ -115,10 +115,10 @@ public struct GroupMemberInfo {
 // MARK: - Group Permissions Repository Implementation
 
 final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
-    private let inboxStateManager: InboxStateManager
+    private let inboxStateManager: any InboxStateManagerProtocol
     private let databaseReader: any DatabaseReader
 
-    init(inboxStateManager: InboxStateManager,
+    init(inboxStateManager: any InboxStateManagerProtocol,
          databaseReader: any DatabaseReader) {
         self.inboxStateManager = inboxStateManager
         self.databaseReader = databaseReader
