@@ -24,6 +24,7 @@ struct NotificationConstants {
         static let pushTokenDidChange: String = "convosPushTokenDidChange"
         static let explosionNotificationTapped: String = "explosionNotificationTapped"
         static let conversationNotificationTapped: String = "conversationNotificationTapped"
+        static let deepLinkReceived: String = "deepLinkReceived"
     }
 }
 
@@ -31,4 +32,5 @@ extension Notification.Name {
     public static let convosPushTokenDidChange: Notification.Name = Notification.Name(NotificationConstants.AppNotifications.pushTokenDidChange)
     public static let explosionNotificationTapped: Notification.Name = Notification.Name(NotificationConstants.AppNotifications.explosionNotificationTapped)
     public static let conversationNotificationTapped: Notification.Name = Notification.Name(NotificationConstants.AppNotifications.conversationNotificationTapped)
+    public static let deepLinkReceived: Notification.Name = Notification.Name(NotificationConstants.AppNotifications.deepLinkReceived)
 }

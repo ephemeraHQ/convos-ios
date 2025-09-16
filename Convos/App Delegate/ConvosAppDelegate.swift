@@ -8,6 +8,7 @@ import UserNotifications
 @MainActor
 class ConvosAppDelegate: NSObject, UIApplicationDelegate {
     var session: (any SessionManagerProtocol)?
+    static var pendingDeepLink: URL?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
@@ -38,6 +39,43 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFailToRegisterForRemoteNotificationsWithError error: Error) {
         Logger.error("Failed to register for remote notifications: \(error)")
+    }
+
+    // Handle URL opening when app is launched or brought to foreground
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        Logger.info("AppDelegate: Received URL: \(url)")
+        // Store the URL for processing
+        ConvosAppDelegate.pendingDeepLink = url
+        // Post notification that URL was received
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: .deepLinkReceived,
+                object: nil,
+                userInfo: ["url": url]
+            )
+        }
+        return true
+    }
+
+    // Handle Universal Links
+    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = userActivity.webpageURL else {
+            return false
+        }
+
+        Logger.info("AppDelegate: Received Universal Link: \(url)")
+        // Store the URL for processing
+        ConvosAppDelegate.pendingDeepLink = url
+        // Post notification that URL was received
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: .deepLinkReceived,
+                object: nil,
+                userInfo: ["url": url]
+            )
+        }
+        return true
     }
 }
 
