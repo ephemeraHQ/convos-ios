@@ -11,7 +11,6 @@ import UserNotifications
 class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     var session: (any SessionManagerProtocol)?
-    static var pendingDeepLink: URL?
 
     override init() {
         super.init()
@@ -41,8 +40,15 @@ class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
         window.rootViewController = UIHostingController(rootView: ConversationsView(session: convos.session).withSafeAreaEnvironment())
         window.makeKeyAndVisible()
 
+        // Handle deep link from launch options
         if let url = launchOptions?[.url] as? URL {
-            ConvosAppDelegate.pendingDeepLink = url
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .deepLinkReceived,
+                    object: nil,
+                    userInfo: ["url": url]
+                )
+            }
         }
 
         UNUserNotificationCenter.current().delegate = self
@@ -54,20 +60,6 @@ class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
         }
 
         return true
-    }
-
-    func applicationDidBecomeActive(_ application: UIApplication) {
-        // Process pending deep link when app becomes active
-        if let pendingURL = ConvosAppDelegate.pendingDeepLink {
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(
-                    name: .deepLinkReceived,
-                    object: nil,
-                    userInfo: ["url": pendingURL]
-                )
-                ConvosAppDelegate.pendingDeepLink = nil
-            }
-        }
     }
 
     func application(_ application: UIApplication,
@@ -91,9 +83,7 @@ class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
 
     // Handle custom URL scheme deep links
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        // Store the URL for processing
-        ConvosAppDelegate.pendingDeepLink = url
-        // Post notification that URL was received
+        Logger.info("Received deep link: \(url)")
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: .deepLinkReceived,
@@ -111,9 +101,7 @@ class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
             return false
         }
 
-        // Store the URL for processing
-        ConvosAppDelegate.pendingDeepLink = url
-        // Post notification that URL was received
+        Logger.info("Received universal link: \(url)")
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: .deepLinkReceived,

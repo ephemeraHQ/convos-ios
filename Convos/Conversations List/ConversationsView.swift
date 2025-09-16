@@ -186,13 +186,6 @@ struct ConversationsView: View {
         }
         .onAppear {
             viewModel.onAppear()
-
-            // Check for pending deep link from cold start
-            if let pendingURL = ConvosAppDelegate.pendingDeepLink {
-                Logger.info("Processing pending deep link from cold start: \(pendingURL)")
-                viewModel.handleURL(pendingURL)
-                ConvosAppDelegate.pendingDeepLink = nil
-            }
         }
     }
 
@@ -212,7 +205,6 @@ struct ConversationsView: View {
             if let url = notification.userInfo?["url"] as? URL {
                 Logger.info("Received deep link via notification: \(url)")
                 viewModel.handleURL(url)
-                ConvosAppDelegate.pendingDeepLink = nil
             }
         }
     }
