@@ -1,5 +1,19 @@
 import SwiftUI
 
+struct SoonLabel: View {
+    var body: some View {
+        Text("Soon")
+            .font(.system(size: 14.0))
+            .foregroundStyle(.colorTextSecondary)
+            .padding(.vertical, DesignConstants.Spacing.stepX)
+            .padding(.horizontal, DesignConstants.Spacing.step2x)
+            .background(
+                Capsule()
+                    .fill(.colorFillMinimal)
+            )
+    }
+}
+
 struct ExplodeInfoView: View {
     @Environment(\.dismiss) var dismiss: DismissAction
 

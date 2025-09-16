@@ -8,13 +8,17 @@ struct EarlyAccessInfoView: View {
             Text("Real life is off the record.™")
                 .font(.caption)
                 .foregroundColor(.colorTextSecondary)
-            Text("Welcome to Convos")
+            Text("Early Access")
                 .font(.system(.largeTitle))
                 .fontWeight(.bold)
 
-            Text("Your convos, encrypted and ephemeral.")
+            Text("Thanks for being here early.")
                 .font(.body)
                 .foregroundStyle(.colorTextPrimary)
+
+            Text("All convos are temporary for now.")
+                .font(.body)
+                .foregroundStyle(.colorTextSecondary)
 
             VStack(spacing: DesignConstants.Spacing.step2x) {
                 Button {
