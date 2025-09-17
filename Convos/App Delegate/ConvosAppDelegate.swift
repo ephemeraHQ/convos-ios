@@ -9,7 +9,6 @@ import UserNotifications
 @main
 @MainActor
 class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
-    var window: UIWindow?
     var session: (any SessionManagerProtocol)?
 
     override init() {
@@ -28,28 +27,7 @@ class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
             Logger.Default.configureForProduction(false)
         }
 
-        Logger.info("🚀 App starting with environment: \(environment)")
-
-        // Initialize ConvosClient
-        let convos: ConvosClient = .client(environment: environment)
-        self.session = convos.session
-
-        // Create the SwiftUI window
-        let window = UIWindow()
-        self.window = window
-        window.rootViewController = UIHostingController(rootView: ConversationsView(session: convos.session).withSafeAreaEnvironment())
-        window.makeKeyAndVisible()
-
-        // Handle deep link from launch options (when app was not running and launched via deep link)
-        if let url = launchOptions?[.url] as? URL {
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(
-                    name: .deepLinkReceived,
-                    object: nil,
-                    userInfo: ["url": url]
-                )
-            }
-        }
+        Logger.info("App starting with environment: \(environment)")
 
         UNUserNotificationCenter.current().delegate = self
 
@@ -60,6 +38,20 @@ class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
         }
 
         return true
+    }
+
+    // MARK: UISceneSession Lifecycle
+
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        /// Called when a new scene session is being created.
+        /// Use this method to select a configuration to create the new scene with.
+        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+    }
+
+    func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {
+        /// Called when the user discards a scene session.
+        /// If any sessions were discarded while the application was not running, this will be called shortly after application:didFinishLaunchingWithOptions.
+        /// Use this method to release any resources that were specific to the discarded scenes, as they will not return.
     }
 
     func application(_ application: UIApplication,
@@ -79,38 +71,6 @@ class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFailToRegisterForRemoteNotificationsWithError error: Error) {
         Logger.error("Failed to register for remote notifications: \(error)")
-    }
-
-    // Handle custom URL scheme deep links (convos://join/invite-code)
-    func application(_ app: UIApplication, open url: URL) -> Bool {
-        Logger.info("Received deep link: \(url)")
-
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(
-                name: .deepLinkReceived,
-                object: nil,
-                userInfo: ["url": url]
-            )
-        }
-        return true
-    }
-
-    // Handle Universal Links (popup.convos.org/invite-code)
-    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-              let url = userActivity.webpageURL else {
-            return false
-        }
-
-        Logger.info("Received universal link: \(url)")
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(
-                name: .deepLinkReceived,
-                object: nil,
-                userInfo: ["url": url]
-            )
-        }
-        return true
     }
 }
 
