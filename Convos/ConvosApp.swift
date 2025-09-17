@@ -84,37 +84,6 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         return true
     }
 
-    // Handle Universal Links when app is already running or launched from background
-    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-              let url = userActivity.webpageURL else {
-            return false
-        }
-
-        Logger.info("Received universal link via AppDelegate: \(url)")
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(
-                name: .deepLinkReceived,
-                object: nil,
-                userInfo: ["url": url]
-            )
-        }
-        return true
-    }
-
-    // Handle custom URL schemes
-    func application(_ app: UIApplication, open url: URL) -> Bool {
-        Logger.info("Received custom URL scheme via AppDelegate: \(url)")
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(
-                name: .deepLinkReceived,
-                object: nil,
-                userInfo: ["url": url]
-            )
-        }
-        return true
-    }
-
     // Scene configuration - required for Camera app Universal Links to work
     func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
         let configuration = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
