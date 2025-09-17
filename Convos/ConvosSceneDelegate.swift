@@ -10,39 +10,19 @@ class ConvosSceneDelegate: UIResponder, UIWindowSceneDelegate {
         if let userActivity = connectionOptions.userActivities.first,
            userActivity.activityType == NSUserActivityTypeBrowsingWeb,
            let url = userActivity.webpageURL {
-            Logger.info("Scene launched with Universal Link: \(url)")
-            // Post notification after a small delay to ensure app is ready
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                NotificationCenter.default.post(
-                    name: .deepLinkReceived,
-                    object: nil,
-                    userInfo: ["url": url]
-                )
-            }
+            handleURL(url, context: "Scene launched")
         }
 
         // Handle custom URL schemes on cold launch
         if let urlContext = connectionOptions.urlContexts.first {
-            Logger.info("Scene launched with custom URL: \(urlContext.url)")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                NotificationCenter.default.post(
-                    name: .deepLinkReceived,
-                    object: nil,
-                    userInfo: ["url": urlContext.url]
-                )
-            }
+            handleURL(urlContext.url, context: "Scene launched")
         }
     }
 
     // Handle custom URL schemes when app is already running
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
         guard let url = URLContexts.first?.url else { return }
-        Logger.info("Scene received custom URL: \(url)")
-        NotificationCenter.default.post(
-            name: .deepLinkReceived,
-            object: nil,
-            userInfo: ["url": url]
-        )
+        handleURL(url, context: "Scene received custom URL")
     }
 
     // Handle Universal Links when app is already running
@@ -51,11 +31,26 @@ class ConvosSceneDelegate: UIResponder, UIWindowSceneDelegate {
               let url = userActivity.webpageURL else {
             return
         }
-        Logger.info("Scene received Universal Link: \(url)")
-        NotificationCenter.default.post(
-            name: .deepLinkReceived,
-            object: nil,
-            userInfo: ["url": url]
-        )
+        handleURL(url, context: "Scene received Universal Link")
+    }
+
+    // Centralized URL handling with security validation
+    private func handleURL(_ url: URL, context: String) {
+        // Validate URL before processing
+        guard DeepLinkHandler.destination(for: url) != nil else {
+            Logger.warning("\(context) - Invalid deep link ignored: [scheme: \(url.scheme ?? "unknown"), host: \(url.host ?? "unknown")]")
+            return
+        }
+
+        Logger.info("\(context) - Valid deep link: [scheme: \(url.scheme ?? "unknown"), host: \(url.host ?? "unknown")]")
+
+        let delay: TimeInterval = context.contains("launched") ? 0.5 : 0.0
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            NotificationCenter.default.post(
+                name: .deepLinkReceived,
+                object: nil,
+                userInfo: ["url": url]
+            )
+        }
     }
 }

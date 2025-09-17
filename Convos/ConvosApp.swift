@@ -50,7 +50,13 @@ struct ConvosApp: App {
     }
 
     private func handleDeepLink(_ url: URL) {
-        Logger.info("Received deep link: \(url)")
+        // Validate URL before processing
+        guard DeepLinkHandler.destination(for: url) != nil else {
+            Logger.warning("Invalid deep link received and ignored: [scheme: \(url.scheme ?? "unknown"), host: \(url.host ?? "unknown")]")
+            return
+        }
+
+        Logger.info("Received valid deep link: [scheme: \(url.scheme ?? "unknown"), host: \(url.host ?? "unknown")]")
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: .deepLinkReceived,
@@ -63,11 +69,11 @@ struct ConvosApp: App {
     private func handleScenePhaseChange(_ phase: ScenePhase) {
         switch phase {
         case .active:
-            Logger.debug("App became active")
+            Logger.info("App became active")
         case .inactive:
-            Logger.debug("App became inactive")
+            Logger.info("App became inactive")
         case .background:
-            Logger.debug("App moved to background")
+            Logger.info("App moved to background")
         @unknown default:
             break
         }
