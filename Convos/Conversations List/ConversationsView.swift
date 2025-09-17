@@ -200,7 +200,7 @@ struct ConversationsView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkReceived)) { notification in
             if let url = notification.userInfo?["url"] as? URL {
-                Logger.info("Received deep link via notification: \(url)")
+                Logger.info("Processing deep link in ConversationsView: [scheme: \(url.scheme ?? "unknown"), host: \(url.host ?? "unknown")]")
                 viewModel.handleURL(url)
             }
         }

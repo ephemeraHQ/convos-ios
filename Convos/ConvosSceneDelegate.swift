@@ -46,6 +46,7 @@ class ConvosSceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         if context.contains("launched") {
             // For cold launch, store URL and let SwiftUI app handle when ready
+            // This path is critical for Camera app Universal Links
             SceneURLStorage.shared.storePendingURL(url)
         } else {
             // App is already running, process immediately

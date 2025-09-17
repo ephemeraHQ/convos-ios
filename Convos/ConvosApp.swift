@@ -76,13 +76,11 @@ struct ConvosApp: App {
     }
 
     private func processDeepLink(_ url: URL) {
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(
-                name: .deepLinkReceived,
-                object: nil,
-                userInfo: ["url": url]
-            )
-        }
+        NotificationCenter.default.post(
+            name: .deepLinkReceived,
+            object: nil,
+            userInfo: ["url": url]
+        )
     }
 
     private func handleScenePhaseChange(_ phase: ScenePhase) {
