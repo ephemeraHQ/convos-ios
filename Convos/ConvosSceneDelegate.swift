@@ -12,9 +12,8 @@ class ConvosSceneDelegate: UIResponder, UIWindowSceneDelegate {
            let url = userActivity.webpageURL {
             handleURL(url, context: "Scene launched")
         }
-
-        // Handle custom URL schemes on cold launch
-        if let urlContext = connectionOptions.urlContexts.first {
+        // Handle custom URL schemes on cold launch (only if no Universal Link was processed)
+        else if let urlContext = connectionOptions.urlContexts.first {
             handleURL(urlContext.url, context: "Scene launched")
         }
     }
