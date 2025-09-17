@@ -6,6 +6,7 @@ import UserNotifications
 struct ConvosApp: App {
     @UIApplicationDelegateAdaptor(ConvosAppDelegate.self) private var appDelegate: ConvosAppDelegate
     @Environment(\.scenePhase) private var scenePhase: ScenePhase
+    @StateObject private var urlStorage: SceneURLStorage = SceneURLStorage.shared
 
     let session: any SessionManagerProtocol
 
@@ -42,6 +43,12 @@ struct ConvosApp: App {
                 .onAppear {
                     // Pass session to app delegate for notification handling
                     appDelegate.session = session
+
+                    // Process any pending URLs from cold launch
+                    if let pendingURL = urlStorage.consumePendingURL() {
+                        Logger.info("Processing pending URL from cold launch")
+                        processDeepLink(pendingURL)
+                    }
                 }
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -57,6 +64,18 @@ struct ConvosApp: App {
         }
 
         Logger.info("Received valid deep link: [scheme: \(url.scheme ?? "unknown"), host: \(url.host ?? "unknown")]")
+
+        // If app is in background, defer processing until it becomes active
+        if scenePhase == .background {
+            Logger.info("App in background - deferring deep link processing")
+            urlStorage.storePendingURL(url)
+            return
+        }
+
+        processDeepLink(url)
+    }
+
+    private func processDeepLink(_ url: URL) {
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: .deepLinkReceived,
@@ -70,6 +89,11 @@ struct ConvosApp: App {
         switch phase {
         case .active:
             Logger.info("App became active")
+            // Process any pending deep links now that app is active and stable
+            if let pendingURL = urlStorage.consumePendingURL() {
+                Logger.info("Processing pending deep link")
+                processDeepLink(pendingURL)
+            }
         case .inactive:
             Logger.info("App became inactive")
         case .background:

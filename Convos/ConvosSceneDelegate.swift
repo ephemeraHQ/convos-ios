@@ -44,8 +44,11 @@ class ConvosSceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         Logger.info("\(context) - Valid deep link: [scheme: \(url.scheme ?? "unknown"), host: \(url.host ?? "unknown")]")
 
-        let delay: TimeInterval = context.contains("launched") ? 0.5 : 0.0
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+        if context.contains("launched") {
+            // For cold launch, store URL and let SwiftUI app handle when ready
+            SceneURLStorage.shared.storePendingURL(url)
+        } else {
+            // App is already running, process immediately
             NotificationCenter.default.post(
                 name: .deepLinkReceived,
                 object: nil,

@@ -198,9 +198,6 @@ struct ConversationsView: View {
                 hasEarlyAccessView
             }
         }
-        .onOpenURL { url in
-            viewModel.handleURL(url)
-        }
         .onReceive(NotificationCenter.default.publisher(for: .deepLinkReceived)) { notification in
             if let url = notification.userInfo?["url"] as? URL {
                 Logger.info("Received deep link via notification: \(url)")
