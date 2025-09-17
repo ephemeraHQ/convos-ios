@@ -40,7 +40,7 @@ class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
         window.rootViewController = UIHostingController(rootView: ConversationsView(session: convos.session).withSafeAreaEnvironment())
         window.makeKeyAndVisible()
 
-        // Handle deep link from launch options
+        // Handle deep link from launch options (when app was not running and launched via deep link)
         if let url = launchOptions?[.url] as? URL {
             DispatchQueue.main.async {
                 NotificationCenter.default.post(
@@ -81,9 +81,10 @@ class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
         Logger.error("Failed to register for remote notifications: \(error)")
     }
 
-    // Handle custom URL scheme deep links
-    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+    // Handle custom URL scheme deep links (convos://join/invite-code)
+    func application(_ app: UIApplication, open url: URL) -> Bool {
         Logger.info("Received deep link: \(url)")
+
         DispatchQueue.main.async {
             NotificationCenter.default.post(
                 name: .deepLinkReceived,
@@ -94,7 +95,7 @@ class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
 
-    // Handle Universal Links
+    // Handle Universal Links (popup.convos.org/invite-code)
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
         guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
               let url = userActivity.webpageURL else {
