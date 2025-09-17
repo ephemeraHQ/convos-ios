@@ -1,22 +1,15 @@
 import ConvosCore
-import Foundation
 import SwiftUI
-import UIKit
 import UserNotifications
 
-// MARK: - UIApplication Delegate
-
 @main
-@MainActor
-class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
-    var session: (any SessionManagerProtocol)?
+struct ConvosApp: App {
+    @UIApplicationDelegateAdaptor(ConvosAppDelegate.self) private var appDelegate: ConvosAppDelegate
+    @Environment(\.scenePhase) private var scenePhase: ScenePhase
 
-    override init() {
-        super.init()
-    }
+    let session: any SessionManagerProtocol
 
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        // Configure Logger based on environment
+    init() {
         let environment = ConfigManager.shared.currentEnvironment
         Logger.configure(environment: environment)
 
@@ -29,29 +22,104 @@ class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
 
         Logger.info("App starting with environment: \(environment)")
 
-        UNUserNotificationCenter.current().delegate = self
+        let convos: ConvosClient = .client(environment: environment)
+        self.session = convos.session
 
         if let url = ConfigManager.shared.currentEnvironment.firebaseConfigURL {
             FirebaseHelperCore.configure(with: url)
         } else {
             Logger.error("Missing Firebase plist URL for current environment")
         }
+    }
 
+    var body: some Scene {
+        WindowGroup {
+            ConversationsView(session: session)
+                .withSafeAreaEnvironment()
+                .onOpenURL { url in
+                    handleDeepLink(url)
+                }
+                .onAppear {
+                    // Pass session to app delegate for notification handling
+                    appDelegate.session = session
+                }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            handleScenePhaseChange(newPhase)
+        }
+    }
+
+    private func handleDeepLink(_ url: URL) {
+        Logger.info("Received deep link: \(url)")
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: .deepLinkReceived,
+                object: nil,
+                userInfo: ["url": url]
+            )
+        }
+    }
+
+    private func handleScenePhaseChange(_ phase: ScenePhase) {
+        switch phase {
+        case .active:
+            Logger.debug("App became active")
+        case .inactive:
+            Logger.debug("App became inactive")
+        case .background:
+            Logger.debug("App moved to background")
+        @unknown default:
+            break
+        }
+    }
+}
+
+// Lightweight delegate for push notifications and Universal Links
+@MainActor
+class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, ObservableObject {
+    var session: (any SessionManagerProtocol)?
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
         return true
     }
 
-    // MARK: UISceneSession Lifecycle
+    // Handle Universal Links when app is already running or launched from background
+    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = userActivity.webpageURL else {
+            return false
+        }
 
-    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-        /// Called when a new scene session is being created.
-        /// Use this method to select a configuration to create the new scene with.
-        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+        Logger.info("Received universal link via AppDelegate: \(url)")
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: .deepLinkReceived,
+                object: nil,
+                userInfo: ["url": url]
+            )
+        }
+        return true
     }
 
-    func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {
-        /// Called when the user discards a scene session.
-        /// If any sessions were discarded while the application was not running, this will be called shortly after application:didFinishLaunchingWithOptions.
-        /// Use this method to release any resources that were specific to the discarded scenes, as they will not return.
+    // Handle custom URL schemes
+    func application(_ app: UIApplication, open url: URL) -> Bool {
+        Logger.info("Received custom URL scheme via AppDelegate: \(url)")
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: .deepLinkReceived,
+                object: nil,
+                userInfo: ["url": url]
+            )
+        }
+        return true
+    }
+
+    // Scene configuration - required for Camera app Universal Links to work
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+        configuration.delegateClass = ConvosSceneDelegate.self
+        return configuration
     }
 
     func application(_ application: UIApplication,
@@ -72,11 +140,9 @@ class ConvosAppDelegate: UIResponder, UIApplicationDelegate {
                      didFailToRegisterForRemoteNotificationsWithError error: Error) {
         Logger.error("Failed to register for remote notifications: \(error)")
     }
-}
 
-// MARK: - UNUserNotificationCenterDelegate
+    // MARK: - UNUserNotificationCenterDelegate
 
-extension ConvosAppDelegate: UNUserNotificationCenterDelegate {
     // Handle notifications when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
