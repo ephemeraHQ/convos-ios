@@ -22,7 +22,7 @@ public struct ConversationUpdate: Hashable, Codable {
         if !addedMembers.isEmpty && !removedMembers.isEmpty {
             "\(creator.displayName) added and removed members from the convo"
         } else if !addedMembers.isEmpty {
-            "\(addedMembers.formattedNamesString) joined the convo"
+            "\(addedMembers.formattedNamesString) joined by invitation"
         } else if !removedMembers.isEmpty {
             "\(removedMembers.formattedNamesString) left the convo"
         } else if let metadataChange = metadataChanges.first,
