@@ -78,11 +78,7 @@ Key enforced rules:
 ## Dependency Management
 
 ### Swift Package Manager (SPM)
-All dependencies managed through SPM:
-- **GRDB**: SQLite database (exact version: 7.5.0)
-- **XMTP iOS**: Messaging protocol (from: 4.4.0)
-- **Firebase**: Analytics and app check (from: 12.1.0)
-- **SwiftLint**: Build-time linting plugin
+All dependencies managed through SPM. See `ConvosCore/Package.swift` for current versions.
 
 ### Environment Configuration
 - Use `ConfigManager` for environment-specific settings
@@ -142,14 +138,23 @@ Logger.error("Error message")
 
 ### Build Commands
 ```bash
-# Lint code
-swiftlint lint
+# Check for linting issues
+swiftlint
+
+# Auto-fix linting issues
+swiftlint --fix
 
 # Format code
 swiftformat .
 
-# Run tests
-xcodebuild test -scheme Convos
+# Run tests (Local environment on iOS Simulator)
+xcodebuild test -scheme "Convos (Local)" -destination "platform=iOS Simulator,name=iPhone 17"
+
+# Build for device (Local environment)
+xcodebuild build -scheme "Convos (Local)" -configuration Debug
+
+# Clean build folder
+xcodebuild clean -scheme "Convos (Local)"
 ```
 
 ### Xcode Project Settings
