@@ -215,15 +215,6 @@ struct ConversationInfoView: View {
 
                 Section {
                     FeatureRowItem(
-                        imageName: "explodeIcon",
-                        symbolName: "",
-                        title: "Explode convo",
-                        subtitle: "Set a timer"
-                    ) {
-                        SoonLabel()
-                    }
-
-                    FeatureRowItem(
                         imageName: nil,
                         symbolName: "timer",
                         title: "Disappear",
