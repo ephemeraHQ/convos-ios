@@ -6,7 +6,7 @@ import UserNotifications
 struct ConvosApp: App {
     @UIApplicationDelegateAdaptor(ConvosAppDelegate.self) private var appDelegate: ConvosAppDelegate
     @Environment(\.scenePhase) private var scenePhase: ScenePhase
-    @StateObject private var urlStorage: SceneURLStorage = SceneURLStorage.shared
+    @State private var urlStorage: SceneURLStorage = SceneURLStorage.shared
 
     let session: any SessionManagerProtocol
 

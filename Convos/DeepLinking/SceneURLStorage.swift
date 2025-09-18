@@ -1,12 +1,14 @@
 import ConvosCore
 import Foundation
+import Observation
 
 /// Shared storage for coordinating URL handling between SceneDelegate and SwiftUI App
 @MainActor
-class SceneURLStorage: ObservableObject {
+@Observable
+class SceneURLStorage {
     static let shared: SceneURLStorage = SceneURLStorage()
 
-    @Published private(set) var pendingURL: URL?
+    private(set) var pendingURL: URL?
 
     private init() {}
 
