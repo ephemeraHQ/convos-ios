@@ -1,24 +1,24 @@
 import ConvosCore
-import Foundation
 import UIKit
 import UserNotifications
 
-// MARK: - UIApplication Delegate Adapter
+// MARK: - App Delegate
 
+/// Lightweight delegate for push notifications and scene configuration
 @MainActor
-class ConvosAppDelegate: NSObject, UIApplicationDelegate {
+class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, ObservableObject {
     var session: (any SessionManagerProtocol)?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
-
-        if let url = ConfigManager.shared.currentEnvironment.firebaseConfigURL {
-            FirebaseHelperCore.configure(with: url)
-        } else {
-            Logger.error("Missing Firebase plist URL for current environment")
-        }
-
         return true
+    }
+
+    // Scene configuration - required for Camera app Universal Links to work
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+        configuration.delegateClass = ConvosSceneDelegate.self
+        return configuration
     }
 
     func application(_ application: UIApplication,
@@ -39,11 +39,9 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate {
                      didFailToRegisterForRemoteNotificationsWithError error: Error) {
         Logger.error("Failed to register for remote notifications: \(error)")
     }
-}
 
-// MARK: - UNUserNotificationCenterDelegate
+    // MARK: - UNUserNotificationCenterDelegate
 
-extension ConvosAppDelegate: UNUserNotificationCenterDelegate {
     // Handle notifications when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
