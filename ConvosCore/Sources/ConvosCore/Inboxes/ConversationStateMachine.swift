@@ -45,7 +45,7 @@ public actor ConversationStateMachine {
     // MARK: - Properties
 
     private let draftConversationId: String
-    private let inboxStateManager: InboxStateManager
+    private let inboxStateManager: any InboxStateManagerProtocol
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
     private let inviteWriter: any InviteWriterProtocol
@@ -102,7 +102,7 @@ public actor ConversationStateMachine {
 
     init(
         draftConversationId: String,
-        inboxStateManager: InboxStateManager,
+        inboxStateManager: any InboxStateManagerProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         inviteWriter: any InviteWriterProtocol

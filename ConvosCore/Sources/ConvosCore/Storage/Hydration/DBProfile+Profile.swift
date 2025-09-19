@@ -5,7 +5,6 @@ extension MemberProfile {
         Profile(
             inboxId: inboxId,
             name: name,
-            username: inboxId,
             avatar: avatar
         )
     }

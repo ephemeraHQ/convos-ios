@@ -110,8 +110,8 @@ public enum KeychainIdentityStoreError: Error, LocalizedError {
             return "Failed to generate private key"
         case .privateKeyLoadingFailed:
             return "Failed to load private key"
-        case let .identityNotFound(id):
-            return "Identity not found: \(id)"
+        case let .identityNotFound(context):
+            return "Identity not found: \(context)"
         case let .rollbackFailed(context):
             return "Rollback failed for \(context)"
         case .invalidAccessGroup:
@@ -173,23 +173,21 @@ private struct KeychainQuery {
 public protocol KeychainIdentityStoreProtocol: Actor {
     func generateKeys() throws -> KeychainIdentityKeys
     func save(inboxId: String, keys: KeychainIdentityKeys) throws -> KeychainIdentity
-    func identity(for inboxId: String) throws -> KeychainIdentity
-    func loadAll() throws -> [KeychainIdentity]
-    func delete(inboxId: String) throws
-    func deleteAll() throws
+    func identity() throws -> KeychainIdentity
+    func delete() throws
 }
 
 public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
     // MARK: - Properties
 
-    private let keychainService: String
+    private let keychainAccount: String = "org.convos.ios.KeychainIdentityStore.account"
+    private let keychainService: String = "org.convos.ios.KeychainIdentityStore.service"
     private let keychainAccessGroup: String
 
     // MARK: - Initialization
 
-    public init(accessGroup: String, service: String = "org.convos.ios.KeychainIdentityStore") {
+    public init(accessGroup: String) {
         self.keychainAccessGroup = accessGroup
-        self.keychainService = service
     }
 
     // MARK: - Public Interface
@@ -207,9 +205,9 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
         return identity
     }
 
-    public func identity(for inboxId: String) throws -> KeychainIdentity {
+    public func identity() throws -> KeychainIdentity {
         let query = KeychainQuery(
-            account: inboxId,
+            account: keychainAccount,
             service: keychainService,
             accessGroup: keychainAccessGroup
         )
@@ -217,59 +215,14 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
         return try JSONDecoder().decode(KeychainIdentity.self, from: data)
     }
 
-    public func loadAll() throws -> [KeychainIdentity] {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccessGroup as String: keychainAccessGroup,
-            kSecMatchLimit as String: kSecMatchLimitAll,
-            kSecReturnData as String: true
-        ]
-
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-        guard status == errSecSuccess, let items = result as? [Data] else {
-            if status == errSecItemNotFound {
-                return []
-            }
-            throw KeychainIdentityStoreError.keychainOperationFailed(status, "loadAll")
-        }
-
-        var identities: [KeychainIdentity] = []
-        for data in items {
-            do {
-                let identity = try JSONDecoder().decode(KeychainIdentity.self, from: data)
-                identities.append(identity)
-            } catch {
-                Logger.error("Failed decoding identity: \(error)")
-            }
-        }
-
-        return identities
-    }
-
-    public func delete(inboxId: String) throws {
+    public func delete() throws {
         let query = KeychainQuery(
-            account: inboxId,
+            account: keychainAccount,
             service: keychainService,
             accessGroup: keychainAccessGroup
         )
 
         try deleteData(with: query)
-    }
-
-    public func deleteAll() throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccessGroup as String: keychainAccessGroup
-        ]
-
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw KeychainIdentityStoreError.keychainOperationFailed(status, "deleteAll")
-        }
     }
 
     // MARK: - Private Methods

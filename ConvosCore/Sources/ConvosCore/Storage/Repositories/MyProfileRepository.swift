@@ -16,7 +16,7 @@ class MyProfileRepository: MyProfileRepositoryProtocol {
     private var cancellables: Set<AnyCancellable> = .init()
 
     init(
-        inboxStateManager: InboxStateManager,
+        inboxStateManager: any InboxStateManagerProtocol,
         databaseReader: any DatabaseReader
     ) {
         self.databaseReader = databaseReader

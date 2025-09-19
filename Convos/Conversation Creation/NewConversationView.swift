@@ -43,24 +43,15 @@ struct NewConversationView: View {
                             viewModel.join(inviteUrlString: inviteCode)
                         }
                     } else {
-                        Group {
-                            if let conversationViewModel = viewModel.conversationViewModel {
-                                ConversationView(
-                                    viewModel: conversationViewModel,
-                                    focusState: $focusState,
-                                    onScanInviteCode: viewModel.onScanInviteCode,
-                                    onDeleteConversation: viewModel.deleteConversation,
-                                    confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
-                                    messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
-                                )
-                            } else if let initializationError = viewModel.initializationError {
-                                ErrorView(error: initializationError) {
-                                    viewModel.start()
-                                }
-                            } else {
-                                EmptyView()
-                            }
-                        }
+                        let conversationViewModel = viewModel.conversationViewModel
+                        ConversationView(
+                            viewModel: conversationViewModel,
+                            focusState: $focusState,
+                            onScanInviteCode: viewModel.onScanInviteCode,
+                            onDeleteConversation: viewModel.deleteConversation,
+                            confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
+                            messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
+                        )
                         .toolbar {
                             ToolbarItem(placement: .topBarLeading) {
                                 Button(role: .close) {
