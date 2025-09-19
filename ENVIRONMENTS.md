@@ -7,8 +7,8 @@ The app supports 3 environments with distinct configurations:
 | Environment | XMTP Network | Backend | Main Bundle ID | Purpose |
 |-------------|--------------|---------|----------------|---------|
 | **Local** | XMTP Local | localhost:4000 | `org.convos.ios-local` | Development with local XMTP |
-| **Dev** | XMTP Dev | api.convos-otr-dev.convos-api.xyz | `org.convos.ios-preview` | TestFlight builds, real XMTP dev |
-| **Production** | XMTP Prod | api.convos-otr-prod.convos-api.xyz | `org.convos.ios` | App Store release |
+| **Dev** | XMTP Dev | api.dev.convos.xyz | `org.convos.ios-preview` | TestFlight builds, real XMTP dev |
+| **Production** | XMTP Prod | api.prod.convos.xyz | `org.convos.ios` | App Store release |
 
 ### Complete Bundle ID Structure
 
