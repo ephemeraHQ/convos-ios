@@ -81,13 +81,10 @@ workflows:
         - automatic_code_signing: api-key
         - scheme: "$BITRISE_SCHEME"
         - configuration: "$BITRISE_BUILD_CONFIG"
-    - deploy-to-itunesconnect-deliver@2:
+    - deploy-to-itunesconnect-application-loader@2:
         inputs:
-        - connection: api_key
         - bundle_id: org.convos.ios-preview
-        - release_notes: "$RELEASE_NOTES"
-        - whats_new: "$RELEASE_NOTES"
-        title: Deploy to App Store Connect (org.convos.ios-preview)
+        - app_id: '6748622252'
     - save-spm-cache@1: {}
     meta:
       bitrise.io:
@@ -164,13 +161,10 @@ workflows:
         - automatic_code_signing: api-key
         - scheme: "$BITRISE_SCHEME"
         - configuration: "$BITRISE_BUILD_CONFIG"
-    - deploy-to-itunesconnect-deliver@2:
+    - deploy-to-itunesconnect-application-loader@2:
         inputs:
-        - connection: api_key
+        - app_id: '6744776535'
         - bundle_id: org.convos.ios
-        - release_notes: "$RELEASE_NOTES"
-        - whats_new: "$RELEASE_NOTES"
-        title: Deploy to App Store Connect (org.convos.ios)
     - save-spm-cache@1: {}
     meta:
       bitrise.io:
@@ -178,6 +172,7 @@ workflows:
     triggers:
       push:
       - branch: main
+      enabled: false
     envs:
     - BITRISE_SCHEME: Convos (Prod)
       opts:
