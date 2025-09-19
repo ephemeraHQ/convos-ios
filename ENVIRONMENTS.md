@@ -7,8 +7,8 @@ The app supports 3 environments with distinct configurations:
 | Environment | XMTP Network | Backend | Main Bundle ID | Purpose |
 |-------------|--------------|---------|----------------|---------|
 | **Local** | XMTP Local | localhost:4000 | `org.convos.ios-local` | Development with local XMTP |
-| **Dev** | XMTP Dev | api.convos-otr-dev.convos-api.xyz | `org.convos.ios-preview` | TestFlight builds, real XMTP dev |
-| **Production** | XMTP Prod | api.convos-otr-prod.convos-api.xyz | `org.convos.ios` | App Store release |
+| **Dev** | XMTP Dev | api.dev.convos.xyz | `org.convos.ios-preview` | TestFlight builds, real XMTP dev |
+| **Production** | XMTP Prod | api.prod.convos.xyz | `org.convos.ios` | App Store release |
 
 ### Complete Bundle ID Structure
 
@@ -37,10 +37,14 @@ Convos/Config/
 ├── Local.xcconfig        # Build settings for local
 ├── Dev.xcconfig          # Build settings for dev
 ├── Prod.xcconfig         # Build settings for prod
-└── Secrets.swift         # Generated from .env (sensitive data)
+└── Secrets.swift         # Generated from environment variables
 
 Scripts/
-└── copy-config.sh        # Copies correct config per build
+├── generate-secrets-local.sh    # Generates Secrets.swift for local dev
+├── generate-secrets-secure.sh   # Generates Secrets.swift from env vars
+├── create-release-tag.sh         # Creates release tags and versions
+├── get-version.sh               # Gets current app version
+└── setup.sh                     # Sets up development environment
 ```
 
 ## 🔄 How to Switch Environments
@@ -85,11 +89,12 @@ After assigning `.xcconfig` files, update each target's bundle ID:
 4. **ConvosAppClipTests target** → Build Settings → Product Bundle Identifier → `$(CONVOS_APP_CLIP_TESTS_BUNDLE_ID)`
 5. **NotificationService target** → Build Settings → Product Bundle Identifier → `$(NOTIFICATION_SERVICE_BUNDLE_ID)`
 
-### 3. Add Build Phase Script
-1. **Target** → **Build Phases** → **+ New Run Script Phase**
-2. **Name:** "Copy Environment Config"
-3. **Script:** `"${SRCROOT}/Scripts/copy-config.sh"`
-4. **Move** this phase to run **before** "Compile Sources"
+### 3. Set Up Secrets Generation
+1. **Ensure you have a `.env` file** with required environment variables (see setup instructions below)
+2. **Run setup script:** `./Scripts/setup.sh` (installs dependencies and sets up git hooks)
+3. **Generate secrets:** Run `make secrets` or use the appropriate script:
+   - **Local development:** `./Scripts/generate-secrets-local.sh` (auto-detects IP)
+   - **CI/Production:** `./Scripts/generate-secrets-secure.sh` (uses environment variables)
 
 ### 4. Create Schemes (Optional but Recommended)
 1. **Product** → **Scheme** → **New Scheme**
@@ -103,44 +108,73 @@ After assigning `.xcconfig` files, update each target's bundle ID:
 After setup, you can verify environment switching works:
 
 ```swift
-// Add this to ConvosApp.swift init() for testing
+// Add this to your app initialization for testing
 print("🏃 Running in: \(ConfigManager.shared.currentEnvironment.rawValue)")
 print("🌐 Backend: \(ConfigManager.shared.backendURLOverride ?? "default")")
+print("🔑 Secrets loaded: \(Secrets.CONVOS_API_BASE_URL.isEmpty ? "No" : "Yes")")
 ```
+
+### Quick Environment Check
+Run `./Scripts/get-version.sh` to see the current app version, or check the build logs for environment information.
 
 ## 🚨 Important Notes
 
-- **Secrets stay in `.env`** → `Secrets.swift` (not in config JSON)
+- **Secrets are generated from environment variables** → `Secrets.swift` (not tracked in Git)
 - **Config files are tracked in Git** (no sensitive data!)
 - **Bundle IDs differ per environment** (allows side-by-side installation)
 - **All environments use real XMTP networks** (local/dev/production)
-- **Build script fails fast** if config file missing
+- **Local development auto-detects IP addresses** for backend connectivity
+- **CI builds use environment variables** for secure secret management
 
 ## 🛠️ Development Workflow
 
 ### Typical Usage:
-- **Daily dev work:** Use `Convos Local` scheme
-- **TestFlight builds:** Use `Convos Dev` scheme
-- **App Store release:** Use `Convos Prod` scheme
+- **Daily dev work:** Use `Convos Local` scheme (auto-detects local IP)
+- **TestFlight builds:** Use `Convos Dev` scheme → `api.dev.convos.xyz`
+- **App Store release:** Use `Convos Prod` scheme → `api.prod.convos.xyz`
 
-### CI/CD Integration:
-```bash
-# Bitrise can build specific schemes
-xcodebuild -scheme "Convos Dev" -configuration Dev archive
-xcodebuild -scheme "Convos Prod" -configuration Release archive
-```
-
-## 🧪 Testing Environments
-
-You can test environment switching without Xcode setup:
-
-1. **Manually copy a config:**
+### Release Process:
+1. **Create release tag:**
    ```bash
-   cp Convos/Config/config.dev.json Convos/Config/config.json
+   ./Scripts/create-release-tag.sh
+   ```
+   This handles version bumping, tagging, and pushing to trigger CI/CD.
+
+2. **CI/CD Integration:**
+   ```bash
+   # Bitrise builds use environment-specific configurations
+   xcodebuild -scheme "Convos Dev" -configuration Dev archive
+   xcodebuild -scheme "Convos Prod" -configuration Release archive
    ```
 
-2. **Add config.json to Xcode project** (temporary)
+### Git Hooks (Auto-installed by setup.sh)
+- **pre-commit:** Formats Swift code with SwiftFormat
+- **pre-push:** Runs SwiftLint to prevent pushing with violations
+- **post-checkout/post-merge:** Updates dependencies and regenerates secrets
 
-3. **Build and run** - should load dev environment
+## 🧪 Testing and Development
 
-4. **Remove config.json** when done testing
+### Initial Setup
+1. **Run the setup script:**
+   ```bash
+   ./Scripts/setup.sh
+   ```
+   This installs dependencies, sets up git hooks, and configures Xcode defaults.
+
+2. **Create a `.env` file** with your environment variables (see `.env.example`)
+
+3. **Generate secrets:**
+   ```bash
+   make secrets  # Smart detection: local vs CI
+   # OR manually:
+   ./Scripts/generate-secrets-local.sh    # For local development
+   ./Scripts/generate-secrets-secure.sh   # For CI/production builds
+   ```
+
+### Available Scripts
+- **`./Scripts/setup.sh`** - Initial development environment setup
+- **`./Scripts/get-version.sh`** - Get current app version from Xcode project
+- **`./Scripts/create-release-tag.sh`** - Create release tags with version bumping
+- **`./Scripts/generate-secrets-local.sh`** - Generate secrets for local development
+- **`./Scripts/generate-secrets-secure.sh`** - Generate secrets from environment variables
+- **`./Scripts/generate-mock-env.sh`** - Generate mock environment for PR builds
