@@ -6,16 +6,16 @@ import XMTPiOS
 // MARK: - Group Permissions Repository Protocol
 
 public protocol GroupPermissionsRepositoryProtocol {
-    func getGroupPermissions(for groupId: String) async throws -> GroupPermissionPolicySet
-    func getMemberRole(memberInboxId: String, in groupId: String) async throws -> MemberRole
-    func canPerformAction(memberInboxId: String, action: GroupPermissionAction, in groupId: String) async throws -> Bool
-    func getGroupMembers(for groupId: String) async throws -> [GroupMemberInfo]
-    func addAdmin(memberInboxId: String, to groupId: String) async throws
-    func removeAdmin(memberInboxId: String, from groupId: String) async throws
-    func addSuperAdmin(memberInboxId: String, to groupId: String) async throws
-    func removeSuperAdmin(memberInboxId: String, from groupId: String) async throws
-    func addMembers(inboxIds: [String], to groupId: String) async throws
-    func removeMembers(inboxIds: [String], from groupId: String) async throws
+    func getGroupPermissions(for conversationId: String) async throws -> GroupPermissionPolicySet
+    func getMemberRole(memberInboxId: String, in conversationId: String) async throws -> MemberRole
+    func canPerformAction(memberInboxId: String, action: GroupPermissionAction, in conversationId: String) async throws -> Bool
+    func getGroupMembers(for conversationId: String) async throws -> [GroupMemberInfo]
+    func addAdmin(memberInboxId: String, to conversationId: String) async throws
+    func removeAdmin(memberInboxId: String, from conversationId: String) async throws
+    func addSuperAdmin(memberInboxId: String, to conversationId: String) async throws
+    func removeSuperAdmin(memberInboxId: String, from conversationId: String) async throws
+    func addMembers(inboxIds: [String], to conversationId: String) async throws
+    func removeMembers(inboxIds: [String], from conversationId: String) async throws
 }
 
 // MARK: - Group Permission Types
@@ -126,11 +126,11 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
 
     // MARK: - Public Methods
 
-    func getGroupPermissions(for groupId: String) async throws -> GroupPermissionPolicySet {
+    func getGroupPermissions(for conversationId: String) async throws -> GroupPermissionPolicySet {
         let client = try await self.inboxStateManager.waitForInboxReadyResult().client
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(groupId: groupId)
+            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
         }
 
         let isCurrentUserAdmin = try group.isAdmin(inboxId: client.inboxId)
@@ -159,12 +159,12 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
         }
     }
 
-    func getMemberRole(memberInboxId: String, in groupId: String) async throws -> MemberRole {
+    func getMemberRole(memberInboxId: String, in conversationId: String) async throws -> MemberRole {
         let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(groupId: groupId)
+            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
         }
 
         // Use XMTP SDK methods to check member roles
@@ -187,13 +187,13 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
     func canPerformAction(
         memberInboxId: String,
         action: GroupPermissionAction,
-        in groupId: String
+        in conversationId: String
     ) async throws -> Bool {
         // Get member role
-        let memberRole = try await getMemberRole(memberInboxId: memberInboxId, in: groupId)
+        let memberRole = try await getMemberRole(memberInboxId: memberInboxId, in: conversationId)
 
         // Get group permissions
-        let permissions = try await getGroupPermissions(for: groupId)
+        let permissions = try await getGroupPermissions(for: conversationId)
 
         // Determine the required permission level for this action
         let requiredPermission: GroupPermissionLevel
@@ -220,12 +220,12 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
         return checkPermission(memberRole: memberRole, requiredLevel: requiredPermission)
     }
 
-    func getGroupMembers(for groupId: String) async throws -> [GroupMemberInfo] {
+    func getGroupMembers(for conversationId: String) async throws -> [GroupMemberInfo] {
         let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(groupId: groupId)
+            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
         }
 
         // Get members from XMTP - members is a property, not a function
@@ -269,67 +269,67 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
         return groupMemberInfos
     }
 
-    func addAdmin(memberInboxId: String, to groupId: String) async throws {
+    func addAdmin(memberInboxId: String, to conversationId: String) async throws {
         let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(groupId: groupId)
+            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
         }
 
         try await group.addAdmin(inboxId: memberInboxId)
     }
 
-    func removeAdmin(memberInboxId: String, from groupId: String) async throws {
+    func removeAdmin(memberInboxId: String, from conversationId: String) async throws {
         let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(groupId: groupId)
+            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
         }
 
         try await group.removeAdmin(inboxId: memberInboxId)
     }
 
-    func addSuperAdmin(memberInboxId: String, to groupId: String) async throws {
+    func addSuperAdmin(memberInboxId: String, to conversationId: String) async throws {
         let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(groupId: groupId)
+            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
         }
 
         try await group.addSuperAdmin(inboxId: memberInboxId)
     }
 
-    func removeSuperAdmin(memberInboxId: String, from groupId: String) async throws {
+    func removeSuperAdmin(memberInboxId: String, from conversationId: String) async throws {
         let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(groupId: groupId)
+            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
         }
 
         try await group.removeSuperAdmin(inboxId: memberInboxId)
     }
 
-    func addMembers(inboxIds: [String], to groupId: String) async throws {
+    func addMembers(inboxIds: [String], to conversationId: String) async throws {
         let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(groupId: groupId)
+            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
         }
 
         _ = try await group.addMembers(inboxIds: inboxIds)
     }
 
-    func removeMembers(inboxIds: [String], from groupId: String) async throws {
+    func removeMembers(inboxIds: [String], from conversationId: String) async throws {
         let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
-        guard let conversation = try await client.conversation(with: groupId),
+        guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(groupId: groupId)
+            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
         }
 
         try await group.removeMembers(inboxIds: inboxIds)
@@ -357,7 +357,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
 
 enum GroupPermissionsError: LocalizedError {
     case clientNotAvailable
-    case groupNotFound(groupId: String)
+    case groupNotFound(conversationId: String)
     case memberNotFound(memberInboxId: String)
     case permissionDenied
 
@@ -365,8 +365,8 @@ enum GroupPermissionsError: LocalizedError {
         switch self {
         case .clientNotAvailable:
             return "XMTP client is not available"
-        case .groupNotFound(let groupId):
-            return "Group not found: \(groupId)"
+        case .groupNotFound(let conversationId):
+            return "Group not found: \(conversationId)"
         case .memberNotFound(let memberInboxId):
             return "Member not found: \(memberInboxId)"
         case .permissionDenied:
