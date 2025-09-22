@@ -100,7 +100,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
         DBMessage.self,
         key: "conversationMessages",
         using: ForeignKey(["id"], to: ["conversationId"])
-    ).order(Column("date").desc)
+    ).order(DBMessage.Columns.dateNs.desc)
 
     static let lastMessageRequest: QueryInterfaceRequest<DBMessage> = DBMessage
         .filter(DBMessage.Columns.contentType != MessageContentType.update.rawValue)

@@ -4,12 +4,14 @@ import SwiftUI
 @main
 struct ConvosAppClipApp: App {
     let convos: ConvosClient = .client(environment: ConfigManager.shared.currentEnvironment)
+    let conversationsViewModel: ConversationsViewModel
 
     @UIApplicationDelegateAdaptor(ConvosAppDelegate.self) var appDelegate: ConvosAppDelegate
 
     init() {
         // Configure Logger based on environment
         let environment = ConfigManager.shared.currentEnvironment
+        self.conversationsViewModel = ConversationsViewModel(session: convos.session)
 
         // Configure Logger with proper environment for app group access
         Logger.configure(environment: environment)
@@ -29,7 +31,7 @@ struct ConvosAppClipApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ConversationsView(session: convos.session)
+            ConversationsView(viewModel: conversationsViewModel)
                 .withSafeAreaEnvironment()
         }
     }
