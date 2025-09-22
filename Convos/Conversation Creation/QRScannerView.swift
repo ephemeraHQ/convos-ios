@@ -4,12 +4,26 @@ import SwiftUI
 
 // MARK: - QR Scanner Delegate
 @Observable
-class QRScannerDelegate: NSObject, AVCaptureMetadataOutputObjectsDelegate {
+class QRScannerViewModel: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     var scannedCode: String?
-    var cameraAuthorized: Bool = false
-    var cameraSetupCompleted: Bool = false
-    var onSetupCamera: (() -> Void)?
+    fileprivate(set) var cameraAuthorized: Bool = false
+    fileprivate(set) var cameraSetupCompleted: Bool = false
+    fileprivate(set) var onSetupCamera: (() -> Void)?
     var isScanningEnabled: Bool = true
+    var showInvalidInviteCodeFormat: Bool = false
+    var invalidInviteCode: String?
+
+    func requestAccess() {
+        AVCaptureDevice.requestAccess(for: .video) { granted in
+            DispatchQueue.main.async {
+                self.cameraAuthorized = granted
+                if granted {
+                    // Trigger camera setup using the callback
+                    self.onSetupCamera?()
+                }
+            }
+        }
+    }
 
     func metadataOutput(
         _ output: AVCaptureMetadataOutput,
@@ -39,7 +53,7 @@ class QRScannerDelegate: NSObject, AVCaptureMetadataOutputObjectsDelegate {
 
 // MARK: - Camera Preview
 struct QRScannerView: UIViewRepresentable {
-    let delegate: QRScannerDelegate
+    let viewModel: QRScannerViewModel
     @Binding var coordinator: Coordinator?
 
     class Coordinator {
@@ -81,13 +95,13 @@ struct QRScannerView: UIViewRepresentable {
         context.coordinator.parentView = view
         coordinator = context.coordinator
 
-        delegate.onSetupCamera = {
+        viewModel.onSetupCamera = {
             self.setupCamera()
         }
 
         checkCameraAuthorization { authorized in
             DispatchQueue.main.async {
-                self.delegate.cameraAuthorized = authorized
+                self.viewModel.cameraAuthorized = authorized
                 if authorized {
                     self.setupCamera()
                 }
@@ -154,8 +168,7 @@ struct QRScannerView: UIViewRepresentable {
 
         if captureSession.canAddOutput(metadataOutput) {
             captureSession.addOutput(metadataOutput)
-
-            metadataOutput.setMetadataObjectsDelegate(delegate, queue: DispatchQueue.main)
+            metadataOutput.setMetadataObjectsDelegate(viewModel, queue: DispatchQueue.main)
             metadataOutput.metadataObjectTypes = [.qr]
         } else {
             Logger.info("Cannot add metadata output")
@@ -206,7 +219,7 @@ struct QRScannerView: UIViewRepresentable {
         }
 
         // Mark camera setup as completed
-        delegate.cameraSetupCompleted = true
+        viewModel.cameraSetupCompleted = true
     }
 
     func updateUIView(_ uiView: UIView, context: Context) {

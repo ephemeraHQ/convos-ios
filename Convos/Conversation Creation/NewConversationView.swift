@@ -39,9 +39,13 @@ struct NewConversationView: View {
                 @Bindable var viewModel = viewModel
                 Group {
                     if viewModel.showingFullScreenScanner {
-                        JoinConversationView(allowsDismissal: viewModel.allowsDismissingScanner) { inviteCode in
-                            viewModel.join(inviteUrlString: inviteCode)
-                        }
+                        JoinConversationView(
+                            viewModel: viewModel.qrScannerViewModel,
+                            allowsDismissal: viewModel.allowsDismissingScanner,
+                            onScannedCode: { inviteCode in
+                                viewModel.joinConversation(inviteCode: inviteCode)
+                            }
+                        )
                     } else {
                         let conversationViewModel = viewModel.conversationViewModel
                         ConversationView(
@@ -77,8 +81,8 @@ struct NewConversationView: View {
                 }
                 .background(.colorBackgroundPrimary)
                 .sheet(isPresented: $viewModel.presentingJoinConversationSheet) {
-                    JoinConversationView { inviteCode in
-                        viewModel.join(inviteUrlString: inviteCode)
+                    JoinConversationView(viewModel: viewModel.qrScannerViewModel, allowsDismissal: true) { inviteCode in
+                        viewModel.joinConversation(inviteCode: inviteCode)
                     }
                 }
                 .selfSizingSheet(isPresented: $viewModel.presentingInvalidInviteSheet) {

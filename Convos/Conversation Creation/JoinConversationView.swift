@@ -4,25 +4,20 @@ import SwiftUI
 // swiftlint:disable force_unwrapping
 
 struct JoinConversationView: View {
-    @State private var qrScannerDelegate: QRScannerDelegate = QRScannerDelegate()
+    @Bindable var viewModel: QRScannerViewModel
+    let allowsDismissal: Bool
+    let onScannedCode: (String) -> Void
+
     @State private var qrScannerCoordinator: QRScannerView.Coordinator?
     @State private var showingExplanation: Bool = false
-    @State private var showingScanFailedForInviteCode: String?
-    let allowsDismissal: Bool
-    let onScannedCode: (String) -> Bool
 
     @Environment(\.dismiss) private var dismiss: DismissAction
     @Environment(\.openURL) private var openURL: OpenURLAction
 
-    init(allowsDismissal: Bool = true, onScannedCode: @escaping (String) -> Bool) {
-        self.allowsDismissal = allowsDismissal
-        self.onScannedCode = onScannedCode
-    }
-
     var body: some View {
         NavigationStack {
             ZStack {
-                QRScannerView(delegate: qrScannerDelegate, coordinator: $qrScannerCoordinator)
+                QRScannerView(viewModel: viewModel, coordinator: $qrScannerCoordinator)
                     .ignoresSafeArea()
 
                 let cutoutSize = 240.0
@@ -44,7 +39,7 @@ struct JoinConversationView: View {
                                 )
 
                             // Show "Enable camera" button when camera is not authorized
-                            if !qrScannerDelegate.cameraAuthorized {
+                            if !viewModel.cameraAuthorized {
                                 Button {
                                     requestCameraAccess()
                                 } label: {
@@ -139,19 +134,18 @@ struct JoinConversationView: View {
                     }
                 }
             }
-            .alert("This is not a convo", isPresented: .constant(showingScanFailedForInviteCode != nil)) {
+            .alert("This is not a convo", isPresented: $viewModel.showInvalidInviteCodeFormat) {
                 Button("Try again") {
-                    showingScanFailedForInviteCode = nil
-                    qrScannerDelegate.resetScanning()
+                    viewModel.showInvalidInviteCodeFormat = false
                 }
                 .buttonStyle(.glassProminent)
             } message: {
-                if let failedCode = showingScanFailedForInviteCode {
+                if let failedCode = viewModel.invalidInviteCode {
                     Text(failedCode)
                 }
             }
         }
-        .onChange(of: qrScannerDelegate.scannedCode) { _, newValue in
+        .onChange(of: viewModel.scannedCode) { _, newValue in
             if let code = newValue {
                 attemptToScanCode(code)
             }
@@ -159,11 +153,7 @@ struct JoinConversationView: View {
     }
 
     private func attemptToScanCode(_ code: String) {
-        if !onScannedCode(code) {
-            showingScanFailedForInviteCode = code
-        } else {
-            showingScanFailedForInviteCode = nil
-        }
+        onScannedCode(code)
     }
 
     private func requestCameraAccess() {
@@ -177,17 +167,9 @@ struct JoinConversationView: View {
             }
         case .notDetermined:
             // Request access for the first time
-            AVCaptureDevice.requestAccess(for: .video) { granted in
-                DispatchQueue.main.async {
-                    qrScannerDelegate.cameraAuthorized = granted
-                    if granted {
-                        // Trigger camera setup using the callback
-                        qrScannerDelegate.onSetupCamera?()
-                    }
-                }
-            }
+            viewModel.requestAccess()
         case .authorized:
-            qrScannerDelegate.onSetupCamera?()
+            viewModel.onSetupCamera?()
         @unknown default:
             break
         }
@@ -197,5 +179,6 @@ struct JoinConversationView: View {
 // swiftlint:enable force_unwrapping
 
 #Preview {
-    JoinConversationView(onScannedCode: { _ in true })
+    JoinConversationView(viewModel: .init(), allowsDismissal: true, onScannedCode: { _ in
+    })
 }
