@@ -191,7 +191,8 @@ struct ConversationsView: View {
 }
 
 #Preview {
-    @Previewable @State var viewModel: ConversationsViewModel = .init(session: ConvosClient.mock().session)
+    let convos = ConvosClient.mock()
+    let viewModel = ConversationsViewModel(session: convos.session)
     ConversationsView(
         viewModel: viewModel
     )

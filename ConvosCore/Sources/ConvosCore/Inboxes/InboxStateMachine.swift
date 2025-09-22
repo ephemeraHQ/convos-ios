@@ -42,7 +42,7 @@ extension InboxStateMachine.State: Equatable {
         case (.uninitialized, .uninitialized),
             (.authorizing, .authorizing),
             (.registering, .registering),
-            (.authenticating, .authenticating),
+            (.authenticatingBackend, .authenticatingBackend),
             (.stopping, .stopping),
             (.deleting, .deleting),
             (.error, .error):
@@ -84,7 +84,7 @@ public actor InboxStateMachine {
         case uninitialized,
              authorizing,
              registering,
-             authenticating, // backend
+             authenticatingBackend,
              ready(InboxReadyResult),
              deleting,
              stopping,
@@ -272,11 +272,10 @@ public actor InboxStateMachine {
 
             case (.authorizing, let .clientAuthorized(client)):
                 try await handleClientAuthorized(client)
-            case (.authorizing, let .clientRegistered(client)):
+            case (.registering, let .clientRegistered(client)):
                 try await handleClientRegistered(client)
 
-            case (.authorizing, let .authorized(result)),
-                (.registering, let .authorized(result)):
+            case (.authenticatingBackend, let .authorized(result)):
                 try await handleAuthorized(
                     client: result.client,
                     apiClient: result.apiClient
@@ -327,7 +326,7 @@ public actor InboxStateMachine {
             }
             enqueueAction(.clientAuthorized(client))
         } catch {
-            Logger.error("Failed authorizing, attempting registration...")
+            Logger.warning("Failed authorizing, attempting registration...")
             try await handleRegister()
         }
     }
@@ -345,7 +344,7 @@ public actor InboxStateMachine {
     }
 
     private func handleClientAuthorized(_ client: any XMTPClientProvider) async throws {
-        emitStateChange(.authenticating)
+        emitStateChange(.authenticatingBackend)
 
         Logger.info("Authenticating API client...")
         let apiClient = initializeApiClient(client: client)
@@ -354,10 +353,9 @@ public actor InboxStateMachine {
     }
 
     private func handleClientRegistered(_ client: any XMTPClientProvider) async throws {
-        emitStateChange(.authenticating)
+        emitStateChange(.authenticatingBackend)
         Logger.info("Authenticating backend for registration...")
         let apiClient = try await authorizeConvosBackend(client: client)
-        emitStateChange(.registering)
         Logger.info("Registering backend...")
         _ = try await registerBackend(
             client: client,
