@@ -9,6 +9,7 @@ struct ConvosApp: App {
     @State private var urlStorage: SceneURLStorage = SceneURLStorage.shared
 
     let session: any SessionManagerProtocol
+    let conversationsViewModel: ConversationsViewModel
 
     init() {
         let environment = ConfigManager.shared.currentEnvironment
@@ -25,6 +26,7 @@ struct ConvosApp: App {
 
         let convos: ConvosClient = .client(environment: environment)
         self.session = convos.session
+        self.conversationsViewModel = ConversationsViewModel(session: session)
 
         if let url = ConfigManager.shared.currentEnvironment.firebaseConfigURL {
             FirebaseHelperCore.configure(with: url)
@@ -35,7 +37,7 @@ struct ConvosApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ConversationsView(session: session)
+            ConversationsView(viewModel: conversationsViewModel)
                 .withSafeAreaEnvironment()
                 .onOpenURL { url in
                     handleDeepLink(url)

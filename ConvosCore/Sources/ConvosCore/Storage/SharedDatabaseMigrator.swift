@@ -30,9 +30,10 @@ extension SharedDatabaseMigrator {
 
             try db.create(table: "conversation") { t in
                 t.column("id", .text)
-                    .unique()
                     .notNull()
                     .primaryKey()
+                t.column("inboxId", .text)
+                    .notNull()
                 t.column("clientConversationId", .text)
                     .notNull()
                     .unique(onConflict: .replace)
@@ -44,6 +45,7 @@ extension SharedDatabaseMigrator {
                 t.column("name", .text)
                 t.column("description", .text)
                 t.column("imageURLString", .text)
+                t.uniqueKey(["id", "inboxId"])
             }
 
             try db.create(table: "memberProfile") { t in

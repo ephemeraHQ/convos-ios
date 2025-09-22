@@ -2,7 +2,6 @@ import ConvosCore
 import SwiftUI
 
 struct ConversationsView: View {
-    let session: any SessionManagerProtocol
     @State var viewModel: ConversationsViewModel
 
     @Namespace private var namespace: Namespace.ID
@@ -13,13 +12,6 @@ struct ConversationsView: View {
     @FocusState private var focusState: MessagesViewInputFocus?
     @State private var sidebarWidth: CGFloat = 0.0
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
-
-    init(
-        session: any SessionManagerProtocol
-    ) {
-        self.session = session
-        self.viewModel = ConversationsViewModel(session: session)
-    }
 
     var emptyConversationsViewScrollable: some View {
         ScrollView {
@@ -209,7 +201,8 @@ struct ConversationsView: View {
 
 #Preview {
     let convos = ConvosClient.mock()
+    let viewModel = ConversationsViewModel(session: convos.session)
     ConversationsView(
-        session: convos.session
+        viewModel: viewModel
     )
 }
