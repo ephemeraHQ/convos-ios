@@ -6,7 +6,7 @@ import SwiftUI
 struct JoinConversationView: View {
     @Bindable var viewModel: QRScannerViewModel
     let allowsDismissal: Bool
-    let onScannedCode: (String) -> ()
+    let onScannedCode: (String) -> Void
 
     @State private var qrScannerCoordinator: QRScannerView.Coordinator?
     @State private var showingExplanation: Bool = false
