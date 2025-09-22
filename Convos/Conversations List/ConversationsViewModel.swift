@@ -102,8 +102,6 @@ final class ConversationsViewModel {
     private var cancellables: Set<AnyCancellable> = .init()
     private var leftConversationObserver: Any?
 
-    private var joinConversationTask: Task<Void, Error>?
-
     init(session: any SessionManagerProtocol) {
         self.session = session
         self.conversationsRepository = session.conversationsRepository(
@@ -134,7 +132,6 @@ final class ConversationsViewModel {
     }
 
     deinit {
-        joinConversationTask?.cancel()
         if let leftConversationObserver {
             NotificationCenter.default.removeObserver(leftConversationObserver)
         }
@@ -192,16 +189,11 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        let viewModel = NewConversationViewModel(
+        newConversationViewModel = NewConversationViewModel(
             session: session,
             delegate: self,
         )
-        joinConversationTask?.cancel()
-        joinConversationTask = Task {
-            viewModel.joinConversation(inviteCode: inviteCode)
-            // before setting the view model, make sure we do not encounter validation errors
-            newConversationViewModel = viewModel
-        }
+        newConversationViewModel?.joinConversation(inviteCode: inviteCode)
     }
 
     func deleteAllInboxes() {
