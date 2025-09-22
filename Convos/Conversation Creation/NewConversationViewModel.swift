@@ -64,6 +64,7 @@ class NewConversationViewModel: Identifiable {
             draftConversationComposer: draftConversationComposer,
             myProfileRepository: messagingService.myProfileRepository()
         )
+        setupObservations()
         self.conversationViewModel.untitledConversationPlaceholder = "New convo"
         if showingFullScreenScanner {
             self.conversationViewModel.showsInfoView = false
