@@ -50,9 +50,9 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     func inviteDetails(_ inviteCode: String) async throws -> ConvosAPI.InviteDetailsResponse
     func inviteDetailsWithGroup(_ inviteCode: String) async throws -> ConvosAPI.InviteDetailsWithGroupResponse
     func updateInvite(_ inviteCode: String, requestBody: ConvosAPI.UpdateInviteCodeRequest) async throws -> ConvosAPI.InviteDetailsResponse
-    func updateInviteName(_ inviteCode: String, groupId: String, name: String) async throws
-    func updateInviteDescription(_ inviteCode: String, groupId: String, description: String) async throws
-    func updateInviteImageUrl(_ inviteCode: String, groupId: String, imageUrl: String) async throws
+    func updateInviteName(_ inviteCode: String, name: String) async throws
+    func updateInviteDescription(_ inviteCode: String, description: String) async throws
+    func updateInviteImageUrl(_ inviteCode: String, imageUrl: String) async throws
     func deleteInvite(_ inviteCode: String) async throws -> ConvosAPI.DeleteInviteResponse
     func publicInviteDetails(_ code: String) async throws -> ConvosAPI.PublicInviteDetailsResponse
     func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse
@@ -355,18 +355,18 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         return try await performRequest(request)
     }
 
-    func updateInviteName(_ inviteCode: String, groupId: String, name: String) async throws {
-        let requestBody = ["groupId": groupId, "name": name]
+    func updateInviteName(_ inviteCode: String, name: String) async throws {
+        let requestBody = ["name": name]
         try await updateInviteWithFields(inviteCode, fields: requestBody)
     }
 
-    func updateInviteDescription(_ inviteCode: String, groupId: String, description: String) async throws {
-        let requestBody = ["groupId": groupId, "description": description]
+    func updateInviteDescription(_ inviteCode: String, description: String) async throws {
+        let requestBody = ["description": description]
         try await updateInviteWithFields(inviteCode, fields: requestBody)
     }
 
-    func updateInviteImageUrl(_ inviteCode: String, groupId: String, imageUrl: String) async throws {
-        let requestBody = ["groupId": groupId, "imageUrl": imageUrl]
+    func updateInviteImageUrl(_ inviteCode: String, imageUrl: String) async throws {
+        let requestBody = ["imageUrl": imageUrl]
         try await updateInviteWithFields(inviteCode, fields: requestBody)
     }
 

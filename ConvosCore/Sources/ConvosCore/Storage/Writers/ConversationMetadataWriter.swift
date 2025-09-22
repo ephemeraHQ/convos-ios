@@ -60,13 +60,17 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
 
         // Update backend invite metadata if invite exists
         if let inviteCode = try await getInviteCode(for: groupId) {
+            Logger.info("🔍 Found invite code for group \(groupId): \(inviteCode)")
             do {
-                try await inboxReady.apiClient.updateInviteName(inviteCode, groupId: groupId, name: truncatedName)
+                try await inboxReady.apiClient.updateInviteName(inviteCode, name: truncatedName)
                 Logger.info("Updated backend invite name for \(groupId)")
             } catch {
-                Logger.error("Failed to update backend invite/group name metadata: \(error.localizedDescription)")
+                Logger.error("❌ Failed to update backend invite name: \(error)")
+                Logger.error("🔍 Full error: \(String(describing: error))")
                 // Continue with XMTP update even if backend update fails
             }
+        } else {
+            Logger.info("ℹ️ No invite code found for group \(groupId), skipping backend update")
         }
 
         try await group.updateName(name: truncatedName)
@@ -94,13 +98,18 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
 
         // Update backend invite metadata if invite exists
         if let inviteCode = try await getInviteCode(for: groupId) {
+            Logger.info("🔍 Found invite code for group \(groupId): \(inviteCode)")
             do {
-                try await inboxReady.apiClient.updateInviteDescription(inviteCode, groupId: groupId, description: description)
-                Logger.info("Updated backend invite description for \(groupId)")
+                Logger.info("🚀 Starting backend invite description update...")
+                try await inboxReady.apiClient.updateInviteDescription(inviteCode, description: description)
+                Logger.info("✅ Backend invite description updated successfully for \(groupId)")
             } catch {
-                Logger.error("Failed to update backend invite/group description metadata: \(error.localizedDescription)")
+                Logger.error("❌ Failed to update backend invite description: \(error)")
+                Logger.error("🔍 Full error: \(String(describing: error))")
                 // Continue with XMTP update even if backend update fails
             }
+        } else {
+            Logger.info("ℹ️ No invite code found for group \(groupId), skipping backend update")
         }
 
         try await group.updateDescription(description: description)
@@ -152,13 +161,18 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
 
         // Update backend invite metadata if invite exists
         if let inviteCode = try await getInviteCode(for: groupId) {
+            Logger.info("🔍 Found invite code for group \(groupId): \(inviteCode)")
             do {
-                try await inboxReady.apiClient.updateInviteImageUrl(inviteCode, groupId: groupId, imageUrl: imageURL)
-                Logger.info("Updated backend invite image URL for \(groupId)")
+                Logger.info("🚀 Starting backend invite image URL update...")
+                try await inboxReady.apiClient.updateInviteImageUrl(inviteCode, imageUrl: imageURL)
+                Logger.info("✅ Backend invite image URL updated successfully for \(groupId)")
             } catch {
-                Logger.error("Failed to update backend invite/group image URL metadata: \(error.localizedDescription)")
+                Logger.error("❌ Failed to update backend invite image URL: \(error)")
+                Logger.error("🔍 Full error: \(String(describing: error))")
                 // Continue with XMTP update even if backend update fails
             }
+        } else {
+            Logger.info("ℹ️ No invite code found for group \(groupId), skipping backend update")
         }
 
         try await group.updateImageUrl(imageUrl: imageURL)
