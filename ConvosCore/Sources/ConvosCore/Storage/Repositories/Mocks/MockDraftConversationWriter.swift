@@ -5,7 +5,7 @@ class MockDraftConversationWriter: DraftConversationWriterProtocol {
     func createConversation() async throws {
     }
 
-    func requestToJoin(inviteCode: String) async throws {
+    func joinConversation(inviteCode: String) async throws {
     }
 
     func checkIfAlreadyJoined(inviteCode: String) async -> String? {

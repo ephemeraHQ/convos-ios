@@ -5,13 +5,14 @@ public protocol InboxStateObserver: AnyObject {
     func inboxStateDidChange(_ state: InboxStateMachine.State)
 }
 
-protocol InboxStateManagerProtocol {
+public protocol InboxStateManagerProtocol: AnyObject {
     var currentState: InboxStateMachine.State { get }
+
+    func waitForInboxReadyResult() async throws -> InboxReadyResult
 
     func addObserver(_ observer: InboxStateObserver)
     func removeObserver(_ observer: InboxStateObserver)
 
-    func waitForInboxReadyResult() async throws -> InboxReadyResult
     func observeState(_ handler: @escaping (InboxStateMachine.State) -> Void) -> StateObserverHandle
 }
 
@@ -125,9 +126,9 @@ public final class ClosureStateObserver: InboxStateObserver {
 
 public final class StateObserverHandle {
     private var observer: ClosureStateObserver?
-    private weak var manager: InboxStateManager?
+    private weak var manager: (any InboxStateManagerProtocol)?
 
-    init(observer: ClosureStateObserver, manager: InboxStateManager) {
+    init(observer: ClosureStateObserver, manager: any InboxStateManagerProtocol) {
         self.observer = observer
         self.manager = manager
     }

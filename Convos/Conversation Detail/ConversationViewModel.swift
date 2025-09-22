@@ -209,7 +209,6 @@ class ConversationViewModel {
             }
             .store(in: &cancellables)
         conversationRepository.conversationPublisher
-            .dropFirst()
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
             .sink { [weak self] conversation in

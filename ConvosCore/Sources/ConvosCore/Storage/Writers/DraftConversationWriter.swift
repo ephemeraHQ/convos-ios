@@ -8,8 +8,7 @@ public protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
     var conversationMetadataWriter: any ConversationMetadataWriterProtocol { get }
 
     func createConversation() async throws
-    func requestToJoin(inviteCode: String) async throws
-    func checkIfAlreadyJoined(inviteCode: String) async -> String?
+    func joinConversation(inviteCode: String) async throws
     func delete() async
 }
 
@@ -112,19 +111,9 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         _ = try await waitForConversationReadyResult()
     }
 
-    func requestToJoin(inviteCode: String) async throws {
+    func joinConversation(inviteCode: String) async throws {
         await stateMachine.join(inviteCode: inviteCode)
         _ = try await waitForConversationReadyResult()
-    }
-
-    func checkIfAlreadyJoined(inviteCode: String) async -> String? {
-        do {
-            let lookupUtility = ConversationLookupUtility(databaseReader: databaseReader)
-            return try await lookupUtility.findExistingConversationForInviteCode(inviteCode)
-        } catch {
-            Logger.error("Error checking if already joined: \(error.localizedDescription)")
-            return nil
-        }
     }
 
     func send(text: String) async throws {
