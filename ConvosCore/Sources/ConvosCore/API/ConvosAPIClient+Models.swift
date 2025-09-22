@@ -215,6 +215,15 @@ public enum ConvosAPI {
     public struct AuthCheckResponse: Codable {
         public let success: Bool
     }
+
+    // MARK: - Invite Code Update Models
+
+    public struct UpdateInviteCodeRequest: Encodable {
+        public let groupId: String
+        public let name: String?
+        public let description: String?
+        public let imageUrl: String?
+    }
 }
 
 public extension ConvosAPI.InitRequest.Profile {

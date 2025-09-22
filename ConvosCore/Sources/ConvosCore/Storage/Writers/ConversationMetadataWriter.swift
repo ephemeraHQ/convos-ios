@@ -35,6 +35,17 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
+    // MARK: - Private Helpers
+
+    private func getInviteCode(for groupId: String) async throws -> String? {
+        return try await databaseWriter.read { db in
+            try DBInvite
+                .filter(DBInvite.Columns.conversationId == groupId)
+                .fetchOne(db)?
+                .id
+        }
+    }
+
     // MARK: - Group Metadata Updates
 
     func updateGroupName(groupId: String, name: String) async throws {
@@ -45,6 +56,17 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
         guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
+        }
+
+        // Update backend invite metadata if invite exists
+        if let inviteCode = try await getInviteCode(for: groupId) {
+            do {
+                try await inboxReady.apiClient.updateInviteName(inviteCode, groupId: groupId, name: truncatedName)
+                Logger.info("Updated backend invite name for \(groupId)")
+            } catch {
+                Logger.error("Failed to update backend invite/group name metadata: \(error.localizedDescription)")
+                // Continue with XMTP update even if backend update fails
+            }
         }
 
         try await group.updateName(name: truncatedName)
@@ -68,6 +90,17 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
         guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
+        }
+
+        // Update backend invite metadata if invite exists
+        if let inviteCode = try await getInviteCode(for: groupId) {
+            do {
+                try await inboxReady.apiClient.updateInviteDescription(inviteCode, groupId: groupId, description: description)
+                Logger.info("Updated backend invite description for \(groupId)")
+            } catch {
+                Logger.error("Failed to update backend invite/group description metadata: \(error.localizedDescription)")
+                // Continue with XMTP update even if backend update fails
+            }
         }
 
         try await group.updateDescription(description: description)
@@ -115,6 +148,17 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
         guard let conversation = try await inboxReady.client.conversation(with: groupId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(groupId: groupId)
+        }
+
+        // Update backend invite metadata if invite exists
+        if let inviteCode = try await getInviteCode(for: groupId) {
+            do {
+                try await inboxReady.apiClient.updateInviteImageUrl(inviteCode, groupId: groupId, imageUrl: imageURL)
+                Logger.info("Updated backend invite image URL for \(groupId)")
+            } catch {
+                Logger.error("Failed to update backend invite/group image URL metadata: \(error.localizedDescription)")
+                // Continue with XMTP update even if backend update fails
+            }
         }
 
         try await group.updateImageUrl(imageUrl: imageURL)
