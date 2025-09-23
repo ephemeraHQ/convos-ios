@@ -192,18 +192,6 @@ extension MessagingService {
     }
 
     /// Processes an invite join request from push notification
-    ///
-    /// Flow Strategy:
-    /// 1. Accept backend request (creates InviteCodeUse)
-    /// 2. Add user to XMTP group
-    /// 3. Clean up processed request
-    /// 4. Store updated conversation
-    ///
-    /// - Parameters:
-    ///   - inviteData: The invite join request data from the push notification
-    ///   - payload: The push notification payload
-    ///   - client: The XMTP client
-    ///   - apiClient: The API client
     private func processInviteJoinRequest(
         inviteData: InviteJoinRequestData,
         payload: PushNotificationPayload,
@@ -246,47 +234,47 @@ extension MessagingService {
         }
 
         do {
-            // Check if the requester is already a member
-            let currentMembers = try await xmtpConversation.members()
-            let memberInboxIds = currentMembers.map { $0.inboxId }
+            // Add member to XMTP with retry logic (no-op if already a member)
+            Logger.info("Adding \(requesterInboxId) to XMTP group \(group.id)")
 
-            if memberInboxIds.contains(requesterInboxId) {
-                Logger.info("User \(requesterInboxId) is already a member of group \(group.id)")
-                return nil
-            }
+            let maxRetries = 3
 
-            var backendAccepted = false
-
-            if let requestId = inviteData.requestId, !requestId.isEmpty {
+            for attempt in 1...maxRetries {
                 do {
-                    Logger.info("Accepting join request: \(requestId)")
-                    let acceptResponse = try await apiClient.acceptRequestToJoin(requestId)
+                    _ = try await group.addMembers(inboxIds: [requesterInboxId])
+                    Logger.info("Successfully added \(requesterInboxId) to XMTP group (attempt \(attempt))")
+                    break // Success, exit retry loop
+                } catch {
+                    Logger.warning("XMTP addition failed on attempt \(attempt)/\(maxRetries): \(error)")
 
-                    if acceptResponse.alreadyAccepted == true {
-                        Logger.info("Request \(requestId) was already processed at \(acceptResponse.inviteCodeUse.usedAt)")
-                    } else {
-                        Logger.info("Request \(requestId) accepted, member added at \(acceptResponse.inviteCodeUse.usedAt)")
+                    if attempt == maxRetries {
+                        Logger.error("XMTP addition failed after \(maxRetries) attempts")
+                        throw error
                     }
 
-                    backendAccepted = true
-                } catch {
-                    // Handle errors with proper recovery logic
-                    backendAccepted = try handleAcceptRequestError(error)
+                    // Exponential backoff: 1s, 2s, 4s
+                    let delay = TimeInterval.calculateExponentialBackoff(for: attempt - 1)
+                    Logger.info("Retrying in \(delay) seconds...")
+                    try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 }
-            } else {
-                Logger.error("No request ID provided - cannot ensure backend consistency")
-                throw NSError(domain: "InviteJoinRequest", code: 1, userInfo: [
-                    NSLocalizedDescriptionKey: "Missing request ID - cannot process join request"
-                ])
             }
 
-            // Only add to XMTP if backend acceptance succeeded
-            if backendAccepted {
-                try await addMemberToXMTPGroup(
-                    requesterInboxId: requesterInboxId,
-                    group: group,
-                    xmtpConversation: xmtpConversation
-                )
+            // Only consume backend invite if XMTP addition succeeded
+            if let requestId = inviteData.requestId, !requestId.isEmpty {
+                do {
+                    Logger.info("XMTP addition succeeded, now accepting join request: \(requestId)")
+                    let acceptResponse = try await apiClient.acceptRequestToJoin(requestId)
+                    Logger.info("Request \(requestId) accepted, invite consumed at \(acceptResponse.inviteCodeUse.usedAt)")
+                } catch {
+                    if let apiError = error as? APIError, case .conflict = apiError {
+                        Logger.info("Request was already processed by another process - continuing")
+                    } else {
+                        Logger.warning("XMTP addition succeeded but backend acceptance failed: \(error)")
+                    }
+                    // Don't throw - XMTP addition worked, that's what matters for the user
+                }
+            } else {
+                Logger.warning("No request ID provided - XMTP addition succeeded but cannot consume backend invite")
             }
 
             // Store the updated conversation
@@ -308,67 +296,6 @@ extension MessagingService {
         } catch {
             Logger.error("Failed to add member to group: \(error.localizedDescription)")
             throw error
-        }
-    }
-
-    /// Adds a member to an XMTP group with membership verification
-    /// - Parameters:
-    ///   - requesterInboxId: The inbox ID of the user to add
-    ///   - group: The XMTP group to add the user to
-    ///   - xmtpConversation: The XMTP conversation for membership checks
-    private func addMemberToXMTPGroup(
-        requesterInboxId: String,
-        group: XMTPiOS.Group,
-        xmtpConversation: XMTPiOS.Conversation
-    ) async throws {
-        // Check if user is already a member (added by someone else or another process) before attempting to add
-        let updatedMembers = try await xmtpConversation.members()
-        let updatedMemberInboxIds = updatedMembers.map { $0.inboxId }
-
-        if updatedMemberInboxIds.contains(requesterInboxId) {
-            Logger.info("User \(requesterInboxId) was already added to group \(group.id) by another process")
-        } else {
-            Logger.info("Adding \(requesterInboxId) to XMTP group \(group.id)")
-            do {
-                _ = try await group.addMembers(inboxIds: [requesterInboxId])
-                Logger.info("Successfully added \(requesterInboxId) to XMTP group")
-            } catch {
-                Logger.error("XMTP user addition failed")
-                throw error
-            }
-        }
-    }
-
-    /// Handles errors from accept request API calls and determines if XMTP addition should proceed
-    /// - Parameter error: The error from the accept request API call
-    /// - Returns: true if XMTP addition should proceed despite the error, false otherwise
-    /// - Throws: Rethrows the error if it's a fatal error that should stop processing
-    private func handleAcceptRequestError(_ error: Error) throws -> Bool {
-        if let apiError = error as? APIError {
-            switch apiError {
-            case .badRequest(let message):
-                Logger.error("Request validation failed: \(message ?? "Unknown validation error")")
-                throw error
-            case .notFound:
-                Logger.error("Request not found - likely expired or invalid")
-                throw error
-            case .forbidden:
-                Logger.error("Permission denied for request acceptance")
-                throw error
-            case .serverError(let message):
-                Logger.warning("Server error - this might be temporary, but proceeding with XMTP addition: \(message ?? "Unknown server error")")
-                return true
-            case .notAuthenticated:
-                Logger.error("Authentication failed for request acceptance")
-                throw error
-            default:
-                Logger.error("Unexpected API error: \(apiError)")
-                throw error
-            }
-        } else {
-            // Network or other errors - might be temporary, proceed with XMTP addition
-            Logger.warning("Network/other error accepting request - proceeding with XMTP addition: \(error)")
-            return true
         }
     }
 }

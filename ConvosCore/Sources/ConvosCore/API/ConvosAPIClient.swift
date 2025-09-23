@@ -546,6 +546,8 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 throw APIError.forbidden
             case 404:
                 throw APIError.notFound
+            case 409:
+                throw APIError.conflict
             default:
                 let errorMessage = String(data: data, encoding: .utf8)
                 throw APIError.serverError(errorMessage)
@@ -749,6 +751,7 @@ enum APIError: Error {
     case badRequest(String?)
     case forbidden
     case notFound
+    case conflict
     case invalidResponse
     case invalidRequest
     case serverError(String?)

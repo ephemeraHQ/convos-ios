@@ -104,7 +104,6 @@ public enum ConvosAPI {
     public struct AcceptRequestToJoinResponse: Decodable {
         public let id: String
         public let accepted: Bool
-        public let alreadyAccepted: Bool?
         public let inviteCodeUse: InviteCodeUse
 
         public struct InviteCodeUse: Decodable {
