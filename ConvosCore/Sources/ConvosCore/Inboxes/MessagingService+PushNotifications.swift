@@ -311,7 +311,7 @@ extension MessagingService {
         }
     }
 
-    /// Adds a member to an XMTP group with race condition protection
+    /// Adds a member to an XMTP group with membership verification
     /// - Parameters:
     ///   - requesterInboxId: The inbox ID of the user to add
     ///   - group: The XMTP group to add the user to
@@ -321,7 +321,7 @@ extension MessagingService {
         group: XMTPiOS.Group,
         xmtpConversation: XMTPiOS.Conversation
     ) async throws {
-        // Re-check membership to prevent race conditions
+        // Check if user is already a member (added by someone else or another process) before attempting to add
         let updatedMembers = try await xmtpConversation.members()
         let updatedMemberInboxIds = updatedMembers.map { $0.inboxId }
 
@@ -347,13 +347,8 @@ extension MessagingService {
         if let apiError = error as? APIError {
             switch apiError {
             case .badRequest(let message):
-                if message?.contains("already accepted") == true {
-                    Logger.info("Request already processed - continuing with XMTP addition")
-                    return true
-                } else {
-                    Logger.error("Request validation failed: \(message ?? "Unknown validation error")")
-                    throw error
-                }
+                Logger.error("Request validation failed: \(message ?? "Unknown validation error")")
+                throw error
             case .notFound:
                 Logger.error("Request not found - likely expired or invalid")
                 throw error
