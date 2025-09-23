@@ -98,8 +98,8 @@ struct NewConversationView: View {
                 }
                 .selfSizingSheet(isPresented: $viewModel.presentingInviterOfflineSheet) {
                     InfoView(
-                        title: "Inviter is away",
-                        description: "You'll be added as soon as they're online again!"
+                        title: "Invite accepted",
+                        description: "See and send messages after someone approves you."
                     )
                 }
             }
