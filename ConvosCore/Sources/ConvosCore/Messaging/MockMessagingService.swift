@@ -487,15 +487,15 @@ public class MockConversationLocalStateWriter: ConversationLocalStateWriterProto
 // Add mock implementations for group functionality
 public class MockGroupMetadataWriter: ConversationMetadataWriterProtocol {
     public init() {}
-    public func updateGroupName(groupId: String, name: String) async throws {}
-    public func updateGroupDescription(groupId: String, description: String) async throws {}
-    public func updateGroupImageUrl(groupId: String, imageURL: String) async throws {}
-    public func addGroupMembers(groupId: String, memberInboxIds: [String]) async throws {}
-    public func removeGroupMembers(groupId: String, memberInboxIds: [String]) async throws {}
-    public func promoteToAdmin(groupId: String, memberInboxId: String) async throws {}
-    public func demoteFromAdmin(groupId: String, memberInboxId: String) async throws {}
-    public func promoteToSuperAdmin(groupId: String, memberInboxId: String) async throws {}
-    public func demoteFromSuperAdmin(groupId: String, memberInboxId: String) async throws {}
+    public func updateGroupName(conversationId: String, name: String) async throws {}
+    public func updateGroupDescription(conversationId: String, description: String) async throws {}
+    public func updateGroupImageUrl(conversationId: String, imageURL: String) async throws {}
+    public func addGroupMembers(conversationId: String, memberInboxIds: [String]) async throws {}
+    public func removeGroupMembers(conversationId: String, memberInboxIds: [String]) async throws {}
+    public func promoteToAdmin(conversationId: String, memberInboxId: String) async throws {}
+    public func demoteFromAdmin(conversationId: String, memberInboxId: String) async throws {}
+    public func promoteToSuperAdmin(conversationId: String, memberInboxId: String) async throws {}
+    public func demoteFromSuperAdmin(conversationId: String, memberInboxId: String) async throws {}
     public func updateGroupImage(conversation: Conversation, image: UIImage) async throws {}
 }
 

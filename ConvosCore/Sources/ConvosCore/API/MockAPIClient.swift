@@ -141,6 +141,35 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         )
     }
 
+    func updateInvite(_ inviteCode: String, requestBody: ConvosAPI.UpdateInviteCodeRequest) async throws -> ConvosAPI.InviteDetailsResponse {
+        return ConvosAPI.InviteDetailsResponse(
+            id: inviteCode,
+            name: requestBody.name ?? "Updated Group",
+            description: requestBody.description,
+            imageUrl: requestBody.imageUrl,
+            maxUses: nil,
+            usesCount: 0,
+            status: .active,
+            expiresAt: nil,
+            autoApprove: false,
+            groupId: "mock_group_123",
+            createdAt: Date(),
+            inviteLinkURL: "https://popup.convos.org/\(inviteCode)"
+        )
+    }
+
+    func updateInviteName(_ inviteCode: String, name: String) async throws {
+        // no-op in mock
+    }
+
+    func updateInviteDescription(_ inviteCode: String, description: String) async throws {
+        // no-op in mock
+    }
+
+    func updateInviteImageUrl(_ inviteCode: String, imageUrl: String) async throws {
+        // no-op in mock
+    }
+
     func updateProfile(
         inboxId: String,
         with requestBody: ConvosAPI.UpdateProfileRequest

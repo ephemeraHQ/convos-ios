@@ -264,7 +264,7 @@ class ConversationViewModel {
                 guard let self, let metadataWriter = self.metadataWriter else { return }
                 do {
                     try await metadataWriter.updateGroupName(
-                        groupId: conversation.id,
+                        conversationId: conversation.id,
                         name: trimmedConversationName
                     )
                 } catch {
@@ -297,7 +297,7 @@ class ConversationViewModel {
                 guard let self, let metadataWriter = self.metadataWriter else { return }
                 do {
                     try await metadataWriter.updateGroupDescription(
-                        groupId: conversation.id,
+                        conversationId: conversation.id,
                         description: trimmedConversationDescription
                     )
                 } catch {
@@ -388,7 +388,7 @@ class ConversationViewModel {
         Task { [weak self] in
             guard let self, let metadataWriter = self.metadataWriter else { return }
             do {
-                try await metadataWriter.removeGroupMembers(groupId: conversation.id, memberInboxIds: [member.profile.inboxId])
+                try await metadataWriter.removeGroupMembers(conversationId: conversation.id, memberInboxIds: [member.profile.inboxId])
             } catch {
                 Logger.error("Error removing member: \(error.localizedDescription)")
             }
@@ -428,7 +428,7 @@ class ConversationViewModel {
                     .filter { !$0.isCurrentUser } // @jarodl fix when we have self removal
                     .map { $0.profile.inboxId }
                 try await metadataWriter.removeGroupMembers(
-                    groupId: conversation.id,
+                    conversationId: conversation.id,
                     memberInboxIds: memberIdsToRemove
                 )
                 try await session.deleteInbox(inboxId: conversation.inboxId)
