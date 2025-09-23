@@ -34,11 +34,7 @@ public class MockMessagingService: MessagingServiceProtocol {
 
     // MARK: - Protocol Conformance
 
-    public func stop() {}
-
-    public func stopAndDelete() {}
-
-    public func stopAndDelete() async {}
+    public func reset() async {}
 
     public func registerForPushNotifications() async {
         // Mock implementation - no-op

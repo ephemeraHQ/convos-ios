@@ -97,23 +97,6 @@ class NewConversationViewModel: Identifiable {
         presentingJoinConversationSheet = true
     }
 
-//    func validateAndJoin(inviteUrlString: String) -> Bool {
-//        // Clear any previous errors when starting a new join attempt
-////        presentingInvalidInviteSheet = false
-//
-//        let validatedInviteCode = validate(inviteUrlString: inviteUrlString)
-//        guard let validatedInviteCode else {
-//            Logger.warning("Invalid invite code format: \(inviteUrlString)")
-//            qrScannerViewModel.invalidInviteCode = inviteUrlString
-//            qrScannerViewModel.showInvalidInviteCodeFormat = true
-//            return false
-//        }
-//
-//        presentingJoinConversationSheet = false
-//        joinConversation(inviteCode: validatedInviteCode)
-//        return true
-//    }
-
     func joinConversation(inviteCode: String) {
         joinConversationTask?.cancel()
         joinConversationTask = Task { [weak self] in
@@ -156,9 +139,7 @@ class NewConversationViewModel: Identifiable {
         joinConversationTask?.cancel()
         Task { [weak self] in
             guard let self else { return }
-//            try await session.deleteInbox(for: messagingService)
             await draftConversationComposer.draftConversationWriter.delete()
-//            self.messagingService = nil
         }
     }
 

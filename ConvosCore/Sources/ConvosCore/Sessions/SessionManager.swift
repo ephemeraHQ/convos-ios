@@ -51,6 +51,24 @@ class SessionManager: SessionManagerProtocol {
         }
     }
 
+    // MARK: -
+
+    func deleteAllData() async throws {
+        await messagingService.reset()
+    }
+
+    func deleteConversation(conversationId: String) async throws {
+        // @jarodl now that we only have one inbox, we need to block the conversation as well
+        _ = try await databaseWriter.write { db in
+            guard let conversation = try DBConversation
+                .fetchOne(db, id: conversationId)
+            else {
+                return
+            }
+            try conversation.delete(db)
+        }
+    }
+
     // MARK: - Private Methods
 
     private func observe() {

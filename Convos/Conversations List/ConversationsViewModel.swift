@@ -192,12 +192,12 @@ final class ConversationsViewModel {
         newConversationViewModel?.joinConversation(inviteCode: inviteCode)
     }
 
-    func deleteAllInboxes() {
+    func deleteAllData() {
         selectedConversation = nil
         Task { [weak self] in
             guard let self else { return }
             do {
-//                try await session.deleteAllInboxes()
+                try await session.deleteAllData()
             } catch {
                 Logger.error("Error deleting all accounts: \(error)")
             }
@@ -212,7 +212,7 @@ final class ConversationsViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-//                try await session.deleteInbox(inboxId: conversation.inboxId)
+                try await session.deleteConversation(conversationId: conversation.id)
             } catch {
                 Logger.error("Error leaving convo: \(error.localizedDescription)")
             }

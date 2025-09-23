@@ -5,6 +5,11 @@ public protocol SessionManagerProtocol {
     // MARK: Messaging Service
     var messagingService: AnyMessagingService { get }
 
+    // MARK: Session Actions
+
+    func deleteAllData() async throws
+    func deleteConversation(conversationId: String) async throws
+
     // MARK: Factory methods for repositories
 
     func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol

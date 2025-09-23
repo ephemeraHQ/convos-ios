@@ -17,6 +17,12 @@ public class MockInboxesService: SessionManagerProtocol {
         Just(AuthServiceState.unknown).eraseToAnyPublisher()
     }
 
+    public func deleteAllData() async throws {
+    }
+
+    public func deleteConversation(conversationId: String) async throws {
+    }
+
     public func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
         MockConversationsRepository()
     }

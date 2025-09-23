@@ -396,7 +396,7 @@ public actor ConversationStateMachine {
 
         if let resultByInviteCode {
             Logger.info("Found existing convo by invite code, returning...")
-            await transitionToExistingInbox(using: resultByInviteCode)
+            emitStateChange(.ready(resultByInviteCode))
             return
         }
 
@@ -433,7 +433,7 @@ public actor ConversationStateMachine {
 
         if let resultByConversationId {
             Logger.info("Found existing convo by id, returning...")
-            await transitionToExistingInbox(using: resultByConversationId)
+            emitStateChange(.ready(resultByConversationId))
             return
         }
 
@@ -449,19 +449,6 @@ public actor ConversationStateMachine {
 
         let apiClient = inboxReady.apiClient
         let client = inboxReady.client
-
-        // @jarodl temporary backup to get around push notif delays
-        // send the invite code to the inviter, observed by `InviteJoinRequestsManager`
-        Task {
-            do {
-                let inviterInboxId = invite.inviterInboxId
-                let dm = try await client.newConversation(with: inviterInboxId)
-                _ = try await dm.prepare(text: invite.id)
-                try await dm.publish()
-            } catch {
-                Logger.error("Failed sending backup invite request over XMTP: \(error.localizedDescription)")
-            }
-        }
 
         // Request to join
         let response = try await apiClient.requestToJoin(invite.id)
@@ -670,16 +657,6 @@ public actor ConversationStateMachine {
         }
 
         emitStateChange(.uninitialized)
-    }
-
-    private func transitionToExistingInbox(using readyResult: ConversationReadyResult) async {
-        // lookup session by result
-//        let messagingService = await session.messagingService(for: readyResult.inboxId)
-//        let previousInboxStateManager = self.inboxStateManager
-//        inboxStateManager = messagingService.inboxStateManager
-
-        // clean up previous inbox manager
-        emitStateChange(.ready(readyResult))
     }
 
     // After the next .ready, if the conversation changed, clean up the previously created convo.
