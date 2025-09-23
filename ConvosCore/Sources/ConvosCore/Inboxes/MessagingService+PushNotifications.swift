@@ -295,18 +295,6 @@ extension MessagingService {
                 }
             }
 
-            // Clean up the processed request
-            if let requestId = inviteData.requestId, !requestId.isEmpty {
-                do {
-                    Logger.info("Cleaning up processed request: \(requestId)")
-                    _ = try await apiClient.deleteRequestToJoin(requestId)
-                    Logger.info("Cleaned up request: \(requestId)")
-                } catch {
-                    Logger.error("Failed to delete request \(requestId): \(error.localizedDescription)")
-                    // Don't throw - cleanup failure is not critical
-                }
-            }
-
             // Store the updated conversation
             Logger.info("Storing updated conversation with id: \(xmtpConversation.id)")
             let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)

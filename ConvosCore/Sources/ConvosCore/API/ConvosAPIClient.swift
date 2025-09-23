@@ -385,6 +385,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     }
 
     func acceptRequestToJoin(_ requestId: String) async throws -> ConvosAPI.AcceptRequestToJoinResponse {
+        // TODO: Cleanup and remove comments
         let request = try authenticatedRequest(for: "v1/invites/requests/\(requestId)/accept", method: "PUT")
         Logger.info("🔄 PUT /v1/invites/requests/\(requestId)/accept")
         Logger.info("🔑 Headers: \(request.allHTTPHeaderFields ?? [:])")
@@ -401,6 +402,8 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         }
     }
 
+    /// Deletes a join request. Use this to REJECT a request, not after accepting it.
+    /// Note: When accepting a request with acceptRequestToJoin, the server automatically deletes it.
     func deleteRequestToJoin(_ requestId: String) async throws -> ConvosAPI.DeleteRequestToJoinResponse {
         let request = try authenticatedRequest(for: "v1/invites/requests/\(requestId)", method: "DELETE")
         return try await performRequest(request)
