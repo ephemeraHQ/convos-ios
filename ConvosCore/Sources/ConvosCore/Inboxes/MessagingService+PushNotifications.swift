@@ -270,27 +270,39 @@ extension MessagingService {
 
                     backendAccepted = true
                 } catch {
-                    // With idempotent backend, most errors are now genuine failures
+                    // Handle errors with proper recovery logic
                     if let apiError = error as? APIError {
                         switch apiError {
                         case .badRequest(let message):
-                            Logger.error("Request validation failed: \(message ?? "Unknown validation error")")
+                            if message?.contains("already accepted") == true {
+                                Logger.info("Request already processed - continuing with XMTP addition")
+                                backendAccepted = true
+                            } else {
+                                Logger.error("Request validation failed: \(message ?? "Unknown validation error")")
+                                throw error
+                            }
                         case .notFound:
-                            Logger.error("Request not found or unauthorized")
+                            Logger.error("Request not found - likely expired or invalid")
+                            throw error
                         case .forbidden:
                             Logger.error("Permission denied for request acceptance")
+                            throw error
                         case .serverError(let message):
-                            Logger.warning("Server error accepting request - this might be temporary: \(message ?? "Unknown server error")")
+                            Logger.warning("Server error - this might be temporary, but proceeding with XMTP addition: \(message ?? "Unknown server error")")
+                            // Don't throw - allow XMTP addition to proceed
+                            backendAccepted = true
                         case .notAuthenticated:
                             Logger.error("Authentication failed for request acceptance")
+                            throw error
                         default:
                             Logger.error("Unexpected API error: \(apiError)")
+                            throw error
                         }
                     } else {
-                        // Network or other errors
-                        Logger.error("Failed to accept join request \(requestId): \(error)")
+                        // Network or other errors - might be temporary, proceed with XMTP addition
+                        Logger.warning("Network/other error accepting request - proceeding with XMTP addition: \(error)")
+                        backendAccepted = true
                     }
-                    throw error
                 }
             } else {
                 Logger.error("No request ID provided - cannot ensure backend consistency")
@@ -301,13 +313,21 @@ extension MessagingService {
 
             // Only add to XMTP if backend acceptance succeeded
             if backendAccepted {
-                Logger.info("Adding \(requesterInboxId) to XMTP group \(group.id)")
-                do {
-                    _ = try await group.addMembers(inboxIds: [requesterInboxId])
-                    Logger.info("Successfully added \(requesterInboxId) to XMTP group")
-                } catch {
-                    Logger.error("XMTP user addition failed")
-                    throw error
+                // Re-check membership to prevent race conditions
+                let updatedMembers = try await xmtpConversation.members()
+                let updatedMemberInboxIds = updatedMembers.map { $0.inboxId }
+
+                if updatedMemberInboxIds.contains(requesterInboxId) {
+                    Logger.info("User \(requesterInboxId) was already added to group \(group.id) by another process")
+                } else {
+                    Logger.info("Adding \(requesterInboxId) to XMTP group \(group.id)")
+                    do {
+                        _ = try await group.addMembers(inboxIds: [requesterInboxId])
+                        Logger.info("Successfully added \(requesterInboxId) to XMTP group")
+                    } catch {
+                        Logger.error("XMTP user addition failed")
+                        throw error
+                    }
                 }
             }
 
