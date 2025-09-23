@@ -176,12 +176,14 @@ class NewConversationViewModel: Identifiable {
 
             guard let draftConversationComposer else {
                 Logger.error("Join attempted before initialization finished")
+                guard !Task.isCancelled else { return }
                 await MainActor.run { self.presentingFailedToJoinSheet = true }
                 return
             }
 
             if let existingConversationId = await draftConversationComposer.draftConversationWriter.checkIfAlreadyJoined(inviteCode: inviteCode) {
                 Logger.info("Invite already redeeemed, showing existing conversation... conversationId: \(existingConversationId)")
+                guard !Task.isCancelled else { return }
                 await MainActor.run {
                     self.presentingJoinConversationSheet = false
                     self.delegate?.newConversationsViewModel(
@@ -192,12 +194,17 @@ class NewConversationViewModel: Identifiable {
                 return
             }
 
+            guard !Task.isCancelled else { return }
+
             do {
                 // Request to join
+                guard !Task.isCancelled else { return }
                 await MainActor.run { self.showingFullScreenScanner = false }
+                guard !Task.isCancelled else { return }
                 try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
             } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
                 Logger.info("Invite already redeeemed, showing existing conversation...")
+                guard !Task.isCancelled else { return }
                 await MainActor.run {
                     self.presentingJoinConversationSheet = false
                     self.delegate?.newConversationsViewModel(
@@ -207,6 +214,7 @@ class NewConversationViewModel: Identifiable {
                 }
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
+                guard !Task.isCancelled else { return }
                 await MainActor.run {
                     withAnimation {
                         if self.startedWithFullscreenScanner {

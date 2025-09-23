@@ -14,13 +14,6 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         return true
     }
 
-    // Scene configuration - required for Camera app Universal Links to work
-    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-        let configuration = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
-        configuration.delegateClass = ConvosSceneDelegate.self
-        return configuration
-    }
-
     func application(_ application: UIApplication,
                      didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }

@@ -139,10 +139,6 @@ final class ConversationsViewModel {
         cancellables.removeAll()
     }
 
-    func onAppear() {
-        checkShouldShowEarlyAccessInfo()
-    }
-
     func handleURL(_ url: URL) {
         guard let destination = DeepLinkHandler.destination(for: url) else {
             return
@@ -178,7 +174,7 @@ final class ConversationsViewModel {
         )
     }
 
-    private func checkShouldShowEarlyAccessInfo() {
+    func checkShouldShowEarlyAccessInfo() {
         if !hasSeenEarlyAccessInfo {
             presentingEarlyAccessInfo = true
             hasSeenEarlyAccessInfo = true

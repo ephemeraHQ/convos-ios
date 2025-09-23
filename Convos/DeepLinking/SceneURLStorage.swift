@@ -18,6 +18,7 @@ class SceneURLStorage {
     }
 
     func consumePendingURL() -> URL? {
+        Logger.info("Consuming pending URL")
         defer { pendingURL = nil }
         return pendingURL
     }
