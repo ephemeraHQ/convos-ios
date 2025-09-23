@@ -261,20 +261,17 @@ extension MessagingService {
                 do {
                     Logger.info("Accepting join request: \(requestId)")
                     let acceptResponse = try await apiClient.acceptRequestToJoin(requestId)
-                    Logger.info("Successfully accepted join request: \(requestId)")
-                    Logger.info("Created invite code use: \(acceptResponse.inviteCodeUse.id)")
+
+                    if acceptResponse.alreadyAccepted == true {
+                        Logger.info("Request \(requestId) was already processed at \(acceptResponse.inviteCodeUse.usedAt)")
+                    } else {
+                        Logger.info("Request \(requestId) accepted, member added at \(acceptResponse.inviteCodeUse.usedAt)")
+                    }
+
                     backendAccepted = true
                 } catch {
-                    Logger.error("Failed to accept join request \(requestId): \(error.localizedDescription)")
-
-                    // Check if already accepted (idempotency)
-                    if error.localizedDescription.contains("already") || error.localizedDescription.contains("400") {
-                        Logger.info("Request \(requestId) was already accepted - continuing")
-                        backendAccepted = true
-                    } else {
-                        Logger.error("Backend acceptance failed - aborting XMTP addition")
-                        throw error
-                    }
+                    Logger.error("Failed to accept join request \(requestId): \(error)")
+                    throw error
                 }
             } else {
                 Logger.error("No request ID provided - cannot ensure backend consistency")

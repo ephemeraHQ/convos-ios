@@ -254,6 +254,7 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         .init(
             id: requestId,
             accepted: true,
+            alreadyAccepted: false,
             inviteCodeUse: .init(
                 id: "use_\(UUID().uuidString.prefix(8))",
                 usedAt: Date()
