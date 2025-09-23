@@ -2,7 +2,6 @@ import ConvosCore
 import SwiftUI
 
 struct ConversationsView: View {
-    let session: any SessionManagerProtocol
     @State var viewModel: ConversationsViewModel
 
     @Namespace private var namespace: Namespace.ID
@@ -13,13 +12,6 @@ struct ConversationsView: View {
     @FocusState private var focusState: MessagesViewInputFocus?
     @State private var sidebarWidth: CGFloat = 0.0
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
-
-    init(
-        session: any SessionManagerProtocol
-    ) {
-        self.session = session
-        self.viewModel = ConversationsViewModel(session: session)
-    }
 
     var emptyConversationsViewScrollable: some View {
         ScrollView {
@@ -36,7 +28,7 @@ struct ConversationsView: View {
         )
     }
 
-    var hasEarlyAccessView: some View {
+    var body: some View {
         ConversationInfoPresenter(
             viewModel: viewModel.selectedConversationViewModel,
             focusState: $focusState,
@@ -82,6 +74,9 @@ struct ConversationsView: View {
                                 )
                         }
                         .listStyle(.plain)
+                        .onAppear {
+                            viewModel.checkShouldShowEarlyAccessInfo()
+                        }
                     }
                 }
                 .onGeometryChange(for: CGSize.self) {
@@ -184,32 +179,20 @@ struct ConversationsView: View {
         .selfSizingSheet(isPresented: $viewModel.presentingMaxNumberOfConvosReachedInfo) {
             MaxedOutInfoView(maxNumberOfConvos: viewModel.maxNumberOfConvos)
         }
-        .onAppear {
-            viewModel.onAppear()
-        }
-    }
-
-    var body: some View {
-        Group {
-            if !viewModel.hasEarlyAccess,
-               let joinViewModel = viewModel.newConversationViewModel {
-                NewConversationView(viewModel: joinViewModel)
-            } else {
-                hasEarlyAccessView
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .deepLinkReceived)) { notification in
-            if let url = notification.userInfo?["url"] as? URL {
-                Logger.info("Processing deep link in ConversationsView: [scheme: \(url.scheme ?? "unknown"), host: \(url.host ?? "unknown")]")
+        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+            if let url = activity.webpageURL {
                 viewModel.handleURL(url)
             }
+        }
+        .onOpenURL { url in
+            viewModel.handleURL(url)
         }
     }
 }
 
 #Preview {
-    let convos = ConvosClient.mock()
+    @Previewable @State var viewModel: ConversationsViewModel = .init(session: ConvosClient.mock().session)
     ConversationsView(
-        session: convos.session
+        viewModel: viewModel
     )
 }
