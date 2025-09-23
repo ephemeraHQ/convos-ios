@@ -270,7 +270,26 @@ extension MessagingService {
 
                     backendAccepted = true
                 } catch {
-                    Logger.error("Failed to accept join request \(requestId): \(error)")
+                    // With idempotent backend, most errors are now genuine failures
+                    if let apiError = error as? APIError {
+                        switch apiError {
+                        case .badRequest(let message):
+                            Logger.error("Request validation failed: \(message ?? "Unknown validation error")")
+                        case .notFound:
+                            Logger.error("Request not found or unauthorized")
+                        case .forbidden:
+                            Logger.error("Permission denied for request acceptance")
+                        case .serverError(let message):
+                            Logger.warning("Server error accepting request - this might be temporary: \(message ?? "Unknown server error")")
+                        case .notAuthenticated:
+                            Logger.error("Authentication failed for request acceptance")
+                        default:
+                            Logger.error("Unexpected API error: \(apiError)")
+                        }
+                    } else {
+                        // Network or other errors
+                        Logger.error("Failed to accept join request \(requestId): \(error)")
+                    }
                     throw error
                 }
             } else {

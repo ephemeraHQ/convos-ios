@@ -411,7 +411,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.httpBody = try JSONSerialization.data(withJSONObject: fields)
         do {
-            let response: ConvosAPI.InviteDetailsResponse = try await performRequest(urlRequest)
+            let _: ConvosAPI.InviteDetailsResponse = try await performRequest(urlRequest)
         } catch {
             Logger.error("Invite update failed: \(error)")
             throw error
