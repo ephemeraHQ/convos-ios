@@ -40,29 +40,6 @@ struct ConvosApp: App {
         WindowGroup {
             ConversationsView(viewModel: conversationsViewModel)
                 .withSafeAreaEnvironment()
-                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
-                    if let url = activity.webpageURL {
-                        handleDeepLink(url)
-                    }
-                }
-                .onOpenURL { url in
-                    handleDeepLink(url)
-                }
         }
-    }
-
-    private func handleDeepLink(_ url: URL) {
-        // Validate URL before processing
-        guard DeepLinkHandler.destination(for: url) != nil else {
-            Logger.warning("Invalid deep link received and ignored: [scheme: \(url.scheme ?? "unknown"), host: \(url.host ?? "unknown")]")
-            return
-        }
-
-        Logger.info("Received valid deep link: [scheme: \(url.scheme ?? "unknown"), host: \(url.host ?? "unknown")]")
-        NotificationCenter.default.post(
-            name: .deepLinkReceived,
-            object: nil,
-            userInfo: ["url": url]
-        )
     }
 }

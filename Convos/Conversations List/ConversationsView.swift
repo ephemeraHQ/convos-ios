@@ -28,7 +28,7 @@ struct ConversationsView: View {
         )
     }
 
-    var hasEarlyAccessView: some View {
+    var body: some View {
         ConversationInfoPresenter(
             viewModel: viewModel.selectedConversationViewModel,
             focusState: $focusState,
@@ -179,18 +179,14 @@ struct ConversationsView: View {
         .selfSizingSheet(isPresented: $viewModel.presentingMaxNumberOfConvosReachedInfo) {
             MaxedOutInfoView(maxNumberOfConvos: viewModel.maxNumberOfConvos)
         }
-    }
-
-    var body: some View {
-        hasEarlyAccessView
-            .onReceive(
-                NotificationCenter.default
-                    .publisher(for: .deepLinkReceived)
-                    .compactMap { $0.userInfo?["url"] as? URL }
-            ) { url in
-                Logger.info("Processing deep link in ConversationsView: [scheme: \(url.scheme ?? "unknown"), host: \(url.host ?? "unknown")]")
+        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+            if let url = activity.webpageURL {
                 viewModel.handleURL(url)
             }
+        }
+        .onOpenURL { url in
+            viewModel.handleURL(url)
+        }
     }
 }
 
