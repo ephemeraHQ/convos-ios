@@ -96,6 +96,12 @@ struct NewConversationView: View {
                 .selfSizingSheet(isPresented: $viewModel.presentingFailedToJoinSheet) {
                     InfoView(title: "Try again", description: "Joining the convo failed.")
                 }
+                .selfSizingSheet(isPresented: $viewModel.presentingInviterOfflineSheet) {
+                    InfoView(
+                        title: "Inviter is away",
+                        description: "You'll be added as soon as they're online again!"
+                    )
+                }
             }
         }
     }

@@ -101,6 +101,28 @@ public enum ConvosAPI {
         public let deleted: Bool
     }
 
+    public struct AcceptRequestToJoinResponse: Decodable {
+        public let id: String
+        public let accepted: Bool
+        public let inviteCodeUse: InviteCodeUse
+
+        public struct InviteCodeUse: Decodable {
+            public let id: String
+            public let usedAt: Date
+        }
+    }
+
+    public struct PendingJoinRequest: Decodable {
+        public let id: String
+        public let inviteId: String
+        public let requesterInboxId: String
+        public let createdAt: Date
+    }
+
+    public struct PendingJoinRequestsResponse: Decodable {
+        public let requests: [PendingJoinRequest]
+    }
+
     public struct UpdateProfileRequest: Encodable {
         public let name: String?
         public let username: String?

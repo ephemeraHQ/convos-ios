@@ -83,7 +83,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         }
     }
 
-    private func waitForConversationReadyResult(timeout: TimeInterval = 10.0) async throws -> ConversationReadyResult {
+    private func waitForConversationReadyResult(timeout: TimeInterval = 20.0) async throws -> ConversationReadyResult {
         return try await withTimeout(
             seconds: timeout,
             timeoutError: ConversationStateMachineError.timedOut

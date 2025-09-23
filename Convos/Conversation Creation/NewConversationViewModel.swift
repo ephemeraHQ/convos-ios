@@ -25,6 +25,8 @@ class NewConversationViewModel: Identifiable {
     var presentingJoinConversationSheet: Bool = false
     var presentingInvalidInviteSheet: Bool = false
     var presentingFailedToJoinSheet: Bool = false
+    var presentingInviterOfflineSheet: Bool = false
+    var isJoiningConversation: Bool = false
     private var initializationTask: Task<Void, Never>?
     private(set) var initializationError: Error?
 
@@ -197,25 +199,47 @@ class NewConversationViewModel: Identifiable {
             guard !Task.isCancelled else { return }
 
             do {
+                // Show loading state and hide scanner
+                await MainActor.run {
+                    self.showingFullScreenScanner = false
+                    self.isJoiningConversation = true
+                }
+
                 // Request to join
-                guard !Task.isCancelled else { return }
-                await MainActor.run { self.showingFullScreenScanner = false }
-                guard !Task.isCancelled else { return }
                 try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
+
+                // Success - hide loading state
+                await MainActor.run {
+                    self.isJoiningConversation = false
+                }
             } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
                 Logger.info("Invite already redeeemed, showing existing conversation...")
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
+                    self.isJoiningConversation = false
                     self.presentingJoinConversationSheet = false
                     self.delegate?.newConversationsViewModel(
                         self,
                         attemptedJoiningExistingConversationWithId: conversationId
                     )
                 }
+            } catch ConversationStateMachineError.timedOut {
+                Logger.info("Join request timed out - inviter may be offline")
+                await MainActor.run {
+                    self.isJoiningConversation = false
+                    withAnimation {
+                        if self.startedWithFullscreenScanner {
+                            self.showingFullScreenScanner = true
+                            self.conversationViewModel?.showsInfoView = false
+                        }
+                        self.presentingInviterOfflineSheet = true
+                    }
+                }
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
+                    self.isJoiningConversation = false
                     withAnimation {
                         if self.startedWithFullscreenScanner {
                             self.showingFullScreenScanner = true

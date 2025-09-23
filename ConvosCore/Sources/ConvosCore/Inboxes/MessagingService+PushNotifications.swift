@@ -38,9 +38,6 @@ extension MessagingService {
             Logger.warning("No apiJWT in payload, might not be able to use the Convos API")
         }
 
-        Logger.debug("Processing notification type: \(payload.notificationType?.rawValue ?? "nil")")
-        Logger.debug("Payload notification data: \(payload.notificationData != nil ? "present" : "nil")")
-
         switch payload.notificationType {
         case .protocolMessage:
             return try await handleProtocolMessage(
@@ -171,12 +168,21 @@ extension MessagingService {
     ) async throws -> DecodedNotificationContent? {
         Logger.info("handleInviteJoinRequest called")
 
-        guard let inviteData = payload.notificationData?.inviteData else {
+        guard let notificationData = payload.notificationData else {
+            Logger.error("Missing notification data in payload")
+            return nil
+        }
+
+        Logger.info("Notification data present: \(notificationData)")
+
+        guard let inviteData = notificationData.inviteData else {
             Logger.error("Missing invite data in notification payload")
             return nil
         }
 
         Logger.info("Processing invite join request: autoApprove=\(inviteData.autoApprove)")
+        Logger.info("Invite data: \(inviteData)")
+
         return try await processInviteJoinRequest(
             inviteData: inviteData,
             payload: payload,
@@ -186,6 +192,13 @@ extension MessagingService {
     }
 
     /// Processes an invite join request from push notification
+    ///
+    /// Flow Strategy:
+    /// 1. Accept backend request (creates InviteCodeUse)
+    /// 2. Add user to XMTP group
+    /// 3. Clean up processed request
+    /// 4. Store updated conversation
+    ///
     /// - Parameters:
     ///   - inviteData: The invite join request data from the push notification
     ///   - payload: The push notification payload
@@ -233,7 +246,6 @@ extension MessagingService {
         }
 
         do {
-            // Check if the requester is already a member
             let currentMembers = try await xmtpConversation.members()
             let memberInboxIds = currentMembers.map { $0.inboxId }
 
@@ -242,22 +254,56 @@ extension MessagingService {
                 return nil
             }
 
-            // Add the requester to the group
-            Logger.info("Adding \(requesterInboxId) to group \(group.id)...")
-            _ = try await group.addMembers(inboxIds: [requesterInboxId])
+            var backendAccepted = false
 
-            // Delete the request from the backend (cleanup after successful processing)
             if let requestId = inviteData.requestId, !requestId.isEmpty {
                 do {
-                    Logger.info("Deleting processed join request: \(requestId)")
-                    _ = try await apiClient.deleteRequestToJoin(requestId)
-                    Logger.info("Successfully deleted join request: \(requestId)")
+                    Logger.info("Accepting join request: \(requestId)")
+                    let acceptResponse = try await apiClient.acceptRequestToJoin(requestId)
+                    Logger.info("Successfully accepted join request: \(requestId)")
+                    Logger.info("Created invite code use: \(acceptResponse.inviteCodeUse.id)")
+                    backendAccepted = true
                 } catch {
-                    Logger.error("Failed to delete join request \(requestId): \(error.localizedDescription)")
-                    // Don't throw here - the member was successfully added, deletion is cleanup
+                    Logger.error("Failed to accept join request \(requestId): \(error.localizedDescription)")
+
+                    // Check if already accepted (idempotency)
+                    if error.localizedDescription.contains("already") || error.localizedDescription.contains("400") {
+                        Logger.info("Request \(requestId) was already accepted - continuing")
+                        backendAccepted = true
+                    } else {
+                        Logger.error("Backend acceptance failed - aborting XMTP addition")
+                        throw error
+                    }
                 }
             } else {
-                Logger.warning("No request ID provided in invite data, skipping backend cleanup")
+                Logger.error("No request ID provided - cannot ensure backend consistency")
+                throw NSError(domain: "InviteJoinRequest", code: 1, userInfo: [
+                    NSLocalizedDescriptionKey: "Missing request ID - cannot process join request"
+                ])
+            }
+
+            // Only add to XMTP if backend acceptance succeeded
+            if backendAccepted {
+                Logger.info("Adding \(requesterInboxId) to XMTP group \(group.id)")
+                do {
+                    _ = try await group.addMembers(inboxIds: [requesterInboxId])
+                    Logger.info("Successfully added \(requesterInboxId) to XMTP group")
+                } catch {
+                    Logger.error("XMTP user addition failed")
+                    throw error
+                }
+            }
+
+            // Clean up the processed request
+            if let requestId = inviteData.requestId, !requestId.isEmpty {
+                do {
+                    Logger.info("Cleaning up processed request: \(requestId)")
+                    _ = try await apiClient.deleteRequestToJoin(requestId)
+                    Logger.info("Cleaned up request: \(requestId)")
+                } catch {
+                    Logger.error("Failed to delete request \(requestId): \(error.localizedDescription)")
+                    // Don't throw - cleanup failure is not critical
+                }
             }
 
             // Store the updated conversation

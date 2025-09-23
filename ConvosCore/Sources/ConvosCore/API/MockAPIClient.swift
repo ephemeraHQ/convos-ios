@@ -250,6 +250,17 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         )
     }
 
+    func acceptRequestToJoin(_ requestId: String) async throws -> ConvosAPI.AcceptRequestToJoinResponse {
+        .init(
+            id: requestId,
+            accepted: true,
+            inviteCodeUse: .init(
+                id: "use_\(UUID().uuidString.prefix(8))",
+                usedAt: Date()
+            )
+        )
+    }
+
     func deleteRequestToJoin(_ requestId: String) async throws -> ConvosAPI.DeleteRequestToJoinResponse {
         .init(
             id: requestId,

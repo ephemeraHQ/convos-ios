@@ -388,7 +388,6 @@ public actor InboxStateMachine {
         try await inboxWriter.storeInbox(inboxId: client.inboxId)
 
         await syncingManager?.start(with: client, apiClient: apiClient)
-        inviteJoinRequestsManager?.start(with: client, apiClient: apiClient)
 
         // Setup push notification observers if registrar is provided
         if autoRegistersForPushNotifications {

@@ -307,18 +307,6 @@ public actor ConversationStateMachine {
         }
 
         let inviteWithGroup = try await apiClient.inviteDetailsWithGroup(inviteCode)
-        // @jarodl temporary backup to get around push notif delays
-        // send the invite code to the inviter, observed by `InviteJoinRequestsManager`
-        Task {
-            do {
-                let inviterInboxId = inviteWithGroup.inviterInboxId
-                let dm = try await client.newConversation(with: inviterInboxId)
-                _ = try await dm.prepare(text: inviteCode)
-                try await dm.publish()
-            } catch {
-                Logger.error("Failed sending backup invite request over XMTP: \(error.localizedDescription)")
-            }
-        }
 
         if hasExistingConversations {
             let groupId = inviteWithGroup.groupId
