@@ -187,10 +187,6 @@ struct ConversationsView: View {
                 NotificationCenter.default
                     .publisher(for: .deepLinkReceived)
                     .compactMap { $0.userInfo?["url"] as? URL }
-//                    .removeDuplicates(by: { lhs, rhs in
-//                        lhs.convosInviteCode == rhs.convosInviteCode
-//                    })
-//                    .eraseToAnyPublisher()
             ) { url in
                 Logger.info("Processing deep link in ConversationsView: [scheme: \(url.scheme ?? "unknown"), host: \(url.host ?? "unknown")]")
                 viewModel.handleURL(url)
