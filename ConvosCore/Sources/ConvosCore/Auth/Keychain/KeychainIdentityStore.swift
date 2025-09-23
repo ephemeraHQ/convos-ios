@@ -241,7 +241,7 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
         }
 
         let query = KeychainQuery(
-            account: identity.inboxId,
+            account: keychainAccount,
             service: keychainService,
             accessGroup: keychainAccessGroup,
             accessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
