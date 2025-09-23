@@ -112,17 +112,6 @@ public enum ConvosAPI {
         }
     }
 
-    public struct PendingJoinRequest: Decodable {
-        public let id: String
-        public let inviteId: String
-        public let requesterInboxId: String
-        public let createdAt: Date
-    }
-
-    public struct PendingJoinRequestsResponse: Decodable {
-        public let requests: [PendingJoinRequest]
-    }
-
     public struct UpdateProfileRequest: Encodable {
         public let name: String?
         public let username: String?

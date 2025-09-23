@@ -70,17 +70,12 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     ) {
         let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
         let syncingManager = startsStreamingServices ? SyncingManager(databaseWriter: databaseWriter) : nil
-        let inviteJoinRequestsManager = startsStreamingServices ? InviteJoinRequestsManager(
-            databaseReader: databaseReader,
-            databaseWriter: databaseWriter
-        ) : nil
         let invitesRepository = InvitesRepository(databaseReader: databaseReader)
         stateMachine = InboxStateMachine(
             identityStore: environment.defaultIdentityStore,
             inboxWriter: inboxWriter,
             invitesRepository: invitesRepository,
             syncingManager: syncingManager,
-            inviteJoinRequestsManager: inviteJoinRequestsManager,
             pushNotificationRegistrar: PushNotificationRegistrar(
                 environment: environment
             ),

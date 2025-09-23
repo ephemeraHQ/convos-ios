@@ -246,6 +246,7 @@ extension MessagingService {
         }
 
         do {
+            // Check if the requester is already a member
             let currentMembers = try await xmtpConversation.members()
             let memberInboxIds = currentMembers.map { $0.inboxId }
 
