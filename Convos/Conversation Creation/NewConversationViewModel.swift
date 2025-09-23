@@ -26,7 +26,6 @@ class NewConversationViewModel: Identifiable {
     var presentingInvalidInviteSheet: Bool = false
     var presentingFailedToJoinSheet: Bool = false
     var presentingInviterOfflineSheet: Bool = false
-    var isJoiningConversation: Bool = false
     private var initializationTask: Task<Void, Never>?
     private(set) var initializationError: Error?
 
@@ -126,6 +125,9 @@ class NewConversationViewModel: Identifiable {
     }
 
     func join(inviteUrlString: String) -> Bool {
+        Logger.info("🔍 [JOIN] Called with: \(inviteUrlString)")
+        Logger.info("🔍 [JOIN] joinConversationTask: \(joinConversationTask != nil ? "exists" : "nil")")
+
         // Clear any previous errors when starting a new join attempt
         presentingInvalidInviteSheet = false
 
@@ -145,10 +147,11 @@ class NewConversationViewModel: Identifiable {
             inviteCode = inviteUrlString
         }
 
-        Logger.info("Processing inviteCode")
+        Logger.info("🔍 [JOIN] Valid inviteCode extracted: \(inviteCode)")
         presentingJoinConversationSheet = false
         joinConversation(inviteCode: inviteCode)
         conversationViewModel?.showsInfoView = true
+        Logger.info("🔍 [JOIN] Returning success")
         return true
     }
 
@@ -169,7 +172,10 @@ class NewConversationViewModel: Identifiable {
     // MARK: - Private
 
     private func joinConversation(inviteCode: String) {
+        Logger.info("🔍 [JOIN_CONVERSATION] Called with inviteCode: \(inviteCode)")
+        Logger.info("🔍 [JOIN_CONVERSATION] Cancelling existing task: \(joinConversationTask != nil)")
         joinConversationTask?.cancel()
+        Logger.info("🔍 [JOIN_CONVERSATION] Creating new task")
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
 
@@ -202,21 +208,20 @@ class NewConversationViewModel: Identifiable {
                 // Show loading state and hide scanner
                 await MainActor.run {
                     self.showingFullScreenScanner = false
-                    self.isJoiningConversation = true
                 }
 
                 // Request to join
+                Logger.info("🔍 [JOIN_CONVERSATION] Calling requestToJoin API")
                 try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
+                Logger.info("🔍 [JOIN_CONVERSATION] requestToJoin API returned successfully")
 
                 // Success - hide loading state
                 await MainActor.run {
-                    self.isJoiningConversation = false
                 }
             } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
                 Logger.info("Invite already redeeemed, showing existing conversation...")
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
-                    self.isJoiningConversation = false
                     self.presentingJoinConversationSheet = false
                     self.delegate?.newConversationsViewModel(
                         self,
@@ -226,7 +231,6 @@ class NewConversationViewModel: Identifiable {
             } catch ConversationStateMachineError.timedOut {
                 Logger.info("Join request timed out - inviter may be offline")
                 await MainActor.run {
-                    self.isJoiningConversation = false
                     withAnimation {
                         if self.startedWithFullscreenScanner {
                             self.showingFullScreenScanner = true
@@ -239,7 +243,6 @@ class NewConversationViewModel: Identifiable {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
-                    self.isJoiningConversation = false
                     withAnimation {
                         if self.startedWithFullscreenScanner {
                             self.showingFullScreenScanner = true
