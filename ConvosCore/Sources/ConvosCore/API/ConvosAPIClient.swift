@@ -385,19 +385,13 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     }
 
     func acceptRequestToJoin(_ requestId: String) async throws -> ConvosAPI.AcceptRequestToJoinResponse {
-        // TODO: Cleanup and remove comments
         let request = try authenticatedRequest(for: "v1/invites/requests/\(requestId)/accept", method: "PUT")
-        Logger.info("🔄 PUT /v1/invites/requests/\(requestId)/accept")
-        Logger.info("🔑 Headers: \(request.allHTTPHeaderFields ?? [:])")
-
         do {
             let response: ConvosAPI.AcceptRequestToJoinResponse = try await performRequest(request)
-            Logger.info("✅ Join request accepted successfully")
-            Logger.info("📥 Response: \(response)")
+            Logger.info("Join request accepted successfully")
             return response
         } catch {
-            Logger.error("❌ Failed to accept join request: \(error)")
-            Logger.error("🔍 Error details: \(String(describing: error))")
+            Logger.error("Failed to accept join request: \(error)")
             throw error
         }
     }
@@ -416,18 +410,10 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         var urlRequest = try authenticatedRequest(for: "v1/invites/\(inviteCode)", method: "PUT")
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.httpBody = try JSONSerialization.data(withJSONObject: fields)
-
-        Logger.info("🔄 PUT /v1/invites/\(inviteCode)")
-        Logger.info("📤 Request body: \(urlRequest.httpBody?.prettyPrintedJSONString ?? "nil")")
-        Logger.info("🔑 Headers: \(urlRequest.allHTTPHeaderFields ?? [:])")
-
         do {
             let response: ConvosAPI.InviteDetailsResponse = try await performRequest(urlRequest)
-            Logger.info("✅ Invite update successful")
-            Logger.info("📥 Response: \(response)")
         } catch {
-            Logger.error("❌ Invite update failed: \(error)")
-            Logger.error("🔍 Error details: \(String(describing: error))")
+            Logger.error("Invite update failed: \(error)")
             throw error
         }
     }
