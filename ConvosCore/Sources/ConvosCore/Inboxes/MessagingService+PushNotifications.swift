@@ -271,38 +271,7 @@ extension MessagingService {
                     backendAccepted = true
                 } catch {
                     // Handle errors with proper recovery logic
-                    if let apiError = error as? APIError {
-                        switch apiError {
-                        case .badRequest(let message):
-                            if message?.contains("already accepted") == true {
-                                Logger.info("Request already processed - continuing with XMTP addition")
-                                backendAccepted = true
-                            } else {
-                                Logger.error("Request validation failed: \(message ?? "Unknown validation error")")
-                                throw error
-                            }
-                        case .notFound:
-                            Logger.error("Request not found - likely expired or invalid")
-                            throw error
-                        case .forbidden:
-                            Logger.error("Permission denied for request acceptance")
-                            throw error
-                        case .serverError(let message):
-                            Logger.warning("Server error - this might be temporary, but proceeding with XMTP addition: \(message ?? "Unknown server error")")
-                            // Don't throw - allow XMTP addition to proceed
-                            backendAccepted = true
-                        case .notAuthenticated:
-                            Logger.error("Authentication failed for request acceptance")
-                            throw error
-                        default:
-                            Logger.error("Unexpected API error: \(apiError)")
-                            throw error
-                        }
-                    } else {
-                        // Network or other errors - might be temporary, proceed with XMTP addition
-                        Logger.warning("Network/other error accepting request - proceeding with XMTP addition: \(error)")
-                        backendAccepted = true
-                    }
+                    backendAccepted = try handleAcceptRequestError(error)
                 }
             } else {
                 Logger.error("No request ID provided - cannot ensure backend consistency")
@@ -313,22 +282,11 @@ extension MessagingService {
 
             // Only add to XMTP if backend acceptance succeeded
             if backendAccepted {
-                // Re-check membership to prevent race conditions
-                let updatedMembers = try await xmtpConversation.members()
-                let updatedMemberInboxIds = updatedMembers.map { $0.inboxId }
-
-                if updatedMemberInboxIds.contains(requesterInboxId) {
-                    Logger.info("User \(requesterInboxId) was already added to group \(group.id) by another process")
-                } else {
-                    Logger.info("Adding \(requesterInboxId) to XMTP group \(group.id)")
-                    do {
-                        _ = try await group.addMembers(inboxIds: [requesterInboxId])
-                        Logger.info("Successfully added \(requesterInboxId) to XMTP group")
-                    } catch {
-                        Logger.error("XMTP user addition failed")
-                        throw error
-                    }
-                }
+                try await addMemberToXMTPGroup(
+                    requesterInboxId: requesterInboxId,
+                    group: group,
+                    xmtpConversation: xmtpConversation
+                )
             }
 
             // Store the updated conversation
@@ -350,6 +308,72 @@ extension MessagingService {
         } catch {
             Logger.error("Failed to add member to group: \(error.localizedDescription)")
             throw error
+        }
+    }
+
+    /// Adds a member to an XMTP group with race condition protection
+    /// - Parameters:
+    ///   - requesterInboxId: The inbox ID of the user to add
+    ///   - group: The XMTP group to add the user to
+    ///   - xmtpConversation: The XMTP conversation for membership checks
+    private func addMemberToXMTPGroup(
+        requesterInboxId: String,
+        group: XMTPiOS.Group,
+        xmtpConversation: XMTPiOS.Conversation
+    ) async throws {
+        // Re-check membership to prevent race conditions
+        let updatedMembers = try await xmtpConversation.members()
+        let updatedMemberInboxIds = updatedMembers.map { $0.inboxId }
+
+        if updatedMemberInboxIds.contains(requesterInboxId) {
+            Logger.info("User \(requesterInboxId) was already added to group \(group.id) by another process")
+        } else {
+            Logger.info("Adding \(requesterInboxId) to XMTP group \(group.id)")
+            do {
+                _ = try await group.addMembers(inboxIds: [requesterInboxId])
+                Logger.info("Successfully added \(requesterInboxId) to XMTP group")
+            } catch {
+                Logger.error("XMTP user addition failed")
+                throw error
+            }
+        }
+    }
+
+    /// Handles errors from accept request API calls and determines if XMTP addition should proceed
+    /// - Parameter error: The error from the accept request API call
+    /// - Returns: true if XMTP addition should proceed despite the error, false otherwise
+    /// - Throws: Rethrows the error if it's a fatal error that should stop processing
+    private func handleAcceptRequestError(_ error: Error) throws -> Bool {
+        if let apiError = error as? APIError {
+            switch apiError {
+            case .badRequest(let message):
+                if message?.contains("already accepted") == true {
+                    Logger.info("Request already processed - continuing with XMTP addition")
+                    return true
+                } else {
+                    Logger.error("Request validation failed: \(message ?? "Unknown validation error")")
+                    throw error
+                }
+            case .notFound:
+                Logger.error("Request not found - likely expired or invalid")
+                throw error
+            case .forbidden:
+                Logger.error("Permission denied for request acceptance")
+                throw error
+            case .serverError(let message):
+                Logger.warning("Server error - this might be temporary, but proceeding with XMTP addition: \(message ?? "Unknown server error")")
+                return true
+            case .notAuthenticated:
+                Logger.error("Authentication failed for request acceptance")
+                throw error
+            default:
+                Logger.error("Unexpected API error: \(apiError)")
+                throw error
+            }
+        } else {
+            // Network or other errors - might be temporary, proceed with XMTP addition
+            Logger.warning("Network/other error accepting request - proceeding with XMTP addition: \(error)")
+            return true
         }
     }
 }
