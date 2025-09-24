@@ -37,7 +37,7 @@ This command handles the entire release workflow automatically.
 4. **Promote Release to Main**:
    - Use `make promote-release` to fast-forward merge dev to main
    - This ensures the tag exists on both branches
-   - Bitrise automatically builds and deploys to App Store Connect to TestFlight
+   - Bitrise automatically builds and deploys to App Store Connect
 
 ## Release Notes
 
@@ -60,7 +60,7 @@ These notes are used for:
 2. **GitHub Release** → Created with AI-generated notes
 3. **Release Promotion** → `make promote-release` fast-forwards main to dev
 4. **Bitrise Reads Release Notes** → From GitHub Release API
-5. **App Store Connect** → Deploys with release notes to TestFlight
+5. **App Store Connect** → Deploys to TestFlight (and copy/paste the Release Notes)
 6. **TestFlight** → Ready for internal/external testing
 
 ## GitHub Actions Workflow
