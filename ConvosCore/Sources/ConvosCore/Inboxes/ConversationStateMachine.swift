@@ -5,14 +5,13 @@ import XMTPiOS
 
 public struct ConversationReadyResult {
     public let conversationId: String
-    public let invite: Invite?
+    public let invite: Invite
 }
 
 public actor ConversationStateMachine {
     enum Action {
         case create
         case join(inviteCode: String)
-        case sendMessage(text: String)
         case delete
         case stop
     }
@@ -34,7 +33,8 @@ public actor ConversationStateMachine {
             case let (.joining(lhsCode), .joining(rhsCode)):
                 return lhsCode == rhsCode
             case let (.ready(lhsResult), .ready(rhsResult)):
-                return lhsResult.conversationId == rhsResult.conversationId
+                return (lhsResult.conversationId == rhsResult.conversationId &&
+                        lhsResult.invite.id == rhsResult.invite.id)
             default:
                 return false
             }
@@ -126,7 +126,9 @@ public actor ConversationStateMachine {
     }
 
     func sendMessage(text: String) {
-        enqueueAction(.sendMessage(text: text))
+        Task {
+            try await handleSendMessage(text: text)
+        }
     }
 
     func delete() {
@@ -171,8 +173,6 @@ public actor ConversationStateMachine {
                 try await handleJoin(inviteCode: inviteCode)
             case (.ready, let .join(inviteCode)):
                 try await handleJoinFromReadyState(inviteCode: inviteCode)
-            case (_, let .sendMessage(text)):
-                try await handleSendMessage(text: text)
             case (.ready, .delete), (.error, .delete):
                 try await handleDelete()
             case (_, .stop):
