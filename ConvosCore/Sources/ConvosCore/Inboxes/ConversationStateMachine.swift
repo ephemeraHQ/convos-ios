@@ -53,6 +53,11 @@ public actor ConversationStateMachine {
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
 
+    // Message stream for ordered message sending
+    private var messageStreamContinuation: AsyncStream<String>.Continuation?
+    private var messageProcessingTask: Task<Void, Never>?
+    private var isMessageStreamSetup: Bool = false
+
     // MARK: - State Observation
 
     private var stateContinuations: [AsyncStream<State>.Continuation] = []
@@ -113,6 +118,42 @@ public actor ConversationStateMachine {
     deinit {
         streamConversationsTask?.cancel()
         currentTask?.cancel()
+        messageStreamContinuation?.finish()
+        messageProcessingTask?.cancel()
+    }
+
+    private func setupMessageStream() {
+        guard !isMessageStreamSetup else { return }
+        isMessageStreamSetup = true
+
+        let stream = AsyncStream<String> { continuation in
+            self.messageStreamContinuation = continuation
+        }
+
+        // Start a single task that processes messages in order
+        messageProcessingTask = Task.detached { [weak self] in
+            for await message in stream {
+                guard let self else { break }
+                await self.processMessage(message)
+            }
+        }
+    }
+
+    private func processMessage(_ text: String) async {
+        do {
+            // Wait for conversation to be ready if it's not
+            let result = try await waitForConversationReadyResult()
+
+            // Send the message
+            let messageWriter = OutgoingMessageWriter(
+                inboxStateManager: inboxStateManager,
+                databaseWriter: databaseWriter,
+                conversationId: result.conversationId
+            )
+            try await messageWriter.send(text: text)
+        } catch {
+            Logger.error("Error sending queued message: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Public Actions
@@ -126,9 +167,8 @@ public actor ConversationStateMachine {
     }
 
     func sendMessage(text: String) {
-        Task {
-            try await handleSendMessage(text: text)
-        }
+        setupMessageStream()
+        messageStreamContinuation?.yield(text)
     }
 
     func delete() {
@@ -137,6 +177,21 @@ public actor ConversationStateMachine {
 
     func stop() {
         enqueueAction(.stop)
+    }
+
+    private func waitForConversationReadyResult() async throws -> ConversationReadyResult {
+        for await state in stateSequence {
+            switch state {
+            case .ready(let result):
+                return result
+            case .error(let error):
+                throw error
+            default:
+                continue
+            }
+        }
+
+        throw ConversationStateMachineError.timedOut
     }
 
     // MARK: - Private Action Processing
@@ -392,52 +447,6 @@ public actor ConversationStateMachine {
         }
     }
 
-    private func handleSendMessage(text: String) async throws {
-        switch _state {
-        case .ready(let result):
-            let messageWriter = OutgoingMessageWriter(
-                inboxStateManager: inboxStateManager,
-                databaseWriter: databaseWriter,
-                conversationId: result.conversationId
-            )
-            try await messageWriter.send(text: text)
-
-        case .uninitialized, .creating, .joining:
-            // Wait for the conversation to reach ready state
-            Logger.info("Waiting for conversation to be ready before sending message...")
-            let result = try await waitForConversationReadyResult()
-
-            // Now send the message
-            let messageWriter = OutgoingMessageWriter(
-                inboxStateManager: inboxStateManager,
-                databaseWriter: databaseWriter,
-                conversationId: result.conversationId
-            )
-            try await messageWriter.send(text: text)
-
-        case .deleting:
-            Logger.warning("Cannot send message while conversation is being deleted")
-
-        case .error(let error):
-            throw ConversationStateMachineError.stateMachineError(error)
-        }
-    }
-
-    private func waitForConversationReadyResult() async throws -> ConversationReadyResult {
-        for await state in stateSequence {
-            switch state {
-            case .ready(let result):
-                return result
-            case .error(let error):
-                throw error
-            default:
-                continue
-            }
-        }
-
-        throw ConversationStateMachineError.timedOut
-    }
-
     private func handleDelete() async throws {
         // For invites, we need the external conversation ID if available,
         // capture before changing state
@@ -450,8 +459,9 @@ public actor ConversationStateMachine {
 
         emitStateChange(.deleting)
 
-        // Cancel any ongoing tasks
+        // Cancel any ongoing tasks and stop accepting new messages
         streamConversationsTask?.cancel()
+        messageStreamContinuation?.finish()
 
         if let conversationId {
             // Get the inbox state to access the API client for unsubscribing
@@ -546,6 +556,7 @@ public actor ConversationStateMachine {
 
     private func handleStop() {
         streamConversationsTask?.cancel()
+        messageStreamContinuation?.finish()
         emitStateChange(.uninitialized)
     }
 }
