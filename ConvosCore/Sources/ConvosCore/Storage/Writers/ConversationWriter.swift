@@ -167,17 +167,6 @@ class ConversationWriter: ConversationWriterProtocol {
         }
     }
 
-    private func validateInboxExists(_ inboxId: String, conversationId: String, in db: Database) throws {
-        let existingInbox = try DBInbox.filter(DBInbox.Columns.inboxId == inboxId).fetchOne(db)
-        if existingInbox == nil {
-            Logger.error("Inbox \(inboxId) does not exist, creating...")
-            try databaseWriter.write { db in
-                let inbox = DBInbox(inboxId: inboxId)
-                try inbox.save(db)
-            }
-        }
-    }
-
     private func saveConversation(_ dbConversation: DBConversation, clientConversationId: String?, in db: Database) throws {
         if let localConversation = try DBConversation
             .filter(Column("id") == dbConversation.id)
