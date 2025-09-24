@@ -4,7 +4,6 @@ import GRDB
 import XMTPiOS
 
 public struct ConversationReadyResult {
-    let inboxId: String
     public let conversationId: String
     public let invite: Invite
 }
@@ -328,7 +327,6 @@ public actor ConversationStateMachine {
 
         // Transition directly to ready state
         emitStateChange(.ready(ConversationReadyResult(
-            inboxId: client.inboxId,
             conversationId: externalConversationId,
             invite: invite
         )))
@@ -353,7 +351,6 @@ public actor ConversationStateMachine {
             let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
             await scheduleCleanupOnNextReady(
                 previousConversationId: previousResult.conversationId,
-                previousInboxId: previousResult.inboxId,
                 client: inboxReady.client,
                 apiClient: inboxReady.apiClient,
             )
@@ -386,7 +383,6 @@ public actor ConversationStateMachine {
                 return nil
             }
             return .init(
-                inboxId: existingConversation.inboxId,
                 conversationId: existingConversation.id,
                 invite: existingInvite.hydrateInvite()
             )
@@ -422,7 +418,6 @@ public actor ConversationStateMachine {
                 return nil
             }
             return .init(
-                inboxId: existingConversation.inboxId,
                 conversationId: existingConversation.id,
                 invite: existingInvite.hydrateInvite()
             )
@@ -499,7 +494,6 @@ public actor ConversationStateMachine {
 
                     // Transition directly to ready state
                     await self.emitStateChange(.ready(ConversationReadyResult(
-                        inboxId: client.inboxId,
                         conversationId: conversation.id,
                         invite: invite
                     )))
@@ -598,18 +592,12 @@ public actor ConversationStateMachine {
     // After the next .ready, if the conversation changed, clean up the previously created convo.
     private func scheduleCleanupOnNextReady(
         previousConversationId: String,
-        previousInboxId: String,
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol,
     ) async {
         for await state in self.stateSequence {
             switch state {
             case .ready(let newReady):
-                guard previousInboxId == client.inboxId else {
-                    Logger.info("inboxId changed, skipping scheduled cleanup...")
-                    return
-                }
-
                 // Only clean up if we actually moved to a different external conversation
                 if newReady.conversationId != previousConversationId {
                     do {
