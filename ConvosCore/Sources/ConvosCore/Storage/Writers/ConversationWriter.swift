@@ -19,10 +19,12 @@ class ConversationWriter: ConversationWriterProtocol {
     private let databaseWriter: any DatabaseWriter
     private let messageWriter: any IncomingMessageWriterProtocol
     private let localStateWriter: any ConversationLocalStateWriterProtocol
+    private let inboxWriter: any InboxWriterProtocol
 
     init(databaseWriter: any DatabaseWriter,
          messageWriter: any IncomingMessageWriterProtocol) {
         self.databaseWriter = databaseWriter
+        self.inboxWriter = InboxWriter(databaseWriter: databaseWriter)
         self.messageWriter = messageWriter
         self.localStateWriter = ConversationLocalStateWriter(databaseWriter: databaseWriter)
     }
@@ -133,6 +135,8 @@ class ConversationWriter: ConversationWriterProtocol {
         dbMembers: [DBConversationMember],
         clientConversationId: String?
     ) async throws {
+        try await inboxWriter.storeInbox(inboxId: dbConversation.inboxId)
+
         try await databaseWriter.write { [weak self] db in
             guard let self else { return }
             // Save creator
@@ -144,9 +148,6 @@ class ConversationWriter: ConversationWriterProtocol {
                 avatar: nil
             )
             try creatorProfile.insert(db, onConflict: .ignore)
-
-            // Validate inbox exists
-            try validateInboxExists(dbConversation.inboxId, conversationId: dbConversation.id, in: db)
 
             // Save conversation (handle local conversation updates)
             try saveConversation(dbConversation, clientConversationId: clientConversationId, in: db)
@@ -163,14 +164,6 @@ class ConversationWriter: ConversationWriterProtocol {
 
             // Save members
             try saveMembers(dbMembers, in: db)
-        }
-    }
-
-    private func validateInboxExists(_ inboxId: String, conversationId: String, in db: Database) throws {
-        let existingInbox = try DBInbox.filter(DBInbox.Columns.inboxId == inboxId).fetchOne(db)
-        if existingInbox == nil {
-            Logger.error("Inbox \(inboxId) does not exist, cannot save conversation \(conversationId)")
-            throw ConversationWriterError.inboxNotFound(inboxId)
         }
     }
 
