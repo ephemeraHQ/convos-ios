@@ -21,7 +21,7 @@ This command handles the entire release workflow automatically.
    ```bash
    make tag-release
    ```
-   
+
    This will:
    - Ensure you're on the `dev` branch
    - Update version in Xcode project
@@ -33,12 +33,11 @@ This command handles the entire release workflow automatically.
    - Verifies version in `dev` branch matches the tag
    - Generates AI-powered release notes using Claude
    - Creates a GitHub Release with the generated notes
-   - Creates a PR from `dev` to `main`
 
-4. **Review and Deploy**:
-   - Review the auto-generated PR and release notes
-   - Merge PR to `main` using "Rebase and merge" (linear history)
-   - Bitrise automatically builds and deploys to TestFlight
+4. **Promote Release to Main**:
+   - Use `make promote-release` to fast-forward merge dev to main
+   - This ensures the tag exists on both branches
+   - Bitrise automatically builds and deploys to App Store Connect to TestFlight
 
 ## Release Notes
 
@@ -59,19 +58,18 @@ These notes are used for:
 
 1. **Tag Creation** → Triggers GitHub Actions
 2. **GitHub Release** → Created with AI-generated notes
-3. **PR Merge to `main`** → Triggers Bitrise production build
+3. **Release Promotion** → `make promote-release` fast-forwards main to dev
 4. **Bitrise Reads Release Notes** → From GitHub Release API
 5. **App Store Connect** → Deploys with release notes to TestFlight
 6. **TestFlight** → Ready for internal/external testing
 
 ## GitHub Actions Workflow
 
-The automated workflow (`auto-release-pr.yml`) triggers on semantic version tags and:
+The automated workflow (`auto-release.yml`) triggers on semantic version tags (including dev versions) and:
 
-- Triggers on semantic version tags (e.g., `1.0.1`)
+- Triggers on semantic version tags (e.g., `1.0.1`, `1.0.0-dev.123456`)
 - AI-powered release notes generation using Anthropic Claude
 - Creates GitHub Release with generated notes
-- Creates PR from `dev` to `main` for linear history
 - Verifies version consistency between dev branch and tag
 - Provides release notes to Bitrise for App Store Connect
 
@@ -119,10 +117,11 @@ This will install all required dependencies and set up the development environme
 ## Best Practices
 
 1. **Use semantic versioning** (1.0.0, 1.0.1, 1.1.0, 2.0.0)
-2. **Test on TestFlight** before creating release PR
-3. **Review AI-generated notes** for accuracy
-4. **Keep release notes user-friendly** for customer-facing content
-5. **Use descriptive commit messages** for better release notes
+2. **Test the dev build on TestFlight** triggered by `make tag-release`
+3. **Test the prod build on TestFlight** happens after `make promote-release` merges dev to main
+4. **Review AI-generated notes** for accuracy
+5. **Keep release notes user-friendly** for customer-facing content
+6. **Use descriptive commit messages** for better release notes
 
 ## Support
 

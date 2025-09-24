@@ -11,20 +11,21 @@ help: ## Print comprehensive help for all commands
 	@echo "=================================="
 	@echo ""
 	@echo "🔑 Secrets Management:"
-	@echo "   make secrets        - Generate Secrets.swift for CI/CD"
-	@echo "   make secrets-local  - Generate Secrets.swift for local development"
-	@echo "   make mock-env       - Generate mock environment for PR builds"
+	@echo "   make secrets         - Generate Secrets.swift for CI/CD"
+	@echo "   make secrets-local   - Generate Secrets.swift for local development"
+	@echo "   make mock-env        - Generate mock environment for PR builds"
 	@echo ""
 	@echo "📱 Version Management:"
-	@echo "   make version        - Show current version from Xcode project"
+	@echo "   make version         - Show current version from Xcode project"
 	@echo "   make dry-run-release - Test release workflow with confirmation"
 	@echo "   make dry-run-release-quick - Quick test without confirmation"
-	@echo "   make tag-release    - Create and push a release tag (triggers auto-PR with rebase merge)"
+	@echo "   make tag-release     - Create and push a release tag (triggers GitHub Actions and Bitrise build for dev)"
+	@echo "   make promote-release - Fast-forward merge dev to main (after tag-release, triggers Bitrise build for prod)"
 	@echo ""
 	@echo "🔧 Setup & Maintenance:"
-	@echo "   make setup          - Setup development environment"
-	@echo "   make clean          - Clean all generated files and build artifacts"
-	@echo "   make status         - Show project status"
+	@echo "   make setup           - Setup development environment"
+	@echo "   make clean           - Clean all generated files and build artifacts"
+	@echo "   make status          - Show project status"
 	@echo ""
 	@echo "🌐 Environment Configuration:"
 	@echo "   • Local: org.convos.ios (local development, no CI)"
@@ -37,9 +38,9 @@ help: ## Print comprehensive help for all commands
 	@echo "   • Prod: Version from Xcode, Build from BITRISE_BUILD_NUMBER"
 	@echo ""
 	@echo "🔄 Release Process:"
-	@echo "   1. Feature branches → dev (merge on dev triggers a dev TestFlight build)"
-	@echo "   2. Create release: git tag 1.0.1 && git push origin 1.0.1 (auto-creates PR)"
-	@echo "   3. Review and merge PR: dev → main (rebase merge, linear history)"
+	@echo "   1. Feature branches → dev"
+	@echo "   2. Create release: make tag-release (triggers GitHub Actions and Bitrise build for dev)"
+	@echo "   3. Promote release: make promote-release (dev → main, triggers Bitrise build for prod)"
 	@echo "   4. Main → App Store (after review and approval)"
 
 .PHONY: setup
@@ -90,8 +91,41 @@ status: ## Show project status (version, secrets, git)
 	@echo "   • Prod: org.convos.ios (App Store, CI: main branch)"
 
 .PHONY: tag-release
-tag-release: ## Create and push a release tag (triggers auto-PR creation)
+tag-release: ## Create and push a release tag (triggers GitHub Actions)
 	./Scripts/create-release-tag.sh
+
+.PHONY: promote-release
+promote-release: ## Fast-forward merge dev to main (ensures tag exists on both branches)
+	@echo "🚀 Promote Release: dev → main"
+	@echo "================================"
+	@echo ""
+	@echo "This will:"
+	@echo "  1. Checkout main branch"
+	@echo "  2. Pull latest main from origin"
+	@echo "  3. Fast-forward merge dev into main"
+	@echo "  4. Push main to origin"
+	@echo "  5. Ensure the release tag exists on both branches"
+	@echo ""
+	@read -p "Continue? (y/N): " CONFIRM; \
+	if [[ ! "$$CONFIRM" =~ ^[Yy]$$ ]]; then \
+		echo "❌ Release promotion cancelled"; \
+		exit 1; \
+	fi
+	@echo ""
+	@echo "🚀 Starting release promotion..."
+	@# Checkout main branch
+	@git checkout main
+	@# Pull latest main
+	@git pull origin main
+	@# Fast-forward merge dev into main
+	@git merge --ff-only dev
+	@# Push main to origin
+	@git push origin main
+	@echo ""
+	@echo "✅ Release promotion completed successfully!"
+	@echo "   • dev has been merged into main"
+	@echo "   • Tag exists on both branches"
+	@echo "   • Bitrise will now build and deploy to TestFlight"
 
 .PHONY: dry-run-release
 dry-run-release: ## Test release workflow without making changes (dry run)
