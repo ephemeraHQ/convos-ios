@@ -74,11 +74,9 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
             Logger.info("Saved local message with local id: \(localMessage.clientMessageId)")
         }
 
-        Task {
-            Logger.info("Sending local message with local id: \(clientMessageId)")
-            try await sender.publish()
-            sentMessageSubject.send(text)
-            Logger.info("Sent local message with local id: \(clientMessageId)")
-        }
+        Logger.info("Sending local message with local id: \(clientMessageId)")
+        try await sender.publish()
+        sentMessageSubject.send(text)
+        Logger.info("Sent local message with local id: \(clientMessageId)")
     }
 }
