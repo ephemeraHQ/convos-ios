@@ -378,7 +378,6 @@ public actor ConversationStateMachine {
 
         Logger.info("Extracted invite code '\(code)', checking if we're already a member...")
 
-        let draftConversationId = self.draftConversationId
         let resultByInviteCode: ConversationReadyResult? = try await databaseReader.read { db in
             guard let existingInvite = try DBInvite.fetchOne(db, key: code) else {
                 return nil
@@ -388,8 +387,7 @@ public actor ConversationStateMachine {
             }
             return .init(
                 inboxId: existingConversation.inboxId,
-                conversationId: draftConversationId,
-                externalConversationId: existingConversation.id,
+                conversationId: existingConversation.id,
                 invite: existingInvite.hydrateInvite()
             )
         }
@@ -425,8 +423,7 @@ public actor ConversationStateMachine {
             }
             return .init(
                 inboxId: existingConversation.inboxId,
-                conversationId: draftConversationId,
-                externalConversationId: existingConversation.id,
+                conversationId: existingConversation.id,
                 invite: existingInvite.hydrateInvite()
             )
         }
@@ -502,13 +499,8 @@ public actor ConversationStateMachine {
 
                     // Transition directly to ready state
                     await self.emitStateChange(.ready(ConversationReadyResult(
-<<<<<<< HEAD
-                        conversationId: conversation.id,
-=======
                         inboxId: client.inboxId,
-                        conversationId: draftConversationId,
-                        externalConversationId: conversation.id,
->>>>>>> b9130a6 (Join Flow Improvements (#150))
+                        conversationId: conversation.id,
                         invite: invite
                     )))
                 } else {
@@ -522,64 +514,9 @@ public actor ConversationStateMachine {
         }
     }
 
-<<<<<<< HEAD
-=======
-    private func handleSendMessage(text: String) async throws {
-        switch _state {
-        case .ready(let result):
-            // For ready conversations, use the regular message writer
-            Logger.info("Sending message for ready result: \(result)")
-            let messageWriter = OutgoingMessageWriter(
-                inboxStateManager: inboxStateManager,
-                databaseWriter: databaseWriter,
-                conversationId: result.externalConversationId
-            )
-            try await messageWriter.send(text: text)
-
-        case .uninitialized, .creating, .validating, .validated, .joining:
-            // For draft conversations, save a local message
-            let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
-            let client = inboxReady.client
-
-            // First ensure the draft conversation exists in the database
-            try await ensureDraftConversationExists(inboxId: client.inboxId)
-
-            // Save the message locally
-            let date = Date()
-            try await databaseWriter.write { db in
-                let clientMessageId = UUID().uuidString
-                let localMessage = DBMessage(
-                    id: clientMessageId,
-                    clientMessageId: clientMessageId,
-                    conversationId: self.draftConversationId,
-                    senderId: client.inboxId,
-                    dateNs: date.nanosecondsSince1970,
-                    date: date,
-                    status: .unpublished,
-                    messageType: .original,
-                    contentType: .text,
-                    text: text,
-                    emoji: nil,
-                    sourceMessageId: nil,
-                    attachmentUrls: [],
-                    update: nil
-                )
-
-                try localMessage.save(db)
-                Logger.info("Saved local message with id: \(localMessage.clientMessageId)")
-            }
-
-        case .deleting:
-            Logger.warning("Cannot send message while conversation is being deleted")
-
-        case .error(let error):
-            throw ConversationStateMachineError.stateMachineError(error)
-        }
-    }
-
-    private func ensureDraftConversationExists(inboxId: String) async throws {
+    private func ensureDraftConversationExists(inboxId: String, draftConversationId: String) async throws {
         let conversationExists = try await databaseReader.read { db in
-            try DBConversation.fetchOne(db, key: self.draftConversationId) != nil
+            try DBConversation.fetchOne(db, key: draftConversationId) != nil
         }
 
         guard !conversationExists else { return }
@@ -587,9 +524,9 @@ public actor ConversationStateMachine {
         // Create the draft conversation and necessary records
         try await databaseWriter.write { db in
             let conversation = DBConversation(
-                id: self.draftConversationId,
+                id: draftConversationId,
                 inboxId: inboxId,
-                clientConversationId: self.draftConversationId,
+                clientConversationId: draftConversationId,
                 creatorId: inboxId,
                 kind: .group,
                 consent: .allowed,
@@ -628,7 +565,6 @@ public actor ConversationStateMachine {
         }
     }
 
->>>>>>> b9130a6 (Join Flow Improvements (#150))
     private func handleDelete() async throws {
         // For invites, we need the external conversation ID if available,
         // capture before changing state
