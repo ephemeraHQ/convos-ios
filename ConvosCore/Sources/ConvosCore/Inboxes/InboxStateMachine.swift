@@ -68,7 +68,6 @@ public struct InboxReadyResult {
 }
 
 typealias AnySyncingManager = (any SyncingManagerProtocol)
-typealias AnyInviteJoinRequestsManager = (any InviteJoinRequestsManagerProtocol)
 
 public actor InboxStateMachine {
     enum Action {
@@ -99,7 +98,6 @@ public actor InboxStateMachine {
     private let invitesRepository: any InvitesRepositoryProtocol
     private let environment: AppEnvironment
     private let syncingManager: AnySyncingManager?
-    private let inviteJoinRequestsManager: AnyInviteJoinRequestsManager?
     private let pushNotificationRegistrar: any PushNotificationRegistrarProtocol
     private let autoRegistersForPushNotifications: Bool
 
@@ -166,7 +164,6 @@ public actor InboxStateMachine {
         inboxWriter: any InboxWriterProtocol,
         invitesRepository: any InvitesRepositoryProtocol,
         syncingManager: AnySyncingManager?,
-        inviteJoinRequestsManager: AnyInviteJoinRequestsManager?,
         pushNotificationRegistrar: any PushNotificationRegistrarProtocol,
         autoRegistersForPushNotifications: Bool,
         environment: AppEnvironment
@@ -175,7 +172,6 @@ public actor InboxStateMachine {
         self.inboxWriter = inboxWriter
         self.invitesRepository = invitesRepository
         self.syncingManager = syncingManager
-        self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
         self.pushNotificationRegistrar = pushNotificationRegistrar
         self.autoRegistersForPushNotifications = autoRegistersForPushNotifications
@@ -388,7 +384,6 @@ public actor InboxStateMachine {
         try await inboxWriter.storeInbox(inboxId: client.inboxId)
 
         await syncingManager?.start(with: client, apiClient: apiClient)
-        inviteJoinRequestsManager?.start(with: client, apiClient: apiClient)
 
         // Setup push notification observers if registrar is provided
         if autoRegistersForPushNotifications {
@@ -410,7 +405,6 @@ public actor InboxStateMachine {
 
         emitStateChange(.deleting)
         await syncingManager?.stop()
-        inviteJoinRequestsManager?.stop()
         try await inboxWriter.deleteInbox(inboxId: client.inboxId)
         if let identity = try? await identityStore.identity(for: client.inboxId) {
             let keys = identity.clientKeys
@@ -435,7 +429,6 @@ public actor InboxStateMachine {
         Logger.info("Deleting inbox from error state...")
         emitStateChange(.deleting)
         await syncingManager?.stop()
-        inviteJoinRequestsManager?.stop()
         if let inboxId = inboxId {
             try await inboxWriter.deleteInbox(inboxId: inboxId)
             try await identityStore.delete(inboxId: inboxId)
@@ -448,7 +441,6 @@ public actor InboxStateMachine {
         Logger.info("Stopping inbox...")
         emitStateChange(.stopping)
         await syncingManager?.stop()
-        inviteJoinRequestsManager?.stop()
         removePushNotificationObservers()
         inboxId = nil
         emitStateChange(.uninitialized)

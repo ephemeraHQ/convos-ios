@@ -56,6 +56,7 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     func deleteInvite(_ inviteCode: String) async throws -> ConvosAPI.DeleteInviteResponse
     func publicInviteDetails(_ code: String) async throws -> ConvosAPI.PublicInviteDetailsResponse
     func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse
+    func acceptRequestToJoin(_ requestId: String) async throws -> ConvosAPI.AcceptRequestToJoinResponse
     func deleteRequestToJoin(_ requestId: String) async throws -> ConvosAPI.DeleteRequestToJoinResponse
 
     func updateProfile(
@@ -383,6 +384,20 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         return try await performRequest(request)
     }
 
+    func acceptRequestToJoin(_ requestId: String) async throws -> ConvosAPI.AcceptRequestToJoinResponse {
+        let request = try authenticatedRequest(for: "v1/invites/requests/\(requestId)/accept", method: "PUT")
+        do {
+            let response: ConvosAPI.AcceptRequestToJoinResponse = try await performRequest(request)
+            Logger.info("Join request accepted successfully")
+            return response
+        } catch {
+            Logger.error("Failed to accept join request: \(error)")
+            throw error
+        }
+    }
+
+    /// Deletes a join request. Use this to REJECT a request, not after accepting it.
+    /// Note: When accepting a request with acceptRequestToJoin, the server automatically deletes it.
     func deleteRequestToJoin(_ requestId: String) async throws -> ConvosAPI.DeleteRequestToJoinResponse {
         let request = try authenticatedRequest(for: "v1/invites/requests/\(requestId)", method: "DELETE")
         return try await performRequest(request)
@@ -395,18 +410,10 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         var urlRequest = try authenticatedRequest(for: "v1/invites/\(inviteCode)", method: "PUT")
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.httpBody = try JSONSerialization.data(withJSONObject: fields)
-
-        Logger.info("🔄 PUT /v1/invites/\(inviteCode)")
-        Logger.info("📤 Request body: \(urlRequest.httpBody?.prettyPrintedJSONString ?? "nil")")
-        Logger.info("🔑 Headers: \(urlRequest.allHTTPHeaderFields ?? [:])")
-
         do {
-            let response: ConvosAPI.InviteDetailsResponse = try await performRequest(urlRequest)
-            Logger.info("✅ Invite update successful")
-            Logger.info("📥 Response: \(response)")
+            let _: ConvosAPI.InviteDetailsResponse = try await performRequest(urlRequest)
         } catch {
-            Logger.error("❌ Invite update failed: \(error)")
-            Logger.error("🔍 Error details: \(String(describing: error))")
+            Logger.error("Invite update failed: \(error)")
             throw error
         }
     }
@@ -539,6 +546,8 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 throw APIError.forbidden
             case 404:
                 throw APIError.notFound
+            case 409:
+                throw APIError.conflict
             default:
                 let errorMessage = String(data: data, encoding: .utf8)
                 throw APIError.serverError(errorMessage)
@@ -742,6 +751,7 @@ enum APIError: Error {
     case badRequest(String?)
     case forbidden
     case notFound
+    case conflict
     case invalidResponse
     case invalidRequest
     case serverError(String?)
