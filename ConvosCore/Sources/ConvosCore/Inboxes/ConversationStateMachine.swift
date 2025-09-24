@@ -128,6 +128,11 @@ public actor ConversationStateMachine {
 
         let stream = AsyncStream<String> { continuation in
             self.messageStreamContinuation = continuation
+            continuation.onTermination = { [weak self] _ in
+                Task { [weak self] in
+                    await self?.resetMessageStream()
+                }
+            }
         }
 
         // Start a single task that processes messages in order
@@ -136,7 +141,15 @@ public actor ConversationStateMachine {
                 guard let self else { break }
                 await self.processMessage(message)
             }
+            // Stream ended, reset so it can be recreated if needed
+            await self?.resetMessageStream()
         }
+    }
+
+    private func resetMessageStream() {
+        isMessageStreamSetup = false
+        messageStreamContinuation = nil
+        messageProcessingTask = nil
     }
 
     private func processMessage(_ text: String) async {
