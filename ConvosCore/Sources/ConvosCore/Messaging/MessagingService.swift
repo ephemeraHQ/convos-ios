@@ -106,12 +106,10 @@ final class MessagingService: MessagingServiceProtocol {
     // MARK: New Conversation
 
     func draftConversationComposer() -> any DraftConversationComposerProtocol {
-        let clientConversationId: String = DBConversation.generateDraftConversationId()
         let draftConversationWriter = DraftConversationWriter(
             inboxStateManager: inboxStateManager,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
-            draftConversationId: clientConversationId
         )
         return DraftConversationComposer(
             myProfileWriter: myProfileWriter(),

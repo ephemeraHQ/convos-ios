@@ -5,7 +5,6 @@ import XMTPiOS
 
 public struct ConversationReadyResult {
     public let conversationId: String
-    public let externalConversationId: String
     public let invite: Invite?
 }
 
@@ -44,7 +43,6 @@ public actor ConversationStateMachine {
 
     // MARK: - Properties
 
-    private let draftConversationId: String
     private let inboxStateManager: InboxStateManager
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
@@ -101,13 +99,11 @@ public actor ConversationStateMachine {
     // MARK: - Init
 
     init(
-        draftConversationId: String,
         inboxStateManager: InboxStateManager,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         inviteWriter: any InviteWriterProtocol
     ) {
-        self.draftConversationId = draftConversationId
         self.inboxStateManager = inboxStateManager
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
@@ -226,7 +222,7 @@ public actor ConversationStateMachine {
         // Store the conversation
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         let conversationWriter = ConversationWriter(databaseWriter: databaseWriter, messageWriter: messageWriter)
-        _ = try await conversationWriter.store(conversation: createdConversation, clientConversationId: draftConversationId)
+        _ = try await conversationWriter.store(conversation: createdConversation)
 
         // Subscribe to push notifications
         let topic = externalConversationId.xmtpGroupTopicFormat
@@ -254,8 +250,7 @@ public actor ConversationStateMachine {
 
         // Transition directly to ready state
         emitStateChange(.ready(ConversationReadyResult(
-            conversationId: draftConversationId,
-            externalConversationId: externalConversationId,
+            conversationId: externalConversationId,
             invite: invite
         )))
     }
@@ -278,7 +273,7 @@ public actor ConversationStateMachine {
             // Get the inbox state to access the API client for unsubscribing
             let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
             await scheduleCleanupOnNextReady(
-                previousExternalId: previousResult.externalConversationId,
+                previousConversationId: previousResult.conversationId,
                 client: inboxReady.client,
                 apiClient: inboxReady.apiClient,
             )
@@ -351,7 +346,7 @@ public actor ConversationStateMachine {
 
                     let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
                     let conversationWriter = ConversationWriter(databaseWriter: databaseWriter, messageWriter: messageWriter)
-                    _ = try await conversationWriter.store(conversation: conversation, clientConversationId: draftConversationId)
+                    _ = try await conversationWriter.store(conversation: conversation)
 
                     // Store the invite we used so we don't join the same conversation again
                     let conversationCreatorInboxId = try await conversation.creatorInboxId
@@ -383,8 +378,7 @@ public actor ConversationStateMachine {
 
                     // Transition directly to ready state
                     await self.emitStateChange(.ready(ConversationReadyResult(
-                        conversationId: draftConversationId,
-                        externalConversationId: conversation.id,
+                        conversationId: conversation.id,
                         invite: invite
                     )))
                 } else {
@@ -401,46 +395,25 @@ public actor ConversationStateMachine {
     private func handleSendMessage(text: String) async throws {
         switch _state {
         case .ready(let result):
-            // For ready conversations, use the regular message writer
             let messageWriter = OutgoingMessageWriter(
                 inboxStateManager: inboxStateManager,
                 databaseWriter: databaseWriter,
-                conversationId: result.externalConversationId
+                conversationId: result.conversationId
             )
             try await messageWriter.send(text: text)
 
         case .uninitialized, .creating, .joining:
-            // For draft conversations, save a local message
-            let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
-            let client = inboxReady.client
+            // Wait for the conversation to reach ready state
+            Logger.info("Waiting for conversation to be ready before sending message...")
+            let result = try await waitForConversationReadyResult()
 
-            // First ensure the draft conversation exists in the database
-            try await ensureDraftConversationExists(inboxId: client.inboxId)
-
-            // Save the message locally
-            let date = Date()
-            try await databaseWriter.write { db in
-                let clientMessageId = UUID().uuidString
-                let localMessage = DBMessage(
-                    id: clientMessageId,
-                    clientMessageId: clientMessageId,
-                    conversationId: self.draftConversationId,
-                    senderId: client.inboxId,
-                    dateNs: date.nanosecondsSince1970,
-                    date: date,
-                    status: .unpublished,
-                    messageType: .original,
-                    contentType: .text,
-                    text: text,
-                    emoji: nil,
-                    sourceMessageId: nil,
-                    attachmentUrls: [],
-                    update: nil
-                )
-
-                try localMessage.save(db)
-                Logger.info("Saved local message with id: \(localMessage.clientMessageId)")
-            }
+            // Now send the message
+            let messageWriter = OutgoingMessageWriter(
+                inboxStateManager: inboxStateManager,
+                databaseWriter: databaseWriter,
+                conversationId: result.conversationId
+            )
+            try await messageWriter.send(text: text)
 
         case .deleting:
             Logger.warning("Cannot send message while conversation is being deleted")
@@ -450,63 +423,27 @@ public actor ConversationStateMachine {
         }
     }
 
-    private func ensureDraftConversationExists(inboxId: String) async throws {
-        let conversationExists = try await databaseReader.read { db in
-            try DBConversation.fetchOne(db, key: self.draftConversationId) != nil
+    private func waitForConversationReadyResult() async throws -> ConversationReadyResult {
+        for await state in stateSequence {
+            switch state {
+            case .ready(let result):
+                return result
+            case .error(let error):
+                throw error
+            default:
+                continue
+            }
         }
 
-        guard !conversationExists else { return }
-
-        // Create the draft conversation and necessary records
-        try await databaseWriter.write { db in
-            let conversation = DBConversation(
-                id: self.draftConversationId,
-                inboxId: inboxId,
-                clientConversationId: self.draftConversationId,
-                creatorId: inboxId,
-                kind: .group,
-                consent: .allowed,
-                createdAt: Date(),
-                name: nil,
-                description: nil,
-                imageURLString: nil
-            )
-
-            let memberProfile = MemberProfile(inboxId: inboxId, name: nil, avatar: nil)
-            let member = Member(inboxId: inboxId)
-
-            try member.save(db)
-            try memberProfile.save(db)
-            try conversation.save(db)
-
-            let localState = ConversationLocalState(
-                conversationId: conversation.id,
-                isPinned: false,
-                isUnread: false,
-                isUnreadUpdatedAt: Date(),
-                isMuted: false
-            )
-            try localState.save(db)
-
-            let conversationMember = DBConversationMember(
-                conversationId: conversation.id,
-                inboxId: memberProfile.inboxId,
-                role: .superAdmin,
-                consent: .allowed,
-                createdAt: Date()
-            )
-            try conversationMember.save(db)
-
-            Logger.info("Created draft conversation")
-        }
+        throw ConversationStateMachineError.timedOut
     }
 
     private func handleDelete() async throws {
         // For invites, we need the external conversation ID if available,
         // capture before changing state
-        let externalConversationId: String? = switch _state {
+        let conversationId: String? = switch _state {
         case .ready(let result):
-            result.externalConversationId
+            result.conversationId
         default:
             nil
         }
@@ -516,14 +453,12 @@ public actor ConversationStateMachine {
         // Cancel any ongoing tasks
         streamConversationsTask?.cancel()
 
-        try await cleanUp(draftConversationId: draftConversationId)
-
-        if let externalConversationId {
+        if let conversationId {
             // Get the inbox state to access the API client for unsubscribing
             let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
             try await cleanUp(
-                externalConversationId: externalConversationId,
+                conversationId: conversationId,
                 client: inboxReady.client,
                 apiClient: inboxReady.apiClient
             )
@@ -534,7 +469,7 @@ public actor ConversationStateMachine {
 
     // Runs once: after the next .ready for a different conversation, clean up the previous convo.
     private func scheduleCleanupOnNextReady(
-        previousExternalId: String,
+        previousConversationId: String,
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol,
     ) async {
@@ -542,10 +477,10 @@ public actor ConversationStateMachine {
             switch state {
             case .ready(let newReady):
                 // Only clean up if we actually moved to a different external conversation
-                if newReady.externalConversationId != previousExternalId {
+                if newReady.conversationId != previousConversationId {
                     do {
                         try await self.cleanUp(
-                            externalConversationId: previousExternalId,
+                            conversationId: previousConversationId,
                             client: client,
                             apiClient: apiClient
                         )
@@ -562,29 +497,17 @@ public actor ConversationStateMachine {
         }
     }
 
-    private func cleanUp(draftConversationId: String) async throws {
-        try await databaseWriter.write { db in
-            try ConversationLocalState
-                .filter(Column("conversationId") == draftConversationId)
-                .deleteAll(db)
-            try DBConversation
-                .filter(DBConversation.Columns.id == draftConversationId)
-                .deleteAll(db)
-            Logger.info("Cleaned up conversation data for draftConversationId: \(draftConversationId)")
-        }
-    }
-
     private func cleanUp(
-        externalConversationId: String,
+        conversationId: String,
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol,
     ) async throws {
         // @jarod until we have self removal, we need to deny the conversation
         // so it doesn't show up in the list
-        let externalConversation = try await client.conversationsProvider.findConversation(conversationId: externalConversationId)
+        let externalConversation = try await client.conversationsProvider.findConversation(conversationId: conversationId)
         try await externalConversation?.updateConsentState(state: .denied)
 
-        let topic = externalConversationId.xmtpGroupTopicFormat
+        let topic = conversationId.xmtpGroupTopicFormat
         do {
             try await apiClient.unsubscribeFromTopics(installationId: client.installationId, topics: [topic])
             Logger.info("Unsubscribed from push topic: \(topic)")
@@ -597,27 +520,27 @@ public actor ConversationStateMachine {
         try await databaseWriter.write { db in
             // Delete messages first (due to foreign key constraints)
             try DBMessage
-                .filter(DBMessage.Columns.conversationId == externalConversationId)
+                .filter(DBMessage.Columns.conversationId == conversationId)
                 .deleteAll(db)
 
             // Delete conversation members
             try DBConversationMember
-                .filter(DBConversationMember.Columns.conversationId == externalConversationId)
+                .filter(DBConversationMember.Columns.conversationId == conversationId)
                 .deleteAll(db)
 
             try ConversationLocalState
-                .filter(Column("conversationId") == externalConversationId)
+                .filter(Column("conversationId") == conversationId)
                 .deleteAll(db)
 
             try DBInvite
-                .filter(DBInvite.Columns.conversationId == externalConversationId)
+                .filter(DBInvite.Columns.conversationId == conversationId)
                 .deleteAll(db)
 
             try DBConversation
-                .filter(DBConversation.Columns.id == externalConversationId)
+                .filter(DBConversation.Columns.id == conversationId)
                 .deleteAll(db)
 
-            Logger.info("Cleaned up conversation data for externalId: \(externalConversationId)")
+            Logger.info("Cleaned up conversation data for conversationId: \(conversationId)")
         }
     }
 

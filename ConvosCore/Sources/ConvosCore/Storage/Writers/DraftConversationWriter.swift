@@ -3,7 +3,6 @@ import Foundation
 import GRDB
 
 public protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
-    var draftConversationId: String { get }
     var conversationId: String { get }
     var conversationIdPublisher: AnyPublisher<String, Never> { get }
     var conversationMetadataWriter: any ConversationMetadataWriterProtocol { get }
@@ -29,7 +28,6 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
         sentMessageSubject.eraseToAnyPublisher()
     }
 
-    let draftConversationId: String
     private let conversationIdSubject: CurrentValueSubject<String, Never>
     var conversationId: String {
         conversationIdSubject.value
@@ -40,13 +38,11 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
     init(inboxStateManager: InboxStateManager,
          databaseReader: any DatabaseReader,
-         databaseWriter: any DatabaseWriter,
-         draftConversationId: String) {
+         databaseWriter: any DatabaseWriter) {
         self.inboxStateManager = inboxStateManager
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
-        self.draftConversationId = draftConversationId
-        self.conversationIdSubject = .init(draftConversationId)
+        self.conversationIdSubject = .init(DBConversation.generateDraftConversationId())
         self.conversationMetadataWriter = ConversationMetadataWriter(
             inboxStateManager: inboxStateManager,
             databaseWriter: databaseWriter
@@ -54,7 +50,6 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
 
         let inviteWriter = InviteWriter(databaseWriter: databaseWriter)
         self.stateMachine = ConversationStateMachine(
-            draftConversationId: draftConversationId,
             inboxStateManager: inboxStateManager,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
@@ -106,10 +101,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     private func handleStateChange(_ state: ConversationStateMachine.State) {
         switch state {
         case .ready(let result):
-            conversationIdSubject.send(result.externalConversationId)
-        case .creating, .joining:
-            // Keep using draft ID during creation/joining
-            conversationIdSubject.send(draftConversationId)
+            conversationIdSubject.send(result.conversationId)
         default:
             break
         }
