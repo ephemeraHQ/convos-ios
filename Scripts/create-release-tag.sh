@@ -260,24 +260,30 @@ main() {
     echo ""
 
     # Get new version from user
-    read -p "Enter new version (e.g., 1.0.1): " NEW_VERSION
+    read -p "Enter new version (e.g., 1.0.1 or 1.0.1-dev.123): " NEW_VERSION
 
-    # Validate version format
-    if [[ ! "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        print_error "Invalid version format. Please use semantic versioning (e.g., 1.0.1)"
+    # Allow prerelease suffixes in the tag, but MARKETING_VERSION must be X.Y.X
+    if [[ ! "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.].*)?$ ]]; then
+        print_error "Invalid version format. Use semantic versioning (e.g., 1.0.1 or 1.0.1-dev.123)"
         exit 1
     fi
 
-    # Enforce monotonic bump when current version is known
+    # Compute base version for MARKETING_VERSION (strip anything after first '-')
+    BASE_VERSION="$NEW_VERSION"
+    if [[ "$BASE_VERSION" == *-* ]]; then
+        BASE_VERSION="${BASE_VERSION%%-*}"
+    fi
+
+    # Enforce monotonic bump when current version is known (compare base versions)
     if [ "$current_version" != "unknown" ]; then
         # Simple version comparison using IFS
         IFS='.' read -r curr_major curr_minor curr_patch <<< "$current_version"
-        IFS='.' read -r new_major new_minor new_patch <<< "$NEW_VERSION"
+        IFS='.' read -r new_major new_minor new_patch <<< "$BASE_VERSION"
 
         if [ "$new_major" -lt "$curr_major" ] || \
            ([ "$new_major" -eq "$curr_major" ] && [ "$new_minor" -lt "$curr_minor" ]) || \
            ([ "$new_major" -eq "$curr_major" ] && [ "$new_minor" -eq "$curr_minor" ] && [ "$new_patch" -le "$curr_patch" ]); then
-            print_error "New version ($NEW_VERSION) must be greater than current ($current_version)"
+            print_error "New version ($BASE_VERSION) must be greater than current ($current_version)"
             exit 1
         fi
         print_success "Version bump validation passed ✓"
@@ -287,21 +293,21 @@ main() {
     echo ""
     if [ "$DRY_RUN" = true ]; then
         print_warning "DRY RUN MODE - This will simulate:"
-        echo "  1. Update version in Xcode project to $NEW_VERSION"
+        echo "  1. Update MARKETING_VERSION in Xcode project to $BASE_VERSION"
         echo "  2. Commit the change to dev branch"
-        echo "  3. Create tag $NEW_VERSION"
+        echo "  3. Create tag $NEW_VERSION (may include prerelease suffix)"
         echo "  4. Push both tag and dev branch to origin"
-        echo "  5. Trigger GitHub Actions to create release PR"
+        echo "  5. Trigger GitHub Actions to create release"
         echo ""
         print_status "No actual changes will be made!"
         echo ""
     else
         print_warning "This will:"
-        echo "  1. Update version in Xcode project to $NEW_VERSION"
+        echo "  1. Update MARKETING_VERSION in Xcode project to $BASE_VERSION"
         echo "  2. Commit the change to dev branch"
-        echo "  3. Create tag $NEW_VERSION"
+        echo "  3. Create tag $NEW_VERSION (may include prerelease suffix)"
         echo "  4. Push both tag and dev branch to origin"
-        echo "  5. Trigger GitHub Actions to create release PR"
+        echo "  5. Trigger GitHub Actions to create release"
         echo ""
     fi
 
@@ -315,8 +321,8 @@ main() {
     echo ""
 
     # Execute the release workflow
-    update_xcode_version "$NEW_VERSION"
-    commit_version_update "$NEW_VERSION"
+    update_xcode_version "$BASE_VERSION"
+    commit_version_update "$BASE_VERSION"
     create_tag_and_push_atomic "$NEW_VERSION"
 
     echo ""
