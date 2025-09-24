@@ -6,22 +6,23 @@ This document describes the automated release process for the Convos iOS app.
 
 ```bash
 make tag-release
+make promote-release
 ```
 
-This command handles the entire release workflow automatically.
+These commands handle the complete release workflow.
 
 ## Release Workflow
 
 1. **Prepare Release**:
    - Ensure all features are merged to `dev` branch
-   - Test thoroughly on TestFlight
+   - Test dev build on TestFlight (triggered by tagging a commit on the dev branch)
    - Decide on version number (semantic versioning)
 
 2. **Create Release Tag**:
    ```bash
    make tag-release
    ```
-   
+
    This will:
    - Ensure you're on the `dev` branch
    - Update version in Xcode project
@@ -33,12 +34,15 @@ This command handles the entire release workflow automatically.
    - Verifies version in `dev` branch matches the tag
    - Generates AI-powered release notes using Claude
    - Creates a GitHub Release with the generated notes
-   - Creates a PR from `dev` to `main`
+   - Triggers dev TestFlight build
 
-4. **Review and Deploy**:
-   - Review the auto-generated PR and release notes
-   - Merge PR to `main` using "Rebase and merge" (linear history)
-   - Bitrise automatically builds and deploys to TestFlight
+4. **Promote Release to Main**:
+   ```bash
+   make promote-release
+   ```
+   - Fast-forward merges dev to main
+   - Ensures the tag exists on both branches
+   - Triggers prod TestFlight build
 
 ## Release Notes
 
@@ -57,23 +61,22 @@ These notes are used for:
 
 ## Complete Release Pipeline
 
-1. **Tag Creation** → Triggers GitHub Actions
+1. **Tag Creation** → `make tag-release` creates tag and triggers GitHub Actions
 2. **GitHub Release** → Created with AI-generated notes
-3. **PR Merge to `main`** → Triggers Bitrise production build
-4. **Bitrise Reads Release Notes** → From GitHub Release API
-5. **App Store Connect** → Deploys with release notes to TestFlight
-6. **TestFlight** → Ready for internal/external testing
+3. **Dev TestFlight** → Bitrise builds and deploys dev build to TestFlight
+4. **Release Promotion** → `make promote-release` fast-forwards main to dev
+5. **Prod TestFlight** → Bitrise builds and deploys prod build to TestFlight
+6. **App Store Connect** → Ready for App Store submission
 
 ## GitHub Actions Workflow
 
-The automated workflow (`auto-release-pr.yml`) triggers on semantic version tags and:
+The automated workflow (`auto-release.yml`) triggers on semantic version tags (including dev versions) and:
 
-- Triggers on semantic version tags (e.g., `1.0.1`)
+- Triggers on semantic version tags (e.g., `1.0.1`, `1.0.0-dev.123456`)
 - AI-powered release notes generation using Anthropic Claude
 - Creates GitHub Release with generated notes
-- Creates PR from `dev` to `main` for linear history
 - Verifies version consistency between dev branch and tag
-- Provides release notes to Bitrise for App Store Connect
+- Provides release notes to Bitrise for TestFlight builds
 
 ## Prerequisites
 
@@ -119,10 +122,11 @@ This will install all required dependencies and set up the development environme
 ## Best Practices
 
 1. **Use semantic versioning** (1.0.0, 1.0.1, 1.1.0, 2.0.0)
-2. **Test on TestFlight** before creating release PR
-3. **Review AI-generated notes** for accuracy
-4. **Keep release notes user-friendly** for customer-facing content
-5. **Use descriptive commit messages** for better release notes
+2. **Test dev build on TestFlight** (triggered by dev branch merges) before creating release tag
+3. **Test prod build on TestFlight** (triggered by `make promote-release`) before App Store submission
+4. **Review AI-generated notes** for accuracy
+5. **Keep release notes user-friendly** for customer-facing content
+6. **Use descriptive commit messages** for better release notes
 
 ## Support
 

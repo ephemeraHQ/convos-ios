@@ -88,7 +88,7 @@ workflows:
     - save-spm-cache@1: {}
     meta:
       bitrise.io:
-        stack: osx-xcode-26.0.x-edge
+        stack: osx-xcode-26.0.x
     envs:
     - BITRISE_SCHEME: Convos (Dev)
       opts:
@@ -168,11 +168,10 @@ workflows:
     - save-spm-cache@1: {}
     meta:
       bitrise.io:
-        stack: osx-xcode-26.0.x-edge
+        stack: osx-xcode-26.0.x
     triggers:
       push:
       - branch: main
-      enabled: false
     envs:
     - BITRISE_SCHEME: Convos (Prod)
       opts:
