@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 extension IndexPath {
     var itemPath: ItemPath {
