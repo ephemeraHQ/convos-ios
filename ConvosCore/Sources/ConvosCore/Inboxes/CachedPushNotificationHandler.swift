@@ -109,7 +109,6 @@ public actor CachedPushNotificationHandler {
 
         Logger.info("Creating new messaging service for inbox: \(inboxId)")
         let messagingService = MessagingService.authorizedMessagingService(
-            for: inboxId,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment,

@@ -39,28 +39,23 @@ struct NewConversationView: View {
                 @Bindable var viewModel = viewModel
                 Group {
                     if viewModel.showingFullScreenScanner {
-                        JoinConversationView(allowsDismissal: viewModel.allowsDismissingScanner) { inviteCode in
-                            viewModel.join(inviteUrlString: inviteCode)
-                        }
-                    } else {
-                        Group {
-                            if let conversationViewModel = viewModel.conversationViewModel {
-                                ConversationView(
-                                    viewModel: conversationViewModel,
-                                    focusState: $focusState,
-                                    onScanInviteCode: viewModel.onScanInviteCode,
-                                    onDeleteConversation: viewModel.deleteConversation,
-                                    confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
-                                    messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
-                                )
-                            } else if let initializationError = viewModel.initializationError {
-                                ErrorView(error: initializationError) {
-                                    viewModel.start()
-                                }
-                            } else {
-                                EmptyView()
+                        JoinConversationView(
+                            viewModel: viewModel.qrScannerViewModel,
+                            allowsDismissal: viewModel.allowsDismissingScanner,
+                            onScannedCode: { inviteCode in
+                                viewModel.joinConversation(inviteCode: inviteCode)
                             }
-                        }
+                        )
+                    } else {
+                        let conversationViewModel = viewModel.conversationViewModel
+                        ConversationView(
+                            viewModel: conversationViewModel,
+                            focusState: $focusState,
+                            onScanInviteCode: viewModel.onScanInviteCode,
+                            onDeleteConversation: viewModel.deleteConversation,
+                            confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
+                            messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
+                        )
                         .toolbar {
                             ToolbarItem(placement: .topBarLeading) {
                                 Button(role: .close) {
@@ -86,8 +81,8 @@ struct NewConversationView: View {
                 }
                 .background(.colorBackgroundPrimary)
                 .sheet(isPresented: $viewModel.presentingJoinConversationSheet) {
-                    JoinConversationView { inviteCode in
-                        viewModel.join(inviteUrlString: inviteCode)
+                    JoinConversationView(viewModel: viewModel.qrScannerViewModel, allowsDismissal: true) { inviteCode in
+                        viewModel.joinConversation(inviteCode: inviteCode)
                     }
                 }
                 .selfSizingSheet(isPresented: $viewModel.presentingInvalidInviteSheet) {

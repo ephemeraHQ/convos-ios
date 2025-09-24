@@ -34,14 +34,14 @@ public class MockMessagingService: MessagingServiceProtocol {
 
     // MARK: - Protocol Conformance
 
-    public func stop() {}
-
-    public func stopAndDelete() {}
-
-    public func stopAndDelete() async {}
+    public func reset() async {}
 
     public func registerForPushNotifications() async {
         // Mock implementation - no-op
+    }
+
+    public var inboxStateManager: any InboxStateManagerProtocol {
+        self
     }
 
     public func myProfileWriter() -> any MyProfileWriterProtocol {
@@ -93,6 +93,26 @@ public class MockMessagingService: MessagingServiceProtocol {
         let uploadedURL = "https://example.com/uploads/\(filename)"
         try await afterUpload(uploadedURL)
         return uploadedURL
+    }
+}
+
+extension MockMessagingService: InboxStateManagerProtocol {
+    public var currentState: InboxStateMachine.State {
+        .uninitialized
+    }
+
+    public func waitForInboxReadyResult() async throws -> InboxReadyResult {
+        .init(client: self, apiClient: MockAPIClient(client: self))
+    }
+
+    public func addObserver(_ observer: any InboxStateObserver) {
+    }
+
+    public func removeObserver(_ observer: any InboxStateObserver) {
+    }
+
+    public func observeState(_ handler: @escaping (InboxStateMachine.State) -> Void) -> StateObserverHandle {
+        .init(observer: .init(handler: { _ in }), manager: self)
     }
 }
 

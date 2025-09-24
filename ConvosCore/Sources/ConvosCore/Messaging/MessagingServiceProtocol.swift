@@ -2,11 +2,7 @@ import Combine
 import Foundation
 
 public protocol MessagingServiceProtocol: AnyObject {
-    var identifier: String { get }
-
-    func stop()
-    func stopAndDelete()
-    func stopAndDelete() async
+    func reset() async
 
     func registerForPushNotifications() async
 

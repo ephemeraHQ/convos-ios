@@ -6,7 +6,8 @@ import UserNotifications
 
 /// Lightweight delegate for push notifications and scene configuration
 @MainActor
-class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, ObservableObject {
+@Observable
+class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     var session: (any SessionManagerProtocol)?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
