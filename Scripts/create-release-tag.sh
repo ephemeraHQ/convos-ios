@@ -282,7 +282,7 @@ main() {
 
         if [ "$new_major" -lt "$curr_major" ] || \
            ([ "$new_major" -eq "$curr_major" ] && [ "$new_minor" -lt "$curr_minor" ]) || \
-           ([ "$new_major" -eq "$curr_major" ] && [ "$new_minor" -eq "$curr_minor" ] && [ "$new_patch" -le "$curr_patch" ]); then
+           ([ "$new_major" -eq "$curr_major" ] && [ "$new_minor" -eq "$curr_minor" ] && [ "$new_patch" -lt "$curr_patch" ]); then
             print_error "New version ($BASE_VERSION) must be greater than current ($current_version)"
             exit 1
         fi
