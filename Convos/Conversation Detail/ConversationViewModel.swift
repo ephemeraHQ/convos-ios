@@ -331,7 +331,7 @@ class ConversationViewModel {
             Task { [weak self] in
                 guard let self else { return }
                 do {
-                    try await myProfileWriter.update(displayName: trimmedDisplayName)
+                    try await myProfileWriter.update(displayName: trimmedDisplayName, conversationId: conversation.id)
                 } catch {
                     Logger.error("Error updating profile display name: \(error.localizedDescription)")
                 }
@@ -345,7 +345,7 @@ class ConversationViewModel {
             Task { [weak self] in
                 guard let self else { return }
                 do {
-                    try await myProfileWriter.update(avatar: profileImage)
+                    try await myProfileWriter.update(avatar: profileImage, conversationId: conversation.id)
                 } catch {
                     Logger.error("Error updating profile image: \(error.localizedDescription)")
                 }

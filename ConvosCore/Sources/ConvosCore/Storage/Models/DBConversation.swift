@@ -31,12 +31,12 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
     public let imageURLString: String?
 
     static let creatorForeignKey: ForeignKey = ForeignKey(
-        [Columns.creatorId],
-        to: [DBConversationMember.Columns.inboxId]
+        [Columns.creatorId, Columns.id],
+        to: [DBConversationMember.Columns.inboxId, DBConversationMember.Columns.conversationId]
     )
     static let inboxMemberKey: ForeignKey = ForeignKey(
-        [Columns.inboxId],
-        to: [DBConversationMember.Columns.inboxId]
+        [Columns.inboxId, Columns.id],
+        to: [DBConversationMember.Columns.inboxId, DBConversationMember.Columns.conversationId]
     )
     static let localStateForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
     static let inviteForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
@@ -63,7 +63,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
         using: creatorForeignKey
     )
 
-    // the member whos inbox this is
+    // the member whos conversation this is
     static let inboxMember: BelongsToAssociation<DBConversation, DBConversationMember> = belongsTo(
         DBConversationMember.self,
         key: "conversationInboxMember",

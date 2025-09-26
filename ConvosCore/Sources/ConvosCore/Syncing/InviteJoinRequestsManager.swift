@@ -10,16 +10,12 @@ protocol InviteJoinRequestsManagerProtocol {
 
 class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
     private let databaseReader: any DatabaseReader
-    private let conversationWriter: any ConversationWriterProtocol
 
     private var streamMessagesTask: Task<Void, Never>?
 
     init(databaseReader: any DatabaseReader,
          databaseWriter: any DatabaseWriter) {
         self.databaseReader = databaseReader
-        let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-        self.conversationWriter = ConversationWriter(databaseWriter: databaseWriter,
-                                                     messageWriter: messageWriter)
     }
 
     deinit {
@@ -29,6 +25,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
     func start(with client: AnyClientProvider,
                apiClient: any ConvosAPIClientProtocol) {
+        let inboxId = client.inboxId
         streamMessagesTask = Task { [weak self, client] in
             do {
                 Logger.info("Started streaming messages...")
@@ -39,16 +36,27 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                         onClose: {
                             Logger.warning("Closing streamAllMessages...")
                         }
-                    ) {
+                    ).filter({ $0.senderInboxId != inboxId }) {
                     guard let self else { return }
                     do {
                         let dbMessage = try message.dbRepresentation()
-                        guard let inviteCode = dbMessage.text else {
+                        guard let text = dbMessage.text else {
                             continue
                         }
+
+                        let signedInvite = try InviteSlugComposer.decode(text)
+                        // @jarodl do more validation here, if someone is sending bogus invites, block the inbox id
+
+                        let publicKey = try signedInvite.signature.recoverPublicKey()
+//                        let verifiedSignature = try signedInvite.verify(signature: signedInvite.signature, with: publicKey)
+//                        guard verifiedSignature else {
+//                            throw ConversationStateMachineError.failedVerifyingSignature
+//                        }
+
                         let dbConversation: DBConversation? = try await databaseReader.read { db in
                             guard let invite = try DBInvite
-                                .fetchOne(db, key: inviteCode) else {
+                                .filter(DBInvite.Columns.code == signedInvite.payload.code)
+                                .fetchOne(db) else {
                                 Logger.warning("Invite code not found for incoming message content")
                                 return nil
                             }
@@ -77,8 +85,8 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                         case .group(let group):
                             Logger.info("Adding \(message.senderInboxId) to group \(group.id)...")
                             try await group.add(members: [message.senderInboxId])
-                            Logger.info("Storing conversation with id: \(conversation.id)")
-                            try await conversationWriter.store(conversation: conversation)
+//                            Logger.info("Storing conversation with id: \(conversation.id)")
+//                            try await conversationWriter.store(conversation: conversation)
                         case .dm:
                             Logger.warning("Expected Group but found DM, ignoring invite join request...")
                         }

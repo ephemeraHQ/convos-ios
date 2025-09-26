@@ -50,6 +50,7 @@ public protocol XMTPClientProvider: AnyObject {
     var inboxId: String { get }
     var conversationsProvider: ConversationsProvider { get }
     func signWithInstallationKey(message: String) throws -> Data
+    func verifySignature(message: String, signature: Data) throws -> Bool
     func messageSender(for conversationId: String) async throws -> (any MessageSender)?
     func canMessage(identity: String) async throws -> Bool
     func canMessage(identities: [String]) async throws -> [String: Bool]

@@ -36,6 +36,7 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
     }
 
     init(inboxStateManager: any InboxStateManagerProtocol,
+         identityStore: any KeychainIdentityStoreProtocol,
          databaseReader: any DatabaseReader,
          databaseWriter: any DatabaseWriter) {
         self.inboxStateManager = inboxStateManager
@@ -47,12 +48,11 @@ class DraftConversationWriter: DraftConversationWriterProtocol {
             databaseWriter: databaseWriter
         )
 
-        let inviteWriter = InviteWriter(databaseWriter: databaseWriter)
         self.stateMachine = ConversationStateMachine(
             inboxStateManager: inboxStateManager,
+            identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
-            inviteWriter: inviteWriter
         )
 
         setupStateObservation()

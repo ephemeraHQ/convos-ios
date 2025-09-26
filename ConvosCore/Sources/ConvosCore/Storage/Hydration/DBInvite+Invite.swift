@@ -3,14 +3,13 @@ import Foundation
 extension DBInvite {
     func hydrateInvite() -> Invite {
         .init(
-            code: id,
+            code: code,
             conversationId: conversationId,
-            inviteUrlString: inviteUrlString,
-            status: status,
+            inviteSlug: inviteSlug,
             createdAt: createdAt,
+            expiresAt: expiresAt,
             maxUses: maxUses,
             usesCount: usesCount,
-            autoApprove: autoApprove
         )
     }
 }

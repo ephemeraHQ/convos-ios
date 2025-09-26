@@ -52,9 +52,11 @@ actor SyncingManager: SyncingManagerProtocol {
 
     // MARK: - Initialization
 
-    init(databaseWriter: any DatabaseWriter) {
+    init(identityStore: any KeychainIdentityStoreProtocol,
+         databaseWriter: any DatabaseWriter) {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(
+            identityStore: identityStore,
             databaseWriter: databaseWriter,
             messageWriter: messageWriter
         )
@@ -206,7 +208,7 @@ actor SyncingManager: SyncingManagerProtocol {
                     try Task.checkCancellation()
 
                     // Process conversation
-                    await processConversation(conversation, apiClient: apiClient)
+                    await processConversation(conversation, client: client, apiClient: apiClient)
                 }
 
                 // Stream ended (onClose was called and continuation finished)
@@ -240,7 +242,7 @@ actor SyncingManager: SyncingManagerProtocol {
 
             // Sync profiles if needed
             if shouldSyncMemberProfiles(for: conversation.id) {
-                await syncMemberProfiles(apiClient: apiClient, for: [conversation])
+//                await syncMemberProfiles(apiClient: apiClient, for: [conversation])
             }
 
             // Store conversation and message
@@ -264,12 +266,13 @@ actor SyncingManager: SyncingManagerProtocol {
 
     private func processConversation(
         _ conversation: XMTPiOS.Conversation,
+        client: AnyClientProvider,
         apiClient: any ConvosAPIClientProtocol
     ) async {
         do {
             // Sync member profiles
             if shouldSyncMemberProfiles(for: conversation.id) {
-                await syncMemberProfiles(apiClient: apiClient, for: [conversation])
+//                await syncMemberProfiles(apiClient: apiClient, for: [conversation])
             }
 
             // Store with latest messages
@@ -319,7 +322,7 @@ actor SyncingManager: SyncingManagerProtocol {
                 // Sync profiles
                 group.addTask { [weak self] in
                     guard let self else { return }
-                    await self.syncMemberProfiles(apiClient: apiClient, for: conversations)
+//                    await self.syncMemberProfiles(apiClient: apiClient, for: conversations)
                 }
             }
 
@@ -467,22 +470,22 @@ actor SyncingManager: SyncingManagerProtocol {
 
         // Cancel existing profile sync task if conversation changed
         if previousId != conversationId || (conversationId != nil && activeConversationProfileTask == nil) {
-            activeConversationProfileTask?.cancel()
-            activeConversationProfileTask = nil
-
-            // Start new profile sync task if we have a conversation
-            if let conversationId = conversationId,
-               let client = currentClient,
-               let apiClient = currentApiClient {
-                Logger.info("Starting periodic profile sync for conversation: \(conversationId)")
-                activeConversationProfileTask = Task { [weak self] in
-                    await self?.runActiveConversationProfileSync(
-                        conversationId: conversationId,
-                        client: client,
-                        apiClient: apiClient
-                    )
-                }
-            }
+//            activeConversationProfileTask?.cancel()
+//            activeConversationProfileTask = nil
+//
+//            // Start new profile sync task if we have a conversation
+//            if let conversationId = conversationId,
+//               let client = currentClient,
+//               let apiClient = currentApiClient {
+//                Logger.info("Starting periodic profile sync for conversation: \(conversationId)")
+//                activeConversationProfileTask = Task { [weak self] in
+//                    await self?.runActiveConversationProfileSync(
+//                        conversationId: conversationId,
+//                        client: client,
+//                        apiClient: apiClient
+//                    )
+//                }
+//            }
         }
     }
 
@@ -505,7 +508,7 @@ actor SyncingManager: SyncingManagerProtocol {
                 if let conversation = try await client.conversationsProvider.findConversation(
                     conversationId: conversationId
                 ) {
-                    await syncMemberProfiles(apiClient: apiClient, for: [conversation], force: true)
+//                    await syncMemberProfiles(apiClient: apiClient, for: [conversation], force: true)
                     Logger.info("Synced profiles for active conversation: \(conversationId)")
                 }
 

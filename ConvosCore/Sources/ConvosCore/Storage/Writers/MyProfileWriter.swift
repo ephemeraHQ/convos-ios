@@ -3,8 +3,8 @@ import GRDB
 import UIKit
 
 public protocol MyProfileWriterProtocol {
-    func update(displayName: String) async throws
-    func update(avatar: UIImage?) async throws
+    func update(displayName: String, conversationId: String) async throws
+    func update(avatar: UIImage?, conversationId: String) async throws
 }
 
 enum MyProfileWriterError: Error {
@@ -23,7 +23,7 @@ class MyProfileWriter: MyProfileWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    func update(displayName: String) async throws {
+    func update(displayName: String, conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
         let trimmedDisplayName = {
             var name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -37,7 +37,8 @@ class MyProfileWriter: MyProfileWriterProtocol {
         let profile = try await databaseWriter.write { db in
             let member = Member(inboxId: inboxId)
             try member.save(db)
-            let profile = (try MemberProfile.fetchOne(db, key: inboxId) ?? .init(
+            let profile = (try MemberProfile.fetchOne(db, conversationId: conversationId, inboxId: inboxId) ?? .init(
+                conversationId: conversationId,
                 inboxId: inboxId,
                 name: trimmedDisplayName,
                 avatar: nil
@@ -49,17 +50,22 @@ class MyProfileWriter: MyProfileWriterProtocol {
         _ = try await inboxReady.apiClient.updateProfile(inboxId: inboxId, with: profile.asUpdateRequest())
     }
 
-    func update(avatar: UIImage?) async throws {
+    func update(avatar: UIImage?, conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
         let inboxId = inboxReady.client.inboxId
         let profile = try await databaseWriter.write { db in
             let member = Member(inboxId: inboxId)
             try member.save(db)
-            if let foundProfile = try MemberProfile.fetchOne(db, key: inboxId) {
+            if let foundProfile = try MemberProfile.fetchOne(db, conversationId: conversationId, inboxId: inboxId) {
                 Logger.info("Found profile: \(foundProfile)")
                 return foundProfile
             } else {
-                let profile = MemberProfile(inboxId: inboxId, name: nil, avatar: nil)
+                let profile = MemberProfile(
+                    conversationId: conversationId,
+                    inboxId: inboxId,
+                    name: nil,
+                    avatar: nil
+                )
                 try profile.save(db)
                 return profile
             }

@@ -127,7 +127,11 @@ extension MessagingService {
         }
 
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-        let conversationWriter = ConversationWriter(databaseWriter: databaseWriter, messageWriter: messageWriter)
+        let conversationWriter = ConversationWriter(
+            identityStore: identityStore,
+            databaseWriter: databaseWriter,
+            messageWriter: messageWriter
+        )
         let dbConversation = try await conversationWriter.store(conversation: conversation)
         _ = try await messageWriter.store(message: decodedMessage, for: dbConversation)
 
@@ -263,7 +267,11 @@ extension MessagingService {
             // Store the updated conversation
             Logger.info("Storing updated conversation with id: \(xmtpConversation.id)")
             let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-            let conversationWriter = ConversationWriter(databaseWriter: databaseWriter, messageWriter: messageWriter)
+            let conversationWriter = ConversationWriter(
+                identityStore: identityStore,
+                databaseWriter: databaseWriter,
+                messageWriter: messageWriter
+            )
             let dBConversation = try await conversationWriter.store(conversation: xmtpConversation)
 
             Logger.info("Successfully processed invite join request for \(requesterInboxId)")

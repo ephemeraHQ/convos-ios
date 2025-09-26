@@ -123,10 +123,10 @@ extension MockMessagingService: InviteRepositoryProtocol {
 }
 
 extension MockMessagingService: MyProfileWriterProtocol {
-    public func update(displayName: String) {
+    public func update(displayName: String, conversationId: String) {
     }
 
-    public func update(avatar: UIImage?) async throws {
+    public func update(avatar: UIImage?, conversationId: String) async throws {
     }
 }
 
@@ -284,6 +284,10 @@ extension MockMessagingService: XMTPClientProvider {
 
     public func signWithInstallationKey(message: String) throws -> Data {
         Data()
+    }
+
+    public func verifySignature(message: String, signature: Data) throws -> Bool {
+        true
     }
 
     public func canMessage(identity: String) async throws -> Bool {

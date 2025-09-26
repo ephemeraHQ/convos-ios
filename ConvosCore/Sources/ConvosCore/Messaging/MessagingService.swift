@@ -7,6 +7,7 @@ final class MessagingService: MessagingServiceProtocol {
     private let authorizationOperation: any AuthorizeInboxOperationProtocol
     internal let inboxStateManager: any InboxStateManagerProtocol
     private let databaseReader: any DatabaseReader
+    internal let identityStore: any KeychainIdentityStoreProtocol
     internal let databaseWriter: any DatabaseWriter
     private var cancellables: Set<AnyCancellable> = []
 
@@ -17,7 +18,9 @@ final class MessagingService: MessagingServiceProtocol {
         startsStreamingServices: Bool,
         registersForPushNotifications: Bool = true
     ) -> MessagingService {
+        let identityStore = environment.defaultIdentityStore
         let authorizationOperation = AuthorizeInboxOperation.authorize(
+            identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
@@ -27,13 +30,16 @@ final class MessagingService: MessagingServiceProtocol {
         return .init(
             authorizationOperation: authorizationOperation,
             databaseWriter: databaseWriter,
-            databaseReader: databaseReader
+            databaseReader: databaseReader,
+            identityStore: identityStore
         )
     }
 
     internal init(authorizationOperation: AuthorizeInboxOperation,
                   databaseWriter: any DatabaseWriter,
-                  databaseReader: any DatabaseReader) {
+                  databaseReader: any DatabaseReader,
+                  identityStore: any KeychainIdentityStoreProtocol) {
+        self.identityStore = identityStore
         self.authorizationOperation = authorizationOperation
         self.inboxStateManager = InboxStateManager(stateMachine: authorizationOperation.stateMachine)
         self.databaseReader = databaseReader
@@ -86,6 +92,7 @@ final class MessagingService: MessagingServiceProtocol {
     func draftConversationComposer() -> any DraftConversationComposerProtocol {
         let draftConversationWriter = DraftConversationWriter(
             inboxStateManager: inboxStateManager,
+            identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
         )
