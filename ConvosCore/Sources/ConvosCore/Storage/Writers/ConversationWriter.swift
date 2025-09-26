@@ -17,12 +17,18 @@ public protocol ConversationWriterProtocol {
 
 class ConversationWriter: ConversationWriterProtocol {
     private let databaseWriter: any DatabaseWriter
+    private let inviteWriter: any InviteWriterProtocol
     private let messageWriter: any IncomingMessageWriterProtocol
     private let localStateWriter: any ConversationLocalStateWriterProtocol
 
-    init(databaseWriter: any DatabaseWriter,
+    init(identityStore: any KeychainIdentityStoreProtocol,
+         databaseWriter: any DatabaseWriter,
          messageWriter: any IncomingMessageWriterProtocol) {
         self.databaseWriter = databaseWriter
+        self.inviteWriter = InviteWriter(
+            identityStore: identityStore,
+            databaseWriter: databaseWriter
+        )
         self.messageWriter = messageWriter
         self.localStateWriter = ConversationLocalStateWriter(databaseWriter: databaseWriter)
     }
@@ -138,15 +144,17 @@ class ConversationWriter: ConversationWriterProtocol {
             // Save creator
             let creator = Member(inboxId: dbConversation.creatorId)
             try creator.save(db)
+
+            // Save conversation (handle local conversation updates)
+            try saveConversation(dbConversation, clientConversationId: clientConversationId, in: db)
+
             let creatorProfile = MemberProfile(
+                conversationId: dbConversation.id,
                 inboxId: dbConversation.creatorId,
                 name: nil,
                 avatar: nil
             )
             try creatorProfile.insert(db, onConflict: .ignore)
-
-            // Save conversation (handle local conversation updates)
-            try saveConversation(dbConversation, clientConversationId: clientConversationId, in: db)
 
             // Save local state
             let localState = ConversationLocalState(
@@ -190,6 +198,7 @@ class ConversationWriter: ConversationWriterProtocol {
             try Member(inboxId: member.inboxId).save(db)
             try member.save(db)
             let memberProfile = MemberProfile(
+                conversationId: member.conversationId,
                 inboxId: member.inboxId,
                 name: nil,
                 avatar: nil

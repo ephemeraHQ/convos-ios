@@ -27,6 +27,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     private var task: Task<Void, Never>?
 
     static func authorize(
+        identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
@@ -34,6 +35,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         registersForPushNotifications: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
+            identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
@@ -45,20 +47,24 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     }
 
     private init(
+        identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
         registersForPushNotifications: Bool
     ) {
-        let syncingManager = startsStreamingServices ? SyncingManager(databaseWriter: databaseWriter) : nil
+        let syncingManager = startsStreamingServices ? SyncingManager(
+            identityStore: identityStore,
+            databaseWriter: databaseWriter
+        ) : nil
         let inviteJoinRequestsManager = startsStreamingServices ? InviteJoinRequestsManager(
             databaseReader: databaseReader,
             databaseWriter: databaseWriter
         ) : nil
         let invitesRepository = InvitesRepository(databaseReader: databaseReader)
         stateMachine = InboxStateMachine(
-            identityStore: environment.defaultIdentityStore,
+            identityStore: identityStore,
             invitesRepository: invitesRepository,
             syncingManager: syncingManager,
             inviteJoinRequestsManager: inviteJoinRequestsManager,

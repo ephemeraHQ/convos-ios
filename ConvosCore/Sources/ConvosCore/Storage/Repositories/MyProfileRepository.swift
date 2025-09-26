@@ -48,27 +48,28 @@ class MyProfileRepository: MyProfileRepositoryProtocol {
     }
 
     private func startObservingProfile(for inboxId: String) {
-        let observation = ValueObservation
-            .tracking { db in
-                try MemberProfile
-                    .fetchOne(db, key: inboxId)?
-                    .hydrateProfile() ?? .empty(inboxId: inboxId)
-            }
-            .publisher(in: databaseReader)
-            .replaceError(with: .empty(inboxId: inboxId))
-
-        observation
-            .sink { [weak self] profile in
-                self?.profileSubject.send(profile)
-            }
-            .store(in: &cancellables)
+//        let observation = ValueObservation
+//            .tracking { db in
+//                try MemberProfile
+//                    .fetchOne(db, key: inboxId)?
+//                    .hydrateProfile() ?? .empty(inboxId: inboxId)
+//            }
+//            .publisher(in: databaseReader)
+//            .replaceError(with: .empty(inboxId: inboxId))
+//
+//        observation
+//            .sink { [weak self] profile in
+//                self?.profileSubject.send(profile)
+//            }
+//            .store(in: &cancellables)
     }
 
     func fetch(inboxId: String) throws -> Profile {
-        try databaseReader.read { db in
-            try MemberProfile
-                .fetchOne(db, key: inboxId)?
-                .hydrateProfile() ?? .empty(inboxId: inboxId)
-        }
+        .empty()
+//        try databaseReader.read { db in
+//            try MemberProfile
+//                .fetchOne(db, key: inboxId)?
+//                .hydrateProfile() ?? .empty(inboxId: inboxId)
+//        }
     }
 }

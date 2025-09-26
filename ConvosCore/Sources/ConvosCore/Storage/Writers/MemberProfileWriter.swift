@@ -25,13 +25,14 @@ class MemberProfileWriter: MemberProfileWriterProtocol {
     }
 
     func store(profiles: [ConvosAPI.ProfileResponse]) async throws {
-        let memberProfiles: [MemberProfile] = profiles.map { profile in
-                .init(
-                    inboxId: profile.xmtpId,
-                    name: profile.name,
-                    avatar: profile.avatar
-                )
-        }
-        try await store(memberProfiles: memberProfiles)
+//        let memberProfiles: [MemberProfile] = profiles.map { profile in
+//                .init(
+//                    conversationId: "",
+//                    inboxId: profile.xmtpId,
+//                    name: profile.name,
+//                    avatar: profile.avatar
+//                )
+//        }
+//        try await store(memberProfiles: memberProfiles)
     }
 }

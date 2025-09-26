@@ -3,34 +3,28 @@ import GRDB
 
 // MARK: - DBInvite
 
-public enum InviteStatus: String, Codable {
-    case active, expired, disabled
-}
-
-struct DBInvite: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
+struct DBInvite: Codable, FetchableRecord, PersistableRecord, Hashable {
     static var databaseTableName: String = "invite"
 
     enum Columns {
-        static let id: Column = Column(CodingKeys.id)
+        static let code: Column = Column(CodingKeys.code)
         static let creatorInboxId: Column = Column(CodingKeys.creatorInboxId)
         static let conversationId: Column = Column(CodingKeys.conversationId)
-        static let inviteUrlString: Column = Column(CodingKeys.inviteUrlString)
+        static let inviteSlug: Column = Column(CodingKeys.inviteSlug)
         static let maxUses: Column = Column(CodingKeys.maxUses)
         static let usesCount: Column = Column(CodingKeys.usesCount)
-        static let status: Column = Column(CodingKeys.status)
         static let createdAt: Column = Column(CodingKeys.createdAt)
-        static let autoApprove: Column = Column(CodingKeys.autoApprove)
+        static let expiresAt: Column = Column(CodingKeys.expiresAt)
     }
 
-    let id: String
+    let code: String
     let creatorInboxId: String
     let conversationId: String
-    let inviteUrlString: String
+    let inviteSlug: String
     let maxUses: Int?
     let usesCount: Int
-    let status: InviteStatus
     let createdAt: Date
-    let autoApprove: Bool
+    let expiresAt: Date?
 
     // Foreign key to the member who created this invite
     static let creatorForeignKey: ForeignKey = ForeignKey(

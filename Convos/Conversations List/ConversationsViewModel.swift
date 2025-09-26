@@ -56,7 +56,7 @@ final class ConversationsViewModel {
                 hasCreatedMoreThanOneConvo = true
             }
 
-            hasEarlyAccess = conversationsCount > 0
+            hasEarlyAccess = true// conversationsCount > 0
         }
     }
 
@@ -114,12 +114,12 @@ final class ConversationsViewModel {
         do {
             self.conversations = try conversationsRepository.fetchAll()
             self.conversationsCount = try conversationsCountRepository.fetchCount()
-            self.hasEarlyAccess = conversationsCount > 0
+            self.hasEarlyAccess = true // conversationsCount > 0
         } catch {
             Logger.error("Error fetching conversations: \(error)")
             self.conversations = []
             self.conversationsCount = 0
-            self.hasEarlyAccess = false
+//            self.hasEarlyAccess = false
         }
         if !hasEarlyAccess {
             self.newConversationViewModel = .init(

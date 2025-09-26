@@ -35,21 +35,6 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    // MARK: - Private Helpers
-
-    private func getInviteCode(for conversationId: String) async throws -> String? {
-        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
-        let currentUserInboxId = inboxReady.client.inboxId
-
-        return try await databaseWriter.read { db in
-            try DBInvite
-                .filter(DBInvite.Columns.conversationId == conversationId)
-                .filter(DBInvite.Columns.creatorInboxId == currentUserInboxId)
-                .fetchOne(db)?
-                .id
-        }
-    }
-
     // MARK: - Group Metadata Updates
 
     func updateGroupName(conversationId: String, name: String) async throws {
@@ -60,17 +45,6 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
         guard let conversation = try await inboxReady.client.conversation(with: conversationId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(conversationId: conversationId)
-        }
-
-        // Update backend invite metadata if invite exists
-        if let inviteCode = try await getInviteCode(for: conversationId) {
-            Logger.info("Found invite code for conversation \(conversationId): \(inviteCode)")
-            do {
-                try await inboxReady.apiClient.updateInviteName(inviteCode, name: truncatedName)
-                Logger.info("Updated backend invite name for conversation \(conversationId)")
-            } catch {
-                // Continue with XMTP update even if backend update fails
-            }
         }
 
         try await group.updateName(name: truncatedName)
@@ -94,16 +68,6 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
         guard let conversation = try await inboxReady.client.conversation(with: conversationId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(conversationId: conversationId)
-        }
-
-        // Update backend invite metadata if invite exists
-        if let inviteCode = try await getInviteCode(for: conversationId) {
-            Logger.info("Found invite code for conversation \(conversationId): \(inviteCode)")
-            do {
-                try await inboxReady.apiClient.updateInviteDescription(inviteCode, description: description)
-            } catch {
-                // Continue with XMTP update even if backend update fails
-            }
         }
 
         try await group.updateDescription(description: description)
@@ -151,16 +115,6 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
         guard let conversation = try await inboxReady.client.conversation(with: conversationId),
               case .group(let group) = conversation else {
             throw GroupMetadataError.groupNotFound(conversationId: conversationId)
-        }
-
-        // Update backend invite metadata if invite exists
-        if let inviteCode = try await getInviteCode(for: conversationId) {
-            Logger.info("Found invite code for conversation \(conversationId): \(inviteCode)")
-            do {
-                try await inboxReady.apiClient.updateInviteImageUrl(inviteCode, imageUrl: imageURL)
-            } catch {
-                // Continue with XMTP update even if backend update fails
-            }
         }
 
         try await group.updateImageUrl(imageUrl: imageURL)

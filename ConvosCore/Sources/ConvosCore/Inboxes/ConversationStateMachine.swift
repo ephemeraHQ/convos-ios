@@ -5,7 +5,6 @@ import XMTPiOS
 
 public struct ConversationReadyResult {
     public let conversationId: String
-    public let invite: Invite
 }
 
 public actor ConversationStateMachine {
@@ -21,8 +20,8 @@ public actor ConversationStateMachine {
         case uninitialized
         case creating
         case validating(inviteCode: String)
-        case validated(invite: ConvosAPI.InviteDetailsWithGroupResponse, inboxReady: InboxReadyResult)
-        case joining(invite: ConvosAPI.InviteDetailsWithGroupResponse)
+        case validated(invite: SignedInvite, inboxReady: InboxReadyResult)
+        case joining(invite: SignedInvite)
         case ready(ConversationReadyResult)
         case deleting
         case error(Error)
@@ -34,14 +33,14 @@ public actor ConversationStateMachine {
                  (.deleting, .deleting):
                 return true
             case let (.joining(lhsInvite), .joining(rhsInvite)):
-                return lhsInvite.id == rhsInvite.id
+                return lhsInvite.payload.code == rhsInvite.payload.code
             case let (.validating(lhsCode), .validating(rhsCode)):
                 return lhsCode == rhsCode
             case let (.validated(lhsInvite, lhsInbox), .validated(rhsInvite, rhsInbox)):
-                return lhsInvite.id == rhsInvite.id && lhsInbox.client.inboxId == rhsInbox.client.inboxId
+                return (lhsInvite.payload.code == rhsInvite.payload.code &&
+                        lhsInbox.client.inboxId == rhsInbox.client.inboxId)
             case let (.ready(lhsResult), .ready(rhsResult)):
-                return (lhsResult.conversationId == rhsResult.conversationId &&
-                        lhsResult.invite.id == rhsResult.invite.id)
+                return lhsResult.conversationId == rhsResult.conversationId
             default:
                 return false
             }
@@ -50,10 +49,10 @@ public actor ConversationStateMachine {
 
     // MARK: - Properties
 
+    private let identityStore: any KeychainIdentityStoreProtocol
     private let inboxStateManager: any InboxStateManagerProtocol
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
-    private let inviteWriter: any InviteWriterProtocol
 
     private var currentTask: Task<Void, Never>?
     private var streamConversationsTask: Task<Void, Never>?
@@ -112,14 +111,14 @@ public actor ConversationStateMachine {
 
     init(
         inboxStateManager: any InboxStateManagerProtocol,
+        identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
-        inviteWriter: any InviteWriterProtocol
     ) {
         self.inboxStateManager = inboxStateManager
+        self.identityStore = identityStore
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
-        self.inviteWriter = inviteWriter
     }
 
     deinit {
@@ -298,8 +297,16 @@ public actor ConversationStateMachine {
 
         // Store the conversation
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-        let conversationWriter = ConversationWriter(databaseWriter: databaseWriter, messageWriter: messageWriter)
-        _ = try await conversationWriter.store(conversation: createdConversation)
+        let conversationWriter = ConversationWriter(
+            identityStore: identityStore,
+            databaseWriter: databaseWriter,
+            messageWriter: messageWriter
+        )
+        let dbConversation = try await conversationWriter.store(conversation: createdConversation)
+
+        // Create invite
+        let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
+        _ = try await inviteWriter.generate(for: dbConversation, maxUses: nil, expiresAt: nil)
 
         // Subscribe to push notifications
         let topic = externalConversationId.xmtpGroupTopicFormat
@@ -310,25 +317,9 @@ public actor ConversationStateMachine {
             Logger.error("Failed subscribing to topic \(topic): \(error)")
         }
 
-        // Create invite
-        let inviteResponse = try await apiClient.createInvite(
-            .init(
-                groupId: externalConversationId,
-                name: nil,
-                description: nil,
-                imageUrl: nil,
-                maxUses: nil,
-                expiresAt: nil,
-                autoApprove: true,
-                notificationTargets: []
-            )
-        )
-        let invite = try await inviteWriter.store(invite: inviteResponse, inboxId: client.inboxId)
-
         // Transition directly to ready state
         emitStateChange(.ready(ConversationReadyResult(
-            conversationId: externalConversationId,
-            invite: invite
+            conversationId: externalConversationId
         )))
     }
 
@@ -362,19 +353,27 @@ public actor ConversationStateMachine {
 
         Logger.info("Validating invite code '\(inviteCode)'")
 
-        let code: String
-        let trimmedInviteCode = inviteCode.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Try to extract invite code from URL first
-        if let url = URL(string: trimmedInviteCode), let extractedCode = url.convosInviteCode {
-            code = extractedCode
-        } else if trimmedInviteCode.count >= 8 {
-            code = trimmedInviteCode
+        let extractedCode: String
+        if let url = URL(string: inviteCode) {
+            extractedCode = url.lastPathComponent
         } else {
-            throw ConversationStateMachineError.invalidInviteCodeFormat(inviteCode)
+            extractedCode = inviteCode
         }
 
-        Logger.info("Extracted invite code '\(code)', checking if we're already a member...")
+        let trimmedInviteCode = extractedCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        let signedInvite = try InviteSlugComposer.decode(trimmedInviteCode)
 
+        Logger.info("Waiting for inbox ready result...")
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
+        Logger.info("Inbox ready, validating signed invite...")
+
+//        let publicKey = try signedInvite.signature.recoverPublicKey()
+//        let verifiedSignature = try signedInvite.verify(signature: signedInvite.signature, with: publicKey)
+//        guard verifiedSignature else {
+//            throw ConversationStateMachineError.failedVerifyingSignature
+//        }
+
+        let code = signedInvite.payload.code
         let resultByInviteCode: ConversationReadyResult? = try await databaseReader.read { db in
             guard let existingInvite = try DBInvite.fetchOne(db, key: code) else {
                 return nil
@@ -383,8 +382,7 @@ public actor ConversationStateMachine {
                 return nil
             }
             return .init(
-                conversationId: existingConversation.id,
-                invite: existingInvite.hydrateInvite()
+                conversationId: existingConversation.id
             )
         }
 
@@ -394,47 +392,37 @@ public actor ConversationStateMachine {
             return
         }
 
-        Logger.info("Waiting for inbox ready result...")
-        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
-        Logger.info("Inbox ready, validating invite code on backend...")
+//        let apiClient = inboxReady.apiClient
+//        let inviteDetails: ConvosAPI.InviteDetailsWithGroupResponse
+//        do {
+//            inviteDetails = try await apiClient.inviteDetailsWithGroup(code)
+//        } catch {
+//            Logger.error("Error fetching invite details: \(error.localizedDescription)")
+//            throw ConversationStateMachineError.inviteExpired
+//        }
 
-        let apiClient = inboxReady.apiClient
-        let inviteDetails: ConvosAPI.InviteDetailsWithGroupResponse
-        do {
-            inviteDetails = try await apiClient.inviteDetailsWithGroup(code)
-        } catch {
-            Logger.error("Error fetching invite details: \(error.localizedDescription)")
-            throw ConversationStateMachineError.inviteExpired
-        }
+//        let conversationId = inviteDetails.groupId
+//        let resultByConversationId: ConversationReadyResult? = try await databaseReader.read { db in
+//            guard let existingConversation = try DBConversation.fetchOne(db, key: conversationId) else {
+//                return nil
+//            }
+//            return .init(
+//                conversationId: existingConversation.id
+//            )
+//        }
 
-        let conversationId = inviteDetails.groupId
-        let resultByConversationId: ConversationReadyResult? = try await databaseReader.read { db in
-            guard let existingConversation = try DBConversation.fetchOne(db, key: conversationId) else {
-                return nil
-            }
-            guard let existingInvite = try DBInvite
-                .filter(DBInvite.Columns.conversationId == conversationId)
-                .fetchOne(db) else {
-                return nil
-            }
-            return .init(
-                conversationId: existingConversation.id,
-                invite: existingInvite.hydrateInvite()
-            )
-        }
-
-        if let resultByConversationId {
-            Logger.info("Found existing convo by id, returning...")
-            emitStateChange(.ready(resultByConversationId))
-            return
-        }
+//        if let resultByConversationId {
+//            Logger.info("Found existing convo by id, returning...")
+//            emitStateChange(.ready(resultByConversationId))
+//            return
+//        }
 
         Logger.info("Existing conversation not found. Proceeding to join...")
-        emitStateChange(.validated(invite: inviteDetails, inboxReady: inboxReady))
+        emitStateChange(.validated(invite: signedInvite, inboxReady: inboxReady))
         enqueueAction(.join)
     }
 
-    private func handleJoin(invite: ConvosAPI.InviteDetailsWithGroupResponse, inboxReady: InboxReadyResult) async throws {
+    private func handleJoin(invite: SignedInvite, inboxReady: InboxReadyResult) async throws {
         emitStateChange(.joining(invite: invite))
 
         Logger.info("Requesting to join conversation...")
@@ -442,18 +430,26 @@ public actor ConversationStateMachine {
         let apiClient = inboxReady.apiClient
         let client = inboxReady.client
 
-        // Request to join
-        let response = try await apiClient.requestToJoin(invite.id)
-        let conversationId = response.invite.groupId
+        Task {
+            do {
+                let inviterInboxId = invite.payload.creatorInboxId
+                let dm = try await client.newConversation(with: inviterInboxId)
+                let text = try InviteSlugComposer.slug(for: invite)
+                _ = try await dm.prepare(text: text)
+                try await dm.publish()
+            } catch {
+                Logger.error("Failed sending invite request over XMTP: \(error.localizedDescription)")
+            }
+        }
 
         // Stream conversations to wait for the joined conversation
         streamConversationsTask = Task { [weak self] in
             guard let self else { return }
             do {
-                Logger.info("Started streaming conversations for inboxId: \(client.inboxId), looking for convo: \(conversationId)...")
+                Logger.info("Started streaming, looking for convo...")
                 if let conversation = try await client.conversationsProvider
                     .stream(type: .groups, onClose: nil)
-                    .first(where: { $0.id == conversationId }) {
+                    .first(where: { try await $0.creatorInboxId == invite.payload.creatorInboxId }) {
                     guard !Task.isCancelled else { return }
 
                     // Accept consent and store the conversation
@@ -461,27 +457,20 @@ public actor ConversationStateMachine {
                     Logger.info("Joined conversation with id: \(conversation.id)")
 
                     let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-                    let conversationWriter = ConversationWriter(databaseWriter: databaseWriter, messageWriter: messageWriter)
-                    _ = try await conversationWriter.store(conversation: conversation)
+                    let conversationWriter = ConversationWriter(
+                        identityStore: identityStore,
+                        databaseWriter: databaseWriter,
+                        messageWriter: messageWriter
+                    )
+                    let dbConversation = try await conversationWriter.store(conversation: conversation)
+
+                    // Create invite
+                    let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
+                    _ = try await inviteWriter.generate(for: dbConversation, maxUses: nil, expiresAt: nil)
 
                     // Store the invite we used so we don't join the same conversation again
-                    let conversationCreatorInboxId = try await conversation.creatorInboxId
-                    _ = try await inviteWriter.store(invite: response.invite, inboxId: conversationCreatorInboxId)
-
-                    // Create invite for the joined conversation
-                    let inviteResponse = try await apiClient.createInvite(
-                        .init(
-                            groupId: conversation.id,
-                            name: nil,
-                            description: nil,
-                            imageUrl: nil,
-                            maxUses: nil,
-                            expiresAt: nil,
-                            autoApprove: true,
-                            notificationTargets: []
-                        )
-                    )
-                    let invite = try await inviteWriter.store(invite: inviteResponse, inboxId: client.inboxId)
+//                    let conversationCreatorInboxId = try await conversation.creatorInboxId
+//                    _ = try await inviteWriter.store(invite: response.invite, inboxId: conversationCreatorInboxId)
 
                     // Subscribe to push notifications
                     let topic = conversation.id.xmtpGroupTopicFormat
@@ -494,8 +483,7 @@ public actor ConversationStateMachine {
 
                     // Transition directly to ready state
                     await self.emitStateChange(.ready(ConversationReadyResult(
-                        conversationId: conversation.id,
-                        invite: invite
+                        conversationId: conversation.id
                     )))
                 } else {
                     Logger.error("Error waiting for conversation to join")
@@ -530,7 +518,12 @@ public actor ConversationStateMachine {
                 imageURLString: nil
             )
 
-            let memberProfile = MemberProfile(inboxId: inboxId, name: nil, avatar: nil)
+            let memberProfile = MemberProfile(
+                conversationId: draftConversationId,
+                inboxId: inboxId,
+                name: nil,
+                avatar: nil
+            )
             let member = Member(inboxId: inboxId)
 
             try member.save(db)
@@ -677,6 +670,7 @@ public actor ConversationStateMachine {
 
 public enum ConversationStateMachineError: Error {
     case failedFindingConversation
+    case failedVerifyingSignature
     case stateMachineError(Error)
     case inviteExpired
     case invalidInviteCodeFormat(String)

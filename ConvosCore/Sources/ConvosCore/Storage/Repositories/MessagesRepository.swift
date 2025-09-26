@@ -125,13 +125,22 @@ extension Array where Element == MessageWithDetails {
                     guard let update = dbMessage.update,
                           let initiatedByMember = try MemberProfile.fetchOne(
                             database,
-                            key: update.initiatedByInboxId
+                            conversationId: conversation.id,
+                            inboxId: update.initiatedByInboxId
                           ) else {
                         Logger.error("Update message type is missing update object")
                         return nil
                     }
-                    let addedMembers = try MemberProfile.fetchAll(database, keys: update.addedInboxIds)
-                    let removedMembers = try MemberProfile.fetchAll(database, keys: update.removedInboxIds)
+                    let addedMembers = try MemberProfile.fetchAll(
+                        database,
+                        conversationId: conversation.id,
+                        inboxIds: update.addedInboxIds
+                    )
+                    let removedMembers = try MemberProfile.fetchAll(
+                        database,
+                        conversationId: conversation.id,
+                        inboxIds: update.removedInboxIds
+                    )
                     messageContent = .update(
                         .init(
                             creator: initiatedByMember.hydrateProfile(),

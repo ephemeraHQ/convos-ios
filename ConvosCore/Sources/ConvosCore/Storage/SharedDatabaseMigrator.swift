@@ -49,36 +49,34 @@ extension SharedDatabaseMigrator {
             }
 
             try db.create(table: "memberProfile") { t in
+                t.column("conversationId", .text)
+                    .notNull()
+                    .references("conversation", onDelete: .cascade)
                 t.column("inboxId", .text)
                     .notNull()
-                    .unique()
-                    .primaryKey()
                     .references("member", onDelete: .cascade)
                 t.column("name", .text)
                 t.column("avatar", .text)
+                t.primaryKey(["conversationId", "inboxId"])
             }
 
             try db.create(table: "invite") { t in
-                t.column("id", .text)
+                t.column("code", .text)
                     .notNull()
                     .primaryKey()
                 t.column("creatorInboxId", .text)
                     .notNull()
                 t.column("conversationId", .text)
                     .notNull()
-                t.column("inviteUrlString", .text)
+                t.column("inviteSlug", .text)
                     .notNull()
                 t.column("maxUses", .numeric)
                 t.column("usesCount", .numeric)
                     .defaults(to: 0)
                     .notNull()
-                t.column("status", .text)
-                    .notNull()
                 t.column("createdAt", .datetime)
                     .notNull()
-                t.column("autoApprove", .boolean)
-                    .notNull()
-                    .defaults(to: false)
+                t.column("expiresAt", .datetime)
 
                 // Foreign key to the conversation member who created this invite
                 t.foreignKey(

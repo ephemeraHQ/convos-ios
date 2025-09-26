@@ -357,10 +357,10 @@ public actor InboxStateMachine {
         Logger.info("Authenticating backend for registration...")
         let apiClient = try await authorizeConvosBackend(client: client)
         Logger.info("Registering backend...")
-        _ = try await registerBackend(
-            client: client,
-            apiClient: apiClient
-        )
+//        _ = try await registerBackend(
+//            client: client,
+//            apiClient: apiClient
+//        )
         enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
     }
 
@@ -492,7 +492,7 @@ public actor InboxStateMachine {
 
         // Make a test call to trigger (re)authentication if needed
         Logger.info("Testing authentication with /auth-check...")
-        _ = try await apiClient.checkAuth()
+//        _ = try await apiClient.checkAuth()
 
         return apiClient
     }

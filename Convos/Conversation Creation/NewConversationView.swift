@@ -4,7 +4,7 @@ import SwiftUI
 struct InviteShareLink: View {
     let invite: Invite?
     var body: some View {
-        let inviteString = invite?.inviteUrlString ?? ""
+        let inviteString = invite?.inviteURLString ?? ""
         ShareLink(
             item: inviteString,
             preview: SharePreview(
