@@ -310,10 +310,6 @@ public actor ConversationStateMachine {
         let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
         let invite = try await inviteWriter.generate(for: dbConversation, maxUses: nil, expiresAt: nil)
 
-        // Add the invite verification code to the group description so the invitee can verify
-        // they are joining the right conversation
-        try await group.updateDescription(description: invite.code)
-
         // Subscribe to push notifications
         let topic = externalConversationId.xmtpGroupTopicFormat
         do {
@@ -367,57 +363,21 @@ public actor ConversationStateMachine {
         }
 
         let trimmedInviteCode = extractedCode.trimmingCharacters(in: .whitespacesAndNewlines)
-        let signedInvite = try InviteSlugComposer.decode(trimmedInviteCode)
+        let signedInvite = try SignedInvite.fromURLSafeSlug(trimmedInviteCode)
+        // Recover the public key of whoever signed this invite
+        let signerPublicKey = try signedInvite.recoverSignerPublicKey()
+        Logger.info("Recovered signer's public key: \(signerPublicKey.hexEncodedString())")
+
+        // TODO: List all conversations and attempt matching the invite `tag`
+        //        if let resultByInviteTag {
+        //            Logger.info("Found existing convo by invite tag, returning...")
+        //            emitStateChange(.ready(resultByInviteCode))
+        //            return
+        //        }
 
         Logger.info("Waiting for inbox ready result...")
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
         Logger.info("Inbox ready, validating signed invite...")
-
-        // Recover the public key of whoever signed this invite
-        let signerPublicKey = try signedInvite.payload.recoverSignerPublicKey(from: signedInvite.signature)
-        Logger.info("Recovered signer's public key: \(signerPublicKey.hexEncodedString())")
-
-        // TODO: In the future, you may want to verify this against a known/expected public key
-        // For now, we just accept any valid signature
-        // Example: try signedInvite.payload.verifySignatureFromExpectedSigner(
-        //     signature: signedInvite.signature,
-        //     expectedPublicKey: someKnownPublicKey
-        // )
-
-        let code = signedInvite.payload.code
-        let resultByInviteCode: ConversationReadyResult? = try await databaseReader.read { db in
-            guard let existingInvite = try DBInvite.fetchOne(db, key: code) else {
-                return nil
-            }
-            guard let existingConversation = try DBConversation.fetchOne(db, key: existingInvite.conversationId) else {
-                return nil
-            }
-            return .init(
-                conversationId: existingConversation.id
-            )
-        }
-
-        if let resultByInviteCode {
-            Logger.info("Found existing convo by invite code, returning...")
-            emitStateChange(.ready(resultByInviteCode))
-            return
-        }
-
-//        let conversationId = inviteDetails.groupId
-//        let resultByConversationId: ConversationReadyResult? = try await databaseReader.read { db in
-//            guard let existingConversation = try DBConversation.fetchOne(db, key: conversationId) else {
-//                return nil
-//            }
-//            return .init(
-//                conversationId: existingConversation.id
-//            )
-//        }
-
-//        if let resultByConversationId {
-//            Logger.info("Found existing convo by id, returning...")
-//            emitStateChange(.ready(resultByConversationId))
-//            return
-//        }
 
         Logger.info("Existing conversation not found. Proceeding to join...")
         emitStateChange(.validated(invite: signedInvite, inboxReady: inboxReady))
@@ -432,17 +392,11 @@ public actor ConversationStateMachine {
         let apiClient = inboxReady.apiClient
         let client = inboxReady.client
 
-        Task {
-            do {
-                let inviterInboxId = invite.payload.creatorInboxId
-                let dm = try await client.newConversation(with: inviterInboxId)
-                let text = try InviteSlugComposer.slug(for: invite)
-                _ = try await dm.prepare(text: text)
-                try await dm.publish()
-            } catch {
-                Logger.error("Failed sending invite request over XMTP: \(error.localizedDescription)")
-            }
-        }
+        let inviterInboxId = invite.payload.creatorInboxID
+        let dm = try await client.newConversation(with: inviterInboxId)
+        let text = try invite.toURLSafeSlug()
+        _ = try await dm.prepare(text: text)
+        try await dm.publish()
 
         // Stream conversations to wait for the joined conversation
         streamConversationsTask = Task { [weak self] in
@@ -454,9 +408,8 @@ public actor ConversationStateMachine {
                     .first(where: {
                         guard case .group(let group) = $0 else { return false }
                         let creatorInboxId = try await group.creatorInboxId()
-                        let verificationCode = try group.description()
-                        return (creatorInboxId == invite.payload.creatorInboxId &&
-                                verificationCode == invite.payload.code)
+                        return (creatorInboxId == invite.payload.creatorInboxID &&
+                                invite.payload.tag.matches(conversationId: group.id))
                     }) {
                     guard !Task.isCancelled else { return }
 

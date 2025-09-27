@@ -46,7 +46,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                             continue
                         }
 
-                        let signedInvite = try InviteSlugComposer.decode(text)
+                        let signedInvite = try SignedInvite.fromURLSafeSlug(text)
 
                         // @jarodl do more validation here, if someone is sending bogus invites, block the inbox id
 
@@ -54,10 +54,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
                         let publicKey = identity.keys.privateKey.publicKey.secp256K1Uncompressed.bytes
 
-                        let verifiedSignature = try signedInvite.payload.verifySignatureFromExpectedSigner(
-                            signature: signedInvite.signature,
-                            expectedPublicKey: publicKey
-                        )
+                        let verifiedSignature = try signedInvite.verify(with: publicKey)
 
                         guard verifiedSignature else {
                             Logger.error("Failed verifying signature for invite, skipping message...")
@@ -66,7 +63,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
                         let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
                         let code = signedInvite.payload.code
-                        let conversationId = try InviteCodeCrypto.decodeCode(
+                        let conversationId = try InviteCode.decodeCode(
                             code,
                             creatorInboxId: client.inboxId,
                             secp256k1PrivateKey: privateKey

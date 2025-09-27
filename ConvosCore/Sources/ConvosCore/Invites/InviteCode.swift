@@ -38,7 +38,7 @@ enum InviteCodeCrypto {
         out.append(version)
         out.append(sealed.combined)
 
-        return b64urlEncode(out)
+        return out.base64URLEncoded()
     }
 
     /// Recover the original conversationId from a public invite code.
@@ -52,7 +52,7 @@ enum InviteCodeCrypto {
         creatorInboxId: String,
         secp256k1PrivateKey: Data
     ) throws -> String {
-        let data = try b64urlDecode(code)
+        let data = try code.base64URLDecoded()
         guard data.count > 1 else { throw Error.truncated }
         guard let ver = data.first else {
             throw Error.missingVersion
@@ -177,23 +177,5 @@ enum InviteCodeCrypto {
             guard let s = String(data: bytes, encoding: .utf8) else { throw Error.invalidFormat }
             return s
         }
-    }
-
-    // MARK: - Base64URL helpers
-
-    private static func b64urlEncode(_ d: Data) -> String {
-        d.base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
-    }
-
-    private static func b64urlDecode(_ s: String) throws -> Data {
-        var t = s.replacingOccurrences(of: "-", with: "+")
-                 .replacingOccurrences(of: "_", with: "/")
-        let pad = 4 - (t.count % 4)
-        if pad < 4 { t += String(repeating: "=", count: pad) }
-        guard let d = Data(base64Encoded: t) else { throw Error.invalidFormat }
-        return d
     }
 }

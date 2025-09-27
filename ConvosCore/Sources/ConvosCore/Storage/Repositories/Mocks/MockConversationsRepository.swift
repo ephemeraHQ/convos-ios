@@ -64,10 +64,8 @@ extension Conversation {
 extension Invite {
     public static func mock() -> Self {
         .init(
-            code: "invite_code_123",
             conversationId: "conversation_123",
-            inviteSlug: "invite_code_123",
-            createdAt: Date(),
+            urlSlug: "invite_code_123",
             expiresAt: nil,
             maxUses: nil,
             usesCount: 0,

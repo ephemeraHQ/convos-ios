@@ -61,22 +61,13 @@ extension SharedDatabaseMigrator {
             }
 
             try db.create(table: "invite") { t in
-                t.column("code", .text)
+                t.column("urlSlug", .text)
                     .notNull()
                     .primaryKey()
                 t.column("creatorInboxId", .text)
                     .notNull()
                 t.column("conversationId", .text)
                     .notNull()
-                t.column("inviteSlug", .text)
-                    .notNull()
-                t.column("maxUses", .numeric)
-                t.column("usesCount", .numeric)
-                    .defaults(to: 0)
-                    .notNull()
-                t.column("createdAt", .datetime)
-                    .notNull()
-                t.column("expiresAt", .datetime)
 
                 // Foreign key to the conversation member who created this invite
                 t.foreignKey(

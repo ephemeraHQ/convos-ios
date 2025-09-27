@@ -32,7 +32,7 @@ struct InviteView: View {
             .mask(RoundedRectangle(cornerRadius: 38.0))
 
             #if DEBUG
-            Text(invite.code)
+            Text(invite.urlSlug)
                 .frame(maxWidth: 180.0)
                 .lineLimit(0)
                 .multilineTextAlignment(.center)

@@ -500,7 +500,7 @@ public actor InboxStateMachine {
     private func deleteAllInvites(for client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
         let invites = try await invitesRepository.fetchInvites(for: client.inboxId)
         for invite in invites {
-            _ = try await apiClient.deleteInvite(invite.code)
+//            _ = try await apiClient.deleteInvite(invite.code)
         }
     }
 
