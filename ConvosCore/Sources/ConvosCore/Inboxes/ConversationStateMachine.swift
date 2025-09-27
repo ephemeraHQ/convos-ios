@@ -290,10 +290,12 @@ public actor ConversationStateMachine {
             throw ConversationStateMachineError.failedFindingConversation
         }
 
-        // Update permissions for group conversations
-        if case .group(let group) = createdConversation {
-            try await group.updateAddMemberPermission(newPermissionOption: .allow)
+        guard case .group(let group) = createdConversation else {
+            throw ConversationStateMachineError.failedFindingConversation
         }
+
+        // Update permissions for group conversations
+        try await group.updateAddMemberPermission(newPermissionOption: .allow)
 
         // Store the conversation
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
@@ -306,7 +308,11 @@ public actor ConversationStateMachine {
 
         // Create invite
         let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
-        _ = try await inviteWriter.generate(for: dbConversation, maxUses: nil, expiresAt: nil)
+        let invite = try await inviteWriter.generate(for: dbConversation, maxUses: nil, expiresAt: nil)
+
+        // Add the invite verification code to the group description so the invitee can verify
+        // they are joining the right conversation
+        try await group.updateDescription(description: invite.code)
 
         // Subscribe to push notifications
         let topic = externalConversationId.xmtpGroupTopicFormat
@@ -367,11 +373,16 @@ public actor ConversationStateMachine {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
         Logger.info("Inbox ready, validating signed invite...")
 
-//        let publicKey = try signedInvite.signature.recoverPublicKey()
-//        let verifiedSignature = try signedInvite.verify(signature: signedInvite.signature, with: publicKey)
-//        guard verifiedSignature else {
-//            throw ConversationStateMachineError.failedVerifyingSignature
-//        }
+        // Recover the public key of whoever signed this invite
+        let signerPublicKey = try signedInvite.payload.recoverSignerPublicKey(from: signedInvite.signature)
+        Logger.info("Recovered signer's public key: \(signerPublicKey.hexEncodedString())")
+
+        // TODO: In the future, you may want to verify this against a known/expected public key
+        // For now, we just accept any valid signature
+        // Example: try signedInvite.payload.verifySignatureFromExpectedSigner(
+        //     signature: signedInvite.signature,
+        //     expectedPublicKey: someKnownPublicKey
+        // )
 
         let code = signedInvite.payload.code
         let resultByInviteCode: ConversationReadyResult? = try await databaseReader.read { db in
@@ -391,15 +402,6 @@ public actor ConversationStateMachine {
             emitStateChange(.ready(resultByInviteCode))
             return
         }
-
-//        let apiClient = inboxReady.apiClient
-//        let inviteDetails: ConvosAPI.InviteDetailsWithGroupResponse
-//        do {
-//            inviteDetails = try await apiClient.inviteDetailsWithGroup(code)
-//        } catch {
-//            Logger.error("Error fetching invite details: \(error.localizedDescription)")
-//            throw ConversationStateMachineError.inviteExpired
-//        }
 
 //        let conversationId = inviteDetails.groupId
 //        let resultByConversationId: ConversationReadyResult? = try await databaseReader.read { db in
@@ -449,7 +451,13 @@ public actor ConversationStateMachine {
                 Logger.info("Started streaming, looking for convo...")
                 if let conversation = try await client.conversationsProvider
                     .stream(type: .groups, onClose: nil)
-                    .first(where: { try await $0.creatorInboxId == invite.payload.creatorInboxId }) {
+                    .first(where: {
+                        guard case .group(let group) = $0 else { return false }
+                        let creatorInboxId = try await group.creatorInboxId()
+                        let verificationCode = try group.description()
+                        return (creatorInboxId == invite.payload.creatorInboxId &&
+                                verificationCode == invite.payload.code)
+                    }) {
                     guard !Task.isCancelled else { return }
 
                     // Accept consent and store the conversation
@@ -467,10 +475,6 @@ public actor ConversationStateMachine {
                     // Create invite
                     let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
                     _ = try await inviteWriter.generate(for: dbConversation, maxUses: nil, expiresAt: nil)
-
-                    // Store the invite we used so we don't join the same conversation again
-//                    let conversationCreatorInboxId = try await conversation.creatorInboxId
-//                    _ = try await inviteWriter.store(invite: response.invite, inboxId: conversationCreatorInboxId)
 
                     // Subscribe to push notifications
                     let topic = conversation.id.xmtpGroupTopicFormat

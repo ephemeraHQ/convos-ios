@@ -9,12 +9,14 @@ protocol InviteJoinRequestsManagerProtocol {
 }
 
 class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
+    private let identityStore: any KeychainIdentityStoreProtocol
     private let databaseReader: any DatabaseReader
 
     private var streamMessagesTask: Task<Void, Never>?
 
-    init(databaseReader: any DatabaseReader,
-         databaseWriter: any DatabaseWriter) {
+    init(identityStore: any KeychainIdentityStoreProtocol,
+         databaseReader: any DatabaseReader) {
+        self.identityStore = identityStore
         self.databaseReader = databaseReader
     }
 
@@ -45,37 +47,33 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                         }
 
                         let signedInvite = try InviteSlugComposer.decode(text)
+
                         // @jarodl do more validation here, if someone is sending bogus invites, block the inbox id
 
-                        let publicKey = try signedInvite.signature.recoverPublicKey()
-//                        let verifiedSignature = try signedInvite.verify(signature: signedInvite.signature, with: publicKey)
-//                        guard verifiedSignature else {
-//                            throw ConversationStateMachineError.failedVerifyingSignature
-//                        }
+                        let identity = try await identityStore.identity()
 
-                        let dbConversation: DBConversation? = try await databaseReader.read { db in
-                            guard let invite = try DBInvite
-                                .filter(DBInvite.Columns.code == signedInvite.payload.code)
-                                .fetchOne(db) else {
-                                Logger.warning("Invite code not found for incoming message content")
-                                return nil
-                            }
+                        let publicKey = identity.keys.privateKey.publicKey.secp256K1Uncompressed.bytes
 
-                            guard let conversation = try DBConversation
-                                .fetchOne(db, key: invite.conversationId) else {
-                                Logger.warning("Conversation not found for invite")
-                                return nil
-                            }
+                        let verifiedSignature = try signedInvite.payload.verifySignatureFromExpectedSigner(
+                            signature: signedInvite.signature,
+                            expectedPublicKey: publicKey
+                        )
 
-                            return conversation
-                        }
-
-                        guard let dbConversation else {
+                        guard verifiedSignature else {
+                            Logger.error("Failed verifying signature for invite, skipping message...")
                             continue
                         }
 
+                        let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
+                        let code = signedInvite.payload.code
+                        let conversationId = try InviteCodeCrypto.decodeCode(
+                            code,
+                            creatorInboxId: client.inboxId,
+                            secp256k1PrivateKey: privateKey
+                        )
+
                         guard let conversation = try await client.conversationsProvider.findConversation(
-                            conversationId: dbConversation.id
+                            conversationId: conversationId
                         ) else {
                             Logger.warning("Conversation not found on XMTP")
                             continue
