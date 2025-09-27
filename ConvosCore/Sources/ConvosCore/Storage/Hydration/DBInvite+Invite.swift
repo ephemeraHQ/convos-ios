@@ -2,7 +2,7 @@ import Foundation
 
 extension DBInvite {
     func hydrateInvite() -> Invite {
-        // TODO: We can extract additional metadata from the urlSlug
+        // @jarodl We can extract additional metadata from the urlSlug
         .init(
             conversationId: conversationId,
             urlSlug: urlSlug,
