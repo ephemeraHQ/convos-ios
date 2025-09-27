@@ -368,7 +368,7 @@ public actor ConversationStateMachine {
         let signerPublicKey = try signedInvite.recoverSignerPublicKey()
         Logger.info("Recovered signer's public key: \(signerPublicKey.hexEncodedString())")
 
-        // TODO: List all conversations and attempt matching the invite `tag`
+        // @jarodl List all conversations and attempt matching the invite `tag`
         //        if let resultByInviteTag {
         //            Logger.info("Found existing convo by invite tag, returning...")
         //            emitStateChange(.ready(resultByInviteCode))
