@@ -45,10 +45,6 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         )
     }
 
-    func publicInviteDetails(_ code: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
-        .init(id: "invite_123", name: "My Invite", description: "My fun group chat", imageUrl: nil, inviteLinkURL: "https://popup.convos.org/123456")
-    }
-
     var identifier: String {
         "\(client.inboxId)\(client.installationId)"
     }
@@ -87,87 +83,6 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
                 avatar: requestBody.profile.avatar
             )
         )
-    }
-
-    func createInvite(_ requestBody: ConvosAPI.CreateInviteCode) async throws -> ConvosAPI.InviteDetailsResponse {
-        return ConvosAPI
-            .InviteDetailsResponse(
-                id: "created_invite_123",
-                name: "My Group",
-                description: nil,
-                imageUrl: nil,
-                maxUses: nil,
-                usesCount: 0,
-                status: .active,
-                expiresAt: nil,
-                autoApprove: false,
-                groupId: "my_group_123",
-                createdAt: Date(),
-                inviteLinkURL: "https://popup.convos.org/my_group_123"
-            )
-    }
-
-    func inviteDetails(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsResponse {
-        return ConvosAPI
-            .InviteDetailsResponse(
-                id: "created_invite_123",
-                name: "My Group",
-                description: nil,
-                imageUrl: nil,
-                maxUses: nil,
-                usesCount: 0,
-                status: .active,
-                expiresAt: nil,
-                autoApprove: false,
-                groupId: "my_group_123",
-                createdAt: Date(),
-                inviteLinkURL: "https://popup.convos.org/my_group_123"
-            )
-    }
-
-    func deleteInvite(_ inviteCode: String) async throws -> ConvosAPI.DeleteInviteResponse {
-        return ConvosAPI.DeleteInviteResponse(id: "invite_123", deleted: true)
-    }
-
-    func inviteDetailsWithGroup(_ inviteId: String) async throws -> ConvosAPI.InviteDetailsWithGroupResponse {
-        return ConvosAPI.InviteDetailsWithGroupResponse(
-            id: "invite_123",
-            name: "My Group",
-            description: nil,
-            imageUrl: nil,
-            inviteLinkURL: "https://popup.convos.org/invite_123",
-            groupId: "my_group_123",
-            inviterInboxId: "0x12345"
-        )
-    }
-
-    func updateInvite(_ inviteCode: String, requestBody: ConvosAPI.UpdateInviteCodeRequest) async throws -> ConvosAPI.InviteDetailsResponse {
-        return ConvosAPI.InviteDetailsResponse(
-            id: inviteCode,
-            name: requestBody.name ?? "Updated Group",
-            description: requestBody.description,
-            imageUrl: requestBody.imageUrl,
-            maxUses: nil,
-            usesCount: 0,
-            status: .active,
-            expiresAt: nil,
-            autoApprove: false,
-            groupId: "mock_group_123",
-            createdAt: Date(),
-            inviteLinkURL: "https://popup.convos.org/\(inviteCode)"
-        )
-    }
-
-    func updateInviteName(_ inviteCode: String, name: String) async throws {
-        // no-op in mock
-    }
-
-    func updateInviteDescription(_ inviteCode: String, description: String) async throws {
-        // no-op in mock
-    }
-
-    func updateInviteImageUrl(_ inviteCode: String, imageUrl: String) async throws {
-        // no-op in mock
     }
 
     func updateProfile(
@@ -227,34 +142,6 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
                 identityAddress: "0xMOCKADDRESSSEARCH1"
             )
         ]
-    }
-
-    func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse {
-        .init(
-            id: UUID().uuidString,
-            invite: ConvosAPI.InviteDetailsResponse(
-                id: "created_invite_123",
-                name: "My Group",
-                description: nil,
-                imageUrl: nil,
-                maxUses: nil,
-                usesCount: 0,
-                status: .active,
-                expiresAt: nil,
-                autoApprove: false,
-                groupId: "my_group_123",
-                createdAt: Date(),
-                inviteLinkURL: "https://popup.convos.org/my_group_123"
-            ),
-            createdAt: Date().ISO8601Format()
-        )
-    }
-
-    func deleteRequestToJoin(_ requestId: String) async throws -> ConvosAPI.DeleteRequestToJoinResponse {
-        .init(
-            id: requestId,
-            deleted: true
-        )
     }
 
     func uploadAttachment(

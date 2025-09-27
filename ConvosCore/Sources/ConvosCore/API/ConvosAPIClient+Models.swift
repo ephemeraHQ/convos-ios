@@ -74,33 +74,6 @@ public enum ConvosAPI {
         }
     }
 
-    public struct CreateInviteCode: Encodable {
-        public let groupId: String
-        public let name: String?
-        public let description: String?
-        public let imageUrl: String?
-        public let maxUses: Int?
-        public let expiresAt: Date?
-        public let autoApprove: Bool
-        public let notificationTargets: [String]
-    }
-
-    public struct RequestToJoinResponse: Decodable {
-        public let id: String
-        public let invite: InviteDetailsResponse
-        public let createdAt: String
-    }
-
-    public struct DeleteInviteResponse: Decodable {
-        public let id: String
-        public let deleted: Bool
-    }
-
-    public struct DeleteRequestToJoinResponse: Decodable {
-        public let id: String
-        public let deleted: Bool
-    }
-
     public struct UpdateProfileRequest: Encodable {
         public let name: String?
         public let username: String?
@@ -123,45 +96,6 @@ public enum ConvosAPI {
         public let avatar: String?
         public let createdAt: String
         public let updatedAt: String
-    }
-
-    public enum InviteCodeStatus: String, Decodable {
-        case active = "ACTIVE",
-             expired = "EXPIRED",
-             disabled = "DISABLED"
-    }
-
-    public struct InviteDetailsResponse: Decodable {
-        public let id: String
-        public let name: String?
-        public let description: String?
-        public let imageUrl: String?
-        public let maxUses: Int?
-        public let usesCount: Int
-        public let status: InviteCodeStatus
-        public let expiresAt: Date?
-        public let autoApprove: Bool
-        public let groupId: String
-        public let createdAt: Date
-        public let inviteLinkURL: String
-    }
-
-    public struct InviteDetailsWithGroupResponse: Decodable {
-        public let id: String
-        public let name: String?
-        public let description: String?
-        public let imageUrl: String?
-        public let inviteLinkURL: String
-        public let groupId: String
-        public let inviterInboxId: String
-    }
-
-    public struct PublicInviteDetailsResponse: Decodable {
-        public let id: String
-        public let name: String?
-        public let description: String?
-        public let imageUrl: String?
-        public let inviteLinkURL: String
     }
 
     public struct BatchProfilesResponse: Decodable {
@@ -214,14 +148,6 @@ public enum ConvosAPI {
 
     public struct AuthCheckResponse: Codable {
         public let success: Bool
-    }
-
-    // MARK: - Invite Code Update Models
-
-    public struct UpdateInviteCodeRequest: Encodable {
-        public let name: String?
-        public let description: String?
-        public let imageUrl: String?
     }
 }
 
