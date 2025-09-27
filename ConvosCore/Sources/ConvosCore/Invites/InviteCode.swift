@@ -140,7 +140,7 @@ enum InviteCode {
             case .missingVersion:
                 return "Invite code is missing version byte"
             case .unsupportedVersion(let version):
-                return "Unsupported invite code version: \(version), expected \(formatVersion)"
+                return "Unsupported invite code version: \(version), expected \(InviteCode.formatVersion)"
             case .badKeyMaterial:
                 return "Invalid private key material"
             case .cryptoOpenFailed:
@@ -148,7 +148,7 @@ enum InviteCode {
             case .invalidFormat(let details):
                 return "Invalid invite code format: \(details)"
             case .stringTooLong(let length):
-                return "Conversation ID too long: \(length) bytes, max \(maxStringLength)"
+                return "Conversation ID too long: \(length) bytes, max \(InviteCode.maxStringLength)"
             }
         }
     }

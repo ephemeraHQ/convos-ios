@@ -34,7 +34,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                 for try await message in client.conversationsProvider
                     .streamAllMessages(
                         type: .dms,
-                        consentStates: [.unknown],
+                        consentStates: [.unknown, .allowed],
                         onClose: {
                             Logger.warning("Closing streamAllMessages...")
                         }
