@@ -10,7 +10,6 @@ extension SignedInvite {
             creatorInboxId: conversation.inboxId,
             secp256k1PrivateKey: privateKey
         )
-
         var payload = InvitePayload()
         payload.tag = try InviteTag.generate(for: conversation.id)
         payload.code = code
