@@ -35,30 +35,13 @@ class InviteWriter: InviteWriterProtocol {
 
         let identity = try await identityStore.identity()
         let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
-        let code = try InviteCodeCrypto.makeCode(
-            conversationId: conversation.id,
-            creatorInboxId: conversation.inboxId,
-            secp256k1PrivateKey: privateKey
-        )
-        Logger.info("Generated invite code: \(code) for conversation: \(conversation.id)")
-
-        let payload = InvitePayload(code: code, creatorInboxId: conversation.inboxId)
-        let signature = try payload.sign(with: privateKey)
-        let signedInvite = SignedInvite(payload: payload, signature: signature)
-        let inviteSlug = try InviteSlugComposer.slug(for: signedInvite)
-        Logger.info("Invite slug: \(inviteSlug)")
-
-        let verificationCode = InviteVerificationCode.generate()
+        let urlSlug = try SignedInvite.slug(for: conversation, privateKey: privateKey)
+        Logger.info("Generated URL slug: \(urlSlug)")
 
         let dbInvite = DBInvite(
-            code: code,
             creatorInboxId: conversation.inboxId,
             conversationId: conversation.id,
-            inviteSlug: inviteSlug,
-            maxUses: maxUses,
-            usesCount: 0,
-            createdAt: Date(),
-            expiresAt: expiresAt
+            urlSlug: urlSlug
         )
         try await databaseWriter.write { db in
             try Member(inboxId: conversation.inboxId).save(db, onConflict: .ignore)

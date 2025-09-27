@@ -7,24 +7,14 @@ struct DBInvite: Codable, FetchableRecord, PersistableRecord, Hashable {
     static var databaseTableName: String = "invite"
 
     enum Columns {
-        static let code: Column = Column(CodingKeys.code)
         static let creatorInboxId: Column = Column(CodingKeys.creatorInboxId)
         static let conversationId: Column = Column(CodingKeys.conversationId)
-        static let inviteSlug: Column = Column(CodingKeys.inviteSlug)
-        static let maxUses: Column = Column(CodingKeys.maxUses)
-        static let usesCount: Column = Column(CodingKeys.usesCount)
-        static let createdAt: Column = Column(CodingKeys.createdAt)
-        static let expiresAt: Column = Column(CodingKeys.expiresAt)
+        static let urlSlug: Column = Column(CodingKeys.urlSlug)
     }
 
-    let code: String
     let creatorInboxId: String
     let conversationId: String
-    let inviteSlug: String
-    let maxUses: Int?
-    let usesCount: Int
-    let createdAt: Date
-    let expiresAt: Date?
+    let urlSlug: String
 
     // Foreign key to the member who created this invite
     static let creatorForeignKey: ForeignKey = ForeignKey(
