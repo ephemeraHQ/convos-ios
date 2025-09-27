@@ -56,12 +56,30 @@ extension Encodable {
         return try data.verifySignature(signature, with: publicKey)
     }
 
-    /// Verifies a signature by recovering the public key from the signature itself
+    /// Recovers the public key that created this signature
+    /// - Parameter signature: The signature in (r, s, v) format (65 bytes)
+    /// - Returns: The recovered public key (compressed format, 33 bytes)
+    func recoverSignerPublicKey(from signature: Data) throws -> Data {
+        // Encode self to Data
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+
+        let data: Data
+        do {
+            data = try encoder.encode(self)
+        } catch {
+            throw EncodableSignatureError.encodingFailure
+        }
+
+        return try data.recoverPublicKey(from: signature)
+    }
+
+    /// Verifies that this signature was created by the expected public key
     /// - Parameters:
     ///   - signature: The signature in (r, s, v) format (65 bytes)
-    ///   - expectedPublicKey: The expected public key to compare against
-    /// - Returns: True if the recovered public key matches the expected one
-    func verifyWithRecovery(signature: Data, expectedPublicKey: Data) throws -> Bool {
+    ///   - expectedPublicKey: The expected public key to verify against
+    /// - Returns: True if the signature was created by the expected public key
+    func verifySignatureFromExpectedSigner(signature: Data, expectedPublicKey: Data) throws -> Bool {
         // Encode self to Data
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
@@ -76,14 +94,35 @@ extension Encodable {
         return try data.verifySignatureWithRecovery(signature, expectedPublicKey: expectedPublicKey)
     }
 
-    /// Verifies this encodable object using r, s, v components
+    /// Recovers the public key from r, s, v signature components
     /// - Parameters:
     ///   - r: The r component of the signature (32 bytes)
     ///   - s: The s component of the signature (32 bytes)
     ///   - v: The recovery ID (0-3, or 27-30 for Ethereum compatibility)
-    ///   - expectedPublicKey: The expected public key to compare against
-    /// - Returns: True if the recovered public key matches the expected one
-    func verifyWithRSV(r: Data, s: Data, v: UInt8, expectedPublicKey: Data) throws -> Bool {
+    /// - Returns: The recovered public key (compressed format, 33 bytes)
+    func recoverSignerPublicKeyFromRSV(r: Data, s: Data, v: UInt8) throws -> Data {
+        // Combine r, s, and v into a single signature
+        var signature = Data()
+        signature.append(r)
+        signature.append(s)
+        // Normalize v to 0-3 range (handle Ethereum's 27-30 format)
+        let recid = v >= 27 ? v - 27 : v
+        guard recid <= 3 else {
+            throw EncodableSignatureError.invalidSignature
+        }
+        signature.append(recid)
+
+        return try recoverSignerPublicKey(from: signature)
+    }
+
+    /// Verifies this encodable object was signed by the expected public key using r, s, v components
+    /// - Parameters:
+    ///   - r: The r component of the signature (32 bytes)
+    ///   - s: The s component of the signature (32 bytes)
+    ///   - v: The recovery ID (0-3, or 27-30 for Ethereum compatibility)
+    ///   - expectedPublicKey: The expected public key to verify against
+    /// - Returns: True if the signature was created by the expected public key
+    func verifySignatureFromExpectedSignerWithRSV(r: Data, s: Data, v: UInt8, expectedPublicKey: Data) throws -> Bool {
         // Encode self to Data
         let encoder = JSONEncoder()
         encoder.outputFormatting = .sortedKeys
@@ -229,8 +268,8 @@ extension Data {
     ///   - expectedPublicKey: The expected public key to compare against
     /// - Returns: True if the recovered public key matches the expected one
     func verifySignatureWithRecovery(_ signature: Data, expectedPublicKey: Data) throws -> Bool {
-        // Recover the public key from the signature
-        let recoveredPublicKey = try signature.recoverPublicKey()
+        // Recover the public key from the signature using this data as the message
+        let recoveredPublicKey = try self.recoverPublicKey(from: signature)
 
         // Compare the recovered key with the expected key
         // If the expected key is uncompressed (65 bytes) and recovered is compressed (33 bytes),
@@ -274,11 +313,11 @@ extension Data {
 
     // MARK: - Key Recovery
 
-    /// Recovers the public key from a signature and this data
+    /// Recovers the public key from a signature for this message data
     /// - Parameter signature: The signature with recovery ID (65 bytes)
     /// - Returns: The recovered public key
-    func recoverPublicKey() throws -> Data {
-        guard self.count == 65 else {
+    func recoverPublicKey(from signature: Data) throws -> Data {
+        guard signature.count == 65 else {
             throw EncodableSignatureError.invalidSignature
         }
 
@@ -292,12 +331,12 @@ extension Data {
             secp256k1_context_destroy(ctx)
         }
 
-        // Hash the message
+        // Hash the message (self is the message data, not the signature)
         let messageHash = self.sha256Hash()
 
-        // Extract signature and recovery ID
-        let signatureData = self.prefix(64)
-        let recid = Int32(self[64])
+        // Extract signature and recovery ID from the signature parameter
+        let signatureData = signature.prefix(64)
+        let recid = Int32(signature[64])
 
         // Parse the recoverable signature
         var recoverableSignature = secp256k1_ecdsa_recoverable_signature()
@@ -317,16 +356,17 @@ extension Data {
             throw EncodableSignatureError.verificationFailure
         }
 
-        // Serialize the public key (compressed format)
-        let outputPtr = UnsafeMutablePointer<UInt8>.allocate(capacity: 33)
-        defer {
-            outputPtr.deallocate()
-        }
+        // Serialize the public key (uncompressed format)
+        let outputPtr = UnsafeMutablePointer<UInt8>.allocate(capacity: 65)
+        defer { outputPtr.deallocate() }
 
-        var outputLen = 33
+        var outputLen = 65
         guard secp256k1_ec_pubkey_serialize(
-            ctx, outputPtr, &outputLen, &pubkey,
-            UInt32(SECP256K1_EC_COMPRESSED)
+            ctx,
+            outputPtr,
+            &outputLen,
+            &pubkey,
+            UInt32(SECP256K1_EC_UNCOMPRESSED)
         ) == 1 else {
             throw EncodableSignatureError.verificationFailure
         }

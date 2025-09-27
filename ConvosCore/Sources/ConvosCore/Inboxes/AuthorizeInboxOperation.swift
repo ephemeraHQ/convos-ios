@@ -59,8 +59,8 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseWriter: databaseWriter
         ) : nil
         let inviteJoinRequestsManager = startsStreamingServices ? InviteJoinRequestsManager(
+            identityStore: identityStore,
             databaseReader: databaseReader,
-            databaseWriter: databaseWriter
         ) : nil
         let invitesRepository = InvitesRepository(databaseReader: databaseReader)
         stateMachine = InboxStateMachine(

@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Models (unchanged)
+// MARK: - Models
 public struct SignedInvite: Codable {
     public let payload: InvitePayload
     public let signature: Data
@@ -12,7 +12,7 @@ public struct InvitePayload: Codable {
 }
 
 // MARK: - Short, unbiased Base62 code generator
-enum InviteCode {
+enum InviteVerificationCode {
     /// Generates a cryptographically random Base62 code (uniform, no modulo bias).
     /// You can safely lower the default length to 8 to shorten URLs.
     static func generate(length: Int = 8) -> String {
@@ -84,10 +84,10 @@ enum InviteSlugComposer {
         out.append(flags)
 
         // Pack Base62 code into raw bytes (saves ~2 bytes vs UTF-8 for 8–10 char codes)
-        let codePacked = try packBase62(signed.payload.code)
-        guard codePacked.count <= 255 else { throw SlugError.tooLong }
-        out.append(UInt8(codePacked.count))
-        out.append(codePacked)
+        let codeBytes = Data(signed.payload.code.utf8)
+        guard codeBytes.count <= 255 else { throw SlugError.tooLong }
+        out.append(UInt8(codeBytes.count))
+        out.append(codeBytes)
 
         // Creator
         if (flags & flagCreatorIsEth) != 0 {
@@ -117,8 +117,10 @@ enum InviteSlugComposer {
 
         // Code
         let codeLen = Int(try r.byte())
-        let codePacked = try r.bytes(count: codeLen)
-        let code = try unpackBase62(codePacked)
+        let codeBytes = try r.bytes(count: codeLen)
+        guard let code = String(data: codeBytes, encoding: .utf8) else {
+            throw SlugError.truncated
+        }
 
         // Creator
         let creatorInboxId: String
