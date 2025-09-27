@@ -30,16 +30,6 @@ struct InviteView: View {
             }
             .background(.colorFillMinimal)
             .mask(RoundedRectangle(cornerRadius: 38.0))
-
-            #if DEBUG
-            Text(invite.urlSlug)
-                .frame(maxWidth: 180.0)
-                .lineLimit(0)
-                .multilineTextAlignment(.center)
-                .font(.system(size: 10.0))
-                .kerning(1.0)
-                .foregroundStyle(.colorTextSecondary)
-            #endif
         }
     }
 }
