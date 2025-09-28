@@ -99,7 +99,7 @@ class ConversationViewModel {
         let messagingService = session.messagingService
 
         myProfileWriter = messagingService.myProfileWriter()
-        myProfileRepository = messagingService.myProfileRepository()
+        myProfileRepository = conversationRepository.myProfileRepository
         outgoingMessageWriter = messagingService.messageWriter(for: conversation.id)
         consentWriter = messagingService.conversationConsentWriter()
         localStateWriter = messagingService.conversationLocalStateWriter()
@@ -186,7 +186,7 @@ class ConversationViewModel {
 
     private func setupMyProfileRepository() {
         do {
-            self.profile = try myProfileRepository.fetch(inboxId: conversation.inboxId)
+            self.profile = try myProfileRepository.fetch()
         } catch {
             Logger.error("Failed fetching my profile: \(error.localizedDescription)")
         }

@@ -1,6 +1,59 @@
+import Compression
 import Foundation
 import SwiftProtobuf
-import Compression
+import XMTPiOS
+
+// MARK: - DB Models
+
+extension MemberProfile {
+    var conversationProfile: ConversationProfile {
+        .init(inboxId: inboxId, name: name, imageUrl: avatar)
+    }
+}
+
+// MARK: - XMTP Extensions
+
+extension XMTPiOS.Group {
+    private var currentCustomMetadata: ConversationCustomMetadata {
+        get throws {
+            let currentDescription = try self.description()
+            return ConversationCustomMetadata.parseDescriptionField(currentDescription)
+        }
+    }
+
+    public var customDescription: String {
+        get throws {
+            try currentCustomMetadata.description_p
+        }
+    }
+
+    public func updateCustomDescription(description: String) async throws {
+        var customMetadata = try currentCustomMetadata
+        customMetadata.description_p = description
+        try await updateDescription(description: customMetadata.toCompactString())
+    }
+
+    public var memberProfiles: [MemberProfile] {
+        get throws {
+            let customMetadata = try currentCustomMetadata
+            return customMetadata.profiles.map {
+                .init(
+                    conversationId: id,
+                    inboxId: $0.inboxID,
+                    name: $0.name,
+                    avatar: $0.image
+                )
+            }
+        }
+    }
+
+    public func updateProfile(_ profile: MemberProfile) async throws {
+        var customMetadata = try currentCustomMetadata
+        customMetadata.profiles.removeAll { $0.inboxID == profile.inboxId }
+        customMetadata.profiles.append(profile.conversationProfile)
+        try await updateDescription(description: customMetadata.toCompactString())
+    }
+}
 
 // MARK: - Serialization Extensions
 

@@ -1,6 +1,18 @@
 import Combine
 import Foundation
 
+public class MockMyProfileRepository: MyProfileRepositoryProtocol {
+    public init() {}
+
+    public var myProfilePublisher: AnyPublisher<Profile, Never> {
+        Just(.empty(inboxId: "mock-inbox-id")).eraseToAnyPublisher()
+    }
+
+    public func fetch() throws -> Profile {
+        .empty(inboxId: "mock-inbox-id")
+    }
+}
+
 public class MockConversationRepository: ConversationRepositoryProtocol {
     public init() {}
 
@@ -10,6 +22,10 @@ public class MockConversationRepository: ConversationRepositoryProtocol {
 
     public var conversationId: String {
         conversation.id
+    }
+
+    public var myProfileRepository: any MyProfileRepositoryProtocol {
+        MockMyProfileRepository()
     }
 
     private let conversation: Conversation = .mock()
@@ -26,6 +42,10 @@ class MockDraftConversationRepository: DraftConversationRepositoryProtocol {
 
     var messagesRepository: any MessagesRepositoryProtocol {
         MockMessagesRepository(conversation: conversation)
+    }
+
+    var myProfileRepository: any MyProfileRepositoryProtocol {
+        MockMyProfileRepository()
     }
 
     var conversationPublisher: AnyPublisher<Conversation?, Never> {

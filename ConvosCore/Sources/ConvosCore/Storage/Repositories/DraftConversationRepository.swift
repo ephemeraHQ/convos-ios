@@ -10,17 +10,26 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
     private let dbReader: any DatabaseReader
     private let writer: any DraftConversationWriterProtocol
     let messagesRepository: any MessagesRepositoryProtocol
+    let myProfileRepository: any MyProfileRepositoryProtocol
 
     var conversationId: String {
         writer.conversationId
     }
 
-    init(dbReader: any DatabaseReader, writer: any DraftConversationWriterProtocol) {
+    init(dbReader: any DatabaseReader,
+         writer: any DraftConversationWriterProtocol,
+         inboxStateManager: any InboxStateManagerProtocol) {
         self.dbReader = dbReader
         self.writer = writer
         Logger.info("Initializing DraftConversationRepository with conversationId: \(writer.conversationId)")
         messagesRepository = MessagesRepository(
             dbReader: dbReader,
+            conversationId: writer.conversationId,
+            conversationIdPublisher: writer.conversationIdPublisher
+        )
+        myProfileRepository = MyProfileRepository(
+            inboxStateManager: inboxStateManager,
+            databaseReader: dbReader,
             conversationId: writer.conversationId,
             conversationIdPublisher: writer.conversationIdPublisher
         )

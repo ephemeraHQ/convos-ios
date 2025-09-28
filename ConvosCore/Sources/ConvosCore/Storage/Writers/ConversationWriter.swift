@@ -4,6 +4,7 @@ import XMTPiOS
 
 enum ConversationWriterError: Error {
     case inboxNotFound(String)
+    case expectedGroup
 }
 
 public protocol ConversationWriterProtocol {
@@ -54,6 +55,10 @@ class ConversationWriter: ConversationWriterProtocol {
         let metadata = try extractConversationMetadata(from: conversation)
         let members = try await conversation.members()
         let dbMembers = members.map { $0.dbRepresentation(conversationId: conversation.id) }
+        guard case .group(let group) = conversation else {
+            throw ConversationWriterError.expectedGroup
+        }
+        let memberProfiles = try group.memberProfiles
 
         // Create database representation
         let dbConversation = try await createDBConversation(
@@ -66,6 +71,7 @@ class ConversationWriter: ConversationWriterProtocol {
         try await saveConversationToDatabase(
             dbConversation: dbConversation,
             dbMembers: dbMembers,
+            memberProfiles: memberProfiles,
             clientConversationId: clientConversationId
         )
 
@@ -109,7 +115,7 @@ class ConversationWriter: ConversationWriterProtocol {
             return ConversationMetadata(
                 kind: .group,
                 name: try group.name(),
-                description: try group.description(),
+                description: try group.customDescription,
                 imageURLString: try group.imageUrl()
             )
         }
@@ -137,6 +143,7 @@ class ConversationWriter: ConversationWriterProtocol {
     private func saveConversationToDatabase(
         dbConversation: DBConversation,
         dbMembers: [DBConversationMember],
+        memberProfiles: [MemberProfile],
         clientConversationId: String?
     ) async throws {
         try await databaseWriter.write { [weak self] db in
@@ -166,8 +173,14 @@ class ConversationWriter: ConversationWriterProtocol {
             )
             try localState.insert(db, onConflict: .ignore)
 
+            // Delete old members
+            try MemberProfile
+                .filter(MemberProfile.Columns.conversationId == dbConversation.id)
+                .deleteAll(db)
             // Save members
             try saveMembers(dbMembers, in: db)
+            // Update profiles
+            try memberProfiles.forEach { try $0.save(db) }
         }
     }
 
@@ -197,6 +210,7 @@ class ConversationWriter: ConversationWriterProtocol {
         for member in dbMembers {
             try Member(inboxId: member.inboxId).save(db)
             try member.save(db)
+            // fetch from description
             let memberProfile = MemberProfile(
                 conversationId: member.conversationId,
                 inboxId: member.inboxId,
