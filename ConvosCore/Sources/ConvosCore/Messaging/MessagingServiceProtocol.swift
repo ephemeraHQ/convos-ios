@@ -2,11 +2,12 @@ import Combine
 import Foundation
 
 public protocol MessagingServiceProtocol: AnyObject {
+    var inboxStateManager: any InboxStateManagerProtocol { get }
+
     func reset() async
 
     func registerForPushNotifications() async
 
-    func myProfileRepository() -> any MyProfileRepositoryProtocol
     func myProfileWriter() -> any MyProfileWriterProtocol
 
     func draftConversationComposer() -> any DraftConversationComposerProtocol

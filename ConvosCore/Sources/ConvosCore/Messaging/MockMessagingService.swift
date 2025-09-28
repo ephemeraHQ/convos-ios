@@ -48,10 +48,6 @@ public class MockMessagingService: MessagingServiceProtocol {
         self
     }
 
-    public func myProfileRepository() -> any MyProfileRepositoryProtocol {
-        self
-    }
-
     public func draftConversationComposer() -> any DraftConversationComposerProtocol {
         MockDraftConversationComposer()
     }
@@ -130,16 +126,6 @@ extension MockMessagingService: MyProfileWriterProtocol {
     }
 }
 
-extension MockMessagingService: MyProfileRepositoryProtocol {
-    public var myProfilePublisher: AnyPublisher<Profile, Never> {
-        Just(currentUser.profile).eraseToAnyPublisher()
-    }
-
-    public func fetch(inboxId: String) throws -> Profile {
-        .mock()
-    }
-}
-
 extension MockMessagingService: ConversationsRepositoryProtocol {
     public var conversationsPublisher: AnyPublisher<[Conversation], Never> {
         Just(_conversations).eraseToAnyPublisher()
@@ -172,6 +158,10 @@ extension MockMessagingService: ConversationConsentWriterProtocol {
 }
 
 extension MockMessagingService: ConversationRepositoryProtocol {
+    public var myProfileRepository: any MyProfileRepositoryProtocol {
+        MockMyProfileRepository()
+    }
+
     public var conversationId: String {
         conversation?.id ?? ""
     }

@@ -79,10 +79,6 @@ final class MessagingService: MessagingServiceProtocol {
 
     // MARK: My Profile
 
-    func myProfileRepository() -> any MyProfileRepositoryProtocol {
-        MyProfileRepository(inboxStateManager: inboxStateManager, databaseReader: databaseReader)
-    }
-
     func myProfileWriter() -> any MyProfileWriterProtocol {
         MyProfileWriter(inboxStateManager: inboxStateManager, databaseWriter: databaseWriter)
     }
@@ -101,7 +97,8 @@ final class MessagingService: MessagingServiceProtocol {
             draftConversationWriter: draftConversationWriter,
             draftConversationRepository: DraftConversationRepository(
                 dbReader: databaseReader,
-                writer: draftConversationWriter
+                writer: draftConversationWriter,
+                inboxStateManager: inboxStateManager
             ),
             conversationConsentWriter: conversationConsentWriter(),
             conversationLocalStateWriter: conversationLocalStateWriter(),

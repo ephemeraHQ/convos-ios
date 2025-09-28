@@ -70,7 +70,7 @@ class NewConversationViewModel: Identifiable {
             conversation: draftConversation,
             session: session,
             draftConversationComposer: draftConversationComposer,
-            myProfileRepository: messagingService.myProfileRepository()
+            myProfileRepository: draftConversationComposer.draftConversationRepository.myProfileRepository
         )
         setupObservations()
         self.conversationViewModel.untitledConversationPlaceholder = "New convo"

@@ -158,7 +158,8 @@ class SessionManager: SessionManagerProtocol {
         return try await withCheckedThrowingContinuation { continuation in
             let conversationRepository = ConversationRepository(
                 conversationId: conversationId,
-                dbReader: databaseReader
+                dbReader: databaseReader,
+                inboxStateManager: messagingService.inboxStateManager
             )
 
             do {
@@ -186,7 +187,8 @@ class SessionManager: SessionManagerProtocol {
     nonisolated func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
         ConversationRepository(
             conversationId: conversationId,
-            dbReader: databaseReader
+            dbReader: databaseReader,
+            inboxStateManager: messagingService.inboxStateManager
         )
     }
 
