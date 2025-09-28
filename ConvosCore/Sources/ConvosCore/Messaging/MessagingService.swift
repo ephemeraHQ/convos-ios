@@ -105,7 +105,7 @@ final class MessagingService: MessagingServiceProtocol {
             ),
             conversationConsentWriter: conversationConsentWriter(),
             conversationLocalStateWriter: conversationLocalStateWriter(),
-            conversationMetadataWriter: groupMetadataWriter()
+            conversationMetadataWriter: conversationMetadataWriter()
         )
     }
 
@@ -132,16 +132,16 @@ final class MessagingService: MessagingServiceProtocol {
 
     // MARK: - Group Management
 
-    func groupMetadataWriter() -> any ConversationMetadataWriterProtocol {
+    func conversationMetadataWriter() -> any ConversationMetadataWriterProtocol {
         ConversationMetadataWriter(
             inboxStateManager: inboxStateManager,
             databaseWriter: databaseWriter
         )
     }
 
-    func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
-        GroupPermissionsRepository(inboxStateManager: inboxStateManager,
-                                   databaseReader: databaseReader)
+    func conversationPermissionsRepository() -> any ConversationPermissionsRepositoryProtocol {
+        ConversationPermissionsRepository(inboxStateManager: inboxStateManager,
+                                         databaseReader: databaseReader)
     }
 
     func uploadImage(data: Data, filename: String) async throws -> String {

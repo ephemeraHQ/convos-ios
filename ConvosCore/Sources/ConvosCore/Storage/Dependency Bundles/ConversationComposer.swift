@@ -24,5 +24,5 @@ struct MockDraftConversationComposer: DraftConversationComposerProtocol {
     let draftConversationRepository: any DraftConversationRepositoryProtocol = MockDraftConversationRepository()
     let conversationConsentWriter: any ConversationConsentWriterProtocol = MockConversationConsentWriter()
     let conversationLocalStateWriter: any ConversationLocalStateWriterProtocol = MockConversationLocalStateWriter()
-    let conversationMetadataWriter: any ConversationMetadataWriterProtocol = MockGroupMetadataWriter()
+    let conversationMetadataWriter: any ConversationMetadataWriterProtocol = MockConversationMetadataWriter()
 }
