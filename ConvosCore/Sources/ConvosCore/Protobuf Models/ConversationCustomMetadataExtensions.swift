@@ -244,9 +244,11 @@ private extension Data {
             let destinationBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: count)
             defer { destinationBuffer.deallocate() }
 
+            guard let baseAddress = sourceBuffer.baseAddress else { return nil }
+
             let compressedSize = compression_encode_buffer(
                 destinationBuffer, count,
-                sourceBuffer.baseAddress!, count,
+                baseAddress, count,
                 nil, COMPRESSION_ZLIB
             )
 
@@ -270,9 +272,11 @@ private extension Data {
             let destinationBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: maxSize)
             defer { destinationBuffer.deallocate() }
 
+            guard let baseAddress = sourceBuffer.baseAddress else { return nil }
+
             let decompressedSize = compression_decode_buffer(
                 destinationBuffer, maxSize,
-                sourceBuffer.baseAddress!, count,
+                baseAddress, count,
                 nil, COMPRESSION_ZLIB
             )
 
