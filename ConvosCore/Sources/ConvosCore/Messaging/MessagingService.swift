@@ -138,7 +138,7 @@ final class MessagingService: MessagingServiceProtocol {
 
     func conversationPermissionsRepository() -> any ConversationPermissionsRepositoryProtocol {
         ConversationPermissionsRepository(inboxStateManager: inboxStateManager,
-                                         databaseReader: databaseReader)
+                                          databaseReader: databaseReader)
     }
 
     func uploadImage(data: Data, filename: String) async throws -> String {
