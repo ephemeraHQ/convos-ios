@@ -103,7 +103,7 @@ class ConversationViewModel {
         outgoingMessageWriter = messagingService.messageWriter(for: conversation.id)
         consentWriter = messagingService.conversationConsentWriter()
         localStateWriter = messagingService.conversationLocalStateWriter()
-        metadataWriter = messagingService.groupMetadataWriter()
+        metadataWriter = messagingService.conversationMetadataWriter()
 
         setupMyProfileRepository()
 
@@ -237,9 +237,9 @@ class ConversationViewModel {
             Task { [weak self] in
                 guard let self else { return }
                 do {
-                    try await metadataWriter.updateGroupName(
-                        conversationId: conversation.id,
-                        name: trimmedConversationName
+                    try await metadataWriter.updateName(
+                        trimmedConversationName,
+                        for: conversation.id
                     )
                 } catch {
                     Logger.error("Failed updating group name: \(error)")
@@ -253,9 +253,9 @@ class ConversationViewModel {
             Task { [weak self] in
                 guard let self else { return }
                 do {
-                    try await metadataWriter.updateGroupImage(
-                        conversation: conversation,
-                        image: conversationImage
+                    try await metadataWriter.updateImage(
+                        conversationImage,
+                        for: conversation
                     )
                 } catch {
                     Logger.error("Failed updating group image: \(error)")
@@ -270,9 +270,9 @@ class ConversationViewModel {
             Task { [weak self] in
                 guard let self else { return }
                 do {
-                    try await metadataWriter.updateGroupDescription(
-                        conversationId: conversation.id,
-                        description: trimmedConversationDescription
+                    try await metadataWriter.updateDescription(
+                        trimmedConversationDescription,
+                        for: conversation.id
                     )
                 } catch {
                     Logger.error("Failed updating group description: \(error)")
@@ -362,7 +362,7 @@ class ConversationViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await metadataWriter.removeGroupMembers(conversationId: conversation.id, memberInboxIds: [member.profile.inboxId])
+                try await metadataWriter.removeMembers([member.profile.inboxId], from: conversation.id)
             } catch {
                 Logger.error("Error removing member: \(error.localizedDescription)")
             }
@@ -401,9 +401,9 @@ class ConversationViewModel {
                 let memberIdsToRemove = conversation.members
                     .filter { !$0.isCurrentUser } // @jarodl fix when we have self removal
                     .map { $0.profile.inboxId }
-                try await metadataWriter.removeGroupMembers(
-                    conversationId: conversation.id,
-                    memberInboxIds: memberIdsToRemove
+                try await metadataWriter.removeMembers(
+                    memberIdsToRemove,
+                    from: conversation.id
                 )
 //                try await session.deleteInbox(inboxId: conversation.inboxId)
                 presentingConversationSettings = false

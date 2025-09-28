@@ -94,7 +94,7 @@ status: ## Show project status (version, secrets, git)
 .PHONY: protobuf
 protobuf: ## Generate Swift code from Protocol Buffer definitions
 	@echo "🔧 Generating Swift code from Protocol Buffer definitions..."
-	@ConvosCore/Sources/ConvosCore/Invites/proto/generate_swift.sh
+	@ConvosCore/Sources/ConvosCore/Protobuf\ Models/proto/generate_swift.sh
 
 .PHONY: tag-release
 tag-release: ## Create and push a release tag (triggers GitHub Actions)

@@ -16,8 +16,8 @@ public protocol MessagingServiceProtocol: AnyObject {
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol
 
-    func groupMetadataWriter() -> any ConversationMetadataWriterProtocol
-    func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol
+    func conversationMetadataWriter() -> any ConversationMetadataWriterProtocol
+    func conversationPermissionsRepository() -> any ConversationPermissionsRepositoryProtocol
 
     func uploadImage(data: Data, filename: String) async throws -> String
     func uploadImageAndExecute(

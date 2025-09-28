@@ -13,7 +13,7 @@ class MockDraftConversationWriter: DraftConversationWriterProtocol {
     }
 
     var conversationMetadataWriter: any ConversationMetadataWriterProtocol {
-        MockGroupMetadataWriter()
+        MockConversationMetadataWriter()
     }
 
     var sentMessage: AnyPublisher<String, Never> {
