@@ -309,7 +309,12 @@ extension MessagesViewController {
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
         Logger.info("Processing updates with \(messages.count) messages")
-        var cells: [MessagesCollectionCell] = messages.enumerated().flatMap { index, message in
+        var cells: [MessagesCollectionCell] = messages
+            .filter { message in
+                message.base.content.showsInMessagesList
+            }
+            .enumerated()
+            .flatMap { index, message in
             var cells: [MessagesCollectionCell] = []
 
             let senderTitleCell = MessagesCollectionCell.messageGroup(

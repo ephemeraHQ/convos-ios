@@ -155,14 +155,6 @@ class ConversationWriter: ConversationWriterProtocol {
             // Save conversation (handle local conversation updates)
             try saveConversation(dbConversation, clientConversationId: clientConversationId, in: db)
 
-            let creatorProfile = MemberProfile(
-                conversationId: dbConversation.id,
-                inboxId: dbConversation.creatorId,
-                name: nil,
-                avatar: nil
-            )
-            try creatorProfile.insert(db, onConflict: .ignore)
-
             // Save local state
             let localState = ConversationLocalState(
                 conversationId: dbConversation.id,
