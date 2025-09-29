@@ -38,8 +38,8 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
         [Columns.inboxId, Columns.id],
         to: [DBConversationMember.Columns.inboxId, DBConversationMember.Columns.conversationId]
     )
-    static let localStateForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
-    static let inviteForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
+    static let localStateForeignKey: ForeignKey = ForeignKey([ConversationLocalState.Columns.conversationId], to: [Columns.id])
+    static let inviteForeignKey: ForeignKey = ForeignKey([DBInvite.Columns.conversationId], to: [Columns.id])
 
     // The invite created by the current inbox member (the user viewing this conversation)
     static let invite: HasOneThroughAssociation<DBConversation, DBInvite> = hasOne(
@@ -80,7 +80,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
     static let _members: HasManyAssociation<DBConversation, DBConversationMember> = hasMany(
         DBConversationMember.self,
         key: "conversationMembers"
-    ).order(Column("createdAt").asc)
+    ).order(DBConversationMember.Columns.createdAt.asc)
 
     static let members: HasManyThroughAssociation<DBConversation, Member> = hasMany(
         Member.self,
@@ -99,7 +99,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
     static let messages: HasManyAssociation<DBConversation, DBMessage> = hasMany(
         DBMessage.self,
         key: "conversationMessages",
-        using: ForeignKey(["id"], to: ["conversationId"])
+        using: ForeignKey([Columns.id], to: [DBMessage.Columns.conversationId])
     ).order(DBMessage.Columns.dateNs.desc)
 
     static let lastMessageRequest: QueryInterfaceRequest<DBMessage> = DBMessage

@@ -86,7 +86,7 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
         attachmentUrls.first
     }
 
-    static let sourceMessageForeignKey: ForeignKey = ForeignKey(["sourceMessageId"], to: ["id"])
+    static let sourceMessageForeignKey: ForeignKey = ForeignKey([Columns.sourceMessageId], to: [Columns.id])
     static let senderForeignKey: ForeignKey = ForeignKey(
         [
             Columns.senderId,
@@ -97,7 +97,7 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
             DBConversationMember.Columns.conversationId
         ]
     )
-    static let conversationForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
+    static let conversationForeignKey: ForeignKey = ForeignKey([Columns.conversationId], to: [DBConversation.Columns.id])
 
     static let conversation: HasOneAssociation<DBMessage, DBConversation> = hasOne(
         DBConversation.self,
@@ -120,14 +120,14 @@ struct DBMessage: FetchableRecord, PersistableRecord, Hashable, Codable {
     static let replies: HasManyAssociation<DBMessage, DBMessage> = hasMany(
         DBMessage.self,
         key: "messageReplies",
-        using: ForeignKey(["id"], to: ["sourceMessageId"])
-    ).filter(Column("messageType") == DBMessageType.reply.rawValue)
+        using: ForeignKey([Columns.id], to: [Columns.sourceMessageId])
+    ).filter(DBMessage.Columns.messageType == DBMessageType.reply.rawValue)
 
     static let reactions: HasManyAssociation<DBMessage, DBMessage> = hasMany(
         DBMessage.self,
         key: "messageReactions",
-        using: ForeignKey(["id"], to: ["sourceMessageId"]),
-    ).filter(Column("messageType") == DBMessageType.reaction.rawValue)
+        using: ForeignKey([Columns.id], to: [Columns.sourceMessageId]),
+    ).filter(DBMessage.Columns.messageType == DBMessageType.reaction.rawValue)
 
     static let sourceMessage: BelongsToAssociation<DBMessage, DBMessage> = belongsTo(
         DBMessage.self,

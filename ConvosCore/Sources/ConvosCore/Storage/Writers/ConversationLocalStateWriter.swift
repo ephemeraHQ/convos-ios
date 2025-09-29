@@ -42,7 +42,7 @@ class ConversationLocalStateWriter: ConversationLocalStateWriterProtocol {
             }
 
             let current = try ConversationLocalState
-                .filter(Column("conversationId") == conversationId)
+                .filter(ConversationLocalState.Columns.conversationId == conversationId)
                 .fetchOne(db)
                 ?? ConversationLocalState(
                     conversationId: conversationId,

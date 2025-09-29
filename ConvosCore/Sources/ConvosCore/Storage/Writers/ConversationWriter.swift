@@ -178,8 +178,8 @@ class ConversationWriter: ConversationWriterProtocol {
 
     private func saveConversation(_ dbConversation: DBConversation, clientConversationId: String?, in db: Database) throws {
         if let localConversation = try DBConversation
-            .filter(Column("id") == dbConversation.id)
-            .filter(Column("clientConversationId") != clientConversationId)
+            .filter(DBConversation.Columns.id == dbConversation.id)
+            .filter(DBConversation.Columns.clientConversationId != clientConversationId)
             .fetchOne(db) {
             // Keep using the same local id
             Logger.info("Found local conversation \(localConversation.clientConversationId) for incoming \(dbConversation.id)")
@@ -254,7 +254,7 @@ class ConversationWriter: ConversationWriterProtocol {
                 }
             ).forKey("latestMessage")
             let result = try DBConversation
-                .filter(Column("id") == conversationId)
+                .filter(DBConversation.Columns.id == conversationId)
                 .with(DBConversation.lastMessageCTE)
                 .including(optional: lastMessage)
                 .asRequest(of: DBConversationLatestMessage.self)

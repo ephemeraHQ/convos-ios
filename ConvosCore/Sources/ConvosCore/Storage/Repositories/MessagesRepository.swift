@@ -197,7 +197,7 @@ extension Array where Element == MessageWithDetails {
 fileprivate extension Database {
     func composeMessages(for conversationId: String) throws -> [AnyMessage] {
         guard let dbConversationDetails = try DBConversation
-            .filter(Column("id") == conversationId)
+            .filter(DBConversation.Columns.id == conversationId)
             .detailedConversationQuery()
             .fetchOne(self) else {
             return []
@@ -205,7 +205,7 @@ fileprivate extension Database {
 
         let conversation = dbConversationDetails.hydrateConversation()
         let dbMessages = try DBMessage
-            .filter(Column("conversationId") == conversationId)
+            .filter(DBMessage.Columns.conversationId == conversationId)
             .order(\.dateNs.asc)
             .including(
                 required: DBMessage.sender
