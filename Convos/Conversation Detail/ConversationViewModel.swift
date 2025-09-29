@@ -373,7 +373,7 @@ class ConversationViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-//                try await session.deleteInbox(inboxId: conversation.inboxId)
+                try await session.deleteConversation(conversationId: conversation.id)
                 presentingConversationSettings = false
                 NotificationCenter.default.post(
                     name: .leftConversationNotification,
@@ -405,7 +405,7 @@ class ConversationViewModel {
                     memberIdsToRemove,
                     from: conversation.id
                 )
-//                try await session.deleteInbox(inboxId: conversation.inboxId)
+                try await session.deleteConversation(conversationId: conversation.id)
                 presentingConversationSettings = false
             } catch {
                 Logger.error("Error exploding convo: \(error.localizedDescription)")

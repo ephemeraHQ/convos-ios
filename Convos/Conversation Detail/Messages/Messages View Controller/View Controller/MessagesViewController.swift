@@ -309,10 +309,10 @@ extension MessagesViewController {
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
         Logger.info("Processing updates with \(messages.count) messages")
-        var cells: [MessagesCollectionCell] = messages
-            .filter { message in
-                message.base.content.showsInMessagesList
-            }
+        let visibleMessages = messages.filter { message in
+            message.base.content.showsInMessagesList
+        }
+        var cells: [MessagesCollectionCell] = visibleMessages
             .enumerated()
             .flatMap { index, message in
             var cells: [MessagesCollectionCell] = []
@@ -326,7 +326,7 @@ extension MessagesViewController {
             )
 
             if index > 0 {
-                let previousMessage = messages[index - 1]
+                let previousMessage = visibleMessages[index - 1]
                 let timeDifference = message.base.date.timeIntervalSince(previousMessage.base.date)
                 if timeDifference > 3600 { // 1 hour in seconds
                     cells.append(MessagesCollectionCell.date(.init(date: message.base.date)))
@@ -345,8 +345,8 @@ extension MessagesViewController {
             }
 
             let bubbleType: MessagesCollectionCell.BubbleType
-            if index < messages.count - 1 {
-                let nextMessage = messages[index + 1]
+            if index < visibleMessages.count - 1 {
+                let nextMessage = visibleMessages[index + 1]
                 bubbleType = message.base.sender.id == nextMessage.base.sender.id ? .normal : .tailed
             } else {
                 bubbleType = .tailed
