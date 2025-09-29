@@ -33,7 +33,6 @@ public enum ConvosAPI {
     public struct InitRequest: Encodable {
         public let device: Device
         public let identity: Identity
-        public let profile: Profile
         public struct Device: Encodable {
             public let os: String
             public let name: String?
@@ -44,18 +43,11 @@ public enum ConvosAPI {
             public let xmtpId: String
             public let xmtpInstallationId: String?
         }
-        public struct Profile: Encodable {
-            public let name: String?
-            public let username: String?
-            public let description: String?
-            public let avatar: String?
-        }
     }
 
     public struct InitResponse: Decodable {
         public let device: Device
         public let identity: Identity
-        public let profile: Profile
         public struct Device: Decodable {
             public let id: String
             public let os: String
@@ -66,50 +58,6 @@ public enum ConvosAPI {
             public let identityAddress: String?
             public let xmtpId: String?
         }
-        public struct Profile: Decodable {
-            public let id: String
-            public let name: String?
-            public let description: String?
-            public let avatar: String?
-        }
-    }
-
-    public struct UpdateProfileRequest: Encodable {
-        public let name: String?
-        public let username: String?
-        public let description: String?
-        public let avatar: String?
-
-        public init(name: String? = nil, username: String? = nil, description: String? = nil, avatar: String? = nil) {
-            self.name = name
-            self.username = username
-            self.description = description
-            self.avatar = avatar
-        }
-    }
-
-    public struct UpdateProfileResponse: Decodable {
-        public let id: String
-        public let name: String?
-        public let username: String?
-        public let description: String?
-        public let avatar: String?
-        public let createdAt: String
-        public let updatedAt: String
-    }
-
-    public struct BatchProfilesResponse: Decodable {
-        public let profiles: [String: ProfileResponse]
-    }
-
-    public struct ProfileResponse: Decodable {
-        public let id: String
-        public let name: String?
-        public let username: String?
-        public let description: String?
-        public let avatar: String?
-        public let xmtpId: String
-        public let identityAddress: String?
     }
 
     // MARK: - Device Update Models
@@ -148,12 +96,6 @@ public enum ConvosAPI {
 
     public struct AuthCheckResponse: Codable {
         public let success: Bool
-    }
-}
-
-public extension ConvosAPI.InitRequest.Profile {
-    static var empty: Self {
-        .init(name: nil, username: nil, description: nil, avatar: nil)
     }
 }
 

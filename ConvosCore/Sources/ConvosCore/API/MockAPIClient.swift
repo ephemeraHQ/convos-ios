@@ -75,73 +75,8 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
                 id: "identity_1",
                 identityAddress: requestBody.identity.identityAddress,
                 xmtpId: requestBody.identity.xmtpId
-            ),
-            profile: ConvosAPI.InitResponse.Profile(
-                id: "profile_1",
-                name: requestBody.profile.name,
-                description: requestBody.profile.description,
-                avatar: requestBody.profile.avatar
             )
         )
-    }
-
-    func updateProfile(
-        inboxId: String,
-        with requestBody: ConvosAPI.UpdateProfileRequest
-    ) async throws -> ConvosAPI.UpdateProfileResponse {
-        .init(
-            id: "",
-            name: requestBody.name ?? "",
-            username: requestBody.username ?? "",
-            description: nil,
-            avatar: requestBody.avatar,
-            createdAt: Date().ISO8601Format(),
-            updatedAt: Date().ISO8601Format()
-        )
-    }
-
-    func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse {
-        return ConvosAPI.ProfileResponse(
-            id: inboxId,
-            name: "Mock User",
-            username: "mockuser",
-            description: "This is a mock profile.",
-            avatar: nil,
-            xmtpId: "mock-xmtp-id",
-            identityAddress: "0xMOCKADDRESS1"
-        )
-    }
-
-    func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse {
-        let profilesById: [String: ConvosAPI.ProfileResponse] = inboxIds.reduce(into: [:]) { result, id in
-            let profile = ConvosAPI.ProfileResponse(
-                id: id,
-                name: "Mock User \(id)",
-                username: "mockuser\(id)",
-                description: "This is a mock profile for \(id).",
-                avatar: nil,
-                xmtpId: "mock-xmtp-id-\(id)",
-                identityAddress: "0xMOCKADDRESS\(id)"
-            )
-            result[id] = profile
-        }
-        return ConvosAPI.BatchProfilesResponse(
-            profiles: profilesById
-        )
-    }
-
-    func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse] {
-        return [
-            ConvosAPI.ProfileResponse(
-                id: "search_1",
-                name: "Search Result 1",
-                username: "searchuser1",
-                description: "Profile matching query: \(query)",
-                avatar: nil,
-                xmtpId: "mock-xmtp-id-search1",
-                identityAddress: "0xMOCKADDRESSSEARCH1"
-            )
-        ]
     }
 
     func uploadAttachment(
