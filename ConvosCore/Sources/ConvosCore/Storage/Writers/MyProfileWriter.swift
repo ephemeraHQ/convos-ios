@@ -82,7 +82,8 @@ class MyProfileWriter: MyProfileWriterProtocol {
         guard let avatarImage = avatar else {
             // remove avatar image URL
             ImageCache.shared.removeImage(for: profile.hydrateProfile())
-            _ = try await inboxReady.apiClient.updateProfile(inboxId: inboxId, with: profile.asUpdateRequest())
+            let updatedProfile = profile.with(avatar: nil)
+            try await group.updateProfile(updatedProfile)
             return
         }
 

@@ -626,8 +626,7 @@ public actor InboxStateMachine {
             device: .current(),
             identity: .init(identityAddress: nil,
                             xmtpId: client.inboxId,
-                            xmtpInstallationId: client.installationId),
-            profile: .empty
+                            xmtpInstallationId: client.installationId)
         )
         return try await apiClient.initWithBackend(requestBody)
     }

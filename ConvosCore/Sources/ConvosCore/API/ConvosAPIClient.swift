@@ -46,15 +46,6 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
 
     func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse
 
-    func updateProfile(
-        inboxId: String,
-        with requestBody: ConvosAPI.UpdateProfileRequest
-    ) async throws -> ConvosAPI.UpdateProfileResponse
-
-    func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse
-    func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse
-    func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse]
-
     func uploadAttachment(
         data: Data,
         filename: String,
@@ -301,40 +292,6 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(requestBody)
         Logger.info("Initializing backend")
-        return try await performRequest(request)
-    }
-
-    // MARK: - Profiles
-
-    func updateProfile(
-        inboxId: String,
-        with requestBody: ConvosAPI.UpdateProfileRequest
-    ) async throws -> ConvosAPI.UpdateProfileResponse {
-        var request = try authenticatedRequest(for: "v1/profiles/\(inboxId)", method: "PUT")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(requestBody)
-        return try await performRequest(request)
-    }
-
-    func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse {
-        let request = try authenticatedRequest(for: "v1/profiles/\(inboxId)")
-        let profile: ConvosAPI.ProfileResponse = try await performRequest(request)
-        return profile
-    }
-
-    func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse {
-        var request = try authenticatedRequest(for: "v1/profiles/batch", method: "POST")
-        let body: [String: Any] = ["xmtpIds": inboxIds]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        return try await performRequest(request)
-    }
-
-    func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse] {
-        let request = try authenticatedRequest(
-            for: "v1/profiles/search",
-            queryParameters: ["query": query]
-        )
         return try await performRequest(request)
     }
 

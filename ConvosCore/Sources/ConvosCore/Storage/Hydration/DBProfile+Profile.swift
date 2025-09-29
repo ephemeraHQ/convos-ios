@@ -8,8 +8,4 @@ extension MemberProfile {
             avatar: avatar
         )
     }
-
-    func asUpdateRequest() -> ConvosAPI.UpdateProfileRequest {
-        .init(name: name, avatar: avatar)
-    }
 }
