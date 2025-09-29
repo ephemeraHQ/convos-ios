@@ -28,6 +28,8 @@ public struct ConversationCustomMetadata: Sendable {
 
   public var description_p: String = String()
 
+  public var tag: String = String()
+
   /// Array of participant profiles
   public var profiles: [ConversationProfile] = []
 
@@ -74,7 +76,7 @@ public struct ConversationProfile: Sendable {
 
 extension ConversationCustomMetadata: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = "ConversationCustomMetadata"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}description\0\u{1}profiles\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}description\0\u{1}tag\0\u{1}profiles\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -83,7 +85,8 @@ extension ConversationCustomMetadata: SwiftProtobuf.Message, SwiftProtobuf._Mess
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
-      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.profiles) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.tag) }()
+      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.profiles) }()
       default: break
       }
     }
@@ -93,14 +96,18 @@ extension ConversationCustomMetadata: SwiftProtobuf.Message, SwiftProtobuf._Mess
     if !self.description_p.isEmpty {
       try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 1)
     }
+    if !self.tag.isEmpty {
+      try visitor.visitSingularStringField(value: self.tag, fieldNumber: 2)
+    }
     if !self.profiles.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.profiles, fieldNumber: 2)
+      try visitor.visitRepeatedMessageField(value: self.profiles, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: ConversationCustomMetadata, rhs: ConversationCustomMetadata) -> Bool {
     if lhs.description_p != rhs.description_p {return false}
+    if lhs.tag != rhs.tag {return false}
     if lhs.profiles != rhs.profiles {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

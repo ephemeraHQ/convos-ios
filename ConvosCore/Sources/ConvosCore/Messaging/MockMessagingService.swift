@@ -217,6 +217,9 @@ extension MockMessagingService: ConversationSender {
 
     public func remove(members inboxIds: [String]) async throws {
     }
+
+    public func updateInviteTag() async throws {
+    }
 }
 
 class MockConversations: ConversationsProvider {
@@ -288,7 +291,7 @@ extension MockMessagingService: XMTPClientProvider {
         return Dictionary(uniqueKeysWithValues: identities.map { ($0, true) })
     }
 
-    public func prepareConversation() async throws -> ConversationSender {
+    public func prepareConversation() throws -> ConversationSender {
         self
     }
 

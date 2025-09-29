@@ -11,7 +11,7 @@ extension SignedInvite {
             secp256k1PrivateKey: privateKey
         )
         var payload = InvitePayload()
-        payload.tag = try InviteTag.generate(for: conversation.id)
+        payload.tag = conversation.inviteTag
         payload.code = code
         payload.creatorInboxID = conversation.inboxId
         let signature = try payload.sign(with: privateKey)
@@ -22,40 +22,6 @@ extension SignedInvite {
     }
 }
 
-// MARK: - Tag Generation
-
-enum InviteTagError: Error {
-    case randomGenerationFailed
-    case encodingFailed
-}
-
-extension InviteTag {
-    /// Generate a tag for the given conversationId with a fresh random nonce.
-    public static func generate(for conversationId: String) throws -> Self {
-        // Make a 16-byte random nonce
-        var nonceBytes = [UInt8](repeating: 0, count: 16)
-        let rc = SecRandomCopyBytes(kSecRandomDefault, nonceBytes.count, &nonceBytes)
-        guard rc == errSecSuccess else {
-            throw InviteTagError.randomGenerationFailed
-        }
-
-        let nonce = Data(nonceBytes)
-        let message = nonce + Data(conversationId.utf8)
-        let hash = SHA256.hash(data: message)
-
-        var tag = InviteTag()
-        tag.nonce = nonce
-        tag.value = Data(hash)
-        return tag
-    }
-
-    /// Check if this tag corresponds to the provided conversationId.
-    public func matches(conversationId: String) -> Bool {
-        let message = self.nonce + Data(conversationId.utf8)
-        let expected = SHA256.hash(data: message)
-        return Data(expected) == self.value
-    }
-}
 // MARK: - Signing
 
 enum EncodableSignatureError: Error {

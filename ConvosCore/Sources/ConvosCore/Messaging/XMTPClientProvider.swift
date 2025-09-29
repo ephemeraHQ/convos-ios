@@ -11,6 +11,7 @@ public protocol ConversationSender {
     func add(members inboxIds: [String]) async throws
     func remove(members inboxIds: [String]) async throws
     func prepare(text: String) async throws -> String
+    func updateInviteTag() async throws
     func publish() async throws
 }
 
@@ -54,7 +55,7 @@ public protocol XMTPClientProvider: AnyObject {
     func messageSender(for conversationId: String) async throws -> (any MessageSender)?
     func canMessage(identity: String) async throws -> Bool
     func canMessage(identities: [String]) async throws -> [String: Bool]
-    func prepareConversation() async throws -> ConversationSender
+    func prepareConversation() throws -> ConversationSender
     func newConversation(with memberInboxIds: [String],
                          name: String,
                          description: String,
@@ -113,7 +114,7 @@ extension XMTPiOS.Client: XMTPClientProvider {
         )
     }
 
-    public func prepareConversation() async throws -> ConversationSender {
+    public func prepareConversation() throws -> ConversationSender {
         return try conversations.newGroupOptimistic()
     }
 

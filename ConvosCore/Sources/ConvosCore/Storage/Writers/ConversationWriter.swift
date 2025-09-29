@@ -130,6 +130,7 @@ class ConversationWriter: ConversationWriterProtocol {
             id: conversation.id,
             inboxId: conversation.client.inboxID,
             clientConversationId: clientConversationId ?? conversation.id,
+            inviteTag: try conversation.inviteTag,
             creatorId: try await conversation.creatorInboxId,
             kind: metadata.kind,
             consent: try conversation.consentState().consent,
@@ -296,6 +297,10 @@ fileprivate extension XMTPiOS.PermissionLevel {
     }
 }
 
+enum ConversationInviteTagError: Error {
+    case attemptedFetchingInviteTagForDM
+}
+
 extension XMTPiOS.Conversation {
     var creatorInboxId: String {
         get async throws {
@@ -304,6 +309,17 @@ extension XMTPiOS.Conversation {
                 return try await group.creatorInboxId()
             case .dm(let dm):
                 return try await dm.creatorInboxId()
+            }
+        }
+    }
+
+    var inviteTag: String {
+        get throws {
+            switch self {
+            case .group(let group):
+                return try group.inviteTag
+            case .dm:
+                throw ConversationInviteTagError.attemptedFetchingInviteTagForDM
             }
         }
     }

@@ -33,32 +33,8 @@ public struct InvitePayload: Sendable {
   /// The creator's inbox ID
   public var creatorInboxID: String = String()
 
-  /// The tag
-  public var tag: InviteTag {
-    get {return _tag ?? InviteTag()}
-    set {_tag = newValue}
-  }
-  /// Returns true if `tag` has been explicitly set.
-  public var hasTag: Bool {return self._tag != nil}
-  /// Clears the value of `tag`. Subsequent reads from it will return its default value.
-  public mutating func clearTag() {self._tag = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _tag: InviteTag? = nil
-}
-
-/// InviteTag represents a tag used to match incoming conversations on the invitee side
-public struct InviteTag: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var value: Data = Data()
-
-  public var nonce: Data = Data()
+  /// The tag to mark which conversation this corresponds to, lives in `ConversationCustomMetadata`
+  public var tag: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -105,68 +81,29 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.code) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.creatorInboxID) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._tag) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.tag) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.code.isEmpty {
       try visitor.visitSingularStringField(value: self.code, fieldNumber: 1)
     }
     if !self.creatorInboxID.isEmpty {
       try visitor.visitSingularStringField(value: self.creatorInboxID, fieldNumber: 2)
     }
-    try { if let v = self._tag {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    } }()
+    if !self.tag.isEmpty {
+      try visitor.visitSingularStringField(value: self.tag, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: InvitePayload, rhs: InvitePayload) -> Bool {
     if lhs.code != rhs.code {return false}
     if lhs.creatorInboxID != rhs.creatorInboxID {return false}
-    if lhs._tag != rhs._tag {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension InviteTag: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = "InviteTag"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}value\0\u{1}nonce\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularBytesField(value: &self.value) }()
-      case 2: try { try decoder.decodeSingularBytesField(value: &self.nonce) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.value.isEmpty {
-      try visitor.visitSingularBytesField(value: self.value, fieldNumber: 1)
-    }
-    if !self.nonce.isEmpty {
-      try visitor.visitSingularBytesField(value: self.nonce, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: InviteTag, rhs: InviteTag) -> Bool {
-    if lhs.value != rhs.value {return false}
-    if lhs.nonce != rhs.nonce {return false}
+    if lhs.tag != rhs.tag {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

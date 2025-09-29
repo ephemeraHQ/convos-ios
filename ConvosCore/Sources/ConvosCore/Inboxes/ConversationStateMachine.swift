@@ -279,7 +279,7 @@ public actor ConversationStateMachine {
         let apiClient = inboxReady.apiClient
 
         // Create the optimistic conversation
-        let optimisticConversation = try await client.prepareConversation()
+        let optimisticConversation = try client.prepareConversation()
         let externalConversationId = optimisticConversation.id
 
         // Publish the conversation
@@ -296,6 +296,7 @@ public actor ConversationStateMachine {
 
         // Update permissions for group conversations
         try await group.updateAddMemberPermission(newPermissionOption: .allow)
+        try await group.updateInviteTag()
 
         // Store the conversation
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
@@ -408,8 +409,9 @@ public actor ConversationStateMachine {
                     .first(where: {
                         guard case .group(let group) = $0 else { return false }
                         let creatorInboxId = try await group.creatorInboxId()
+                        let tag = try group.inviteTag
                         return (creatorInboxId == invite.payload.creatorInboxID &&
-                                invite.payload.tag.matches(conversationId: group.id))
+                                tag == invite.payload.tag)
                     }) {
                     guard !Task.isCancelled else { return }
 
@@ -466,6 +468,7 @@ public actor ConversationStateMachine {
                 id: draftConversationId,
                 inboxId: inboxId,
                 clientConversationId: draftConversationId,
+                inviteTag: UUID().uuidString,
                 creatorId: inboxId,
                 kind: .group,
                 consent: .allowed,

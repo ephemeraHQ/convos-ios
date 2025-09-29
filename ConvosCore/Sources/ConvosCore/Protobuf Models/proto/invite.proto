@@ -8,14 +8,8 @@ message InvitePayload {
     // The creator's inbox ID
     string creator_inbox_id = 2;
 
-    // The tag
-    InviteTag tag = 3;
-}
-
-// InviteTag represents a tag used to match incoming conversations on the invitee side
-message InviteTag {
-    bytes value = 1;
-    bytes nonce = 2;
+    // The tag to mark which conversation this corresponds to, lives in `ConversationCustomMetadata`
+    string tag = 3;
 }
 
 // SignedInvite represents an invite with its cryptographic signature

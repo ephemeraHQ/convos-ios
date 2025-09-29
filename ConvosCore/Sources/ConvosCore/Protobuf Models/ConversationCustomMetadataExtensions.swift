@@ -3,6 +3,12 @@ import Foundation
 import SwiftProtobuf
 import XMTPiOS
 
+// MARK: - Errors
+
+enum ConversationCustomMetadataError: Error {
+    case randomGenerationFailed
+}
+
 // MARK: - DB Models
 
 extension MemberProfile {
@@ -19,6 +25,46 @@ extension XMTPiOS.Group {
             let currentDescription = try self.description()
             return ConversationCustomMetadata.parseDescriptionField(currentDescription)
         }
+    }
+
+    public var inviteTag: String {
+        get throws {
+            try currentCustomMetadata.tag
+        }
+    }
+
+    // This should only be done by the conversation creator
+    // Updating the invite tag effectively expires all invites generated with that tag
+    // The tag is used by the invitee to verify the conversation they've been added to
+    // is the one that corresponds to the invite they are requesting to join
+    public func updateInviteTag() async throws {
+        var customMetadata = try currentCustomMetadata
+        customMetadata.tag = try generateSecureRandomString(length: 10)
+        try await updateDescription(description: customMetadata.toCompactString())
+    }
+
+    /// Generates a cryptographically secure random string of specified length
+    /// using alphanumeric characters (a-z, A-Z, 0-9)
+    private func generateSecureRandomString(length: Int) throws -> String {
+        let characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        let charactersArray = Array(characters)
+        let charactersCount = charactersArray.count
+
+        var randomBytes = [UInt8](repeating: 0, count: length)
+        let result = SecRandomCopyBytes(kSecRandomDefault, length, &randomBytes)
+
+        guard result == errSecSuccess else {
+            throw ConversationCustomMetadataError.randomGenerationFailed
+        }
+
+        let randomString = randomBytes.map { byte in
+            // Use modulo to map random byte to character index
+            // This gives a slight bias but is acceptable for non-cryptographic identifiers
+            let index = Int(byte) % charactersCount
+            return charactersArray[index]
+        }
+
+        return String(randomString)
     }
 
     public var customDescription: String {
