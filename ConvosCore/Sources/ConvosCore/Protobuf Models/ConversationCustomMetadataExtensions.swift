@@ -49,8 +49,7 @@ extension XMTPiOS.Group {
 
     public func updateProfile(_ profile: MemberProfile) async throws {
         var customMetadata = try currentCustomMetadata
-        customMetadata.profiles.removeAll { $0.inboxID == profile.inboxId }
-        customMetadata.profiles.append(profile.conversationProfile)
+        customMetadata.upsertProfile(profile.conversationProfile)
         try await updateDescription(description: customMetadata.toCompactString())
     }
 }
