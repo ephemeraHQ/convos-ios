@@ -58,7 +58,11 @@ class SessionManager: SessionManagerProtocol {
     }
 
     func deleteConversation(conversationId: String) async throws {
-        // @jarodl now that we only have one inbox, we need to block the conversation as well
+        let inboxReady = try await messagingService.inboxStateManager.waitForInboxReadyResult()
+        let client = inboxReady.client
+        let externalConversation = try await client.conversationsProvider.findConversation(conversationId: conversationId)
+        try await externalConversation?.updateConsentState(state: .denied)
+
         _ = try await databaseWriter.write { db in
             guard let conversation = try DBConversation
                 .fetchOne(db, id: conversationId)

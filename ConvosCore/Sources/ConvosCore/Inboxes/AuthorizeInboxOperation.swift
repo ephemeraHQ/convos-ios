@@ -90,8 +90,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     }
 
     func reset() async {
-        await stateMachine.stopAndDelete()
-        await stateMachine.authorize()
+        await stateMachine.reset()
     }
 
     func stopAndDelete() {

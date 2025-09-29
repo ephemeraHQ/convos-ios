@@ -77,7 +77,8 @@ public actor InboxStateMachine {
              clientRegistered(any XMTPClientProvider),
              authorized(InboxReadyResult),
              delete,
-             stop
+             stop,
+             reset
     }
 
     public enum State {
@@ -207,6 +208,10 @@ public actor InboxStateMachine {
         enqueueAction(.delete)
     }
 
+    func reset() {
+        enqueueAction(.reset)
+    }
+
     /// Registers for push notifications once the inbox is in a ready state.
     func registerForPushNotifications() async {
         Logger.info("Manually triggering push notification registration")
@@ -290,6 +295,14 @@ public actor InboxStateMachine {
 
             case (.uninitialized, .stop):
                 break
+
+            // Reset transitions
+            case (let .ready(result), .reset):
+                try await handleReset(client: result.client, apiClient: result.apiClient)
+            case (.error, .reset), (.uninitialized, .reset):
+                // If not ready, just start fresh authorization
+                try await handleAuthorize()
+
             default:
                 Logger.warning("Invalid state transition: \(_state) -> \(action)")
             }
@@ -383,32 +396,11 @@ public actor InboxStateMachine {
 
     private func handleDelete(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
         Logger.info("Deleting inbox...")
-
-        removePushNotificationObservers()
-
-        // before unregistering, delete invites from backend
-        try await deleteAllInvites(for: client, apiClient: apiClient)
-        await pushNotificationRegistrar.unregisterInstallation(client: client, apiClient: apiClient)
-
         emitStateChange(.deleting)
-        await syncingManager?.stop()
-        inviteJoinRequestsManager?.stop()
-        if let identity = try? await identityStore.identity() {
-            let keys = identity.clientKeys
-            do {
-                try await client.revokeInstallations(
-                    signingKey: keys.signingKey,
-                    installationIds: [client.installationId]
-                )
-            } catch {
-                Logger.error("Failed revoking installation: \(error.localizedDescription)")
-            }
-        } else {
-            Logger.warning("Identity not found, skipping revoking installation...")
-        }
-        try await identityStore.delete()
-        try client.deleteLocalDatabase()
-        Logger.info("Deleted inbox \(client.inboxId)")
+
+        // Perform common cleanup operations
+        try await performInboxCleanup(client: client, apiClient: apiClient)
+
         enqueueAction(.stop)
     }
 
@@ -432,6 +424,50 @@ public actor InboxStateMachine {
         removePushNotificationObservers()
         inboxId = nil
         emitStateChange(.uninitialized)
+    }
+
+    private func handleReset(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
+        Logger.info("Resetting inbox...")
+        emitStateChange(.deleting)
+
+        // Perform common cleanup operations
+        try await performInboxCleanup(client: client, apiClient: apiClient)
+
+        // Transition to uninitialized
+        inboxId = nil
+        emitStateChange(.uninitialized)
+
+        // Now start authorization
+        try await handleAuthorize()
+    }
+
+    /// Performs common cleanup operations when deleting or resetting an inbox
+    private func performInboxCleanup(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
+        // Stop all services and observers
+        removePushNotificationObservers()
+        await pushNotificationRegistrar.unregisterInstallation(client: client, apiClient: apiClient)
+        await syncingManager?.stop()
+        inviteJoinRequestsManager?.stop()
+
+        // Revoke installation if identity is available
+        if let identity = try? await identityStore.identity() {
+            let keys = identity.clientKeys
+            do {
+                try await client.revokeInstallations(
+                    signingKey: keys.signingKey,
+                    installationIds: [client.installationId]
+                )
+            } catch {
+                Logger.error("Failed revoking installation: \(error.localizedDescription)")
+            }
+        } else {
+            Logger.warning("Identity not found, skipping revoking installation...")
+        }
+
+        // Delete identity and local database
+        try await identityStore.delete()
+        try client.deleteLocalDatabase()
+        Logger.info("Deleted inbox \(client.inboxId)")
     }
 
     // MARK: - Helpers
@@ -495,13 +531,6 @@ public actor InboxStateMachine {
 //        _ = try await apiClient.checkAuth()
 
         return apiClient
-    }
-
-    private func deleteAllInvites(for client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
-        let invites = try await invitesRepository.fetchInvites(for: client.inboxId)
-        for invite in invites {
-//            _ = try await apiClient.deleteInvite(invite.code)
-        }
     }
 
     // MARK: - Backend Init
