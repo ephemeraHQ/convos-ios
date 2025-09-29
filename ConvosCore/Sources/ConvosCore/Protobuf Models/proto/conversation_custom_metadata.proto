@@ -3,7 +3,8 @@ syntax = "proto3";
 // ConversationCustomMetadata stores custom metadata for XMTP conversations
 message ConversationCustomMetadata {
     string description = 1;
-    repeated ConversationProfile profiles = 2;  // Array of participant profiles
+    string tag = 2;
+    repeated ConversationProfile profiles = 3;  // Array of participant profiles
 }
 
 // ConversationProfile represents a participant in the conversation

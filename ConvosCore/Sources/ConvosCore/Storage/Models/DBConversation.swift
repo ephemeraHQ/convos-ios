@@ -10,6 +10,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
         static let id: Column = Column(CodingKeys.id)
         static let inboxId: Column = Column(CodingKeys.inboxId)
         static let clientConversationId: Column = Column(CodingKeys.clientConversationId)
+        static let inviteTag: Column = Column(CodingKeys.inviteTag)
         static let creatorId: Column = Column(CodingKeys.creatorId)
         static let kind: Column = Column(CodingKeys.kind)
         static let consent: Column = Column(CodingKeys.consent)
@@ -22,6 +23,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
     public let id: String
     public let inboxId: String
     public let clientConversationId: String // used for conversation drafts
+    public let inviteTag: String
     public let creatorId: String
     public let kind: ConversationKind
     public let consent: Consent
@@ -138,6 +140,7 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
@@ -153,6 +156,7 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
@@ -168,6 +172,7 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
@@ -183,6 +188,7 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
@@ -200,6 +206,7 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
@@ -215,6 +222,7 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
@@ -230,6 +238,7 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
