@@ -1,4 +1,5 @@
 import Foundation
+import GRDB
 import XMTPiOS
 
 private extension AppEnvironment {
@@ -101,6 +102,7 @@ public actor InboxStateMachine {
     private let inviteJoinRequestsManager: AnyInviteJoinRequestsManager?
     private let pushNotificationRegistrar: any PushNotificationRegistrarProtocol
     private let autoRegistersForPushNotifications: Bool
+    private let databaseWriter: any DatabaseWriter
 
     private var inboxId: String?
     private var currentTask: Task<Void, Never>?
@@ -163,6 +165,7 @@ public actor InboxStateMachine {
     init(
         identityStore: any KeychainIdentityStoreProtocol,
         invitesRepository: any InvitesRepositoryProtocol,
+        databaseWriter: any DatabaseWriter,
         syncingManager: AnySyncingManager?,
         inviteJoinRequestsManager: AnyInviteJoinRequestsManager?,
         pushNotificationRegistrar: any PushNotificationRegistrarProtocol,
@@ -171,6 +174,7 @@ public actor InboxStateMachine {
     ) {
         self.identityStore = identityStore
         self.invitesRepository = invitesRepository
+        self.databaseWriter = databaseWriter
         self.syncingManager = syncingManager
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
@@ -409,10 +413,24 @@ public actor InboxStateMachine {
         emitStateChange(.deleting)
         await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
-        if let inboxId = inboxId {
-            try await identityStore.delete()
-            Logger.info("Deleted inbox \(inboxId)")
+
+        // Try to get the inbox ID from identity store if not available
+        var inboxIdToClean = inboxId
+        if inboxIdToClean == nil {
+            if let identity = try? await identityStore.identity() {
+                inboxIdToClean = identity.inboxId
+            }
         }
+
+        // Clean up database records if we have an inbox ID
+        if let inboxIdToClean = inboxIdToClean {
+            try await cleanupInboxData(inboxId: inboxIdToClean)
+            Logger.info("Deleted inbox data for \(inboxIdToClean)")
+        }
+
+        // Delete identity store
+        try await identityStore.delete()
+
         enqueueAction(.stop)
     }
 
@@ -464,10 +482,75 @@ public actor InboxStateMachine {
             Logger.warning("Identity not found, skipping revoking installation...")
         }
 
+        // Clean up all database records for this inbox
+        try await cleanupInboxData(inboxId: client.inboxId)
+
         // Delete identity and local database
         try await identityStore.delete()
         try client.deleteLocalDatabase()
         Logger.info("Deleted inbox \(client.inboxId)")
+    }
+
+    /// Deletes all database records associated with a given inboxId
+    private func cleanupInboxData(inboxId: String) async throws {
+        Logger.info("Cleaning up all data for inbox: \(inboxId)")
+
+        try await databaseWriter.write { db in
+            // First, fetch all conversation IDs for this inbox
+            let conversationIds = try DBConversation
+                .filter(DBConversation.Columns.inboxId == inboxId)
+                .fetchAll(db)
+                .map { $0.id }
+
+            Logger.info("Found \(conversationIds.count) conversations to clean up for inbox: \(inboxId)")
+
+            // Delete messages for all conversations belonging to this inbox
+            for conversationId in conversationIds {
+                try DBMessage
+                    .filter(DBMessage.Columns.conversationId == conversationId)
+                    .deleteAll(db)
+            }
+
+            // Delete conversation members for all conversations
+            for conversationId in conversationIds {
+                try DBConversationMember
+                    .filter(DBConversationMember.Columns.conversationId == conversationId)
+                    .deleteAll(db)
+            }
+
+            // Delete conversation local states
+            for conversationId in conversationIds {
+                try ConversationLocalState
+                    .filter(Column("conversationId") == conversationId)
+                    .deleteAll(db)
+            }
+
+            // Delete invites for all conversations
+            for conversationId in conversationIds {
+                try DBInvite
+                    .filter(DBInvite.Columns.conversationId == conversationId)
+                    .deleteAll(db)
+            }
+
+            // Delete member profiles for this inbox
+            for conversationId in conversationIds {
+                try MemberProfile
+                    .filter(Column("conversationId") == conversationId)
+                    .deleteAll(db)
+            }
+
+            // Delete the member record for this inbox
+            try Member
+                .filter(Column("inboxId") == inboxId)
+                .deleteAll(db)
+
+            // Finally, delete all conversations for this inbox
+            try DBConversation
+                .filter(DBConversation.Columns.inboxId == inboxId)
+                .deleteAll(db)
+
+            Logger.info("Successfully cleaned up all data for inbox: \(inboxId)")
+        }
     }
 
     // MARK: - Helpers
