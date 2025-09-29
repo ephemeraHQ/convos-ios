@@ -59,7 +59,7 @@ public actor CachedPushNotificationHandler {
             return nil
         }
 
-        Logger.info("Processing for inbox: \(inboxId), type: \(payload.notificationType?.displayName ?? "unknown")")
+        Logger.info("Processing for inbox: \(inboxId)")
 
         // Process with timeout
         return try await withTimeout(seconds: timeout, timeoutError: NotificationProcessingError.timeout) {

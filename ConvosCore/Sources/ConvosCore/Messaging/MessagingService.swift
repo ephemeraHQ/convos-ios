@@ -6,8 +6,8 @@ import XMTPiOS
 final class MessagingService: MessagingServiceProtocol {
     private let authorizationOperation: any AuthorizeInboxOperationProtocol
     internal let inboxStateManager: any InboxStateManagerProtocol
-    private let databaseReader: any DatabaseReader
     internal let identityStore: any KeychainIdentityStoreProtocol
+    internal let databaseReader: any DatabaseReader
     internal let databaseWriter: any DatabaseWriter
     private var cancellables: Set<AnyCancellable> = []
 
