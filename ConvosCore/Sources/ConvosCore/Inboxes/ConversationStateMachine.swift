@@ -601,7 +601,7 @@ public actor ConversationStateMachine {
                 .deleteAll(db)
 
             try ConversationLocalState
-                .filter(Column("conversationId") == conversationId)
+                .filter(ConversationLocalState.Columns.conversationId == conversationId)
                 .deleteAll(db)
 
             try DBInvite

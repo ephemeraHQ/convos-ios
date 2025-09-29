@@ -20,8 +20,8 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
 
     static var databaseTableName: String { "conversation_members" }
 
-    static let memberForeignKey: ForeignKey = ForeignKey(["inboxId"], to: ["inboxId"])
-    static let conversationForeignKey: ForeignKey = ForeignKey(["conversationId"])
+    static let memberForeignKey: ForeignKey = ForeignKey([Columns.inboxId], to: [Member.Columns.inboxId])
+    static let conversationForeignKey: ForeignKey = ForeignKey([Columns.conversationId], to: [DBConversation.Columns.id])
 
     // Foreign key to match invites created by this member for this conversation
     static let inviteForeignKey: ForeignKey = ForeignKey(

@@ -103,7 +103,7 @@ fileprivate extension Database {
     func composeConversation(for conversationId: String) throws -> Conversation? {
         do {
             guard let dbConversation = try DBConversation
-                .filter(Column("clientConversationId") == conversationId)
+                .filter(DBConversation.Columns.clientConversationId == conversationId)
                 .detailedConversationQuery()
                 .fetchOne(self) else {
                 return nil

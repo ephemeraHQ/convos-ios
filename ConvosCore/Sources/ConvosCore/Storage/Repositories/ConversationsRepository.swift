@@ -54,7 +54,7 @@ extension Array where Element == DBConversationDetails {
 fileprivate extension Database {
     func composeAllConversations(consent: [Consent]) throws -> [Conversation] {
         let dbConversationDetails = try DBConversation
-            .filter(!Column("id").like("draft-%"))
+            .filter(!DBConversation.Columns.id.like("draft-%"))
             .filter(consent.contains(DBConversation.Columns.consent))
             .detailedConversationQuery()
             .fetchAll(self)
@@ -88,7 +88,7 @@ extension QueryInterfaceRequest where RowDecoder == DBConversation {
                     .select([DBConversationMember.Columns.role])
                     .including(required: DBConversationMember.memberProfile)
             )
-            .group(Column("id"))
+            .group(DBConversation.Columns.id)
             // Sort by last message date if available, otherwise by conversation createdAt
             .order(sql: "COALESCE(conversationLastMessage.date, conversation.createdAt) DESC")
             .asRequest(of: DBConversationDetails.self)

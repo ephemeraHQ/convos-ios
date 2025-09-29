@@ -521,7 +521,7 @@ public actor InboxStateMachine {
             // Delete conversation local states
             for conversationId in conversationIds {
                 try ConversationLocalState
-                    .filter(Column("conversationId") == conversationId)
+                    .filter(ConversationLocalState.Columns.conversationId == conversationId)
                     .deleteAll(db)
             }
 
@@ -535,13 +535,13 @@ public actor InboxStateMachine {
             // Delete member profiles for this inbox
             for conversationId in conversationIds {
                 try MemberProfile
-                    .filter(Column("conversationId") == conversationId)
+                    .filter(MemberProfile.Columns.conversationId == conversationId)
                     .deleteAll(db)
             }
 
             // Delete the member record for this inbox
             try Member
-                .filter(Column("inboxId") == inboxId)
+                .filter(Member.Columns.inboxId == inboxId)
                 .deleteAll(db)
 
             // Finally, delete all conversations for this inbox
