@@ -66,13 +66,14 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         stateMachine = InboxStateMachine(
             identityStore: identityStore,
             invitesRepository: invitesRepository,
+            databaseWriter: databaseWriter,
             syncingManager: syncingManager,
             inviteJoinRequestsManager: inviteJoinRequestsManager,
             pushNotificationRegistrar: PushNotificationRegistrar(
                 environment: environment
             ),
             autoRegistersForPushNotifications: registersForPushNotifications,
-            environment: environment,
+            environment: environment
         )
     }
 
