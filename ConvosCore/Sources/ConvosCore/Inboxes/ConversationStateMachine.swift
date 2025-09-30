@@ -369,12 +369,16 @@ public actor ConversationStateMachine {
         let signerPublicKey = try signedInvite.recoverSignerPublicKey()
         Logger.info("Recovered signer's public key: \(signerPublicKey.hexEncodedString())")
 
-        // @jarodl List all conversations and attempt matching the invite `tag`
-        //        if let resultByInviteTag {
-        //            Logger.info("Found existing convo by invite tag, returning...")
-        //            emitStateChange(.ready(resultByInviteCode))
-        //            return
-        //        }
+        let existingConversation: DBConversation? = try await databaseReader.read { db in
+            try DBConversation
+                .filter(DBConversation.Columns.inviteTag == signedInvite.payload.tag)
+                .fetchOne(db)
+        }
+        if let existingConversation {
+            Logger.info("Found existing convo by invite tag, returning...")
+            emitStateChange(.ready(.init(conversationId: existingConversation.id)))
+            return
+        }
 
         Logger.info("Waiting for inbox ready result...")
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
