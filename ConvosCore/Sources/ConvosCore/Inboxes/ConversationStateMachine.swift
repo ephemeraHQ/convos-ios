@@ -33,11 +33,11 @@ public actor ConversationStateMachine {
                  (.deleting, .deleting):
                 return true
             case let (.joining(lhsInvite), .joining(rhsInvite)):
-                return lhsInvite.payload.code == rhsInvite.payload.code
+                return lhsInvite.payload.conversationToken == rhsInvite.payload.conversationToken
             case let (.validating(lhsCode), .validating(rhsCode)):
                 return lhsCode == rhsCode
             case let (.validated(lhsInvite, lhsInbox), .validated(rhsInvite, rhsInbox)):
-                return (lhsInvite.payload.code == rhsInvite.payload.code &&
+                return (lhsInvite.payload.conversationToken == rhsInvite.payload.conversationToken &&
                         lhsInbox.client.inboxId == rhsInbox.client.inboxId)
             case let (.ready(lhsResult), .ready(rhsResult)):
                 return lhsResult.conversationId == rhsResult.conversationId

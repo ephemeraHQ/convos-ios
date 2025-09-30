@@ -73,9 +73,9 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         }
 
         let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
-        let code = signedInvite.payload.code
-        let conversationId = try InviteCode.decodeCode(
-            code,
+        let conversationToken = signedInvite.payload.conversationToken
+        let conversationId = try InviteConversationToken.decodeConversationToken(
+            conversationToken,
             creatorInboxId: client.inboxId,
             secp256k1PrivateKey: privateKey
         )

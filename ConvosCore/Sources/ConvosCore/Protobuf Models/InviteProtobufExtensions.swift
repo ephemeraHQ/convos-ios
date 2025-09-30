@@ -5,14 +5,14 @@ import SwiftProtobuf
 
 extension SignedInvite {
     public static func slug(for conversation: DBConversation, privateKey: Data) throws -> String {
-        let code = try InviteCode.makeCode(
+        let conversationToken = try InviteConversationToken.makeConversationToken(
             conversationId: conversation.id,
             creatorInboxId: conversation.inboxId,
             secp256k1PrivateKey: privateKey
         )
         var payload = InvitePayload()
         payload.tag = conversation.inviteTag
-        payload.code = code
+        payload.conversationToken = conversationToken
         payload.creatorInboxID = conversation.inboxId
         let signature = try payload.sign(with: privateKey)
         var signedInvite = SignedInvite()

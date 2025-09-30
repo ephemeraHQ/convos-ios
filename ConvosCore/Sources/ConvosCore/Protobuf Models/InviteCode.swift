@@ -1,11 +1,11 @@
 import CryptoKit
 import Foundation
 
-/// Compact, public invite codes that only the creator can decode.
+/// Compact, public invite conversation tokens that only the creator can decode.
 ///
 /// ## Cryptographic Design
 /// - **Key Derivation**: HKDF-SHA256(privateKey, salt="ConvosInviteV1", info="inbox:<inboxId>")
-/// - **AEAD**: ChaCha20-Poly1305 with AAD = creatorInboxId (binds code to creator's identity)
+/// - **AEAD**: ChaCha20-Poly1305 with AAD = creatorInboxId (binds token to creator's identity)
 ///
 /// ## Binary Format Specification
 /// ```
@@ -29,9 +29,9 @@ import Foundation
 ///
 /// ## Size Analysis
 /// - **Minimum size**: 46 bytes (version + nonce + type_tag + auth_tag = 1 + 12 + 1 + 16 = 30 bytes encoded)
-/// - **UUID code**: 46 bytes encrypted → ~62 chars base64url
-/// - **String code**: 30 + string_length bytes → varies by conversation ID length
-enum InviteCode {
+/// - **UUID token**: 46 bytes encrypted → ~62 chars base64url
+/// - **String token**: 30 + string_length bytes → varies by conversation ID length
+enum InviteConversationToken {
     // MARK: - Format Constants
 
     /// Current format version
@@ -44,10 +44,10 @@ enum InviteCode {
     private static let nonceLength: Int = 12
     private static let authTagLength: Int = 16
 
-    /// Minimum valid code size (version + nonce + type_tag + auth_tag)
+    /// Minimum valid token size (version + nonce + type_tag + auth_tag)
     static let minEncodedSize: Int = 1 + nonceLength + 1 + authTagLength // 30 bytes
 
-    /// Size of UUID-based codes (fixed)
+    /// Size of UUID-based tokens (fixed)
     static let uuidCodeSize: Int = 1 + nonceLength + 16 + 1 + authTagLength // 46 bytes
 
     /// Maximum supported string length for conversation IDs
@@ -59,13 +59,13 @@ enum InviteCode {
 
     // MARK: - Public API
 
-    /// Make a public invite code that the creator can later decrypt to the conversationId.
+    /// Make a public invite conversation token that the creator can later decrypt to the conversationId.
     /// - Parameters:
     ///   - conversationId: The conversation id (UUID string recommended; detected & packed into 16 bytes).
     ///   - creatorInboxId: The creator’s inbox id (used for domain separation & AAD).
     ///   - secp256k1PrivateKey: 32-byte raw secp256k1 private key data.
-    /// - Returns: Base64URL (no padding) opaque code suitable for URLs.
-    static func makeCode(
+    /// - Returns: Base64URL (no padding) opaque conversation token suitable for URLs.
+    static func makeConversationToken(
         conversationId: String,
         creatorInboxId: String,
         secp256k1PrivateKey: Data
@@ -75,7 +75,7 @@ enum InviteCode {
         // Pack plaintext as either UUID(16) or UTF-8 with a tiny tag
         let plaintext = try packConversationId(conversationId)
 
-        // AAD binds this code to the specific creator identity
+        // AAD binds this token to the specific creator identity
         let aad = Data(creatorInboxId.utf8)
 
         let sealed = try chachaSeal(plaintext: plaintext, key: key, aad: aad)
@@ -88,18 +88,18 @@ enum InviteCode {
         return out.base64URLEncoded()
     }
 
-    /// Recover the original conversationId from a public invite code.
+    /// Recover the original conversationId from a public invite conversation token.
     /// - Parameters:
-    ///   - code: Base64URL opaque string produced by `makeCode`.
-    ///   - creatorInboxId: Same inbox id used when generating the code.
+    ///   - conversationToken: Base64URL opaque string produced by `makeConversationToken`.
+    ///   - creatorInboxId: Same inbox id used when generating the token.
     ///   - secp256k1PrivateKey: Same 32-byte private key used when generating.
     /// - Returns: The original conversationId on success.
-    static func decodeCode(
-        _ code: String,
+    static func decodeConversationToken(
+        _ conversationToken: String,
         creatorInboxId: String,
         secp256k1PrivateKey: Data
     ) throws -> String {
-        let data = try code.base64URLDecoded()
+        let data = try conversationToken.base64URLDecoded()
 
         // Validate minimum size
         guard data.count >= minEncodedSize else {
@@ -140,7 +140,7 @@ enum InviteCode {
             case .missingVersion:
                 return "Invite code is missing version byte"
             case .unsupportedVersion(let version):
-                return "Unsupported invite code version: \(version), expected \(InviteCode.formatVersion)"
+                return "Unsupported invite code version: \(version), expected \(InviteConversationToken.formatVersion)"
             case .badKeyMaterial:
                 return "Invalid private key material"
             case .cryptoOpenFailed:
@@ -148,7 +148,7 @@ enum InviteCode {
             case .invalidFormat(let details):
                 return "Invalid invite code format: \(details)"
             case .stringTooLong(let length):
-                return "Conversation ID too long: \(length) bytes, max \(InviteCode.maxStringLength)"
+                return "Conversation ID too long: \(length) bytes, max \(InviteConversationToken.maxStringLength)"
             }
         }
     }
