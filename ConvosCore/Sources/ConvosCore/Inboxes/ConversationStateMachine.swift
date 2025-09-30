@@ -309,7 +309,7 @@ public actor ConversationStateMachine {
 
         // Create invite
         let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
-        _ = try await inviteWriter.generate(for: dbConversation, maxUses: nil, expiresAt: nil)
+        _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
 
         // Subscribe to push notifications
         let topic = externalConversationId.xmtpGroupTopicFormat
@@ -429,7 +429,7 @@ public actor ConversationStateMachine {
 
                     // Create invite
                     let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
-                    _ = try await inviteWriter.generate(for: dbConversation, maxUses: nil, expiresAt: nil)
+                    _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
 
                     // Subscribe to push notifications
                     let topic = conversation.id.xmtpGroupTopicFormat

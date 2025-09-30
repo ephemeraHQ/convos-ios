@@ -28,10 +28,13 @@ enum ConversationMetadataWriterError: Error {
 final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     private let inboxStateManager: any InboxStateManagerProtocol
     private let databaseWriter: any DatabaseWriter
+    private let inviteWriter: any InviteWriterProtocol
 
     init(inboxStateManager: any InboxStateManagerProtocol,
+         inviteWriter: any InviteWriterProtocol,
          databaseWriter: any DatabaseWriter) {
         self.inboxStateManager = inboxStateManager
+        self.inviteWriter = inviteWriter
         self.databaseWriter = databaseWriter
     }
 
@@ -49,15 +52,23 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
 
         try await group.updateName(name: truncatedName)
 
-        try await databaseWriter.write { db in
-            if let localConversation = try DBConversation
-                .filter(DBConversation.Columns.id == conversationId)
-                .fetchOne(db) {
-                let updatedConversation = localConversation.with(name: truncatedName)
-                try updatedConversation.save(db)
-                Logger.info("Updated local conversation name for \(conversationId): \(truncatedName)")
+        let updatedConversation = try await databaseWriter.write { db in
+            guard let localConversation = try DBConversation
+                .fetchOne(db, key: conversationId) else {
+                throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
             }
+            let updatedConversation = localConversation.with(name: truncatedName)
+            try updatedConversation.save(db)
+            Logger.info("Updated local conversation name for \(conversationId): \(truncatedName)")
+            return updatedConversation
         }
+
+        _ = try await inviteWriter .update(
+            for: updatedConversation.id,
+            name: updatedConversation.name,
+            description: updatedConversation.description,
+            imageURL: updatedConversation.imageURLString
+        )
 
         Logger.info("Updated conversation name for \(conversationId): \(truncatedName)")
     }
@@ -72,15 +83,23 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
 
         try await group.updateCustomDescription(description: description)
 
-        try await databaseWriter.write { db in
-            if let localConversation = try DBConversation
-                .filter(DBConversation.Columns.id == conversationId)
-                .fetchOne(db) {
-                let updatedConversation = localConversation.with(description: description)
-                try updatedConversation.save(db)
-                Logger.info("Updated local conversation description for \(conversationId): \(description)")
+        let updatedConversation = try await databaseWriter.write { db in
+            guard let localConversation = try DBConversation
+                .fetchOne(db, key: conversationId) else {
+                throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
             }
+            let updatedConversation = localConversation.with(description: description)
+            try updatedConversation.save(db)
+            Logger.info("Updated local conversation description for \(conversationId): \(description)")
+            return updatedConversation
         }
+
+        _ = try await inviteWriter .update(
+            for: updatedConversation.id,
+            name: updatedConversation.name,
+            description: updatedConversation.description,
+            imageURL: updatedConversation.imageURLString
+        )
 
         Logger.info("Updated conversation description for \(conversationId): \(description)")
     }
@@ -119,15 +138,23 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
 
         try await group.updateImageUrl(imageUrl: imageURL)
 
-        try await databaseWriter.write { db in
-            if let localConversation = try DBConversation
-                .filter(DBConversation.Columns.id == conversationId)
-                .fetchOne(db) {
-                let updatedConversation = localConversation.with(imageURLString: imageURL)
-                try updatedConversation.save(db)
-                Logger.info("Updated local conversation image for \(conversationId): \(imageURL)")
+        let updatedConversation = try await databaseWriter.write { db in
+            guard let localConversation = try DBConversation
+                .fetchOne(db, key: conversationId) else {
+                throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
             }
+            let updatedConversation = localConversation.with(imageURLString: imageURL)
+            try updatedConversation.save(db)
+            Logger.info("Updated local conversation image for \(conversationId): \(imageURL)")
+            return updatedConversation
         }
+
+        _ = try await inviteWriter .update(
+            for: updatedConversation.id,
+            name: updatedConversation.name,
+            description: updatedConversation.description,
+            imageURL: updatedConversation.imageURLString
+        )
 
         Logger.info("Updated conversation image for \(conversationId): \(imageURL)")
     }
