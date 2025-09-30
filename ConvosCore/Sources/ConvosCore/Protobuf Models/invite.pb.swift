@@ -36,9 +36,41 @@ public struct InvitePayload: Sendable {
   /// The tag to mark which conversation this corresponds to, lives in `ConversationCustomMetadata`
   public var tag: String = String()
 
+  /// optional conversation metadata
+  public var name: String {
+    get {return _name ?? String()}
+    set {_name = newValue}
+  }
+  /// Returns true if `name` has been explicitly set.
+  public var hasName: Bool {return self._name != nil}
+  /// Clears the value of `name`. Subsequent reads from it will return its default value.
+  public mutating func clearName() {self._name = nil}
+
+  public var description_p: String {
+    get {return _description_p ?? String()}
+    set {_description_p = newValue}
+  }
+  /// Returns true if `description_p` has been explicitly set.
+  public var hasDescription_p: Bool {return self._description_p != nil}
+  /// Clears the value of `description_p`. Subsequent reads from it will return its default value.
+  public mutating func clearDescription_p() {self._description_p = nil}
+
+  public var imageURL: String {
+    get {return _imageURL ?? String()}
+    set {_imageURL = newValue}
+  }
+  /// Returns true if `imageURL` has been explicitly set.
+  public var hasImageURL: Bool {return self._imageURL != nil}
+  /// Clears the value of `imageURL`. Subsequent reads from it will return its default value.
+  public mutating func clearImageURL() {self._imageURL = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _name: String? = nil
+  fileprivate var _description_p: String? = nil
+  fileprivate var _imageURL: String? = nil
 }
 
 /// SignedInvite represents an invite with its cryptographic signature
@@ -71,7 +103,7 @@ public struct SignedInvite: Sendable {
 
 extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = "InvitePayload"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}conversationToken\0\u{3}creator_inbox_id\0\u{1}tag\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}conversationToken\0\u{3}creator_inbox_id\0\u{1}tag\0\u{1}name\0\u{1}description\0\u{1}imageURL\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -82,12 +114,19 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
       case 1: try { try decoder.decodeSingularStringField(value: &self.conversationToken) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.creatorInboxID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.tag) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self._name) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self._description_p) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self._imageURL) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.conversationToken.isEmpty {
       try visitor.visitSingularStringField(value: self.conversationToken, fieldNumber: 1)
     }
@@ -97,6 +136,15 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
     if !self.tag.isEmpty {
       try visitor.visitSingularStringField(value: self.tag, fieldNumber: 3)
     }
+    try { if let v = self._name {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 4)
+    } }()
+    try { if let v = self._description_p {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 5)
+    } }()
+    try { if let v = self._imageURL {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 6)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -104,6 +152,9 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
     if lhs.conversationToken != rhs.conversationToken {return false}
     if lhs.creatorInboxID != rhs.creatorInboxID {return false}
     if lhs.tag != rhs.tag {return false}
+    if lhs._name != rhs._name {return false}
+    if lhs._description_p != rhs._description_p {return false}
+    if lhs._imageURL != rhs._imageURL {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
