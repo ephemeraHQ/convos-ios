@@ -85,24 +85,12 @@ final class MessagingService: MessagingServiceProtocol {
 
     // MARK: New Conversation
 
-    func draftConversationComposer() -> any DraftConversationComposerProtocol {
-        let draftConversationWriter = DraftConversationWriter(
+    func conversationStateManager() -> any ConversationStateManagerProtocol {
+        return ConversationStateManager(
             inboxStateManager: inboxStateManager,
             identityStore: identityStore,
             databaseReader: databaseReader,
-            databaseWriter: databaseWriter,
-        )
-        return DraftConversationComposer(
-            myProfileWriter: myProfileWriter(),
-            draftConversationWriter: draftConversationWriter,
-            draftConversationRepository: DraftConversationRepository(
-                dbReader: databaseReader,
-                writer: draftConversationWriter,
-                inboxStateManager: inboxStateManager
-            ),
-            conversationConsentWriter: conversationConsentWriter(),
-            conversationLocalStateWriter: conversationLocalStateWriter(),
-            conversationMetadataWriter: conversationMetadataWriter()
+            databaseWriter: databaseWriter
         )
     }
 

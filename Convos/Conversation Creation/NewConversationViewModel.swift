@@ -37,7 +37,7 @@ class NewConversationViewModel: Identifiable {
 
     // MARK: - Private
 
-    private let draftConversationComposer: any DraftConversationComposerProtocol
+    private let conversationStateManager: any ConversationStateManagerProtocol
     private let messagingService: AnyMessagingService
     private var newConversationTask: Task<Void, Never>?
     private var joinConversationTask: Task<Void, Error>?
@@ -61,16 +61,16 @@ class NewConversationViewModel: Identifiable {
         self.delegate = delegate
 
         self.messagingService = session.messagingService
-        let draftConversationComposer = messagingService.draftConversationComposer()
-        self.draftConversationComposer = draftConversationComposer
+        let conversationStateManager = messagingService.conversationStateManager()
+        self.conversationStateManager = conversationStateManager
         let draftConversation: Conversation = .empty(
-            id: draftConversationComposer.draftConversationRepository.conversationId
+            id: conversationStateManager.draftConversationRepository.conversationId
         )
         self.conversationViewModel = .init(
             conversation: draftConversation,
             session: session,
-            draftConversationComposer: draftConversationComposer,
-            myProfileRepository: draftConversationComposer.draftConversationRepository.myProfileRepository
+            conversationStateManager: conversationStateManager,
+            myProfileRepository: conversationStateManager.draftConversationRepository.myProfileRepository
         )
         setupObservations()
         self.conversationViewModel.untitledConversationPlaceholder = "New convo"
@@ -79,7 +79,7 @@ class NewConversationViewModel: Identifiable {
         }
         if autoCreateConversation {
             Task {
-                try await draftConversationComposer.draftConversationWriter.createConversation()
+                try await conversationStateManager.createConversation()
             }
         }
     }
@@ -109,7 +109,7 @@ class NewConversationViewModel: Identifiable {
 
             do {
                 // Request to join
-                try await draftConversationComposer.draftConversationWriter.joinConversation(inviteCode: inviteCode)
+                try await conversationStateManager.joinConversation(inviteCode: inviteCode)
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
                     self.presentingJoinConversationSheet = false
@@ -139,7 +139,7 @@ class NewConversationViewModel: Identifiable {
         joinConversationTask?.cancel()
         Task { [weak self] in
             guard let self else { return }
-            await draftConversationComposer.draftConversationWriter.delete()
+            await conversationStateManager.delete()
         }
     }
 
@@ -148,7 +148,7 @@ class NewConversationViewModel: Identifiable {
     private func setupObservations() {
         cancellables.removeAll()
 
-        draftConversationComposer.draftConversationWriter.conversationIdPublisher
+        conversationStateManager.conversationIdPublisher
             .receive(on: DispatchQueue.main)
             .sink { conversationId in
                 Logger.info("Active conversation changed: \(conversationId)")
@@ -161,8 +161,8 @@ class NewConversationViewModel: Identifiable {
             .store(in: &cancellables)
 
         Publishers.Merge(
-            draftConversationComposer.draftConversationWriter.sentMessage.map { _ in () },
-            draftConversationComposer.draftConversationRepository.messagesRepository
+            conversationStateManager.sentMessage.map { _ in () },
+            conversationStateManager.draftConversationRepository.messagesRepository
                 .messagesPublisher
                 .filter { $0.contains { $0.base.content.showsInMessagesList } }
                 .map { _ in () }

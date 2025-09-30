@@ -10,7 +10,7 @@ public protocol MessagingServiceProtocol: AnyObject {
 
     func myProfileWriter() -> any MyProfileWriterProtocol
 
-    func draftConversationComposer() -> any DraftConversationComposerProtocol
+    func conversationStateManager() -> any ConversationStateManagerProtocol
 
     func conversationConsentWriter() -> any ConversationConsentWriterProtocol
     func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol

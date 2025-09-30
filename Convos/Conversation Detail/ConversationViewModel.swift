@@ -129,7 +129,7 @@ class ConversationViewModel {
     init(
         conversation: Conversation,
         session: any SessionManagerProtocol,
-        draftConversationComposer: any DraftConversationComposerProtocol,
+        conversationStateManager: any ConversationStateManagerProtocol,
         myProfileRepository: any MyProfileRepositoryProtocol
     ) {
         self.conversation = conversation
@@ -138,15 +138,15 @@ class ConversationViewModel {
         self.conversationDescription = conversation.description ?? ""
         self.profile = .empty(inboxId: conversation.inboxId)
 
-        // Extract dependencies from draft composer
-        self.myProfileWriter = draftConversationComposer.myProfileWriter
+        // Extract dependencies from conversation state manager
+        self.myProfileWriter = conversationStateManager.myProfileWriter
         self.myProfileRepository = myProfileRepository
-        self.conversationRepository = draftConversationComposer.draftConversationRepository
-        self.messagesRepository = draftConversationComposer.draftConversationRepository.messagesRepository
-        self.outgoingMessageWriter = draftConversationComposer.draftConversationWriter
-        self.consentWriter = draftConversationComposer.conversationConsentWriter
-        self.localStateWriter = draftConversationComposer.conversationLocalStateWriter
-        self.metadataWriter = draftConversationComposer.conversationMetadataWriter
+        self.conversationRepository = conversationStateManager.draftConversationRepository
+        self.messagesRepository = conversationStateManager.draftConversationRepository.messagesRepository
+        self.outgoingMessageWriter = conversationStateManager
+        self.consentWriter = conversationStateManager.conversationConsentWriter
+        self.localStateWriter = conversationStateManager.conversationLocalStateWriter
+        self.metadataWriter = conversationStateManager.conversationMetadataWriter
         do {
             self.messages = try messagesRepository.fetchAll()
             self.conversation = try conversationRepository.fetchConversation() ?? conversation

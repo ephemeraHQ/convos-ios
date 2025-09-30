@@ -8,36 +8,35 @@ public protocol DraftConversationRepositoryProtocol: ConversationRepositoryProto
 
 class DraftConversationRepository: DraftConversationRepositoryProtocol {
     private let dbReader: any DatabaseReader
-    private let writer: any DraftConversationWriterProtocol
+    let conversationId: String
+    private let conversationIdPublisher: AnyPublisher<String, Never>
     let messagesRepository: any MessagesRepositoryProtocol
     let myProfileRepository: any MyProfileRepositoryProtocol
 
-    var conversationId: String {
-        writer.conversationId
-    }
-
     init(dbReader: any DatabaseReader,
-         writer: any DraftConversationWriterProtocol,
+         conversationId: String,
+         conversationIdPublisher: AnyPublisher<String, Never>,
          inboxStateManager: any InboxStateManagerProtocol) {
         self.dbReader = dbReader
-        self.writer = writer
-        Logger.info("Initializing DraftConversationRepository with conversationId: \(writer.conversationId)")
+        self.conversationId = conversationId
+        self.conversationIdPublisher = conversationIdPublisher
+        Logger.info("Initializing DraftConversationRepository with conversationId: \(conversationId)")
         messagesRepository = MessagesRepository(
             dbReader: dbReader,
-            conversationId: writer.conversationId,
-            conversationIdPublisher: writer.conversationIdPublisher
+            conversationId: conversationId,
+            conversationIdPublisher: conversationIdPublisher
         )
         myProfileRepository = MyProfileRepository(
             inboxStateManager: inboxStateManager,
             databaseReader: dbReader,
-            conversationId: writer.conversationId,
-            conversationIdPublisher: writer.conversationIdPublisher
+            conversationId: conversationId,
+            conversationIdPublisher: conversationIdPublisher
         )
     }
 
     lazy var conversationPublisher: AnyPublisher<Conversation?, Never> = {
-        Logger.info("Creating conversationPublisher for conversationId: \(writer.conversationId)")
-        return writer.conversationIdPublisher
+        Logger.info("Creating conversationPublisher for conversationId: \(conversationId)")
+        return conversationIdPublisher
             .removeDuplicates()
             .flatMap { [weak self] conversationId -> AnyPublisher<Conversation?, Never> in
                 guard let self else {
@@ -77,23 +76,23 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
     }()
 
     func fetchConversation() throws -> Conversation? {
-        Logger.info("Fetching conversation for ID: \(writer.conversationId)")
+        Logger.info("Fetching conversation for ID: \(conversationId)")
         do {
             let conversation: Conversation? = try dbReader.read { [weak self] db in
                 guard let self else {
                     Logger.warning("DraftConversationRepository deallocated during fetchConversation")
                     return nil
                 }
-                return try db.composeConversation(for: writer.conversationId)
+                return try db.composeConversation(for: self.conversationId)
             }
             if conversation != nil {
-                Logger.info("Successfully fetched conversation: \(writer.conversationId)")
+                Logger.info("Successfully fetched conversation: \(conversationId)")
             } else {
-                Logger.debug("No conversation found for ID: \(writer.conversationId)")
+                Logger.debug("No conversation found for ID: \(conversationId)")
             }
             return conversation
         } catch {
-            Logger.error("Error fetching conversation for ID \(writer.conversationId): \(error)")
+            Logger.error("Error fetching conversation for ID \(conversationId): \(error)")
             throw error
         }
     }
