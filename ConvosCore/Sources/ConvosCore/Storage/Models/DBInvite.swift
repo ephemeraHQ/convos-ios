@@ -36,3 +36,13 @@ struct DBInvite: Codable, FetchableRecord, PersistableRecord, Hashable {
         key: "inviteConversation"
     )
 }
+
+extension DBInvite {
+    func with(urlSlug: String) -> Self {
+        .init(
+            creatorInboxId: creatorInboxId,
+            conversationId: conversationId,
+            urlSlug: urlSlug
+        )
+    }
+}

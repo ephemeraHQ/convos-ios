@@ -2,13 +2,14 @@ import Foundation
 import GRDB
 
 public protocol InviteWriterProtocol {
-    func generate(for conversation: DBConversation,
-                  maxUses: Int?,
-                  expiresAt: Date?) async throws -> Invite
+    func generate(for conversation: DBConversation, expiresAt: Date?) async throws -> Invite
+    func update(for conversationId: String, name: String?, description: String?, imageURL: String?) async throws -> Invite
 }
 
 enum InviteWriterError: Error {
     case failedEncodingInvitePayload
+    case conversationNotFound
+    case inviteNotFound
 }
 
 class InviteWriter: InviteWriterProtocol {
@@ -21,7 +22,7 @@ class InviteWriter: InviteWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    func generate(for conversation: DBConversation, maxUses: Int? = nil, expiresAt: Date? = nil) async throws -> Invite {
+    func generate(for conversation: DBConversation, expiresAt: Date? = nil) async throws -> Invite {
         let existingInvite = try? await self.databaseWriter.read { db in
             try? DBInvite
                 .filter(DBInvite.Columns.conversationId == conversation.id)
@@ -63,5 +64,37 @@ class InviteWriter: InviteWriterProtocol {
             try dbInvite.save(db)
         }
         return dbInvite.hydrateInvite()
+    }
+
+    func update(
+        for conversationId: String,
+        name: String?,
+        description: String?,
+        imageURL: String?
+    ) async throws -> Invite {
+        guard let conversation = try await databaseWriter.read({ db in
+            try DBConversation
+                .fetchOne(db, key: conversationId)
+        }) else {
+            throw InviteWriterError.conversationNotFound
+        }
+        let invite = try await databaseWriter.read { db in
+            try DBInvite
+                .filter(DBInvite.Columns.conversationId == conversation.id)
+                .filter(DBInvite.Columns.creatorInboxId == conversation.inboxId)
+                .fetchOne(db)
+        }
+        guard let invite else { throw InviteWriterError.inviteNotFound }
+
+        var signedInvite = try SignedInvite.fromURLSafeSlug(invite.urlSlug)
+        signedInvite.payload.name = name ?? ""
+        signedInvite.payload.description_p = description ?? ""
+        signedInvite.payload.imageURL = imageURL ?? ""
+        let urlSlug = try signedInvite.toURLSafeSlug()
+        let updatedInvite = invite.with(urlSlug: urlSlug)
+        try await databaseWriter.write { db in
+            try updatedInvite.save(db)
+        }
+        return updatedInvite.hydrateInvite()
     }
 }

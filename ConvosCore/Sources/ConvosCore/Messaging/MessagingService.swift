@@ -120,6 +120,7 @@ final class MessagingService: MessagingServiceProtocol {
     func conversationMetadataWriter() -> any ConversationMetadataWriterProtocol {
         ConversationMetadataWriter(
             inboxStateManager: inboxStateManager,
+            inviteWriter: InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter),
             databaseWriter: databaseWriter
         )
     }

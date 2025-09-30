@@ -96,8 +96,10 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
         self.conversationIdSubject = .init(DBConversation.generateDraftConversationId())
 
         // Initialize writers
+        let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
         self.conversationMetadataWriter = ConversationMetadataWriter(
             inboxStateManager: inboxStateManager,
+            inviteWriter: inviteWriter,
             databaseWriter: databaseWriter
         )
 
