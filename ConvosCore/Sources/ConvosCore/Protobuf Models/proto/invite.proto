@@ -2,8 +2,8 @@ syntax = "proto3";
 
 // InvitePayload represents the core invite data
 message InvitePayload {
-    // The invite code (typically a Base62 string)
-    string code = 1;
+    // The encrypted conversation id
+    string conversationToken = 1;
 
     // The creator's inbox ID
     string creator_inbox_id = 2;

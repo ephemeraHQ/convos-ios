@@ -27,8 +27,8 @@ public struct InvitePayload: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// The invite code (typically a Base62 string)
-  public var code: String = String()
+  /// The encrypted conversation id
+  public var conversationToken: String = String()
 
   /// The creator's inbox ID
   public var creatorInboxID: String = String()
@@ -71,7 +71,7 @@ public struct SignedInvite: Sendable {
 
 extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = "InvitePayload"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}code\0\u{3}creator_inbox_id\0\u{1}tag\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}conversationToken\0\u{3}creator_inbox_id\0\u{1}tag\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -79,7 +79,7 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.code) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.conversationToken) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.creatorInboxID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.tag) }()
       default: break
@@ -88,8 +88,8 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.code.isEmpty {
-      try visitor.visitSingularStringField(value: self.code, fieldNumber: 1)
+    if !self.conversationToken.isEmpty {
+      try visitor.visitSingularStringField(value: self.conversationToken, fieldNumber: 1)
     }
     if !self.creatorInboxID.isEmpty {
       try visitor.visitSingularStringField(value: self.creatorInboxID, fieldNumber: 2)
@@ -101,7 +101,7 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
   }
 
   public static func ==(lhs: InvitePayload, rhs: InvitePayload) -> Bool {
-    if lhs.code != rhs.code {return false}
+    if lhs.conversationToken != rhs.conversationToken {return false}
     if lhs.creatorInboxID != rhs.creatorInboxID {return false}
     if lhs.tag != rhs.tag {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
