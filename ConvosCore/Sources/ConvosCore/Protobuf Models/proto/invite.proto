@@ -10,6 +10,11 @@ message InvitePayload {
 
     // The tag to mark which conversation this corresponds to, lives in `ConversationCustomMetadata`
     string tag = 3;
+
+    // optional conversation metadata
+    optional string name = 4;
+    optional string description = 5;
+    optional string imageURL = 6;
 }
 
 // SignedInvite represents an invite with its cryptographic signature
