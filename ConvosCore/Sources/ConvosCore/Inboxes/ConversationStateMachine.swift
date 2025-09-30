@@ -20,8 +20,8 @@ public actor ConversationStateMachine {
         case uninitialized
         case creating
         case validating(inviteCode: String)
-        case validated(invite: SignedInvite, inboxReady: InboxReadyResult)
-        case joining(invite: SignedInvite)
+        case validated(invite: SignedInvite, placeholder: ConversationReadyResult, inboxReady: InboxReadyResult)
+        case joining(invite: SignedInvite, placeholder: ConversationReadyResult)
         case ready(ConversationReadyResult)
         case deleting
         case error(Error)
@@ -32,11 +32,11 @@ public actor ConversationStateMachine {
                  (.creating, .creating),
                  (.deleting, .deleting):
                 return true
-            case let (.joining(lhsInvite), .joining(rhsInvite)):
+            case let (.joining(lhsInvite, _), .joining(rhsInvite, _)):
                 return lhsInvite.payload.conversationToken == rhsInvite.payload.conversationToken
             case let (.validating(lhsCode), .validating(rhsCode)):
                 return lhsCode == rhsCode
-            case let (.validated(lhsInvite, lhsInbox), .validated(rhsInvite, rhsInbox)):
+            case let (.validated(lhsInvite, _, lhsInbox), .validated(rhsInvite, _, rhsInbox)):
                 return (lhsInvite.payload.conversationToken == rhsInvite.payload.conversationToken &&
                         lhsInbox.client.inboxId == rhsInbox.client.inboxId)
             case let (.ready(lhsResult), .ready(rhsResult)):
@@ -249,8 +249,8 @@ public actor ConversationStateMachine {
             case (.ready, let .validate(inviteCode)):
                 try await handleValidateFromReadyState(inviteCode: inviteCode)
 
-            case (let .validated(invite, inboxReady), .join):
-                try await handleJoin(invite: invite, inboxReady: inboxReady)
+            case (let .validated(invite, placeholder, inboxReady), .join):
+                try await handleJoin(invite: invite, placeholder: placeholder, inboxReady: inboxReady)
 
             case (.ready, .delete), (.error, .delete):
                 try await handleDelete()
@@ -353,44 +353,54 @@ public actor ConversationStateMachine {
 
     private func handleValidate(inviteCode: String) async throws {
         emitStateChange(.validating(inviteCode: inviteCode))
-
         Logger.info("Validating invite code '\(inviteCode)'")
-
-        let extractedCode: String
-        if let url = URL(string: inviteCode) {
-            extractedCode = url.lastPathComponent
-        } else {
-            extractedCode = inviteCode
-        }
-
-        let trimmedInviteCode = extractedCode.trimmingCharacters(in: .whitespacesAndNewlines)
-        let signedInvite = try SignedInvite.fromURLSafeSlug(trimmedInviteCode)
+        let signedInvite = try SignedInvite.fromInviteCode(inviteCode)
         // Recover the public key of whoever signed this invite
         let signerPublicKey = try signedInvite.recoverSignerPublicKey()
         Logger.info("Recovered signer's public key: \(signerPublicKey.hexEncodedString())")
-
-        let existingConversation: DBConversation? = try await databaseReader.read { db in
+        let existingConversation: Conversation? = try await databaseReader.read { db in
             try DBConversation
                 .filter(DBConversation.Columns.inviteTag == signedInvite.payload.tag)
-                .fetchOne(db)
-        }
-        if let existingConversation {
-            Logger.info("Found existing convo by invite tag, returning...")
-            emitStateChange(.ready(.init(conversationId: existingConversation.id)))
-            return
+                .detailedConversationQuery()
+                .fetchOne(db)?
+                .hydrateConversation()
         }
 
         Logger.info("Waiting for inbox ready result...")
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
-        Logger.info("Inbox ready, validating signed invite...")
 
-        Logger.info("Existing conversation not found. Proceeding to join...")
-        emitStateChange(.validated(invite: signedInvite, inboxReady: inboxReady))
-        enqueueAction(.join)
+        if let existingConversation {
+            Logger.info("Found existing convo by invite tag...")
+            if existingConversation.hasJoined {
+                Logger.info("Already joined conversation... moving to ready state.")
+                emitStateChange(.ready(.init(conversationId: existingConversation.id)))
+            } else {
+                Logger.info("Waiting for invite approval...")
+                if existingConversation.isDraft {
+                    // update the placeholder with the signed invite
+                    _ = try await createPlaceholderConversation(
+                        draftConversationId: existingConversation.id,
+                        for: signedInvite,
+                        inboxId: inboxReady.client.inboxId
+                    )
+                }
+                emitStateChange(.validated(
+                    invite: signedInvite,
+                    placeholder: .init(conversationId: existingConversation.id),
+                    inboxReady: inboxReady
+                ))
+                enqueueAction(.join)
+            }
+        } else {
+            Logger.info("Existing conversation not found. Creating placeholder...")
+            let placeholder = try await createPlaceholderConversation(for: signedInvite, inboxId: inboxReady.client.inboxId)
+            emitStateChange(.validated(invite: signedInvite, placeholder: placeholder, inboxReady: inboxReady))
+            enqueueAction(.join)
+        }
     }
 
-    private func handleJoin(invite: SignedInvite, inboxReady: InboxReadyResult) async throws {
-        emitStateChange(.joining(invite: invite))
+    private func handleJoin(invite: SignedInvite, placeholder: ConversationReadyResult, inboxReady: InboxReadyResult) async throws {
+        emitStateChange(.joining(invite: invite, placeholder: placeholder))
 
         Logger.info("Requesting to join conversation...")
 
@@ -459,40 +469,39 @@ public actor ConversationStateMachine {
         }
     }
 
-    private func ensureDraftConversationExists(inboxId: String, draftConversationId: String) async throws {
-        let conversationExists = try await databaseReader.read { db in
-            try DBConversation.fetchOne(db, key: draftConversationId) != nil
-        }
-
-        guard !conversationExists else { return }
+    private func createPlaceholderConversation(
+        draftConversationId: String? = nil,
+        for signedInvite: SignedInvite,
+        inboxId: String
+    ) async throws -> ConversationReadyResult {
+        let draftConversationId = draftConversationId ?? DBConversation.generateDraftConversationId()
 
         // Create the draft conversation and necessary records
-        try await databaseWriter.write { db in
+        let creatorInboxId = signedInvite.payload.creatorInboxID // TODO: the creator of the invite is not necessarily the invite creator, but do we care?
+        let conversation = try await databaseWriter.write { db in
             let conversation = DBConversation(
                 id: draftConversationId,
                 inboxId: inboxId,
                 clientConversationId: draftConversationId,
-                inviteTag: UUID().uuidString,
-                creatorId: inboxId,
+                inviteTag: signedInvite.payload.tag,
+                creatorId: creatorInboxId,
                 kind: .group,
                 consent: .allowed,
                 createdAt: Date(),
-                name: nil,
-                description: nil,
-                imageURLString: nil
+                name: signedInvite.name,
+                description: signedInvite.description_p,
+                imageURLString: signedInvite.imageURL
             )
-
+            try conversation.save(db)
             let memberProfile = MemberProfile(
                 conversationId: draftConversationId,
-                inboxId: inboxId,
+                inboxId: creatorInboxId,
                 name: nil,
                 avatar: nil
             )
-            let member = Member(inboxId: inboxId)
-
+            let member = Member(inboxId: creatorInboxId)
             try member.save(db)
             try memberProfile.save(db)
-            try conversation.save(db)
 
             let localState = ConversationLocalState(
                 conversationId: conversation.id,
@@ -505,15 +514,18 @@ public actor ConversationStateMachine {
 
             let conversationMember = DBConversationMember(
                 conversationId: conversation.id,
-                inboxId: memberProfile.inboxId,
-                role: .superAdmin,
+                inboxId: creatorInboxId,
+                role: .member,
                 consent: .allowed,
                 createdAt: Date()
             )
             try conversationMember.save(db)
 
-            Logger.info("Created draft conversation")
+            Logger.info("Created placeholder conversation for invite")
+            return conversation
         }
+
+        return .init(conversationId: conversation.id)
     }
 
     private func handleDelete() async throws {

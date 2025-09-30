@@ -4,6 +4,18 @@ import Foundation
 import SwiftProtobuf
 
 extension SignedInvite {
+    public var name: String? {
+        payload.nameIfPresent
+    }
+
+    public var description_p: String? {
+        payload.descriptionIfPresent
+    }
+
+    public var imageURL: String? {
+        payload.imageURLIfPresent
+    }
+
     public static func slug(for conversation: DBConversation, privateKey: Data) throws -> String {
         let conversationToken = try InviteConversationToken.makeConversationToken(
             conversationId: conversation.id,
@@ -19,6 +31,23 @@ extension SignedInvite {
         signedInvite.payload = payload
         signedInvite.signature = signature
         return try signedInvite.toURLSafeSlug()
+    }
+}
+
+extension InvitePayload {
+    public var nameIfPresent: String? {
+        guard hasName else { return nil }
+        return name
+    }
+
+    public var descriptionIfPresent: String? {
+        guard hasDescription_p else { return nil }
+        return description_p
+    }
+
+    public var imageURLIfPresent: String? {
+        guard hasImageURL else { return nil }
+        return imageURL
     }
 }
 
@@ -88,16 +117,28 @@ extension InvitePayload {
 // MARK: - URL-safe Base64 encoding
 
 extension SignedInvite {
-    /// Encode to URL-safe base64 string (similar to InviteSlugComposer.slug)
+    /// Encode to URL-safe base64 string
     public func toURLSafeSlug() throws -> String {
         let data = try self.serializedData()
         return data.base64URLEncoded()
     }
 
-    /// Decode from URL-safe base64 string (similar to InviteSlugComposer.decode)
+    /// Decode from URL-safe base64 string
     public static func fromURLSafeSlug(_ slug: String) throws -> SignedInvite {
         let data = try slug.base64URLDecoded()
         return try SignedInvite(serializedBytes: data)
+    }
+
+    /// Decode from either the full URL string or the invite code string
+    public static func fromInviteCode(_ code: String) throws -> SignedInvite {
+        let extractedCode: String
+        if let url = URL(string: code) {
+            extractedCode = url.lastPathComponent
+        } else {
+            extractedCode = code
+        }
+        let trimmedInviteCode = extractedCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        return try fromURLSafeSlug(trimmedInviteCode)
     }
 }
 

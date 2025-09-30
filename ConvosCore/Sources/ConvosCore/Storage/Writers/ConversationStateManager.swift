@@ -14,7 +14,6 @@ public protocol ConversationStateObserver: AnyObject {
 public protocol ConversationStateManagerProtocol: AnyObject, DraftConversationWriterProtocol {
     // State Management
     var currentState: ConversationStateMachine.State { get }
-    func waitForConversationReadyResult(timeout: TimeInterval) async throws -> ConversationReadyResult
 
     // Observer Management
     func addObserver(_ observer: ConversationStateObserver)
@@ -162,7 +161,8 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
         currentState = state
 
         switch state {
-        case .ready(let result):
+        case .ready(let result),
+                .joining(invite: _, placeholder: let result):
             isReady = true
             hasError = false
             errorMessage = nil
@@ -233,12 +233,11 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
 
     public func createConversation() async throws {
         await stateMachine.create()
-        _ = try await waitForConversationReadyResult()
     }
 
     public func joinConversation(inviteCode: String) async throws {
         await stateMachine.join(inviteCode: inviteCode)
-        _ = try await waitForConversationReadyResult()
+        // TODO: This should wait for validation, but not readiness
     }
 
     public func send(text: String) async throws {
