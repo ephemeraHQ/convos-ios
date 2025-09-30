@@ -48,8 +48,8 @@ public class MockMessagingService: MessagingServiceProtocol {
         self
     }
 
-    public func draftConversationComposer() -> any DraftConversationComposerProtocol {
-        MockDraftConversationComposer()
+    public func conversationStateManager() -> any ConversationStateManagerProtocol {
+        MockConversationStateManager()
     }
 
     public var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
