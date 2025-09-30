@@ -164,7 +164,7 @@ class NewConversationViewModel: Identifiable {
             draftConversationComposer.draftConversationWriter.sentMessage.map { _ in () },
             draftConversationComposer.draftConversationRepository.messagesRepository
                 .messagesPublisher
-                .filter { !$0.isEmpty }
+                .filter { $0.contains { $0.base.content.showsInMessagesList } }
                 .map { _ in () }
         )
         .eraseToAnyPublisher()
