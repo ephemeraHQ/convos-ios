@@ -378,7 +378,13 @@ public actor ConversationStateMachine {
                 Logger.info("Waiting for invite approval...")
                 if existingConversation.isDraft {
                     // update the placeholder with the signed invite
-                    _ = try await createPlaceholderConversation(
+                    let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
+                    let conversationWriter = ConversationWriter(
+                        identityStore: identityStore,
+                        databaseWriter: databaseWriter,
+                        messageWriter: messageWriter
+                    )
+                    _ = try await conversationWriter.createPlaceholderConversation(
                         draftConversationId: existingConversation.id,
                         for: signedInvite,
                         inboxId: inboxReady.client.inboxId
@@ -393,7 +399,18 @@ public actor ConversationStateMachine {
             }
         } else {
             Logger.info("Existing conversation not found. Creating placeholder...")
-            let placeholder = try await createPlaceholderConversation(for: signedInvite, inboxId: inboxReady.client.inboxId)
+            let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
+            let conversationWriter = ConversationWriter(
+                identityStore: identityStore,
+                databaseWriter: databaseWriter,
+                messageWriter: messageWriter
+            )
+            let conversationId = try await conversationWriter.createPlaceholderConversation(
+                draftConversationId: nil,
+                for: signedInvite,
+                inboxId: inboxReady.client.inboxId
+            )
+            let placeholder = ConversationReadyResult(conversationId: conversationId)
             emitStateChange(.validated(invite: signedInvite, placeholder: placeholder, inboxReady: inboxReady))
             enqueueAction(.join)
         }
@@ -469,64 +486,6 @@ public actor ConversationStateMachine {
         }
     }
 
-    private func createPlaceholderConversation(
-        draftConversationId: String? = nil,
-        for signedInvite: SignedInvite,
-        inboxId: String
-    ) async throws -> ConversationReadyResult {
-        let draftConversationId = draftConversationId ?? DBConversation.generateDraftConversationId()
-
-        // Create the draft conversation and necessary records
-        let creatorInboxId = signedInvite.payload.creatorInboxID // TODO: the creator of the invite is not necessarily the invite creator, but do we care?
-        let conversation = try await databaseWriter.write { db in
-            let conversation = DBConversation(
-                id: draftConversationId,
-                inboxId: inboxId,
-                clientConversationId: draftConversationId,
-                inviteTag: signedInvite.payload.tag,
-                creatorId: creatorInboxId,
-                kind: .group,
-                consent: .allowed,
-                createdAt: Date(),
-                name: signedInvite.name,
-                description: signedInvite.description_p,
-                imageURLString: signedInvite.imageURL
-            )
-            try conversation.save(db)
-            let memberProfile = MemberProfile(
-                conversationId: draftConversationId,
-                inboxId: creatorInboxId,
-                name: nil,
-                avatar: nil
-            )
-            let member = Member(inboxId: creatorInboxId)
-            try member.save(db)
-            try memberProfile.save(db)
-
-            let localState = ConversationLocalState(
-                conversationId: conversation.id,
-                isPinned: false,
-                isUnread: false,
-                isUnreadUpdatedAt: Date(),
-                isMuted: false
-            )
-            try localState.save(db)
-
-            let conversationMember = DBConversationMember(
-                conversationId: conversation.id,
-                inboxId: creatorInboxId,
-                role: .member,
-                consent: .allowed,
-                createdAt: Date()
-            )
-            try conversationMember.save(db)
-
-            Logger.info("Created placeholder conversation for invite")
-            return conversation
-        }
-
-        return .init(conversationId: conversation.id)
-    }
 
     private func handleDelete() async throws {
         // For invites, we need the external conversation ID if available,

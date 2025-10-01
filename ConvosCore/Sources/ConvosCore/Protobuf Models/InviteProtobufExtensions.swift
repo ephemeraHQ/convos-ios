@@ -23,6 +23,15 @@ extension SignedInvite {
             secp256k1PrivateKey: privateKey
         )
         var payload = InvitePayload()
+        if let name = conversation.name {
+            payload.name = name
+        }
+        if let description_p = conversation.description {
+            payload.description_p = description_p
+        }
+        if let imageURL = conversation.imageURLString {
+            payload.imageURL = imageURL
+        }
         payload.tag = conversation.inviteTag
         payload.conversationToken = conversationToken
         payload.creatorInboxID = conversation.inboxId

@@ -149,7 +149,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             return updatedConversation
         }
 
-        _ = try await inviteWriter .update(
+        _ = try await inviteWriter.update(
             for: updatedConversation.id,
             name: updatedConversation.name,
             description: updatedConversation.description,

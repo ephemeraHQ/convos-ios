@@ -12,8 +12,11 @@ public protocol ConversationWriterProtocol {
     func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation
     @discardableResult
     func storeWithLatestMessages(conversation: XMTPiOS.Conversation) async throws -> DBConversation
-    func store(conversation: XMTPiOS.Conversation,
-               clientConversationId: String) async throws -> DBConversation
+    func createPlaceholderConversation(
+        draftConversationId: String?,
+        for signedInvite: SignedInvite,
+        inboxId: String
+    ) async throws -> String
 }
 
 class ConversationWriter: ConversationWriterProtocol {
@@ -42,14 +45,68 @@ class ConversationWriter: ConversationWriterProtocol {
         return try await _store(conversation: conversation, withLatestMessages: true)
     }
 
-    func store(conversation: XMTPiOS.Conversation, clientConversationId: String) async throws -> DBConversation {
-        return try await _store(conversation: conversation, clientConversationId: clientConversationId)
+    func createPlaceholderConversation(
+        draftConversationId: String? = nil,
+        for signedInvite: SignedInvite,
+        inboxId: String
+    ) async throws -> String {
+        let draftConversationId = draftConversationId ?? DBConversation.generateDraftConversationId()
+
+        // Create the draft conversation and necessary records
+        let creatorInboxId = signedInvite.payload.creatorInboxID // TODO: the creator of the invite is not necessarily the invite creator, but do we care?
+        let conversation = try await databaseWriter.write { db in
+            let conversation = DBConversation(
+                id: draftConversationId,
+                inboxId: inboxId,
+                clientConversationId: draftConversationId,
+                inviteTag: signedInvite.payload.tag,
+                creatorId: creatorInboxId,
+                kind: .group,
+                consent: .allowed,
+                createdAt: Date(),
+                name: signedInvite.name,
+                description: signedInvite.description_p,
+                imageURLString: signedInvite.imageURL
+            )
+            try conversation.save(db)
+            let memberProfile = MemberProfile(
+                conversationId: draftConversationId,
+                inboxId: creatorInboxId,
+                name: nil,
+                avatar: nil
+            )
+            let member = Member(inboxId: creatorInboxId)
+            try member.save(db)
+            try memberProfile.save(db)
+
+            let localState = ConversationLocalState(
+                conversationId: conversation.id,
+                isPinned: false,
+                isUnread: false,
+                isUnreadUpdatedAt: Date(),
+                isMuted: false
+            )
+            try localState.save(db)
+
+            let conversationMember = DBConversationMember(
+                conversationId: conversation.id,
+                inboxId: creatorInboxId,
+                role: .member,
+                consent: .allowed,
+                createdAt: Date()
+            )
+            try conversationMember.save(db)
+
+            Logger.info("Created placeholder conversation for invite")
+            return conversation
+        }
+
+        return conversation.id
     }
 
     private func _store(
         conversation: XMTPiOS.Conversation,
-        withLatestMessages: Bool = false,
-        clientConversationId: String? = nil
+        withLatestMessages: Bool = false
     ) async throws -> DBConversation {
         // Extract conversation metadata
         let metadata = try extractConversationMetadata(from: conversation)
@@ -63,16 +120,14 @@ class ConversationWriter: ConversationWriterProtocol {
         // Create database representation
         let dbConversation = try await createDBConversation(
             from: conversation,
-            metadata: metadata,
-            clientConversationId: clientConversationId
+            metadata: metadata
         )
 
         // Save to database
         try await saveConversationToDatabase(
             dbConversation: dbConversation,
             dbMembers: dbMembers,
-            memberProfiles: memberProfiles,
-            clientConversationId: clientConversationId
+            memberProfiles: memberProfiles
         )
 
         // Fetch and store latest messages if requested
@@ -123,13 +178,12 @@ class ConversationWriter: ConversationWriterProtocol {
 
     private func createDBConversation(
         from conversation: XMTPiOS.Conversation,
-        metadata: ConversationMetadata,
-        clientConversationId: String?
+        metadata: ConversationMetadata
     ) async throws -> DBConversation {
         return DBConversation(
             id: conversation.id,
             inboxId: conversation.client.inboxID,
-            clientConversationId: clientConversationId ?? conversation.id,
+            clientConversationId: conversation.id,
             inviteTag: try conversation.inviteTag,
             creatorId: try await conversation.creatorInboxId,
             kind: metadata.kind,
@@ -144,8 +198,7 @@ class ConversationWriter: ConversationWriterProtocol {
     private func saveConversationToDatabase(
         dbConversation: DBConversation,
         dbMembers: [DBConversationMember],
-        memberProfiles: [MemberProfile],
-        clientConversationId: String?
+        memberProfiles: [MemberProfile]
     ) async throws {
         try await databaseWriter.write { [weak self] db in
             guard let self else { return }
@@ -154,7 +207,7 @@ class ConversationWriter: ConversationWriterProtocol {
             try creator.save(db)
 
             // Save conversation (handle local conversation updates)
-            try saveConversation(dbConversation, clientConversationId: clientConversationId, in: db)
+            try saveConversation(dbConversation, in: db)
 
             // Save local state
             let localState = ConversationLocalState(
@@ -177,17 +230,16 @@ class ConversationWriter: ConversationWriterProtocol {
         }
     }
 
-    private func saveConversation(_ dbConversation: DBConversation, clientConversationId: String?, in db: Database) throws {
+    private func saveConversation(_ dbConversation: DBConversation, in db: Database) throws {
         if let localConversation = try DBConversation
-            .filter(DBConversation.Columns.id == dbConversation.id)
-            .filter(DBConversation.Columns.clientConversationId != clientConversationId)
+            .filter(DBConversation.Columns.inviteTag == dbConversation.inviteTag)
+            .filter(DBConversation.Columns.clientConversationId != dbConversation.clientConversationId)
             .fetchOne(db) {
             // Keep using the same local id
             Logger.info("Found local conversation \(localConversation.clientConversationId) for incoming \(dbConversation.id)")
-            let updatedConversation = dbConversation.with(
-                clientConversationId: localConversation.clientConversationId
-            )
-            try updatedConversation.save(db)
+            let updatedConversation = dbConversation
+                .with(clientConversationId: localConversation.clientConversationId)
+            try updatedConversation.save(db, onConflict: .replace)
             Logger.info("Updated incoming conversation with local \(localConversation.clientConversationId)")
         } else {
             do {

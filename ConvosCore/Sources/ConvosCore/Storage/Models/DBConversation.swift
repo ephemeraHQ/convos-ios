@@ -167,6 +167,22 @@ extension DBConversation {
         )
     }
 
+    func with(creatorId: String) -> Self {
+        .init(
+            id: id,
+            inboxId: inboxId,
+            clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString
+        )
+    }
+
     func with(kind: ConversationKind) -> Self {
         .init(
             id: id,

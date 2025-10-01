@@ -85,12 +85,9 @@ class InviteWriter: InviteWriterProtocol {
                 .fetchOne(db)
         }
         guard let invite else { throw InviteWriterError.inviteNotFound }
-
-        var signedInvite = try SignedInvite.fromURLSafeSlug(invite.urlSlug)
-        signedInvite.payload.name = name ?? ""
-        signedInvite.payload.description_p = description ?? ""
-        signedInvite.payload.imageURL = imageURL ?? ""
-        let urlSlug = try signedInvite.toURLSafeSlug()
+        let identity = try await identityStore.identity()
+        let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
+        let urlSlug = try SignedInvite.slug(for: conversation, privateKey: privateKey)
         let updatedInvite = invite.with(urlSlug: urlSlug)
         try await databaseWriter.write { db in
             try updatedInvite.save(db)
