@@ -32,8 +32,6 @@ class NewConversationViewModel: Identifiable {
         }
     }
     var presentingFailedToJoinSheet: Bool = false
-    private var initializationTask: Task<Void, Never>?
-    private(set) var initializationError: Error?
 
     // MARK: - Private
 
@@ -101,12 +99,7 @@ class NewConversationViewModel: Identifiable {
         joinConversationTask?.cancel()
         joinConversationTask = Task { [weak self] in
             guard let self else { return }
-
-            // wait for init
-            await initializationTask?.value
-
             guard !Task.isCancelled else { return }
-
             do {
                 // Request to join
                 try await conversationStateManager.joinConversation(inviteCode: inviteCode)
