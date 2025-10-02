@@ -104,7 +104,7 @@ jobs:
           prompt = f"Generate SHORT, customer-friendly release notes for iOS app version {version}. Key changes: Features: {features[:3] if features else []}, Bugfixes: {bugfixes[:2] if bugfixes else []}, Other: {other_changes[:2] if other_changes and not features and not bugfixes else []}. Requirements: MAXIMUM 5 bullet points total, use warm friendly language, focus on user benefits, keep each point under 15 words, no technical jargon. Format as simple bullet points, no headers or markdown."
 
           # Use model from environment variable with fallback
-          model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
+          model = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
 
           try:
               response = client.messages.create(
@@ -132,6 +132,7 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
 
       - name: Store release notes for later use
         run: |
