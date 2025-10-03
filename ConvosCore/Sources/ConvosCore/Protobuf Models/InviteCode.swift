@@ -207,10 +207,11 @@ enum InviteConversationToken {
                 throw Error.stringTooLong(bytes.count)
             }
 
-            if bytes.count <= 255 {
+            if !bytes.isEmpty && bytes.count <= 255 {
                 out.append(UInt8(bytes.count))
             } else {
-                // 0 length means use 2-byte big-endian length next
+                // 0 length byte is a sentinel for 2-byte big-endian length
+                // Use this format for empty strings (count == 0) and long strings (count > 255)
                 out.append(0)
                 out.append(UInt8((bytes.count >> 8) & 0xff))
                 out.append(UInt8(bytes.count & 0xff))
