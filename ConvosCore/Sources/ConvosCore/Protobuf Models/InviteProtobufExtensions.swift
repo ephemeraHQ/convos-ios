@@ -106,9 +106,11 @@ extension InvitePayload {
         }
 
         var recid: Int32 = 0
-        secp256k1_ecdsa_recoverable_signature_serialize_compact(
+        guard secp256k1_ecdsa_recoverable_signature_serialize_compact(
             ctx, outputPtr, &recid, signaturePtr
-        )
+        ) == 1 else {
+            throw EncodableSignatureError.encodingFailure
+        }
 
         // Combine signature and recovery ID
         let outputWithRecidPtr = UnsafeMutablePointer<UInt8>.allocate(capacity: 65)
