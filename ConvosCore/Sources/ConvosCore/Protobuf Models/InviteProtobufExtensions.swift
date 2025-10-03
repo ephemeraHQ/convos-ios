@@ -92,17 +92,27 @@ extension InvitePayload {
         // Hash the message using SHA256
         let messageHash = try serializedData().sha256Hash()
 
-        let msg = (messageHash as NSData).bytes.assumingMemoryBound(to: UInt8.self)
-        let privateKeyPtr = (privateKey as NSData).bytes.assumingMemoryBound(to: UInt8.self)
-
         let signaturePtr = UnsafeMutablePointer<secp256k1_ecdsa_recoverable_signature>.allocate(capacity: 1)
         defer {
             signaturePtr.deallocate()
         }
 
-        guard secp256k1_ecdsa_sign_recoverable(
-            ctx, signaturePtr, msg, privateKeyPtr, nil, nil
-        ) == 1 else {
+        // Use withUnsafeBytes to ensure pointer lifetime is valid during C API call
+        let result = messageHash.withUnsafeBytes { msgBuffer -> Int32 in
+            guard let msg = msgBuffer.bindMemory(to: UInt8.self).baseAddress else {
+                return 0
+            }
+            return privateKey.withUnsafeBytes { keyBuffer -> Int32 in
+                guard let privateKeyPtr = keyBuffer.bindMemory(to: UInt8.self).baseAddress else {
+                    return 0
+                }
+                return secp256k1_ecdsa_sign_recoverable(
+                    ctx, signaturePtr, msg, privateKeyPtr, nil, nil
+                )
+            }
+        }
+
+        guard result == 1 else {
             throw EncodableSignatureError.signatureFailure
         }
 
@@ -203,19 +213,32 @@ extension SignedInvite {
 
         // Parse the recoverable signature
         var recoverableSignature = secp256k1_ecdsa_recoverable_signature()
-        let signaturePtr = (signatureData as NSData).bytes.assumingMemoryBound(to: UInt8.self)
 
-        guard secp256k1_ecdsa_recoverable_signature_parse_compact(
-            ctx, &recoverableSignature, signaturePtr, recid
-        ) == 1 else {
+        // Use withUnsafeBytes to ensure pointer lifetime is valid during C API call
+        let parseResult = signatureData.withUnsafeBytes { sigBuffer -> Int32 in
+            guard let signaturePtr = sigBuffer.bindMemory(to: UInt8.self).baseAddress else {
+                return 0
+            }
+            return secp256k1_ecdsa_recoverable_signature_parse_compact(
+                ctx, &recoverableSignature, signaturePtr, recid
+            )
+        }
+
+        guard parseResult == 1 else {
             throw EncodableSignatureError.invalidSignature
         }
 
         // Recover the public key
         var pubkey = secp256k1_pubkey()
-        let msgPtr = (messageHash as NSData).bytes.assumingMemoryBound(to: UInt8.self)
 
-        guard secp256k1_ecdsa_recover(ctx, &pubkey, &recoverableSignature, msgPtr) == 1 else {
+        let recoverResult = messageHash.withUnsafeBytes { msgBuffer -> Int32 in
+            guard let msgPtr = msgBuffer.bindMemory(to: UInt8.self).baseAddress else {
+                return 0
+            }
+            return secp256k1_ecdsa_recover(ctx, &pubkey, &recoverableSignature, msgPtr)
+        }
+
+        guard recoverResult == 1 else {
             throw EncodableSignatureError.verificationFailure
         }
 
@@ -253,9 +276,16 @@ extension Data {
 
         // Parse the public key
         var pubkey = secp256k1_pubkey()
-        let publicKeyPtr = (self as NSData).bytes.assumingMemoryBound(to: UInt8.self)
 
-        guard secp256k1_ec_pubkey_parse(ctx, &pubkey, publicKeyPtr, self.count) == 1 else {
+        // Use withUnsafeBytes to ensure pointer lifetime is valid during C API call
+        let parseResult = self.withUnsafeBytes { buffer -> Int32 in
+            guard let publicKeyPtr = buffer.bindMemory(to: UInt8.self).baseAddress else {
+                return 0
+            }
+            return secp256k1_ec_pubkey_parse(ctx, &pubkey, publicKeyPtr, self.count)
+        }
+
+        guard parseResult == 1 else {
             throw EncodableSignatureError.invalidPublicKey
         }
 
