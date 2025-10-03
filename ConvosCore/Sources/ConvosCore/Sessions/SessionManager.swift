@@ -87,12 +87,11 @@ class SessionManager: SessionManagerProtocol {
                     // Schedule explosion notification if conversationId is provided
                     if let conversationId: String = notification.userInfo?["conversationId"] as? String {
                         await self.scheduleExplosionNotification(inboxId: inboxId, conversationId: conversationId)
-                    }
-
-                    do {
-//                        try await self.deleteInbox(inboxId: inboxId)
-                    } catch {
-                        Logger.error("Error deleting account from left conversation notification: \(error.localizedDescription)")
+                        do {
+                            try await self.deleteConversation(conversationId: conversationId)
+                        } catch {
+                            Logger.error("Error deleting data from left conversation notification: \(error.localizedDescription)")
+                        }
                     }
                 }
             }
