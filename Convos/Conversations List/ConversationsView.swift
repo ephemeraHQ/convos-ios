@@ -141,7 +141,10 @@ struct ConversationsView: View {
                         onScanInviteCode: {},
                         onDeleteConversation: {},
                         confirmDeletionBeforeDismissal: false,
-                        messagesTopBarTrailingItem: .share
+                        messagesTopBarTrailingItem: .share,
+                        messagesTopBarTrailingItemEnabled: true,
+                        messagesBottomBarEnabled: true,
+                        bottomBarContent: { EmptyView() }
                     )
                 } else if horizontalSizeClass != .compact {
                     emptyConversationsViewScrollable

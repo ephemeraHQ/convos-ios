@@ -46,7 +46,7 @@ public class MockConversationStateManager: ConversationStateManagerProtocol {
 
     public func waitForConversationReadyResult(timeout: TimeInterval = 10.0) async throws -> ConversationReadyResult {
         // Mock implementation returns immediate success
-        return ConversationReadyResult(conversationId: conversationId)
+        return ConversationReadyResult(conversationId: conversationId, origin: .created)
     }
 
     // MARK: - Observer Management
@@ -76,7 +76,7 @@ public class MockConversationStateManager: ConversationStateManagerProtocol {
         // Simulate async operation
         try await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
 
-        let result = ConversationReadyResult(conversationId: conversationId)
+        let result = ConversationReadyResult(conversationId: conversationId, origin: .created)
         currentState = .ready(result)
         notifyObservers(currentState)
     }
@@ -88,7 +88,7 @@ public class MockConversationStateManager: ConversationStateManagerProtocol {
         // Simulate async operation
         try await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
 
-        let result = ConversationReadyResult(conversationId: conversationId)
+        let result = ConversationReadyResult(conversationId: conversationId, origin: .joined)
         currentState = .ready(result)
         notifyObservers(currentState)
     }

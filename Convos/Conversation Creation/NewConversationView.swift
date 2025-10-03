@@ -19,6 +19,42 @@ struct InviteShareLink: View {
     }
 }
 
+struct InviteAcceptedView: View {
+    @State private var showingDescription: Bool = false
+
+    var body: some View {
+        VStack(spacing: DesignConstants.Spacing.step2x) {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 14.0))
+                    .foregroundStyle(.colorGreen)
+                Text("Invite accepted")
+                    .foregroundStyle(.colorTextPrimary)
+            }
+            .font(.body)
+
+            if showingDescription {
+                Text("See and send messages after someone approves you.")
+                    .font(.caption)
+                    .foregroundStyle(.colorTextSecondary)
+            }
+        }
+        .padding(.horizontal, DesignConstants.Spacing.step10x)
+        .padding(.bottom, DesignConstants.Spacing.step4x)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                withAnimation {
+                    self.showingDescription = true
+                }
+            }
+        }
+    }
+}
+
+#Preview {
+    InviteAcceptedView()
+}
+
 struct NewConversationView: View {
     let viewModel: NewConversationViewModel
     @State private var hasShownScannerOnAppear: Bool = false
@@ -54,8 +90,14 @@ struct NewConversationView: View {
                             onScanInviteCode: viewModel.onScanInviteCode,
                             onDeleteConversation: viewModel.deleteConversation,
                             confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
-                            messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
-                        )
+                            messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem,
+                            messagesTopBarTrailingItemEnabled: viewModel.messagesTopBarTrailingItemEnabled,
+                            messagesBottomBarEnabled: viewModel.messagesBottomBarEnabled
+                        ) {
+                            if viewModel.isWaitingForInviteAcceptance {
+                                InviteAcceptedView()
+                            }
+                        }
                         .toolbar {
                             ToolbarItem(placement: .topBarLeading) {
                                 Button(role: .close) {

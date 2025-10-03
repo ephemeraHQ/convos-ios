@@ -130,9 +130,12 @@ extension DBConversation {
         "\(draftPrefix)\(UUID().uuidString)"
     }
 
+    static func isDraft(id: String) -> Bool {
+        id.hasPrefix(draftPrefix)
+    }
+
     var isDraft: Bool {
-        (id.hasPrefix(Self.draftPrefix) &&
-         clientConversationId.hasPrefix(Self.draftPrefix))
+        Self.isDraft(id: id) && Self.isDraft(id: clientConversationId)
     }
 
     func with(id: String) -> Self {

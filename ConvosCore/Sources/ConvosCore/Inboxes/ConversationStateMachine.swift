@@ -4,7 +4,13 @@ import GRDB
 import XMTPiOS
 
 public struct ConversationReadyResult {
+    public enum Origin {
+        case created
+        case joined
+    }
+
     public let conversationId: String
+    public let origin: Origin
 }
 
 public actor ConversationStateMachine {
@@ -322,7 +328,8 @@ public actor ConversationStateMachine {
 
         // Transition directly to ready state
         emitStateChange(.ready(ConversationReadyResult(
-            conversationId: externalConversationId
+            conversationId: externalConversationId,
+            origin: .created
         )))
     }
 
@@ -373,7 +380,7 @@ public actor ConversationStateMachine {
             Logger.info("Found existing convo by invite tag...")
             if existingConversation.hasJoined {
                 Logger.info("Already joined conversation... moving to ready state.")
-                emitStateChange(.ready(.init(conversationId: existingConversation.id)))
+                emitStateChange(.ready(.init(conversationId: existingConversation.id, origin: .joined)))
             } else {
                 Logger.info("Waiting for invite approval...")
                 if existingConversation.isDraft {
@@ -392,7 +399,7 @@ public actor ConversationStateMachine {
                 }
                 emitStateChange(.validated(
                     invite: signedInvite,
-                    placeholder: .init(conversationId: existingConversation.id),
+                    placeholder: .init(conversationId: existingConversation.id, origin: .joined),
                     inboxReady: inboxReady
                 ))
                 enqueueAction(.join)
@@ -410,7 +417,7 @@ public actor ConversationStateMachine {
                 for: signedInvite,
                 inboxId: inboxReady.client.inboxId
             )
-            let placeholder = ConversationReadyResult(conversationId: conversationId)
+            let placeholder = ConversationReadyResult(conversationId: conversationId, origin: .joined)
             emitStateChange(.validated(invite: signedInvite, placeholder: placeholder, inboxReady: inboxReady))
             enqueueAction(.join)
         }
@@ -473,7 +480,8 @@ public actor ConversationStateMachine {
 
                     // Transition directly to ready state
                     await self.emitStateChange(.ready(ConversationReadyResult(
-                        conversationId: conversation.id
+                        conversationId: conversation.id,
+                        origin: .joined
                     )))
                 } else {
                     Logger.error("Error waiting for conversation to join")
@@ -485,7 +493,6 @@ public actor ConversationStateMachine {
             }
         }
     }
-
 
     private func handleDelete() async throws {
         // For invites, we need the external conversation ID if available,

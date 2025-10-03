@@ -17,7 +17,9 @@ class NewConversationViewModel: Identifiable {
     let conversationViewModel: ConversationViewModel
     let qrScannerViewModel: QRScannerViewModel
     private weak var delegate: NewConversationsViewModelDelegate?
-    private(set) var messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .scan
+    private(set) var messagesTopBarTrailingItem: MessagesViewTopBarTrailingItem = .scan
+    private(set) var messagesTopBarTrailingItemEnabled: Bool = false
+    private(set) var messagesBottomBarEnabled: Bool = false
     private(set) var shouldConfirmDeletingConversation: Bool = true
     private let startedWithFullscreenScanner: Bool
     let allowsDismissingScanner: Bool
@@ -33,6 +35,38 @@ class NewConversationViewModel: Identifiable {
     }
     var presentingFailedToJoinSheet: Bool = false
 
+    // State tracking
+    private(set) var isWaitingForInviteAcceptance: Bool = false
+    private(set) var isValidatingInvite: Bool = false
+    private(set) var isCreatingConversation: Bool = false
+    private(set) var currentError: Error?
+    private(set) var conversationState: ConversationStateMachine.State = .uninitialized
+
+    // MARK: - Computed Properties
+
+    /// Whether the conversation is in a loading/processing state
+    var isProcessing: Bool {
+        isCreatingConversation || isValidatingInvite || isWaitingForInviteAcceptance
+    }
+
+    /// Whether there is an active error
+    var hasError: Bool {
+        currentError != nil
+    }
+
+    /// Localized error message for display
+    var errorMessage: String? {
+        currentError?.localizedDescription
+    }
+
+    /// Whether the conversation is ready for use
+    var isConversationReady: Bool {
+        if case .ready = conversationState {
+            return true
+        }
+        return false
+    }
+
     // MARK: - Private
 
     private let conversationStateManager: any ConversationStateManagerProtocol
@@ -40,6 +74,7 @@ class NewConversationViewModel: Identifiable {
     private var newConversationTask: Task<Void, Never>?
     private var joinConversationTask: Task<Void, Error>?
     private var cancellables: Set<AnyCancellable> = []
+    private var stateObserverHandle: ConversationStateObserverHandle?
 
     // MARK: - Init
 
@@ -71,6 +106,7 @@ class NewConversationViewModel: Identifiable {
             myProfileRepository: conversationStateManager.draftConversationRepository.myProfileRepository
         )
         setupObservations()
+        setupStateObservation()
         self.conversationViewModel.untitledConversationPlaceholder = "New convo"
         if showingFullScreenScanner {
             self.conversationViewModel.showsInfoView = false
@@ -87,6 +123,7 @@ class NewConversationViewModel: Identifiable {
         cancellables.removeAll()
         newConversationTask?.cancel()
         joinConversationTask?.cancel()
+        stateObserverHandle?.cancel()
     }
 
     // MARK: - Actions
@@ -101,14 +138,55 @@ class NewConversationViewModel: Identifiable {
             guard let self else { return }
             guard !Task.isCancelled else { return }
             do {
-                // Request to join
+                // Request to join - this will trigger state changes through the observer
                 try await conversationStateManager.joinConversation(inviteCode: inviteCode)
                 guard !Task.isCancelled else { return }
+
+                // Update UI after successful join initiation
                 await MainActor.run {
                     self.presentingJoinConversationSheet = false
                     self.presentingInvalidInviteSheet = false
                     self.conversationViewModel.showsInfoView = true
                     self.showingFullScreenScanner = false
+                }
+
+                // Note: The state machine will handle the waiting period and eventual ready state
+                // The UI can observe isWaitingForInviteAcceptance to show appropriate feedback
+            } catch ConversationStateMachineError.invalidInviteCodeFormat(let code) {
+                Logger.error("Invalid invite code format: \(code)")
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    withAnimation {
+                        if self.startedWithFullscreenScanner {
+                            self.showingFullScreenScanner = true
+                            self.conversationViewModel.showsInfoView = false
+                        }
+                        self.presentingInvalidInviteSheet = true
+                    }
+                }
+            } catch ConversationStateMachineError.inviteExpired {
+                Logger.error("Invite code has expired")
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    withAnimation {
+                        if self.startedWithFullscreenScanner {
+                            self.showingFullScreenScanner = true
+                            self.conversationViewModel.showsInfoView = false
+                        }
+                        self.presentingInvalidInviteSheet = true
+                    }
+                }
+            } catch ConversationStateMachineError.timedOut {
+                Logger.error("Join conversation timed out")
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    withAnimation {
+                        self.presentingFailedToJoinSheet = true
+                        if self.startedWithFullscreenScanner {
+                            self.showingFullScreenScanner = true
+                            self.conversationViewModel.showsInfoView = false
+                        }
+                    }
                 }
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
@@ -136,7 +214,126 @@ class NewConversationViewModel: Identifiable {
         }
     }
 
+    func clearError() {
+        currentError = nil
+    }
+
+    func retryAfterError() {
+        guard let error = currentError else { return }
+        Logger.info("Retrying after error: \(error.localizedDescription)")
+        currentError = nil
+
+        // If we were in the middle of joining, could potentially retry
+        // For now, just clear the error and let the user try again
+    }
+
     // MARK: - Private
+
+    private func setupStateObservation() {
+        stateObserverHandle = conversationStateManager.observeState { [weak self] state in
+            Task { @MainActor in
+                guard let self else { return }
+                self.handleStateChange(state)
+            }
+        }
+    }
+
+    @MainActor
+    private func handleStateChange(_ state: ConversationStateMachine.State) {
+        conversationState = state
+
+        switch state {
+        case .uninitialized:
+            isWaitingForInviteAcceptance = false
+            isValidatingInvite = false
+            isCreatingConversation = false
+            currentError = nil
+
+        case .creating:
+            isCreatingConversation = true
+            isValidatingInvite = false
+            isWaitingForInviteAcceptance = false
+            currentError = nil
+
+        case .validating:
+            isValidatingInvite = true
+            isCreatingConversation = false
+            isWaitingForInviteAcceptance = false
+            currentError = nil
+
+        case .validated:
+            isValidatingInvite = false
+            isCreatingConversation = false
+            isWaitingForInviteAcceptance = false
+            currentError = nil
+
+        case .joining:
+            // This is the waiting state - user is waiting for inviter to accept
+            messagesTopBarTrailingItem = .share
+            isWaitingForInviteAcceptance = true
+            isValidatingInvite = false
+            isCreatingConversation = false
+            currentError = nil
+            Logger.info("Waiting for invite acceptance...")
+
+        case .ready(let result):
+            switch result.origin {
+            case .joined:
+                break
+            case .created:
+                break
+            }
+            messagesTopBarTrailingItemEnabled = true
+            messagesBottomBarEnabled = true
+            isWaitingForInviteAcceptance = false
+            isValidatingInvite = false
+            isCreatingConversation = false
+            currentError = nil
+            Logger.info("Conversation ready!")
+
+        case .deleting:
+            isWaitingForInviteAcceptance = false
+            isValidatingInvite = false
+            isCreatingConversation = false
+            currentError = nil
+
+        case .error(let error):
+            isWaitingForInviteAcceptance = false
+            isValidatingInvite = false
+            isCreatingConversation = false
+            currentError = error
+            Logger.error("Conversation state error: \(error.localizedDescription)")
+
+            // Handle specific error types
+            handleError(error)
+        }
+    }
+
+    @MainActor
+    private func handleError(_ error: Error) {
+        // Map state machine errors to appropriate UI states
+        if let stateMachineError = error as? ConversationStateMachineError {
+            switch stateMachineError {
+            case .invalidInviteCodeFormat, .inviteExpired:
+                presentingInvalidInviteSheet = true
+                if startedWithFullscreenScanner {
+                    showingFullScreenScanner = true
+                    conversationViewModel.showsInfoView = false
+                }
+
+            case .timedOut:
+                presentingFailedToJoinSheet = true
+                if startedWithFullscreenScanner {
+                    showingFullScreenScanner = true
+                    conversationViewModel.showsInfoView = false
+                }
+
+            case .failedFindingConversation, .failedVerifyingSignature, .stateMachineError:
+                // Generic error - could show a different alert
+                presentingFailedToJoinSheet = true
+            }
+        }
+    }
 
     private func setupObservations() {
         cancellables.removeAll()
