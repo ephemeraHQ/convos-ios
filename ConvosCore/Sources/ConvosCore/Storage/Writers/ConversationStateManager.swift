@@ -237,7 +237,7 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
 
     public func joinConversation(inviteCode: String) async throws {
         await stateMachine.join(inviteCode: inviteCode)
-        // TODO: This should wait for validation, but not readiness
+        // @jarodl This should wait for validation, but not readiness
     }
 
     public func send(text: String) async throws {

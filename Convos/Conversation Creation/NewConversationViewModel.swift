@@ -142,64 +142,11 @@ class NewConversationViewModel: Identifiable {
                 try await conversationStateManager.joinConversation(inviteCode: inviteCode)
                 guard !Task.isCancelled else { return }
 
-                // Update UI after successful join initiation
-                await MainActor.run {
-                    self.presentingJoinConversationSheet = false
-                    self.presentingInvalidInviteSheet = false
-                    self.conversationViewModel.showsInfoView = true
-                    self.showingFullScreenScanner = false
-                }
-
-                // Note: The state machine will handle the waiting period and eventual ready state
-                // The UI can observe isWaitingForInviteAcceptance to show appropriate feedback
-            } catch ConversationStateMachineError.invalidInviteCodeFormat(let code) {
-                Logger.error("Invalid invite code format: \(code)")
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    withAnimation {
-                        if self.startedWithFullscreenScanner {
-                            self.showingFullScreenScanner = true
-                            self.conversationViewModel.showsInfoView = false
-                        }
-                        self.presentingInvalidInviteSheet = true
-                    }
-                }
-            } catch ConversationStateMachineError.inviteExpired {
-                Logger.error("Invite code has expired")
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    withAnimation {
-                        if self.startedWithFullscreenScanner {
-                            self.showingFullScreenScanner = true
-                            self.conversationViewModel.showsInfoView = false
-                        }
-                        self.presentingInvalidInviteSheet = true
-                    }
-                }
-            } catch ConversationStateMachineError.timedOut {
-                Logger.error("Join conversation timed out")
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    withAnimation {
-                        self.presentingFailedToJoinSheet = true
-                        if self.startedWithFullscreenScanner {
-                            self.showingFullScreenScanner = true
-                            self.conversationViewModel.showsInfoView = false
-                        }
-                    }
-                }
+                await handleJoinSuccess()
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
                 guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    withAnimation {
-                        if self.startedWithFullscreenScanner {
-                            self.showingFullScreenScanner = true
-                            self.conversationViewModel.showsInfoView = false
-                        }
-                        self.presentingInvalidInviteSheet = true
-                    }
-                }
+                await handleJoinError(error)
             }
         }
     }
@@ -228,6 +175,38 @@ class NewConversationViewModel: Identifiable {
     }
 
     // MARK: - Private
+
+    @MainActor
+    private func handleJoinSuccess() {
+        presentingJoinConversationSheet = false
+        presentingInvalidInviteSheet = false
+        conversationViewModel.showsInfoView = true
+        showingFullScreenScanner = false
+    }
+
+    @MainActor
+    private func handleJoinError(_ error: Error) {
+        withAnimation {
+            if startedWithFullscreenScanner {
+                showingFullScreenScanner = true
+                conversationViewModel.showsInfoView = false
+            }
+
+            // Determine which sheet to present based on error type
+            if let stateMachineError = error as? ConversationStateMachineError {
+                switch stateMachineError {
+                case .invalidInviteCodeFormat, .inviteExpired:
+                    presentingInvalidInviteSheet = true
+                case .timedOut:
+                    presentingFailedToJoinSheet = true
+                case .failedFindingConversation, .failedVerifyingSignature, .stateMachineError:
+                    presentingInvalidInviteSheet = true
+                }
+            } else {
+                presentingInvalidInviteSheet = true
+            }
+        }
+    }
 
     private func setupStateObservation() {
         stateObserverHandle = conversationStateManager.observeState { [weak self] state in
