@@ -2,12 +2,16 @@ import Foundation
 import GRDB
 
 struct Member: Codable, FetchableRecord, PersistableRecord, Hashable {
+    enum Columns {
+        static let inboxId: Column = Column(CodingKeys.inboxId)
+    }
+
     let inboxId: String
 
-    static let profileForeignKey: ForeignKey = ForeignKey(["inboxId"], to: ["inboxId"])
+    static let profilesForeignKey: ForeignKey = ForeignKey([Columns.inboxId], to: [MemberProfile.Columns.inboxId])
 
-    static let profile: HasOneAssociation<Member, MemberProfile> = hasOne(
+    static let profiles: HasManyAssociation<Member, MemberProfile> = hasMany(
         MemberProfile.self,
-        using: profileForeignKey
+        using: profilesForeignKey
     )
 }

@@ -22,7 +22,7 @@ struct ConversationShareView: View {
 
     var body: some View {
         AutoShareSheetView(
-            items: [invite.inviteUrlString],
+            items: [invite.inviteURLString],
             onDismiss: {
                 withAnimation {
                     hasAppeared = false

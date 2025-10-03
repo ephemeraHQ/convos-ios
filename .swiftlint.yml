@@ -141,3 +141,4 @@ excluded:
   - ConvosTests/Helpers
   - ConvosAppClipTests
   - ConvosAppClipUITests
+  - "**/*.pb.swift"  # Generated protobuf files

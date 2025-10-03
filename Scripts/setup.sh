@@ -103,6 +103,16 @@ if ! command -v swiftformat &> /dev/null; then
     fi
 fi
 
+# Check and install swift-protobuf
+if ! command -v protoc-gen-swift &> /dev/null; then
+    echo "Installing swift-protobuf..."
+    if ! brew install swift-protobuf; then
+        echo "❌ Failed to install swift-protobuf. Please try installing manually:"
+        echo "  brew install swift-protobuf"
+        exit 1
+    fi
+fi
+
 # Check and install GitHub CLI (skip installing in CI)
 if [ ! "${CI}" = true ]; then
     if ! command -v gh >/dev/null 2>&1; then

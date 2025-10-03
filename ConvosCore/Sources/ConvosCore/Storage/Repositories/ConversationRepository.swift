@@ -5,6 +5,7 @@ import GRDB
 public protocol ConversationRepositoryProtocol {
     var conversationId: String { get }
     var conversationPublisher: AnyPublisher<Conversation?, Never> { get }
+    var myProfileRepository: any MyProfileRepositoryProtocol { get }
 
     func fetchConversation() throws -> Conversation?
 }
@@ -17,12 +18,20 @@ class ConversationRepository: ConversationRepositoryProtocol {
     private let dbReader: any DatabaseReader
     let conversationId: String
     private let messagesRepository: MessagesRepository
+    let myProfileRepository: any MyProfileRepositoryProtocol
 
-    init(conversationId: String, dbReader: any DatabaseReader) {
+    init(conversationId: String,
+         dbReader: any DatabaseReader,
+         inboxStateManager: any InboxStateManagerProtocol) {
         self.dbReader = dbReader
         self.conversationId = conversationId
         self.messagesRepository = MessagesRepository(
             dbReader: dbReader,
+            conversationId: conversationId
+        )
+        self.myProfileRepository = MyProfileRepository(
+            inboxStateManager: inboxStateManager,
+            databaseReader: dbReader,
             conversationId: conversationId
         )
     }

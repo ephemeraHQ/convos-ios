@@ -6,6 +6,7 @@ public struct ConversationUpdate: Hashable, Codable {
             case name = "group_name",
                  description = "description",
                  image = "group_image_url_square",
+                 custom = "custom",
                  unknown
         }
         public let field: Field
@@ -17,6 +18,13 @@ public struct ConversationUpdate: Hashable, Codable {
     public let addedMembers: [Profile]
     public let removedMembers: [Profile]
     public let metadataChanges: [MetadataChange]
+
+    var showsInMessagesList: Bool {
+        guard metadataChanges.allSatisfy({ $0.field != .custom }) else {
+            return false
+        }
+        return true
+    }
 
     public var summary: String {
         if !addedMembers.isEmpty && !removedMembers.isEmpty {
@@ -35,8 +43,8 @@ public struct ConversationUpdate: Hashable, Codable {
             "\(creator.displayName) changed the convo photo"
         } else if let metadataChange = metadataChanges.first,
                   metadataChange.field == .description,
-                  metadataChange.newValue != nil {
-            "\(creator.displayName) changed the convo description"
+                  let newValue = metadataChange.newValue {
+            "\(creator.displayName) changed the convo description to \"\(newValue)\""
         } else {
             "Unknown update"
         }

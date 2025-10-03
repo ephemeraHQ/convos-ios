@@ -4,7 +4,6 @@ import XMTPiOS
 
 public protocol MemberProfileWriterProtocol {
     func store(memberProfiles: [MemberProfile]) async throws
-    func store(profiles: [ConvosAPI.ProfileResponse]) async throws
 }
 
 class MemberProfileWriter: MemberProfileWriterProtocol {
@@ -22,16 +21,5 @@ class MemberProfileWriter: MemberProfileWriterProtocol {
                 try memberProfile.save(db)
             }
         }
-    }
-
-    func store(profiles: [ConvosAPI.ProfileResponse]) async throws {
-        let memberProfiles: [MemberProfile] = profiles.map { profile in
-                .init(
-                    inboxId: profile.xmtpId,
-                    name: profile.name,
-                    avatar: profile.avatar
-                )
-        }
-        try await store(memberProfiles: memberProfiles)
     }
 }

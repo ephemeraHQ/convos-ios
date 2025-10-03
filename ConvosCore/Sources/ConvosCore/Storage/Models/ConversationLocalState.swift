@@ -4,13 +4,21 @@ import GRDB
 // MARK: - ConversationLocalState
 
 struct ConversationLocalState: Codable, FetchableRecord, PersistableRecord, Hashable {
+    enum Columns {
+        static let conversationId: Column = Column(CodingKeys.conversationId)
+        static let isPinned: Column = Column(CodingKeys.isPinned)
+        static let isUnread: Column = Column(CodingKeys.isUnread)
+        static let isUnreadUpdatedAt: Column = Column(CodingKeys.isUnreadUpdatedAt)
+        static let isMuted: Column = Column(CodingKeys.isMuted)
+    }
+
     let conversationId: String
     let isPinned: Bool
     let isUnread: Bool
     let isUnreadUpdatedAt: Date
     let isMuted: Bool
 
-    static let conversationForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
+    static let conversationForeignKey: ForeignKey = ForeignKey([Columns.conversationId], to: [DBConversation.Columns.id])
 
     static let conversation: BelongsToAssociation<ConversationLocalState, DBConversation> = belongsTo(
         DBConversation.self,

@@ -72,7 +72,7 @@ class NotificationService: UNNotificationServiceExtension {
                 try Task.checkCancellation()
 
                 let payload = PushNotificationPayload(userInfo: request.content.userInfo)
-                Logger.info("Processing notification: type=\(payload.notificationType?.rawValue ?? "unknown"), inboxId=\(payload.inboxId ?? "none")")
+                Logger.info("Processing notification")
 
                 // Process the notification with the global handler
                 let decodedContent = try await pushHandler.handlePushNotification(payload: payload)

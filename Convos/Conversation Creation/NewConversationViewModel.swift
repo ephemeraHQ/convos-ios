@@ -14,31 +14,67 @@ class NewConversationViewModel: Identifiable {
     // MARK: - Public
 
     let session: any SessionManagerProtocol
-    var conversationViewModel: ConversationViewModel?
+    let conversationViewModel: ConversationViewModel
+    let qrScannerViewModel: QRScannerViewModel
     private weak var delegate: NewConversationsViewModelDelegate?
-    private(set) var messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem = .scan
+    private(set) var messagesTopBarTrailingItem: MessagesViewTopBarTrailingItem = .scan
+    private(set) var messagesTopBarTrailingItemEnabled: Bool = false
+    private(set) var messagesBottomBarEnabled: Bool = false
     private(set) var shouldConfirmDeletingConversation: Bool = true
     private let startedWithFullscreenScanner: Bool
     let allowsDismissingScanner: Bool
     private let autoCreateConversation: Bool
     private(set) var showingFullScreenScanner: Bool
     var presentingJoinConversationSheet: Bool = false
-    var presentingInvalidInviteSheet: Bool = false
+    var presentingInvalidInviteSheet: Bool = false {
+        willSet {
+            if !newValue {
+                qrScannerViewModel.resetScanning()
+            }
+        }
+    }
     var presentingFailedToJoinSheet: Bool = false
-    private var initializationTask: Task<Void, Never>?
-    private(set) var initializationError: Error?
+
+    // State tracking
+    private(set) var isWaitingForInviteAcceptance: Bool = false
+    private(set) var isValidatingInvite: Bool = false
+    private(set) var isCreatingConversation: Bool = false
+    private(set) var currentError: Error?
+    private(set) var conversationState: ConversationStateMachine.State = .uninitialized
+
+    // MARK: - Computed Properties
+
+    /// Whether the conversation is in a loading/processing state
+    var isProcessing: Bool {
+        isCreatingConversation || isValidatingInvite || isWaitingForInviteAcceptance
+    }
+
+    /// Whether there is an active error
+    var hasError: Bool {
+        currentError != nil
+    }
+
+    /// Localized error message for display
+    var errorMessage: String? {
+        currentError?.localizedDescription
+    }
+
+    /// Whether the conversation is ready for use
+    var isConversationReady: Bool {
+        if case .ready = conversationState {
+            return true
+        }
+        return false
+    }
 
     // MARK: - Private
 
-    private var draftConversationComposer: (any DraftConversationComposerProtocol)? {
-        didSet {
-            setupObservations()
-        }
-    }
-    private var messagingService: AnyMessagingService?
+    private let conversationStateManager: any ConversationStateManagerProtocol
+    private let messagingService: AnyMessagingService
     private var newConversationTask: Task<Void, Never>?
     private var joinConversationTask: Task<Void, Error>?
     private var cancellables: Set<AnyCancellable> = []
+    private var stateObserverHandle: ConversationStateObserverHandle?
 
     // MARK: - Init
 
@@ -50,71 +86,44 @@ class NewConversationViewModel: Identifiable {
         delegate: NewConversationsViewModelDelegate? = nil
     ) {
         self.session = session
+        self.qrScannerViewModel = QRScannerViewModel()
         self.autoCreateConversation = autoCreateConversation
         self.startedWithFullscreenScanner = showingFullScreenScanner
         self.showingFullScreenScanner = showingFullScreenScanner
         self.allowsDismissingScanner = allowsDismissingScanner
         self.delegate = delegate
 
-        start()
+        self.messagingService = session.messagingService
+        let conversationStateManager = messagingService.conversationStateManager()
+        self.conversationStateManager = conversationStateManager
+        let draftConversation: Conversation = .empty(
+            id: conversationStateManager.draftConversationRepository.conversationId
+        )
+        self.conversationViewModel = .init(
+            conversation: draftConversation,
+            session: session,
+            conversationStateManager: conversationStateManager,
+            myProfileRepository: conversationStateManager.draftConversationRepository.myProfileRepository
+        )
+        setupObservations()
+        setupStateObservation()
+        self.conversationViewModel.untitledConversationPlaceholder = "New convo"
+        if showingFullScreenScanner {
+            self.conversationViewModel.showsInfoView = false
+        }
+        if autoCreateConversation {
+            Task {
+                try await conversationStateManager.createConversation()
+            }
+        }
     }
 
     deinit {
-        Logger.info("🧹 deinit")
-        initializationTask?.cancel()
+        Logger.info("deinit")
         cancellables.removeAll()
         newConversationTask?.cancel()
         joinConversationTask?.cancel()
-        conversationViewModel = nil
-    }
-
-    func start() {
-        // Start async initialization
-        initializationTask?.cancel()
-        initializationError = nil
-        initializationTask = Task { [weak self] in
-            guard let self else { return }
-            await self.initializeAsyncDependencies()
-        }
-    }
-
-    @MainActor
-    private func initializeAsyncDependencies() async {
-        do {
-            let messagingService: AnyMessagingService
-            if let existing = self.messagingService {
-                messagingService = existing
-            } else {
-                messagingService = try await session.addInbox()
-                self.messagingService = messagingService
-            }
-            let draftConversationComposer = messagingService.draftConversationComposer()
-            self.draftConversationComposer = draftConversationComposer
-            let draftConversation = try draftConversationComposer.draftConversationRepository.fetchConversation() ?? .empty(
-                id: draftConversationComposer.draftConversationRepository.conversationId
-            )
-            self.conversationViewModel = .init(
-                conversation: draftConversation,
-                session: session,
-                draftConversationComposer: draftConversationComposer,
-                myProfileRepository: messagingService.myProfileRepository()
-            )
-            self.conversationViewModel?.untitledConversationPlaceholder = "New convo"
-            if showingFullScreenScanner {
-                self.conversationViewModel?.showsInfoView = false
-            }
-            if autoCreateConversation {
-                try await draftConversationComposer.draftConversationWriter.createConversation()
-            }
-        } catch is CancellationError {
-            return
-        } catch {
-            Logger.error("Error initializing: \(error)")
-            withAnimation {
-                self.initializationError = error
-                self.conversationViewModel = nil
-            }
-        }
+        stateObserverHandle?.cancel()
     }
 
     // MARK: - Actions
@@ -123,107 +132,184 @@ class NewConversationViewModel: Identifiable {
         presentingJoinConversationSheet = true
     }
 
-    func join(inviteUrlString: String) -> Bool {
-        // Clear any previous errors when starting a new join attempt
-        presentingInvalidInviteSheet = false
+    func joinConversation(inviteCode: String) {
+        joinConversationTask?.cancel()
+        joinConversationTask = Task { [weak self] in
+            guard let self else { return }
+            guard !Task.isCancelled else { return }
+            do {
+                // Request to join - this will trigger state changes through the observer
+                try await conversationStateManager.joinConversation(inviteCode: inviteCode)
+                guard !Task.isCancelled else { return }
 
-        let inviteCode: String
-
-        // Try to extract invite code from URL first
-        if let url = URL(string: inviteUrlString), let extractedCode = url.convosInviteCode {
-            inviteCode = extractedCode
-        } else {
-            // If it's not a valid URL, treat as direct invite code
-            // Only accept if it looks like a valid invite code (no spaces, reasonable length)
-            guard !inviteUrlString.contains(" "), inviteUrlString.count >= 8 else {
-                Logger.warning("Invalid invite code format: \(inviteUrlString)")
-                presentingInvalidInviteSheet = true
-                return false
+                await handleJoinSuccess()
+            } catch {
+                Logger.error("Error joining new conversation: \(error.localizedDescription)")
+                guard !Task.isCancelled else { return }
+                await handleJoinError(error)
             }
-            inviteCode = inviteUrlString
         }
-
-        Logger.info("Processing inviteCode")
-        presentingJoinConversationSheet = false
-        joinConversation(inviteCode: inviteCode)
-        conversationViewModel?.showsInfoView = true
-        return true
     }
 
     func deleteConversation() {
         Logger.info("Deleting conversation")
         newConversationTask?.cancel()
         joinConversationTask?.cancel()
-        conversationViewModel = nil
         Task { [weak self] in
             guard let self else { return }
-            guard let messagingService else { return }
-            try await session.deleteInbox(for: messagingService)
-            await draftConversationComposer?.draftConversationWriter.delete()
-            self.messagingService = nil
+            await conversationStateManager.delete()
         }
+    }
+
+    func clearError() {
+        currentError = nil
+    }
+
+    func retryAfterError() {
+        guard let error = currentError else { return }
+        Logger.info("Retrying after error: \(error.localizedDescription)")
+        currentError = nil
+
+        // If we were in the middle of joining, could potentially retry
+        // For now, just clear the error and let the user try again
     }
 
     // MARK: - Private
 
-    private func joinConversation(inviteCode: String) {
-        joinConversationTask?.cancel()
-        joinConversationTask = Task { [weak self] in
-            guard let self else { return }
+    @MainActor
+    private func handleJoinSuccess() {
+        presentingJoinConversationSheet = false
+        presentingInvalidInviteSheet = false
+        conversationViewModel.showsInfoView = true
+        showingFullScreenScanner = false
+    }
 
-            // wait for init
-            await initializationTask?.value
-
-            guard let draftConversationComposer else {
-                Logger.error("Join attempted before initialization finished")
-                guard !Task.isCancelled else { return }
-                await MainActor.run { self.presentingFailedToJoinSheet = true }
-                return
+    @MainActor
+    private func handleJoinError(_ error: Error) {
+        withAnimation {
+            if startedWithFullscreenScanner {
+                showingFullScreenScanner = true
+                conversationViewModel.showsInfoView = false
             }
 
-            if let existingConversationId = await draftConversationComposer.draftConversationWriter.checkIfAlreadyJoined(inviteCode: inviteCode) {
-                Logger.info("Invite already redeeemed, showing existing conversation... conversationId: \(existingConversationId)")
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    self.presentingJoinConversationSheet = false
-                    self.delegate?.newConversationsViewModel(
-                        self,
-                        attemptedJoiningExistingConversationWithId: existingConversationId
-                    )
+            // Determine which sheet to present based on error type
+            if let stateMachineError = error as? ConversationStateMachineError {
+                switch stateMachineError {
+                case .invalidInviteCodeFormat, .inviteExpired:
+                    presentingInvalidInviteSheet = true
+                case .timedOut:
+                    presentingFailedToJoinSheet = true
+                case .failedFindingConversation, .failedVerifyingSignature, .stateMachineError:
+                    presentingInvalidInviteSheet = true
                 }
-                return
+            } else {
+                presentingInvalidInviteSheet = true
             }
+        }
+    }
 
-            guard !Task.isCancelled else { return }
+    private func setupStateObservation() {
+        stateObserverHandle = conversationStateManager.observeState { [weak self] state in
+            Task { @MainActor in
+                guard let self else { return }
+                self.handleStateChange(state)
+            }
+        }
+    }
 
-            do {
-                // Request to join
-                guard !Task.isCancelled else { return }
-                await MainActor.run { self.showingFullScreenScanner = false }
-                guard !Task.isCancelled else { return }
-                try await draftConversationComposer.draftConversationWriter.requestToJoin(inviteCode: inviteCode)
-            } catch ConversationStateMachineError.alreadyRedeemedInviteForConversation(let conversationId) {
-                Logger.info("Invite already redeeemed, showing existing conversation...")
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    self.presentingJoinConversationSheet = false
-                    self.delegate?.newConversationsViewModel(
-                        self,
-                        attemptedJoiningExistingConversationWithId: conversationId
-                    )
+    @MainActor
+    private func handleStateChange(_ state: ConversationStateMachine.State) {
+        conversationState = state
+
+        switch state {
+        case .uninitialized:
+            isWaitingForInviteAcceptance = false
+            isValidatingInvite = false
+            isCreatingConversation = false
+            currentError = nil
+
+        case .creating:
+            isCreatingConversation = true
+            isValidatingInvite = false
+            isWaitingForInviteAcceptance = false
+            currentError = nil
+
+        case .validating:
+            isValidatingInvite = true
+            isCreatingConversation = false
+            isWaitingForInviteAcceptance = false
+            currentError = nil
+
+        case .validated:
+            isValidatingInvite = false
+            isCreatingConversation = false
+            isWaitingForInviteAcceptance = false
+            currentError = nil
+
+        case .joining:
+            // This is the waiting state - user is waiting for inviter to accept
+            messagesTopBarTrailingItem = .share
+            isWaitingForInviteAcceptance = true
+            isValidatingInvite = false
+            isCreatingConversation = false
+            currentError = nil
+            Logger.info("Waiting for invite acceptance...")
+
+        case .ready(let result):
+            switch result.origin {
+            case .joined:
+                break
+            case .created:
+                break
+            }
+            messagesTopBarTrailingItemEnabled = true
+            messagesBottomBarEnabled = true
+            isWaitingForInviteAcceptance = false
+            isValidatingInvite = false
+            isCreatingConversation = false
+            currentError = nil
+            Logger.info("Conversation ready!")
+
+        case .deleting:
+            isWaitingForInviteAcceptance = false
+            isValidatingInvite = false
+            isCreatingConversation = false
+            currentError = nil
+
+        case .error(let error):
+            isWaitingForInviteAcceptance = false
+            isValidatingInvite = false
+            isCreatingConversation = false
+            currentError = error
+            Logger.error("Conversation state error: \(error.localizedDescription)")
+
+            // Handle specific error types
+            handleError(error)
+        }
+    }
+
+    @MainActor
+    private func handleError(_ error: Error) {
+        // Map state machine errors to appropriate UI states
+        if let stateMachineError = error as? ConversationStateMachineError {
+            switch stateMachineError {
+            case .invalidInviteCodeFormat, .inviteExpired:
+                presentingInvalidInviteSheet = true
+                if startedWithFullscreenScanner {
+                    showingFullScreenScanner = true
+                    conversationViewModel.showsInfoView = false
                 }
-            } catch {
-                Logger.error("Error joining new conversation: \(error.localizedDescription)")
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    withAnimation {
-                        if self.startedWithFullscreenScanner {
-                            self.showingFullScreenScanner = true
-                            self.conversationViewModel?.showsInfoView = false
-                        }
-                        self.presentingInvalidInviteSheet = true
-                    }
+
+            case .timedOut:
+                presentingFailedToJoinSheet = true
+                if startedWithFullscreenScanner {
+                    showingFullScreenScanner = true
+                    conversationViewModel.showsInfoView = false
                 }
+
+            case .failedFindingConversation, .failedVerifyingSignature, .stateMachineError:
+                // Generic error - could show a different alert
+                presentingFailedToJoinSheet = true
             }
         }
     }
@@ -231,11 +317,7 @@ class NewConversationViewModel: Identifiable {
     private func setupObservations() {
         cancellables.removeAll()
 
-        guard let draftConversationComposer else {
-            return
-        }
-
-        draftConversationComposer.draftConversationWriter.conversationIdPublisher
+        conversationStateManager.conversationIdPublisher
             .receive(on: DispatchQueue.main)
             .sink { conversationId in
                 Logger.info("Active conversation changed: \(conversationId)")
@@ -248,10 +330,10 @@ class NewConversationViewModel: Identifiable {
             .store(in: &cancellables)
 
         Publishers.Merge(
-            draftConversationComposer.draftConversationWriter.sentMessage.map { _ in () },
-            draftConversationComposer.draftConversationRepository.messagesRepository
+            conversationStateManager.sentMessage.map { _ in () },
+            conversationStateManager.draftConversationRepository.messagesRepository
                 .messagesPublisher
-                .filter { !$0.isEmpty }
+                .filter { $0.contains { $0.base.content.showsInMessagesList } }
                 .map { _ in () }
         )
         .eraseToAnyPublisher()
@@ -260,7 +342,7 @@ class NewConversationViewModel: Identifiable {
             guard let self else { return }
             messagesTopBarTrailingItem = .share
             shouldConfirmDeletingConversation = false
-            conversationViewModel?.untitledConversationPlaceholder = "Untitled"
+            conversationViewModel.untitledConversationPlaceholder = "Untitled"
         }
         .store(in: &cancellables)
     }

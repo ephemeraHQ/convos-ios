@@ -52,9 +52,11 @@ actor SyncingManager: SyncingManagerProtocol {
 
     // MARK: - Initialization
 
-    init(databaseWriter: any DatabaseWriter) {
+    init(identityStore: any KeychainIdentityStoreProtocol,
+         databaseWriter: any DatabaseWriter) {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(
+            identityStore: identityStore,
             databaseWriter: databaseWriter,
             messageWriter: messageWriter
         )
@@ -206,7 +208,7 @@ actor SyncingManager: SyncingManagerProtocol {
                     try Task.checkCancellation()
 
                     // Process conversation
-                    await processConversation(conversation, apiClient: apiClient)
+                    await processConversation(conversation, client: client, apiClient: apiClient)
                 }
 
                 // Stream ended (onClose was called and continuation finished)
@@ -238,11 +240,6 @@ actor SyncingManager: SyncingManagerProtocol {
                 return
             }
 
-            // Sync profiles if needed
-            if shouldSyncMemberProfiles(for: conversation.id) {
-                await syncMemberProfiles(apiClient: apiClient, for: [conversation])
-            }
-
             // Store conversation and message
             let dbConversation = try await conversationWriter.store(conversation: conversation)
             let result = try await messageWriter.store(message: message, for: dbConversation)
@@ -264,14 +261,10 @@ actor SyncingManager: SyncingManagerProtocol {
 
     private func processConversation(
         _ conversation: XMTPiOS.Conversation,
+        client: AnyClientProvider,
         apiClient: any ConvosAPIClientProtocol
     ) async {
         do {
-            // Sync member profiles
-            if shouldSyncMemberProfiles(for: conversation.id) {
-                await syncMemberProfiles(apiClient: apiClient, for: [conversation])
-            }
-
             // Store with latest messages
             Logger.info("Syncing conversation: \(conversation.id)")
             try await conversationWriter.storeWithLatestMessages(conversation: conversation)
@@ -314,12 +307,6 @@ actor SyncingManager: SyncingManagerProtocol {
                             Logger.error("Error storing conversation: \(error)")
                         }
                     }
-                }
-
-                // Sync profiles
-                group.addTask { [weak self] in
-                    guard let self else { return }
-                    await self.syncMemberProfiles(apiClient: apiClient, for: conversations)
                 }
             }
 
@@ -392,68 +379,6 @@ actor SyncingManager: SyncingManagerProtocol {
         }
     }
 
-    // MARK: - Member Profile Sync
-
-    private func shouldSyncMemberProfiles(for conversationId: String) -> Bool {
-        let now = Date()
-
-        guard let lastSync = lastMemberProfileSync[conversationId] else {
-            lastMemberProfileSync[conversationId] = now
-            return true
-        }
-
-        guard now.timeIntervalSince(lastSync) >= memberProfileSyncInterval else {
-            return false
-        }
-
-        lastMemberProfileSync[conversationId] = now
-        return true
-    }
-
-    private func syncMemberProfiles(
-        apiClient: any ConvosAPIClientProtocol,
-        for conversations: [XMTPiOS.Conversation],
-        force: Bool = false
-    ) async {
-        // Collect member IDs
-        var memberIds = Set<String>()
-
-        for conversation in conversations {
-            // Skip if recently synced (unless forced)
-            if !force && conversation.id == activeConversationId {
-                // For active conversation, we use a different check since it syncs more frequently
-                continue
-            } else if !force && !shouldSyncMemberProfiles(for: conversation.id) {
-                continue
-            }
-
-            if let members = try? await conversation.members() {
-                memberIds.formUnion(members.map { $0.inboxId })
-            }
-        }
-
-        guard !memberIds.isEmpty else { return }
-
-        // Batch fetch profiles
-        let chunks = Array(memberIds).chunked(into: 50)
-
-        await withTaskGroup(of: Void.self) { group in
-            for chunk in chunks {
-                group.addTask { [weak self] in
-                    guard let self else { return }
-                    do {
-                        let batchProfiles = try await apiClient.getProfiles(for: chunk)
-                        let profiles = Array(batchProfiles.profiles.values)
-                        try await self.profileWriter.store(profiles: profiles)
-                        Logger.info("Synced \(profiles.count) profiles")
-                    } catch {
-                        Logger.error("Error syncing profiles: \(error)")
-                    }
-                }
-            }
-        }
-    }
-
     // MARK: - Mutation
 
     func markLastActiveAtAsNow() {
@@ -462,64 +387,7 @@ actor SyncingManager: SyncingManagerProtocol {
 
     func setActiveConversationId(_ conversationId: String?) {
         // Update the active conversation
-        let previousId = activeConversationId
         activeConversationId = conversationId
-
-        // Cancel existing profile sync task if conversation changed
-        if previousId != conversationId || (conversationId != nil && activeConversationProfileTask == nil) {
-            activeConversationProfileTask?.cancel()
-            activeConversationProfileTask = nil
-
-            // Start new profile sync task if we have a conversation
-            if let conversationId = conversationId,
-               let client = currentClient,
-               let apiClient = currentApiClient {
-                Logger.info("Starting periodic profile sync for conversation: \(conversationId)")
-                activeConversationProfileTask = Task { [weak self] in
-                    await self?.runActiveConversationProfileSync(
-                        conversationId: conversationId,
-                        client: client,
-                        apiClient: apiClient
-                    )
-                }
-            }
-        }
-    }
-
-    // MARK: - Active Conversation Profile Sync
-
-    private func runActiveConversationProfileSync(
-        conversationId: String,
-        client: AnyClientProvider,
-        apiClient: any ConvosAPIClientProtocol
-    ) async {
-        while !Task.isCancelled {
-            do {
-                // Check if this is still the active conversation
-                guard activeConversationId == conversationId else {
-                    Logger.info("Active conversation changed, stopping profile sync")
-                    break
-                }
-
-                // Find and sync profiles for the active conversation
-                if let conversation = try await client.conversationsProvider.findConversation(
-                    conversationId: conversationId
-                ) {
-                    await syncMemberProfiles(apiClient: apiClient, for: [conversation], force: true)
-                    Logger.info("Synced profiles for active conversation: \(conversationId)")
-                }
-
-                // Wait for the interval before next sync
-                try await Task.sleep(nanoseconds: UInt64(activeConversationProfileSyncInterval * 1_000_000_000))
-            } catch is CancellationError {
-                Logger.info("Active conversation profile sync cancelled")
-                break
-            } catch {
-                Logger.error("Error syncing profiles for active conversation: \(error)")
-                // Continue trying after a delay
-                try? await Task.sleep(nanoseconds: UInt64(activeConversationProfileSyncInterval * 1_000_000_000))
-            }
-        }
     }
 
     // MARK: - Notification Observers

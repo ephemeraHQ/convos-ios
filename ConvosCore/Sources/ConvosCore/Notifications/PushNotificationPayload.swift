@@ -32,7 +32,6 @@ public struct DecodedNotificationContent {
 /// Represents the payload structure of a push notification
 public final class PushNotificationPayload {
     public let inboxId: String?
-    public let notificationType: NotificationType?
     public let notificationData: NotificationData?
     public let apiJWT: String?
     public let userInfo: [AnyHashable: Any]
@@ -44,7 +43,6 @@ public final class PushNotificationPayload {
     public init(userInfo: [AnyHashable: Any]) {
         self.userInfo = userInfo
         self.inboxId = userInfo["inboxId"] as? String
-        self.notificationType = NotificationType(rawValue: userInfo["notificationType"] as? String ?? "")
         self.notificationData = NotificationData(dictionary: userInfo["notificationData"] as? [String: Any])
         self.apiJWT = userInfo["apiJWT"] as? String
         self.decodedTitle = nil
@@ -72,17 +70,14 @@ public enum NotificationType: String, CaseIterable {
 
 public struct NotificationData {
     public let protocolData: ProtocolNotificationData?
-    public let inviteData: InviteJoinRequestData?
 
     public init(dictionary: [String: Any]?) {
         guard let dict = dictionary else {
             self.protocolData = nil
-            self.inviteData = nil
             return
         }
 
         self.protocolData = ProtocolNotificationData(dictionary: dict)
-        self.inviteData = InviteJoinRequestData(dictionary: dict)
     }
 }
 
@@ -106,30 +101,6 @@ public struct ProtocolNotificationData {
 
         self.contentTopic = dict["contentTopic"] as? String
         self.encryptedMessage = dict["encryptedMessage"] as? String
-    }
-}
-
-// MARK: - Invite Join Request Data
-
-public struct InviteJoinRequestData {
-    public let requestId: String?
-    public let requester: RequesterData?
-    public let inviteCode: InviteCodeData?
-    public let autoApprove: Bool
-
-    public init(dictionary: [String: Any]?) {
-        guard let dict = dictionary else {
-            self.requestId = nil
-            self.requester = nil
-            self.inviteCode = nil
-            self.autoApprove = false
-            return
-        }
-
-        self.requestId = dict["id"] as? String ?? dict["requestId"] as? String
-        self.requester = RequesterData(dictionary: dict["requester"] as? [String: Any])
-        self.inviteCode = InviteCodeData(dictionary: dict["inviteCode"] as? [String: Any])
-        self.autoApprove = dict["autoApprove"] as? Bool ?? false
     }
 }
 
@@ -178,122 +149,50 @@ public struct ProfileData {
     }
 }
 
-public struct InviteCodeData {
-    public let id: String?
-    public let name: String?
-    public let groupId: String?
-
-    public init(dictionary: [String: Any]?) {
-        guard let dict = dictionary else {
-            self.id = nil
-            self.name = nil
-            self.groupId = nil
-            return
-        }
-
-        self.id = dict["id"] as? String
-        self.name = dict["name"] as? String
-        self.groupId = dict["groupId"] as? String
-    }
-
-    public var displayName: String {
-        return name ?? "your group"
-    }
-}
-
 // MARK: - Convenience Extensions
 
 public extension PushNotificationPayload {
     /// Creates a thread identifier for grouping notifications
     var threadIdentifier: String? {
-        switch notificationType {
-        case .protocolMessage:
-            return notificationData?.protocolData?.conversationId
-        case .inviteJoinRequest:
-            guard let inboxId = inboxId else { return nil }
-            return "invites-\(inboxId)"
-        case .none:
-            return nil
-        }
+        notificationData?.protocolData?.conversationId
     }
 
     /// Generates a display title for the notification
     var displayTitle: String? {
-        switch notificationType {
-        case .inviteJoinRequest:
-            return "Group Invitation"
-        case .protocolMessage:
-            return nil // Use default title
-        case .none:
-            return nil
-        }
+        nil // Use default title
     }
 
     /// Generates a display body for the notification
     var displayBody: String? {
-        switch notificationType {
-        case .protocolMessage:
-            return "New message"
-        case .inviteJoinRequest:
-            guard let inviteData = notificationData?.inviteData else {
-                return "Someone requested to join your group"
-            }
-
-            let displayName = inviteData.requester?.profile?.displayNameOrUsername ?? "Someone"
-            let groupName = inviteData.inviteCode?.displayName ?? "your group"
-
-            if inviteData.autoApprove {
-                return "\(displayName) joined \(groupName)"
-            } else {
-                return "\(displayName) requested to join \(groupName)"
-            }
-        case .none:
-            return nil
-        }
+        "New message"
     }
 
     /// Generates a display title for the notification with decoded content
     /// - Returns: The display title with decoded content if available
     func displayTitleWithDecodedContent() -> String? {
-        switch notificationType {
-        case .protocolMessage:
-            // Use decoded title if available and non-empty, otherwise fall back to default
-            if let decodedTitle = decodedTitle {
-                let trimmed = decodedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty {
-                    return trimmed
-                }
-            }
+        // Use decoded title if available and non-empty, otherwise fall back to default
+        guard let decodedTitle = decodedTitle else {
             return displayTitle
-        case .inviteJoinRequest:
-            return displayTitle
-        case .none:
-            return nil
         }
+
+        let trimmed = decodedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? displayTitle : trimmed
     }
 
     /// Generates a display body for the notification with decoded content
     /// - Returns: The display body with decoded content if available
     func displayBodyWithDecodedContent() -> String? {
-        switch notificationType {
-        case .protocolMessage:
-            // Use decoded body if available and non-empty, otherwise fall back to default
-            if let decodedBody = decodedBody {
-                let trimmed = decodedBody.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty {
-                    return trimmed
-                }
-            }
+        // Use decoded body if available and non-empty, otherwise fall back to default
+        guard let decodedBody = decodedBody else {
             return displayBody
-        case .inviteJoinRequest:
-            return displayBody
-        case .none:
-            return nil
         }
+
+        let trimmed = decodedBody.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? displayBody : trimmed
     }
 
     /// Checks if the notification has valid data for processing
     var isValid: Bool {
-        return inboxId != nil && notificationType != nil
+        return inboxId != nil
     }
 }

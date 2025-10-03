@@ -64,14 +64,11 @@ extension Conversation {
 extension Invite {
     public static func mock() -> Self {
         .init(
-            code: "invite_code_123",
             conversationId: "conversation_123",
-            inviteUrlString: "https://popup.convos.org/invite_code_123",
-            status: .active,
-            createdAt: Date(),
-            maxUses: 0,
+            urlSlug: "invite_code_123",
+            expiresAt: nil,
+            maxUses: nil,
             usesCount: 0,
-            autoApprove: false
         )
     }
 }

@@ -59,7 +59,7 @@ public actor CachedPushNotificationHandler {
             return nil
         }
 
-        Logger.info("Processing for inbox: \(inboxId), type: \(payload.notificationType?.displayName ?? "unknown")")
+        Logger.info("Processing for inbox: \(inboxId)")
 
         // Process with timeout
         return try await withTimeout(seconds: timeout, timeoutError: NotificationProcessingError.timeout) {
@@ -109,7 +109,6 @@ public actor CachedPushNotificationHandler {
 
         Logger.info("Creating new messaging service for inbox: \(inboxId)")
         let messagingService = MessagingService.authorizedMessagingService(
-            for: inboxId,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment,

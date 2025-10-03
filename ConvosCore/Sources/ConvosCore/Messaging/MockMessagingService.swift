@@ -34,26 +34,22 @@ public class MockMessagingService: MessagingServiceProtocol {
 
     // MARK: - Protocol Conformance
 
-    public func stop() {}
-
-    public func stopAndDelete() {}
-
-    public func stopAndDelete() async {}
+    public func reset() async {}
 
     public func registerForPushNotifications() async {
         // Mock implementation - no-op
+    }
+
+    public var inboxStateManager: any InboxStateManagerProtocol {
+        self
     }
 
     public func myProfileWriter() -> any MyProfileWriterProtocol {
         self
     }
 
-    public func myProfileRepository() -> any MyProfileRepositoryProtocol {
-        self
-    }
-
-    public func draftConversationComposer() -> any DraftConversationComposerProtocol {
-        MockDraftConversationComposer()
+    public func conversationStateManager() -> any ConversationStateManagerProtocol {
+        MockConversationStateManager()
     }
 
     public var clientPublisher: AnyPublisher<(any XMTPClientProvider)?, Never> {
@@ -72,12 +68,12 @@ public class MockMessagingService: MessagingServiceProtocol {
         MockConversationLocalStateWriter()
     }
 
-    public func groupMetadataWriter() -> any ConversationMetadataWriterProtocol {
-        MockGroupMetadataWriter()
+    public func conversationMetadataWriter() -> any ConversationMetadataWriterProtocol {
+        MockConversationMetadataWriter()
     }
 
-    public func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
-        MockGroupPermissionsRepository()
+    public func conversationPermissionsRepository() -> any ConversationPermissionsRepositoryProtocol {
+        MockConversationPermissionsRepository()
     }
 
     public func uploadImage(data: Data, filename: String) async throws -> String {
@@ -96,6 +92,26 @@ public class MockMessagingService: MessagingServiceProtocol {
     }
 }
 
+extension MockMessagingService: InboxStateManagerProtocol {
+    public var currentState: InboxStateMachine.State {
+        .uninitialized
+    }
+
+    public func waitForInboxReadyResult() async throws -> InboxReadyResult {
+        .init(client: self, apiClient: MockAPIClient(client: self))
+    }
+
+    public func addObserver(_ observer: any InboxStateObserver) {
+    }
+
+    public func removeObserver(_ observer: any InboxStateObserver) {
+    }
+
+    public func observeState(_ handler: @escaping (InboxStateMachine.State) -> Void) -> StateObserverHandle {
+        .init(observer: .init(handler: { _ in }), manager: self)
+    }
+}
+
 extension MockMessagingService: InviteRepositoryProtocol {
     public var invitePublisher: AnyPublisher<Invite?, Never> {
         Just(.mock()).eraseToAnyPublisher()
@@ -103,20 +119,10 @@ extension MockMessagingService: InviteRepositoryProtocol {
 }
 
 extension MockMessagingService: MyProfileWriterProtocol {
-    public func update(displayName: String) {
+    public func update(displayName: String, conversationId: String) {
     }
 
-    public func update(avatar: UIImage?) async throws {
-    }
-}
-
-extension MockMessagingService: MyProfileRepositoryProtocol {
-    public var myProfilePublisher: AnyPublisher<Profile, Never> {
-        Just(currentUser.profile).eraseToAnyPublisher()
-    }
-
-    public func fetch(inboxId: String) throws -> Profile {
-        .mock()
+    public func update(avatar: UIImage?, conversationId: String) async throws {
     }
 }
 
@@ -152,6 +158,10 @@ extension MockMessagingService: ConversationConsentWriterProtocol {
 }
 
 extension MockMessagingService: ConversationRepositoryProtocol {
+    public var myProfileRepository: any MyProfileRepositoryProtocol {
+        MockMyProfileRepository()
+    }
+
     public var conversationId: String {
         conversation?.id ?? ""
     }
@@ -206,6 +216,9 @@ extension MockMessagingService: ConversationSender {
     }
 
     public func remove(members inboxIds: [String]) async throws {
+    }
+
+    public func updateInviteTag() async throws {
     }
 }
 
@@ -266,6 +279,10 @@ extension MockMessagingService: XMTPClientProvider {
         Data()
     }
 
+    public func verifySignature(message: String, signature: Data) throws -> Bool {
+        true
+    }
+
     public func canMessage(identity: String) async throws -> Bool {
         true
     }
@@ -274,7 +291,7 @@ extension MockMessagingService: XMTPClientProvider {
         return Dictionary(uniqueKeysWithValues: identities.map { ($0, true) })
     }
 
-    public func prepareConversation() async throws -> ConversationSender {
+    public func prepareConversation() throws -> ConversationSender {
         self
     }
 
@@ -484,59 +501,59 @@ public class MockConversationLocalStateWriter: ConversationLocalStateWriterProto
     public func setMuted(_ isMuted: Bool, for conversationId: String) async throws {}
 }
 
-// Add mock implementations for group functionality
-public class MockGroupMetadataWriter: ConversationMetadataWriterProtocol {
+// Add mock implementations for conversation functionality
+public class MockConversationMetadataWriter: ConversationMetadataWriterProtocol {
     public init() {}
-    public func updateGroupName(conversationId: String, name: String) async throws {}
-    public func updateGroupDescription(conversationId: String, description: String) async throws {}
-    public func updateGroupImageUrl(conversationId: String, imageURL: String) async throws {}
-    public func addGroupMembers(conversationId: String, memberInboxIds: [String]) async throws {}
-    public func removeGroupMembers(conversationId: String, memberInboxIds: [String]) async throws {}
-    public func promoteToAdmin(conversationId: String, memberInboxId: String) async throws {}
-    public func demoteFromAdmin(conversationId: String, memberInboxId: String) async throws {}
-    public func promoteToSuperAdmin(conversationId: String, memberInboxId: String) async throws {}
-    public func demoteFromSuperAdmin(conversationId: String, memberInboxId: String) async throws {}
-    public func updateGroupImage(conversation: Conversation, image: UIImage) async throws {}
+    public func updateName(_ name: String, for conversationId: String) async throws {}
+    public func updateDescription(_ description: String, for conversationId: String) async throws {}
+    public func updateImageUrl(_ imageURL: String, for conversationId: String) async throws {}
+    public func addMembers(_ memberInboxIds: [String], to conversationId: String) async throws {}
+    public func removeMembers(_ memberInboxIds: [String], from conversationId: String) async throws {}
+    public func promoteToAdmin(_ memberInboxId: String, in conversationId: String) async throws {}
+    public func demoteFromAdmin(_ memberInboxId: String, in conversationId: String) async throws {}
+    public func promoteToSuperAdmin(_ memberInboxId: String, in conversationId: String) async throws {}
+    public func demoteFromSuperAdmin(_ memberInboxId: String, in conversationId: String) async throws {}
+    public func updateImage(_ image: UIImage, for conversation: Conversation) async throws {}
 }
 
-class MockGroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
-    func addAdmin(memberInboxId: String, to groupId: String) async throws {
+class MockConversationPermissionsRepository: ConversationPermissionsRepositoryProtocol {
+    func addAdmin(memberInboxId: String, to conversationId: String) async throws {
         // @lourou
     }
 
-    func removeAdmin(memberInboxId: String, from groupId: String) async throws {
+    func removeAdmin(memberInboxId: String, from conversationId: String) async throws {
         // @lourou
     }
 
-    func addSuperAdmin(memberInboxId: String, to groupId: String) async throws {
+    func addSuperAdmin(memberInboxId: String, to conversationId: String) async throws {
         // @lourou
     }
 
-    func removeSuperAdmin(memberInboxId: String, from groupId: String) async throws {
+    func removeSuperAdmin(memberInboxId: String, from conversationId: String) async throws {
     }
 
-    func addMembers(inboxIds: [String], to groupId: String) async throws {
+    func addMembers(inboxIds: [String], to conversationId: String) async throws {
     }
 
-    func removeMembers(inboxIds: [String], from groupId: String) async throws {
+    func removeMembers(inboxIds: [String], from conversationId: String) async throws {
     }
 
-    func getGroupPermissions(for groupId: String) async throws -> GroupPermissionPolicySet {
-        return GroupPermissionPolicySet.defaultPolicy
+    func getConversationPermissions(for conversationId: String) async throws -> ConversationPermissionPolicySet {
+        return ConversationPermissionPolicySet.defaultPolicy
     }
 
-    func getMemberRole(memberInboxId: String, in groupId: String) async throws -> MemberRole {
+    func getMemberRole(memberInboxId: String, in conversationId: String) async throws -> MemberRole {
         return .member
     }
 
     func canPerformAction(
         memberInboxId: String,
-        action: GroupPermissionAction,
-        in groupId: String) async throws -> Bool {
+        action: ConversationPermissionAction,
+        in conversationId: String) async throws -> Bool {
         return true
     }
 
-    func getGroupMembers(for groupId: String) async throws -> [GroupMemberInfo] {
+    func getConversationMembers(for conversationId: String) async throws -> [ConversationMemberInfo] {
         return []
     }
 }

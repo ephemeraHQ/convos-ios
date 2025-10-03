@@ -24,6 +24,7 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
             let sender = Member(inboxId: message.senderInboxId)
             try sender.save(db)
             let senderProfile = MemberProfile(
+                conversationId: conversation.id,
                 inboxId: message.senderInboxId,
                 name: nil,
                 avatar: nil
@@ -48,8 +49,8 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
             Logger.info("Storing incoming message \(message.id) localId \(message.clientMessageId)")
             // see if this message has a local version
             if let localMessage = try DBMessage
-                .filter(Column("id") == message.id)
-                .filter(Column("clientMessageId") != message.id)
+                .filter(DBMessage.Columns.id == message.id)
+                .filter(DBMessage.Columns.clientMessageId != message.id)
                 .fetchOne(db) {
                 // keep using the same local id
                 Logger.info("Found local message \(localMessage.clientMessageId) for incoming message \(message.id)")

@@ -8,26 +8,20 @@ class ConversationViewModel {
     // MARK: - Private
 
     private let session: any SessionManagerProtocol
-
-    // These will be loaded asynchronously
-    private var myProfileWriter: (any MyProfileWriterProtocol)?
-    private var myProfileRepository: (any MyProfileRepositoryProtocol)?
-    private var outgoingMessageWriter: (any OutgoingMessageWriterProtocol)?
-    private var consentWriter: (any ConversationConsentWriterProtocol)?
-    private var localStateWriter: (any ConversationLocalStateWriterProtocol)?
-    private var metadataWriter: (any ConversationMetadataWriterProtocol)?
-
+    private let myProfileWriter: any MyProfileWriterProtocol
+    private let myProfileRepository: any MyProfileRepositoryProtocol
+    private let outgoingMessageWriter: any OutgoingMessageWriterProtocol
+    private let consentWriter: any ConversationConsentWriterProtocol
+    private let localStateWriter: any ConversationLocalStateWriterProtocol
+    private let metadataWriter: any ConversationMetadataWriterProtocol
     private let conversationRepository: any ConversationRepositoryProtocol
     private let messagesRepository: any MessagesRepositoryProtocol
 
     private var cancellables: Set<AnyCancellable> = []
     private var loadProfileImageTask: Task<Void, Never>?
     private var loadConversationImageTask: Task<Void, Never>?
-    private var initializationTask: Task<Void, Never>?
 
     // MARK: - Public
-
-    var loadingError: Error?
 
     var showsInfoView: Bool = true
     private(set) var conversation: Conversation {
@@ -49,7 +43,7 @@ class ConversationViewModel {
     private(set) var profile: Profile = .empty(inboxId: "")
     var untitledConversationPlaceholder: String = "Untitled"
     var conversationInfoSubtitle: String {
-        conversation.members.count > 1 ? conversation.membersCountString : "Customize"
+        !conversation.hasJoined || conversation.members.count > 1 ? conversation.membersCountString : "Customize"
     }
     var conversationNamePlaceholder: String = "Name"
     var conversationDescriptionPlaceholder: String = "Description"
@@ -102,15 +96,31 @@ class ConversationViewModel {
             self.messages = []
         }
 
-        observe()
+        let messagingService = session.messagingService
 
-        Logger.info("🔄 created for conversation: \(conversation.id)")
+        myProfileWriter = messagingService.myProfileWriter()
+        myProfileRepository = conversationRepository.myProfileRepository
+        outgoingMessageWriter = messagingService.messageWriter(for: conversation.id)
+        consentWriter = messagingService.conversationConsentWriter()
+        localStateWriter = messagingService.conversationLocalStateWriter()
+        metadataWriter = messagingService.conversationMetadataWriter()
 
-        // Start async initialization
-        initializationTask = Task { [weak self] in
-            guard let self else { return }
-            await self.initializeAsyncDependencies()
+        setupMyProfileRepository()
+
+        // Initialize UI state only if not already set
+        if displayName.isEmpty {
+            displayName = profile.name ?? ""
         }
+        if conversationName.isEmpty {
+            conversationName = conversation.name ?? ""
+        }
+        if conversationDescription.isEmpty {
+            conversationDescription = conversation.description ?? ""
+        }
+
+        Logger.info("Created for conversation: \(conversation.id)")
+
+        observe()
 
         KeyboardListener.shared.add(delegate: self)
     }
@@ -119,7 +129,7 @@ class ConversationViewModel {
     init(
         conversation: Conversation,
         session: any SessionManagerProtocol,
-        draftConversationComposer: any DraftConversationComposerProtocol,
+        conversationStateManager: any ConversationStateManagerProtocol,
         myProfileRepository: any MyProfileRepositoryProtocol
     ) {
         self.conversation = conversation
@@ -128,15 +138,15 @@ class ConversationViewModel {
         self.conversationDescription = conversation.description ?? ""
         self.profile = .empty(inboxId: conversation.inboxId)
 
-        // Extract dependencies from draft composer
-        self.myProfileWriter = draftConversationComposer.myProfileWriter
+        // Extract dependencies from conversation state manager
+        self.myProfileWriter = conversationStateManager.myProfileWriter
         self.myProfileRepository = myProfileRepository
-        self.conversationRepository = draftConversationComposer.draftConversationRepository
-        self.messagesRepository = draftConversationComposer.draftConversationRepository.messagesRepository
-        self.outgoingMessageWriter = draftConversationComposer.draftConversationWriter
-        self.consentWriter = draftConversationComposer.conversationConsentWriter
-        self.localStateWriter = draftConversationComposer.conversationLocalStateWriter
-        self.metadataWriter = draftConversationComposer.conversationMetadataWriter
+        self.conversationRepository = conversationStateManager.draftConversationRepository
+        self.messagesRepository = conversationStateManager.draftConversationRepository.messagesRepository
+        self.outgoingMessageWriter = conversationStateManager
+        self.consentWriter = conversationStateManager.conversationConsentWriter
+        self.localStateWriter = conversationStateManager.conversationLocalStateWriter
+        self.metadataWriter = conversationStateManager.conversationMetadataWriter
         do {
             self.messages = try messagesRepository.fetchAll()
             self.conversation = try conversationRepository.fetchConversation() ?? conversation
@@ -164,39 +174,9 @@ class ConversationViewModel {
         KeyboardListener.shared.add(delegate: self)
     }
 
-    @MainActor
-    private func initializeAsyncDependencies() async {
-        // Get the messaging service
-        let messagingService = await session.messagingService(for: conversation.inboxId)
-
-        // Store all the dependencies
-        myProfileWriter = messagingService.myProfileWriter()
-        myProfileRepository = messagingService.myProfileRepository()
-        outgoingMessageWriter = messagingService.messageWriter(for: conversation.id)
-        consentWriter = messagingService.conversationConsentWriter()
-        localStateWriter = messagingService.conversationLocalStateWriter()
-        metadataWriter = messagingService.groupMetadataWriter()
-
-        setupMyProfileRepository()
-
-        // Initialize UI state only if not already set
-        if displayName.isEmpty {
-            displayName = profile.name ?? ""
-        }
-        if conversationName.isEmpty {
-            conversationName = conversation.name ?? ""
-        }
-        if conversationDescription.isEmpty {
-            conversationDescription = conversation.description ?? ""
-        }
-
-        loadingError = nil
-    }
-
     deinit {
         Logger.info("🗑️ deallocated for conversation: \(conversation.id)")
         cancellables.removeAll()
-        initializationTask?.cancel()
         loadProfileImageTask?.cancel()
         loadConversationImageTask?.cancel()
         KeyboardListener.shared.remove(delegate: self)
@@ -205,13 +185,8 @@ class ConversationViewModel {
     // MARK: - Private
 
     private func setupMyProfileRepository() {
-        guard let myProfileRepository else {
-            Logger.warning("My profile repository is not available, skipping setup...")
-            return
-        }
-
         do {
-            self.profile = try myProfileRepository.fetch(inboxId: conversation.inboxId)
+            self.profile = try myProfileRepository.fetch()
         } catch {
             Logger.error("Failed fetching my profile: \(error.localizedDescription)")
         }
@@ -234,7 +209,6 @@ class ConversationViewModel {
             }
             .store(in: &cancellables)
         conversationRepository.conversationPublisher
-            .dropFirst()
             .receive(on: DispatchQueue.main)
             .compactMap { $0 }
             .sink { [weak self] conversation in
@@ -261,11 +235,11 @@ class ConversationViewModel {
 
         if trimmedConversationName != (conversation.name ?? "") {
             Task { [weak self] in
-                guard let self, let metadataWriter = self.metadataWriter else { return }
+                guard let self else { return }
                 do {
-                    try await metadataWriter.updateGroupName(
-                        conversationId: conversation.id,
-                        name: trimmedConversationName
+                    try await metadataWriter.updateName(
+                        trimmedConversationName,
+                        for: conversation.id
                     )
                 } catch {
                     Logger.error("Failed updating group name: \(error)")
@@ -277,11 +251,11 @@ class ConversationViewModel {
             ImageCache.shared.setImage(conversationImage, for: conversation)
 
             Task { [weak self] in
-                guard let self, let metadataWriter = self.metadataWriter else { return }
+                guard let self else { return }
                 do {
-                    try await metadataWriter.updateGroupImage(
-                        conversation: conversation,
-                        image: conversationImage
+                    try await metadataWriter.updateImage(
+                        conversationImage,
+                        for: conversation
                     )
                 } catch {
                     Logger.error("Failed updating group image: \(error)")
@@ -294,11 +268,11 @@ class ConversationViewModel {
 
         if trimmedConversationDescription != (conversation.description ?? "") {
             Task { [weak self] in
-                guard let self, let metadataWriter = self.metadataWriter else { return }
+                guard let self else { return }
                 do {
-                    try await metadataWriter.updateGroupDescription(
-                        conversationId: conversation.id,
-                        description: trimmedConversationDescription
+                    try await metadataWriter.updateDescription(
+                        trimmedConversationDescription,
+                        for: conversation.id
                     )
                 } catch {
                     Logger.error("Failed updating group description: \(error)")
@@ -330,7 +304,7 @@ class ConversationViewModel {
         let prevMessageText = messageText
         messageText = ""
         Task { [weak self] in
-            guard let self, let outgoingMessageWriter = self.outgoingMessageWriter else { return }
+            guard let self else { return }
             do {
                 try await outgoingMessageWriter.send(text: prevMessageText)
             } catch {
@@ -355,9 +329,9 @@ class ConversationViewModel {
 
         if (profile.name ?? "") != trimmedDisplayName {
             Task { [weak self] in
-                guard let self, let myProfileWriter = self.myProfileWriter else { return }
+                guard let self else { return }
                 do {
-                    try await myProfileWriter.update(displayName: trimmedDisplayName)
+                    try await myProfileWriter.update(displayName: trimmedDisplayName, conversationId: conversation.id)
                 } catch {
                     Logger.error("Error updating profile display name: \(error.localizedDescription)")
                 }
@@ -369,9 +343,9 @@ class ConversationViewModel {
             ImageCache.shared.setImage(profileImage, for: profile)
 
             Task { [weak self] in
-                guard let self, let myProfileWriter = self.myProfileWriter else { return }
+                guard let self else { return }
                 do {
-                    try await myProfileWriter.update(avatar: profileImage)
+                    try await myProfileWriter.update(avatar: profileImage, conversationId: conversation.id)
                 } catch {
                     Logger.error("Error updating profile image: \(error.localizedDescription)")
                 }
@@ -386,9 +360,9 @@ class ConversationViewModel {
     func remove(member: ConversationMember) {
         guard canRemoveMembers else { return }
         Task { [weak self] in
-            guard let self, let metadataWriter = self.metadataWriter else { return }
+            guard let self else { return }
             do {
-                try await metadataWriter.removeGroupMembers(conversationId: conversation.id, memberInboxIds: [member.profile.inboxId])
+                try await metadataWriter.removeMembers([member.profile.inboxId], from: conversation.id)
             } catch {
                 Logger.error("Error removing member: \(error.localizedDescription)")
             }
@@ -399,7 +373,7 @@ class ConversationViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await session.deleteInbox(inboxId: conversation.inboxId)
+                try await session.deleteConversation(conversationId: conversation.id)
                 presentingConversationSettings = false
                 NotificationCenter.default.post(
                     name: .leftConversationNotification,
@@ -422,16 +396,16 @@ class ConversationViewModel {
         )
 
         Task { [weak self] in
-            guard let self, let metadataWriter = self.metadataWriter else { return }
+            guard let self else { return }
             do {
                 let memberIdsToRemove = conversation.members
                     .filter { !$0.isCurrentUser } // @jarodl fix when we have self removal
                     .map { $0.profile.inboxId }
-                try await metadataWriter.removeGroupMembers(
-                    conversationId: conversation.id,
-                    memberInboxIds: memberIdsToRemove
+                try await metadataWriter.removeMembers(
+                    memberIdsToRemove,
+                    from: conversation.id
                 )
-                try await session.deleteInbox(inboxId: conversation.inboxId)
+                try await session.deleteConversation(conversationId: conversation.id)
                 presentingConversationSettings = false
             } catch {
                 Logger.error("Error exploding convo: \(error.localizedDescription)")

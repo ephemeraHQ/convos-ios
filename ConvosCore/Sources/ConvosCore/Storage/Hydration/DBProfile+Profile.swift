@@ -5,12 +5,7 @@ extension MemberProfile {
         Profile(
             inboxId: inboxId,
             name: name,
-            username: inboxId,
             avatar: avatar
         )
-    }
-
-    func asUpdateRequest() -> ConvosAPI.UpdateProfileRequest {
-        .init(name: name, avatar: avatar)
     }
 }

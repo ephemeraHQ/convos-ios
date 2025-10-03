@@ -26,6 +26,7 @@ help: ## Print comprehensive help for all commands
 	@echo "   make setup           - Setup development environment"
 	@echo "   make clean           - Clean all generated files and build artifacts"
 	@echo "   make status          - Show project status"
+	@echo "   make protobuf        - Generate Swift code from Protocol Buffer definitions"
 	@echo ""
 	@echo "🌐 Environment Configuration:"
 	@echo "   • Local: org.convos.ios (local development, no CI)"
@@ -89,6 +90,11 @@ status: ## Show project status (version, secrets, git)
 	@echo "   • Local: org.convos.ios (local development, no CI)"
 	@echo "   • Dev: org.convos.ios-preview (TestFlight internal, CI: dev branch)"
 	@echo "   • Prod: org.convos.ios (App Store, CI: main branch)"
+
+.PHONY: protobuf
+protobuf: ## Generate Swift code from Protocol Buffer definitions
+	@echo "🔧 Generating Swift code from Protocol Buffer definitions..."
+	@ConvosCore/Sources/ConvosCore/Protobuf\ Models/proto/generate_swift.sh
 
 .PHONY: tag-release
 tag-release: ## Create and push a release tag (triggers GitHub Actions)

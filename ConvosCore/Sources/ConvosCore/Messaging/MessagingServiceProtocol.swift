@@ -2,26 +2,23 @@ import Combine
 import Foundation
 
 public protocol MessagingServiceProtocol: AnyObject {
-    var identifier: String { get }
+    var inboxStateManager: any InboxStateManagerProtocol { get }
 
-    func stop()
-    func stopAndDelete()
-    func stopAndDelete() async
+    func reset() async
 
     func registerForPushNotifications() async
 
-    func myProfileRepository() -> any MyProfileRepositoryProtocol
     func myProfileWriter() -> any MyProfileWriterProtocol
 
-    func draftConversationComposer() -> any DraftConversationComposerProtocol
+    func conversationStateManager() -> any ConversationStateManagerProtocol
 
     func conversationConsentWriter() -> any ConversationConsentWriterProtocol
     func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol
 
-    func groupMetadataWriter() -> any ConversationMetadataWriterProtocol
-    func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol
+    func conversationMetadataWriter() -> any ConversationMetadataWriterProtocol
+    func conversationPermissionsRepository() -> any ConversationPermissionsRepositoryProtocol
 
     func uploadImage(data: Data, filename: String) async throws -> String
     func uploadImageAndExecute(

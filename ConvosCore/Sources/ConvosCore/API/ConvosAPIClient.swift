@@ -46,27 +46,6 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
 
     func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse
 
-    func createInvite(_ requestBody: ConvosAPI.CreateInviteCode) async throws -> ConvosAPI.InviteDetailsResponse
-    func inviteDetails(_ inviteCode: String) async throws -> ConvosAPI.InviteDetailsResponse
-    func inviteDetailsWithGroup(_ inviteCode: String) async throws -> ConvosAPI.InviteDetailsWithGroupResponse
-    func updateInvite(_ inviteCode: String, requestBody: ConvosAPI.UpdateInviteCodeRequest) async throws -> ConvosAPI.InviteDetailsResponse
-    func updateInviteName(_ inviteCode: String, name: String) async throws
-    func updateInviteDescription(_ inviteCode: String, description: String) async throws
-    func updateInviteImageUrl(_ inviteCode: String, imageUrl: String) async throws
-    func deleteInvite(_ inviteCode: String) async throws -> ConvosAPI.DeleteInviteResponse
-    func publicInviteDetails(_ code: String) async throws -> ConvosAPI.PublicInviteDetailsResponse
-    func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse
-    func deleteRequestToJoin(_ requestId: String) async throws -> ConvosAPI.DeleteRequestToJoinResponse
-
-    func updateProfile(
-        inboxId: String,
-        with requestBody: ConvosAPI.UpdateProfileRequest
-    ) async throws -> ConvosAPI.UpdateProfileResponse
-
-    func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse
-    func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse
-    func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse]
-
     func uploadAttachment(
         data: Data,
         filename: String,
@@ -142,12 +121,6 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
         } catch {
             throw APIError.serverError(error.localizedDescription)
         }
-    }
-
-    func publicInviteDetails(_ code: String) async throws -> ConvosAPI.PublicInviteDetailsResponse {
-        let request = try request(for: "v1/invites/public/\(code)")
-        let invite: ConvosAPI.PublicInviteDetailsResponse = try await performRequest(request)
-        return invite
     }
 
     func request(for path: String,
@@ -319,129 +292,6 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(requestBody)
         Logger.info("Initializing backend")
-        return try await performRequest(request)
-    }
-
-    // MARK: - Invites
-
-    func createInvite(_ requestBody: ConvosAPI.CreateInviteCode) async throws -> ConvosAPI.InviteDetailsResponse {
-        var request = try authenticatedRequest(for: "v1/invites", method: "POST")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        Logger.info("Sending create invite request with body: \(requestBody)")
-        request.httpBody = try JSONEncoder().encode(requestBody)
-        Logger.info("Creating invite with json body: \(request.httpBody?.prettyPrintedJSONString ?? "")")
-        return try await performRequest(request)
-    }
-
-    func inviteDetails(_ code: String) async throws -> ConvosAPI.InviteDetailsResponse {
-        let request = try authenticatedRequest(for: "v1/invites/\(code)")
-        let invite: ConvosAPI.InviteDetailsResponse = try await performRequest(request)
-        return invite
-    }
-
-    func inviteDetailsWithGroup(_ code: String) async throws -> ConvosAPI.InviteDetailsWithGroupResponse {
-        let request = try authenticatedRequest(for: "v1/invites/\(code)/with-group")
-        let invite: ConvosAPI.InviteDetailsWithGroupResponse = try await performRequest(request)
-        return invite
-    }
-
-    func updateInvite(_ inviteCode: String, requestBody: ConvosAPI.UpdateInviteCodeRequest) async throws -> ConvosAPI.InviteDetailsResponse {
-        var request = try authenticatedRequest(for: "v1/invites/\(inviteCode)", method: "PUT")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        request.httpBody = try encoder.encode(requestBody)
-        Logger.info("Updating invite \(inviteCode) with body: \(request.httpBody?.prettyPrintedJSONString ?? "")")
-        return try await performRequest(request)
-    }
-
-    func updateInviteName(_ inviteCode: String, name: String) async throws {
-        let requestBody = ["name": name]
-        try await updateInviteWithFields(inviteCode, fields: requestBody)
-    }
-
-    func updateInviteDescription(_ inviteCode: String, description: String) async throws {
-        let requestBody = ["description": description]
-        try await updateInviteWithFields(inviteCode, fields: requestBody)
-    }
-
-    func updateInviteImageUrl(_ inviteCode: String, imageUrl: String) async throws {
-        let requestBody = ["imageUrl": imageUrl]
-        try await updateInviteWithFields(inviteCode, fields: requestBody)
-    }
-
-    func deleteInvite(_ inviteCode: String) async throws -> ConvosAPI.DeleteInviteResponse {
-        let request = try authenticatedRequest(for: "v1/invites/\(inviteCode)", method: "DELETE")
-        return try await performRequest(request)
-    }
-
-    func requestToJoin(_ inviteCode: String) async throws -> ConvosAPI.RequestToJoinResponse {
-        var request = try authenticatedRequest(for: "v1/invites/request", method: "POST")
-        let body: [String: Any] = ["inviteId": inviteCode]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        return try await performRequest(request)
-    }
-
-    func deleteRequestToJoin(_ requestId: String) async throws -> ConvosAPI.DeleteRequestToJoinResponse {
-        let request = try authenticatedRequest(for: "v1/invites/requests/\(requestId)", method: "DELETE")
-        return try await performRequest(request)
-    }
-
-    // MARK: - Private Invite Helpers
-
-    /// Helper for updating invites with specific fields
-    private func updateInviteWithFields(_ inviteCode: String, fields: [String: String]) async throws {
-        var urlRequest = try authenticatedRequest(for: "v1/invites/\(inviteCode)", method: "PUT")
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.httpBody = try JSONSerialization.data(withJSONObject: fields)
-
-        Logger.info("🔄 PUT /v1/invites/\(inviteCode)")
-        Logger.info("📤 Request body: \(urlRequest.httpBody?.prettyPrintedJSONString ?? "nil")")
-        Logger.info("🔑 Headers: \(urlRequest.allHTTPHeaderFields ?? [:])")
-
-        do {
-            let response: ConvosAPI.InviteDetailsResponse = try await performRequest(urlRequest)
-            Logger.info("✅ Invite update successful")
-            Logger.info("📥 Response: \(response)")
-        } catch {
-            Logger.error("❌ Invite update failed: \(error)")
-            Logger.error("🔍 Error details: \(String(describing: error))")
-            throw error
-        }
-    }
-
-    // MARK: - Profiles
-
-    func updateProfile(
-        inboxId: String,
-        with requestBody: ConvosAPI.UpdateProfileRequest
-    ) async throws -> ConvosAPI.UpdateProfileResponse {
-        var request = try authenticatedRequest(for: "v1/profiles/\(inboxId)", method: "PUT")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(requestBody)
-        return try await performRequest(request)
-    }
-
-    func getProfile(inboxId: String) async throws -> ConvosAPI.ProfileResponse {
-        let request = try authenticatedRequest(for: "v1/profiles/\(inboxId)")
-        let profile: ConvosAPI.ProfileResponse = try await performRequest(request)
-        return profile
-    }
-
-    func getProfiles(for inboxIds: [String]) async throws -> ConvosAPI.BatchProfilesResponse {
-        var request = try authenticatedRequest(for: "v1/profiles/batch", method: "POST")
-        let body: [String: Any] = ["xmtpIds": inboxIds]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        return try await performRequest(request)
-    }
-
-    func getProfiles(matching query: String) async throws -> [ConvosAPI.ProfileResponse] {
-        let request = try authenticatedRequest(
-            for: "v1/profiles/search",
-            queryParameters: ["query": query]
-        )
         return try await performRequest(request)
     }
 

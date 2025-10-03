@@ -125,13 +125,22 @@ extension Array where Element == MessageWithDetails {
                     guard let update = dbMessage.update,
                           let initiatedByMember = try MemberProfile.fetchOne(
                             database,
-                            key: update.initiatedByInboxId
+                            conversationId: conversation.id,
+                            inboxId: update.initiatedByInboxId
                           ) else {
                         Logger.error("Update message type is missing update object")
                         return nil
                     }
-                    let addedMembers = try MemberProfile.fetchAll(database, keys: update.addedInboxIds)
-                    let removedMembers = try MemberProfile.fetchAll(database, keys: update.removedInboxIds)
+                    let addedMembers = try MemberProfile.fetchAll(
+                        database,
+                        conversationId: conversation.id,
+                        inboxIds: update.addedInboxIds
+                    )
+                    let removedMembers = try MemberProfile.fetchAll(
+                        database,
+                        conversationId: conversation.id,
+                        inboxIds: update.removedInboxIds
+                    )
                     messageContent = .update(
                         .init(
                             creator: initiatedByMember.hydrateProfile(),
@@ -188,7 +197,7 @@ extension Array where Element == MessageWithDetails {
 fileprivate extension Database {
     func composeMessages(for conversationId: String) throws -> [AnyMessage] {
         guard let dbConversationDetails = try DBConversation
-            .filter(Column("id") == conversationId)
+            .filter(DBConversation.Columns.id == conversationId)
             .detailedConversationQuery()
             .fetchOne(self) else {
             return []
@@ -196,7 +205,7 @@ fileprivate extension Database {
 
         let conversation = dbConversationDetails.hydrateConversation()
         let dbMessages = try DBMessage
-            .filter(Column("conversationId") == conversationId)
+            .filter(DBMessage.Columns.conversationId == conversationId)
             .order(\.dateNs.asc)
             .including(
                 required: DBMessage.sender
