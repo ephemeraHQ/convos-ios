@@ -68,11 +68,17 @@ enum EncodableSignatureError: Error {
     case encodingFailure
     case invalidSignature
     case invalidPublicKey
+    case invalidPrivateKey
     case verificationFailure
 }
 
 extension InvitePayload {
     func sign(with privateKey: Data) throws -> Data {
+        // Validate private key length to prevent out-of-bounds reads
+        guard privateKey.count == 32 else {
+            throw EncodableSignatureError.invalidPrivateKey
+        }
+
         guard let ctx = secp256k1_context_create(
             UInt32(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY)
         ) else {
