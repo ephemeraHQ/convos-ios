@@ -5,8 +5,18 @@ import XMTPiOS
 
 // MARK: - Errors
 
-enum ConversationCustomMetadataError: Error {
+enum ConversationCustomMetadataError: Error, LocalizedError {
     case randomGenerationFailed
+    case invalidLength(Int)
+
+    var errorDescription: String? {
+        switch self {
+        case .randomGenerationFailed:
+            return "Failed to generate secure random bytes"
+        case .invalidLength(let length):
+            return "Invalid length for random string generation: \(length). Length must be positive."
+        }
+    }
 }
 
 // MARK: - DB Models
@@ -46,6 +56,11 @@ extension XMTPiOS.Group {
     /// Generates a cryptographically secure random string of specified length
     /// using alphanumeric characters (a-z, A-Z, 0-9)
     private func generateSecureRandomString(length: Int) throws -> String {
+        // Validate that length is positive
+        guard length > 0 else {
+            throw ConversationCustomMetadataError.invalidLength(length)
+        }
+
         let characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         let charactersArray = Array(characters)
         let charactersCount = charactersArray.count
