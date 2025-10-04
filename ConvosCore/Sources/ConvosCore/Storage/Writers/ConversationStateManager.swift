@@ -195,11 +195,17 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
     }
 
     private func notifyObservers(_ state: ConversationStateMachine.State) {
-        observers = observers.compactMap { weakObserver in
-            guard let observer = weakObserver.observer else { return nil }
-            observer.conversationStateDidChange(state)
-            return weakObserver
+        // Take a snapshot of observers to iterate, so modifications during
+        // callbacks don't interfere with iteration or get overwritten
+        let snapshot = observers
+
+        // Notify each observer in the snapshot
+        for weakObserver in snapshot {
+            weakObserver.observer?.conversationStateDidChange(state)
         }
+
+        // Clean up nil observers, preserving any removals made during callbacks
+        observers.removeAll { $0.observer == nil }
     }
 
     public func observeState(_ handler: @escaping (ConversationStateMachine.State) -> Void) -> ConversationStateObserverHandle {

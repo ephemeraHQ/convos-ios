@@ -132,6 +132,7 @@ enum InviteConversationToken {
         case cryptoOpenFailed
         case invalidFormat(String)
         case stringTooLong(Int)
+        case emptyConversationId
 
         var errorDescription: String? {
             switch self {
@@ -149,6 +150,8 @@ enum InviteConversationToken {
                 return "Invalid invite code format: \(details)"
             case .stringTooLong(let length):
                 return "Conversation ID too long: \(length) bytes, max \(InviteConversationToken.maxStringLength)"
+            case .emptyConversationId:
+                return "Conversation ID cannot be empty"
             }
         }
     }
@@ -191,6 +194,11 @@ enum InviteConversationToken {
     private enum PlainTag: UInt8 { case uuid16 = 0x01, utf8 = 0x02 }
 
     private static func packConversationId(_ id: String) throws -> Data {
+        // Validate that conversation ID is not empty
+        guard !id.isEmpty else {
+            throw Error.emptyConversationId
+        }
+
         var out = Data()
         if let uuid = UUID(uuidString: id) {
             out.append(PlainTag.uuid16.rawValue)
