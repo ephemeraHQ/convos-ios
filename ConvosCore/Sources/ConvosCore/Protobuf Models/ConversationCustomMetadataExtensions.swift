@@ -313,7 +313,11 @@ private extension Data {
             )
 
             // Allocate a buffer that's 10x the compressed size (typical for text-heavy data)
-            let maxSize = count * 10
+            // Use overflow-safe multiplication to prevent integer overflow
+            let (maxSize, overflow) = count.multipliedReportingOverflow(by: 10)
+            guard !overflow, maxSize <= Int.max / 2 else {
+                return nil
+            }
             let destinationBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: maxSize)
             defer { destinationBuffer.deallocate() }
 
