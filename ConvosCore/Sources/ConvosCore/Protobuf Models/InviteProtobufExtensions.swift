@@ -158,14 +158,19 @@ extension SignedInvite {
 
     /// Decode from either the full URL string or the invite code string
     public static func fromInviteCode(_ code: String) throws -> SignedInvite {
+        // Trim whitespace and newlines from input to handle padded URLs
+        let trimmedInput = code.trimmingCharacters(in: .whitespacesAndNewlines)
+
         let extractedCode: String
-        if let url = URL(string: code) {
+        if let url = URL(string: trimmedInput) {
             extractedCode = url.lastPathComponent
         } else {
-            extractedCode = code
+            extractedCode = trimmedInput
         }
-        let trimmedInviteCode = extractedCode.trimmingCharacters(in: .whitespacesAndNewlines)
-        return try fromURLSafeSlug(trimmedInviteCode)
+
+        // Trim again in case the extracted path component has whitespace (shouldn't happen, but defensive)
+        let finalCode = extractedCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        return try fromURLSafeSlug(finalCode)
     }
 }
 
