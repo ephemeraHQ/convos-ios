@@ -96,7 +96,7 @@ workflows:
     - BITRISE_SCHEME_NSE: NotificationService (Dev)
       opts:
         is_expand: false
-    - BITRISE_SCHEME_APPCLIP: ConvosAppClip
+    - BITRISE_SCHEME_APPCLIP: ConvosAppClip (Dev)
       opts:
         is_expand: false
     - BITRISE_BUILD_CONFIG: Dev
@@ -179,7 +179,7 @@ workflows:
     - BITRISE_SCHEME_NSE: NotificationService (Prod)
       opts:
         is_expand: false
-    - BITRISE_SCHEME_APPCLIP: ConvosAppClip
+    - BITRISE_SCHEME_APPCLIP: ConvosAppClip (Prod)
       opts:
         is_expand: false
     - BITRISE_BUILD_CONFIG: Release
