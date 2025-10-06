@@ -5,8 +5,9 @@ set -o pipefail
 # NO set -x to avoid exposing secrets in logs
 
 SECRETS_FILE="Convos/Config/Secrets.swift"
+APPCLIP_SECRETS_FILE="ConvosAppClip/Config/Secrets.swift"
 
-echo "🔑 Generating $SECRETS_FILE from environment variables"
+echo "🔑 Generating Secrets.swift from environment variables"
 
 # Sensitive secrets (checked but not displayed)
 SENSITIVE_SECRETS=(
@@ -49,8 +50,9 @@ if [[ ${#missing_secrets[@]} -gt 0 ]]; then
     exit 1
 fi
 
-# Create directory if needed
+# Create directories if needed
 mkdir -p "Convos/Config"
+mkdir -p "ConvosAppClip/Config"
 
 # Generate Secrets.swift WITHOUT exposing values in logs
 cat >"$SECRETS_FILE" <<EOF
@@ -86,6 +88,9 @@ enum Secrets {
 // swiftlint:enable all
 EOF
 
+# Copy the generated file to ConvosAppClip
+cp "$SECRETS_FILE" "$APPCLIP_SECRETS_FILE"
+
 # Display only environment variables (not secrets)
 echo "✅ Generated secrets with environment variables:"
 for var in "${ENV_VARS[@]}"; do
@@ -111,4 +116,6 @@ if [[ -z "$XMTP_CUSTOM_HOST" ]]; then
     echo "⚠️  XMTP_CUSTOM_HOST is empty - using default configuration"
 fi
 
-echo "🔐 Secrets.swift generated successfully"
+echo "🔐 Secrets.swift generated successfully at:"
+echo "   - $SECRETS_FILE"
+echo "   - $APPCLIP_SECRETS_FILE"
