@@ -5,7 +5,6 @@ import UserNotifications
 @main
 struct ConvosApp: App {
     @UIApplicationDelegateAdaptor(ConvosAppDelegate.self) private var appDelegate: ConvosAppDelegate
-    @Environment(\.scenePhase) private var scenePhase: ScenePhase
 
     let session: any SessionManagerProtocol
     let conversationsViewModel: ConversationsViewModel

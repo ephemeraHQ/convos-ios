@@ -183,13 +183,11 @@
 		DAE6B1002E70955E0062483A /* Exceptions for "Convos" folder in "ConvosAppClip" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"App Delegate/ConvosAppDelegate.swift",
 				"App Settings/AppSettingsView.swift",
 				"AppIcon-Prod.icon",
 				Assets.xcassets,
 				Config/config.local.json,
 				Config/ConfigManager.swift,
-				Config/Secrets.swift,
 				"Conversation Creation/JoinConversationView.swift",
 				"Conversation Creation/NewConversationView.swift",
 				"Conversation Creation/NewConversationViewModel.swift",
@@ -262,6 +260,7 @@
 				"Conversations List/ConversationsListItem.swift",
 				"Conversations List/ConversationsView.swift",
 				"Conversations List/ConversationsViewModel.swift",
+				ConvosAppDelegate.swift,
 				"Debug View/DebugExportView.swift",
 				"Debug View/DebugView.swift",
 				DeepLinking/DeepLinkHandler.swift,
