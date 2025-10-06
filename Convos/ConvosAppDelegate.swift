@@ -6,7 +6,6 @@ import UserNotifications
 
 /// Lightweight delegate for push notifications and scene configuration
 @MainActor
-@Observable
 class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     var session: (any SessionManagerProtocol)?
 

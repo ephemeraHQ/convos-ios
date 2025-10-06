@@ -3,17 +3,13 @@ import SwiftUI
 
 @main
 struct ConvosAppClipApp: App {
-    let convos: ConvosClient = .client(environment: ConfigManager.shared.currentEnvironment)
+    @UIApplicationDelegateAdaptor(ConvosAppDelegate.self) private var appDelegate: ConvosAppDelegate
+
+    let session: any SessionManagerProtocol
     let conversationsViewModel: ConversationsViewModel
 
-    @UIApplicationDelegateAdaptor(ConvosAppDelegate.self) var appDelegate: ConvosAppDelegate
-
     init() {
-        // Configure Logger based on environment
         let environment = ConfigManager.shared.currentEnvironment
-        self.conversationsViewModel = ConversationsViewModel(session: convos.session)
-
-        // Configure Logger with proper environment for app group access
         Logger.configure(environment: environment)
 
         switch environment {
@@ -23,10 +19,18 @@ struct ConvosAppClipApp: App {
             Logger.Default.configureForProduction(false)
         }
 
-        Logger.info("🚀 App starting with environment: \(environment)")
+        Logger.info("App starting with environment: \(environment)")
 
-        // Pass the session to the app delegate for notification handling
-        appDelegate.session = convos.session
+        let convos: ConvosClient = .client(environment: environment)
+        self.session = convos.session
+        self.conversationsViewModel = .init(session: session)
+        appDelegate.session = session
+
+        if let url = ConfigManager.shared.currentEnvironment.firebaseConfigURL {
+            FirebaseHelperCore.configure(with: url)
+        } else {
+            Logger.error("Missing Firebase plist URL for current environment")
+        }
     }
 
     var body: some Scene {
