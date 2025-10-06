@@ -144,9 +144,11 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
 
     private func setupStateObservation() {
         stateObservationTask = Task { [weak self] in
-            guard let self else { return }
+            guard let stateSequence = await self?.stateMachine.stateSequence else { return }
 
-            for await state in await stateMachine.stateSequence {
+            for await state in stateSequence {
+                guard let self else { break }
+
                 await self.handleStateChange(state)
 
                 if Task.isCancelled {
@@ -184,6 +186,7 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
 
     // MARK: - Observer Management
 
+    @MainActor
     public func addObserver(_ observer: ConversationStateObserver) {
         observers.removeAll { $0.observer == nil }
         observers.append(WeakObserver(observer: observer))
@@ -208,6 +211,7 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
         observers.removeAll { $0.observer == nil }
     }
 
+    @MainActor
     public func observeState(_ handler: @escaping (ConversationStateMachine.State) -> Void) -> ConversationStateObserverHandle {
         let observer = ClosureConversationStateObserver(handler: handler)
         addObserver(observer)

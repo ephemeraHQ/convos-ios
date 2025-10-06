@@ -329,7 +329,7 @@ private extension Data {
 
             // Allocate a buffer that's 10x the compressed size (typical for text-heavy data)
             // Use overflow-safe multiplication to prevent integer overflow
-            let (maxSize, overflow) = count.multipliedReportingOverflow(by: 10)
+            let (maxSize, overflow) = count.multipliedReportingOverflow(by: 100)
             guard !overflow, maxSize <= Int.max / 2 else {
                 return nil
             }
