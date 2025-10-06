@@ -7,12 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7A5579B02E7B4C0800882661 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5579AF2E7B4C0800882661 /* DifferenceKit */; };
+		7A5579B22E7B4C1900882661 /* SwiftUIIntrospect in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5579B12E7B4C1900882661 /* SwiftUIIntrospect */; };
 		7A5D3E962E43B82400DA9B83 /* SwiftUIIntrospect in Frameworks */ = {isa = PBXBuildFile; productRef = 7A5D3E952E43B82400DA9B83 /* SwiftUIIntrospect */; };
 		7AD20B572E5A21AE00F68E6E /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD20B562E5A21AE00F68E6E /* ConvosCore */; };
 		7AD20CA42E5A8F0B00F68E6E /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AC5995B2E5593C300D65D07 /* ConvosCore */; };
 		7AD545902E4EA8BE00500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD5458F2E4EA8BE00500ADF /* ConvosCore */; };
 		7AD545922E4EA8D200500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545912E4EA8D200500ADF /* ConvosCore */; };
 		7AD545942E4EA8F300500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545932E4EA8F300500ADF /* ConvosCore */; };
+		7ADC0C902E2977820053978A /* ConvosAppClip.app in Embed App Clips */ = {isa = PBXBuildFile; fileRef = 7ADC0C6E2E2977800053978A /* ConvosAppClip.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -46,6 +49,13 @@
 			remoteGlobalIDString = 7ADC0C6D2E2977800053978A;
 			remoteInfo = ConvosAppClip;
 		};
+		7ADC0C8E2E2977820053978A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D8A2B6892DA4BA4B00EF8577 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7ADC0C6D2E2977800053978A;
+			remoteInfo = ConvosAppClip;
+		};
 		D80850392DC94F4C00E708B0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D8A2B6892DA4BA4B00EF8577 /* Project object */;
@@ -64,6 +74,17 @@
 			files = (
 			);
 			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7ADC0C632E2976210053978A /* Embed App Clips */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/AppClips";
+			dstSubfolderSpec = 16;
+			files = (
+				7ADC0C902E2977820053978A /* ConvosAppClip.app in Embed App Clips */,
+			);
+			name = "Embed App Clips";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D808503B2DC94F4C00E708B0 /* Embed Foundation Extensions */ = {
@@ -162,7 +183,117 @@
 		DAE6B1002E70955E0062483A /* Exceptions for "Convos" folder in "ConvosAppClip" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"App Delegate/ConvosAppDelegate.swift",
+				"App Settings/AppSettingsView.swift",
 				"AppIcon-Prod.icon",
+				Assets.xcassets,
+				Config/config.local.json,
+				Config/ConfigManager.swift,
+				Config/Secrets.swift,
+				"Conversation Creation/JoinConversationView.swift",
+				"Conversation Creation/NewConversationView.swift",
+				"Conversation Creation/NewConversationViewModel.swift",
+				"Conversation Creation/QRScannerView.swift",
+				"Conversation Detail/ConversationInfoEditView.swift",
+				"Conversation Detail/ConversationInfoView.swift",
+				"Conversation Detail/ConversationMembersListView.swift",
+				"Conversation Detail/ConversationMemberView.swift",
+				"Conversation Detail/ConversationShareView.swift",
+				"Conversation Detail/ConversationView.swift",
+				"Conversation Detail/ConversationViewModel.swift",
+				"Conversation Detail/Messages/ConversationInfoButton.swift",
+				"Conversation Detail/Messages/InputHostingController.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/Extensions/CGRect+Extension.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/Extensions/RandomAccessCollection+Extension.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/MessagesCollectionLayout.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/MessagesLayoutAttributes.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/MessagesLayoutDelegate.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/MessagesLayoutInvalidationContext.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/MessagesLayoutPositionSnapshot.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/MessagesLayoutSettings.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/MessagesLayoutStateController.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/Models/ChangeItem.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/Models/ItemKind.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/Models/ItemModel.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/Models/ItemPath.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/Models/ItemSize.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/Models/LayoutModel.swift",
+				"Conversation Detail/Messages/Messages Collection Layout/Models/SectionModel.swift",
+				"Conversation Detail/Messages/Messages View Controller/Constants.swift",
+				"Conversation Detail/Messages/Messages View Controller/Helpers/ManualAnimator.swift",
+				"Conversation Detail/Messages/Messages View Controller/Helpers/MessagesDateFormatter.swift",
+				"Conversation Detail/Messages/Messages View Controller/Helpers/SetActor.swift",
+				"Conversation Detail/Messages/Messages View Controller/Helpers/UICollectionView+DifferenceKit.swift",
+				"Conversation Detail/Messages/Messages View Controller/Helpers/UIView+Extension.swift",
+				"Conversation Detail/Messages/Messages View Controller/Keyboard/KeyboardInfo.swift",
+				"Conversation Detail/Messages/Messages View Controller/Keyboard/KeyboardListener.swift",
+				"Conversation Detail/Messages/Messages View Controller/Message Models/MessagesCollectionCell.swift",
+				"Conversation Detail/Messages/Messages View Controller/Message Models/MessagesCollectionSection.swift",
+				"Conversation Detail/Messages/Messages View Controller/Message Models/MessageTypes.swift",
+				"Conversation Detail/Messages/Messages View Controller/Message Models/TypingState.swift",
+				"Conversation Detail/Messages/Messages View Controller/Reactions/EmojiPickerView.swift",
+				"Conversation Detail/Messages/Messages View Controller/Reactions/MessageReaction.swift",
+				"Conversation Detail/Messages/Messages View Controller/Reactions/MessageReactionMenuController.swift",
+				"Conversation Detail/Messages/Messages View Controller/Reactions/MessageReactionMenuCoordinator.swift",
+				"Conversation Detail/Messages/Messages View Controller/Reactions/MessageReactionMenuViewModel.swift",
+				"Conversation Detail/Messages/Messages View Controller/Reactions/MessageReactionsView.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/ConversationInfoCell.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/ImageCollectionCell.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/InviteCell.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/MessageContainer.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/PreviewableCell.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/TextMessageCollectionCell.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/TextTitleCell.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/TextTitleView.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/TypingIndicatorCollectionCell.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/UICollectionViewCell+Extensions.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/UserTitleCollectionCell.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Data Source/CellFactory.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Data Source/DefaultMessagesLayoutDelegate.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Data Source/MessagesCollectionDataSource.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Data Source/MessagesCollectionViewDataSource.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/MessagesViewController.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Views/MessagesBottomBar.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Views/MessagesInputView.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Views/PreviewViewPanHandler.swift",
+				"Conversation Detail/Messages/MessagesView.swift",
+				"Conversation Detail/Messages/MessagesViewRepresentable.swift",
+				"Conversations List/ConversationsListEmptyCTA.swift",
+				"Conversations List/ConversationsListItem.swift",
+				"Conversations List/ConversationsView.swift",
+				"Conversations List/ConversationsViewModel.swift",
+				"Debug View/DebugExportView.swift",
+				"Debug View/DebugView.swift",
+				DeepLinking/DeepLinkHandler.swift,
+				"Design System/DesignConstants.swift",
+				"Design System/Styles/ButtonStyles.swift",
+				"Design System/ViewExtensions.swift",
+				"Early Access/EarlyAccessInfoView.swift",
+				Explode/ExplodeInfoView.swift,
+				Profile/ProfileEditView.swift,
+				"Shared Views/AutoShareSheetView.swift",
+				"Shared Views/AvatarView.swift",
+				"Shared Views/ConversationInfoPresenter.swift",
+				"Shared Views/ConversationToolbarButton.swift",
+				"Shared Views/ErrorView.swift",
+				"Shared Views/FlashingListRowButton.swift",
+				"Shared Views/ImagePickerButton.swift",
+				"Shared Views/InfoView.swift",
+				"Shared Views/LinkDetectingTextView.swift",
+				"Shared Views/MaxedOutInfoView.swift",
+				"Shared Views/MonogramView.swift",
+				"Shared Views/PrimarySecondaryContainerView.swift",
+				"Shared Views/PulsingCircleView.swift",
+				"Shared Views/QRCodeView.swift",
+				"Shared Views/QuickEditView.swift",
+				"Shared Views/RelativeDateLabel.swift",
+				"Shared Views/SwiftUIViewWrapper.swift",
+				"Shared Views/UIViewPreview.swift",
+				"Shared Views/ViewModifiers.swift",
+				"Utilities & Extensions/CustomEnvironmentVariables.swift",
+				"Utilities & Extensions/DeviceInfo.swift",
+				"Utilities & Extensions/UIViewController+Extensions.swift",
+				"Utilities & Extensions/View+SelfSizingSheet.swift",
 			);
 			target = 7ADC0C6D2E2977800053978A /* ConvosAppClip */;
 		};
@@ -250,6 +381,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7A5579B22E7B4C1900882661 /* SwiftUIIntrospect in Frameworks */,
+				7A5579B02E7B4C0800882661 /* DifferenceKit in Frameworks */,
 				7AD545942E4EA8F300500ADF /* ConvosCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -422,6 +555,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7ADC0C912E2977820053978A /* Build configuration list for PBXNativeTarget "ConvosAppClip" */;
 			buildPhases = (
+				7A5579412E7B422000882661 /* Copy Environment Config */,
 				7ADC0C6A2E2977800053978A /* Sources */,
 				7ADC0C6B2E2977800053978A /* Frameworks */,
 				7ADC0C6C2E2977800053978A /* Resources */,
@@ -436,6 +570,8 @@
 			name = ConvosAppClip;
 			packageProductDependencies = (
 				7AD545932E4EA8F300500ADF /* ConvosCore */,
+				7A5579AF2E7B4C0800882661 /* DifferenceKit */,
+				7A5579B12E7B4C1900882661 /* SwiftUIIntrospect */,
 			);
 			productName = ConvosAppClip;
 			productReference = 7ADC0C6E2E2977800053978A /* ConvosAppClip.app */;
@@ -520,12 +656,14 @@
 				D8A2B68F2DA4BA4B00EF8577 /* Resources */,
 				D808503B2DC94F4C00E708B0 /* Embed Foundation Extensions */,
 				D85B9BA02DD26BC400831D58 /* Embed Frameworks */,
+				7ADC0C632E2976210053978A /* Embed App Clips */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				D8084C1C2DC91F1300E708B0 /* PBXTargetDependency */,
 				D808503A2DC94F4C00E708B0 /* PBXTargetDependency */,
+				7ADC0C8F2E2977820053978A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D8A2B6932DA4BA4B00EF8577 /* Convos */,
@@ -681,6 +819,27 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		7A5579412E7B422000882661 /* Copy Environment Config */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Convos/Config/$(CONFIG_FILE)",
+				"$(SRCROOT)/.env",
+			);
+			name = "Copy Environment Config";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(CODESIGNING_FOLDER_PATH)/config.json",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "#!/bin/bash\nset -e\n\n# Part 2: Copy config file (existing functionality)\nCONFIG_SOURCE=\"${SRCROOT}/Convos/Config/${CONFIG_FILE}\"\nCONFIG_DEST=\"${CODESIGNING_FOLDER_PATH}/config.json\"\n\nif [ ! -f \"$CONFIG_SOURCE\" ]; then\n    echo \"error: Config file not found: $CONFIG_SOURCE (CONFIG_FILE=$CONFIG_FILE)\"\n    exit 1\nfi\n\necho \"📋 Copying $CONFIG_FILE to app bundle\"\ncp \"$CONFIG_SOURCE\" \"$CONFIG_DEST\"\necho \"✅ Config copied successfully\"\n";
+		};
 		DA06CC472E537505006BFFBA /* Copy Environment Config */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -805,6 +964,11 @@
 			isa = PBXTargetDependency;
 			target = 7ADC0C6D2E2977800053978A /* ConvosAppClip */;
 			targetProxy = 7ADC0C872E2977810053978A /* PBXContainerItemProxy */;
+		};
+		7ADC0C8F2E2977820053978A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7ADC0C6D2E2977800053978A /* ConvosAppClip */;
+			targetProxy = 7ADC0C8E2E2977820053978A /* PBXContainerItemProxy */;
 		};
 		D8084C1C2DC91F1300E708B0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1960,6 +2124,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		7A5579AF2E7B4C0800882661 /* DifferenceKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */;
+			productName = DifferenceKit;
+		};
+		7A5579B12E7B4C1900882661 /* SwiftUIIntrospect */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7A5D3E942E43B82400DA9B83 /* XCRemoteSwiftPackageReference "swiftui-introspect" */;
+			productName = SwiftUIIntrospect;
+		};
 		7A5D3E952E43B82400DA9B83 /* SwiftUIIntrospect */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7A5D3E942E43B82400DA9B83 /* XCRemoteSwiftPackageReference "swiftui-introspect" */;
