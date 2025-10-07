@@ -344,10 +344,11 @@ private extension Data {
         // Read original size (4 bytes, big-endian)
         guard dataAfterMarker.count >= 4 else { return nil }
         let sizeBytes = dataAfterMarker.prefix(4)
-        let originalSize = sizeBytes.withUnsafeBytes { bytes in
-            bytes.load(as: UInt32.self).bigEndian
+        let originalSize: UInt32 = sizeBytes.withUnsafeBytes { ptr in
+            // Directly load the 4 bytes as UInt32 and convert from big-endian
+            let raw = ptr.load(as: UInt32.self)
+            return UInt32(bigEndian: raw)
         }
-
         // Security check: reject if original size exceeds maximum
         guard originalSize > 0, originalSize <= maxSize else { return nil }
 
