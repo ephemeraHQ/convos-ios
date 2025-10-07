@@ -163,7 +163,7 @@ extension SignedInvite {
 
         let extractedCode: String
         if let url = URL(string: trimmedInput),
-           let codeFromURL = url.pathComponents.last(where: { !$0.isEmpty }) {
+           let codeFromURL = url.pathComponents.last(where: { !$0.isEmpty && $0 != "/" }) {
             extractedCode = codeFromURL
         } else {
             extractedCode = trimmedInput
