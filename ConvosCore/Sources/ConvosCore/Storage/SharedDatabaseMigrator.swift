@@ -21,6 +21,17 @@ extension SharedDatabaseMigrator {
 #endif
 
         migrator.registerMigration("createSchema") { db in
+            try db.create(table: "inbox") { t in
+                t.column("inboxId", .text)
+                    .notNull()
+                    .primaryKey()
+                t.column("clientId", .text)
+                    .notNull()
+                    .unique()
+                t.column("createdAt", .datetime)
+                    .notNull()
+            }
+
             try db.create(table: "member") { t in
                 t.column("inboxId", .text)
                     .unique()

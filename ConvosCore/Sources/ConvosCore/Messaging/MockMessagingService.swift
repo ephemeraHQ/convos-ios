@@ -4,8 +4,6 @@ import UIKit
 import XMTPiOS
 
 public class MockMessagingService: MessagingServiceProtocol {
-    public let identifier: String
-
     public let currentUser: ConversationMember = .mock()
     public let allUsers: [ConversationMember]
     public let _conversations: [Conversation]
@@ -18,7 +16,6 @@ public class MockMessagingService: MessagingServiceProtocol {
     private var messageTimer: Timer?
 
     public init() {
-        self.identifier = UUID().uuidString
         let users = Self.randomUsers()
         allUsers = users
         _conversations = Self.randomConversations(with: users)
@@ -33,6 +30,12 @@ public class MockMessagingService: MessagingServiceProtocol {
     }
 
     // MARK: - Protocol Conformance
+
+    public func stop() {}
+
+    public func stopAndDelete() {}
+
+    public func stopAndDelete() async {}
 
     public func reset() async {}
 
@@ -263,15 +266,19 @@ class MockConversations: ConversationsProvider {
 }
 
 extension MockMessagingService: XMTPClientProvider {
+    public var state: MessagingServiceState {
+        .authorized(inboxId)
+    }
+
+    public var inboxId: String {
+        "mock-inbox-id"
+    }
+
     public func newConversation(with memberInboxId: String) async throws -> any MessageSender {
         self
     }
 
     public var installationId: String {
-        ""
-    }
-
-    public var inboxId: String {
         ""
     }
 

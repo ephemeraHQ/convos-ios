@@ -200,7 +200,12 @@ public actor InboxStateMachine {
 
     // MARK: - Public
 
-    func authorize() {
+    func authorize(inboxId: String) {
+        self.inboxId = inboxId
+        enqueueAction(.authorize)
+    }
+
+    func register() {
         enqueueAction(.authorize)
     }
 
@@ -319,12 +324,17 @@ public actor InboxStateMachine {
     }
 
     private func handleAuthorize() async throws {
-        emitStateChange(.authorizing)
+        // If no inboxId is set, this is a registration flow
+        guard let inboxId = inboxId else {
+            try await handleRegister()
+            return
+        }
 
-        Logger.info("Started authorization flow")
+        emitStateChange(.authorizing)
+        Logger.info("Started authorization flow for inbox: \(inboxId)")
 
         do {
-            let identity = try await identityStore.identity()
+            let identity = try await identityStore.identity(for: inboxId)
             let keys = identity.clientKeys
             let clientOptions = clientOptions(keys: keys)
             let client: any XMTPClientProvider
@@ -343,7 +353,7 @@ public actor InboxStateMachine {
             }
             enqueueAction(.clientAuthorized(client))
         } catch {
-            Logger.warning("Failed authorizing, attempting registration...")
+            Logger.warning("Failed authorizing inbox \(inboxId), attempting registration...")
             try await handleRegister()
         }
     }
@@ -356,7 +366,21 @@ public actor InboxStateMachine {
             signingKey: keys.signingKey,
             options: clientOptions(keys: keys)
         )
-        _ = try await identityStore.save(inboxId: client.inboxId, keys: keys)
+        // Save the generated inboxId
+        self.inboxId = client.inboxId
+
+        // Generate a clientId for privacy
+        let clientId = ClientId.generate()
+        Logger.info("Generated clientId: \(clientId.value) for inboxId: \(client.inboxId)")
+
+        // Save to keychain with clientId
+        let identity = try await identityStore.save(inboxId: client.inboxId, clientId: clientId.value, keys: keys)
+
+        // Save to database
+        let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+        try await inboxWriter.save(inboxId: client.inboxId, clientId: clientId.value)
+        Logger.info("Saved inbox to database with clientId: \(clientId.value)")
+
         enqueueAction(.clientRegistered(client))
     }
 
@@ -414,22 +438,12 @@ public actor InboxStateMachine {
         await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
 
-        // Try to get the inbox ID from identity store if not available
-        var inboxIdToClean = inboxId
-        if inboxIdToClean == nil {
-            if let identity = try? await identityStore.identity() {
-                inboxIdToClean = identity.inboxId
-            }
+        // Clean up database records and keychain if we have an inbox ID
+        if let inboxId = inboxId {
+            try await cleanupInboxData(inboxId: inboxId)
+            try await identityStore.delete(inboxId: inboxId)
+            Logger.info("Deleted inbox \(inboxId)")
         }
-
-        // Clean up database records if we have an inbox ID
-        if let inboxIdToClean = inboxIdToClean {
-            try await cleanupInboxData(inboxId: inboxIdToClean)
-            Logger.info("Deleted inbox data for \(inboxIdToClean)")
-        }
-
-        // Delete identity store
-        try await identityStore.delete()
 
         enqueueAction(.stop)
     }
@@ -468,7 +482,7 @@ public actor InboxStateMachine {
         inviteJoinRequestsManager?.stop()
 
         // Revoke installation if identity is available
-        if let identity = try? await identityStore.identity() {
+        if let identity = try? await identityStore.identity(for: client.inboxId) {
             let keys = identity.clientKeys
             do {
                 try await client.revokeInstallations(
@@ -486,7 +500,7 @@ public actor InboxStateMachine {
         try await cleanupInboxData(inboxId: client.inboxId)
 
         // Delete identity and local database
-        try await identityStore.delete()
+        try await identityStore.delete(inboxId: client.inboxId)
         try client.deleteLocalDatabase()
         Logger.info("Deleted inbox \(client.inboxId)")
     }
@@ -544,9 +558,14 @@ public actor InboxStateMachine {
                 .filter(Member.Columns.inboxId == inboxId)
                 .deleteAll(db)
 
-            // Finally, delete all conversations for this inbox
+            // Delete all conversations for this inbox
             try DBConversation
                 .filter(DBConversation.Columns.inboxId == inboxId)
+                .deleteAll(db)
+
+            // Finally, delete the inbox record itself
+            try DBInbox
+                .filter(DBInbox.Columns.inboxId == inboxId)
                 .deleteAll(db)
 
             Logger.info("Successfully cleaned up all data for inbox: \(inboxId)")

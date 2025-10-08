@@ -70,7 +70,6 @@ class NewConversationViewModel: Identifiable {
     // MARK: - Private
 
     private let conversationStateManager: any ConversationStateManagerProtocol
-    private let messagingService: AnyMessagingService
     private var newConversationTask: Task<Void, Never>?
     private var joinConversationTask: Task<Void, Error>?
     private var cancellables: Set<AnyCancellable> = []
@@ -84,7 +83,7 @@ class NewConversationViewModel: Identifiable {
         showingFullScreenScanner: Bool = false,
         allowsDismissingScanner: Bool = true,
         delegate: NewConversationsViewModelDelegate? = nil
-    ) {
+    ) throws {
         self.session = session
         self.qrScannerViewModel = QRScannerViewModel()
         self.autoCreateConversation = autoCreateConversation
@@ -93,7 +92,7 @@ class NewConversationViewModel: Identifiable {
         self.allowsDismissingScanner = allowsDismissingScanner
         self.delegate = delegate
 
-        self.messagingService = session.messagingService
+        let messagingService = try session.addInbox()
         let conversationStateManager = messagingService.conversationStateManager()
         self.conversationStateManager = conversationStateManager
         let draftConversation: Conversation = .empty(

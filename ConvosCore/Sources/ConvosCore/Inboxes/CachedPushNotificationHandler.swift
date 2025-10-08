@@ -10,9 +10,9 @@ public enum NotificationProcessingError: Error {
 }
 
 public actor CachedPushNotificationHandler {
-    private var messagingServices: [String: MessagingService] = [:]
+    private var messagingServices: [String: MessagingService] = [:] // Keyed by inboxId
 
-    // Track last access time for cleanup
+    // Track last access time for cleanup (keyed by inboxId)
     private var lastAccessTime: [String: Date] = [:]
 
     // Maximum age for cached services (10 minutes)
@@ -109,6 +109,7 @@ public actor CachedPushNotificationHandler {
 
         Logger.info("Creating new messaging service for inbox: \(inboxId)")
         let messagingService = MessagingService.authorizedMessagingService(
+            for: inboxId,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment,

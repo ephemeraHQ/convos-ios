@@ -15,10 +15,13 @@ enum SessionManagerError: Error {
     case inboxNotFound
 }
 
-class SessionManager: SessionManagerProtocol {
-    let messagingService: AnyMessagingService
+public final class SessionManager: SessionManagerProtocol {
     private var leftConversationObserver: Any?
     private var activeConversationObserver: Any?
+
+    // Thread-safe access to messaging services
+    private let serviceQueue = DispatchQueue(label: "com.convos.sessionmanager.services")
+    private var messagingServices: [AnyMessagingService] = []
     private var activeConversationId: String?
 
     private let databaseWriter: any DatabaseWriter
@@ -31,13 +34,15 @@ class SessionManager: SessionManagerProtocol {
         self.databaseWriter = databaseWriter
         self.databaseReader = databaseReader
         self.environment = environment
-        self.messagingService = MessagingService
-            .authorizedMessagingService(
-                databaseWriter: databaseWriter,
-                databaseReader: databaseReader,
-                environment: environment,
-                startsStreamingServices: true
-            )
+        self.messagingServices = []
+
+        let inboxesRepository = InboxesRepository(databaseReader: databaseReader)
+        do {
+            let inboxes = try inboxesRepository.allInboxes()
+            self.startMessagingServices(for: inboxes)
+        } catch {
+            Logger.error("Error starting messaging services: \(error.localizedDescription)")
+        }
 
         observe()
     }
@@ -49,31 +54,29 @@ class SessionManager: SessionManagerProtocol {
         if let activeConversationObserver {
             NotificationCenter.default.removeObserver(activeConversationObserver)
         }
-    }
-
-    // MARK: -
-
-    func deleteAllData() async throws {
-        await messagingService.reset()
-    }
-
-    func deleteConversation(conversationId: String) async throws {
-        let inboxReady = try await messagingService.inboxStateManager.waitForInboxReadyResult()
-        let client = inboxReady.client
-        let externalConversation = try await client.conversationsProvider.findConversation(conversationId: conversationId)
-        try await externalConversation?.updateConsentState(state: .denied)
-
-        _ = try await databaseWriter.write { db in
-            guard let conversation = try DBConversation
-                .fetchOne(db, id: conversationId)
-            else {
-                return
-            }
-            try conversation.delete(db)
-        }
+        messagingServices.removeAll()
     }
 
     // MARK: - Private Methods
+
+    private func startMessagingServices(for inboxes: [Inbox]) {
+        let inboxIds = inboxes.map { $0.inboxId }
+        Logger.info("Starting messaging services for inboxes: \(inboxIds)")
+        let services = inboxes.map { startMessagingService(for: $0.inboxId) }
+        serviceQueue.sync {
+            messagingServices.append(contentsOf: services)
+        }
+    }
+
+    private func startMessagingService(for inboxId: String) -> AnyMessagingService {
+        MessagingService.authorizedMessagingService(
+            for: inboxId,
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            environment: environment,
+            startsStreamingServices: true
+        )
+    }
 
     private func observe() {
         leftConversationObserver = NotificationCenter.default
@@ -87,31 +90,38 @@ class SessionManager: SessionManagerProtocol {
                     // Schedule explosion notification if conversationId is provided
                     if let conversationId: String = notification.userInfo?["conversationId"] as? String {
                         await self.scheduleExplosionNotification(inboxId: inboxId, conversationId: conversationId)
-                        do {
-                            try await self.deleteConversation(conversationId: conversationId)
-                        } catch {
-                            Logger.error("Error deleting data from left conversation notification: \(error.localizedDescription)")
-                        }
+                    }
+
+                    do {
+                        try await self.deleteInbox(inboxId: inboxId)
+                    } catch {
+                        Logger.error("Error deleting inbox from left conversation notification: \(error.localizedDescription)")
                     }
                 }
             }
 
         activeConversationObserver = NotificationCenter.default
             .addObserver(forName: .activeConversationChanged, object: nil, queue: .main) { notification in
-                Task { [weak self] in
-                    guard let self else { return }
-                    let conversationId = notification.userInfo?["conversationId"] as? String
-                    activeConversationId = conversationId
-                    Logger.info("Active conversation changed to: \(conversationId ?? "none")")
-                }
+                let conversationId = notification.userInfo?["conversationId"] as? String
+                self.setActiveConversationId(conversationId)
+                Logger.info("Active conversation changed to: \(conversationId ?? "none")")
             }
+    }
+
+    private func setActiveConversationId(_ conversationId: String?) {
+        serviceQueue.sync {
+            activeConversationId = conversationId
+        }
     }
 
     // MARK: - Local Notification
 
     private func scheduleExplosionNotification(inboxId: String, conversationId: String) async {
         do {
-            let conversation = try await fetchConversationDetails(conversationId: conversationId)
+            let conversation = try fetchConversationDetails(
+                conversationId: conversationId,
+                inboxId: inboxId
+            )
 
             let content = UNMutableNotificationContent()
             content.title = "💥 \(conversation.displayName) 💥"
@@ -157,29 +167,116 @@ class SessionManager: SessionManagerProtocol {
         }
     }
 
-    private func fetchConversationDetails(conversationId: String) async throws -> Conversation {
-        return try await withCheckedThrowingContinuation { continuation in
-            let conversationRepository = ConversationRepository(
-                conversationId: conversationId,
-                dbReader: databaseReader,
-                inboxStateManager: messagingService.inboxStateManager
-            )
+    private func fetchConversationDetails(conversationId: String, inboxId: String) throws -> Conversation {
+        let conversationRepository = conversationRepository(for: conversationId, inboxId: inboxId)
+        guard let conversation = try conversationRepository.fetchConversation() else {
+            throw ConversationRepositoryError.failedFetchingConversation
+        }
+        return conversation
+    }
 
-            do {
-                if let conversation = try conversationRepository.fetchConversation() {
-                    continuation.resume(returning: conversation)
-                } else {
-                    continuation.resume(throwing: ConversationRepositoryError.failedFetchingConversation)
+    // MARK: - Inbox Management
+
+    public func addInbox() throws -> AnyMessagingService {
+        let messagingService = MessagingService.registeredMessagingService(
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            environment: environment
+        )
+        serviceQueue.sync {
+            messagingServices.append(messagingService)
+        }
+        return messagingService
+    }
+
+    public func deleteInbox(for messagingService: AnyMessagingService) async throws {
+        let service: AnyMessagingService? = serviceQueue.sync {
+            guard let index = messagingServices.firstIndex(where: { $0 === messagingService }) else {
+                return nil
+            }
+            let service = messagingServices[index]
+            messagingServices.remove(at: index)
+            return service
+        }
+
+        guard let service = service else {
+            Logger.error("Inbox to delete for messaging service not found")
+            return
+        }
+
+        Logger.info("Stopping messaging service for inbox")
+        await service.stopAndDelete()
+    }
+
+    public func deleteInbox(inboxId: String) async throws {
+        let service: AnyMessagingService? = serviceQueue.sync {
+            guard let index = messagingServices.firstIndex(where: { $0.matches(inboxId: inboxId) }) else {
+                return nil
+            }
+            let service = messagingServices[index]
+            messagingServices.remove(at: index)
+            return service
+        }
+
+        guard let service = service else {
+            Logger.error("Messaging service not found for inbox id \(inboxId)")
+            return
+        }
+
+        Logger.info("Stopping messaging service for inbox: \(inboxId)")
+        await service.stopAndDelete()
+
+        // Delete from database
+        let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+        try await inboxWriter.delete(inboxId: inboxId)
+    }
+
+    public func deleteAllInboxes() async throws {
+        let services = serviceQueue.sync {
+            let copy = messagingServices
+            messagingServices.removeAll()
+            return copy
+        }
+
+        await withTaskGroup(of: Void.self) { group in
+            for messagingService in services {
+                group.addTask {
+                    await messagingService.stopAndDelete()
                 }
-            } catch {
-                continuation.resume(throwing: error)
             }
         }
+
+        // Delete all from database
+        let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+        try await inboxWriter.deleteAll()
+    }
+
+    // MARK: - Messaging Services
+
+    public func messagingService(for inboxId: String) -> AnyMessagingService {
+        // Check if we already have a messaging service for this inbox
+        let existingService = serviceQueue.sync {
+            messagingServices.first(where: { $0.matches(inboxId: inboxId) })
+        }
+
+        if let existingService = existingService {
+            return existingService
+        }
+
+        // Start a new messaging service for this inbox
+        Logger.info("Starting messaging service for inbox: \(inboxId)")
+        let newService = startMessagingService(for: inboxId)
+
+        serviceQueue.sync {
+            messagingServices.append(newService)
+        }
+
+        return newService
     }
 
     // MARK: - Factory methods for repositories
 
-    nonisolated func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {
+    public func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {
         InviteRepository(
             databaseReader: databaseReader,
             conversationId: conversationId,
@@ -187,40 +284,43 @@ class SessionManager: SessionManagerProtocol {
         )
     }
 
-    nonisolated func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
-        ConversationRepository(
+    public func conversationRepository(for conversationId: String, inboxId: String) -> any ConversationRepositoryProtocol {
+        let messagingService = messagingService(for: inboxId)
+        return ConversationRepository(
             conversationId: conversationId,
             dbReader: databaseReader,
             inboxStateManager: messagingService.inboxStateManager
         )
     }
 
-    nonisolated func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
+    public func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
         MessagesRepository(
             dbReader: databaseReader,
             conversationId: conversationId
         )
     }
 
-    nonisolated func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
+    public func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
         ConversationsRepository(dbReader: databaseReader, consent: consent)
     }
 
-    nonisolated func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
+    public func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
         ConversationsCountRepository(databaseReader: databaseReader, consent: consent, kinds: kinds)
     }
 
     // MARK: Notification Display Logic
 
-    func shouldDisplayNotification(for conversationId: String) async -> Bool {
+    public func shouldDisplayNotification(for conversationId: String) async -> Bool {
+        let currentActiveConversationId = serviceQueue.sync { activeConversationId }
+
         // Don't display notification if we're in the conversations list
-        guard let activeConversationId else {
+        guard let currentActiveConversationId else {
             Logger.info("Suppressing notification from conversations list: \(conversationId)")
             return false
         }
 
         // Don't display notification if it's for the currently active conversation
-        if activeConversationId == conversationId {
+        if currentActiveConversationId == conversationId {
             Logger.info("Suppressing notification for active conversation: \(conversationId)")
             return false
         }

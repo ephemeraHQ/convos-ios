@@ -63,7 +63,8 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
         // @jarodl do more validation here, if someone is sending bogus invites, block the inbox id
 
-        let identity = try await identityStore.identity()
+        let inboxId = signedInvite.payload.creatorInboxID
+        let identity = try await identityStore.identity(for: inboxId)
         let publicKey = identity.keys.privateKey.publicKey.secp256K1Uncompressed.bytes
 
         let verifiedSignature = try signedInvite.verify(with: publicKey)

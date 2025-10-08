@@ -86,7 +86,10 @@ class ConversationViewModel {
         self.conversationName = conversation.name ?? ""
         self.conversationDescription = conversation.description ?? ""
         self.profile = .empty(inboxId: conversation.inboxId)
-        self.conversationRepository = session.conversationRepository(for: conversation.id)
+        self.conversationRepository = session.conversationRepository(
+            for: conversation.id,
+            inboxId: conversation.inboxId
+        )
         self.messagesRepository = session.messagesRepository(for: conversation.id)
         do {
             self.messages = try messagesRepository.fetchAll()
@@ -96,8 +99,7 @@ class ConversationViewModel {
             self.messages = []
         }
 
-        let messagingService = session.messagingService
-
+        let messagingService = session.messagingService(for: conversation.inboxId)
         myProfileWriter = messagingService.myProfileWriter()
         myProfileRepository = conversationRepository.myProfileRepository
         outgoingMessageWriter = messagingService.messageWriter(for: conversation.id)
@@ -373,7 +375,7 @@ class ConversationViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await session.deleteConversation(conversationId: conversation.id)
+                try await session.deleteInbox(inboxId: conversation.inboxId)
                 presentingConversationSettings = false
                 NotificationCenter.default.post(
                     name: .leftConversationNotification,
@@ -405,7 +407,7 @@ class ConversationViewModel {
                     memberIdsToRemove,
                     from: conversation.id
                 )
-                try await session.deleteConversation(conversationId: conversation.id)
+                try await session.deleteInbox(inboxId: conversation.inboxId)
                 presentingConversationSettings = false
             } catch {
                 Logger.error("Error exploding convo: \(error.localizedDescription)")

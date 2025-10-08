@@ -1,9 +1,37 @@
 import Combine
 import Foundation
 
+public enum MessagingServiceState {
+    case registering, authorized(String)
+}
+
+extension MessagingServiceProtocol {
+    public var state: MessagingServiceState {
+        switch inboxStateManager.currentState {
+        case .ready(let result):
+            return .authorized(result.client.inboxId)
+        default:
+            return .registering
+        }
+    }
+
+    public func matches(inboxId: String) -> Bool {
+        switch state {
+        case .registering:
+            false
+        case .authorized(let messagingInboxId):
+            messagingInboxId == inboxId
+        }
+    }
+}
+
 public protocol MessagingServiceProtocol: AnyObject {
+    var state: MessagingServiceState { get }
     var inboxStateManager: any InboxStateManagerProtocol { get }
 
+    func stop()
+    func stopAndDelete()
+    func stopAndDelete() async
     func reset() async
 
     func registerForPushNotifications() async

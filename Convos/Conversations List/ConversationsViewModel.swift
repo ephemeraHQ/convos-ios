@@ -99,6 +99,7 @@ final class ConversationsViewModel {
     private let session: any SessionManagerProtocol
     private let conversationsRepository: any ConversationsRepositoryProtocol
     private let conversationsCountRepository: any ConversationsCountRepositoryProtocol
+    private var localStateWriters: [String: any ConversationLocalStateWriterProtocol] = [:]
     private var cancellables: Set<AnyCancellable> = .init()
     private var leftConversationObserver: Any?
 
@@ -122,11 +123,16 @@ final class ConversationsViewModel {
 //            self.hasEarlyAccess = false
         }
         if !hasEarlyAccess {
-            self.newConversationViewModel = .init(
-                session: session,
-                showingFullScreenScanner: true,
-                allowsDismissingScanner: false
-            )
+            do {
+                self.newConversationViewModel = try .init(
+                    session: session,
+                    showingFullScreenScanner: true,
+                    allowsDismissingScanner: false
+                )
+            } catch {
+                // @jarodl show the error state here
+                Logger.error("Error initializing new conversation view model: \(error.localizedDescription)")
+            }
         }
         observe()
     }
@@ -154,11 +160,15 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        newConversationViewModel = .init(
-            session: session,
-            autoCreateConversation: true,
-            delegate: self
-        )
+        do {
+            newConversationViewModel = try .init(
+                session: session,
+                autoCreateConversation: true,
+                delegate: self
+            )
+        } catch {
+            Logger.error("Error starting convo: \(error.localizedDescription)")
+        }
     }
 
     func onJoinConvo() {
@@ -166,11 +176,15 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        newConversationViewModel = .init(
-            session: session,
-            showingFullScreenScanner: true,
-            delegate: self
-        )
+        do {
+            newConversationViewModel = try .init(
+                session: session,
+                showingFullScreenScanner: true,
+                delegate: self
+            )
+        } catch {
+            Logger.error("Error joining convo: \(error.localizedDescription)")
+        }
     }
 
     func checkShouldShowEarlyAccessInfo() {
@@ -185,11 +199,15 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        newConversationViewModel = NewConversationViewModel(
-            session: session,
-            delegate: self,
-        )
-        newConversationViewModel?.joinConversation(inviteCode: inviteCode)
+        do {
+            newConversationViewModel = try NewConversationViewModel(
+                session: session,
+                delegate: self,
+            )
+            newConversationViewModel?.joinConversation(inviteCode: inviteCode)
+        } catch {
+            Logger.error("Error adding inbox: \(error.localizedDescription)")
+        }
     }
 
     func deleteAllData() {
@@ -197,7 +215,7 @@ final class ConversationsViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await session.deleteAllData()
+                try await session.deleteAllInboxes()
             } catch {
                 Logger.error("Error deleting all accounts: \(error)")
             }
@@ -212,7 +230,7 @@ final class ConversationsViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await session.deleteConversation(conversationId: conversation.id)
+                try await session.deleteInbox(inboxId: conversation.inboxId)
             } catch {
                 Logger.error("Error leaving convo: \(error.localizedDescription)")
             }
@@ -289,8 +307,34 @@ final class ConversationsViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                let messagingService = session.messagingService
-                let writer = messagingService.conversationLocalStateWriter()
+                // Get or create the local state writer for this inbox
+                // Wrap dictionary access in MainActor.run to prevent race conditions
+                let localStateWriter: (any ConversationLocalStateWriterProtocol)? = await MainActor.run {
+                    if let existingWriter = self.localStateWriters[conversation.inboxId] {
+                        return existingWriter
+                    }
+                    return nil
+                }
+
+                let writer: any ConversationLocalStateWriterProtocol
+                if let localStateWriter {
+                    writer = localStateWriter
+                } else {
+                    // Create new writer outside of MainActor context
+                    let messagingService = await session.messagingService(for: conversation.inboxId)
+                    let newWriter = messagingService.conversationLocalStateWriter()
+
+                    // Store it atomically on MainActor
+                    await MainActor.run {
+                        // Check again in case another task created it while we were waiting
+                        if self.localStateWriters[conversation.inboxId] == nil {
+                            self.localStateWriters[conversation.inboxId] = newWriter
+                        }
+                    }
+
+                    writer = newWriter
+                }
+
                 try await writer.setUnread(false, for: conversation.id)
             } catch {
                 Logger.warning("Failed marking conversation as read: \(error.localizedDescription)")

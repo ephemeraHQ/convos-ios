@@ -12,6 +12,7 @@ final class MessagingService: MessagingServiceProtocol {
     private var cancellables: Set<AnyCancellable> = []
 
     static func authorizedMessagingService(
+        for inboxId: String,
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
         environment: AppEnvironment,
@@ -20,6 +21,7 @@ final class MessagingService: MessagingServiceProtocol {
     ) -> MessagingService {
         let identityStore = environment.defaultIdentityStore
         let authorizationOperation = AuthorizeInboxOperation.authorize(
+            inboxId: inboxId,
             identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
@@ -27,7 +29,29 @@ final class MessagingService: MessagingServiceProtocol {
             startsStreamingServices: startsStreamingServices,
             registersForPushNotifications: registersForPushNotifications
         )
-        return .init(
+        return MessagingService(
+            authorizationOperation: authorizationOperation,
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            identityStore: identityStore
+        )
+    }
+
+    static func registeredMessagingService(
+        databaseWriter: any DatabaseWriter,
+        databaseReader: any DatabaseReader,
+        environment: AppEnvironment,
+        registersForPushNotifications: Bool = true
+    ) -> MessagingService {
+        let identityStore = environment.defaultIdentityStore
+        let authorizationOperation = AuthorizeInboxOperation.register(
+            identityStore: identityStore,
+            databaseReader: databaseReader,
+            databaseWriter: databaseWriter,
+            environment: environment,
+            registersForPushNotifications: registersForPushNotifications
+        )
+        return MessagingService(
             authorizationOperation: authorizationOperation,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,

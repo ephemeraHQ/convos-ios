@@ -34,7 +34,7 @@ class InviteWriter: InviteWriterProtocol {
             return existingInvite.hydrateInvite()
         }
 
-        let identity = try await identityStore.identity()
+        let identity = try await identityStore.identity(for: conversation.inboxId)
         let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
         let urlSlug = try SignedInvite.slug(for: conversation, privateKey: privateKey)
         Logger.info("Generated URL slug: \(urlSlug)")
@@ -85,7 +85,7 @@ class InviteWriter: InviteWriterProtocol {
                 .fetchOne(db)
         }
         guard let invite else { throw InviteWriterError.inviteNotFound }
-        let identity = try await identityStore.identity()
+        let identity = try await identityStore.identity(for: conversation.inboxId)
         let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
         let urlSlug = try SignedInvite.slug(for: conversation, privateKey: privateKey)
         let updatedInvite = invite.with(urlSlug: urlSlug)
