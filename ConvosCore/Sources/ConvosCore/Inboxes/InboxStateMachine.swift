@@ -374,7 +374,7 @@ public actor InboxStateMachine {
         Logger.info("Generated clientId: \(clientId.value) for inboxId: \(client.inboxId)")
 
         // Save to keychain with clientId
-        let identity = try await identityStore.save(inboxId: client.inboxId, clientId: clientId.value, keys: keys)
+        _ = try await identityStore.save(inboxId: client.inboxId, clientId: clientId.value, keys: keys)
 
         // Save to database
         let inboxWriter = InboxWriter(dbWriter: databaseWriter)

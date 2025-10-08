@@ -12,4 +12,3 @@ public struct Inbox: Codable, Hashable, Identifiable {
         self.createdAt = createdAt
     }
 }
-

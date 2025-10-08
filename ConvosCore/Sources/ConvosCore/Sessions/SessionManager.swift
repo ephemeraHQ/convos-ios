@@ -20,7 +20,7 @@ public final class SessionManager: SessionManagerProtocol {
     private var activeConversationObserver: Any?
 
     // Thread-safe access to messaging services
-    private let serviceQueue = DispatchQueue(label: "com.convos.sessionmanager.services")
+    private let serviceQueue: DispatchQueue = DispatchQueue(label: "com.convos.sessionmanager.services")
     private var messagingServices: [AnyMessagingService] = []
     private var activeConversationId: String?
 

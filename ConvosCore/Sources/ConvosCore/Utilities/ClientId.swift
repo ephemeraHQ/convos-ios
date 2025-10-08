@@ -34,5 +34,3 @@ extension ClientId: ExpressibleByStringLiteral {
         self.value = value
     }
 }
-
-

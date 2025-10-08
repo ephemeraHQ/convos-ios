@@ -34,9 +34,8 @@ struct InboxWriter {
     }
 
     func deleteAll() async throws {
-        try await dbWriter.write { db in
+        _ = try await dbWriter.write { db in
             try DBInbox.deleteAll(db)
         }
     }
 }
-
