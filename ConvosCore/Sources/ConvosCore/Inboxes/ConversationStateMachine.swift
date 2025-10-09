@@ -26,7 +26,12 @@ public actor ConversationStateMachine {
         case uninitialized
         case creating
         case validating(inviteCode: String)
-        case validated(invite: SignedInvite, placeholder: ConversationReadyResult, inboxReady: InboxReadyResult)
+        case validated(
+            invite: SignedInvite,
+            placeholder: ConversationReadyResult,
+            inboxReady: InboxReadyResult,
+            previousReadyResult: ConversationReadyResult?
+        )
         case joining(invite: SignedInvite, placeholder: ConversationReadyResult)
         case ready(ConversationReadyResult)
         case deleting
@@ -42,7 +47,7 @@ public actor ConversationStateMachine {
                 return lhsInvite.payload.conversationToken == rhsInvite.payload.conversationToken
             case let (.validating(lhsCode), .validating(rhsCode)):
                 return lhsCode == rhsCode
-            case let (.validated(lhsInvite, _, lhsInbox), .validated(rhsInvite, _, rhsInbox)):
+            case let (.validated(lhsInvite, _, lhsInbox, _), .validated(rhsInvite, _, rhsInbox, _)):
                 return (lhsInvite.payload.conversationToken == rhsInvite.payload.conversationToken &&
                         lhsInbox.client.inboxId == rhsInbox.client.inboxId)
             case let (.ready(lhsResult), .ready(rhsResult)):
@@ -251,12 +256,17 @@ public actor ConversationStateMachine {
                 try await handleCreate()
 
             case (.uninitialized, let .validate(inviteCode)):
-                try await handleValidate(inviteCode: inviteCode)
-            case (.ready, let .validate(inviteCode)):
-                try await handleValidateFromReadyState(inviteCode: inviteCode)
+                try await handleValidate(inviteCode: inviteCode, previousResult: nil)
+            case let (.ready(previousResult), .validate(inviteCode)):
+                try await handleValidate(inviteCode: inviteCode, previousResult: previousResult)
 
-            case (let .validated(invite, placeholder, inboxReady), .join):
-                try await handleJoin(invite: invite, placeholder: placeholder, inboxReady: inboxReady)
+            case (let .validated(invite, placeholder, inboxReady, previousResult), .join):
+                try await handleJoin(
+                    invite: invite,
+                    placeholder: placeholder,
+                    inboxReady: inboxReady,
+                    previousReadyResult: previousResult
+                )
 
             case (.ready, .delete), (.error, .delete):
                 try await handleDelete()
@@ -333,32 +343,7 @@ public actor ConversationStateMachine {
         )))
     }
 
-    private func handleValidateFromReadyState(inviteCode: String) async throws {
-        let previousResult: ConversationReadyResult? = switch _state {
-        case .ready(let result):
-            result
-        default:
-            nil
-        }
-
-        // Try to join the new conversation
-        try await handleValidate(inviteCode: inviteCode)
-
-        // If the join succeeded, clean up the previous conversation
-        if let previousResult {
-            Logger.info("Join succeeded, cleaning up previous conversation: \(previousResult.conversationId)")
-
-            // Get the inbox state to access the API client for unsubscribing
-            let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
-            await scheduleCleanupOnNextReady(
-                previousConversationId: previousResult.conversationId,
-                client: inboxReady.client,
-                apiClient: inboxReady.apiClient,
-            )
-        }
-    }
-
-    private func handleValidate(inviteCode: String) async throws {
+    private func handleValidate(inviteCode: String, previousResult: ConversationReadyResult?) async throws {
         emitStateChange(.validating(inviteCode: inviteCode))
         Logger.info("Validating invite code '\(inviteCode)'")
         let signedInvite = try SignedInvite.fromInviteCode(inviteCode)
@@ -381,6 +366,12 @@ public actor ConversationStateMachine {
             if existingConversation.hasJoined {
                 Logger.info("Already joined conversation... moving to ready state.")
                 emitStateChange(.ready(.init(conversationId: existingConversation.id, origin: .joined)))
+                await cleanUpPreviousConversationIfNeeded(
+                    previousResult: previousResult,
+                    newConversationId: existingConversation.id,
+                    client: inboxReady.client,
+                    apiClient: inboxReady.apiClient
+                )
             } else {
                 Logger.info("Waiting for invite approval...")
                 if existingConversation.isDraft {
@@ -400,7 +391,8 @@ public actor ConversationStateMachine {
                 emitStateChange(.validated(
                     invite: signedInvite,
                     placeholder: .init(conversationId: existingConversation.id, origin: .joined),
-                    inboxReady: inboxReady
+                    inboxReady: inboxReady,
+                    previousReadyResult: previousResult
                 ))
                 enqueueAction(.join)
             }
@@ -418,12 +410,22 @@ public actor ConversationStateMachine {
                 inboxId: inboxReady.client.inboxId
             )
             let placeholder = ConversationReadyResult(conversationId: conversationId, origin: .joined)
-            emitStateChange(.validated(invite: signedInvite, placeholder: placeholder, inboxReady: inboxReady))
+            emitStateChange(.validated(
+                invite: signedInvite,
+                placeholder: placeholder,
+                inboxReady: inboxReady,
+                previousReadyResult: previousResult
+            ))
             enqueueAction(.join)
         }
     }
 
-    private func handleJoin(invite: SignedInvite, placeholder: ConversationReadyResult, inboxReady: InboxReadyResult) async throws {
+    private func handleJoin(
+        invite: SignedInvite,
+        placeholder: ConversationReadyResult,
+        inboxReady: InboxReadyResult,
+        previousReadyResult: ConversationReadyResult?
+    ) async throws {
         emitStateChange(.joining(invite: invite, placeholder: placeholder))
 
         Logger.info("Requesting to join conversation...")
@@ -483,6 +485,14 @@ public actor ConversationStateMachine {
                         conversationId: conversation.id,
                         origin: .joined
                     )))
+
+                    // Clean up previous conversation if it exists and is different
+                    await self.cleanUpPreviousConversationIfNeeded(
+                        previousResult: previousReadyResult,
+                        newConversationId: conversation.id,
+                        client: client,
+                        apiClient: apiClient
+                    )
                 } else {
                     Logger.error("Error waiting for conversation to join")
                     await self.emitStateChange(.error(ConversationStateMachineError.timedOut))
@@ -524,33 +534,27 @@ public actor ConversationStateMachine {
         emitStateChange(.uninitialized)
     }
 
-    // After the next .ready, if the conversation changed, clean up the previously created convo.
-    private func scheduleCleanupOnNextReady(
-        previousConversationId: String,
+    private func cleanUpPreviousConversationIfNeeded(
+        previousResult: ConversationReadyResult?,
+        newConversationId: String,
         client: any XMTPClientProvider,
-        apiClient: any ConvosAPIClientProtocol,
+        apiClient: any ConvosAPIClientProtocol
     ) async {
-        for await state in self.stateSequence {
-            switch state {
-            case .ready(let newReady):
-                // Only clean up if we actually moved to a different external conversation
-                if newReady.conversationId != previousConversationId {
-                    do {
-                        try await self.cleanUp(
-                            conversationId: previousConversationId,
-                            client: client,
-                            apiClient: apiClient
-                        )
-                    } catch {
-                        Logger.error("Deferred cleanup of previous conversation failed: \(error)")
-                    }
-                    return
-                }
-            case .error:
-                return
-            default:
-                continue
-            }
+        guard let previousResult,
+              previousResult.conversationId != newConversationId else {
+            return
+        }
+
+        Logger.info("Cleaning up previous conversation: \(previousResult.conversationId)")
+        do {
+            try await cleanUp(
+                conversationId: previousResult.conversationId,
+                client: client,
+                apiClient: apiClient
+            )
+        } catch {
+            Logger.error("Failed to clean up previous conversation: \(error)")
+            // Continue with transition even if cleanup fails
         }
     }
 
