@@ -123,15 +123,17 @@ final class ConversationsViewModel {
 //            self.hasEarlyAccess = false
         }
         if !hasEarlyAccess {
-            do {
-                self.newConversationViewModel = try .init(
-                    session: session,
-                    showingFullScreenScanner: true,
-                    allowsDismissingScanner: false
-                )
-            } catch {
-                // @jarodl show the error state here
-                Logger.error("Error initializing new conversation view model: \(error.localizedDescription)")
+            Task {
+                do {
+                    self.newConversationViewModel = try await NewConversationViewModel.create(
+                        session: session,
+                        showingFullScreenScanner: true,
+                        allowsDismissingScanner: false
+                    )
+                } catch {
+                    // @jarodl show the error state here
+                    Logger.error("Error initializing new conversation view model: \(error.localizedDescription)")
+                }
             }
         }
         observe()
@@ -160,14 +162,16 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        do {
-            newConversationViewModel = try .init(
-                session: session,
-                autoCreateConversation: true,
-                delegate: self
-            )
-        } catch {
-            Logger.error("Error starting convo: \(error.localizedDescription)")
+        Task {
+            do {
+                newConversationViewModel = try await NewConversationViewModel.create(
+                    session: session,
+                    autoCreateConversation: true,
+                    delegate: self
+                )
+            } catch {
+                Logger.error("Error starting convo: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -176,14 +180,16 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        do {
-            newConversationViewModel = try .init(
-                session: session,
-                showingFullScreenScanner: true,
-                delegate: self
-            )
-        } catch {
-            Logger.error("Error joining convo: \(error.localizedDescription)")
+        Task {
+            do {
+                newConversationViewModel = try await NewConversationViewModel.create(
+                    session: session,
+                    showingFullScreenScanner: true,
+                    delegate: self
+                )
+            } catch {
+                Logger.error("Error joining convo: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -199,14 +205,16 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        do {
-            newConversationViewModel = try NewConversationViewModel(
-                session: session,
-                delegate: self,
-            )
-            newConversationViewModel?.joinConversation(inviteCode: inviteCode)
-        } catch {
-            Logger.error("Error adding inbox: \(error.localizedDescription)")
+        Task {
+            do {
+                newConversationViewModel = try await NewConversationViewModel.create(
+                    session: session,
+                    delegate: self
+                )
+                newConversationViewModel?.joinConversation(inviteCode: inviteCode)
+            } catch {
+                Logger.error("Error adding inbox: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -321,7 +329,7 @@ final class ConversationsViewModel {
                     writer = localStateWriter
                 } else {
                     // Create new writer outside of MainActor context
-                    let messagingService = await session.messagingService(for: conversation.inboxId)
+                    let messagingService = session.messagingService(for: conversation.inboxId)
                     let newWriter = messagingService.conversationLocalStateWriter()
 
                     // Store it atomically on MainActor

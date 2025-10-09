@@ -45,6 +45,13 @@ public final class SessionManager: SessionManagerProtocol {
         }
 
         observe()
+
+        // Schedule creation of unused inbox on app startup
+        MessagingService.createUnusedInboxIfNeeded(
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            environment: environment
+        )
     }
 
     deinit {
@@ -177,8 +184,8 @@ public final class SessionManager: SessionManagerProtocol {
 
     // MARK: - Inbox Management
 
-    public func addInbox() throws -> AnyMessagingService {
-        let messagingService = MessagingService.registeredMessagingService(
+    public func addInbox() async throws -> AnyMessagingService {
+        let messagingService = await MessagingService.registeredMessagingService(
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment

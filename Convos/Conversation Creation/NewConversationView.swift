@@ -142,6 +142,7 @@ struct NewConversationView: View {
     // swiftlint:disable:next force_try
     @Previewable @State var viewModel: NewConversationViewModel = try! .init(
         session: ConvosClient.mock().session,
+        messagingService: MockMessagingService(),
         showingFullScreenScanner: false
     )
     @Previewable @State var presented: Bool = true

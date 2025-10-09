@@ -77,8 +77,28 @@ class NewConversationViewModel: Identifiable {
 
     // MARK: - Init
 
-    init(
+    static func create(
         session: any SessionManagerProtocol,
+        autoCreateConversation: Bool = false,
+        showingFullScreenScanner: Bool = false,
+        allowsDismissingScanner: Bool = true,
+        delegate: NewConversationsViewModelDelegate? = nil
+    ) async throws -> NewConversationViewModel {
+        let messagingService = try await session.addInbox()
+        return try NewConversationViewModel(
+            session: session,
+            messagingService: messagingService,
+            autoCreateConversation: autoCreateConversation,
+            showingFullScreenScanner: showingFullScreenScanner,
+            allowsDismissingScanner: allowsDismissingScanner,
+            delegate: delegate
+        )
+    }
+
+    /// Internal initializer for previews and tests
+    internal init(
+        session: any SessionManagerProtocol,
+        messagingService: AnyMessagingService,
         autoCreateConversation: Bool = false,
         showingFullScreenScanner: Bool = false,
         allowsDismissingScanner: Bool = true,
@@ -92,7 +112,6 @@ class NewConversationViewModel: Identifiable {
         self.allowsDismissingScanner = allowsDismissingScanner
         self.delegate = delegate
 
-        let messagingService = try session.addInbox()
         let conversationStateManager = messagingService.conversationStateManager()
         self.conversationStateManager = conversationStateManager
         let draftConversation: Conversation = .empty(

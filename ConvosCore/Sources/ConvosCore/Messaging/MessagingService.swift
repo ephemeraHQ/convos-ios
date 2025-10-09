@@ -42,20 +42,11 @@ final class MessagingService: MessagingServiceProtocol {
         databaseReader: any DatabaseReader,
         environment: AppEnvironment,
         registersForPushNotifications: Bool = true
-    ) -> MessagingService {
-        let identityStore = environment.defaultIdentityStore
-        let authorizationOperation = AuthorizeInboxOperation.register(
-            identityStore: identityStore,
-            databaseReader: databaseReader,
-            databaseWriter: databaseWriter,
-            environment: environment,
-            registersForPushNotifications: registersForPushNotifications
-        )
-        return MessagingService(
-            authorizationOperation: authorizationOperation,
+    ) async -> MessagingService {
+        return await UnusedInboxCache.shared.consumeOrCreateMessagingService(
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
-            identityStore: identityStore
+            environment: environment
         )
     }
 
@@ -175,5 +166,21 @@ final class MessagingService: MessagingServiceProtocol {
             filename: filename,
             afterUpload: afterUpload
         )
+    }
+
+    // MARK: - Public Unused Inbox Methods
+
+    static func createUnusedInboxIfNeeded(
+        databaseWriter: any DatabaseWriter,
+        databaseReader: any DatabaseReader,
+        environment: AppEnvironment
+    ) {
+        Task(priority: .background) {
+            await UnusedInboxCache.shared.prepareUnusedInboxIfNeeded(
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment
+            )
+        }
     }
 }
