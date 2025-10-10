@@ -7,6 +7,7 @@ public struct ConversationReadyResult {
     public enum Origin {
         case created
         case joined
+        case existing
     }
 
     public let conversationId: String
@@ -358,19 +359,18 @@ public actor ConversationStateMachine {
                 .hydrateConversation()
         }
 
-        Logger.info("Waiting for inbox ready result...")
-        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
-
         if let existingConversation {
             Logger.info("Found existing convo by invite tag...")
+            let prevInboxReady = try await inboxStateManager.waitForInboxReadyResult()
+            let inboxReady = try await inboxStateManager.reauthorize(inboxId: existingConversation.inboxId)
             if existingConversation.hasJoined {
                 Logger.info("Already joined conversation... moving to ready state.")
-                emitStateChange(.ready(.init(conversationId: existingConversation.id, origin: .joined)))
+                emitStateChange(.ready(.init(conversationId: existingConversation.id, origin: .existing)))
                 await cleanUpPreviousConversationIfNeeded(
                     previousResult: previousResult,
                     newConversationId: existingConversation.id,
-                    client: inboxReady.client,
-                    apiClient: inboxReady.apiClient
+                    client: prevInboxReady.client,
+                    apiClient: prevInboxReady.apiClient
                 )
             } else {
                 Logger.info("Waiting for invite approval...")
@@ -390,7 +390,7 @@ public actor ConversationStateMachine {
                 }
                 emitStateChange(.validated(
                     invite: signedInvite,
-                    placeholder: .init(conversationId: existingConversation.id, origin: .joined),
+                    placeholder: .init(conversationId: existingConversation.id, origin: .existing),
                     inboxReady: inboxReady,
                     previousReadyResult: previousResult
                 ))
@@ -398,6 +398,8 @@ public actor ConversationStateMachine {
             }
         } else {
             Logger.info("Existing conversation not found. Creating placeholder...")
+            Logger.info("Waiting for inbox ready result...")
+            let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
             let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
             let conversationWriter = ConversationWriter(
                 identityStore: identityStore,

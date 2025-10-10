@@ -279,6 +279,8 @@ class NewConversationViewModel: Identifiable {
                 break
             case .created:
                 break
+            case .existing:
+                break
             }
             messagesTopBarTrailingItemEnabled = true
             messagesBottomBarEnabled = true

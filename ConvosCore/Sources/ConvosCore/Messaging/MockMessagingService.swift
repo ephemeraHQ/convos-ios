@@ -110,6 +110,10 @@ extension MockMessagingService: InboxStateManagerProtocol {
     public func removeObserver(_ observer: any InboxStateObserver) {
     }
 
+    public func reauthorize(inboxId: String) async throws -> InboxReadyResult {
+        .init(client: self, apiClient: MockAPIClient(client: self))
+    }
+
     public func observeState(_ handler: @escaping (InboxStateMachine.State) -> Void) -> StateObserverHandle {
         .init(observer: .init(handler: { _ in }), manager: self)
     }

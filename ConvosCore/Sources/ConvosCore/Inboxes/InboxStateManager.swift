@@ -9,6 +9,7 @@ public protocol InboxStateManagerProtocol: AnyObject {
     var currentState: InboxStateMachine.State { get }
 
     func waitForInboxReadyResult() async throws -> InboxReadyResult
+    func reauthorize(inboxId: String) async throws -> InboxReadyResult
 
     func addObserver(_ observer: InboxStateObserver)
     func removeObserver(_ observer: InboxStateObserver)
@@ -95,6 +96,56 @@ public final class InboxStateManager: InboxStateManagerProtocol {
             switch state {
             case .ready(let result):
                 return result
+            case .error(let error):
+                throw error
+            default:
+                continue
+            }
+        }
+
+        throw InboxStateError.inboxNotReady
+    }
+
+    public func reauthorize(inboxId: String) async throws -> InboxReadyResult {
+        guard let stateMachine = stateMachine else {
+            throw InboxStateError.inboxNotReady
+        }
+
+        // Check if we're already authorized with this inbox
+        if case .ready(let result) = currentState, result.client.inboxId == inboxId {
+            Logger.info("Already authorized with inbox \(inboxId), skipping reauthorization")
+            return result
+        }
+
+        Logger.info("Reauthorizing with inbox \(inboxId)...")
+
+        // Stop current inbox if running
+        if case .ready = currentState {
+            await stateMachine.stop()
+            // Wait for the stop to complete (state should transition away from ready)
+            for await state in await stateMachine.stateSequence {
+                if case .uninitialized = state {
+                    break
+                }
+            }
+        }
+
+        // Authorize with the new inbox
+        await stateMachine.authorize(inboxId: inboxId)
+
+        // Wait for ready state with the CORRECT inbox (not the old one)
+        for await state in await stateMachine.stateSequence {
+            switch state {
+            case .ready(let result):
+                // Verify this is the inbox we requested
+                if result.client.inboxId == inboxId {
+                    Logger.info("Successfully reauthorized to inbox \(inboxId)")
+                    return result
+                } else {
+                    // This is the old inbox's ready state, keep waiting
+                    Logger.info("Waiting for correct inbox... current: \(result.client.inboxId), expected: \(inboxId)")
+                    continue
+                }
             case .error(let error):
                 throw error
             default:
