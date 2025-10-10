@@ -30,36 +30,6 @@ public enum ConvosAPI {
         public let walletAddress: String
     }
 
-    public struct InitRequest: Encodable {
-        public let device: Device
-        public let identity: Identity
-        public struct Device: Encodable {
-            public let os: String
-            public let name: String?
-            public let id: String
-        }
-        public struct Identity: Encodable {
-            public let identityAddress: String?
-            public let xmtpId: String
-            public let xmtpInstallationId: String?
-        }
-    }
-
-    public struct InitResponse: Decodable {
-        public let device: Device
-        public let identity: Identity
-        public struct Device: Decodable {
-            public let id: String
-            public let os: String
-            public let name: String?
-        }
-        public struct Identity: Decodable {
-            public let id: String
-            public let identityAddress: String?
-            public let xmtpId: String?
-        }
-    }
-
     // MARK: - Device Update Models
 
     struct DeviceUpdateRequest: Codable {
@@ -84,7 +54,6 @@ public enum ConvosAPI {
             self.apnsEnv = apnsEnv
         }
     }
-
     public struct DeviceUpdateResponse: Codable {
         public let id: String
         public let pushToken: String?
@@ -96,15 +65,5 @@ public enum ConvosAPI {
 
     public struct AuthCheckResponse: Codable {
         public let success: Bool
-    }
-}
-
-extension ConvosAPI.InitRequest.Device {
-    static func current() -> Self {
-        return .init(
-            os: DeviceInfo.osString,
-            name: nil,
-            id: DeviceInfo.deviceIdentifier
-        )
     }
 }

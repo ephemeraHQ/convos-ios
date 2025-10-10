@@ -110,6 +110,8 @@ public actor InboxStateMachine {
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
     private var pushTokenObserver: NSObjectProtocol?
+    private var deviceRegistrationTask: Task<Void, Error>?
+    private var isDeviceRegistered: Bool = false
 
     // MARK: - State Observation
 
@@ -251,6 +253,44 @@ public actor InboxStateMachine {
                 continue
             }
         }
+    }
+
+    /// Ensures device is registered before subscribing to topics.
+    /// This prevents race conditions where topic subscription happens before device registration.
+    /// @lourou refactor
+    func subscribeToTopicsWhenDeviceReady(topics: [String]) async throws {
+        guard case .ready(let result) = _state else {
+            throw InboxStateError.inboxNotReady
+        }
+
+        // Wait for device registration to complete
+        try await waitForDeviceRegistration()
+
+        // Now subscribe to topics
+        let deviceId = DeviceInfo.deviceIdentifier
+        try await result.apiClient.subscribeToTopics(
+            deviceId: deviceId,
+            clientId: result.client.installationId,
+            topics: topics
+        )
+    }
+
+    /// Waits for device registration to complete.
+    private func waitForDeviceRegistration() async throws {
+        // If already registered, return immediately
+        if isDeviceRegistered {
+            return
+        }
+
+        // If registration is in progress, wait for it
+        if let task = deviceRegistrationTask {
+            try await task.value
+            return
+        }
+
+        // No registration in progress, but not registered yet
+        // This can happen if push token hasn't arrived yet
+        Logger.warning("Device registration not started yet, continuing anyway (push token may not be available)")
     }
 
     // MARK: - Private
@@ -415,11 +455,6 @@ public actor InboxStateMachine {
         emitStateChange(.authenticatingBackend)
         Logger.info("Authenticating backend for registration...")
         let apiClient = try await authorizeConvosBackend(client: client)
-        Logger.info("Registering backend...")
-//        _ = try await registerBackend(
-//            client: client,
-//            apiClient: apiClient
-//        )
         enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
     }
 
@@ -472,6 +507,9 @@ public actor InboxStateMachine {
         await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         removePushNotificationObservers()
+        deviceRegistrationTask?.cancel()
+        deviceRegistrationTask = nil
+        isDeviceRegistered = false
         inboxId = nil
         emitStateChange(.uninitialized)
     }
@@ -520,7 +558,51 @@ public actor InboxStateMachine {
         // Delete identity and local database
         try await identityStore.delete(inboxId: client.inboxId)
         try client.deleteLocalDatabase()
+
+        // Delete database files
+        deleteDatabaseFiles(for: client.inboxId)
+
         Logger.info("Deleted inbox \(client.inboxId)")
+    }
+
+    private func deleteDatabaseFiles(for inboxId: String) {
+        let fileManager = FileManager.default
+        let dbDirectory = environment.defaultDatabasesDirectoryURL
+
+        // XMTP creates files like: xmtp-{env}-{inboxId}.db3
+        // Note: .local environment uses "localhost" in filename, not "local"
+        let envPrefix: String
+        switch environment.xmtpEnv {
+        case .local:
+            envPrefix = "localhost"
+        case .dev:
+            envPrefix = "dev"
+        case .production:
+            envPrefix = "production"
+        @unknown default:
+            envPrefix = "unknown"
+        }
+
+        let dbBaseName = "xmtp-\(envPrefix)-\(inboxId)"
+
+        let filesToDelete = [
+            "\(dbBaseName).db3",
+            "\(dbBaseName).db3.sqlcipher_salt",
+            "\(dbBaseName).db3-shm",
+            "\(dbBaseName).db3-wal"
+        ]
+
+        for filename in filesToDelete {
+            let fileURL = dbDirectory.appendingPathComponent(filename)
+            if fileManager.fileExists(atPath: fileURL.path) {
+                do {
+                    try fileManager.removeItem(at: fileURL)
+                    Logger.info("Deleted XMTP database file: \(filename)")
+                } catch {
+                    Logger.error("Failed to delete XMTP database file \(filename): \(error)")
+                }
+            }
+        }
     }
 
     /// Deletes all database records associated with a given inboxId
@@ -648,25 +730,11 @@ public actor InboxStateMachine {
 
         // Make a test call to trigger (re)authentication if needed
         Logger.info("Testing authentication with /auth-check...")
-//        _ = try await apiClient.checkAuth()
+        _ = try await apiClient.checkAuth()
 
         return apiClient
     }
 
-    // MARK: - Backend Init
-
-    private func registerBackend(
-        client: any XMTPClientProvider,
-        apiClient: any ConvosAPIClientProtocol
-    ) async throws -> ConvosAPI.InitResponse {
-        let requestBody: ConvosAPI.InitRequest = .init(
-            device: .current(),
-            identity: .init(identityAddress: nil,
-                            xmtpId: client.inboxId,
-                            xmtpInstallationId: client.installationId)
-        )
-        return try await apiClient.initWithBackend(requestBody)
-    }
 }
 
 // MARK: - Push Notification Observers
@@ -674,14 +742,38 @@ public actor InboxStateMachine {
 extension InboxStateMachine {
     private func performPushNotificationRegistration(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
         Logger.info("Registering for push notifications")
-        // Attempt to register for remote notifications to obtain APNS token ASAP
-        await pushNotificationRegistrar.registerForRemoteNotifications()
 
-        // Request system notification authorization (APNS registration is handled separately)
-        await pushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
+        // Track device registration as a task so topic subscriptions can wait for it
+        deviceRegistrationTask = Task {
+            do {
+                // Step 1: Register device immediately without push token (early registration)
+                // This allows the backend to know about the device before APNS token arrives
+                try await pushNotificationRegistrar.registerDeviceWithoutToken(apiClient: apiClient)
+                await markDeviceAsRegistered()
 
-        // Register backend notifications mapping (deviceId + token + identity + installation)
-        await pushNotificationRegistrar.registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
+                // Step 2: Request APNS token from iOS system
+                await pushNotificationRegistrar.registerForRemoteNotifications()
+
+                // Step 3: Request system notification authorization
+                await pushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
+
+                // Step 4: If token is already available, update the registration
+                // (Token may have been received from previous app sessions)
+                await pushNotificationRegistrar.registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
+            } catch is CancellationError {
+                Logger.info("Device registration was cancelled")
+            } catch {
+                Logger.error("Device registration failed: \(error)")
+            }
+        }
+
+        // Wait for registration to complete
+        try? await deviceRegistrationTask?.value
+    }
+
+    private func markDeviceAsRegistered() {
+        isDeviceRegistered = true
+        Logger.info("Device registration completed")
     }
 
     private func setupPushNotificationObservers() {
@@ -706,6 +798,20 @@ extension InboxStateMachine {
 
     private func handleTokenChange() async {
         guard case let .ready(result) = _state else { return }
-        await pushNotificationRegistrar.requestAuthAndRegisterIfNeeded(client: result.client, apiClient: result.apiClient)
+
+        // Reset registration state and register again with new token
+        deviceRegistrationTask?.cancel()
+        isDeviceRegistered = false
+
+        deviceRegistrationTask = Task {
+            await pushNotificationRegistrar.requestAuthAndRegisterIfNeeded(client: result.client, apiClient: result.apiClient)
+            await markDeviceAsRegistered()
+        }
+
+        do {
+            try await deviceRegistrationTask?.value
+        } catch {
+            Logger.error("Device re-registration after token change failed: \(error)")
+        }
     }
 }

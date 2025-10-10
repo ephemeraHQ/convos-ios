@@ -39,12 +39,9 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     func authenticate(inboxId: String,
                       installationId: String,
                       appCheckToken: String,
-                      signature: String,
                       retryCount: Int) async throws -> String
 
     func checkAuth() async throws
-
-    func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse
 
     func uploadAttachment(
         data: Data,
@@ -59,14 +56,10 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     ) async throws -> String
 
     // Push notifications
-    func getDevice(deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse
-    func registerForNotifications(deviceId: String,
-                                  pushToken: String,
-                                  identityId: String,
-                                  xmtpInstallationId: String) async throws
-    func subscribeToTopics(installationId: String, topics: [String]) async throws
-    func unsubscribeFromTopics(installationId: String, topics: [String]) async throws
-    func unregisterInstallation(xmtpInstallationId: String) async throws
+    func registerDevice(deviceId: String, pushToken: String?) async throws
+    func subscribeToTopics(deviceId: String, clientId: String, topics: [String]) async throws
+    func unsubscribeFromTopics(clientId: String, topics: [String]) async throws
+    func unregisterInstallation(clientId: String) async throws
 
     func overrideJWTToken(_ token: String)
 }
@@ -191,14 +184,11 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         let installationId = client.installationId
         let inboxId = client.inboxId
         let firebaseAppCheckToken = try await FirebaseHelperCore.getAppCheckToken()
-        let signatureData = try client.signWithInstallationKey(message: firebaseAppCheckToken)
-        let signature = signatureData.hexEncodedString()
 
         return try await authenticate(
             inboxId: inboxId,
             installationId: installationId,
             appCheckToken: firebaseAppCheckToken,
-            signature: signature,
             retryCount: 0
         )
     }
@@ -208,17 +198,21 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     func authenticate(inboxId: String,
                       installationId: String,
                       appCheckToken: String,
-                      signature: String,
                       retryCount: Int = 0) async throws -> String {
-        let url = baseURL.appendingPathComponent("v1/authenticate")
+        let url = baseURL.appendingPathComponent("v2/auth/token")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
 
-        request.setValue(installationId, forHTTPHeaderField: "X-XMTP-InstallationId")
-        request.setValue(inboxId, forHTTPHeaderField: "X-XMTP-InboxId")
-        request.setValue("0x\(signature)", forHTTPHeaderField: "X-XMTP-Signature")
         request.setValue(appCheckToken, forHTTPHeaderField: "X-Firebase-AppCheck")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        struct AuthRequest: Encodable {
+            let deviceId: String
+        }
+
+        let deviceId = DeviceInfo.deviceIdentifier
+        let requestBody = AuthRequest(deviceId: deviceId)
+        request.httpBody = try JSONEncoder().encode(requestBody)
 
         let (data, response) = try await session.data(for: request)
 
@@ -226,18 +220,9 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             throw APIError.authenticationFailed
         }
 
-        // Special handling for installation ID errors
+        // Handle bad request
         if httpResponse.statusCode == 400 {
-            if let errorMessage = parseErrorMessage(from: data),
-               errorMessage.lowercased().contains("invalid installation id") {
-                throw APIError.invalidInstallationId(
-                    inboxId: inboxId,
-                    installationId: installationId,
-                    message: errorMessage
-                )
-            } else {
-                throw APIError.badRequest(parseErrorMessage(from: data))
-            }
+            throw APIError.badRequest(parseErrorMessage(from: data))
         }
 
         // Handle auth rate limiting
@@ -254,11 +239,12 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             return try await authenticate(inboxId: inboxId,
                                           installationId: installationId,
                                           appCheckToken: appCheckToken,
-                                          signature: signature,
                                           retryCount: retryCount + 1)
         }
 
         guard httpResponse.statusCode == 200 else {
+            let errorMessage = parseErrorMessage(from: data)
+            Logger.error("Authentication failed with status \(httpResponse.statusCode): \(errorMessage ?? "unknown error")")
             throw APIError.authenticationFailed
         }
 
@@ -268,11 +254,12 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
         let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
         try keychainService.saveString(authResponse.token, for: .init(inboxId: inboxId))
+        Logger.info("Successfully authenticated and stored JWT token")
         return authResponse.token
     }
 
     func checkAuth() async throws {
-        let request = try authenticatedRequest(for: "v1/auth-check")
+        let request = try authenticatedRequest(for: "v2/auth-check")
         let _: ConvosAPI.AuthCheckResponse = try await performRequest(request)
     }
 
@@ -283,16 +270,6 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         tokenAccessQueue.sync {
             _overrideJWTToken = token
         }
-    }
-
-    // MARK: - Init
-
-    func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse {
-        var request = try authenticatedRequest(for: "v1/init", method: "POST")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(requestBody)
-        Logger.info("Initializing backend")
-        return try await performRequest(request)
     }
 
     // MARK: - Private Helpers
@@ -495,80 +472,86 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         return uploadedURL
     }
 
-    // MARK: - Device Management
-
-    func getDevice(deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse {
-        let request = try authenticatedRequest(
-            for: "v1/devices/\(deviceId)",
-            method: "GET"
-        )
-
-        return try await performRequest(request)
-    }
-
     // MARK: - Notifications Registration & Subscriptions
 
-    func registerForNotifications(deviceId: String,
-                                  pushToken: String,
-                                  identityId: String,
-                                  xmtpInstallationId: String) async throws {
-        var request = try authenticatedRequest(for: "v1/notifications/register", method: "POST")
+    func registerDevice(deviceId: String, pushToken: String?) async throws {
+        var request = try authenticatedRequest(for: "v2/notifications/register", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        struct Installation: Encodable { let identityId: String; let xmtpInstallationId: String }
-
-        struct Body: Encodable {
+        struct RegisterDeviceRequest: Encodable {
             let deviceId: String
-            let pushToken: String
-            let pushTokenType: String
-            let apnsEnv: String
-            let installations: [Installation]
+            let pushToken: String?
+            let pushTokenType: String?
+            let apnsEnv: String?
         }
 
-        let apnsEnv = environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
-        Logger.info("Registering push token with APNS environment: \(apnsEnv) (raw enum: \(environment.apnsEnvironment))")
+        let apnsEnv: String?
+        if pushToken != nil {
+            apnsEnv = environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
+            Logger.info("Registering device with push token and APNS environment: \(apnsEnv ?? "nil") (raw enum: \(environment.apnsEnvironment))")
+        } else {
+            apnsEnv = nil
+            Logger.info("Registering device without push token (early registration)")
+        }
 
-        let body = Body(deviceId: deviceId,
-                        pushToken: pushToken,
-                        pushTokenType: "apns",
-                        apnsEnv: apnsEnv,
-                        installations: [.init(identityId: identityId, xmtpInstallationId: xmtpInstallationId)])
+        let body = RegisterDeviceRequest(
+            deviceId: deviceId,
+            pushToken: pushToken,
+            pushTokenType: pushToken != nil ? "apns" : nil,
+            apnsEnv: apnsEnv
+        )
         request.httpBody = try JSONEncoder().encode(body)
 
         let (_, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
-            throw APIError.serverError("Failed notifications/register: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
+            throw APIError.serverError("Failed v2/notifications/register: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
         }
     }
 
-    func subscribeToTopics(installationId: String, topics: [String]) async throws {
-        var request = try authenticatedRequest(for: "v1/notifications/subscribe", method: "POST")
+    func subscribeToTopics(deviceId: String, clientId: String, topics: [String]) async throws {
+        var request = try authenticatedRequest(for: "v2/notifications/subscribe", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        struct Body: Encodable { let installationId: String; let topics: [String] }
-        request.httpBody = try JSONEncoder().encode(Body(installationId: installationId, topics: topics))
+
+        struct SubscribeRequest: Encodable {
+            let deviceId: String
+            let clientId: String
+            let topics: [String]
+        }
+
+        request.httpBody = try JSONEncoder().encode(SubscribeRequest(
+            deviceId: deviceId,
+            clientId: clientId,
+            topics: topics
+        ))
+
         let (_, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
-            throw APIError.serverError("Failed notifications/subscribe: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
+            throw APIError.serverError("Failed v2/notifications/subscribe: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
         }
     }
 
-    func unsubscribeFromTopics(installationId: String, topics: [String]) async throws {
-        var request = try authenticatedRequest(for: "v1/notifications/unsubscribe", method: "POST")
+    func unsubscribeFromTopics(clientId: String, topics: [String]) async throws {
+        var request = try authenticatedRequest(for: "v2/notifications/unsubscribe", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        struct Body: Encodable { let installationId: String; let topics: [String] }
-        request.httpBody = try JSONEncoder().encode(Body(installationId: installationId, topics: topics))
+
+        struct UnsubscribeRequest: Encodable {
+            let clientId: String
+            let topics: [String]
+        }
+
+        request.httpBody = try JSONEncoder().encode(UnsubscribeRequest(clientId: clientId, topics: topics))
         let (_, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
-            throw APIError.serverError("Failed notifications/unsubscribe: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
+            throw APIError.serverError("Failed v2/notifications/unsubscribe: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
         }
     }
 
-    func unregisterInstallation(xmtpInstallationId: String) async throws {
-        let path = "v1/notifications/unregister/\(xmtpInstallationId)"
+    func unregisterInstallation(clientId: String) async throws {
+        let path = "v2/notifications/unregister/\(clientId)"
         let request = try authenticatedRequest(for: path, method: "DELETE")
         let (_, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
-            throw APIError.serverError("Failed DELETE notifications/unregister: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
+            throw APIError.serverError("Failed DELETE v2/notifications/unregister: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
         }
     }
 
@@ -596,7 +579,6 @@ enum APIError: Error {
     case invalidRequest
     case serverError(String?)
     case rateLimitExceeded
-    case invalidInstallationId(inboxId: String, installationId: String, message: String)
 }
 
 extension TimeInterval {

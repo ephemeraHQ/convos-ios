@@ -328,10 +328,10 @@ public actor ConversationStateMachine {
         let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
         _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
 
-        // Subscribe to push notifications
+        // Subscribe to push notifications (ensures device is registered first)
         let topic = externalConversationId.xmtpGroupTopicFormat
         do {
-            try await apiClient.subscribeToTopics(installationId: client.installationId, topics: [topic])
+            try await inboxStateManager.subscribeToTopicsWhenDeviceReady(topics: [topic])
             Logger.info("Subscribed to push topic: \(topic)")
         } catch {
             Logger.error("Failed subscribing to topic \(topic): \(error)")
@@ -473,10 +473,10 @@ public actor ConversationStateMachine {
                     let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
                     _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
 
-                    // Subscribe to push notifications
+                    // Subscribe to push notifications (ensures device is registered first)
                     let topic = conversation.id.xmtpGroupTopicFormat
                     do {
-                        try await apiClient.subscribeToTopics(installationId: client.installationId, topics: [topic])
+                        try await inboxStateManager.subscribeToTopicsWhenDeviceReady(topics: [topic])
                         Logger.info("Subscribed to push topic after join: \(topic)")
                     } catch {
                         Logger.error("Failed subscribing to topic after join \(topic): \(error)")
@@ -572,7 +572,7 @@ public actor ConversationStateMachine {
 
         let topic = conversationId.xmtpGroupTopicFormat
         do {
-            try await apiClient.unsubscribeFromTopics(installationId: client.installationId, topics: [topic])
+            try await apiClient.unsubscribeFromTopics(clientId: client.installationId, topics: [topic])
             Logger.info("Unsubscribed from push topic: \(topic)")
         } catch {
             Logger.error("Failed unsubscribing from topic \(topic): \(error)")

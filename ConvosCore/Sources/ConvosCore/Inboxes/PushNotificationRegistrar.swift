@@ -6,6 +6,7 @@ import XMTPiOS
 protocol PushNotificationRegistrarProtocol {
     func registerForRemoteNotifications() async
     func requestNotificationAuthorizationIfNeeded() async
+    func registerDeviceWithoutToken(apiClient: any ConvosAPIClientProtocol) async throws
     func requestAuthAndRegisterIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async
     func registerForNotificationsIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async
     func unregisterInstallation(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async
@@ -48,6 +49,12 @@ public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol 
         }
     }
 
+    func registerDeviceWithoutToken(apiClient: any ConvosAPIClientProtocol) async throws {
+        let deviceId = await currentDeviceId()
+        try await apiClient.registerDevice(deviceId: deviceId, pushToken: nil)
+        Logger.info("Registered device without push token (early registration) for deviceId=\(deviceId)")
+    }
+
     func requestAuthAndRegisterIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
         await requestNotificationAuthorizationIfNeeded()
         await registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
@@ -63,26 +70,26 @@ public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol 
         }
 
         let deviceId = await currentDeviceId()
-        let installationId = client.installationId
         do {
-            try await apiClient.registerForNotifications(deviceId: deviceId,
-                                                         pushToken: token,
-                                                         identityId: identityId,
-                                                         xmtpInstallationId: installationId)
-            Logger.info("Registered notifications mapping for deviceId=\(deviceId), inboxId=\(identityId)")
+            // Register device with push token
+            // Topics will be subscribed individually when conversations are created/joined
+            try await apiClient.registerDevice(deviceId: deviceId, pushToken: token)
+            Logger.info("Registered device with push token for deviceId=\(deviceId)")
+
             savePushToken(token, for: identityId)
         } catch {
-            Logger.error("Failed to register notifications mapping: \(error)")
+            Logger.error("Failed to register device: \(error)")
         }
     }
 
     func unregisterInstallation(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
         do {
-            try await apiClient.unregisterInstallation(xmtpInstallationId: client.installationId)
+            try await apiClient.unregisterInstallation(clientId: client.installationId)
             deleteLastUsedPushTokenFromKeychain(for: client.inboxId)
             Logger.info("Unregistered installation: \(client.installationId)")
         } catch {
-            Logger.error("Failed to unregister installation: \(error)")
+            // Ignore errors during unregistration
+            Logger.info("Could not unregister installation (likely during account deletion): \(error)")
         }
     }
 
@@ -125,6 +132,7 @@ public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol 
 final class MockPushNotificationRegistrar: PushNotificationRegistrarProtocol {
     func registerForRemoteNotifications() async {}
     func requestNotificationAuthorizationIfNeeded() async {}
+    func registerDeviceWithoutToken(apiClient: any ConvosAPIClientProtocol) async throws {}
     func requestAuthAndRegisterIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {}
     func registerForNotificationsIfNeeded(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {}
     func unregisterInstallation(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {}
