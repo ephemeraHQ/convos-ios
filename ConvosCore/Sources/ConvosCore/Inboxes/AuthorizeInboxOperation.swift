@@ -52,6 +52,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
+        savesInboxToDatabase: Bool = true,
         registersForPushNotifications: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
@@ -60,6 +61,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: true,
+            savesInboxToDatabase: savesInboxToDatabase,
             registersForPushNotifications: registersForPushNotifications
         )
         operation.register()
@@ -72,6 +74,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
+        savesInboxToDatabase: Bool = true,
         registersForPushNotifications: Bool
     ) {
         let syncingManager = startsStreamingServices ? SyncingManager(
@@ -92,6 +95,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             pushNotificationRegistrar: PushNotificationRegistrar(
                 environment: environment
             ),
+            savesInboxToDatabase: savesInboxToDatabase,
             autoRegistersForPushNotifications: registersForPushNotifications,
             environment: environment
         )

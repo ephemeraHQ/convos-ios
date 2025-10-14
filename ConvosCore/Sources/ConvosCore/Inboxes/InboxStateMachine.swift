@@ -101,6 +101,7 @@ public actor InboxStateMachine {
     private let syncingManager: AnySyncingManager?
     private let inviteJoinRequestsManager: AnyInviteJoinRequestsManager?
     private let pushNotificationRegistrar: any PushNotificationRegistrarProtocol
+    private let savesInboxToDatabase: Bool
     private let autoRegistersForPushNotifications: Bool
     private let databaseWriter: any DatabaseWriter
 
@@ -169,6 +170,7 @@ public actor InboxStateMachine {
         syncingManager: AnySyncingManager?,
         inviteJoinRequestsManager: AnyInviteJoinRequestsManager?,
         pushNotificationRegistrar: any PushNotificationRegistrarProtocol,
+        savesInboxToDatabase: Bool = true,
         autoRegistersForPushNotifications: Bool,
         environment: AppEnvironment
     ) {
@@ -179,6 +181,7 @@ public actor InboxStateMachine {
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.environment = environment
         self.pushNotificationRegistrar = pushNotificationRegistrar
+        self.savesInboxToDatabase = savesInboxToDatabase
         self.autoRegistersForPushNotifications = autoRegistersForPushNotifications
 
         // Set custom XMTP host if provided
@@ -351,6 +354,17 @@ public actor InboxStateMachine {
                     options: clientOptions
                 )
             }
+
+            if savesInboxToDatabase {
+                // Ensure inbox is saved to database when authorizing
+                // (in case it was registered as unused but is now being used)
+                let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+                try await inboxWriter.save(inboxId: identity.inboxId, clientId: identity.clientId)
+                Logger.info("Ensured inbox is saved to database: \(identity.inboxId)")
+            } else {
+                Logger.warning("Skipping save to database during authorization")
+            }
+
             enqueueAction(.clientAuthorized(client))
         } catch {
             Logger.warning("Failed authorizing inbox \(inboxId), attempting registration...")
@@ -376,10 +390,14 @@ public actor InboxStateMachine {
         // Save to keychain with clientId
         _ = try await identityStore.save(inboxId: client.inboxId, clientId: clientId.value, keys: keys)
 
-        // Save to database
-        let inboxWriter = InboxWriter(dbWriter: databaseWriter)
-        try await inboxWriter.save(inboxId: client.inboxId, clientId: clientId.value)
-        Logger.info("Saved inbox to database with clientId: \(clientId.value)")
+        // Conditionally save to database based on configuration
+        if savesInboxToDatabase {
+            let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+            try await inboxWriter.save(inboxId: client.inboxId, clientId: clientId.value)
+            Logger.info("Saved inbox to database with clientId: \(clientId.value)")
+        } else {
+            Logger.info("Skipping database save for inbox: \(client.inboxId) (unused inbox)")
+        }
 
         enqueueAction(.clientRegistered(client))
     }

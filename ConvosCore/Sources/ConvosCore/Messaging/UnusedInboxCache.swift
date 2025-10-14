@@ -71,6 +71,18 @@ actor UnusedInboxCache {
             // Clear from keychain
             clearUnusedInboxFromKeychain()
 
+            // Save to database now that it's being consumed by the user
+            do {
+                let result = try await unusedService.inboxStateManager.waitForInboxReadyResult()
+                let inboxId = result.client.inboxId
+                let identity = try await environment.defaultIdentityStore.identity(for: inboxId)
+                let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+                try await inboxWriter.save(inboxId: inboxId, clientId: identity.clientId)
+                Logger.info("Saved consumed unused inbox to database: \(inboxId)")
+            } catch {
+                Logger.error("Failed to save consumed inbox to database: \(error)")
+            }
+
             // Schedule creation of a new unused inbox for next time
             Task(priority: .background) { [weak self] in
                 guard let self else { return }
@@ -104,6 +116,8 @@ actor UnusedInboxCache {
             }
 
             // Use the existing inbox with authorize
+            // Note: The authorize flow in InboxStateMachine.handleAuthorize() will
+            // automatically save this inbox to the database
             let identityStore = environment.defaultIdentityStore
             let authorizationOperation = AuthorizeInboxOperation.authorize(
                 inboxId: unusedInboxId,
@@ -232,6 +246,7 @@ actor UnusedInboxCache {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
+            savesInboxToDatabase: false,
             registersForPushNotifications: false
         )
 
@@ -246,7 +261,7 @@ actor UnusedInboxCache {
             let result = try await tempMessagingService.inboxStateManager.waitForInboxReadyResult()
             let inboxId = result.client.inboxId
 
-            // Save the inbox ID to keychain
+            // Save the inbox ID to keychain, save to database when consumed
             saveUnusedInboxToKeychain(inboxId)
 
             // Store the messaging service instance
