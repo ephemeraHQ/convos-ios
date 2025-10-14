@@ -21,4 +21,8 @@ public extension Invite {
             usesCount: 0,
         )
     }
+
+    var isEmpty: Bool {
+        urlSlug.isEmpty
+    }
 }
