@@ -255,11 +255,17 @@ public actor ConversationStateMachine {
             switch (_state, action) {
             case (.uninitialized, .create):
                 try await handleCreate()
+            case (.error, .create):
+                handleStop()
+                try await handleCreate()
 
             case (.uninitialized, let .validate(inviteCode)):
                 try await handleValidate(inviteCode: inviteCode, previousResult: nil)
             case let (.ready(previousResult), .validate(inviteCode)):
                 try await handleValidate(inviteCode: inviteCode, previousResult: previousResult)
+            case let (.error, .validate(inviteCode)):
+                handleStop()
+                try await handleValidate(inviteCode: inviteCode, previousResult: nil)
 
             case (let .validated(invite, placeholder, inboxReady, previousResult), .join):
                 try await handleJoin(
@@ -347,9 +353,19 @@ public actor ConversationStateMachine {
     private func handleValidate(inviteCode: String, previousResult: ConversationReadyResult?) async throws {
         emitStateChange(.validating(inviteCode: inviteCode))
         Logger.info("Validating invite code '\(inviteCode)'")
-        let signedInvite = try SignedInvite.fromInviteCode(inviteCode)
+        let signedInvite: SignedInvite
+        do {
+            signedInvite = try SignedInvite.fromInviteCode(inviteCode)
+        } catch {
+            throw ConversationStateMachineError.invalidInviteCodeFormat(inviteCode)
+        }
         // Recover the public key of whoever signed this invite
-        let signerPublicKey = try signedInvite.recoverSignerPublicKey()
+        let signerPublicKey: Data
+        do {
+            signerPublicKey = try signedInvite.recoverSignerPublicKey()
+        } catch {
+            throw ConversationStateMachineError.failedVerifyingSignature
+        }
         Logger.info("Recovered signer's public key: \(signerPublicKey.hexEncodedString())")
         let existingConversation: Conversation? = try await databaseReader.read { db in
             try DBConversation

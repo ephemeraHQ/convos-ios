@@ -308,24 +308,19 @@ class NewConversationViewModel: Identifiable {
         // Map state machine errors to appropriate UI states
         if let stateMachineError = error as? ConversationStateMachineError {
             switch stateMachineError {
-            case .invalidInviteCodeFormat, .inviteExpired:
+            case .invalidInviteCodeFormat, .inviteExpired, .failedVerifyingSignature:
                 presentingInvalidInviteSheet = true
-                if startedWithFullscreenScanner {
-                    showingFullScreenScanner = true
-                    conversationViewModel.showsInfoView = false
-                }
-
-            case .timedOut:
-                presentingFailedToJoinSheet = true
-                if startedWithFullscreenScanner {
-                    showingFullScreenScanner = true
-                    conversationViewModel.showsInfoView = false
-                }
-
-            case .failedFindingConversation, .failedVerifyingSignature, .stateMachineError:
+            case .failedFindingConversation, .stateMachineError, .timedOut:
                 // Generic error - could show a different alert
                 presentingFailedToJoinSheet = true
             }
+        } else {
+            presentingFailedToJoinSheet = true
+        }
+
+        if startedWithFullscreenScanner {
+            showingFullScreenScanner = true
+            conversationViewModel.showsInfoView = false
         }
     }
 
