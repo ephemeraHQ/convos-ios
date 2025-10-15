@@ -734,7 +734,6 @@ public actor InboxStateMachine {
 
         return apiClient
     }
-
 }
 
 // MARK: - Push Notification Observers
