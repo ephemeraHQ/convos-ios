@@ -331,7 +331,7 @@ public actor ConversationStateMachine {
         // Subscribe to push notifications (ensures device is registered first)
         let topic = externalConversationId.xmtpGroupTopicFormat
         do {
-            try await inboxStateManager.subscribeToTopicsWhenDeviceReady(topics: [topic])
+            try await inboxStateManager.subscribeToTopics(topics: [topic])
             Logger.info("Subscribed to push topic: \(topic)")
         } catch {
             Logger.error("Failed subscribing to topic \(topic): \(error)")
@@ -476,7 +476,7 @@ public actor ConversationStateMachine {
                     // Subscribe to push notifications (ensures device is registered first)
                     let topic = conversation.id.xmtpGroupTopicFormat
                     do {
-                        try await inboxStateManager.subscribeToTopicsWhenDeviceReady(topics: [topic])
+                        try await inboxStateManager.subscribeToTopics(topics: [topic])
                         Logger.info("Subscribed to push topic after join: \(topic)")
                     } catch {
                         Logger.error("Failed subscribing to topic after join \(topic): \(error)")

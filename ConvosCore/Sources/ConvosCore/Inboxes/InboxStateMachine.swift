@@ -100,9 +100,7 @@ public actor InboxStateMachine {
     private let environment: AppEnvironment
     private let syncingManager: AnySyncingManager?
     private let inviteJoinRequestsManager: AnyInviteJoinRequestsManager?
-    private let pushNotificationRegistrar: any PushNotificationRegistrarProtocol
     private let savesInboxToDatabase: Bool
-    private let autoRegistersForPushNotifications: Bool
     private let databaseWriter: any DatabaseWriter
 
     private var inboxId: String?
@@ -110,8 +108,7 @@ public actor InboxStateMachine {
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
     private var pushTokenObserver: NSObjectProtocol?
-    private var deviceRegistrationTask: Task<Void, Error>?
-    private var isDeviceRegistered: Bool = false
+    private var lastRegisteredPushToken: String?
 
     // MARK: - State Observation
 
@@ -171,9 +168,7 @@ public actor InboxStateMachine {
         databaseWriter: any DatabaseWriter,
         syncingManager: AnySyncingManager?,
         inviteJoinRequestsManager: AnyInviteJoinRequestsManager?,
-        pushNotificationRegistrar: any PushNotificationRegistrarProtocol,
         savesInboxToDatabase: Bool = true,
-        autoRegistersForPushNotifications: Bool,
         environment: AppEnvironment
     ) {
         self.identityStore = identityStore
@@ -181,10 +176,8 @@ public actor InboxStateMachine {
         self.databaseWriter = databaseWriter
         self.syncingManager = syncingManager
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
-        self.environment = environment
-        self.pushNotificationRegistrar = pushNotificationRegistrar
         self.savesInboxToDatabase = savesInboxToDatabase
-        self.autoRegistersForPushNotifications = autoRegistersForPushNotifications
+        self.environment = environment
 
         // Set custom XMTP host if provided
         Logger.info("🔧 XMTP Configuration:")
@@ -226,47 +219,12 @@ public actor InboxStateMachine {
         enqueueAction(.reset)
     }
 
-    /// Registers for push notifications once the inbox is in a ready state.
-    func registerForPushNotifications() async {
-        Logger.info("Manually triggering push notification registration")
-        setupPushNotificationObservers()
-
-        // Check if we're already in ready state
-        if case .ready(let result) = _state {
-            await performPushNotificationRegistration(client: result.client, apiClient: result.apiClient)
-            return
-        }
-
-        Logger.info("Inbox not ready, waiting to register for push notifications...")
-        // Wait for ready state
-        for await state in stateSequence {
-            switch state {
-            case .ready(let result):
-                await performPushNotificationRegistration(client: result.client, apiClient: result.apiClient)
-                return
-            case .error, .stopping, .deleting:
-                // Don't wait if we're in an error or terminal state
-                Logger.warning("Cannot register for push notifications in state: \(state)")
-                return
-            default:
-                // Continue waiting for ready state
-                continue
-            }
-        }
-    }
-
-    /// Ensures device is registered before subscribing to topics.
-    /// This prevents race conditions where topic subscription happens before device registration.
-    /// @lourou refactor
-    func subscribeToTopicsWhenDeviceReady(topics: [String]) async throws {
+    /// Subscribes to topics for this inbox/client
+    func subscribeToTopics(topics: [String]) async throws {
         guard case .ready(let result) = _state else {
             throw InboxStateError.inboxNotReady
         }
 
-        // Wait for device registration to complete
-        try await waitForDeviceRegistration()
-
-        // Now subscribe to topics
         let deviceId = DeviceInfo.deviceIdentifier
         try await result.apiClient.subscribeToTopics(
             deviceId: deviceId,
@@ -275,22 +233,16 @@ public actor InboxStateMachine {
         )
     }
 
-    /// Waits for device registration to complete.
-    private func waitForDeviceRegistration() async throws {
-        // If already registered, return immediately
-        if isDeviceRegistered {
-            return
+    /// Unsubscribes from topics for this inbox/client
+    func unsubscribeFromTopics(topics: [String]) async throws {
+        guard case .ready(let result) = _state else {
+            throw InboxStateError.inboxNotReady
         }
 
-        // If registration is in progress, wait for it
-        if let task = deviceRegistrationTask {
-            try await task.value
-            return
-        }
-
-        // No registration in progress, but not registered yet
-        // This can happen if push token hasn't arrived yet
-        Logger.warning("Device registration not started yet, continuing anyway (push token may not be available)")
+        try await result.apiClient.unsubscribeFromTopics(
+            clientId: result.client.installationId,
+            topics: topics
+        )
     }
 
     // MARK: - Private
@@ -466,12 +418,31 @@ public actor InboxStateMachine {
         await syncingManager?.start(with: client, apiClient: apiClient)
         inviteJoinRequestsManager?.start(with: client, apiClient: apiClient)
 
-        // Setup push notification observers if registrar is provided
-        if autoRegistersForPushNotifications {
-            setupPushNotificationObservers()
-            await performPushNotificationRegistration(client: client, apiClient: apiClient)
-        } else {
-            Logger.info("Auto push notification registration is disabled, skipping push notification setup")
+        // Register device with backend (with push token if available)
+        await registerDeviceIfNeeded(apiClient: apiClient)
+
+        // Setup observer to automatically re-register when push token changes
+        setupPushTokenObserver()
+    }
+
+    /// Registers device with backend after authentication
+    /// Only registers if push token has changed or this is the first registration
+    private func registerDeviceIfNeeded(apiClient: any ConvosAPIClientProtocol) async {
+        let deviceId = DeviceInfo.deviceIdentifier
+        let pushToken = PushNotificationRegistrar.token
+
+        // Check if we need to register (token changed or first time)
+        if lastRegisteredPushToken == pushToken {
+            Logger.info("Device already registered with this token, skipping")
+            return
+        }
+
+        do {
+            try await apiClient.registerDevice(deviceId: deviceId, pushToken: pushToken)
+            lastRegisteredPushToken = pushToken
+            Logger.info("Registered device with backend (token: \(pushToken != nil ? "present" : "nil"))")
+        } catch {
+            Logger.error("Failed to register device: \(error)")
         }
     }
 
@@ -506,10 +477,8 @@ public actor InboxStateMachine {
         emitStateChange(.stopping)
         await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
-        removePushNotificationObservers()
-        deviceRegistrationTask?.cancel()
-        deviceRegistrationTask = nil
-        isDeviceRegistered = false
+        removePushTokenObserver()
+        lastRegisteredPushToken = nil
         inboxId = nil
         emitStateChange(.uninitialized)
     }
@@ -531,11 +500,18 @@ public actor InboxStateMachine {
 
     /// Performs common cleanup operations when deleting or resetting an inbox
     private func performInboxCleanup(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
-        // Stop all services and observers
-        removePushNotificationObservers()
-        await pushNotificationRegistrar.unregisterInstallation(client: client, apiClient: apiClient)
+        // Stop all services
         await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
+
+        // Unregister client from backend
+        do {
+            try await apiClient.unregisterInstallation(clientId: client.installationId)
+            Logger.info("Unregistered client: \(client.installationId)")
+        } catch {
+            // Ignore errors during unregistration (common during account deletion when auth may be invalid)
+            Logger.info("Could not unregister client (likely during account deletion): \(error)")
+        }
 
         // Revoke installation if identity is available
         if let identity = try? await identityStore.identity(for: client.inboxId) {
@@ -734,83 +710,39 @@ public actor InboxStateMachine {
 
         return apiClient
     }
-}
 
-// MARK: - Push Notification Observers
+    // MARK: - Push Token Observer
 
-extension InboxStateMachine {
-    private func performPushNotificationRegistration(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
-        Logger.info("Registering for push notifications")
-
-        // Track device registration as a task so topic subscriptions can wait for it
-        deviceRegistrationTask = Task {
-            do {
-                // Step 1: Register device immediately without push token (early registration)
-                // This allows the backend to know about the device before APNS token arrives
-                try await pushNotificationRegistrar.registerDeviceWithoutToken(apiClient: apiClient)
-                await markDeviceAsRegistered()
-
-                // Step 2: Request APNS token from iOS system
-                await pushNotificationRegistrar.registerForRemoteNotifications()
-
-                // Step 3: Request system notification authorization
-                await pushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
-
-                // Step 4: If token is already available, update the registration
-                // (Token may have been received from previous app sessions)
-                await pushNotificationRegistrar.registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
-            } catch is CancellationError {
-                Logger.info("Device registration was cancelled")
-            } catch {
-                Logger.error("Device registration failed: \(error)")
-            }
-        }
-
-        // Wait for registration to complete
-        try? await deviceRegistrationTask?.value
-    }
-
-    private func markDeviceAsRegistered() {
-        isDeviceRegistered = true
-        Logger.info("Device registration completed")
-    }
-
-    private func setupPushNotificationObservers() {
+    private func setupPushTokenObserver() {
         guard pushTokenObserver == nil else { return }
-        Logger.info("Started observing for push token change...")
-        // Observe future token changes
+
+        Logger.info("Setting up push token observer...")
         pushTokenObserver = NotificationCenter.default.addObserver(
             forName: .convosPushTokenDidChange,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             Task { [weak self] in
-                await self?.handleTokenChange()
+                await self?.handlePushTokenChange()
             }
         }
     }
 
-    private func removePushNotificationObservers() {
-        if let pushTokenObserver { NotificationCenter.default.removeObserver(pushTokenObserver) }
-        pushTokenObserver = nil
+    private func removePushTokenObserver() {
+        if let observer = pushTokenObserver {
+            NotificationCenter.default.removeObserver(observer)
+            pushTokenObserver = nil
+            Logger.info("Removed push token observer")
+        }
     }
 
-    private func handleTokenChange() async {
-        guard case let .ready(result) = _state else { return }
-
-        // Reset registration state and register again with new token
-        deviceRegistrationTask?.cancel()
-        isDeviceRegistered = false
-
-        deviceRegistrationTask = Task {
-            await pushNotificationRegistrar.requestAuthAndRegisterIfNeeded(client: result.client, apiClient: result.apiClient)
-            await markDeviceAsRegistered()
+    private func handlePushTokenChange() async {
+        guard case .ready(let result) = _state else {
+            Logger.info("Push token changed but inbox not ready, skipping re-registration")
+            return
         }
 
-        do {
-            try await deviceRegistrationTask?.value
-        } catch {
-            Logger.error("Device re-registration after token change failed: \(error)")
-        }
+        Logger.info("Push token changed or became available, checking if re-registration needed...")
+        await registerDeviceIfNeeded(apiClient: result.apiClient)
     }
 }

@@ -39,10 +39,6 @@ public class MockMessagingService: MessagingServiceProtocol {
 
     public func reset() async {}
 
-    public func registerForPushNotifications() async {
-        // Mock implementation - no-op
-    }
-
     public var inboxStateManager: any InboxStateManagerProtocol {
         self
     }
@@ -114,7 +110,10 @@ extension MockMessagingService: InboxStateManagerProtocol {
         .init(client: self, apiClient: MockAPIClient(client: self))
     }
 
-    public func subscribeToTopicsWhenDeviceReady(topics: [String]) async throws {
+    public func subscribeToTopics(topics: [String]) async throws {
+    }
+
+    public func unsubscribeFromTopics(topics: [String]) async throws {
     }
 
     public func observeState(_ handler: @escaping (InboxStateMachine.State) -> Void) -> StateObserverHandle {

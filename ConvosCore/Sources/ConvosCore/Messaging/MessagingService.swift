@@ -26,8 +26,7 @@ final class MessagingService: MessagingServiceProtocol {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
-            startsStreamingServices: startsStreamingServices,
-            registersForPushNotifications: registersForPushNotifications
+            startsStreamingServices: startsStreamingServices
         )
         return MessagingService(
             authorizationOperation: authorizationOperation,
@@ -81,15 +80,6 @@ final class MessagingService: MessagingServiceProtocol {
 
     func reset() async {
         await authorizationOperation.reset()
-    }
-
-    // MARK: Push Notifications
-
-    /// Registers for push notifications once the inbox is in a ready state.
-    /// If already in ready state, registration happens immediately.
-    /// If not ready, waits for the ready state before registering.
-    func registerForPushNotifications() async {
-        await authorizationOperation.registerForPushNotifications()
     }
 
     // MARK: My Profile

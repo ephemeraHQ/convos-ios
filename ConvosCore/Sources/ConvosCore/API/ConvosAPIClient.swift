@@ -37,7 +37,6 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     var identifier: String { get }
 
     func authenticate(inboxId: String,
-                      installationId: String,
                       appCheckToken: String,
                       retryCount: Int) async throws -> String
 
@@ -181,13 +180,11 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     }
 
     private func reAuthenticate() async throws -> String {
-        let installationId = client.installationId
         let inboxId = client.inboxId
         let firebaseAppCheckToken = try await FirebaseHelperCore.getAppCheckToken()
 
         return try await authenticate(
             inboxId: inboxId,
-            installationId: installationId,
             appCheckToken: firebaseAppCheckToken,
             retryCount: 0
         )
@@ -195,8 +192,13 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
     // MARK: - Authentication
 
+    /// Authenticates with the backend to obtain a JWT token
+    /// - Parameters:
+    ///   - inboxId: Used to store the JWT token in keychain (not sent to backend)
+    ///   - appCheckToken: Firebase AppCheck token for authentication
+    ///   - retryCount: Number of retry attempts (for rate limiting)
+    /// - Returns: JWT token string
     func authenticate(inboxId: String,
-                      installationId: String,
                       appCheckToken: String,
                       retryCount: Int = 0) async throws -> String {
         let url = baseURL.appendingPathComponent("v2/auth/token")
@@ -237,7 +239,6 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             // Sleep and then retry
             try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             return try await authenticate(inboxId: inboxId,
-                                          installationId: installationId,
                                           appCheckToken: appCheckToken,
                                           retryCount: retryCount + 1)
         }
@@ -474,6 +475,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
     // MARK: - Notifications Registration & Subscriptions
 
+    /// Supports optional push token (for early registration)
     func registerDevice(deviceId: String, pushToken: String?) async throws {
         var request = try authenticatedRequest(for: "v2/notifications/register", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -486,23 +488,26 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         }
 
         let apnsEnv: String?
+        let pushTokenType: String?
         if pushToken != nil {
             apnsEnv = environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
+            pushTokenType = "apns"
             Logger.info("Registering device with push token and APNS environment: \(apnsEnv ?? "nil") (raw enum: \(environment.apnsEnvironment))")
         } else {
             apnsEnv = nil
+            pushTokenType = nil
             Logger.info("Registering device without push token (early registration)")
         }
 
         let body = RegisterDeviceRequest(
             deviceId: deviceId,
             pushToken: pushToken,
-            pushTokenType: pushToken != nil ? "apns" : nil,
+            pushTokenType: pushTokenType,
             apnsEnv: apnsEnv
         )
         request.httpBody = try JSONEncoder().encode(body)
 
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
             throw APIError.serverError("Failed v2/notifications/register: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
         }
@@ -524,7 +529,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             topics: topics
         ))
 
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
             throw APIError.serverError("Failed v2/notifications/subscribe: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
         }
@@ -540,7 +545,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         }
 
         request.httpBody = try JSONEncoder().encode(UnsubscribeRequest(clientId: clientId, topics: topics))
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
             throw APIError.serverError("Failed v2/notifications/unsubscribe: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
         }
@@ -549,7 +554,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     func unregisterInstallation(clientId: String) async throws {
         let path = "v2/notifications/unregister/\(clientId)"
         let request = try authenticatedRequest(for: path, method: "DELETE")
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, 200...299 ~= http.statusCode else {
             throw APIError.serverError("Failed DELETE v2/notifications/unregister: \((response as? HTTPURLResponse)?.statusCode.description ?? "?")")
         }
