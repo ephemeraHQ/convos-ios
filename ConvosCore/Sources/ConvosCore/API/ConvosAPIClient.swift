@@ -517,16 +517,30 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         var request = try authenticatedRequest(for: "v2/notifications/subscribe", method: "POST")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
+        struct HmacKey: Encodable {
+            let thirtyDayPeriodsSinceEpoch: Int
+            let key: String
+        }
+
+        struct TopicSubscription: Encodable {
+            let topic: String
+            let hmacKeys: [HmacKey]
+        }
+
         struct SubscribeRequest: Encodable {
             let deviceId: String
             let clientId: String
-            let topics: [String]
+            let topics: [TopicSubscription]
+        }
+
+        let topicSubscriptions: [TopicSubscription] = topics.map { topic in
+            TopicSubscription(topic: topic, hmacKeys: [])
         }
 
         request.httpBody = try JSONEncoder().encode(SubscribeRequest(
             deviceId: deviceId,
             clientId: clientId,
-            topics: topics
+            topics: topicSubscriptions
         ))
 
         let (_, response) = try await session.data(for: request)
