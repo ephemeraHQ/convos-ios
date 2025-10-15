@@ -59,7 +59,7 @@ public final class DeviceRegistrationManager {
                            daysSinceLastSuccess > 7
 
         guard shouldRegister else {
-            Logger.info("[DeviceRegistrationManager] Device already registered with this token (last success: \(Int(daysSinceLastSuccess)) days ago)")
+            Logger.info("Device already registered with this token (last success: \(Int(daysSinceLastSuccess)) days ago)")
             return
         }
 
@@ -68,7 +68,7 @@ public final class DeviceRegistrationManager {
                     "periodic refresh"
 
         do {
-            Logger.info("[DeviceRegistrationManager] Registering device (\(reason), token: \(pushToken != nil ? "present" : "nil"))")
+            Logger.info("Registering device (\(reason), token: \(pushToken != nil ? "present" : "nil"))")
 
             // Register device using AppCheck (handled by API client)
             try await apiClient.registerDevice(deviceId: deviceId, pushToken: pushToken)
@@ -82,9 +82,9 @@ public final class DeviceRegistrationManager {
                 UserDefaults.standard.removeObject(forKey: lastTokenKey)
             }
 
-            Logger.info("[DeviceRegistrationManager] Successfully registered device")
+            Logger.info("Successfully registered device")
         } catch {
-            Logger.error("[DeviceRegistrationManager] Failed to register device: \(error). Will retry on next attempt.")
+            Logger.error("Failed to register device: \(error). Will retry on next attempt.")
         }
     }
 
@@ -95,7 +95,7 @@ public final class DeviceRegistrationManager {
         UserDefaults.standard.removeObject(forKey: "lastRegisteredDevicePushToken_\(deviceId)")
         UserDefaults.standard.removeObject(forKey: "hasRegisteredDevice_\(deviceId)")
         UserDefaults.standard.removeObject(forKey: "lastSuccessfulRegistration_\(deviceId)")
-        Logger.info("[DeviceRegistrationManager] Cleared device registration state")
+        Logger.info("Cleared device registration state")
     }
 
     /// Returns true if this device has been registered at least once.
