@@ -32,6 +32,12 @@ struct ConvosApp: App {
         } else {
             Logger.error("Missing Firebase plist URL for current environment")
         }
+
+        // Register device with backend on app launch (independent of inbox state)
+        Task {
+            let deviceManager = DeviceRegistrationManager(environment: environment)
+            await deviceManager.registerDeviceIfNeeded()
+        }
     }
 
     var body: some Scene {

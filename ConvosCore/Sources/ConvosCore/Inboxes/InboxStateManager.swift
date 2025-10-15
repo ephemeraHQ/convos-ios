@@ -10,8 +10,6 @@ public protocol InboxStateManagerProtocol: AnyObject {
 
     func waitForInboxReadyResult() async throws -> InboxReadyResult
     func reauthorize(inboxId: String) async throws -> InboxReadyResult
-    func subscribeToTopics(topics: [String]) async throws
-    func unsubscribeFromTopics(topics: [String]) async throws
 
     func addObserver(_ observer: InboxStateObserver)
     func removeObserver(_ observer: InboxStateObserver)
@@ -156,22 +154,6 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         }
 
         throw InboxStateError.inboxNotReady
-    }
-
-    public func subscribeToTopics(topics: [String]) async throws {
-        guard let stateMachine = stateMachine else {
-            throw InboxStateError.inboxNotReady
-        }
-
-        try await stateMachine.subscribeToTopics(topics: topics)
-    }
-
-    public func unsubscribeFromTopics(topics: [String]) async throws {
-        guard let stateMachine = stateMachine else {
-            throw InboxStateError.inboxNotReady
-        }
-
-        try await stateMachine.unsubscribeFromTopics(topics: topics)
     }
 
     public func observeState(_ handler: @escaping (InboxStateMachine.State) -> Void) -> StateObserverHandle {

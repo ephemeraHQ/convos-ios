@@ -289,6 +289,9 @@ public actor ConversationStateMachine {
     private func handleCreate() async throws {
         emitStateChange(.creating)
 
+        // Request push notification permissions when user creates a conversation
+        await PushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
+
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
         Logger.info("Inbox ready, creating conversation...")
 
@@ -328,13 +331,22 @@ public actor ConversationStateMachine {
         let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
         _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
 
-        // Subscribe to push notifications (ensures device is registered first)
+        // Subscribe to push notifications using clientId from keychain
         let topic = externalConversationId.xmtpGroupTopicFormat
-        do {
-            try await inboxStateManager.subscribeToTopics(topics: [topic])
-            Logger.info("Subscribed to push topic: \(topic)")
-        } catch {
-            Logger.error("Failed subscribing to topic \(topic): \(error)")
+        if let identity = try? await identityStore.identity(for: client.inboxId) {
+            do {
+                let deviceId = DeviceInfo.deviceIdentifier
+                try await apiClient.subscribeToTopics(
+                    deviceId: deviceId,
+                    clientId: identity.clientId,
+                    topics: [topic]
+                )
+                Logger.info("Subscribed to push topic: \(topic)")
+            } catch {
+                Logger.error("Failed subscribing to topic \(topic): \(error)")
+            }
+        } else {
+            Logger.warning("Identity not found, skipping push notification subscription")
         }
 
         // Transition directly to ready state
@@ -430,6 +442,9 @@ public actor ConversationStateMachine {
     ) async throws {
         emitStateChange(.joining(invite: invite, placeholder: placeholder))
 
+        // Request push notification permissions when user joins a conversation
+        await PushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
+
         Logger.info("Requesting to join conversation...")
 
         let apiClient = inboxReady.apiClient
@@ -473,13 +488,22 @@ public actor ConversationStateMachine {
                     let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
                     _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
 
-                    // Subscribe to push notifications (ensures device is registered first)
+                    // Subscribe to push notifications using clientId from keychain
                     let topic = conversation.id.xmtpGroupTopicFormat
-                    do {
-                        try await inboxStateManager.subscribeToTopics(topics: [topic])
-                        Logger.info("Subscribed to push topic after join: \(topic)")
-                    } catch {
-                        Logger.error("Failed subscribing to topic after join \(topic): \(error)")
+                    if let identity = try? await identityStore.identity(for: client.inboxId) {
+                        do {
+                            let deviceId = DeviceInfo.deviceIdentifier
+                            try await apiClient.subscribeToTopics(
+                                deviceId: deviceId,
+                                clientId: identity.clientId,
+                                topics: [topic]
+                            )
+                            Logger.info("Subscribed to push topic after join: \(topic)")
+                        } catch {
+                            Logger.error("Failed subscribing to topic after join \(topic): \(error)")
+                        }
+                    } else {
+                        Logger.warning("Identity not found, skipping push notification subscription")
                     }
 
                     // Transition directly to ready state
@@ -570,13 +594,31 @@ public actor ConversationStateMachine {
         let externalConversation = try await client.conversationsProvider.findConversation(conversationId: conversationId)
         try await externalConversation?.updateConsentState(state: .denied)
 
+        // Get clientId from keychain (privacy-preserving identifier, not XMTP installationId)
+        guard let identity = try? await identityStore.identity(for: client.inboxId) else {
+            Logger.warning("Identity not found, skipping push notification cleanup for: \(client.inboxId)")
+            return
+        }
+
+        let clientId = identity.clientId
+
+        // Unsubscribe from conversation's push notification topic
         let topic = conversationId.xmtpGroupTopicFormat
         do {
-            try await apiClient.unsubscribeFromTopics(clientId: client.installationId, topics: [topic])
+            try await apiClient.unsubscribeFromTopics(clientId: clientId, topics: [topic])
             Logger.info("Unsubscribed from push topic: \(topic)")
         } catch {
             Logger.error("Failed unsubscribing from topic \(topic): \(error)")
             // Continue with cleanup even if unsubscribe fails
+        }
+
+        // Unregister the installation from backend
+        do {
+            try await apiClient.unregisterInstallation(clientId: clientId)
+            Logger.info("Unregistered installation from backend: \(clientId)")
+        } catch {
+            Logger.error("Failed unregistering installation \(clientId): \(error)")
+            // Continue with cleanup even if unregister fails
         }
 
         // Clean up database records

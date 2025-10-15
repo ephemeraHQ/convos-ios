@@ -31,6 +31,10 @@ class MockBaseAPIClient: ConvosAPIBaseProtocol {
         }
         return URLRequest(url: url)
     }
+
+    func registerDevice(deviceId: String, pushToken: String?) async throws {
+        // Mock implementation - no-op
+    }
 }
 
 class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
@@ -73,9 +77,6 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
     }
 
     // MARK: - Notifications mocks
-    func registerDevice(deviceId: String, pushToken: String?) async throws {
-        // no-op in mock
-    }
 
     func subscribeToTopics(deviceId: String, clientId: String, topics: [String]) async throws {
         // no-op in mock

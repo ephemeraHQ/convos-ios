@@ -102,13 +102,15 @@ public actor InboxStateMachine {
     private let inviteJoinRequestsManager: AnyInviteJoinRequestsManager?
     private let savesInboxToDatabase: Bool
     private let databaseWriter: any DatabaseWriter
+    private lazy var deviceRegistrationManager: DeviceRegistrationManager = {
+        DeviceRegistrationManager(environment: environment)
+    }()
 
     private var inboxId: String?
     private var currentTask: Task<Void, Never>?
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
     private var pushTokenObserver: NSObjectProtocol?
-    private var lastRegisteredPushToken: String?
 
     // MARK: - State Observation
 
@@ -217,32 +219,6 @@ public actor InboxStateMachine {
 
     func reset() {
         enqueueAction(.reset)
-    }
-
-    /// Subscribes to topics for this inbox/client
-    func subscribeToTopics(topics: [String]) async throws {
-        guard case .ready(let result) = _state else {
-            throw InboxStateError.inboxNotReady
-        }
-
-        let deviceId = DeviceInfo.deviceIdentifier
-        try await result.apiClient.subscribeToTopics(
-            deviceId: deviceId,
-            clientId: result.client.installationId,
-            topics: topics
-        )
-    }
-
-    /// Unsubscribes from topics for this inbox/client
-    func unsubscribeFromTopics(topics: [String]) async throws {
-        guard case .ready(let result) = _state else {
-            throw InboxStateError.inboxNotReady
-        }
-
-        try await result.apiClient.unsubscribeFromTopics(
-            clientId: result.client.installationId,
-            topics: topics
-        )
     }
 
     // MARK: - Private
@@ -396,10 +372,8 @@ public actor InboxStateMachine {
 
     private func handleClientAuthorized(_ client: any XMTPClientProvider) async throws {
         emitStateChange(.authenticatingBackend)
-
-        Logger.info("Authenticating API client...")
-        let apiClient = initializeApiClient(client: client)
-
+        Logger.info("Authenticating backend for authorization...")
+        let apiClient = try await authorizeConvosBackend(client: client)
         enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
     }
 
@@ -418,32 +392,11 @@ public actor InboxStateMachine {
         await syncingManager?.start(with: client, apiClient: apiClient)
         inviteJoinRequestsManager?.start(with: client, apiClient: apiClient)
 
-        // Register device with backend (with push token if available)
-        await registerDeviceIfNeeded(apiClient: apiClient)
+        // Register device with backend
+        await deviceRegistrationManager.registerDeviceIfNeeded()
 
         // Setup observer to automatically re-register when push token changes
         setupPushTokenObserver()
-    }
-
-    /// Registers device with backend after authentication
-    /// Only registers if push token has changed or this is the first registration
-    private func registerDeviceIfNeeded(apiClient: any ConvosAPIClientProtocol) async {
-        let deviceId = DeviceInfo.deviceIdentifier
-        let pushToken = PushNotificationRegistrar.token
-
-        // Check if we need to register (token changed or first time)
-        if lastRegisteredPushToken == pushToken {
-            Logger.info("Device already registered with this token, skipping")
-            return
-        }
-
-        do {
-            try await apiClient.registerDevice(deviceId: deviceId, pushToken: pushToken)
-            lastRegisteredPushToken = pushToken
-            Logger.info("Registered device with backend (token: \(pushToken != nil ? "present" : "nil"))")
-        } catch {
-            Logger.error("Failed to register device: \(error)")
-        }
     }
 
     private func handleDelete(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
@@ -478,7 +431,10 @@ public actor InboxStateMachine {
         await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
         removePushTokenObserver()
-        lastRegisteredPushToken = nil
+
+        // Note: We do NOT clear device registration state here
+        // Device registration persists across inbox switches (app-level, not inbox-level)
+
         inboxId = nil
         emitStateChange(.uninitialized)
     }
@@ -504,13 +460,17 @@ public actor InboxStateMachine {
         await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
 
-        // Unregister client from backend
-        do {
-            try await apiClient.unregisterInstallation(clientId: client.installationId)
-            Logger.info("Unregistered client: \(client.installationId)")
-        } catch {
-            // Ignore errors during unregistration (common during account deletion when auth may be invalid)
-            Logger.info("Could not unregister client (likely during account deletion): \(error)")
+        // Unregister installation from backend using clientId (not XMTP installationId)
+        if let identity = try? await identityStore.identity(for: client.inboxId) {
+            do {
+                try await apiClient.unregisterInstallation(clientId: identity.clientId)
+                Logger.info("Unregistered installation from backend: \(identity.clientId)")
+            } catch {
+                // Ignore errors during unregistration (common during account deletion when auth may be invalid)
+                Logger.info("Could not unregister installation (likely during account deletion): \(error)")
+            }
+        } else {
+            Logger.warning("Identity not found, skipping backend unregistration")
         }
 
         // Revoke installation if identity is available
@@ -737,12 +697,12 @@ public actor InboxStateMachine {
     }
 
     private func handlePushTokenChange() async {
-        guard case .ready(let result) = _state else {
+        guard case .ready = _state else {
             Logger.info("Push token changed but inbox not ready, skipping re-registration")
             return
         }
 
-        Logger.info("Push token changed or became available, checking if re-registration needed...")
-        await registerDeviceIfNeeded(apiClient: result.apiClient)
+        Logger.info("Push token changed or became available, re-registering device...")
+        await deviceRegistrationManager.registerDeviceIfNeeded()
     }
 }

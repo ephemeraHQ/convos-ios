@@ -8,10 +8,36 @@ import UserNotifications
 @MainActor
 class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     var session: (any SessionManagerProtocol)?
+    private var pushTokenObserver: NSObjectProtocol?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+
+        // Setup global observer for push token changes (app-level, not inbox-specific)
+        setupPushTokenObserver()
+
         return true
+    }
+
+    deinit {
+        if let observer = pushTokenObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
+    private func setupPushTokenObserver() {
+        pushTokenObserver = NotificationCenter.default.addObserver(
+            forName: .convosPushTokenDidChange,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task {
+                let environment = ConfigManager.shared.currentEnvironment
+                let deviceManager = DeviceRegistrationManager(environment: environment)
+                await deviceManager.registerDeviceIfNeeded()
+            }
+        }
+        Logger.info("Setup global push token observer in app delegate")
     }
 
     func application(_ application: UIApplication,
