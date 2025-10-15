@@ -244,6 +244,7 @@ class NewConversationViewModel: Identifiable {
             isWaitingForInviteAcceptance = false
             isValidatingInvite = false
             isCreatingConversation = false
+            messagesTopBarTrailingItemEnabled = false
             currentError = nil
 
         case .creating:
@@ -266,22 +267,17 @@ class NewConversationViewModel: Identifiable {
 
         case .joining:
             // This is the waiting state - user is waiting for inviter to accept
+            messagesTopBarTrailingItemEnabled = false
             messagesTopBarTrailingItem = .share
             isWaitingForInviteAcceptance = true
+            shouldConfirmDeletingConversation = false
+            conversationViewModel.untitledConversationPlaceholder = "Untitled"
             isValidatingInvite = false
             isCreatingConversation = false
             currentError = nil
             Logger.info("Waiting for invite acceptance...")
 
-        case .ready(let result):
-            switch result.origin {
-            case .joined:
-                break
-            case .created:
-                break
-            case .existing:
-                break
-            }
+        case .ready:
             messagesTopBarTrailingItemEnabled = true
             messagesBottomBarEnabled = true
             isWaitingForInviteAcceptance = false
@@ -302,7 +298,6 @@ class NewConversationViewModel: Identifiable {
             isCreatingConversation = false
             currentError = error
             Logger.error("Conversation state error: \(error.localizedDescription)")
-
             // Handle specific error types
             handleError(error)
         }

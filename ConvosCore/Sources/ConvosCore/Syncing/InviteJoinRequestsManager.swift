@@ -83,7 +83,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
         guard let conversation = try await client.conversationsProvider.findConversation(
             conversationId: conversationId
-        ) else {
+        ), try conversation.consentState() == .allowed else {
             Logger.warning("Conversation \(conversationId) not found on XMTP")
             throw InviteJoinRequestError.conversationNotFound(conversationId)
         }

@@ -59,6 +59,7 @@ struct NewConversationView: View {
     let viewModel: NewConversationViewModel
     @State private var hasShownScannerOnAppear: Bool = false
     @State private var presentingDeleteConfirmation: Bool = false
+    @State private var presentingJoiningStateInfo: Bool = false
     @State private var sidebarWidth: CGFloat = 0.0
 
     @FocusState private var focusState: MessagesViewInputFocus?
@@ -103,7 +104,16 @@ struct NewConversationView: View {
                                 Button(role: .close) {
                                     if viewModel.shouldConfirmDeletingConversation {
                                         presentingDeleteConfirmation = true
+                                    } else if viewModel.isWaitingForInviteAcceptance {
+                                        presentingJoiningStateInfo = true
                                     } else {
+                                        dismiss()
+                                    }
+                                }
+                                .confirmationDialog("This convo will appear on your home screen after someone approves you",
+                                                    isPresented: $presentingJoiningStateInfo,
+                                                    titleVisibility: .visible) {
+                                    Button("Continue") {
                                         dismiss()
                                     }
                                 }
