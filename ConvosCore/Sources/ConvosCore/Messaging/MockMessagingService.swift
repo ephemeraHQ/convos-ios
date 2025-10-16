@@ -232,6 +232,10 @@ class MockConversations: ConversationsProvider {
         []
     }
 
+    func listDms(createdAfter: Date?, createdBefore: Date?, limit: Int?, consentStates: [ConsentState]?) throws -> [Dm] {
+        []
+    }
+
     func list(
         createdAfter: Date?,
         createdBefore: Date?,
