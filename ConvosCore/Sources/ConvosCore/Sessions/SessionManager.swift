@@ -240,6 +240,9 @@ public final class SessionManager: SessionManagerProtocol {
     }
 
     public func deleteAllInboxes() async throws {
+        // Always clear device registration state, even if deletion fails
+        defer { DeviceRegistrationManager.clearRegistrationState() }
+
         let services = serviceQueue.sync {
             let copy = messagingServices
             messagingServices.removeAll()
@@ -257,9 +260,6 @@ public final class SessionManager: SessionManagerProtocol {
         // Delete all from database
         let inboxWriter = InboxWriter(dbWriter: databaseWriter)
         try await inboxWriter.deleteAll()
-
-        // Clear device registration state (forces re-registration with backend on next use)
-        DeviceRegistrationManager.clearRegistrationState()
     }
 
     // MARK: - Messaging Services
