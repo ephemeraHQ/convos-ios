@@ -240,7 +240,7 @@ public final class SessionManager: SessionManagerProtocol {
     }
 
     public func deleteAllInboxes() async throws {
-        let services = serviceQueue.sync {
+        let services = serviceQueue.sync(flags: .barrier) {
             let copy = messagingServices
             messagingServices.removeAll()
             return copy
