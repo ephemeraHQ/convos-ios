@@ -108,7 +108,8 @@ public final class SessionManager: SessionManagerProtocol {
             }
 
         activeConversationObserver = NotificationCenter.default
-            .addObserver(forName: .activeConversationChanged, object: nil, queue: .main) { notification in
+            .addObserver(forName: .activeConversationChanged, object: nil, queue: .main) { [weak self] notification in
+                guard let self else { return }
                 let conversationId = notification.userInfo?["conversationId"] as? String
                 self.setActiveConversationId(conversationId)
                 Logger.info("Active conversation changed to: \(conversationId ?? "none")")
