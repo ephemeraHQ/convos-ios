@@ -387,9 +387,17 @@ public actor InboxStateMachine {
 
         // Conditionally save to database based on configuration
         if savesInboxToDatabase {
-            let inboxWriter = InboxWriter(dbWriter: databaseWriter)
-            try await inboxWriter.save(inboxId: client.inboxId, clientId: clientId.value)
-            Logger.info("Saved inbox to database with clientId: \(clientId.value)")
+            do {
+                let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+                try await inboxWriter.save(inboxId: client.inboxId, clientId: clientId.value)
+                Logger.info("Saved inbox to database with clientId: \(clientId.value)")
+            } catch {
+                // Rollback keychain entry on database failure to maintain consistency
+                Logger.error("Failed to save inbox to database, rolling back keychain: \(error)")
+                self.inboxId = nil
+                try? await identityStore.delete(inboxId: client.inboxId)
+                throw error
+            }
         } else {
             Logger.info("Skipping database save for inbox: \(client.inboxId) (unused inbox)")
         }
