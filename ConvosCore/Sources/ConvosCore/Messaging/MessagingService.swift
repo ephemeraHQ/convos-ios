@@ -78,8 +78,13 @@ final class MessagingService: MessagingServiceProtocol {
         await authorizationOperation.stopAndDelete()
     }
 
-    func reset() async {
-        await authorizationOperation.reset()
+    // MARK: Push Notifications
+
+    /// Registers for push notifications once the inbox is in a ready state.
+    /// If already in ready state, registration happens immediately.
+    /// If not ready, waits for the ready state before registering.
+    func registerForPushNotifications() async {
+        await authorizationOperation.registerForPushNotifications()
     }
 
     // MARK: My Profile

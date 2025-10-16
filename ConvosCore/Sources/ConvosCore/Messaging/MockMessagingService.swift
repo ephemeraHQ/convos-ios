@@ -37,7 +37,8 @@ public class MockMessagingService: MessagingServiceProtocol {
 
     public func stopAndDelete() async {}
 
-    public func reset() async {}
+    public func registerForPushNotifications() async {
+    }
 
     public var inboxStateManager: any InboxStateManagerProtocol {
         self

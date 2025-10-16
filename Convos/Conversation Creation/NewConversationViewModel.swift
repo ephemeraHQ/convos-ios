@@ -70,7 +70,7 @@ class NewConversationViewModel: Identifiable {
     // MARK: - Private
 
     private let conversationStateManager: any ConversationStateManagerProtocol
-    private var newConversationTask: Task<Void, Never>?
+    private var newConversationTask: Task<Void, Error>?
     private var joinConversationTask: Task<Void, Error>?
     private var cancellables: Set<AnyCancellable> = []
     private var stateObserverHandle: ConversationStateObserverHandle?
@@ -130,7 +130,7 @@ class NewConversationViewModel: Identifiable {
             self.conversationViewModel.showsInfoView = false
         }
         if autoCreateConversation {
-            Task {
+            newConversationTask = Task {
                 try await conversationStateManager.createConversation()
             }
         }
@@ -244,6 +244,7 @@ class NewConversationViewModel: Identifiable {
             isWaitingForInviteAcceptance = false
             isValidatingInvite = false
             isCreatingConversation = false
+            messagesTopBarTrailingItemEnabled = false
             currentError = nil
 
         case .creating:
@@ -266,22 +267,17 @@ class NewConversationViewModel: Identifiable {
 
         case .joining:
             // This is the waiting state - user is waiting for inviter to accept
+            messagesTopBarTrailingItemEnabled = false
             messagesTopBarTrailingItem = .share
             isWaitingForInviteAcceptance = true
+            shouldConfirmDeletingConversation = false
+            conversationViewModel.untitledConversationPlaceholder = "Untitled"
             isValidatingInvite = false
             isCreatingConversation = false
             currentError = nil
             Logger.info("Waiting for invite acceptance...")
 
-        case .ready(let result):
-            switch result.origin {
-            case .joined:
-                break
-            case .created:
-                break
-            case .existing:
-                break
-            }
+        case .ready:
             messagesTopBarTrailingItemEnabled = true
             messagesBottomBarEnabled = true
             isWaitingForInviteAcceptance = false
@@ -302,7 +298,6 @@ class NewConversationViewModel: Identifiable {
             isCreatingConversation = false
             currentError = error
             Logger.error("Conversation state error: \(error.localizedDescription)")
-
             // Handle specific error types
             handleError(error)
         }
@@ -313,24 +308,19 @@ class NewConversationViewModel: Identifiable {
         // Map state machine errors to appropriate UI states
         if let stateMachineError = error as? ConversationStateMachineError {
             switch stateMachineError {
-            case .invalidInviteCodeFormat, .inviteExpired:
+            case .invalidInviteCodeFormat, .inviteExpired, .failedVerifyingSignature:
                 presentingInvalidInviteSheet = true
-                if startedWithFullscreenScanner {
-                    showingFullScreenScanner = true
-                    conversationViewModel.showsInfoView = false
-                }
-
-            case .timedOut:
-                presentingFailedToJoinSheet = true
-                if startedWithFullscreenScanner {
-                    showingFullScreenScanner = true
-                    conversationViewModel.showsInfoView = false
-                }
-
-            case .failedFindingConversation, .failedVerifyingSignature, .stateMachineError:
+            case .failedFindingConversation, .stateMachineError, .timedOut:
                 // Generic error - could show a different alert
                 presentingFailedToJoinSheet = true
             }
+        } else {
+            presentingFailedToJoinSheet = true
+        }
+
+        if startedWithFullscreenScanner {
+            showingFullScreenScanner = true
+            conversationViewModel.showsInfoView = false
         }
     }
 

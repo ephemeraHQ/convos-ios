@@ -32,7 +32,6 @@ public protocol MessagingServiceProtocol: AnyObject {
     func stop()
     func stopAndDelete()
     func stopAndDelete() async
-    func reset() async
 
     func myProfileWriter() -> any MyProfileWriterProtocol
 

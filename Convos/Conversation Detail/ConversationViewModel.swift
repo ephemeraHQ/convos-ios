@@ -43,7 +43,9 @@ class ConversationViewModel {
     private(set) var profile: Profile = .empty(inboxId: "")
     var untitledConversationPlaceholder: String = "Untitled"
     var conversationInfoSubtitle: String {
-        !conversation.hasJoined || conversation.members.count > 1 ? conversation.membersCountString : "Customize"
+        (
+            !conversation.hasJoined || conversation.members.count > 1
+        ) && !conversation.isDraft ? conversation.membersCountString : "Customize"
     }
     var conversationNamePlaceholder: String = "Name"
     var conversationDescriptionPlaceholder: String = "Description"
