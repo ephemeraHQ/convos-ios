@@ -30,14 +30,16 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
-        startsStreamingServices: Bool
+        startsStreamingServices: Bool,
+        autoRegistersForPushNotifications: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
             identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
-            startsStreamingServices: startsStreamingServices
+            startsStreamingServices: startsStreamingServices,
+            autoRegistersForPushNotifications: autoRegistersForPushNotifications
         )
         operation.authorize(inboxId: inboxId)
         return operation
@@ -68,7 +70,8 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
-        savesInboxToDatabase: Bool = true
+        savesInboxToDatabase: Bool = true,
+        autoRegistersForPushNotifications: Bool = true
     ) {
         let syncingManager = startsStreamingServices ? SyncingManager(
             identityStore: identityStore,
@@ -86,6 +89,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             syncingManager: syncingManager,
             inviteJoinRequestsManager: inviteJoinRequestsManager,
             savesInboxToDatabase: savesInboxToDatabase,
+            autoRegistersForPushNotifications: autoRegistersForPushNotifications,
             environment: environment
         )
     }

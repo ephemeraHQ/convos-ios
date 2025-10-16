@@ -16,7 +16,8 @@ final class MessagingService: MessagingServiceProtocol {
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
         environment: AppEnvironment,
-        startsStreamingServices: Bool
+        startsStreamingServices: Bool,
+        autoRegistersForPushNotifications: Bool = true
     ) -> MessagingService {
         let identityStore = environment.defaultIdentityStore
         let authorizationOperation = AuthorizeInboxOperation.authorize(
@@ -25,7 +26,8 @@ final class MessagingService: MessagingServiceProtocol {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
-            startsStreamingServices: startsStreamingServices
+            startsStreamingServices: startsStreamingServices,
+            autoRegistersForPushNotifications: autoRegistersForPushNotifications
         )
         return MessagingService(
             authorizationOperation: authorizationOperation,

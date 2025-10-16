@@ -101,6 +101,7 @@ public actor InboxStateMachine {
     private let syncingManager: AnySyncingManager?
     private let inviteJoinRequestsManager: AnyInviteJoinRequestsManager?
     private let savesInboxToDatabase: Bool
+    private let autoRegistersForPushNotifications: Bool
     private let databaseWriter: any DatabaseWriter
     private lazy var deviceRegistrationManager: DeviceRegistrationManager = {
         DeviceRegistrationManager(environment: environment)
@@ -183,6 +184,7 @@ public actor InboxStateMachine {
         syncingManager: AnySyncingManager?,
         inviteJoinRequestsManager: AnyInviteJoinRequestsManager?,
         savesInboxToDatabase: Bool = true,
+        autoRegistersForPushNotifications: Bool = true,
         environment: AppEnvironment
     ) {
         self.identityStore = identityStore
@@ -191,6 +193,7 @@ public actor InboxStateMachine {
         self.syncingManager = syncingManager
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.savesInboxToDatabase = savesInboxToDatabase
+        self.autoRegistersForPushNotifications = autoRegistersForPushNotifications
         self.environment = environment
 
         // Set custom XMTP host if provided
@@ -426,11 +429,13 @@ public actor InboxStateMachine {
         await syncingManager?.start(with: client, apiClient: apiClient)
         inviteJoinRequestsManager?.start(with: client, apiClient: apiClient)
 
-        // Register device with backend
-        await deviceRegistrationManager.registerDeviceIfNeeded()
-
-        // Setup observer to automatically re-register when push token changes
-        setupPushTokenObserver()
+        // Setup push notification observers if auto-registration is enabled
+        if autoRegistersForPushNotifications {
+            setupPushTokenObserver()
+            await performPushNotificationRegistration(client: client, apiClient: apiClient)
+        } else {
+            Logger.info("Auto push notification registration is disabled, skipping push notification setup")
+        }
     }
 
     private func handleDelete(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
@@ -690,6 +695,18 @@ public actor InboxStateMachine {
         _ = try await apiClient.checkAuth()
 
         return apiClient
+    }
+
+    // MARK: - Push Notification Registration
+
+    private func performPushNotificationRegistration(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
+        Logger.info("Registering for push notifications")
+
+        // Request system notification authorization and trigger APNS registration
+        await PushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
+
+        // Register device with backend (includes deviceId + optional push token)
+        await deviceRegistrationManager.registerDeviceIfNeeded()
     }
 
     // MARK: - Push Token Observer
