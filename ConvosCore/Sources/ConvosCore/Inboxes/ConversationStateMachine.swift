@@ -338,18 +338,21 @@ public actor ConversationStateMachine {
         _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
 
         // Subscribe to push notifications using clientId from keychain
-        let topic = externalConversationId.xmtpGroupTopicFormat
+        let conversationTopic = externalConversationId.xmtpGroupTopicFormat
+        let welcomeTopic = "w-\(client.installationId)"
+
         if let identity = try? await identityStore.identity(for: client.inboxId) {
             do {
                 let deviceId = DeviceInfo.deviceIdentifier
+                // Subscribe to both conversation topic and welcome topic in one call
                 try await apiClient.subscribeToTopics(
                     deviceId: deviceId,
                     clientId: identity.clientId,
-                    topics: [topic]
+                    topics: [conversationTopic, welcomeTopic]
                 )
-                Logger.info("Subscribed to push topic: \(topic)")
+                Logger.info("Subscribed to push topics: \(conversationTopic), \(welcomeTopic)")
             } catch {
-                Logger.error("Failed subscribing to topic \(topic): \(error)")
+                Logger.error("Failed subscribing to topics: \(error)")
             }
         } else {
             Logger.warning("Identity not found, skipping push notification subscription")
@@ -505,18 +508,21 @@ public actor ConversationStateMachine {
                     _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
 
                     // Subscribe to push notifications using clientId from keychain
-                    let topic = conversation.id.xmtpGroupTopicFormat
+                    let conversationTopic = conversation.id.xmtpGroupTopicFormat
+                    let welcomeTopic = "w-\(client.installationId)"
+
                     if let identity = try? await identityStore.identity(for: client.inboxId) {
                         do {
                             let deviceId = DeviceInfo.deviceIdentifier
+                            // Subscribe to both conversation topic and welcome topic in one call
                             try await apiClient.subscribeToTopics(
                                 deviceId: deviceId,
                                 clientId: identity.clientId,
-                                topics: [topic]
+                                topics: [conversationTopic, welcomeTopic]
                             )
-                            Logger.info("Subscribed to push topic after join: \(topic)")
+                            Logger.info("Subscribed to push topics after join: \(conversationTopic), \(welcomeTopic)")
                         } catch {
-                            Logger.error("Failed subscribing to topic after join \(topic): \(error)")
+                            Logger.error("Failed subscribing to topics after join: \(error)")
                         }
                     } else {
                         Logger.warning("Identity not found, skipping push notification subscription")
