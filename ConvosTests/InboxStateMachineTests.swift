@@ -46,7 +46,11 @@ struct InboxStateMachineTests {
             await stateIterator.next()
         }
         Logger.info("🔍 Got third state: \(String(describing: third))")
-        #expect(third == .authorizing)
+        if case .authorizing = third {
+            // Expected state
+        } else {
+            #expect(Bool(false), "Expected .authorizing state, got \(String(describing: third))")
+        }
 
         Logger.info("🔍 Waiting for registering state...")
         let fourth = await withTimeout(seconds: 10) {
@@ -119,7 +123,11 @@ struct InboxStateMachineTests {
             await stateIterator.next()
         }
         Logger.info("🔍 Got third state: \(String(describing: third))")
-        #expect(third == .authorizing)
+        if case .authorizing = third {
+            // Expected state
+        } else {
+            #expect(Bool(false), "Expected .authorizing state, got \(String(describing: third))")
+        }
 
         let fourth = await withTimeout(seconds: 10) {
             await stateIterator.next()
@@ -166,7 +174,11 @@ struct InboxStateMachineTests {
             await signInStateIterator.next()
         }
         Logger.info("🔍 Got sign in third state: \(String(describing: signInThird))")
-        #expect(signInThird == .authorizing)
+        if case .authorizing = signInThird {
+            // Expected state
+        } else {
+            #expect(Bool(false), "Expected .authorizing state, got \(String(describing: signInThird))")
+        }
 
         let signInFourth = await withTimeout(seconds: 10) {
             await signInStateIterator.next()
