@@ -339,7 +339,7 @@ public actor ConversationStateMachine {
 
         // Subscribe to push notifications using clientId from keychain
         let conversationTopic = externalConversationId.xmtpGroupTopicFormat
-        let welcomeTopic = "w-\(client.installationId)"
+        let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
 
         if let identity = try? await identityStore.identity(for: client.inboxId) {
             do {
@@ -509,7 +509,7 @@ public actor ConversationStateMachine {
 
                     // Subscribe to push notifications using clientId from keychain
                     let conversationTopic = conversation.id.xmtpGroupTopicFormat
-                    let welcomeTopic = "w-\(client.installationId)"
+                    let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
 
                     if let identity = try? await identityStore.identity(for: client.inboxId) {
                         do {
