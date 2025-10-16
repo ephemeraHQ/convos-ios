@@ -70,7 +70,7 @@ class NewConversationViewModel: Identifiable {
     // MARK: - Private
 
     private let conversationStateManager: any ConversationStateManagerProtocol
-    private var newConversationTask: Task<Void, Never>?
+    private var newConversationTask: Task<Void, Error>?
     private var joinConversationTask: Task<Void, Error>?
     private var cancellables: Set<AnyCancellable> = []
     private var stateObserverHandle: ConversationStateObserverHandle?
@@ -130,7 +130,7 @@ class NewConversationViewModel: Identifiable {
             self.conversationViewModel.showsInfoView = false
         }
         if autoCreateConversation {
-            Task {
+            newConversationTask = Task {
                 try await conversationStateManager.createConversation()
             }
         }
