@@ -59,11 +59,12 @@ extension MessagingService {
         }
 
         guard let encryptedMessage = protocolData.encryptedMessage,
-           let contentTopic = protocolData.contentTopic,
-           let currentInboxId = payload.inboxId else {
+           let contentTopic = protocolData.contentTopic else {
             Logger.error("Invalid protocolData in notification payload")
             return nil
         }
+
+        let currentInboxId = client.inboxId
 
         // Try to decode the text message for notification display
         return try await decodeTextMessageWithSender(

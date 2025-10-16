@@ -611,33 +611,37 @@ public actor ConversationStateMachine {
         try await externalConversation?.updateConsentState(state: .denied)
 
         // Get clientId from keychain (privacy-preserving identifier, not XMTP installationId)
-        guard let identity = try? await identityStore.identity(for: client.inboxId) else {
+        // Make optional - don't exit early if missing, only skip push notification cleanup
+        let identity = try? await identityStore.identity(for: client.inboxId)
+        if identity == nil {
             Logger.warning("Identity not found, skipping push notification cleanup for: \(client.inboxId)")
-            return
         }
 
-        let clientId = identity.clientId
+        let clientId = identity?.clientId
 
-        // Unsubscribe from conversation's push notification topic
-        let topic = conversationId.xmtpGroupTopicFormat
-        do {
-            try await apiClient.unsubscribeFromTopics(clientId: clientId, topics: [topic])
-            Logger.info("Unsubscribed from push topic: \(topic)")
-        } catch {
-            Logger.error("Failed unsubscribing from topic \(topic): \(error)")
-            // Continue with cleanup even if unsubscribe fails
+        // Only perform push notification cleanup if we have a clientId
+        if let clientId = clientId {
+            // Unsubscribe from conversation's push notification topic
+            let topic = conversationId.xmtpGroupTopicFormat
+            do {
+                try await apiClient.unsubscribeFromTopics(clientId: clientId, topics: [topic])
+                Logger.info("Unsubscribed from push topic: \(topic)")
+            } catch {
+                Logger.error("Failed unsubscribing from topic \(topic): \(error)")
+                // Continue with cleanup even if unsubscribe fails
+            }
+
+            // Unregister the installation from backend
+            do {
+                try await apiClient.unregisterInstallation(clientId: clientId)
+                Logger.info("Unregistered installation from backend: \(clientId)")
+            } catch {
+                Logger.error("Failed unregistering installation \(clientId): \(error)")
+                // Continue with cleanup even if unregister fails
+            }
         }
 
-        // Unregister the installation from backend
-        do {
-            try await apiClient.unregisterInstallation(clientId: clientId)
-            Logger.info("Unregistered installation from backend: \(clientId)")
-        } catch {
-            Logger.error("Failed unregistering installation \(clientId): \(error)")
-            // Continue with cleanup even if unregister fails
-        }
-
-        // Clean up database records
+        // Always clean up database records, even if identity/clientId is missing
         try await databaseWriter.write { db in
             // Delete messages first (due to foreign key constraints)
             try DBMessage

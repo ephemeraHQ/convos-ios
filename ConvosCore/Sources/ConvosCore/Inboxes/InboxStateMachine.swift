@@ -231,11 +231,11 @@ public actor InboxStateMachine {
     /// Registers for push notifications once the inbox is in a ready state.
     func registerForPushNotifications() async {
         Logger.info("Manually triggering push notification registration")
-        setupPushNotificationObservers()
+        setupPushTokenObserver()
 
         // Check if we're already in ready state
-        if case .ready(let result) = _state {
-            await performPushNotificationRegistration(client: result.client, apiClient: result.apiClient)
+        if case .ready = _state {
+            await deviceRegistrationManager.registerDeviceIfNeeded()
             return
         }
 
@@ -243,8 +243,8 @@ public actor InboxStateMachine {
         // Wait for ready state
         for await state in stateSequence {
             switch state {
-            case .ready(let result):
-                await performPushNotificationRegistration(client: result.client, apiClient: result.apiClient)
+            case .ready:
+                await deviceRegistrationManager.registerDeviceIfNeeded()
                 return
             case .error, .stopping, .deleting:
                 // Don't wait if we're in an error or terminal state
@@ -471,7 +471,7 @@ public actor InboxStateMachine {
         emitStateChange(.stopping)
         await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
-        removePushNotificationObservers()
+        removePushTokenObserver()
         emitStateChange(.uninitialized)
     }
 
