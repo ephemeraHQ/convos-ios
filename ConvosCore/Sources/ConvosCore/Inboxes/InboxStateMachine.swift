@@ -336,40 +336,35 @@ public actor InboxStateMachine {
         emitStateChange(.authorizing)
         Logger.info("Started authorization flow for inbox: \(inboxId)")
 
+        let identity = try await identityStore.identity(for: inboxId)
+        let keys = identity.clientKeys
+        let clientOptions = clientOptions(keys: keys)
+        let client: any XMTPClientProvider
         do {
-            let identity = try await identityStore.identity(for: inboxId)
-            let keys = identity.clientKeys
-            let clientOptions = clientOptions(keys: keys)
-            let client: any XMTPClientProvider
-            do {
-                client = try await buildXmtpClient(
-                    inboxId: identity.inboxId,
-                    identity: keys.signingKey.identity,
-                    options: clientOptions
-                )
-            } catch {
-                Logger.info("Error building client, trying create...")
-                client = try await createXmtpClient(
-                    signingKey: keys.signingKey,
-                    options: clientOptions
-                )
-            }
-
-            if savesInboxToDatabase {
-                // Ensure inbox is saved to database when authorizing
-                // (in case it was registered as unused but is now being used)
-                let inboxWriter = InboxWriter(dbWriter: databaseWriter)
-                try await inboxWriter.save(inboxId: identity.inboxId, clientId: identity.clientId)
-                Logger.info("Ensured inbox is saved to database: \(identity.inboxId)")
-            } else {
-                Logger.warning("Skipping save to database during authorization")
-            }
-
-            enqueueAction(.clientAuthorized(client))
+            client = try await buildXmtpClient(
+                inboxId: identity.inboxId,
+                identity: keys.signingKey.identity,
+                options: clientOptions
+            )
         } catch {
-            Logger.warning("Failed authorizing inbox \(inboxId), attempting registration...")
-            try await handleRegister()
+            Logger.info("Error building client, trying create...")
+            client = try await createXmtpClient(
+                signingKey: keys.signingKey,
+                options: clientOptions
+            )
         }
+
+        if savesInboxToDatabase {
+            // Ensure inbox is saved to database when authorizing
+            // (in case it was registered as unused but is now being used)
+            let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+            try await inboxWriter.save(inboxId: identity.inboxId, clientId: identity.clientId)
+            Logger.info("Ensured inbox is saved to database: \(identity.inboxId)")
+        } else {
+            Logger.warning("Skipping save to database during authorization")
+        }
+
+        enqueueAction(.clientAuthorized(client))
     }
 
     private func handleRegister() async throws {
