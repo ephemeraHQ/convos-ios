@@ -108,7 +108,7 @@ public actor CachedPushNotificationHandler {
 
     private func getOrCreateMessagingService(for inboxId: String) -> MessagingService {
         // Update access time
-        lastAccessTime[inboxId] = Date(
+        lastAccessTime[inboxId] = Date()
 
         if let existing = messagingServices[inboxId] {
             Logger.info("Reusing existing messaging service for inbox: \(inboxId)")

@@ -10,10 +10,11 @@ import Foundation
 ///
 /// The manager persists registration state in UserDefaults to avoid unnecessary re-registrations
 /// across app launches and to detect when push tokens change.
-public final class DeviceRegistrationManager {
+public actor DeviceRegistrationManager {
     // MARK: - Properties
 
     private let apiClient: any ConvosAPIBaseProtocol
+    private var isRegistering: Bool = false
 
     public init(environment: AppEnvironment) {
         self.apiClient = ConvosAPIClientFactory.client(environment: environment)
@@ -34,38 +35,38 @@ public final class DeviceRegistrationManager {
     ///
     /// Retry strategy: Will retry on every call if previous attempt failed (UserDefaults not updated on failure).
     /// This ensures eventual consistency even with intermittent network issues.
+    ///
+    /// Protected by isRegistering flag to prevent concurrent registration attempts.
     public func registerDeviceIfNeeded() async {
+        guard !isRegistering else {
+            Logger.info("Registration already in progress, skipping")
+            return
+        }
+
+        isRegistering = true
+        defer { isRegistering = false }
+
         let deviceId = DeviceInfo.deviceIdentifier
         let pushToken = PushNotificationRegistrar.token
 
         // Get last registered token from UserDefaults (persisted across app launches)
         let lastTokenKey = "lastRegisteredDevicePushToken_\(deviceId)"
         let hasRegisteredKey = "hasRegisteredDevice_\(deviceId)"
-        let lastSuccessKey = "lastSuccessfulRegistration_\(deviceId)"
 
         let lastToken = UserDefaults.standard.string(forKey: lastTokenKey)
         let hasEverRegistered = UserDefaults.standard.bool(forKey: hasRegisteredKey)
-        let lastSuccessTimestamp = UserDefaults.standard.double(forKey: lastSuccessKey)
-
-        let now = Date().timeIntervalSince1970
-        let daysSinceLastSuccess = (now - lastSuccessTimestamp) / (24 * 60 * 60)
 
         // Register if:
         // 1. Never registered this device before (important for v1→v2 migration)
         // 2. Push token has changed (including nil → token and token → nil)
-        // 3. It's been more than 7 days since last successful registration (drift check)
-        let shouldRegister = !hasEverRegistered ||
-                           lastToken != pushToken ||
-                           daysSinceLastSuccess > 7
+        let shouldRegister = !hasEverRegistered || lastToken != pushToken
 
         guard shouldRegister else {
-            Logger.info("Device already registered with this token (last success: \(Int(daysSinceLastSuccess)) days ago)")
+            Logger.info("Device already registered with this token")
             return
         }
 
-        let reason = !hasEverRegistered ? "first time" :
-                    lastToken != pushToken ? "token changed" :
-                    "periodic refresh"
+        let reason = !hasEverRegistered ? "first time" : "token changed"
 
         do {
             Logger.info("Registering device (\(reason), token: \(pushToken != nil ? "present" : "nil"))")
@@ -75,7 +76,6 @@ public final class DeviceRegistrationManager {
 
             // Only persist on SUCCESS - ensures retry on failure
             UserDefaults.standard.set(true, forKey: hasRegisteredKey)
-            UserDefaults.standard.set(now, forKey: lastSuccessKey)
             if let pushToken = pushToken {
                 UserDefaults.standard.set(pushToken, forKey: lastTokenKey)
             } else {
@@ -94,7 +94,6 @@ public final class DeviceRegistrationManager {
         let deviceId = DeviceInfo.deviceIdentifier
         UserDefaults.standard.removeObject(forKey: "lastRegisteredDevicePushToken_\(deviceId)")
         UserDefaults.standard.removeObject(forKey: "hasRegisteredDevice_\(deviceId)")
-        UserDefaults.standard.removeObject(forKey: "lastSuccessfulRegistration_\(deviceId)")
         Logger.info("Cleared device registration state")
     }
 
