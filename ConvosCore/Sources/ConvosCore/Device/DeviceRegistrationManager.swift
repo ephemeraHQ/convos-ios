@@ -71,18 +71,17 @@ public actor DeviceRegistrationManager {
         do {
             Logger.info("Registering device (\(reason), token: \(pushToken != nil ? "present" : "nil"))")
 
-            // Register device using AppCheck (handled by API client)
             try await apiClient.registerDevice(deviceId: deviceId, pushToken: pushToken)
 
-            // Only persist on SUCCESS - ensures retry on failure
-            UserDefaults.standard.set(true, forKey: hasRegisteredKey)
+            // Only persist registration state if we have a push token
+            // This ensures we keep trying on every launch until we successfully register with a token
             if let pushToken = pushToken {
+                UserDefaults.standard.set(true, forKey: hasRegisteredKey)
                 UserDefaults.standard.set(pushToken, forKey: lastTokenKey)
+                Logger.info("Successfully registered device with push token")
             } else {
-                UserDefaults.standard.removeObject(forKey: lastTokenKey)
+                Logger.info("Registered device without push token (will retry when token available)")
             }
-
-            Logger.info("Successfully registered device")
         } catch {
             Logger.error("Failed to register device: \(error). Will retry on next attempt.")
         }
