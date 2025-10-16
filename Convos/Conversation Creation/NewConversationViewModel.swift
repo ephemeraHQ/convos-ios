@@ -245,6 +245,7 @@ class NewConversationViewModel: Identifiable {
             isValidatingInvite = false
             isCreatingConversation = false
             messagesTopBarTrailingItemEnabled = false
+            messagesBottomBarEnabled = false
             currentError = nil
 
         case .creating:
@@ -269,6 +270,7 @@ class NewConversationViewModel: Identifiable {
             // This is the waiting state - user is waiting for inviter to accept
             messagesTopBarTrailingItemEnabled = false
             messagesTopBarTrailingItem = .share
+            messagesBottomBarEnabled = false
             isWaitingForInviteAcceptance = true
             shouldConfirmDeletingConversation = false
             conversationViewModel.untitledConversationPlaceholder = "Untitled"
