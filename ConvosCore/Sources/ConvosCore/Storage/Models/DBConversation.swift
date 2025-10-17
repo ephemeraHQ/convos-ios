@@ -18,6 +18,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
         static let name: Column = Column(CodingKeys.name)
         static let description: Column = Column(CodingKeys.description)
         static let imageURLString: Column = Column(CodingKeys.imageURLString)
+        static let expiresAt: Column = Column(CodingKeys.expiresAt)
     }
 
     public let id: String
@@ -31,6 +32,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
     public let name: String?
     public let description: String?
     public let imageURLString: String?
+    public let expiresAt: Date?
 
     static let creatorForeignKey: ForeignKey = ForeignKey(
         [Columns.creatorId, Columns.id],
@@ -150,7 +152,8 @@ extension DBConversation {
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 
@@ -166,7 +169,8 @@ extension DBConversation {
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 
@@ -182,7 +186,8 @@ extension DBConversation {
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 
@@ -198,7 +203,8 @@ extension DBConversation {
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 
@@ -214,7 +220,8 @@ extension DBConversation {
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 
@@ -232,7 +239,8 @@ extension DBConversation {
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 
@@ -248,7 +256,8 @@ extension DBConversation {
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 
@@ -264,7 +273,8 @@ extension DBConversation {
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 }

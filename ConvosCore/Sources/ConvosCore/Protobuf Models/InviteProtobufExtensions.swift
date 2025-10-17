@@ -4,6 +4,20 @@ import Foundation
 import SwiftProtobuf
 
 extension SignedInvite {
+    public var expiresAt: Date? {
+        payload.expiresAtIfPresent
+    }
+
+    public var hasExpired: Bool {
+        guard let expiresAt else { return false }
+        return Date() > expiresAt
+    }
+
+    public var conversationHasExpired: Bool {
+        guard let conversationExpiresAt else { return false }
+        return Date() > conversationExpiresAt
+    }
+
     public var name: String? {
         payload.nameIfPresent
     }
@@ -14,6 +28,10 @@ extension SignedInvite {
 
     public var imageURL: String? {
         payload.imageURLIfPresent
+    }
+
+    public var conversationExpiresAt: Date? {
+        payload.conversationExpiresAtIfPresent
     }
 
     public static func slug(for conversation: DBConversation, privateKey: Data) throws -> String {
@@ -32,6 +50,9 @@ extension SignedInvite {
         if let imageURL = conversation.imageURLString {
             payload.imageURL = imageURL
         }
+        if let conversationExpiresAt = conversation.expiresAt {
+            payload.conversationExpiresAt = .init(date: conversationExpiresAt)
+        }
         payload.tag = conversation.inviteTag
         payload.conversationToken = conversationToken
         payload.creatorInboxID = conversation.inboxId
@@ -44,6 +65,25 @@ extension SignedInvite {
 }
 
 extension InvitePayload {
+    public var expiresAtIfPresent: Date? {
+        get {
+            guard hasExpiresAt else { return nil }
+            return expiresAt.date
+        }
+        set {
+            if let newValue {
+                expiresAt = .init(date: newValue)
+            } else {
+                clearExpiresAt()
+            }
+        }
+    }
+
+    public var conversationExpiresAtIfPresent: Date? {
+        guard hasConversationExpiresAt else { return nil }
+        return conversationExpiresAt.date
+    }
+
     public var nameIfPresent: String? {
         guard hasName else { return nil }
         return name

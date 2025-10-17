@@ -43,6 +43,20 @@ extension XMTPiOS.Group {
         }
     }
 
+    public var expiresAt: Date? {
+        get throws {
+            let metadata = try currentCustomMetadata
+            guard metadata.hasExpiresAt else { return nil }
+            return metadata.expiresAt.date
+        }
+    }
+
+    public func updateExpiresAt(date: Date) async throws {
+        var customMetadata = try currentCustomMetadata
+        customMetadata.expiresAt = .init(date: date)
+        try await updateDescription(description: customMetadata.toCompactString())
+    }
+
     // This should only be done by the conversation creator
     // Updating the invite tag effectively expires all invites generated with that tag
     // The tag is used by the invitee to verify the conversation they've been added to

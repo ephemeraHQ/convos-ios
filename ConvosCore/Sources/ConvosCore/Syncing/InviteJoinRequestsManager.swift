@@ -8,6 +8,8 @@ public enum InviteJoinRequestError: Error {
     case invalidConversationType
     case missingTextContent
     case invalidInviteFormat
+    case expired
+    case expiredConversation
 }
 
 protocol InviteJoinRequestsManagerProtocol {
@@ -104,6 +106,16 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         } catch {
             Logger.info("Message text is not a valid signed invite format")
             throw InviteJoinRequestError.invalidInviteFormat
+        }
+
+        guard !signedInvite.hasExpired else {
+            Logger.info("Invite expired, cancelling join request...")
+            throw InviteJoinRequestError.expired
+        }
+
+        guard !signedInvite.conversationHasExpired else {
+            Logger.info("Conversation expired, cancelling join request...")
+            throw InviteJoinRequestError.expiredConversation
         }
 
         let inboxId = signedInvite.payload.creatorInboxID

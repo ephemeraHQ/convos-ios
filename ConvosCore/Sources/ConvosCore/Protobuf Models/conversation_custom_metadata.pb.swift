@@ -33,9 +33,20 @@ public struct ConversationCustomMetadata: Sendable {
   /// Array of participant profiles
   public var profiles: [ConversationProfile] = []
 
+  public var expiresAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+    get {return _expiresAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
+    set {_expiresAt = newValue}
+  }
+  /// Returns true if `expiresAt` has been explicitly set.
+  public var hasExpiresAt: Bool {return self._expiresAt != nil}
+  /// Clears the value of `expiresAt`. Subsequent reads from it will return its default value.
+  public mutating func clearExpiresAt() {self._expiresAt = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _expiresAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
 }
 
 /// ConversationProfile represents a participant in the conversation
@@ -76,7 +87,7 @@ public struct ConversationProfile: Sendable {
 
 extension ConversationCustomMetadata: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = "ConversationCustomMetadata"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}description\0\u{1}tag\0\u{1}profiles\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}description\0\u{1}tag\0\u{1}profiles\0\u{1}expiresAt\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -87,12 +98,17 @@ extension ConversationCustomMetadata: SwiftProtobuf.Message, SwiftProtobuf._Mess
       case 1: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.tag) }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.profiles) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._expiresAt) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.description_p.isEmpty {
       try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 1)
     }
@@ -102,6 +118,9 @@ extension ConversationCustomMetadata: SwiftProtobuf.Message, SwiftProtobuf._Mess
     if !self.profiles.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.profiles, fieldNumber: 3)
     }
+    try { if let v = self._expiresAt {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -109,6 +128,7 @@ extension ConversationCustomMetadata: SwiftProtobuf.Message, SwiftProtobuf._Mess
     if lhs.description_p != rhs.description_p {return false}
     if lhs.tag != rhs.tag {return false}
     if lhs.profiles != rhs.profiles {return false}
+    if lhs._expiresAt != rhs._expiresAt {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

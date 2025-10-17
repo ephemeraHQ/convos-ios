@@ -187,7 +187,7 @@ class NewConversationViewModel: Identifiable {
             // Determine which sheet to present based on error type
             if let stateMachineError = error as? ConversationStateMachineError {
                 switch stateMachineError {
-                case .invalidInviteCodeFormat, .inviteExpired:
+                case .invalidInviteCodeFormat, .inviteExpired, .conversationExpired:
                     presentingInvalidInviteSheet = true
                 case .timedOut:
                     presentingFailedToJoinSheet = true
@@ -290,7 +290,7 @@ class NewConversationViewModel: Identifiable {
         // Map state machine errors to appropriate UI states
         if let stateMachineError = error as? ConversationStateMachineError {
             switch stateMachineError {
-            case .invalidInviteCodeFormat, .inviteExpired, .failedVerifyingSignature:
+            case .invalidInviteCodeFormat, .inviteExpired, .failedVerifyingSignature, .conversationExpired:
                 presentingInvalidInviteSheet = true
             case .failedFindingConversation, .stateMachineError, .timedOut:
                 // Generic error - could show a different alert

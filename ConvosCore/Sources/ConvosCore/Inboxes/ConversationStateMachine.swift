@@ -371,6 +371,15 @@ public actor ConversationStateMachine {
         } catch {
             throw ConversationStateMachineError.invalidInviteCodeFormat(inviteCode)
         }
+
+        guard !signedInvite.hasExpired else {
+            throw ConversationStateMachineError.inviteExpired
+        }
+
+        guard !signedInvite.conversationHasExpired else {
+            throw ConversationStateMachineError.conversationExpired
+        }
+
         // Recover the public key of whoever signed this invite
         let signerPublicKey: Data
         do {
@@ -672,6 +681,7 @@ public enum ConversationStateMachineError: Error {
     case failedVerifyingSignature
     case stateMachineError(Error)
     case inviteExpired
+    case conversationExpired
     case invalidInviteCodeFormat(String)
     case timedOut
 }

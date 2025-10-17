@@ -64,6 +64,25 @@ public struct InvitePayload: Sendable {
   /// Clears the value of `imageURL`. Subsequent reads from it will return its default value.
   public mutating func clearImageURL() {self._imageURL = nil}
 
+  public var conversationExpiresAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+    get {return _conversationExpiresAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
+    set {_conversationExpiresAt = newValue}
+  }
+  /// Returns true if `conversationExpiresAt` has been explicitly set.
+  public var hasConversationExpiresAt: Bool {return self._conversationExpiresAt != nil}
+  /// Clears the value of `conversationExpiresAt`. Subsequent reads from it will return its default value.
+  public mutating func clearConversationExpiresAt() {self._conversationExpiresAt = nil}
+
+  /// optional invite expiration
+  public var expiresAt: SwiftProtobuf.Google_Protobuf_Timestamp {
+    get {return _expiresAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
+    set {_expiresAt = newValue}
+  }
+  /// Returns true if `expiresAt` has been explicitly set.
+  public var hasExpiresAt: Bool {return self._expiresAt != nil}
+  /// Clears the value of `expiresAt`. Subsequent reads from it will return its default value.
+  public mutating func clearExpiresAt() {self._expiresAt = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -71,6 +90,8 @@ public struct InvitePayload: Sendable {
   fileprivate var _name: String? = nil
   fileprivate var _description_p: String? = nil
   fileprivate var _imageURL: String? = nil
+  fileprivate var _conversationExpiresAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+  fileprivate var _expiresAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
 }
 
 /// SignedInvite represents an invite with its cryptographic signature
@@ -103,7 +124,7 @@ public struct SignedInvite: Sendable {
 
 extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = "InvitePayload"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}conversationToken\0\u{3}creator_inbox_id\0\u{1}tag\0\u{1}name\0\u{1}description\0\u{1}imageURL\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}conversationToken\0\u{3}creator_inbox_id\0\u{1}tag\0\u{1}name\0\u{1}description\0\u{1}imageURL\0\u{1}conversationExpiresAt\0\u{1}expiresAt\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -117,6 +138,8 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
       case 4: try { try decoder.decodeSingularStringField(value: &self._name) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self._description_p) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self._imageURL) }()
+      case 7: try { try decoder.decodeSingularMessageField(value: &self._conversationExpiresAt) }()
+      case 8: try { try decoder.decodeSingularMessageField(value: &self._expiresAt) }()
       default: break
       }
     }
@@ -145,6 +168,12 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
     try { if let v = self._imageURL {
       try visitor.visitSingularStringField(value: v, fieldNumber: 6)
     } }()
+    try { if let v = self._conversationExpiresAt {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    } }()
+    try { if let v = self._expiresAt {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -155,6 +184,8 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
     if lhs._name != rhs._name {return false}
     if lhs._description_p != rhs._description_p {return false}
     if lhs._imageURL != rhs._imageURL {return false}
+    if lhs._conversationExpiresAt != rhs._conversationExpiresAt {return false}
+    if lhs._expiresAt != rhs._expiresAt {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
