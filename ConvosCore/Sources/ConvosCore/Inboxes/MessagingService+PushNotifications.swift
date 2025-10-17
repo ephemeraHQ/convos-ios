@@ -82,7 +82,10 @@ extension MessagingService {
         }
 
         // Regular message - decrypt the encrypted content
-        let encryptedMessage = protocolData.encryptedMessage!
+        guard let encryptedMessage = protocolData.encryptedMessage else {
+            Logger.error("Missing encryptedMessage after nil check")
+            return nil
+        }
 
         let currentInboxId = client.inboxId
 
