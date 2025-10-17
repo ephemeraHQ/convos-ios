@@ -219,23 +219,33 @@ extension MessagingService {
 
         switch conversation {
         case .dm:
-            // Handle all DMs as join requests
-            // This can be used to accept subsequent invites for side conversations with the same inbox
+            // DMs are only used for join requests (invite acceptance flow)
+            // When someone accepts an invite, they send the signed invite back via DM
+            // This allows us to add them to the group conversation they were invited to
             let joinRequestsManager = InviteJoinRequestsManager(
                 identityStore: identityStore,
                 databaseReader: databaseReader
             )
-            guard let result = try await joinRequestsManager.processJoinRequest(message: decodedMessage, client: client) else {
-                Logger.warning("Failed processing join request")
+
+            do {
+                if let result = try await joinRequestsManager.processJoinRequest(message: decodedMessage, client: client) {
+                    // Valid join request - show notification
+                    return .init(
+                        title: result.conversationName,
+                        body: "Someone accepted your invite 👀",
+                        conversationId: result.conversationId,
+                        userInfo: userInfo
+                    )
+                }
+            } catch {
+                // Not a valid join request - block the DM to prevent spam
+                Logger.warning("DM is not a valid join request, blocking conversation")
+                try? await conversation.updateConsentState(state: .denied)
                 return .droppedMessage
             }
 
-            return .init(
-                title: result.conversationName,
-                body: "Someone accepted your invite 👀",
-                conversationId: result.conversationId,
-                userInfo: userInfo
-            )
+            // Shouldn't reach here, but if we do, drop the notification
+            return .droppedMessage
         case .group:
             let dbConversation = try await storeConversation(conversation)
             let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
