@@ -146,24 +146,24 @@ extension MessagingService {
             // Try to process each message as a join request
             for message in messages {
                 do {
-                    if let conversationId = try await joinRequestsManager.processJoinRequest(
+                    if let result = try await joinRequestsManager.processJoinRequest(
                         message: message,
                         client: client
                     ) {
                         // Successfully processed join request and added requester to group
-                        Logger.info("Successfully processed join request from welcome message for conversation: \(conversationId)")
+                        Logger.info("Successfully processed join request from welcome message for conversation: \(result.conversationId)")
 
                         // Store the group conversation and sync messages to ensure XMTP has complete group state
-                        if let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) {
+                        if let conversation = try await client.conversationsProvider.findConversation(conversationId: result.conversationId) {
                             try await storeConversation(conversation)
                         } else {
-                            Logger.error("Group conversation \(conversationId) not found after join")
+                            Logger.error("Group conversation \(result.conversationId) not found after join")
                         }
 
                         return .init(
-                            title: nil,
+                            title: result.conversationName,
                             body: "Someone accepted your invite 👀",
-                            conversationId: conversationId,
+                            conversationId: result.conversationId,
                             userInfo: userInfo
                         )
                     }
@@ -225,15 +225,15 @@ extension MessagingService {
                 identityStore: identityStore,
                 databaseReader: databaseReader
             )
-            guard let conversationId = try await joinRequestsManager.processJoinRequest(message: decodedMessage, client: client) else {
+            guard let result = try await joinRequestsManager.processJoinRequest(message: decodedMessage, client: client) else {
                 Logger.warning("Failed processing join request")
                 return .droppedMessage
             }
 
             return .init(
-                title: nil,
+                title: result.conversationName,
                 body: "Someone accepted your invite 👀",
-                conversationId: conversationId,
+                conversationId: result.conversationId,
                 userInfo: userInfo
             )
         case .group:

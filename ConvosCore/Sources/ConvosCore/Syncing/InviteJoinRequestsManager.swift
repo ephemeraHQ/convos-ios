@@ -12,6 +12,11 @@ public enum InviteJoinRequestError: Error {
     case expiredConversation
 }
 
+public struct JoinRequestResult {
+    public let conversationId: String
+    public let conversationName: String?
+}
+
 protocol InviteJoinRequestsManagerProtocol {
     func start(with client: AnyClientProvider,
                apiClient: any ConvosAPIClientProtocol)
@@ -19,7 +24,7 @@ protocol InviteJoinRequestsManagerProtocol {
     func processJoinRequest(
         message: XMTPiOS.DecodedMessage,
         client: AnyClientProvider
-    ) async throws -> String?
+    ) async throws -> JoinRequestResult?
 }
 
 class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
@@ -61,11 +66,11 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         client: AnyClientProvider
     ) async {
         do {
-            if let conversationId = try await processJoinRequest(
+            if let result = try await processJoinRequest(
                 message: message,
                 client: client
             ) {
-                Logger.info("Successfully added \(message.senderInboxId) to conversation \(conversationId)")
+                Logger.info("Successfully added \(message.senderInboxId) to conversation \(result.conversationId)")
             }
         } catch InviteJoinRequestError.missingTextContent {
             // Silently skip - not a join request
@@ -86,11 +91,11 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
     /// - Parameters:
     ///   - message: The decoded message to process
     ///   - client: The XMTP client provider
-    /// - Returns: The conversation ID that the sender was added to, or nil if not a valid join request
+    /// - Returns: The conversation details (ID and name) that the sender was added to, or nil if not a valid join request
     func processJoinRequest(
         message: XMTPiOS.DecodedMessage,
         client: AnyClientProvider
-    ) async throws -> String? {
+    ) async throws -> JoinRequestResult? {
         let senderInboxId = message.senderInboxId
 
         let dbMessage = try message.dbRepresentation()
@@ -154,7 +159,11 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         case .group(let group):
             Logger.info("Adding \(senderInboxId) to group \(group.id)...")
             try await group.add(members: [senderInboxId])
-            return group.id
+            let conversationName = try? group.name()
+            return JoinRequestResult(
+                conversationId: group.id,
+                conversationName: conversationName
+            )
         case .dm:
             Logger.warning("Expected Group but found DM from \(senderInboxId), ignoring invite join request")
             throw InviteJoinRequestError.invalidConversationType
