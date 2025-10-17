@@ -362,17 +362,16 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 return try decoder.decode(T.self, from: data)
             case 204, 205, 304:
                 // Handle no content responses
-                if T.self == Void.self {
-                    return unsafeBitCast((), to: T.self)
-                } else if T.self == EmptyResponse.self {
-                    return unsafeBitCast(EmptyResponse(), to: T.self)
+                if T.self == EmptyResponse.self,
+                   let emptyResponse = EmptyResponse() as? T {
+                    return emptyResponse
                 } else if let emptyDict = [:] as? T {
                     return emptyDict
                 } else if let emptyArray = [] as? T {
                     return emptyArray
                 } else {
-                    // For other types, try to decode empty data or throw appropriate error
-                    throw APIError.invalidResponse
+                    // For other types, throw appropriate error
+                    throw APIError.noContent
                 }
             case 400:
                 // Parse error message from response if available
@@ -580,6 +579,7 @@ enum APIError: Error {
     case badRequest(String?)
     case forbidden
     case notFound
+    case noContent
     case invalidResponse
     case invalidRequest
     case serverError(String?)
