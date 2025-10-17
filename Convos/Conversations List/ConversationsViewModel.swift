@@ -218,7 +218,7 @@ final class ConversationsViewModel {
                 try await session.deleteAllInboxes()
 
                 // Clear all cached writers
-                self.localStateWriters.removeAll()
+                await MainActor.run { self.localStateWriters.removeAll() }
             } catch {
                 Logger.error("Error deleting all accounts: \(error)")
             }
@@ -236,7 +236,7 @@ final class ConversationsViewModel {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
 
                 // Remove cached writer for deleted inbox
-                self.localStateWriters.removeValue(forKey: conversation.inboxId)
+                _ = await MainActor.run { self.localStateWriters.removeValue(forKey: conversation.inboxId) }
             } catch {
                 Logger.error("Error leaving convo: \(error.localizedDescription)")
             }
