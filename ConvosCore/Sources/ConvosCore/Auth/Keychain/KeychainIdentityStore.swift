@@ -80,9 +80,16 @@ protocol KeychainIdentityType {
 
 public struct KeychainIdentity: Codable, KeychainIdentityType {
     public let inboxId: String
+    public let clientId: String
     public let keys: KeychainIdentityKeys
     var clientKeys: any XMTPClientKeys {
         keys
+    }
+
+    init(inboxId: String, clientId: String, keys: KeychainIdentityKeys) {
+        self.inboxId = inboxId
+        self.clientId = clientId
+        self.keys = keys
     }
 }
 
@@ -110,8 +117,8 @@ public enum KeychainIdentityStoreError: Error, LocalizedError {
             return "Failed to generate private key"
         case .privateKeyLoadingFailed:
             return "Failed to load private key"
-        case let .identityNotFound(id):
-            return "Identity not found: \(id)"
+        case let .identityNotFound(context):
+            return "Identity not found: \(context)"
         case let .rollbackFailed(context):
             return "Rollback failed for \(context)"
         case .invalidAccessGroup:
@@ -172,7 +179,7 @@ private struct KeychainQuery {
 
 public protocol KeychainIdentityStoreProtocol: Actor {
     func generateKeys() throws -> KeychainIdentityKeys
-    func save(inboxId: String, keys: KeychainIdentityKeys) throws -> KeychainIdentity
+    func save(inboxId: String, clientId: String, keys: KeychainIdentityKeys) throws -> KeychainIdentity
     func identity(for inboxId: String) throws -> KeychainIdentity
     func loadAll() throws -> [KeychainIdentity]
     func delete(inboxId: String) throws
@@ -198,9 +205,10 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
         try KeychainIdentityKeys.generate()
     }
 
-    public func save(inboxId: String, keys: KeychainIdentityKeys) throws -> KeychainIdentity {
+    public func save(inboxId: String, clientId: String, keys: KeychainIdentityKeys) throws -> KeychainIdentity {
         let identity = KeychainIdentity(
             inboxId: inboxId,
+            clientId: clientId,
             keys: keys
         )
         try save(identity: identity)

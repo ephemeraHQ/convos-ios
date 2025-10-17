@@ -11,6 +11,7 @@ public protocol ConversationSender {
     func add(members inboxIds: [String]) async throws
     func remove(members inboxIds: [String]) async throws
     func prepare(text: String) async throws -> String
+    func updateInviteTag() async throws
     func publish() async throws
 }
 
@@ -28,6 +29,13 @@ public protocol ConversationsProvider {
         limit: Int?,
         consentStates: [ConsentState]?
     ) async throws -> [XMTPiOS.Conversation]
+
+    func listDms(
+        createdAfter: Date?,
+        createdBefore: Date?,
+        limit: Int?,
+        consentStates: [ConsentState]?
+    ) throws -> [Dm]
 
     func stream(
         type: ConversationFilterType,
@@ -50,10 +58,11 @@ public protocol XMTPClientProvider: AnyObject {
     var inboxId: String { get }
     var conversationsProvider: ConversationsProvider { get }
     func signWithInstallationKey(message: String) throws -> Data
+    func verifySignature(message: String, signature: Data) throws -> Bool
     func messageSender(for conversationId: String) async throws -> (any MessageSender)?
     func canMessage(identity: String) async throws -> Bool
     func canMessage(identities: [String]) async throws -> [String: Bool]
-    func prepareConversation() async throws -> ConversationSender
+    func prepareConversation() throws -> ConversationSender
     func newConversation(with memberInboxIds: [String],
                          name: String,
                          description: String,
@@ -112,7 +121,7 @@ extension XMTPiOS.Client: XMTPClientProvider {
         )
     }
 
-    public func prepareConversation() async throws -> ConversationSender {
+    public func prepareConversation() throws -> ConversationSender {
         return try conversations.newGroupOptimistic()
     }
 

@@ -4,18 +4,12 @@ import GRDB
 import XMTPiOS
 
 final class MessagingService: MessagingServiceProtocol {
-    var identifier: String {
-        guard case .ready(let result) = inboxStateManager.currentState else {
-            return internalIdentifier
-        }
-        return result.client.inboxId
-    }
-    private let inboxId: String?
-    private let internalIdentifier: String
     private let authorizationOperation: any AuthorizeInboxOperationProtocol
-    internal let inboxStateManager: InboxStateManager
-    private let databaseReader: any DatabaseReader
+    internal let inboxStateManager: any InboxStateManagerProtocol
+    internal let identityStore: any KeychainIdentityStoreProtocol
+    internal let databaseReader: any DatabaseReader
     internal let databaseWriter: any DatabaseWriter
+    private let environment: AppEnvironment
     private var cancellables: Set<AnyCancellable> = []
 
     static func authorizedMessagingService(
@@ -26,26 +20,30 @@ final class MessagingService: MessagingServiceProtocol {
         startsStreamingServices: Bool,
         registersForPushNotifications: Bool = true
     ) -> MessagingService {
+        let identityStore = environment.defaultIdentityStore
         let authorizationOperation = AuthorizeInboxOperation.authorize(
             inboxId: inboxId,
+            identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: startsStreamingServices,
             registersForPushNotifications: registersForPushNotifications
         )
-        return .init(
-            inboxId: inboxId,
+        return MessagingService(
             authorizationOperation: authorizationOperation,
             databaseWriter: databaseWriter,
-            databaseReader: databaseReader
+            databaseReader: databaseReader,
+            identityStore: identityStore,
+            environment: environment
         )
     }
 
     static func registeredMessagingService(
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        registersForPushNotifications: Bool = true
     ) async -> MessagingService {
         return await UnusedInboxCache.shared.consumeOrCreateMessagingService(
             databaseWriter: databaseWriter,
@@ -54,16 +52,17 @@ final class MessagingService: MessagingServiceProtocol {
         )
     }
 
-    internal init(inboxId: String?,
-                  authorizationOperation: AuthorizeInboxOperation,
+    internal init(authorizationOperation: AuthorizeInboxOperation,
                   databaseWriter: any DatabaseWriter,
-                  databaseReader: any DatabaseReader) {
-        self.inboxId = inboxId
-        self.internalIdentifier = inboxId ?? UUID().uuidString
+                  databaseReader: any DatabaseReader,
+                  identityStore: any KeychainIdentityStoreProtocol,
+                  environment: AppEnvironment) {
+        self.identityStore = identityStore
         self.authorizationOperation = authorizationOperation
         self.inboxStateManager = InboxStateManager(stateMachine: authorizationOperation.stateMachine)
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
+        self.environment = environment
     }
 
     deinit {
@@ -95,32 +94,19 @@ final class MessagingService: MessagingServiceProtocol {
 
     // MARK: My Profile
 
-    func myProfileRepository() -> any MyProfileRepositoryProtocol {
-        MyProfileRepository(inboxStateManager: inboxStateManager, databaseReader: databaseReader)
-    }
-
     func myProfileWriter() -> any MyProfileWriterProtocol {
         MyProfileWriter(inboxStateManager: inboxStateManager, databaseWriter: databaseWriter)
     }
 
     // MARK: New Conversation
 
-    func draftConversationComposer() -> any DraftConversationComposerProtocol {
-        let draftConversationWriter = DraftConversationWriter(
+    func conversationStateManager() -> any ConversationStateManagerProtocol {
+        return ConversationStateManager(
             inboxStateManager: inboxStateManager,
+            identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
-        )
-        return DraftConversationComposer(
-            myProfileWriter: myProfileWriter(),
-            draftConversationWriter: draftConversationWriter,
-            draftConversationRepository: DraftConversationRepository(
-                dbReader: databaseReader,
-                writer: draftConversationWriter
-            ),
-            conversationConsentWriter: conversationConsentWriter(),
-            conversationLocalStateWriter: conversationLocalStateWriter(),
-            conversationMetadataWriter: groupMetadataWriter()
+            environment: environment
         )
     }
 
@@ -147,16 +133,17 @@ final class MessagingService: MessagingServiceProtocol {
 
     // MARK: - Group Management
 
-    func groupMetadataWriter() -> any ConversationMetadataWriterProtocol {
+    func conversationMetadataWriter() -> any ConversationMetadataWriterProtocol {
         ConversationMetadataWriter(
             inboxStateManager: inboxStateManager,
+            inviteWriter: InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter),
             databaseWriter: databaseWriter
         )
     }
 
-    func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol {
-        GroupPermissionsRepository(inboxStateManager: inboxStateManager,
-                                   databaseReader: databaseReader)
+    func conversationPermissionsRepository() -> any ConversationPermissionsRepositoryProtocol {
+        ConversationPermissionsRepository(inboxStateManager: inboxStateManager,
+                                          databaseReader: databaseReader)
     }
 
     func uploadImage(data: Data, filename: String) async throws -> String {

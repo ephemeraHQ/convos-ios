@@ -3,8 +3,8 @@ import GRDB
 import UIKit
 
 public protocol MyProfileWriterProtocol {
-    func update(displayName: String) async throws
-    func update(avatar: UIImage?) async throws
+    func update(displayName: String, conversationId: String) async throws
+    func update(avatar: UIImage?, conversationId: String) async throws
 }
 
 enum MyProfileWriterError: Error {
@@ -12,19 +12,23 @@ enum MyProfileWriterError: Error {
 }
 
 class MyProfileWriter: MyProfileWriterProtocol {
-    private let inboxStateManager: InboxStateManager
+    private let inboxStateManager: any InboxStateManagerProtocol
     private let databaseWriter: any DatabaseWriter
 
     init(
-        inboxStateManager: InboxStateManager,
+        inboxStateManager: any InboxStateManagerProtocol,
         databaseWriter: any DatabaseWriter
     ) {
         self.inboxStateManager = inboxStateManager
         self.databaseWriter = databaseWriter
     }
 
-    func update(displayName: String) async throws {
+    func update(displayName: String, conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
+        guard let conversation = try await inboxReady.client.conversation(with: conversationId),
+              case .group(let group) = conversation else {
+            throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
+        }
         let trimmedDisplayName = {
             var name = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
             if name.count > NameLimits.maxDisplayNameLength {
@@ -37,7 +41,8 @@ class MyProfileWriter: MyProfileWriterProtocol {
         let profile = try await databaseWriter.write { db in
             let member = Member(inboxId: inboxId)
             try member.save(db)
-            let profile = (try MemberProfile.fetchOne(db, key: inboxId) ?? .init(
+            let profile = (try MemberProfile.fetchOne(db, conversationId: conversationId, inboxId: inboxId) ?? .init(
+                conversationId: conversationId,
                 inboxId: inboxId,
                 name: trimmedDisplayName,
                 avatar: nil
@@ -46,20 +51,29 @@ class MyProfileWriter: MyProfileWriterProtocol {
             return profile
         }
 
-        _ = try await inboxReady.apiClient.updateProfile(inboxId: inboxId, with: profile.asUpdateRequest())
+        try await group.updateProfile(profile)
     }
 
-    func update(avatar: UIImage?) async throws {
+    func update(avatar: UIImage?, conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
+        guard let conversation = try await inboxReady.client.conversation(with: conversationId),
+              case .group(let group) = conversation else {
+            throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
+        }
         let inboxId = inboxReady.client.inboxId
         let profile = try await databaseWriter.write { db in
             let member = Member(inboxId: inboxId)
             try member.save(db)
-            if let foundProfile = try MemberProfile.fetchOne(db, key: inboxId) {
+            if let foundProfile = try MemberProfile.fetchOne(db, conversationId: conversationId, inboxId: inboxId) {
                 Logger.info("Found profile: \(foundProfile)")
                 return foundProfile
             } else {
-                let profile = MemberProfile(inboxId: inboxId, name: nil, avatar: nil)
+                let profile = MemberProfile(
+                    conversationId: conversationId,
+                    inboxId: inboxId,
+                    name: nil,
+                    avatar: nil
+                )
                 try profile.save(db)
                 return profile
             }
@@ -68,7 +82,8 @@ class MyProfileWriter: MyProfileWriterProtocol {
         guard let avatarImage = avatar else {
             // remove avatar image URL
             ImageCache.shared.removeImage(for: profile.hydrateProfile())
-            _ = try await inboxReady.apiClient.updateProfile(inboxId: inboxId, with: profile.asUpdateRequest())
+            let updatedProfile = profile.with(avatar: nil)
+            try await group.updateProfile(updatedProfile)
             return
         }
 
@@ -87,7 +102,7 @@ class MyProfileWriter: MyProfileWriterProtocol {
             acl: "public-read"
         )
         let updatedProfile = profile.with(avatar: uploadedURL)
-        _ = try await inboxReady.apiClient.updateProfile(inboxId: inboxId, with: updatedProfile.asUpdateRequest())
+        try await group.updateProfile(updatedProfile)
 
         ImageCache.shared.setImage(resizedImage, for: uploadedURL)
 

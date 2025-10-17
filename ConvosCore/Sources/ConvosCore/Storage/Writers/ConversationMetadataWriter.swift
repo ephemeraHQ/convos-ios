@@ -4,124 +4,107 @@ import GRDB
 import UIKit
 import XMTPiOS
 
-// MARK: - Group Metadata Writer Protocol
+// MARK: - Conversation Metadata Writer Protocol
 
 public protocol ConversationMetadataWriterProtocol {
-    func updateGroupName(conversationId: String, name: String) async throws
-    func updateGroupDescription(conversationId: String, description: String) async throws
-    func updateGroupImageUrl(conversationId: String, imageURL: String) async throws
-    func addGroupMembers(conversationId: String, memberInboxIds: [String]) async throws
-    func removeGroupMembers(conversationId: String, memberInboxIds: [String]) async throws
-    func promoteToAdmin(conversationId: String, memberInboxId: String) async throws
-    func demoteFromAdmin(conversationId: String, memberInboxId: String) async throws
-    func promoteToSuperAdmin(conversationId: String, memberInboxId: String) async throws
-    func demoteFromSuperAdmin(conversationId: String, memberInboxId: String) async throws
-    func updateGroupImage(conversation: Conversation, image: UIImage) async throws
+    func updateName(_ name: String, for conversationId: String) async throws
+    func updateDescription(_ description: String, for conversationId: String) async throws
+    func updateImageUrl(_ imageURL: String, for conversationId: String) async throws
+    func addMembers(_ memberInboxIds: [String], to conversationId: String) async throws
+    func removeMembers(_ memberInboxIds: [String], from conversationId: String) async throws
+    func promoteToAdmin(_ memberInboxId: String, in conversationId: String) async throws
+    func demoteFromAdmin(_ memberInboxId: String, in conversationId: String) async throws
+    func promoteToSuperAdmin(_ memberInboxId: String, in conversationId: String) async throws
+    func demoteFromSuperAdmin(_ memberInboxId: String, in conversationId: String) async throws
+    func updateImage(_ image: UIImage, for conversation: Conversation) async throws
 }
 
-// MARK: - Group Metadata Writer Implementation
+// MARK: - Conversation Metadata Writer Implementation
 
 enum ConversationMetadataWriterError: Error {
     case failedImageCompression
 }
 
 final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
-    private let inboxStateManager: InboxStateManager
+    private let inboxStateManager: any InboxStateManagerProtocol
     private let databaseWriter: any DatabaseWriter
+    private let inviteWriter: any InviteWriterProtocol
 
-    init(inboxStateManager: InboxStateManager,
+    init(inboxStateManager: any InboxStateManagerProtocol,
+         inviteWriter: any InviteWriterProtocol,
          databaseWriter: any DatabaseWriter) {
         self.inboxStateManager = inboxStateManager
+        self.inviteWriter = inviteWriter
         self.databaseWriter = databaseWriter
     }
 
-    // MARK: - Private Helpers
+    // MARK: - Conversation Metadata Updates
 
-    private func getInviteCode(for conversationId: String) async throws -> String? {
-        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
-        let currentUserInboxId = inboxReady.client.inboxId
-
-        return try await databaseWriter.read { db in
-            try DBInvite
-                .filter(DBInvite.Columns.conversationId == conversationId)
-                .filter(DBInvite.Columns.creatorInboxId == currentUserInboxId)
-                .fetchOne(db)?
-                .id
-        }
-    }
-
-    // MARK: - Group Metadata Updates
-
-    func updateGroupName(conversationId: String, name: String) async throws {
+    func updateName(_ name: String, for conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         let truncatedName = name.count > NameLimits.maxConversationNameLength ? String(name.prefix(NameLimits.maxConversationNameLength)) : name
 
         guard let conversation = try await inboxReady.client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupMetadataError.groupNotFound(conversationId: conversationId)
-        }
-
-        // Update backend invite metadata if invite exists
-        if let inviteCode = try await getInviteCode(for: conversationId) {
-            Logger.info("Found invite code for conversation \(conversationId): \(inviteCode)")
-            do {
-                try await inboxReady.apiClient.updateInviteName(inviteCode, name: truncatedName)
-                Logger.info("Updated backend invite name for conversation \(conversationId)")
-            } catch {
-                // Continue with XMTP update even if backend update fails
-            }
+            throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
         }
 
         try await group.updateName(name: truncatedName)
 
-        try await databaseWriter.write { db in
-            if let localConversation = try DBConversation
-                .filter(DBConversation.Columns.id == conversationId)
-                .fetchOne(db) {
-                let updatedConversation = localConversation.with(name: truncatedName)
-                try updatedConversation.save(db)
-                Logger.info("Updated local conversation name for \(conversationId): \(truncatedName)")
+        let updatedConversation = try await databaseWriter.write { db in
+            guard let localConversation = try DBConversation
+                .fetchOne(db, key: conversationId) else {
+                throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
             }
+            let updatedConversation = localConversation.with(name: truncatedName)
+            try updatedConversation.save(db)
+            Logger.info("Updated local conversation name for \(conversationId): \(truncatedName)")
+            return updatedConversation
         }
+
+        _ = try await inviteWriter .update(
+            for: updatedConversation.id,
+            name: updatedConversation.name,
+            description: updatedConversation.description,
+            imageURL: updatedConversation.imageURLString
+        )
 
         Logger.info("Updated conversation name for \(conversationId): \(truncatedName)")
     }
 
-    func updateGroupDescription(conversationId: String, description: String) async throws {
+    func updateDescription(_ description: String, for conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupMetadataError.groupNotFound(conversationId: conversationId)
+            throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
         }
 
-        // Update backend invite metadata if invite exists
-        if let inviteCode = try await getInviteCode(for: conversationId) {
-            Logger.info("Found invite code for conversation \(conversationId): \(inviteCode)")
-            do {
-                try await inboxReady.apiClient.updateInviteDescription(inviteCode, description: description)
-            } catch {
-                // Continue with XMTP update even if backend update fails
+        try await group.updateCustomDescription(description: description)
+
+        let updatedConversation = try await databaseWriter.write { db in
+            guard let localConversation = try DBConversation
+                .fetchOne(db, key: conversationId) else {
+                throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
             }
+            let updatedConversation = localConversation.with(description: description)
+            try updatedConversation.save(db)
+            Logger.info("Updated local conversation description for \(conversationId): \(description)")
+            return updatedConversation
         }
 
-        try await group.updateDescription(description: description)
-
-        try await databaseWriter.write { db in
-            if let localConversation = try DBConversation
-                .filter(DBConversation.Columns.id == conversationId)
-                .fetchOne(db) {
-                let updatedConversation = localConversation.with(description: description)
-                try updatedConversation.save(db)
-                Logger.info("Updated local conversation description for \(conversationId): \(description)")
-            }
-        }
+        _ = try await inviteWriter .update(
+            for: updatedConversation.id,
+            name: updatedConversation.name,
+            description: updatedConversation.description,
+            imageURL: updatedConversation.imageURLString
+        )
 
         Logger.info("Updated conversation description for \(conversationId): \(description)")
     }
 
-    func updateGroupImage(conversation: Conversation, image: UIImage) async throws {
+    func updateImage(_ image: UIImage, for conversation: Conversation) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         let resizedImage = ImageCompression.resizeForCache(image)
@@ -130,62 +113,60 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             throw ConversationMetadataWriterError.failedImageCompression
         }
 
-        let filename = "group-image-\(UUID().uuidString).jpg"
+        let filename = "conversation-image-\(UUID().uuidString).jpg"
 
         _ = try await inboxReady.apiClient.uploadAttachmentAndExecute(
             data: compressedImageData,
             filename: filename
         ) { uploadedURL in
             do {
-                try await self.updateGroupImageUrl(conversationId: conversation.id, imageURL: uploadedURL)
+                try await self.updateImageUrl(uploadedURL, for: conversation.id)
                 ImageCache.shared.setImage(resizedImage, for: conversation)
             } catch {
-                Logger.error("Failed updating group image URL: \(error.localizedDescription)")
+                Logger.error("Failed updating conversation image URL: \(error.localizedDescription)")
             }
         }
     }
 
-    func updateGroupImageUrl(conversationId: String, imageURL: String) async throws {
+    func updateImageUrl(_ imageURL: String, for conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupMetadataError.groupNotFound(conversationId: conversationId)
-        }
-
-        // Update backend invite metadata if invite exists
-        if let inviteCode = try await getInviteCode(for: conversationId) {
-            Logger.info("Found invite code for conversation \(conversationId): \(inviteCode)")
-            do {
-                try await inboxReady.apiClient.updateInviteImageUrl(inviteCode, imageUrl: imageURL)
-            } catch {
-                // Continue with XMTP update even if backend update fails
-            }
+            throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
         }
 
         try await group.updateImageUrl(imageUrl: imageURL)
 
-        try await databaseWriter.write { db in
-            if let localConversation = try DBConversation
-                .filter(DBConversation.Columns.id == conversationId)
-                .fetchOne(db) {
-                let updatedConversation = localConversation.with(imageURLString: imageURL)
-                try updatedConversation.save(db)
-                Logger.info("Updated local conversation image for \(conversationId): \(imageURL)")
+        let updatedConversation = try await databaseWriter.write { db in
+            guard let localConversation = try DBConversation
+                .fetchOne(db, key: conversationId) else {
+                throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
             }
+            let updatedConversation = localConversation.with(imageURLString: imageURL)
+            try updatedConversation.save(db)
+            Logger.info("Updated local conversation image for \(conversationId): \(imageURL)")
+            return updatedConversation
         }
+
+        _ = try await inviteWriter.update(
+            for: updatedConversation.id,
+            name: updatedConversation.name,
+            description: updatedConversation.description,
+            imageURL: updatedConversation.imageURLString
+        )
 
         Logger.info("Updated conversation image for \(conversationId): \(imageURL)")
     }
 
     // MARK: - Member Management
 
-    func addGroupMembers(conversationId: String, memberInboxIds: [String]) async throws {
+    func addMembers(_ memberInboxIds: [String], to conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupMetadataError.groupNotFound(conversationId: conversationId)
+            throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
         }
 
         _ = try await group.addMembers(inboxIds: memberInboxIds)
@@ -200,19 +181,19 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
                     createdAt: Date()
                 )
                 try conversationMember.save(db)
-                Logger.info("Added local group member \(memberInboxId) to \(conversationId)")
+                Logger.info("Added local conversation member \(memberInboxId) to \(conversationId)")
             }
         }
 
-        Logger.info("Added members to group \(conversationId): \(memberInboxIds)")
+        Logger.info("Added members to conversation \(conversationId): \(memberInboxIds)")
     }
 
-    func removeGroupMembers(conversationId: String, memberInboxIds: [String]) async throws {
+    func removeMembers(_ memberInboxIds: [String], from conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupMetadataError.groupNotFound(conversationId: conversationId)
+            throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
         }
 
         try await group.removeMembers(inboxIds: memberInboxIds)
@@ -223,21 +204,21 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
                     .filter(DBConversationMember.Columns.conversationId == conversationId)
                     .filter(DBConversationMember.Columns.inboxId == memberInboxId)
                     .deleteAll(db)
-                Logger.info("Removed local group member \(memberInboxId) from \(conversationId)")
+                Logger.info("Removed local conversation member \(memberInboxId) from \(conversationId)")
             }
         }
 
-        Logger.info("Removed members from group \(conversationId): \(memberInboxIds)")
+        Logger.info("Removed members from conversation \(conversationId): \(memberInboxIds)")
     }
 
     // MARK: - Admin Management
 
-    func promoteToAdmin(conversationId: String, memberInboxId: String) async throws {
+    func promoteToAdmin(_ memberInboxId: String, in conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupMetadataError.groupNotFound(conversationId: conversationId)
+            throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
         }
 
         try await group.addAdmin(inboxId: memberInboxId)
@@ -253,15 +234,15 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             }
         }
 
-        Logger.info("Promoted \(memberInboxId) to admin in group \(conversationId)")
+        Logger.info("Promoted \(memberInboxId) to admin in conversation \(conversationId)")
     }
 
-    func demoteFromAdmin(conversationId: String, memberInboxId: String) async throws {
+    func demoteFromAdmin(_ memberInboxId: String, in conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupMetadataError.groupNotFound(conversationId: conversationId)
+            throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
         }
 
         try await group.removeAdmin(inboxId: memberInboxId)
@@ -276,15 +257,15 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             }
         }
 
-        Logger.info("Demoted \(memberInboxId) from admin in group \(conversationId)")
+        Logger.info("Demoted \(memberInboxId) from admin in conversation \(conversationId)")
     }
 
-    func promoteToSuperAdmin(conversationId: String, memberInboxId: String) async throws {
+    func promoteToSuperAdmin(_ memberInboxId: String, in conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupMetadataError.groupNotFound(conversationId: conversationId)
+            throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
         }
 
         try await group.addSuperAdmin(inboxId: memberInboxId)
@@ -299,15 +280,15 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             }
         }
 
-        Logger.info("Promoted \(memberInboxId) to super admin in group \(conversationId)")
+        Logger.info("Promoted \(memberInboxId) to super admin in conversation \(conversationId)")
     }
 
-    func demoteFromSuperAdmin(conversationId: String, memberInboxId: String) async throws {
+    func demoteFromSuperAdmin(_ memberInboxId: String, in conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
         guard let conversation = try await inboxReady.client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupMetadataError.groupNotFound(conversationId: conversationId)
+            throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
         }
 
         try await group.removeSuperAdmin(inboxId: memberInboxId)
@@ -322,15 +303,15 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             }
         }
 
-        Logger.info("Demoted \(memberInboxId) from super admin in group \(conversationId)")
+        Logger.info("Demoted \(memberInboxId) from super admin in conversation \(conversationId)")
     }
 }
 
-// MARK: - Group Metadata Errors
+// MARK: - Conversation Metadata Errors
 
-enum GroupMetadataError: LocalizedError {
+enum ConversationMetadataError: LocalizedError {
     case clientNotAvailable
-    case groupNotFound(conversationId: String)
+    case conversationNotFound(conversationId: String)
     case memberNotFound(memberInboxId: String)
     case insufficientPermissions
 
@@ -338,8 +319,8 @@ enum GroupMetadataError: LocalizedError {
         switch self {
         case .clientNotAvailable:
             return "XMTP client is not available"
-        case .groupNotFound(let conversationId):
-            return "Group not found: \(conversationId)"
+        case .conversationNotFound(let conversationId):
+            return "Conversation not found: \(conversationId)"
         case .memberNotFound(let memberInboxId):
             return "Member not found: \(memberInboxId)"
         case .insufficientPermissions:

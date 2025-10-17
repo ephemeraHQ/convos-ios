@@ -5,13 +5,21 @@ struct DBInbox: Codable, FetchableRecord, PersistableRecord, Identifiable, Hasha
     static let databaseTableName: String = "inbox"
 
     enum Columns {
-        static let sessionId: Column = Column(CodingKeys.sessionId)
         static let inboxId: Column = Column(CodingKeys.inboxId)
+        static let clientId: Column = Column(CodingKeys.clientId)
+        static let createdAt: Column = Column(CodingKeys.createdAt)
     }
 
     var id: String { inboxId }
-    var sessionId: Int64 = Session.defaultSessionId
     let inboxId: String
+    let clientId: String
+    let createdAt: Date
+
+    init(inboxId: String, clientId: String, createdAt: Date = Date()) {
+        self.inboxId = inboxId
+        self.clientId = clientId
+        self.createdAt = createdAt
+    }
 
     static let conversations: HasManyAssociation<DBInbox, DBConversation> = hasMany(
         DBConversation.self,
@@ -19,21 +27,9 @@ struct DBInbox: Codable, FetchableRecord, PersistableRecord, Identifiable, Hasha
         using: ForeignKey([Columns.inboxId], to: [DBConversation.Columns.inboxId])
     )
 
-    private static let _member: HasOneAssociation<DBInbox, Member> = hasOne(
+    static let member: HasOneAssociation<DBInbox, Member> = hasOne(
         Member.self,
         key: "inboxMember",
         using: ForeignKey(["inboxId"], to: ["inboxId"])
     )
-
-    static let memberProfile: HasOneThroughAssociation<DBInbox, MemberProfile> = hasOne(
-        MemberProfile.self,
-        through: _member.forKey("inboxMember"),
-        using: Member.profile,
-        key: "inboxMemberProfile"
-    )
-}
-
-struct DBInboxDetails: Codable, FetchableRecord, PersistableRecord, Hashable {
-    let inbox: DBInbox
-    let inboxMemberProfile: MemberProfile
 }

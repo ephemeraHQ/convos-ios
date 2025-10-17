@@ -1,16 +1,14 @@
 import Foundation
 
-public extension Inbox {
-    static func mock() -> Self {
-        .init(
-            inboxId: UUID().uuidString,
-            profile: .mock()
-        )
-    }
-}
-
-public struct Inbox: Codable, Identifiable, Hashable {
+public struct Inbox: Codable, Hashable, Identifiable {
     public var id: String { inboxId }
     public let inboxId: String
-    public let profile: Profile
+    public let clientId: String
+    public let createdAt: Date
+
+    public init(inboxId: String, clientId: String, createdAt: Date = Date()) {
+        self.inboxId = inboxId
+        self.clientId = clientId
+        self.createdAt = createdAt
+    }
 }

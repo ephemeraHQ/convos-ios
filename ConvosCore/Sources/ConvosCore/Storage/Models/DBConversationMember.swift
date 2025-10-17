@@ -20,13 +20,13 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
 
     static var databaseTableName: String { "conversation_members" }
 
-    static let memberForeignKey: ForeignKey = ForeignKey(["inboxId"], to: ["inboxId"])
-    static let conversationForeignKey: ForeignKey = ForeignKey(["conversationId"])
+    static let memberForeignKey: ForeignKey = ForeignKey([Columns.inboxId], to: [Member.Columns.inboxId])
+    static let conversationForeignKey: ForeignKey = ForeignKey([Columns.conversationId], to: [DBConversation.Columns.id])
 
     // Foreign key to match invites created by this member for this conversation
     static let inviteForeignKey: ForeignKey = ForeignKey(
-        ["creatorInboxId", "conversationId"],
-        to: ["inboxId", "conversationId"]
+        [DBInvite.Columns.creatorInboxId, DBInvite.Columns.conversationId],
+        to: [Columns.inboxId, Columns.conversationId]
     )
 
     static let invite: HasOneAssociation<DBConversationMember, DBInvite> = hasOne(
@@ -45,10 +45,14 @@ struct DBConversationMember: Codable, FetchableRecord, PersistableRecord, Hashab
         using: memberForeignKey
     )
 
-    static let memberProfile: HasOneThroughAssociation<DBConversationMember, MemberProfile> = hasOne(
+    static let memberProfileForeignKey: ForeignKey = ForeignKey(
+        [Columns.conversationId, Columns.inboxId],
+        to: [MemberProfile.Columns.conversationId, MemberProfile.Columns.inboxId]
+    )
+
+    static let memberProfile: HasOneAssociation<DBConversationMember, MemberProfile> = hasOne(
         MemberProfile.self,
-        through: member,
-        using: Member.profile
+        using: memberProfileForeignKey
     )
 }
 

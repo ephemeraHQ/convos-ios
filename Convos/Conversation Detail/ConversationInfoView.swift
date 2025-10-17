@@ -132,7 +132,7 @@ struct ConversationInfoView: View {
                             Text(ConfigManager.shared.currentEnvironment.relyingPartyIdentifier)
                                 .font(.caption)
                                 .foregroundStyle(.colorTextSecondary)
-                            Text(viewModel.invite.inviteUrlString)
+                            Text(viewModel.invite.inviteURLString)
                                 .foregroundStyle(.colorTextPrimary)
                         }
 

@@ -27,6 +27,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     static func authorize(
         inboxId: String,
+        identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
@@ -34,6 +35,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         registersForPushNotifications: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
+            identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
@@ -45,16 +47,20 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     }
 
     static func register(
+        identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
+        savesInboxToDatabase: Bool = true,
         registersForPushNotifications: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
+            identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: true,
+            savesInboxToDatabase: savesInboxToDatabase,
             registersForPushNotifications: registersForPushNotifications
         )
         operation.register()
@@ -62,30 +68,35 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     }
 
     private init(
+        identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
+        savesInboxToDatabase: Bool = true,
         registersForPushNotifications: Bool
     ) {
-        let inboxWriter = InboxWriter(databaseWriter: databaseWriter)
-        let syncingManager = startsStreamingServices ? SyncingManager(databaseWriter: databaseWriter) : nil
-        let inviteJoinRequestsManager = startsStreamingServices ? InviteJoinRequestsManager(
-            databaseReader: databaseReader,
+        let syncingManager = startsStreamingServices ? SyncingManager(
+            identityStore: identityStore,
             databaseWriter: databaseWriter
+        ) : nil
+        let inviteJoinRequestsManager = startsStreamingServices ? InviteJoinRequestsManager(
+            identityStore: identityStore,
+            databaseReader: databaseReader,
         ) : nil
         let invitesRepository = InvitesRepository(databaseReader: databaseReader)
         stateMachine = InboxStateMachine(
-            identityStore: environment.defaultIdentityStore,
-            inboxWriter: inboxWriter,
+            identityStore: identityStore,
             invitesRepository: invitesRepository,
+            databaseWriter: databaseWriter,
             syncingManager: syncingManager,
             inviteJoinRequestsManager: inviteJoinRequestsManager,
             pushNotificationRegistrar: PushNotificationRegistrar(
                 environment: environment
             ),
+            savesInboxToDatabase: savesInboxToDatabase,
             autoRegistersForPushNotifications: registersForPushNotifications,
-            environment: environment,
+            environment: environment
         )
     }
 
@@ -96,7 +107,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     private func authorize(inboxId: String) {
         task?.cancel()
-        task = Task { [weak self] in
+        task = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             await stateMachine.authorize(inboxId: inboxId)
         }
@@ -104,7 +115,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     private func register() {
         task?.cancel()
-        task = Task { [weak self] in
+        task = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             await stateMachine.register()
         }
@@ -112,7 +123,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     func stopAndDelete() {
         task?.cancel()
-        task = Task { [weak self] in
+        task = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             await stateMachine.stopAndDelete()
         }
@@ -125,7 +136,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     func stop() {
         task?.cancel()
-        task = Task { [weak self] in
+        task = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             await stateMachine.stop()
         }

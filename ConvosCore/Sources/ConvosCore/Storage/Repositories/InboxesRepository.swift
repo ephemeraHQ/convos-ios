@@ -1,51 +1,39 @@
-import Combine
 import Foundation
 import GRDB
 
-public protocol InboxesRepositoryProtocol {
-    var inboxesPublisher: AnyPublisher<[Inbox], Never> { get }
-
-    func allInboxes() throws -> [Inbox]
-}
-
-final class InboxesRepository: InboxesRepositoryProtocol {
+/// Repository for fetching inbox data from the database
+public struct InboxesRepository {
     private let databaseReader: any DatabaseReader
 
-    let inboxesPublisher: AnyPublisher<[Inbox], Never>
-
-    init(databaseReader: any DatabaseReader) {
+    public init(databaseReader: any DatabaseReader) {
         self.databaseReader = databaseReader
-        self.inboxesPublisher = ValueObservation
-            .tracking { db in
-                try db.composeAllInboxes()
-            }
-            .publisher(in: databaseReader)
-            .replaceError(with: [])
-            .eraseToAnyPublisher()
     }
 
-    func allInboxes() throws -> [Inbox] {
+    /// Fetch all inboxes from the database
+    public func allInboxes() throws -> [Inbox] {
         try databaseReader.read { db in
-            try db.composeAllInboxes()
+            try DBInbox
+                .fetchAll(db)
+                .map { $0.toDomain() }
         }
     }
-}
 
-extension Array where Element == DBInboxDetails {
-    func composeInboxes(from database: Database) throws -> [Inbox] {
-        map { dbInbox in
-            dbInbox.hydrateInbox()
+    /// Fetch a specific inbox by inboxId
+    public func inbox(for inboxId: String) throws -> Inbox? {
+        try databaseReader.read { db in
+            try DBInbox
+                .fetchOne(db, id: inboxId)?
+                .toDomain()
         }
     }
-}
 
-fileprivate extension Database {
-    func composeAllInboxes() throws -> [Inbox] {
-        let dbInboxDetails = try DBInbox
-            .including(required: DBInbox.memberProfile)
-            .asRequest(of: DBInboxDetails.self)
-            .fetchAll(self)
-
-        return try dbInboxDetails.composeInboxes(from: self)
+    /// Fetch inbox by clientId
+    public func inbox(byClientId clientId: String) throws -> Inbox? {
+        try databaseReader.read { db in
+            try DBInbox
+                .filter(DBInbox.Columns.clientId == clientId)
+                .fetchOne(db)?
+                .toDomain()
+        }
     }
 }

@@ -10,6 +10,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
         static let id: Column = Column(CodingKeys.id)
         static let inboxId: Column = Column(CodingKeys.inboxId)
         static let clientConversationId: Column = Column(CodingKeys.clientConversationId)
+        static let inviteTag: Column = Column(CodingKeys.inviteTag)
         static let creatorId: Column = Column(CodingKeys.creatorId)
         static let kind: Column = Column(CodingKeys.kind)
         static let consent: Column = Column(CodingKeys.consent)
@@ -17,11 +18,13 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
         static let name: Column = Column(CodingKeys.name)
         static let description: Column = Column(CodingKeys.description)
         static let imageURLString: Column = Column(CodingKeys.imageURLString)
+        static let expiresAt: Column = Column(CodingKeys.expiresAt)
     }
 
     public let id: String
     public let inboxId: String
     public let clientConversationId: String // used for conversation drafts
+    public let inviteTag: String
     public let creatorId: String
     public let kind: ConversationKind
     public let consent: Consent
@@ -29,17 +32,18 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
     public let name: String?
     public let description: String?
     public let imageURLString: String?
+    public let expiresAt: Date?
 
     static let creatorForeignKey: ForeignKey = ForeignKey(
-        [Columns.creatorId],
-        to: [DBConversationMember.Columns.inboxId]
+        [Columns.creatorId, Columns.id],
+        to: [DBConversationMember.Columns.inboxId, DBConversationMember.Columns.conversationId]
     )
     static let inboxMemberKey: ForeignKey = ForeignKey(
-        [Columns.inboxId],
-        to: [DBConversationMember.Columns.inboxId]
+        [Columns.inboxId, Columns.id],
+        to: [DBConversationMember.Columns.inboxId, DBConversationMember.Columns.conversationId]
     )
-    static let localStateForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
-    static let inviteForeignKey: ForeignKey = ForeignKey(["conversationId"], to: ["id"])
+    static let localStateForeignKey: ForeignKey = ForeignKey([ConversationLocalState.Columns.conversationId], to: [Columns.id])
+    static let inviteForeignKey: ForeignKey = ForeignKey([DBInvite.Columns.conversationId], to: [Columns.id])
 
     // The invite created by the current inbox member (the user viewing this conversation)
     static let invite: HasOneThroughAssociation<DBConversation, DBInvite> = hasOne(
@@ -57,19 +61,13 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
         key: "conversationCreatorInvite"
     )
 
-    static let inbox: BelongsToAssociation<DBConversation, DBInbox> = belongsTo(
-        DBInbox.self,
-        key: "conversationInbox",
-        using: .init([Columns.inboxId], to: [DBInbox.Columns.inboxId])
-    )
-
     static let creator: BelongsToAssociation<DBConversation, DBConversationMember> = belongsTo(
         DBConversationMember.self,
         key: "conversationCreator",
         using: creatorForeignKey
     )
 
-    // the member whos inbox this is
+    // the member whos conversation this is
     static let inboxMember: BelongsToAssociation<DBConversation, DBConversationMember> = belongsTo(
         DBConversationMember.self,
         key: "conversationInboxMember",
@@ -86,7 +84,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
     static let _members: HasManyAssociation<DBConversation, DBConversationMember> = hasMany(
         DBConversationMember.self,
         key: "conversationMembers"
-    ).order(Column("createdAt").asc)
+    ).order(DBConversationMember.Columns.createdAt.asc)
 
     static let members: HasManyThroughAssociation<DBConversation, Member> = hasMany(
         Member.self,
@@ -105,8 +103,8 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
     static let messages: HasManyAssociation<DBConversation, DBMessage> = hasMany(
         DBMessage.self,
         key: "conversationMessages",
-        using: ForeignKey(["id"], to: ["conversationId"])
-    ).order(Column("date").desc)
+        using: ForeignKey([Columns.id], to: [DBMessage.Columns.conversationId])
+    ).order(DBMessage.Columns.dateNs.desc)
 
     static let lastMessageRequest: QueryInterfaceRequest<DBMessage> = DBMessage
         .filter(DBMessage.Columns.contentType != MessageContentType.update.rawValue)
@@ -134,9 +132,12 @@ extension DBConversation {
         "\(draftPrefix)\(UUID().uuidString)"
     }
 
+    static func isDraft(id: String) -> Bool {
+        id.hasPrefix(draftPrefix)
+    }
+
     var isDraft: Bool {
-        (id.hasPrefix(Self.draftPrefix) &&
-         clientConversationId.hasPrefix(Self.draftPrefix))
+        Self.isDraft(id: id) && Self.isDraft(id: clientConversationId)
     }
 
     func with(id: String) -> Self {
@@ -144,13 +145,15 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 
@@ -159,13 +162,32 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
+        )
+    }
+
+    func with(creatorId: String) -> Self {
+        .init(
+            id: id,
+            inboxId: inboxId,
+            clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 
@@ -174,13 +196,15 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 
@@ -189,13 +213,15 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 
@@ -206,13 +232,15 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 
@@ -221,13 +249,15 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
     }
 
@@ -236,55 +266,15 @@ extension DBConversation {
             id: id,
             inboxId: inboxId,
             clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
             creatorId: creatorId,
             kind: kind,
             consent: consent,
             createdAt: createdAt,
             name: name,
             description: description,
-            imageURLString: imageURLString
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
         )
-    }
-}
-
-extension DBConversation {
-    static func findConversationWith(members ids: [String], inboxId: String, db: Database) throws -> DBConversation? {
-        let ids = Array(Set<String>(ids))
-        guard !ids.isEmpty else { return nil }
-        let count = ids.count
-
-        // Find candidate conversation IDs
-        let placeholders = databaseQuestionMarks(count: count)
-        let sql = """
-        SELECT conversationId
-        FROM \(DBConversationMember.databaseTableName)
-        WHERE memberId IN (\(placeholders))
-          AND conversationId NOT LIKE 'draft-%'
-        GROUP BY conversationId
-        HAVING COUNT(DISTINCT memberId) = :count
-        """
-        var arguments = StatementArguments()
-        for id in ids {
-            arguments += [id]
-        }
-        arguments += ["count": count]
-
-        let candidateIds = try String.fetchAll(db, sql: sql, arguments: arguments)
-
-        // For each candidate, check if the set of member IDs matches exactly
-        for conversationId in candidateIds {
-            let memberIds = try String.fetchAll(
-                db,
-                sql: "SELECT memberId FROM \(DBConversationMember.databaseTableName) WHERE conversationId = ?",
-                arguments: [conversationId]
-            )
-            if Set(memberIds) == Set(ids),
-               let conversation = try DBConversation
-                .fetchOne(db, key: conversationId),
-               conversation.inboxId == inboxId {
-                return conversation
-            }
-        }
-        return nil
     }
 }

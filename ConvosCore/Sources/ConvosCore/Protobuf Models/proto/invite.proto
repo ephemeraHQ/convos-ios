@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+// InvitePayload represents the core invite data
+message InvitePayload {
+    // The encrypted conversation id
+    string conversationToken = 1;
+
+    // The creator's inbox ID
+    string creator_inbox_id = 2;
+
+    // The tag to mark which conversation this corresponds to, lives in `ConversationCustomMetadata`
+    string tag = 3;
+
+    // optional conversation metadata
+    optional string name = 4;
+    optional string description = 5;
+    optional string imageURL = 6;
+    optional google.protobuf.Timestamp conversationExpiresAt = 7;
+
+    // optional invite expiration
+    optional google.protobuf.Timestamp expiresAt = 8;
+
+    // Whether the invite should expire after being used once
+    bool expiresAfterUse = 9;
+}
+
+// SignedInvite represents an invite with its cryptographic signature
+message SignedInvite {
+    // The invite payload containing the actual invite data
+    InvitePayload payload = 1;
+
+    // The cryptographic signature (typically 65 bytes for ECDSA with recovery)
+    bytes signature = 2;
+}

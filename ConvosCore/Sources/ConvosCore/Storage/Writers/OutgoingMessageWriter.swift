@@ -13,7 +13,7 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
         case missingClientProvider
     }
 
-    private let inboxStateManager: InboxStateManager
+    private let inboxStateManager: any InboxStateManagerProtocol
     private let databaseWriter: any DatabaseWriter
     private let conversationId: String
     private let isSendingValue: CurrentValueSubject<Bool, Never> = .init(false)
@@ -23,7 +23,7 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
         sentMessageSubject.eraseToAnyPublisher()
     }
 
-    init(inboxStateManager: InboxStateManager,
+    init(inboxStateManager: any InboxStateManagerProtocol,
          databaseWriter: any DatabaseWriter,
          conversationId: String) {
         self.inboxStateManager = inboxStateManager

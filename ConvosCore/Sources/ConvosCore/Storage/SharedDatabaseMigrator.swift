@@ -12,8 +12,6 @@ class SharedDatabaseMigrator {
     }
 }
 
-// swiftlint:disable function_body_length
-
 extension SharedDatabaseMigrator {
     private func createMigrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -23,18 +21,15 @@ extension SharedDatabaseMigrator {
 #endif
 
         migrator.registerMigration("createSchema") { db in
-            try db.create(table: "session") { t in
-                t.column("id", .integer)
-                    .unique()
-                    .primaryKey()
-            }
-
             try db.create(table: "inbox") { t in
                 t.column("inboxId", .text)
-                    .unique()
+                    .notNull()
                     .primaryKey()
-                t.column("sessionId", .integer)
-                    .references("session", onDelete: .cascade)
+                t.column("clientId", .text)
+                    .notNull()
+                    .unique()
+                t.column("createdAt", .datetime)
+                    .notNull()
             }
 
             try db.create(table: "member") { t in
@@ -50,10 +45,12 @@ extension SharedDatabaseMigrator {
                     .primaryKey()
                 t.column("inboxId", .text)
                     .notNull()
-                    .references("inbox", onDelete: .cascade)
                 t.column("clientConversationId", .text)
                     .notNull()
                     .unique(onConflict: .replace)
+                t.column("inviteTag", .text)
+                    .notNull()
+                    .unique()
                 t.column("creatorId", .text)
                     .notNull()
                 t.column("kind", .text).notNull()
@@ -62,41 +59,30 @@ extension SharedDatabaseMigrator {
                 t.column("name", .text)
                 t.column("description", .text)
                 t.column("imageURLString", .text)
-
+                t.column("expiresAt", .datetime)
                 t.uniqueKey(["id", "inboxId"])
             }
 
             try db.create(table: "memberProfile") { t in
+                t.column("conversationId", .text)
+                    .notNull()
+                    .references("conversation", onDelete: .cascade)
                 t.column("inboxId", .text)
                     .notNull()
-                    .unique()
-                    .primaryKey()
                     .references("member", onDelete: .cascade)
                 t.column("name", .text)
                 t.column("avatar", .text)
+                t.primaryKey(["conversationId", "inboxId"])
             }
 
             try db.create(table: "invite") { t in
-                t.column("id", .text)
+                t.column("urlSlug", .text)
                     .notNull()
                     .primaryKey()
                 t.column("creatorInboxId", .text)
                     .notNull()
                 t.column("conversationId", .text)
                     .notNull()
-                t.column("inviteUrlString", .text)
-                    .notNull()
-                t.column("maxUses", .numeric)
-                t.column("usesCount", .numeric)
-                    .defaults(to: 0)
-                    .notNull()
-                t.column("status", .text)
-                    .notNull()
-                t.column("createdAt", .datetime)
-                    .notNull()
-                t.column("autoApprove", .boolean)
-                    .notNull()
-                    .defaults(to: false)
 
                 // Foreign key to the conversation member who created this invite
                 t.foreignKey(
@@ -152,6 +138,7 @@ extension SharedDatabaseMigrator {
                     .notNull()
                     .references("member", onDelete: .none)
                 t.column("date", .datetime).notNull()
+                t.column("dateNs", .integer).notNull()
                 t.column("status", .text).notNull()
                 t.column("messageType", .text).notNull()
                 t.column("contentType", .text).notNull()
@@ -163,29 +150,6 @@ extension SharedDatabaseMigrator {
             }
         }
 
-        // Migration to add dateNs column and populate from existing date values
-        migrator.registerMigration("addDateNsColumn") { db in
-            // First, add the dateNs column to the message table
-            try db.alter(table: "message") { t in
-                t.add(column: "dateNs", .integer).notNull().defaults(to: 0)
-            }
-
-            // Then update all existing messages to set dateNs based on their date column
-            // SQLite stores datetime as Julian day numbers, so we need to convert to Unix timestamp first
-            // then multiply by 1,000,000,000 to get nanoseconds
-            try db.execute(sql: """
-                UPDATE message
-                SET dateNs = CAST((julianday(date) - 2440587.5) * 86400 * 1000000000 AS INTEGER)
-                WHERE dateNs IS NULL OR dateNs = 0
-            """)
-
-            // Indexes for ordering and last-message computations
-            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_message_conversationId_dateNs ON message (conversationId, dateNs)")
-            try db.execute(sql: "CREATE INDEX IF NOT EXISTS idx_message_dateNs ON message (dateNs)")
-        }
-
         return migrator
     }
 }
-
-// swiftlint:enable function_body_length

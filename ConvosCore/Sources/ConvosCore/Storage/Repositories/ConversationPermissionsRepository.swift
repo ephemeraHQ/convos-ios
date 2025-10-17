@@ -3,13 +3,13 @@ import Foundation
 import GRDB
 import XMTPiOS
 
-// MARK: - Group Permissions Repository Protocol
+// MARK: - Conversation Permissions Repository Protocol
 
-public protocol GroupPermissionsRepositoryProtocol {
-    func getGroupPermissions(for conversationId: String) async throws -> GroupPermissionPolicySet
+public protocol ConversationPermissionsRepositoryProtocol {
+    func getConversationPermissions(for conversationId: String) async throws -> ConversationPermissionPolicySet
     func getMemberRole(memberInboxId: String, in conversationId: String) async throws -> MemberRole
-    func canPerformAction(memberInboxId: String, action: GroupPermissionAction, in conversationId: String) async throws -> Bool
-    func getGroupMembers(for conversationId: String) async throws -> [GroupMemberInfo]
+    func canPerformAction(memberInboxId: String, action: ConversationPermissionAction, in conversationId: String) async throws -> Bool
+    func getConversationMembers(for conversationId: String) async throws -> [ConversationMemberInfo]
     func addAdmin(memberInboxId: String, to conversationId: String) async throws
     func removeAdmin(memberInboxId: String, from conversationId: String) async throws
     func addSuperAdmin(memberInboxId: String, to conversationId: String) async throws
@@ -18,20 +18,20 @@ public protocol GroupPermissionsRepositoryProtocol {
     func removeMembers(inboxIds: [String], from conversationId: String) async throws
 }
 
-// MARK: - Group Permission Types
+// MARK: - Conversation Permission Types
 
-public enum GroupPermissionAction: String, CaseIterable {
+public enum ConversationPermissionAction: String, CaseIterable {
     case addMember = "add_member_policy"
     case removeMember = "remove_member_policy"
     case addAdmin = "add_admin_policy"
     case removeAdmin = "remove_admin_policy"
-    case updateGroupName = "update_group_name_policy"
-    case updateGroupDescription = "update_group_description_policy"
-    case updateGroupImage = "update_group_image_url_policy"
+    case updateConversationName = "update_group_name_policy"
+    case updateConversationDescription = "update_group_description_policy"
+    case updateConversationImage = "update_group_image_url_policy"
     case updateMessageDisappearing = "update_group_pinned_frame_url_policy"
 }
 
-public enum GroupPermissionLevel: String {
+public enum ConversationPermissionLevel: String {
     case allow
     case deny
     case admin
@@ -39,86 +39,86 @@ public enum GroupPermissionLevel: String {
     case unknown
 }
 
-public struct GroupPermissionPolicySet {
-    let addMemberPolicy: GroupPermissionLevel
-    let removeMemberPolicy: GroupPermissionLevel
-    let addAdminPolicy: GroupPermissionLevel
-    let removeAdminPolicy: GroupPermissionLevel
-    let updateGroupNamePolicy: GroupPermissionLevel
-    let updateGroupDescriptionPolicy: GroupPermissionLevel
-    let updateGroupImagePolicy: GroupPermissionLevel
-    let updateMessageDisappearingPolicy: GroupPermissionLevel
+public struct ConversationPermissionPolicySet {
+    let addMemberPolicy: ConversationPermissionLevel
+    let removeMemberPolicy: ConversationPermissionLevel
+    let addAdminPolicy: ConversationPermissionLevel
+    let removeAdminPolicy: ConversationPermissionLevel
+    let updateConversationNamePolicy: ConversationPermissionLevel
+    let updateConversationDescriptionPolicy: ConversationPermissionLevel
+    let updateConversationImagePolicy: ConversationPermissionLevel
+    let updateMessageDisappearingPolicy: ConversationPermissionLevel
 
-    static let defaultPolicy: GroupPermissionPolicySet = GroupPermissionPolicySet(
+    static let defaultPolicy: ConversationPermissionPolicySet = ConversationPermissionPolicySet(
         addMemberPolicy: .admin,
         removeMemberPolicy: .admin,
         addAdminPolicy: .superAdmin,
         removeAdminPolicy: .superAdmin,
-        updateGroupNamePolicy: .admin,
-        updateGroupDescriptionPolicy: .admin,
-        updateGroupImagePolicy: .admin,
+        updateConversationNamePolicy: .admin,
+        updateConversationDescriptionPolicy: .admin,
+        updateConversationImagePolicy: .admin,
         updateMessageDisappearingPolicy: .admin
     )
 
-    static let restrictivePolicy: GroupPermissionPolicySet = GroupPermissionPolicySet(
+    static let restrictivePolicy: ConversationPermissionPolicySet = ConversationPermissionPolicySet(
         addMemberPolicy: .superAdmin,
         removeMemberPolicy: .superAdmin,
         addAdminPolicy: .superAdmin,
         removeAdminPolicy: .superAdmin,
-        updateGroupNamePolicy: .superAdmin,
-        updateGroupDescriptionPolicy: .superAdmin,
-        updateGroupImagePolicy: .superAdmin,
+        updateConversationNamePolicy: .superAdmin,
+        updateConversationDescriptionPolicy: .superAdmin,
+        updateConversationImagePolicy: .superAdmin,
         updateMessageDisappearingPolicy: .superAdmin
     )
 
-    static let superAdminPolicy: GroupPermissionPolicySet = GroupPermissionPolicySet(
+    static let superAdminPolicy: ConversationPermissionPolicySet = ConversationPermissionPolicySet(
         addMemberPolicy: .admin,
         removeMemberPolicy: .admin,
         addAdminPolicy: .superAdmin,
         removeAdminPolicy: .superAdmin,
-        updateGroupNamePolicy: .admin,
-        updateGroupDescriptionPolicy: .admin,
-        updateGroupImagePolicy: .admin,
+        updateConversationNamePolicy: .admin,
+        updateConversationDescriptionPolicy: .admin,
+        updateConversationImagePolicy: .admin,
         updateMessageDisappearingPolicy: .admin
     )
 
-    static let adminPolicy: GroupPermissionPolicySet = GroupPermissionPolicySet(
+    static let adminPolicy: ConversationPermissionPolicySet = ConversationPermissionPolicySet(
         addMemberPolicy: .admin,
         removeMemberPolicy: .admin,
         addAdminPolicy: .superAdmin,
         removeAdminPolicy: .deny,
-        updateGroupNamePolicy: .admin,
-        updateGroupDescriptionPolicy: .admin,
-        updateGroupImagePolicy: .admin,
+        updateConversationNamePolicy: .admin,
+        updateConversationDescriptionPolicy: .admin,
+        updateConversationImagePolicy: .admin,
         updateMessageDisappearingPolicy: .admin
     )
 
-    static let memberPolicy: GroupPermissionPolicySet = GroupPermissionPolicySet(
+    static let memberPolicy: ConversationPermissionPolicySet = ConversationPermissionPolicySet(
         addMemberPolicy: .admin,
         removeMemberPolicy: .admin,
         addAdminPolicy: .deny,
         removeAdminPolicy: .deny,
-        updateGroupNamePolicy: .admin,
-        updateGroupDescriptionPolicy: .admin,
-        updateGroupImagePolicy: .admin,
+        updateConversationNamePolicy: .admin,
+        updateConversationDescriptionPolicy: .admin,
+        updateConversationImagePolicy: .admin,
         updateMessageDisappearingPolicy: .admin
     )
 }
 
-public struct GroupMemberInfo {
+public struct ConversationMemberInfo {
     let inboxId: String
     let role: MemberRole
     let consent: Consent
     let addedAt: Date
 }
 
-// MARK: - Group Permissions Repository Implementation
+// MARK: - Conversation Permissions Repository Implementation
 
-final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
-    private let inboxStateManager: InboxStateManager
+final class ConversationPermissionsRepository: ConversationPermissionsRepositoryProtocol {
+    private let inboxStateManager: any InboxStateManagerProtocol
     private let databaseReader: any DatabaseReader
 
-    init(inboxStateManager: InboxStateManager,
+    init(inboxStateManager: any InboxStateManagerProtocol,
          databaseReader: any DatabaseReader) {
         self.inboxStateManager = inboxStateManager
         self.databaseReader = databaseReader
@@ -126,36 +126,36 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
 
     // MARK: - Public Methods
 
-    func getGroupPermissions(for conversationId: String) async throws -> GroupPermissionPolicySet {
+    func getConversationPermissions(for conversationId: String) async throws -> ConversationPermissionPolicySet {
         let client = try await self.inboxStateManager.waitForInboxReadyResult().client
         guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
+            throw ConversationPermissionsError.conversationNotFound(conversationId: conversationId)
         }
 
         let isCurrentUserAdmin = try group.isAdmin(inboxId: client.inboxId)
         let isCurrentUserSuperAdmin = try group.isSuperAdmin(inboxId: client.inboxId)
 
-        // Get all group members to analyze the permission structure
+        // Get all conversation members to analyze the permission structure
         let members = try await conversation.members()
         let hasMultipleAdmins = members.filter { member in
             (try? group.isAdmin(inboxId: member.inboxId)) == true ||
             (try? group.isSuperAdmin(inboxId: member.inboxId)) == true
         }.count > 1
 
-        // Determine permission policy based on group structure and user role
+        // Determine permission policy based on conversation structure and user role
         if isCurrentUserSuperAdmin {
             // Super admins get full control but still follow hierarchical model
-            return GroupPermissionPolicySet.superAdminPolicy
+            return ConversationPermissionPolicySet.superAdminPolicy
         } else if isCurrentUserAdmin {
             // Regular admins get standard admin permissions
-            return GroupPermissionPolicySet.adminPolicy
+            return ConversationPermissionPolicySet.adminPolicy
         } else if hasMultipleAdmins {
-            // Group with multiple admins - more restrictive for members
-            return GroupPermissionPolicySet.memberPolicy
+            // Conversation with multiple admins - more restrictive for members
+            return ConversationPermissionPolicySet.memberPolicy
         } else {
-            // Single admin group or member-only view - use default
-            return GroupPermissionPolicySet.defaultPolicy
+            // Single admin conversation or member-only view - use default
+            return ConversationPermissionPolicySet.defaultPolicy
         }
     }
 
@@ -164,7 +164,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
 
         guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
+            throw ConversationPermissionsError.conversationNotFound(conversationId: conversationId)
         }
 
         // Use XMTP SDK methods to check member roles
@@ -173,30 +173,30 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
         } else if try group.isAdmin(inboxId: memberInboxId) {
             return .admin
         } else {
-            // Check if member exists in the group
+            // Check if member exists in the conversation
             let members = try await conversation.members()
             let memberExists = members.contains { $0.inboxId == memberInboxId }
             if memberExists {
                 return .member
             } else {
-                throw GroupPermissionsError.memberNotFound(memberInboxId: memberInboxId)
+                throw ConversationPermissionsError.memberNotFound(memberInboxId: memberInboxId)
             }
         }
     }
 
     func canPerformAction(
         memberInboxId: String,
-        action: GroupPermissionAction,
+        action: ConversationPermissionAction,
         in conversationId: String
     ) async throws -> Bool {
         // Get member role
         let memberRole = try await getMemberRole(memberInboxId: memberInboxId, in: conversationId)
 
-        // Get group permissions
-        let permissions = try await getGroupPermissions(for: conversationId)
+        // Get conversation permissions
+        let permissions = try await getConversationPermissions(for: conversationId)
 
         // Determine the required permission level for this action
-        let requiredPermission: GroupPermissionLevel
+        let requiredPermission: ConversationPermissionLevel
         switch action {
         case .addMember:
             requiredPermission = permissions.addMemberPolicy
@@ -206,12 +206,12 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
             requiredPermission = permissions.addAdminPolicy
         case .removeAdmin:
             requiredPermission = permissions.removeAdminPolicy
-        case .updateGroupName:
-            requiredPermission = permissions.updateGroupNamePolicy
-        case .updateGroupDescription:
-            requiredPermission = permissions.updateGroupDescriptionPolicy
-        case .updateGroupImage:
-            requiredPermission = permissions.updateGroupImagePolicy
+        case .updateConversationName:
+            requiredPermission = permissions.updateConversationNamePolicy
+        case .updateConversationDescription:
+            requiredPermission = permissions.updateConversationDescriptionPolicy
+        case .updateConversationImage:
+            requiredPermission = permissions.updateConversationImagePolicy
         case .updateMessageDisappearing:
             requiredPermission = permissions.updateMessageDisappearingPolicy
         }
@@ -220,19 +220,19 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
         return checkPermission(memberRole: memberRole, requiredLevel: requiredPermission)
     }
 
-    func getGroupMembers(for conversationId: String) async throws -> [GroupMemberInfo] {
+    func getConversationMembers(for conversationId: String) async throws -> [ConversationMemberInfo] {
         let client = try await self.inboxStateManager.waitForInboxReadyResult().client
 
         guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
+            throw ConversationPermissionsError.conversationNotFound(conversationId: conversationId)
         }
 
         // Get members from XMTP - members is a property, not a function
         let members = try await conversation.members()
 
         // Convert to our format
-        var groupMemberInfos: [GroupMemberInfo] = []
+        var conversationMemberInfos: [ConversationMemberInfo] = []
 
         for member in members {
             // Determine role using XMTP SDK methods
@@ -256,17 +256,17 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
                 consent = .unknown
             }
 
-            let groupMemberInfo = GroupMemberInfo(
+            let conversationMemberInfo = ConversationMemberInfo(
                 inboxId: member.inboxId,
                 role: memberRole,
                 consent: consent,
                 addedAt: Date() // XMTP doesn't provide exact add date, use current
             )
 
-            groupMemberInfos.append(groupMemberInfo)
+            conversationMemberInfos.append(conversationMemberInfo)
         }
 
-        return groupMemberInfos
+        return conversationMemberInfos
     }
 
     func addAdmin(memberInboxId: String, to conversationId: String) async throws {
@@ -274,7 +274,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
 
         guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
+            throw ConversationPermissionsError.conversationNotFound(conversationId: conversationId)
         }
 
         try await group.addAdmin(inboxId: memberInboxId)
@@ -285,7 +285,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
 
         guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
+            throw ConversationPermissionsError.conversationNotFound(conversationId: conversationId)
         }
 
         try await group.removeAdmin(inboxId: memberInboxId)
@@ -296,7 +296,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
 
         guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
+            throw ConversationPermissionsError.conversationNotFound(conversationId: conversationId)
         }
 
         try await group.addSuperAdmin(inboxId: memberInboxId)
@@ -307,7 +307,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
 
         guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
+            throw ConversationPermissionsError.conversationNotFound(conversationId: conversationId)
         }
 
         try await group.removeSuperAdmin(inboxId: memberInboxId)
@@ -318,7 +318,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
 
         guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
+            throw ConversationPermissionsError.conversationNotFound(conversationId: conversationId)
         }
 
         _ = try await group.addMembers(inboxIds: inboxIds)
@@ -329,7 +329,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
 
         guard let conversation = try await client.conversation(with: conversationId),
               case .group(let group) = conversation else {
-            throw GroupPermissionsError.groupNotFound(conversationId: conversationId)
+            throw ConversationPermissionsError.conversationNotFound(conversationId: conversationId)
         }
 
         try await group.removeMembers(inboxIds: inboxIds)
@@ -337,7 +337,7 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
 
     // MARK: - Private Helper Methods
 
-    private func checkPermission(memberRole: MemberRole, requiredLevel: GroupPermissionLevel) -> Bool {
+    private func checkPermission(memberRole: MemberRole, requiredLevel: ConversationPermissionLevel) -> Bool {
         switch requiredLevel {
         case .allow:
             return true
@@ -353,11 +353,11 @@ final class GroupPermissionsRepository: GroupPermissionsRepositoryProtocol {
     }
 }
 
-// MARK: - Group Permissions Errors
+// MARK: - Conversation Permissions Errors
 
-enum GroupPermissionsError: LocalizedError {
+enum ConversationPermissionsError: LocalizedError {
     case clientNotAvailable
-    case groupNotFound(conversationId: String)
+    case conversationNotFound(conversationId: String)
     case memberNotFound(memberInboxId: String)
     case permissionDenied
 
@@ -365,8 +365,8 @@ enum GroupPermissionsError: LocalizedError {
         switch self {
         case .clientNotAvailable:
             return "XMTP client is not available"
-        case .groupNotFound(let conversationId):
-            return "Group not found: \(conversationId)"
+        case .conversationNotFound(let conversationId):
+            return "Conversation not found: \(conversationId)"
         case .memberNotFound(let memberInboxId):
             return "Member not found: \(memberInboxId)"
         case .permissionDenied:

@@ -10,9 +10,9 @@ public enum NotificationProcessingError: Error {
 }
 
 public actor CachedPushNotificationHandler {
-    private var messagingServices: [String: MessagingService] = [:]
+    private var messagingServices: [String: MessagingService] = [:] // Keyed by inboxId
 
-    // Track last access time for cleanup
+    // Track last access time for cleanup (keyed by inboxId)
     private var lastAccessTime: [String: Date] = [:]
 
     // Maximum age for cached services (10 minutes)
@@ -59,7 +59,7 @@ public actor CachedPushNotificationHandler {
             return nil
         }
 
-        Logger.info("Processing for inbox: \(inboxId), type: \(payload.notificationType?.displayName ?? "unknown")")
+        Logger.info("Processing for inbox: \(inboxId)")
 
         // Process with timeout
         return try await withTimeout(seconds: timeout, timeoutError: NotificationProcessingError.timeout) {

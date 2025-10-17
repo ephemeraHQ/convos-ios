@@ -31,6 +31,15 @@ public enum MessageContent: Hashable, Codable {
          attachments([URL]),
          update(ConversationUpdate)
 
+    public var showsInMessagesList: Bool {
+        switch self {
+        case .update(let update):
+            return update.showsInMessagesList
+        default:
+            return true
+        }
+    }
+
     public var showsSender: Bool {
         switch self {
         case .update:

@@ -1,7 +1,9 @@
 import Combine
 import Foundation
 
-public class MockInboxesService: SessionManagerProtocol {
+public final class MockInboxesService: SessionManagerProtocol {
+    private let mockMessagingService: MockMessagingService = MockMessagingService()
+
     public func shouldDisplayNotification(for conversationId: String) async -> Bool {
         true
     }
@@ -9,47 +11,42 @@ public class MockInboxesService: SessionManagerProtocol {
     public init() {
     }
 
-    public var authState: AnyPublisher<AuthServiceState, Never> {
-        Just(AuthServiceState.unknown).eraseToAnyPublisher()
-    }
+    // MARK: - Inbox Management
 
-    public func addInbox() async throws -> AnyMessagingService {
-        MockMessagingService()
+    public func addInbox() async -> AnyMessagingService {
+        mockMessagingService
     }
 
     public func deleteInbox(inboxId: String) async throws {
     }
 
-    public func deleteAllInboxes() async throws {
-    }
-
     public func deleteInbox(for messagingService: AnyMessagingService) async throws {
     }
 
-    public func deleteAllAccounts() throws {
+    public func deleteAllInboxes() async throws {
     }
 
-    public var inboxesRepository: any InboxesRepositoryProtocol {
-        self
+    // MARK: - Messaging Services
+
+    public func messagingService(for inboxId: String) -> AnyMessagingService {
+        mockMessagingService
     }
 
-    public func messagingService(for inboxId: String) async -> AnyMessagingService {
-        MockMessagingService()
-    }
+    // MARK: - Factory methods for repositories
 
     public func conversationsRepository(for consent: [Consent]) -> any ConversationsRepositoryProtocol {
         MockConversationsRepository()
     }
 
     public func conversationsCountRepo(for consent: [Consent], kinds: [ConversationKind]) -> any ConversationsCountRepositoryProtocol {
-        self
+        MockConversationsCountRepository()
     }
 
     public func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol {
         MockInviteRepository()
     }
 
-    public func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol {
+    public func conversationRepository(for conversationId: String, inboxId: String) -> any ConversationRepositoryProtocol {
         MockConversationRepository()
     }
 
@@ -58,28 +55,13 @@ public class MockInboxesService: SessionManagerProtocol {
     }
 }
 
-extension MockInboxesService: ConversationsCountRepositoryProtocol {
-    public var conversationsCount: AnyPublisher<Int, Never> {
+// Separate mock for ConversationsCountRepository
+class MockConversationsCountRepository: ConversationsCountRepositoryProtocol {
+    var conversationsCount: AnyPublisher<Int, Never> {
         Just(1).eraseToAnyPublisher()
     }
 
-    public func fetchCount() throws -> Int {
+    func fetchCount() throws -> Int {
         1
-    }
-}
-
-extension MockInboxesService: InboxesRepositoryProtocol {
-    public var inboxesPublisher: AnyPublisher<[Inbox], Never> {
-        Just((try? allInboxes()) ?? [])
-            .eraseToAnyPublisher()
-    }
-
-    public func allInboxes() throws -> [Inbox] {
-        [
-            Inbox(
-                inboxId: "1",
-                profile: .mock()
-            )
-        ]
     }
 }

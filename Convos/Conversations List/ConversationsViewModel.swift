@@ -102,6 +102,7 @@ final class ConversationsViewModel {
     private var localStateWriters: [String: any ConversationLocalStateWriterProtocol] = [:]
     private var cancellables: Set<AnyCancellable> = .init()
     private var leftConversationObserver: Any?
+    private var newConversationViewModelTask: Task<Void, Never>?
 
     init(session: any SessionManagerProtocol) {
         self.session = session
@@ -123,16 +124,20 @@ final class ConversationsViewModel {
             self.hasEarlyAccess = false
         }
         if !hasEarlyAccess {
-            self.newConversationViewModel = .init(
-                session: session,
-                showingFullScreenScanner: true,
-                allowsDismissingScanner: false
-            )
+            newConversationViewModelTask = Task { [weak self] in
+                guard let self else { return }
+                self.newConversationViewModel = await NewConversationViewModel.create(
+                    session: session,
+                    showingFullScreenScanner: true,
+                    allowsDismissingScanner: false
+                )
+            }
         }
         observe()
     }
 
     deinit {
+        newConversationViewModelTask?.cancel()
         if let leftConversationObserver {
             NotificationCenter.default.removeObserver(leftConversationObserver)
         }
@@ -145,7 +150,7 @@ final class ConversationsViewModel {
         }
 
         switch destination {
-        case .requestToJoin(inviteCode: let inviteCode):
+        case .joinConversation(inviteCode: let inviteCode):
             join(from: inviteCode)
         }
     }
@@ -155,11 +160,15 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        newConversationViewModel = .init(
-            session: session,
-            autoCreateConversation: true,
-            delegate: self
-        )
+        newConversationViewModelTask?.cancel()
+        newConversationViewModelTask = Task { [weak self] in
+            guard let self else { return }
+            newConversationViewModel = await NewConversationViewModel.create(
+                session: session,
+                autoCreateConversation: true,
+                delegate: self
+            )
+        }
     }
 
     func onJoinConvo() {
@@ -167,11 +176,15 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        newConversationViewModel = .init(
-            session: session,
-            showingFullScreenScanner: true,
-            delegate: self
-        )
+        newConversationViewModelTask?.cancel()
+        newConversationViewModelTask = Task { [weak self] in
+            guard let self else { return }
+            newConversationViewModel = await NewConversationViewModel.create(
+                session: session,
+                showingFullScreenScanner: true,
+                delegate: self
+            )
+        }
     }
 
     func checkShouldShowEarlyAccessInfo() {
@@ -186,22 +199,25 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        // This creates a request to join via invite code
-        // For deep links, we want to directly join without showing the scanner
-        // All validation (already joined, invalid codes, etc.) is handled by ConversationStateMachine
-        newConversationViewModel = .init(
-            session: session,
-            delegate: self,
-        )
-        _ = newConversationViewModel?.join(inviteUrlString: inviteCode)
+        newConversationViewModelTask?.cancel()
+        newConversationViewModelTask = Task { [weak self] in
+            guard let self else { return }
+            newConversationViewModel = await NewConversationViewModel.create(
+                session: session,
+                delegate: self
+            )
+            newConversationViewModel?.joinConversation(inviteCode: inviteCode)
+        }
     }
 
-    func deleteAllInboxes() {
+    func deleteAllData() {
         selectedConversation = nil
         Task { [weak self] in
             guard let self else { return }
             do {
                 try await session.deleteAllInboxes()
+
+                // Clear all cached writers
                 await MainActor.run { self.localStateWriters.removeAll() }
             } catch {
                 Logger.error("Error deleting all accounts: \(error)")
@@ -218,6 +234,8 @@ final class ConversationsViewModel {
             guard let self else { return }
             do {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
+
+                // Remove cached writer for deleted inbox
                 _ = await MainActor.run { self.localStateWriters.removeValue(forKey: conversation.inboxId) }
             } catch {
                 Logger.error("Error leaving convo: \(error.localizedDescription)")
@@ -236,7 +254,7 @@ final class ConversationsViewModel {
                 if selectedConversation?.id == conversationId {
                     selectedConversation = nil
                 }
-                if newConversationViewModel?.conversationViewModel?.conversation.id == conversationId {
+                if newConversationViewModel?.conversationViewModel.conversation.id == conversationId {
                     newConversationViewModel = nil
                 }
             }
@@ -309,7 +327,7 @@ final class ConversationsViewModel {
                     writer = localStateWriter
                 } else {
                     // Create new writer outside of MainActor context
-                    let messagingService = await session.messagingService(for: conversation.inboxId)
+                    let messagingService = session.messagingService(for: conversation.inboxId)
                     let newWriter = messagingService.conversationLocalStateWriter()
 
                     // Store it atomically on MainActor

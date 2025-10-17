@@ -1,8 +1,33 @@
 import Combine
 import Foundation
 
+public enum MessagingServiceState {
+    case registering, authorized(String)
+}
+
+extension MessagingServiceProtocol {
+    public var state: MessagingServiceState {
+        switch inboxStateManager.currentState {
+        case .ready(let result):
+            return .authorized(result.client.inboxId)
+        default:
+            return .registering
+        }
+    }
+
+    public func matches(inboxId: String) -> Bool {
+        switch state {
+        case .registering:
+            false
+        case .authorized(let messagingInboxId):
+            messagingInboxId == inboxId
+        }
+    }
+}
+
 public protocol MessagingServiceProtocol: AnyObject {
-    var identifier: String { get }
+    var state: MessagingServiceState { get }
+    var inboxStateManager: any InboxStateManagerProtocol { get }
 
     func stop()
     func stopAndDelete()
@@ -10,18 +35,17 @@ public protocol MessagingServiceProtocol: AnyObject {
 
     func registerForPushNotifications() async
 
-    func myProfileRepository() -> any MyProfileRepositoryProtocol
     func myProfileWriter() -> any MyProfileWriterProtocol
 
-    func draftConversationComposer() -> any DraftConversationComposerProtocol
+    func conversationStateManager() -> any ConversationStateManagerProtocol
 
     func conversationConsentWriter() -> any ConversationConsentWriterProtocol
     func conversationLocalStateWriter() -> any ConversationLocalStateWriterProtocol
 
     func messageWriter(for conversationId: String) -> any OutgoingMessageWriterProtocol
 
-    func groupMetadataWriter() -> any ConversationMetadataWriterProtocol
-    func groupPermissionsRepository() -> any GroupPermissionsRepositoryProtocol
+    func conversationMetadataWriter() -> any ConversationMetadataWriterProtocol
+    func conversationPermissionsRepository() -> any ConversationPermissionsRepositoryProtocol
 
     func uploadImage(data: Data, filename: String) async throws -> String
     func uploadImageAndExecute(

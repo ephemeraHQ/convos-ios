@@ -2,43 +2,61 @@ import Foundation
 import GRDB
 
 public protocol InviteWriterProtocol {
-    @discardableResult
-    func store(invite: ConvosAPI.PublicInviteDetailsResponse, conversationId: String, inboxId: String) async throws -> Invite
-    @discardableResult
-    func store(invite: ConvosAPI.InviteDetailsResponse, inboxId: String) async throws -> Invite
+    func generate(for conversation: DBConversation, expiresAt: Date?) async throws -> Invite
+    func update(for conversationId: String, name: String?, description: String?, imageURL: String?) async throws -> Invite
+}
+
+enum InviteWriterError: Error {
+    case failedEncodingInvitePayload
+    case conversationNotFound
+    case inviteNotFound
 }
 
 class InviteWriter: InviteWriterProtocol {
+    private let identityStore: any KeychainIdentityStoreProtocol
     private let databaseWriter: any DatabaseWriter
 
-    init(databaseWriter: any DatabaseWriter) {
+    init(identityStore: any KeychainIdentityStoreProtocol,
+         databaseWriter: any DatabaseWriter) {
+        self.identityStore = identityStore
         self.databaseWriter = databaseWriter
     }
 
-    func store(invite: ConvosAPI.PublicInviteDetailsResponse, conversationId: String, inboxId: String) async throws -> Invite {
+    func generate(for conversation: DBConversation, expiresAt: Date? = nil) async throws -> Invite {
+        let existingInvite = try? await self.databaseWriter.read { db in
+            try? DBInvite
+                .filter(DBInvite.Columns.conversationId == conversation.id)
+                .filter(DBInvite.Columns.creatorInboxId == conversation.inboxId)
+                .fetchOne(db)
+        }
+        if let existingInvite {
+            Logger.info("Existing invite found for conversation: \(conversation.id), \(existingInvite)")
+            return existingInvite.hydrateInvite()
+        }
+
+        let identity = try await identityStore.identity(for: conversation.inboxId)
+        let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
+        let urlSlug = try SignedInvite.slug(for: conversation, privateKey: privateKey)
+        Logger.info("Generated URL slug: \(urlSlug)")
+
         let dbInvite = DBInvite(
-            id: invite.id,
-            creatorInboxId: inboxId,
-            conversationId: conversationId,
-            inviteUrlString: invite.inviteLinkURL,
-            maxUses: nil,
-            usesCount: 0,
-            status: .active,
-            createdAt: Date(),
-            autoApprove: true
+            creatorInboxId: conversation.inboxId,
+            conversationId: conversation.id,
+            urlSlug: urlSlug
         )
         try await databaseWriter.write { db in
-            try Member(inboxId: inboxId).save(db, onConflict: .ignore)
+            try Member(inboxId: conversation.inboxId).save(db, onConflict: .ignore)
             try DBConversationMember(
-                conversationId: conversationId,
-                inboxId: inboxId,
+                conversationId: conversation.id,
+                inboxId: conversation.inboxId,
                 role: .member,
                 consent: .allowed,
                 createdAt: Date()
             )
             .save(db, onConflict: .ignore)
             let memberProfile = MemberProfile(
-                inboxId: inboxId,
+                conversationId: conversation.id,
+                inboxId: conversation.inboxId,
                 name: nil,
                 avatar: nil
             )
@@ -48,49 +66,32 @@ class InviteWriter: InviteWriterProtocol {
         return dbInvite.hydrateInvite()
     }
 
-    func store(invite: ConvosAPI.InviteDetailsResponse, inboxId: String) async throws -> Invite {
-        let dbInvite = DBInvite(
-            id: invite.id,
-            creatorInboxId: inboxId,
-            conversationId: invite.groupId,
-            inviteUrlString: invite.inviteLinkURL,
-            maxUses: invite.maxUses,
-            usesCount: invite.usesCount,
-            status: invite.status.inviteStatus,
-            createdAt: invite.createdAt,
-            autoApprove: invite.autoApprove
-        )
+    func update(
+        for conversationId: String,
+        name: String?,
+        description: String?,
+        imageURL: String?
+    ) async throws -> Invite {
+        guard let conversation = try await databaseWriter.read({ db in
+            try DBConversation
+                .fetchOne(db, key: conversationId)
+        }) else {
+            throw InviteWriterError.conversationNotFound
+        }
+        let invite = try await databaseWriter.read { db in
+            try DBInvite
+                .filter(DBInvite.Columns.conversationId == conversation.id)
+                .filter(DBInvite.Columns.creatorInboxId == conversation.inboxId)
+                .fetchOne(db)
+        }
+        guard let invite else { throw InviteWriterError.inviteNotFound }
+        let identity = try await identityStore.identity(for: conversation.inboxId)
+        let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
+        let urlSlug = try SignedInvite.slug(for: conversation, privateKey: privateKey)
+        let updatedInvite = invite.with(urlSlug: urlSlug)
         try await databaseWriter.write { db in
-            try Member(inboxId: inboxId).save(db, onConflict: .ignore)
-            try DBConversationMember(
-                conversationId: invite.groupId,
-                inboxId: inboxId,
-                role: .member,
-                consent: .allowed,
-                createdAt: Date()
-            )
-            .save(db, onConflict: .ignore)
-            let memberProfile = MemberProfile(
-                inboxId: inboxId,
-                name: nil,
-                avatar: nil
-            )
-            try? memberProfile.insert(db, onConflict: .ignore)
-            try dbInvite.save(db)
+            try updatedInvite.save(db)
         }
-        return dbInvite.hydrateInvite()
-    }
-}
-
-extension ConvosAPI.InviteCodeStatus {
-    var inviteStatus: InviteStatus {
-        switch self {
-        case .active:
-            return .active
-        case .expired:
-            return .expired
-        case .disabled:
-            return .disabled
-        }
+        return updatedInvite.hydrateInvite()
     }
 }

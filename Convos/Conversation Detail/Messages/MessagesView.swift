@@ -1,11 +1,11 @@
 import ConvosCore
 import SwiftUI
 
-struct MessagesView: View {
-    enum TopBarTrailingItem {
-        case share, scan
-    }
+enum MessagesViewTopBarTrailingItem {
+    case share, scan
+}
 
+struct MessagesView<BottomBarContent: View>: View {
     let conversation: Conversation
     let messages: [AnyMessage]
     let invite: Invite
@@ -19,6 +19,7 @@ struct MessagesView: View {
     @Binding var sendButtonEnabled: Bool
     @Binding var profileImage: UIImage?
     @FocusState.Binding var focusState: MessagesViewInputFocus?
+    let messagesBottomBarEnabled: Bool
     let viewModelFocus: MessagesViewInputFocus?
     let onConversationInfoTap: () -> Void
     let onConversationNameEndedEditing: () -> Void
@@ -28,6 +29,7 @@ struct MessagesView: View {
     let onTapMessage: (AnyMessage) -> Void
     let onDisplayNameEndedEditing: () -> Void
     let onProfileSettings: () -> Void
+    @ViewBuilder let bottomBarContent: () -> BottomBarContent
 
     @State private var bottomBarHeight: CGFloat = 0.0
     var body: some View {
@@ -42,19 +44,23 @@ struct MessagesView: View {
             .ignoresSafeArea()
         }
         .safeAreaBar(edge: .bottom) {
-            MessagesBottomBar(
-                profile: profile,
-                displayName: $displayName,
-                messageText: $messageText,
-                sendButtonEnabled: $sendButtonEnabled,
-                profileImage: $profileImage,
-                focusState: $focusState,
-                viewModelFocus: viewModelFocus,
-                onProfilePhotoTap: onProfilePhotoTap,
-                onSendMessage: onSendMessage,
-                onDisplayNameEndedEditing: onDisplayNameEndedEditing,
-                onProfileSettings: onProfileSettings
-            )
+            VStack(spacing: 0.0) {
+                bottomBarContent()
+                MessagesBottomBar(
+                    profile: profile,
+                    displayName: $displayName,
+                    messageText: $messageText,
+                    sendButtonEnabled: $sendButtonEnabled,
+                    profileImage: $profileImage,
+                    focusState: $focusState,
+                    viewModelFocus: viewModelFocus,
+                    onProfilePhotoTap: onProfilePhotoTap,
+                    onSendMessage: onSendMessage,
+                    onDisplayNameEndedEditing: onDisplayNameEndedEditing,
+                    onProfileSettings: onProfileSettings
+                )
+                .disabled(!messagesBottomBarEnabled)
+            }
             .background(HeightReader())
             .onPreferenceChange(HeightPreferenceKey.self) { height in
                 bottomBarHeight = height

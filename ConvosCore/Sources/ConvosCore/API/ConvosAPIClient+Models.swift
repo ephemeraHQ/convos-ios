@@ -33,7 +33,6 @@ public enum ConvosAPI {
     public struct InitRequest: Encodable {
         public let device: Device
         public let identity: Identity
-        public let profile: Profile
         public struct Device: Encodable {
             public let os: String
             public let name: String?
@@ -44,18 +43,11 @@ public enum ConvosAPI {
             public let xmtpId: String
             public let xmtpInstallationId: String?
         }
-        public struct Profile: Encodable {
-            public let name: String?
-            public let username: String?
-            public let description: String?
-            public let avatar: String?
-        }
     }
 
     public struct InitResponse: Decodable {
         public let device: Device
         public let identity: Identity
-        public let profile: Profile
         public struct Device: Decodable {
             public let id: String
             public let os: String
@@ -66,116 +58,6 @@ public enum ConvosAPI {
             public let identityAddress: String?
             public let xmtpId: String?
         }
-        public struct Profile: Decodable {
-            public let id: String
-            public let name: String?
-            public let description: String?
-            public let avatar: String?
-        }
-    }
-
-    public struct CreateInviteCode: Encodable {
-        public let groupId: String
-        public let name: String?
-        public let description: String?
-        public let imageUrl: String?
-        public let maxUses: Int?
-        public let expiresAt: Date?
-        public let autoApprove: Bool
-        public let notificationTargets: [String]
-    }
-
-    public struct RequestToJoinResponse: Decodable {
-        public let id: String
-        public let invite: InviteDetailsResponse
-        public let createdAt: String
-    }
-
-    public struct DeleteInviteResponse: Decodable {
-        public let id: String
-        public let deleted: Bool
-    }
-
-    public struct DeleteRequestToJoinResponse: Decodable {
-        public let id: String
-        public let deleted: Bool
-    }
-
-    public struct UpdateProfileRequest: Encodable {
-        public let name: String?
-        public let username: String?
-        public let description: String?
-        public let avatar: String?
-
-        public init(name: String? = nil, username: String? = nil, description: String? = nil, avatar: String? = nil) {
-            self.name = name
-            self.username = username
-            self.description = description
-            self.avatar = avatar
-        }
-    }
-
-    public struct UpdateProfileResponse: Decodable {
-        public let id: String
-        public let name: String?
-        public let username: String?
-        public let description: String?
-        public let avatar: String?
-        public let createdAt: String
-        public let updatedAt: String
-    }
-
-    public enum InviteCodeStatus: String, Decodable {
-        case active = "ACTIVE",
-             expired = "EXPIRED",
-             disabled = "DISABLED"
-    }
-
-    public struct InviteDetailsResponse: Decodable {
-        public let id: String
-        public let name: String?
-        public let description: String?
-        public let imageUrl: String?
-        public let maxUses: Int?
-        public let usesCount: Int
-        public let status: InviteCodeStatus
-        public let expiresAt: Date?
-        public let autoApprove: Bool
-        public let groupId: String
-        public let createdAt: Date
-        public let inviteLinkURL: String
-    }
-
-    public struct InviteDetailsWithGroupResponse: Decodable {
-        public let id: String
-        public let name: String?
-        public let description: String?
-        public let imageUrl: String?
-        public let inviteLinkURL: String
-        public let groupId: String
-        public let inviterInboxId: String
-    }
-
-    public struct PublicInviteDetailsResponse: Decodable {
-        public let id: String
-        public let name: String?
-        public let description: String?
-        public let imageUrl: String?
-        public let inviteLinkURL: String
-    }
-
-    public struct BatchProfilesResponse: Decodable {
-        public let profiles: [String: ProfileResponse]
-    }
-
-    public struct ProfileResponse: Decodable {
-        public let id: String
-        public let name: String?
-        public let username: String?
-        public let description: String?
-        public let avatar: String?
-        public let xmtpId: String
-        public let identityAddress: String?
     }
 
     // MARK: - Device Update Models
@@ -214,20 +96,6 @@ public enum ConvosAPI {
 
     public struct AuthCheckResponse: Codable {
         public let success: Bool
-    }
-
-    // MARK: - Invite Code Update Models
-
-    public struct UpdateInviteCodeRequest: Encodable {
-        public let name: String?
-        public let description: String?
-        public let imageUrl: String?
-    }
-}
-
-public extension ConvosAPI.InitRequest.Profile {
-    static var empty: Self {
-        .init(name: nil, username: nil, description: nil, avatar: nil)
     }
 }
 

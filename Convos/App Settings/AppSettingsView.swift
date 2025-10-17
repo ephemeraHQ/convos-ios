@@ -25,7 +25,7 @@ struct ConvosToolbarButton: View {
 // swiftlint:disable force_unwrapping
 
 struct AppSettingsView: View {
-    let onDeleteAllInboxes: () -> Void
+    let onDeleteAllData: () -> Void
     @State private var showingDeleteAllDataConfirmation: Bool = false
     @Environment(\.openURL) private var openURL: OpenURLAction
     @Environment(\.dismiss) private var dismiss: DismissAction
@@ -156,7 +156,7 @@ struct AppSettingsView: View {
                     }
                     .confirmationDialog("", isPresented: $showingDeleteAllDataConfirmation) {
                         Button("Delete", role: .destructive) {
-                            onDeleteAllInboxes()
+                            onDeleteAllData()
                             dismiss()
                         }
 

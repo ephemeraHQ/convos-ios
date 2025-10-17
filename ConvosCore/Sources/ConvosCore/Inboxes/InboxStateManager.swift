@@ -5,8 +5,21 @@ public protocol InboxStateObserver: AnyObject {
     func inboxStateDidChange(_ state: InboxStateMachine.State)
 }
 
+public protocol InboxStateManagerProtocol: AnyObject {
+    var currentState: InboxStateMachine.State { get }
+
+    func waitForInboxReadyResult() async throws -> InboxReadyResult
+    func reauthorize(inboxId: String) async throws -> InboxReadyResult
+    func delete() async throws
+
+    func addObserver(_ observer: InboxStateObserver)
+    func removeObserver(_ observer: InboxStateObserver)
+
+    func observeState(_ handler: @escaping (InboxStateMachine.State) -> Void) -> StateObserverHandle
+}
+
 @Observable
-public final class InboxStateManager {
+public final class InboxStateManager: InboxStateManagerProtocol {
     public private(set) var currentState: InboxStateMachine.State = .uninitialized
     public private(set) var isReady: Bool = false
     public private(set) var hasError: Bool = false
@@ -94,6 +107,63 @@ public final class InboxStateManager {
         throw InboxStateError.inboxNotReady
     }
 
+    public func delete() async throws {
+        guard let stateMachine = stateMachine else {
+            throw InboxStateError.inboxNotReady
+        }
+        await stateMachine.stopAndDelete()
+    }
+
+    public func reauthorize(inboxId: String) async throws -> InboxReadyResult {
+        guard let stateMachine = stateMachine else {
+            throw InboxStateError.inboxNotReady
+        }
+
+        // Check if we're already authorized with this inbox
+        if case .ready(let result) = currentState, result.client.inboxId == inboxId {
+            Logger.info("Already authorized with inbox \(inboxId), skipping reauthorization")
+            return result
+        }
+
+        Logger.info("Reauthorizing with inbox \(inboxId)...")
+
+        // Stop current inbox if running
+        if case .ready = currentState {
+            await stateMachine.stop()
+            // Wait for the stop to complete (state should transition away from ready)
+            for await state in await stateMachine.stateSequence {
+                if case .uninitialized = state {
+                    break
+                }
+            }
+        }
+
+        // Authorize with the new inbox
+        await stateMachine.authorize(inboxId: inboxId)
+
+        // Wait for ready state with the new inboxId
+        for await state in await stateMachine.stateSequence {
+            switch state {
+            case .ready(let result):
+                // Verify this is the inbox we requested
+                if result.client.inboxId == inboxId {
+                    Logger.info("Successfully reauthorized to inbox \(inboxId)")
+                    return result
+                } else {
+                    // This is the old inbox's ready state, keep waiting
+                    Logger.info("Waiting for correct inbox... current: \(result.client.inboxId), expected: \(inboxId)")
+                    continue
+                }
+            case .error(let error):
+                throw error
+            default:
+                continue
+            }
+        }
+
+        throw InboxStateError.inboxNotReady
+    }
+
     public func observeState(_ handler: @escaping (InboxStateMachine.State) -> Void) -> StateObserverHandle {
         let observer = ClosureStateObserver(handler: handler)
         addObserver(observer)
@@ -115,9 +185,9 @@ public final class ClosureStateObserver: InboxStateObserver {
 
 public final class StateObserverHandle {
     private var observer: ClosureStateObserver?
-    private weak var manager: InboxStateManager?
+    private weak var manager: (any InboxStateManagerProtocol)?
 
-    init(observer: ClosureStateObserver, manager: InboxStateManager) {
+    init(observer: ClosureStateObserver, manager: any InboxStateManagerProtocol) {
         self.observer = observer
         self.manager = manager
     }

@@ -7,21 +7,21 @@ actor MockKeychainIdentityStore: KeychainIdentityStoreProtocol {
         try KeychainIdentityKeys.generate()
     }
 
-    func save(inboxId: String, keys: KeychainIdentityKeys) throws -> KeychainIdentity {
-        let identity = KeychainIdentity(inboxId: inboxId, keys: keys)
+    func save(inboxId: String, clientId: String, keys: KeychainIdentityKeys) throws -> KeychainIdentity {
+        let identity = KeychainIdentity(inboxId: inboxId, clientId: clientId, keys: keys)
         savedIdentities[inboxId] = identity
         return identity
     }
 
     func identity(for inboxId: String) throws -> KeychainIdentity {
         guard let identity = savedIdentities[inboxId] else {
-            throw KeychainIdentityStoreError.identityNotFound(inboxId)
+            throw KeychainIdentityStoreError.identityNotFound("Identity not found for inboxId: \(inboxId)")
         }
         return identity
     }
 
     func loadAll() throws -> [KeychainIdentity] {
-        Array(savedIdentities.values)
+        return Array(savedIdentities.values)
     }
 
     func delete(inboxId: String) throws {

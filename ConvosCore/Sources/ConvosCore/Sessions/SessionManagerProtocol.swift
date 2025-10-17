@@ -1,23 +1,26 @@
 import Combine
 import Foundation
 
-public protocol SessionManagerProtocol {
+public protocol SessionManagerProtocol: AnyObject {
     // MARK: Inbox Management
 
-    func addInbox() async throws -> AnyMessagingService
+    func addInbox() async -> AnyMessagingService
     func deleteInbox(inboxId: String) async throws
     func deleteInbox(for messagingService: AnyMessagingService) async throws
     func deleteAllInboxes() async throws
 
     // MARK: Messaging Services
 
-    func messagingService(for inboxId: String) async -> AnyMessagingService
+    func messagingService(for inboxId: String) -> AnyMessagingService
 
     // MARK: Factory methods for repositories
 
     func inviteRepository(for conversationId: String) -> any InviteRepositoryProtocol
 
-    func conversationRepository(for conversationId: String) -> any ConversationRepositoryProtocol
+    func conversationRepository(
+        for conversationId: String,
+        inboxId: String
+    ) -> any ConversationRepositoryProtocol
 
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol
 

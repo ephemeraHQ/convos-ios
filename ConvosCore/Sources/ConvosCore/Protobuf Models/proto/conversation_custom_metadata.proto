@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+// ConversationCustomMetadata stores custom metadata for XMTP conversations
+message ConversationCustomMetadata {
+    string description = 1;
+    string tag = 2;
+    repeated ConversationProfile profiles = 3;  // Array of participant profiles
+    optional google.protobuf.Timestamp expiresAt = 4;
+}
+
+// ConversationProfile represents a participant in the conversation
+message ConversationProfile {
+    string inboxId = 1;
+    optional string name = 2;
+    optional string image = 3;
+}

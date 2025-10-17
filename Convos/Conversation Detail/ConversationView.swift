@@ -1,12 +1,15 @@
 import SwiftUI
 
-struct ConversationView: View {
+struct ConversationView<MessagesBottomBar: View>: View {
     @Bindable var viewModel: ConversationViewModel
     @FocusState.Binding var focusState: MessagesViewInputFocus?
     let onScanInviteCode: () -> Void
     let onDeleteConversation: () -> Void
     let confirmDeletionBeforeDismissal: Bool
-    let messagesTopBarTrailingItem: MessagesView.TopBarTrailingItem
+    let messagesTopBarTrailingItem: MessagesViewTopBarTrailingItem
+    let messagesTopBarTrailingItemEnabled: Bool
+    let messagesBottomBarEnabled: Bool
+    @ViewBuilder let bottomBarContent: () -> MessagesBottomBar
 
     @State private var presentingShareView: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
@@ -26,6 +29,7 @@ struct ConversationView: View {
             sendButtonEnabled: $viewModel.sendButtonEnabled,
             profileImage: $viewModel.profileImage,
             focusState: $focusState,
+            messagesBottomBarEnabled: messagesBottomBarEnabled,
             viewModelFocus: viewModel.focus,
             onConversationInfoTap: viewModel.onConversationInfoTap,
             onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
@@ -35,6 +39,7 @@ struct ConversationView: View {
             onTapMessage: viewModel.onTapMessage(_:),
             onDisplayNameEndedEditing: viewModel.onDisplayNameEndedEditing,
             onProfileSettings: viewModel.onProfileSettings,
+            bottomBarContent: bottomBarContent
         )
         .sheet(isPresented: $viewModel.presentingProfileSettings) {
             ProfileView(viewModel: viewModel)
@@ -53,6 +58,7 @@ struct ConversationView: View {
                         ConversationShareView(conversation: viewModel.conversation, invite: viewModel.invite)
                             .presentationBackground(.clear)
                     }
+                    .disabled(!messagesTopBarTrailingItemEnabled)
                     .transaction { transaction in
                         transaction.disablesAnimations = true
                     }
@@ -63,6 +69,7 @@ struct ConversationView: View {
                         Image(systemName: "qrcode.viewfinder")
                     }
                     .buttonBorderShape(.circle)
+                    .disabled(!messagesTopBarTrailingItemEnabled)
                 }
             }
         }
@@ -97,7 +104,10 @@ struct ConversationView: View {
             onScanInviteCode: {},
             onDeleteConversation: {},
             confirmDeletionBeforeDismissal: true,
-            messagesTopBarTrailingItem: .share
+            messagesTopBarTrailingItem: .share,
+            messagesTopBarTrailingItemEnabled: true,
+            messagesBottomBarEnabled: true,
+            bottomBarContent: { EmptyView() }
         )
     }
 }

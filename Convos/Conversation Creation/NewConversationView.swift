@@ -4,7 +4,7 @@ import SwiftUI
 struct InviteShareLink: View {
     let invite: Invite?
     var body: some View {
-        let inviteString = invite?.inviteUrlString ?? ""
+        let inviteString = invite?.inviteURLString ?? ""
         ShareLink(
             item: inviteString,
             preview: SharePreview(
@@ -19,10 +19,47 @@ struct InviteShareLink: View {
     }
 }
 
+struct InviteAcceptedView: View {
+    @State private var showingDescription: Bool = false
+
+    var body: some View {
+        VStack(spacing: DesignConstants.Spacing.step2x) {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 14.0))
+                    .foregroundStyle(.colorGreen)
+                Text("Invite accepted")
+                    .foregroundStyle(.colorTextPrimary)
+            }
+            .font(.body)
+
+            if showingDescription {
+                Text("See and send messages after someone approves you.")
+                    .font(.caption)
+                    .foregroundStyle(.colorTextSecondary)
+            }
+        }
+        .padding(.horizontal, DesignConstants.Spacing.step10x)
+        .padding(.bottom, DesignConstants.Spacing.step4x)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                withAnimation {
+                    self.showingDescription = true
+                }
+            }
+        }
+    }
+}
+
+#Preview {
+    InviteAcceptedView()
+}
+
 struct NewConversationView: View {
     let viewModel: NewConversationViewModel
     @State private var hasShownScannerOnAppear: Bool = false
     @State private var presentingDeleteConfirmation: Bool = false
+    @State private var presentingJoiningStateInfo: Bool = false
     @State private var sidebarWidth: CGFloat = 0.0
 
     @FocusState private var focusState: MessagesViewInputFocus?
@@ -39,26 +76,27 @@ struct NewConversationView: View {
                 @Bindable var viewModel = viewModel
                 Group {
                     if viewModel.showingFullScreenScanner {
-                        JoinConversationView(allowsDismissal: viewModel.allowsDismissingScanner) { inviteCode in
-                            viewModel.join(inviteUrlString: inviteCode)
-                        }
+                        JoinConversationView(
+                            viewModel: viewModel.qrScannerViewModel,
+                            allowsDismissal: viewModel.allowsDismissingScanner,
+                            onScannedCode: { inviteCode in
+                                viewModel.joinConversation(inviteCode: inviteCode)
+                            }
+                        )
                     } else {
-                        Group {
-                            if let conversationViewModel = viewModel.conversationViewModel {
-                                ConversationView(
-                                    viewModel: conversationViewModel,
-                                    focusState: $focusState,
-                                    onScanInviteCode: viewModel.onScanInviteCode,
-                                    onDeleteConversation: viewModel.deleteConversation,
-                                    confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
-                                    messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem
-                                )
-                            } else if let initializationError = viewModel.initializationError {
-                                ErrorView(error: initializationError) {
-                                    viewModel.start()
-                                }
-                            } else {
-                                EmptyView()
+                        let conversationViewModel = viewModel.conversationViewModel
+                        ConversationView(
+                            viewModel: conversationViewModel,
+                            focusState: $focusState,
+                            onScanInviteCode: viewModel.onScanInviteCode,
+                            onDeleteConversation: viewModel.deleteConversation,
+                            confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
+                            messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem,
+                            messagesTopBarTrailingItemEnabled: viewModel.messagesTopBarTrailingItemEnabled,
+                            messagesBottomBarEnabled: viewModel.messagesBottomBarEnabled
+                        ) {
+                            if viewModel.isWaitingForInviteAcceptance {
+                                InviteAcceptedView()
                             }
                         }
                         .toolbar {
@@ -66,7 +104,16 @@ struct NewConversationView: View {
                                 Button(role: .close) {
                                     if viewModel.shouldConfirmDeletingConversation {
                                         presentingDeleteConfirmation = true
+                                    } else if viewModel.isWaitingForInviteAcceptance {
+                                        presentingJoiningStateInfo = true
                                     } else {
+                                        dismiss()
+                                    }
+                                }
+                                .confirmationDialog("This convo will appear on your home screen after someone approves you",
+                                                    isPresented: $presentingJoiningStateInfo,
+                                                    titleVisibility: .visible) {
+                                    Button("Continue") {
                                         dismiss()
                                     }
                                 }
@@ -86,8 +133,8 @@ struct NewConversationView: View {
                 }
                 .background(.colorBackgroundPrimary)
                 .sheet(isPresented: $viewModel.presentingJoinConversationSheet) {
-                    JoinConversationView { inviteCode in
-                        viewModel.join(inviteUrlString: inviteCode)
+                    JoinConversationView(viewModel: viewModel.qrScannerViewModel, allowsDismissal: true) { inviteCode in
+                        viewModel.joinConversation(inviteCode: inviteCode)
                     }
                 }
                 .selfSizingSheet(isPresented: $viewModel.presentingInvalidInviteSheet) {
@@ -102,8 +149,10 @@ struct NewConversationView: View {
 }
 
 #Preview {
-    @Previewable @State var viewModel: NewConversationViewModel = .init(
+    // swiftlint:disable:next force_try
+    @Previewable @State var viewModel: NewConversationViewModel = try! .init(
         session: ConvosClient.mock().session,
+        messagingService: MockMessagingService(),
         showingFullScreenScanner: false
     )
     @Previewable @State var presented: Bool = true
