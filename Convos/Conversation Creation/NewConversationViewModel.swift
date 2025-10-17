@@ -166,19 +166,6 @@ class NewConversationViewModel: Identifiable {
         }
     }
 
-    func clearError() {
-        currentError = nil
-    }
-
-    func retryAfterError() {
-        guard let error = currentError else { return }
-        Logger.info("Retrying after error: \(error.localizedDescription)")
-        currentError = nil
-
-        // If we were in the middle of joining, could potentially retry
-        // For now, just clear the error and let the user try again
-    }
-
     // MARK: - Private
 
     @MainActor
