@@ -193,6 +193,7 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
         observer.conversationStateDidChange(currentState)
     }
 
+    @MainActor
     public func removeObserver(_ observer: ConversationStateObserver) {
         observers.removeAll { $0.observer === observer }
     }
