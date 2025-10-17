@@ -8,5 +8,5 @@ public protocol DraftConversationWriterProtocol: OutgoingMessageWriterProtocol {
 
     func createConversation() async throws
     func joinConversation(inviteCode: String) async throws
-    func delete() async
+    func delete() async throws
 }

@@ -10,6 +10,7 @@ public protocol InboxStateManagerProtocol: AnyObject {
 
     func waitForInboxReadyResult() async throws -> InboxReadyResult
     func reauthorize(inboxId: String) async throws -> InboxReadyResult
+    func delete() async throws
 
     func addObserver(_ observer: InboxStateObserver)
     func removeObserver(_ observer: InboxStateObserver)
@@ -104,6 +105,13 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         }
 
         throw InboxStateError.inboxNotReady
+    }
+
+    public func delete() async throws {
+        guard let stateMachine = stateMachine else {
+            throw InboxStateError.inboxNotReady
+        }
+        await stateMachine.stopAndDelete()
     }
 
     public func reauthorize(inboxId: String) async throws -> InboxReadyResult {

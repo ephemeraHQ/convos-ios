@@ -13,7 +13,7 @@ public final class MockInboxesService: SessionManagerProtocol {
 
     // MARK: - Inbox Management
 
-    public func addInbox() throws -> AnyMessagingService {
+    public func addInbox() async -> AnyMessagingService {
         mockMessagingService
     }
 

@@ -83,9 +83,9 @@ class NewConversationViewModel: Identifiable {
         showingFullScreenScanner: Bool = false,
         allowsDismissingScanner: Bool = true,
         delegate: NewConversationsViewModelDelegate? = nil
-    ) async throws -> NewConversationViewModel {
-        let messagingService = try await session.addInbox()
-        return try NewConversationViewModel(
+    ) async -> NewConversationViewModel {
+        let messagingService = await session.addInbox()
+        return NewConversationViewModel(
             session: session,
             messagingService: messagingService,
             autoCreateConversation: autoCreateConversation,
@@ -103,7 +103,7 @@ class NewConversationViewModel: Identifiable {
         showingFullScreenScanner: Bool = false,
         allowsDismissingScanner: Bool = true,
         delegate: NewConversationsViewModelDelegate? = nil
-    ) throws {
+    ) {
         self.session = session
         self.qrScannerViewModel = QRScannerViewModel()
         self.autoCreateConversation = autoCreateConversation
@@ -175,7 +175,11 @@ class NewConversationViewModel: Identifiable {
         joinConversationTask?.cancel()
         Task { [weak self] in
             guard let self else { return }
-            await conversationStateManager.delete()
+            do {
+                try await conversationStateManager.delete()
+            } catch {
+                Logger.error("Failed deleting conversation: \(error.localizedDescription)")
+            }
         }
     }
 

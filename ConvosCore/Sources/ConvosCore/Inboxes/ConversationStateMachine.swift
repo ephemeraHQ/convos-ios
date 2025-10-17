@@ -619,6 +619,9 @@ public actor ConversationStateMachine {
                 .filter(DBConversation.Columns.id == conversationId)
                 .deleteAll(db)
 
+            try DBInbox
+                .deleteOne(db, id: client.inboxId)
+
             Logger.info("Cleaned up conversation data for conversationId: \(conversationId)")
         }
     }

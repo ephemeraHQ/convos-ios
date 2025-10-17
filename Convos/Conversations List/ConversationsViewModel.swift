@@ -115,25 +115,20 @@ final class ConversationsViewModel {
         do {
             self.conversations = try conversationsRepository.fetchAll()
             self.conversationsCount = try conversationsCountRepository.fetchCount()
-            self.hasEarlyAccess = true // conversationsCount > 0
+            self.hasEarlyAccess = conversationsCount > 0
         } catch {
             Logger.error("Error fetching conversations: \(error)")
             self.conversations = []
             self.conversationsCount = 0
-//            self.hasEarlyAccess = false
+            self.hasEarlyAccess = false
         }
         if !hasEarlyAccess {
             Task {
-                do {
-                    self.newConversationViewModel = try await NewConversationViewModel.create(
-                        session: session,
-                        showingFullScreenScanner: true,
-                        allowsDismissingScanner: false
-                    )
-                } catch {
-                    // @jarodl show the error state here
-                    Logger.error("Error initializing new conversation view model: \(error.localizedDescription)")
-                }
+                self.newConversationViewModel = await NewConversationViewModel.create(
+                    session: session,
+                    showingFullScreenScanner: true,
+                    allowsDismissingScanner: false
+                )
             }
         }
         observe()
@@ -163,15 +158,11 @@ final class ConversationsViewModel {
             return
         }
         Task {
-            do {
-                newConversationViewModel = try await NewConversationViewModel.create(
-                    session: session,
-                    autoCreateConversation: true,
-                    delegate: self
-                )
-            } catch {
-                Logger.error("Error starting convo: \(error.localizedDescription)")
-            }
+            newConversationViewModel = await NewConversationViewModel.create(
+                session: session,
+                autoCreateConversation: true,
+                delegate: self
+            )
         }
     }
 
@@ -181,15 +172,11 @@ final class ConversationsViewModel {
             return
         }
         Task {
-            do {
-                newConversationViewModel = try await NewConversationViewModel.create(
-                    session: session,
-                    showingFullScreenScanner: true,
-                    delegate: self
-                )
-            } catch {
-                Logger.error("Error joining convo: \(error.localizedDescription)")
-            }
+            newConversationViewModel = await NewConversationViewModel.create(
+                session: session,
+                showingFullScreenScanner: true,
+                delegate: self
+            )
         }
     }
 
@@ -206,15 +193,11 @@ final class ConversationsViewModel {
             return
         }
         Task {
-            do {
-                newConversationViewModel = try await NewConversationViewModel.create(
-                    session: session,
-                    delegate: self
-                )
-                newConversationViewModel?.joinConversation(inviteCode: inviteCode)
-            } catch {
-                Logger.error("Error adding inbox: \(error.localizedDescription)")
-            }
+            newConversationViewModel = await NewConversationViewModel.create(
+                session: session,
+                delegate: self
+            )
+            newConversationViewModel?.joinConversation(inviteCode: inviteCode)
         }
     }
 
