@@ -23,6 +23,7 @@ public final class PushNotificationRegistrar: PushNotificationRegistrarProtocol 
 
     public static func save(token: String) {
         UserDefaults.standard.set(token, forKey: tokenKey)
+        NotificationCenter.default.post(name: .convosPushTokenDidChange, object: nil)
     }
 
     public static var token: String? {
