@@ -273,6 +273,12 @@ enum InviteConversationToken {
                 length = (Int(data[offset]) << 8) | Int(data[offset + 1])
                 offset += 2
             }
+
+            // Validate that length is not zero
+            guard length > 0 else {
+                throw Error.emptyConversationId
+            }
+
             guard data.count >= offset + length else {
                 throw Error.invalidFormat("String payload truncated: need \(length) bytes, have \(data.count - offset)")
             }
