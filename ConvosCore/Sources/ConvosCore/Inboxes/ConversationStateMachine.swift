@@ -627,7 +627,10 @@ public actor ConversationStateMachine {
 
         // Only perform push notification cleanup if we have a clientId
         if let clientId = clientId {
-            // Unsubscribe from conversation's push notification topic
+            // Unsubscribe from this conversation's push notification topic only.
+            // The welcome topic remains subscribed (it's inbox-level, not conversation-level).
+            // Installation unregistration only happens at inbox level in InboxStateMachine.performInboxCleanup()
+
             let topic = conversationId.xmtpGroupTopicFormat
             do {
                 try await apiClient.unsubscribeFromTopics(clientId: clientId, topics: [topic])
@@ -635,15 +638,6 @@ public actor ConversationStateMachine {
             } catch {
                 Logger.error("Failed unsubscribing from topic \(topic): \(error)")
                 // Continue with cleanup even if unsubscribe fails
-            }
-
-            // Unregister the installation from backend
-            do {
-                try await apiClient.unregisterInstallation(clientId: clientId)
-                Logger.info("Unregistered installation from backend: \(clientId)")
-            } catch {
-                Logger.error("Failed unregistering installation \(clientId): \(error)")
-                // Continue with cleanup even if unregister fails
             }
         }
 

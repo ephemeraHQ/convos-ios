@@ -486,11 +486,25 @@ public actor InboxStateMachine {
         await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
 
-        // Unregister installation from backend using clientId (not XMTP installationId)
+        // Unsubscribe from inbox-level welcome topic and unregister installation from backend
+        // Note: Conversation topics are handled by ConversationStateMachine.cleanUp()
         if let identity = try? await identityStore.identity(for: client.inboxId) {
+            let clientId = identity.clientId
+            let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
+
+            // Unsubscribe from welcome topic (inbox-level topic only)
             do {
-                try await apiClient.unregisterInstallation(clientId: identity.clientId)
-                Logger.info("Unregistered installation from backend: \(identity.clientId)")
+                try await apiClient.unsubscribeFromTopics(clientId: clientId, topics: [welcomeTopic])
+                Logger.info("Unsubscribed from welcome topic: \(welcomeTopic)")
+            } catch {
+                Logger.error("Failed to unsubscribe from welcome topic: \(error)")
+                // Continue with cleanup even if unsubscribe fails
+            }
+
+            // Unregister installation
+            do {
+                try await apiClient.unregisterInstallation(clientId: clientId)
+                Logger.info("Unregistered installation from backend: \(clientId)")
             } catch {
                 // Ignore errors during unregistration (common during account deletion when auth may be invalid)
                 Logger.info("Could not unregister installation (likely during account deletion): \(error)")
