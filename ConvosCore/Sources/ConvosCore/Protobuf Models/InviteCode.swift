@@ -177,7 +177,13 @@ enum InviteConversationToken {
     }
 
     private static func chachaOpen(combined: Data, key: SymmetricKey, aad: Data) throws -> Data {
-        let box = try ChaChaPoly.SealedBox(combined: combined)
+        let box: ChaChaPoly.SealedBox
+        do {
+            box = try ChaChaPoly.SealedBox(combined: combined)
+        } catch {
+            throw Error.invalidFormat("Malformed encrypted data")
+        }
+
         do {
             return try ChaChaPoly.open(box, using: key, authenticating: aad)
         } catch {
