@@ -4,7 +4,7 @@ import Foundation
 public protocol SessionManagerProtocol: AnyObject {
     // MARK: Inbox Management
 
-    func addInbox() async throws -> AnyMessagingService
+    func addInbox() async -> AnyMessagingService
     func deleteInbox(inboxId: String) async throws
     func deleteInbox(for messagingService: AnyMessagingService) async throws
     func deleteAllInboxes() async throws

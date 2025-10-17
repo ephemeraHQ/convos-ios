@@ -83,9 +83,9 @@ class NewConversationViewModel: Identifiable {
         showingFullScreenScanner: Bool = false,
         allowsDismissingScanner: Bool = true,
         delegate: NewConversationsViewModelDelegate? = nil
-    ) async throws -> NewConversationViewModel {
-        let messagingService = try await session.addInbox()
-        return try NewConversationViewModel(
+    ) async -> NewConversationViewModel {
+        let messagingService = await session.addInbox()
+        return NewConversationViewModel(
             session: session,
             messagingService: messagingService,
             autoCreateConversation: autoCreateConversation,
@@ -103,7 +103,7 @@ class NewConversationViewModel: Identifiable {
         showingFullScreenScanner: Bool = false,
         allowsDismissingScanner: Bool = true,
         delegate: NewConversationsViewModelDelegate? = nil
-    ) throws {
+    ) {
         self.session = session
         self.qrScannerViewModel = QRScannerViewModel()
         self.autoCreateConversation = autoCreateConversation
@@ -130,8 +130,16 @@ class NewConversationViewModel: Identifiable {
             self.conversationViewModel.showsInfoView = false
         }
         if autoCreateConversation {
-            newConversationTask = Task {
-                try await conversationStateManager.createConversation()
+            newConversationTask = Task { [weak self] in
+                guard let self else { return }
+                guard !Task.isCancelled else { return }
+                do {
+                    try await conversationStateManager.createConversation()
+                } catch {
+                    Logger.error("Error auto-creating conversation: \(error.localizedDescription)")
+                    guard !Task.isCancelled else { return }
+                    await handleCreationError(error)
+                }
             }
         }
     }
@@ -175,7 +183,11 @@ class NewConversationViewModel: Identifiable {
         joinConversationTask?.cancel()
         Task { [weak self] in
             guard let self else { return }
-            await conversationStateManager.delete()
+            do {
+                try await conversationStateManager.delete()
+            } catch {
+                Logger.error("Failed deleting conversation: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -226,6 +238,12 @@ class NewConversationViewModel: Identifiable {
         }
     }
 
+    @MainActor
+    private func handleCreationError(_ error: Error) {
+        currentError = error
+        isCreatingConversation = false
+    }
+
     private func setupStateObservation() {
         stateObserverHandle = conversationStateManager.observeState { [weak self] state in
             Task { @MainActor in
@@ -245,6 +263,7 @@ class NewConversationViewModel: Identifiable {
             isValidatingInvite = false
             isCreatingConversation = false
             messagesTopBarTrailingItemEnabled = false
+            messagesBottomBarEnabled = false
             currentError = nil
 
         case .creating:
@@ -269,6 +288,7 @@ class NewConversationViewModel: Identifiable {
             // This is the waiting state - user is waiting for inviter to accept
             messagesTopBarTrailingItemEnabled = false
             messagesTopBarTrailingItem = .share
+            messagesBottomBarEnabled = false
             isWaitingForInviteAcceptance = true
             shouldConfirmDeletingConversation = false
             conversationViewModel.untitledConversationPlaceholder = "Untitled"

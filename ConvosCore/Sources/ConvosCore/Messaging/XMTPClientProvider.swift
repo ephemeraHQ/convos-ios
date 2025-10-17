@@ -30,6 +30,13 @@ public protocol ConversationsProvider {
         consentStates: [ConsentState]?
     ) async throws -> [XMTPiOS.Conversation]
 
+    func listDms(
+        createdAfter: Date?,
+        createdBefore: Date?,
+        limit: Int?,
+        consentStates: [ConsentState]?
+    ) throws -> [Dm]
+
     func stream(
         type: ConversationFilterType,
         onClose: (() -> Void)?

@@ -393,6 +393,7 @@ public actor ConversationStateMachine {
         if let existingConversation {
             Logger.info("Found existing convo by invite tag...")
             let prevInboxReady = try await inboxStateManager.waitForInboxReadyResult()
+            try await inboxStateManager.delete()
             let inboxReady = try await inboxStateManager.reauthorize(inboxId: existingConversation.inboxId)
             if existingConversation.hasJoined {
                 Logger.info("Already joined conversation... moving to ready state.")
@@ -575,8 +576,10 @@ public actor ConversationStateMachine {
             try await cleanUp(
                 conversationId: conversationId,
                 client: inboxReady.client,
-                apiClient: inboxReady.apiClient
+                apiClient: inboxReady.apiClient,
             )
+
+            try await inboxStateManager.delete()
         }
 
         emitStateChange(.uninitialized)
@@ -598,7 +601,7 @@ public actor ConversationStateMachine {
             try await cleanUp(
                 conversationId: previousResult.conversationId,
                 client: client,
-                apiClient: apiClient
+                apiClient: apiClient,
             )
         } catch {
             Logger.error("Failed to clean up previous conversation: \(error)")
@@ -609,7 +612,7 @@ public actor ConversationStateMachine {
     private func cleanUp(
         conversationId: String,
         client: any XMTPClientProvider,
-        apiClient: any ConvosAPIClientProtocol,
+        apiClient: any ConvosAPIClientProtocol
     ) async throws {
         // @jarod until we have self removal, we need to deny the conversation
         // so it doesn't show up in the list
@@ -666,6 +669,17 @@ public actor ConversationStateMachine {
                 .deleteAll(db)
 
             Logger.info("Cleaned up conversation data for conversationId: \(conversationId)")
+        }
+
+        // Check if we need to clean up the inbox
+        try await databaseWriter.write { db in
+            let conversationsCount = try DBConversation
+                .filter(!DBConversation.Columns.id.like("draft-%"))
+                .fetchCount(db)
+            if conversationsCount == 0 {
+                try DBInbox
+                    .deleteOne(db, id: client.inboxId)
+            }
         }
     }
 

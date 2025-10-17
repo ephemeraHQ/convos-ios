@@ -10,6 +10,7 @@ public protocol InboxStateManagerProtocol: AnyObject {
 
     func waitForInboxReadyResult() async throws -> InboxReadyResult
     func reauthorize(inboxId: String) async throws -> InboxReadyResult
+    func delete() async throws
 
     func addObserver(_ observer: InboxStateObserver)
     func removeObserver(_ observer: InboxStateObserver)
@@ -106,6 +107,13 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         throw InboxStateError.inboxNotReady
     }
 
+    public func delete() async throws {
+        guard let stateMachine = stateMachine else {
+            throw InboxStateError.inboxNotReady
+        }
+        await stateMachine.stopAndDelete()
+    }
+
     public func reauthorize(inboxId: String) async throws -> InboxReadyResult {
         guard let stateMachine = stateMachine else {
             throw InboxStateError.inboxNotReady
@@ -133,7 +141,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         // Authorize with the new inbox
         await stateMachine.authorize(inboxId: inboxId)
 
-        // Wait for ready state with the CORRECT inbox (not the old one)
+        // Wait for ready state with the new inboxId
         for await state in await stateMachine.stateSequence {
             switch state {
             case .ready(let result):

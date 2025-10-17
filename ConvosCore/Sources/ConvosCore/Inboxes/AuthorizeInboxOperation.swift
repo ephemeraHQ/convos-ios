@@ -101,7 +101,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     private func authorize(inboxId: String) {
         task?.cancel()
-        task = Task { [weak self] in
+        task = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             await stateMachine.authorize(inboxId: inboxId)
         }
@@ -109,7 +109,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     private func register() {
         task?.cancel()
-        task = Task { [weak self] in
+        task = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             await stateMachine.register()
         }
@@ -117,7 +117,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     func stopAndDelete() {
         task?.cancel()
-        task = Task { [weak self] in
+        task = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             await stateMachine.stopAndDelete()
         }
@@ -130,7 +130,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
 
     func stop() {
         task?.cancel()
-        task = Task { [weak self] in
+        task = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             await stateMachine.stop()
         }

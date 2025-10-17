@@ -255,7 +255,8 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
         sentMessageSubject.send(text)
     }
 
-    public func delete() async {
+    public func delete() async throws {
+        try await inboxStateManager.delete()
         await stateMachine.delete()
     }
 }

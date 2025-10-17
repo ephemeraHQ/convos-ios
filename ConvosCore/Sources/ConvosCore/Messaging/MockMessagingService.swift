@@ -98,6 +98,8 @@ extension MockMessagingService: InboxStateManagerProtocol {
         .init(client: self, apiClient: MockAPIClient(client: self))
     }
 
+    public func delete() async throws {}
+
     public func addObserver(_ observer: any InboxStateObserver) {
     }
 
@@ -225,6 +227,10 @@ extension MockMessagingService: ConversationSender {
 
 class MockConversations: ConversationsProvider {
     func listGroups(createdAfter: Date?, createdBefore: Date?, limit: Int?, consentStates: [ConsentState]?) throws -> [XMTPiOS.Group] {
+        []
+    }
+
+    func listDms(createdAfter: Date?, createdBefore: Date?, limit: Int?, consentStates: [ConsentState]?) throws -> [Dm] {
         []
     }
 

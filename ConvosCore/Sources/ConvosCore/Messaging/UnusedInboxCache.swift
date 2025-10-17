@@ -34,9 +34,6 @@ actor UnusedInboxCache {
         // Check if we have an unused inbox ID in keychain
         if let unusedInboxId = getUnusedInboxFromKeychain() {
             Logger.info("Found unused inbox ID in keychain: \(unusedInboxId)")
-
-            clearUnusedInboxFromKeychain()
-
             await authorizeUnusedInbox(
                 inboxId: unusedInboxId,
                 databaseWriter: databaseWriter,

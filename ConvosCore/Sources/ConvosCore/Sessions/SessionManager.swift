@@ -185,7 +185,7 @@ public final class SessionManager: SessionManagerProtocol {
 
     // MARK: - Inbox Management
 
-    public func addInbox() async throws -> AnyMessagingService {
+    public func addInbox() async -> AnyMessagingService {
         let messagingService = await MessagingService.registeredMessagingService(
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
@@ -228,7 +228,7 @@ public final class SessionManager: SessionManagerProtocol {
 
         guard let service = service else {
             Logger.error("Messaging service not found for inbox id \(inboxId)")
-            return
+            throw SessionManagerError.inboxNotFound
         }
 
         Logger.info("Stopping messaging service for inbox: \(inboxId)")
@@ -243,7 +243,7 @@ public final class SessionManager: SessionManagerProtocol {
         // Always clear device registration state, even if deletion fails
         defer { DeviceRegistrationManager.clearRegistrationState() }
 
-        let services = serviceQueue.sync {
+        let services = serviceQueue.sync(flags: .barrier) {
             let copy = messagingServices
             messagingServices.removeAll()
             return copy

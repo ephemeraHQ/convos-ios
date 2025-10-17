@@ -20,12 +20,9 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         let token = tokenParts.joined()
 
         Logger.info("Received device token from APNS: \(token)")
-        // Store token in shared storage
+        // Store token in shared storage (automatically notifies listeners)
         PushNotificationRegistrar.save(token: token)
         Logger.info("Stored device token in shared storage")
-
-        // Notify listeners that token changed so session-ready components can push it to backend
-        NotificationCenter.default.post(name: .convosPushTokenDidChange, object: nil)
     }
 
     func application(_ application: UIApplication,
