@@ -207,6 +207,9 @@ final class ConversationsViewModel {
             guard let self else { return }
             do {
                 try await session.deleteAllInboxes()
+                
+                // Clear all cached writers
+                self.localStateWriters.removeAll()
             } catch {
                 Logger.error("Error deleting all accounts: \(error)")
             }
@@ -222,6 +225,9 @@ final class ConversationsViewModel {
             guard let self else { return }
             do {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
+                
+                // Remove cached writer for deleted inbox
+                self.localStateWriters.removeValue(forKey: conversation.inboxId)
             } catch {
                 Logger.error("Error leaving convo: \(error.localizedDescription)")
             }
