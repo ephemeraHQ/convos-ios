@@ -31,15 +31,14 @@ public class MockMessagingService: MessagingServiceProtocol {
 
     // MARK: - Protocol Conformance
 
+    public func registerForPushNotifications() async {
+    }
+
     public func stop() {}
 
     public func stopAndDelete() {}
 
     public func stopAndDelete() async {}
-
-    public var inboxStateManager: any InboxStateManagerProtocol {
-        self
-    }
 
     public var inboxStateManager: any InboxStateManagerProtocol {
         self

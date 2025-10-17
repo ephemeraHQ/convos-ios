@@ -30,6 +30,20 @@ public enum ConvosAPI {
         public let walletAddress: String
     }
 
+    public struct RegisterDeviceRequest: Codable {
+        public let deviceId: String
+        public let pushToken: String?
+        public let pushTokenType: String?
+        public let apnsEnv: String?
+
+        public init(deviceId: String, pushToken: String?, pushTokenType: String?, apnsEnv: String?) {
+            self.deviceId = deviceId
+            self.pushToken = pushToken
+            self.pushTokenType = pushTokenType
+            self.apnsEnv = apnsEnv
+        }
+    }
+
     public struct InitRequest: Encodable {
         public let device: Device
         public let identity: Identity

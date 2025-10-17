@@ -334,4 +334,18 @@ public final class SessionManager: SessionManagerProtocol {
         }
         return true
     }
+
+    public func inboxId(for conversationId: String) async -> String? {
+        do {
+            return try await databaseReader.read { db in
+                try DBConversation
+                    .filter(DBConversation.Columns.id == conversationId)
+                    .fetchOne(db)?
+                    .inboxId
+            }
+        } catch {
+            Logger.error("Failed to look up inboxId for conversationId \(conversationId): \(error)")
+            return nil
+        }
+    }
 }

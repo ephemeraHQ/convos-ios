@@ -18,6 +18,9 @@ enum MockAPIError: Error {
 }
 
 class MockBaseAPIClient: ConvosAPIBaseProtocol {
+    func registerDevice(deviceId: String, pushToken: String?) async throws {
+    }
+
     func createSubOrganization(
         ephemeralPublicKey: String,
         passkey: ConvosAPI.Passkey

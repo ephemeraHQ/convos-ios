@@ -7,6 +7,8 @@ public protocol ConvosAPIBaseProtocol {
         passkey: ConvosAPI.Passkey
     ) async throws -> ConvosAPI.CreateSubOrganizationResponse
 
+    func registerDevice(deviceId: String, pushToken: String?) async throws
+
     func request(for path: String,
                  method: String,
                  queryParameters: [String: String]?) throws -> URLRequest
@@ -121,6 +123,50 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
         } catch {
             throw APIError.serverError(error.localizedDescription)
         }
+    }
+
+    func registerDevice(deviceId: String, pushToken: String?) async throws {
+        let url = baseURL.appendingPathComponent("v2/device/register")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // Get AppCheck token for authentication
+        let appCheckToken = try await FirebaseHelperCore.getAppCheckToken()
+        request.setValue(appCheckToken, forHTTPHeaderField: "X-Firebase-AppCheck")
+
+        // Determine APNS environment and token type
+        let apnsEnv: String?
+        let pushTokenType: String?
+        if pushToken != nil {
+            apnsEnv = environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
+            pushTokenType = "apns"
+        } else {
+            apnsEnv = nil
+            pushTokenType = nil
+        }
+
+        let body = ConvosAPI.RegisterDeviceRequest(
+            deviceId: deviceId,
+            pushToken: pushToken,
+            pushTokenType: pushTokenType,
+            apnsEnv: apnsEnv
+        )
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        guard httpResponse.statusCode == 200 else {
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            Logger.error("Device registration failed with status \(httpResponse.statusCode): \(errorMessage)")
+            throw APIError.serverError(errorMessage)
+        }
+
+        Logger.info("Device registered successfully")
     }
 
     func request(for path: String,
