@@ -118,8 +118,12 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             if let dmConversation = try await client.conversationsProvider.findConversation(
                 conversationId: message.conversationId
             ) {
-                try await dmConversation.updateConsentState(state: .denied)
-                Logger.info("Set consent state to .denied for DM with \(senderInboxId)")
+                do {
+                    try await dmConversation.updateConsentState(state: .denied)
+                    Logger.info("Set consent state to .denied for DM with \(senderInboxId)")
+                } catch {
+                    Logger.error("Failed to set consent state to .denied for DM with \(senderInboxId): \(error)")
+                }
             }
 
             throw InviteJoinRequestError.invalidSignature
