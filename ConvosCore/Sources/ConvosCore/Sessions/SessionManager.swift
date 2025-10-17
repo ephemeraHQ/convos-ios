@@ -228,7 +228,7 @@ public final class SessionManager: SessionManagerProtocol {
 
         guard let service = service else {
             Logger.error("Messaging service not found for inbox id \(inboxId)")
-            return
+            throw SessionManagerError.inboxNotFound
         }
 
         Logger.info("Stopping messaging service for inbox: \(inboxId)")
