@@ -141,7 +141,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         // Authorize with the new inbox
         await stateMachine.authorize(inboxId: inboxId)
 
-        // Wait for ready state with the CORRECT inbox (not the old one)
+        // Wait for ready state with the new inboxId
         for await state in await stateMachine.stateSequence {
             switch state {
             case .ready(let result):
