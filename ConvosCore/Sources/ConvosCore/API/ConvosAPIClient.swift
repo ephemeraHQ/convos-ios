@@ -172,7 +172,7 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
             throw APIError.invalidResponse
         }
 
-        guard httpResponse.statusCode == 200 else {
+        guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             Logger.error("Device registration failed with status \(httpResponse.statusCode): \(errorMessage)")
             throw APIError.serverError(errorMessage)
