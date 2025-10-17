@@ -364,6 +364,8 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 // Handle no content responses
                 if T.self == Void.self {
                     return unsafeBitCast((), to: T.self)
+                } else if T.self == EmptyResponse.self {
+                    return unsafeBitCast(EmptyResponse(), to: T.self)
                 } else if let emptyDict = [:] as? T {
                     return emptyDict
                 } else if let emptyArray = [] as? T {
