@@ -34,9 +34,6 @@ actor UnusedInboxCache {
         // Check if we have an unused inbox ID in keychain
         if let unusedInboxId = getUnusedInboxFromKeychain() {
             Logger.info("Found unused inbox ID in keychain: \(unusedInboxId)")
-
-            clearUnusedInboxFromKeychain()
-
             await authorizeUnusedInbox(
                 inboxId: unusedInboxId,
                 databaseWriter: databaseWriter,
@@ -199,6 +196,8 @@ actor UnusedInboxCache {
         do {
             // Wait for it to be ready
             _ = try await messagingService.inboxStateManager.waitForInboxReadyResult()
+
+            clearUnusedInboxFromKeychain()
 
             // Store it as the unused messaging service
             unusedMessagingService = messagingService
