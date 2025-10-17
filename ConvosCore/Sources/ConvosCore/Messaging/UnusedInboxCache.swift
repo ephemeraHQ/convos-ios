@@ -197,8 +197,6 @@ actor UnusedInboxCache {
             // Wait for it to be ready
             _ = try await messagingService.inboxStateManager.waitForInboxReadyResult()
 
-            clearUnusedInboxFromKeychain()
-
             // Store it as the unused messaging service
             unusedMessagingService = messagingService
 
