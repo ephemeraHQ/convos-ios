@@ -86,6 +86,7 @@ public struct NotificationData {
 public struct ProtocolNotificationData {
     public let contentTopic: String?
     public let encryptedMessage: String?
+    public let messageType: String?
 
     public var conversationId: String? {
         guard let topic = contentTopic else { return nil }
@@ -96,11 +97,13 @@ public struct ProtocolNotificationData {
         guard let dict = dictionary else {
             self.contentTopic = nil
             self.encryptedMessage = nil
+            self.messageType = nil
             return
         }
 
         self.contentTopic = dict["contentTopic"] as? String
         self.encryptedMessage = dict["encryptedMessage"] as? String
+        self.messageType = dict["messageType"] as? String
     }
 }
 
