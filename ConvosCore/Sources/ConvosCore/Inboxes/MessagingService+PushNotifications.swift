@@ -152,6 +152,14 @@ extension MessagingService {
                     ) {
                         // Successfully processed join request and added requester to group
                         Logger.info("Successfully processed join request from welcome message for conversation: \(conversationId)")
+
+                        // Store the group conversation and sync messages to ensure XMTP has complete group state
+                        if let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) {
+                            try await storeConversation(conversation)
+                        } else {
+                            Logger.error("Group conversation \(conversationId) not found after join")
+                        }
+
                         return .init(
                             title: nil,
                             body: "Someone accepted your invite 👀",
@@ -229,13 +237,8 @@ extension MessagingService {
                 userInfo: userInfo
             )
         case .group:
+            let dbConversation = try await storeConversation(conversation)
             let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-            let conversationWriter = ConversationWriter(
-                identityStore: identityStore,
-                databaseWriter: databaseWriter,
-                messageWriter: messageWriter
-            )
-            let dbConversation = try await conversationWriter.store(conversation: conversation)
             _ = try await messageWriter.store(message: decodedMessage, for: dbConversation)
 
             // Only handle text content type
@@ -269,5 +272,20 @@ extension MessagingService {
                 userInfo: userInfo
             )
         }
+    }
+
+    /// Stores a conversation in the database along with its latest messages
+    /// This ensures XMTP has complete group state for decrypting subsequent messages
+    /// - Parameter conversation: The XMTP conversation to store
+    /// - Returns: The stored database conversation
+    @discardableResult
+    private func storeConversation(_ conversation: XMTPiOS.Conversation) async throws -> DBConversation {
+        let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
+        let conversationWriter = ConversationWriter(
+            identityStore: identityStore,
+            databaseWriter: databaseWriter,
+            messageWriter: messageWriter
+        )
+        return try await conversationWriter.storeWithLatestMessages(conversation: conversation)
     }
 }
