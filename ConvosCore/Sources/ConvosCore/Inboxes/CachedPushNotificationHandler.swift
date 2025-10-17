@@ -6,6 +6,7 @@ import GRDB
 public enum NotificationProcessingError: Error {
     case timeout
     case invalidPayload
+    case missingInboxId
 }
 
 public actor CachedPushNotificationHandler {
@@ -49,23 +50,14 @@ public actor CachedPushNotificationHandler {
         cleanupStaleServices()
 
         guard payload.isValid else {
-            Logger.info("Dropping notification without clientId (v1/legacy)")
+            Logger.error("Invalid push notification payload: \(payload)")
             return nil
         }
 
-        guard let clientId = payload.clientId else {
-            Logger.info("Dropping notification without clientId")
+        guard let inboxId = payload.inboxId else {
+            Logger.error("Push notification missing inboxId")
             return nil
         }
-
-        Logger.info("Processing v2 notification for clientId: \(clientId)")
-        let inboxesRepository = InboxesRepository(databaseReader: databaseReader)
-        guard let inbox = try? inboxesRepository.inbox(byClientId: clientId) else {
-            Logger.warning("No inbox found in database for clientId: \(clientId) - dropping notification")
-            return nil
-        }
-        let inboxId = inbox.inboxId
-        Logger.info("Matched clientId \(clientId) to inboxId: \(inboxId)")
 
         Logger.info("Processing for inbox: \(inboxId)")
 
@@ -122,7 +114,7 @@ public actor CachedPushNotificationHandler {
             databaseReader: databaseReader,
             environment: environment,
             startsStreamingServices: false,
-            autoRegistersForPushNotifications: false  // NSE: Skip push notification registration
+            registersForPushNotifications: false
         )
         messagingServices[inboxId] = messagingService
         return messagingService

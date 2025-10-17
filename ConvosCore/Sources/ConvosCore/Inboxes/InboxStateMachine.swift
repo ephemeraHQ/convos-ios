@@ -100,12 +100,10 @@ public actor InboxStateMachine {
     private let environment: AppEnvironment
     private let syncingManager: AnySyncingManager?
     private let inviteJoinRequestsManager: AnyInviteJoinRequestsManager?
+    private let pushNotificationRegistrar: any PushNotificationRegistrarProtocol
     private let savesInboxToDatabase: Bool
     private let autoRegistersForPushNotifications: Bool
     private let databaseWriter: any DatabaseWriter
-    private lazy var deviceRegistrationManager: DeviceRegistrationManager = {
-        DeviceRegistrationManager(environment: environment)
-    }()
 
     private var currentTask: Task<Void, Never>?
     private var actionQueue: [Action] = []
@@ -183,8 +181,9 @@ public actor InboxStateMachine {
         databaseWriter: any DatabaseWriter,
         syncingManager: AnySyncingManager?,
         inviteJoinRequestsManager: AnyInviteJoinRequestsManager?,
+        pushNotificationRegistrar: any PushNotificationRegistrarProtocol,
         savesInboxToDatabase: Bool = true,
-        autoRegistersForPushNotifications: Bool = true,
+        autoRegistersForPushNotifications: Bool,
         environment: AppEnvironment
     ) {
         self.identityStore = identityStore
@@ -192,9 +191,10 @@ public actor InboxStateMachine {
         self.databaseWriter = databaseWriter
         self.syncingManager = syncingManager
         self.inviteJoinRequestsManager = inviteJoinRequestsManager
+        self.environment = environment
+        self.pushNotificationRegistrar = pushNotificationRegistrar
         self.savesInboxToDatabase = savesInboxToDatabase
         self.autoRegistersForPushNotifications = autoRegistersForPushNotifications
-        self.environment = environment
 
         // Set custom XMTP host if provided
         Logger.info("🔧 XMTP Configuration:")
@@ -234,11 +234,11 @@ public actor InboxStateMachine {
     /// Registers for push notifications once the inbox is in a ready state.
     func registerForPushNotifications() async {
         Logger.info("Manually triggering push notification registration")
-        setupPushTokenObserver()
+        setupPushNotificationObservers()
 
         // Check if we're already in ready state
-        if case .ready = _state {
-            await deviceRegistrationManager.registerDeviceIfNeeded()
+        if case .ready(let result) = _state {
+            await performPushNotificationRegistration(client: result.client, apiClient: result.apiClient)
             return
         }
 
@@ -246,8 +246,8 @@ public actor InboxStateMachine {
         // Wait for ready state
         for await state in stateSequence {
             switch state {
-            case .ready:
-                await deviceRegistrationManager.registerDeviceIfNeeded()
+            case .ready(let result):
+                await performPushNotificationRegistration(client: result.client, apiClient: result.apiClient)
                 return
             case .error, .stopping, .deleting:
                 // Don't wait if we're in an error or terminal state
@@ -418,6 +418,11 @@ public actor InboxStateMachine {
         emitStateChange(.authenticatingBackend(inboxId: client.inboxId))
         Logger.info("Authenticating backend for registration...")
         let apiClient = try await authorizeConvosBackend(client: client)
+        Logger.info("Registering backend...")
+//        _ = try await registerBackend(
+//            client: client,
+//            apiClient: apiClient
+//        )
         enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
     }
 
@@ -429,9 +434,9 @@ public actor InboxStateMachine {
         await syncingManager?.start(with: client, apiClient: apiClient)
         inviteJoinRequestsManager?.start(with: client, apiClient: apiClient)
 
-        // Setup push notification observers if auto-registration is enabled
+        // Setup push notification observers if registrar is provided
         if autoRegistersForPushNotifications {
-            setupPushTokenObserver()
+            setupPushNotificationObservers()
             await performPushNotificationRegistration(client: client, apiClient: apiClient)
         } else {
             Logger.info("Auto push notification registration is disabled, skipping push notification setup")
@@ -476,42 +481,17 @@ public actor InboxStateMachine {
         emitStateChange(.stopping)
         await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
-        removePushTokenObserver()
+        removePushNotificationObservers()
         emitStateChange(.uninitialized)
     }
 
     /// Performs common cleanup operations when deleting an inbox
     private func performInboxCleanup(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
-        // Stop all services
+        // Stop all services and observers
+        removePushNotificationObservers()
+        await pushNotificationRegistrar.unregisterInstallation(client: client, apiClient: apiClient)
         await syncingManager?.stop()
         inviteJoinRequestsManager?.stop()
-
-        // Unsubscribe from inbox-level welcome topic and unregister installation from backend
-        // Note: Conversation topics are handled by ConversationStateMachine.cleanUp()
-        if let identity = try? await identityStore.identity(for: client.inboxId) {
-            let clientId = identity.clientId
-            let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
-
-            // Unsubscribe from welcome topic (inbox-level topic only)
-            do {
-                try await apiClient.unsubscribeFromTopics(clientId: clientId, topics: [welcomeTopic])
-                Logger.info("Unsubscribed from welcome topic: \(welcomeTopic)")
-            } catch {
-                Logger.error("Failed to unsubscribe from welcome topic: \(error)")
-                // Continue with cleanup even if unsubscribe fails
-            }
-
-            // Unregister installation
-            do {
-                try await apiClient.unregisterInstallation(clientId: clientId)
-                Logger.info("Unregistered installation from backend: \(clientId)")
-            } catch {
-                // Ignore errors during unregistration (common during account deletion when auth may be invalid)
-                Logger.info("Could not unregister installation (likely during account deletion): \(error)")
-            }
-        } else {
-            Logger.warning("Identity not found, skipping backend unregistration")
-        }
 
         // Revoke installation if identity is available
         if let identity = try? await identityStore.identity(for: client.inboxId) {
@@ -534,51 +514,7 @@ public actor InboxStateMachine {
         // Delete identity and local database
         try await identityStore.delete(inboxId: client.inboxId)
         try client.deleteLocalDatabase()
-
-        // Delete database files
-        deleteDatabaseFiles(for: client.inboxId)
-
         Logger.info("Deleted inbox \(client.inboxId)")
-    }
-
-    private func deleteDatabaseFiles(for inboxId: String) {
-        let fileManager = FileManager.default
-        let dbDirectory = environment.defaultDatabasesDirectoryURL
-
-        // XMTP creates files like: xmtp-{env}-{inboxId}.db3
-        // Note: .local environment uses "localhost" in filename, not "local"
-        let envPrefix: String
-        switch environment.xmtpEnv {
-        case .local:
-            envPrefix = "localhost"
-        case .dev:
-            envPrefix = "dev"
-        case .production:
-            envPrefix = "production"
-        @unknown default:
-            envPrefix = "unknown"
-        }
-
-        let dbBaseName = "xmtp-\(envPrefix)-\(inboxId)"
-
-        let filesToDelete = [
-            "\(dbBaseName).db3",
-            "\(dbBaseName).db3.sqlcipher_salt",
-            "\(dbBaseName).db3-shm",
-            "\(dbBaseName).db3-wal"
-        ]
-
-        for filename in filesToDelete {
-            let fileURL = dbDirectory.appendingPathComponent(filename)
-            if fileManager.fileExists(atPath: fileURL.path) {
-                do {
-                    try fileManager.removeItem(at: fileURL)
-                    Logger.info("Deleted XMTP database file: \(filename)")
-                } catch {
-                    Logger.error("Failed to delete XMTP database file \(filename): \(error)")
-                }
-            }
-        }
     }
 
     /// Deletes all database records associated with a given inboxId
@@ -706,55 +642,64 @@ public actor InboxStateMachine {
 
         // Make a test call to trigger (re)authentication if needed
         Logger.info("Testing authentication with /auth-check...")
-        _ = try await apiClient.checkAuth()
+//        _ = try await apiClient.checkAuth()
 
         return apiClient
     }
 
-    // MARK: - Push Notification Registration
+    // MARK: - Backend Init
 
+    private func registerBackend(
+        client: any XMTPClientProvider,
+        apiClient: any ConvosAPIClientProtocol
+    ) async throws -> ConvosAPI.InitResponse {
+        let requestBody: ConvosAPI.InitRequest = .init(
+            device: .current(),
+            identity: .init(identityAddress: nil,
+                            xmtpId: client.inboxId,
+                            xmtpInstallationId: client.installationId)
+        )
+        return try await apiClient.initWithBackend(requestBody)
+    }
+}
+
+// MARK: - Push Notification Observers
+
+extension InboxStateMachine {
     private func performPushNotificationRegistration(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
         Logger.info("Registering for push notifications")
+        // Attempt to register for remote notifications to obtain APNS token ASAP
+        await pushNotificationRegistrar.registerForRemoteNotifications()
 
-        // Request system notification authorization and trigger APNS registration
-        await PushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
+        // Request system notification authorization (APNS registration is handled separately)
+        await pushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
 
-        // Register device with backend (includes deviceId + optional push token)
-        await deviceRegistrationManager.registerDeviceIfNeeded()
+        // Register backend notifications mapping (deviceId + token + identity + installation)
+        await pushNotificationRegistrar.registerForNotificationsIfNeeded(client: client, apiClient: apiClient)
     }
 
-    // MARK: - Push Token Observer
-
-    private func setupPushTokenObserver() {
+    private func setupPushNotificationObservers() {
         guard pushTokenObserver == nil else { return }
-
-        Logger.info("Setting up push token observer...")
+        Logger.info("Started observing for push token change...")
+        // Observe future token changes
         pushTokenObserver = NotificationCenter.default.addObserver(
             forName: .convosPushTokenDidChange,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             Task { [weak self] in
-                await self?.handlePushTokenChange()
+                await self?.handleTokenChange()
             }
         }
     }
 
-    private func removePushTokenObserver() {
-        if let observer = pushTokenObserver {
-            NotificationCenter.default.removeObserver(observer)
-            pushTokenObserver = nil
-            Logger.info("Removed push token observer")
-        }
+    private func removePushNotificationObservers() {
+        if let pushTokenObserver { NotificationCenter.default.removeObserver(pushTokenObserver) }
+        pushTokenObserver = nil
     }
 
-    private func handlePushTokenChange() async {
-        guard case .ready = _state else {
-            Logger.info("Push token changed but inbox not ready, skipping re-registration")
-            return
-        }
-
-        Logger.info("Push token changed or became available, re-registering device...")
-        await deviceRegistrationManager.registerDeviceIfNeeded()
+    private func handleTokenChange() async {
+        guard case let .ready(result) = _state else { return }
+        await pushNotificationRegistrar.requestAuthAndRegisterIfNeeded(client: result.client, apiClient: result.apiClient)
     }
 }

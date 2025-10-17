@@ -240,9 +240,6 @@ public final class SessionManager: SessionManagerProtocol {
     }
 
     public func deleteAllInboxes() async throws {
-        // Always clear device registration state, even if deletion fails
-        defer { DeviceRegistrationManager.clearRegistrationState() }
-
         let services = serviceQueue.sync(flags: .barrier) {
             let copy = messagingServices
             messagingServices.removeAll()
@@ -336,19 +333,5 @@ public final class SessionManager: SessionManagerProtocol {
             return false
         }
         return true
-    }
-
-    public func inboxId(for conversationId: String) async -> String? {
-        do {
-            return try await databaseReader.read { db in
-                try DBConversation
-                    .filter(DBConversation.Columns.id == conversationId)
-                    .fetchOne(db)?
-                    .inboxId
-            }
-        } catch {
-            Logger.error("Failed to look up inboxId for conversationId \(conversationId): \(error)")
-            return nil
-        }
     }
 }

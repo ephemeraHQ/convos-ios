@@ -41,6 +41,10 @@ public class MockMessagingService: MessagingServiceProtocol {
         self
     }
 
+    public var inboxStateManager: any InboxStateManagerProtocol {
+        self
+    }
+
     public func myProfileWriter() -> any MyProfileWriterProtocol {
         self
     }

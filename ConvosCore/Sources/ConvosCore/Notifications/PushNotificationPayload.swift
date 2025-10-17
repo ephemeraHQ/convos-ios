@@ -31,7 +31,7 @@ public struct DecodedNotificationContent {
 
 /// Represents the payload structure of a push notification
 public final class PushNotificationPayload {
-    public let clientId: String?
+    public let inboxId: String?
     public let notificationData: NotificationData?
     public let apiJWT: String?
     public let userInfo: [AnyHashable: Any]
@@ -42,7 +42,7 @@ public final class PushNotificationPayload {
 
     public init(userInfo: [AnyHashable: Any]) {
         self.userInfo = userInfo
-        self.clientId = userInfo["clientId"] as? String
+        self.inboxId = userInfo["inboxId"] as? String
         self.notificationData = NotificationData(dictionary: userInfo["notificationData"] as? [String: Any])
         self.apiJWT = userInfo["apiJWT"] as? String
         self.decodedTitle = nil
@@ -86,7 +86,6 @@ public struct NotificationData {
 public struct ProtocolNotificationData {
     public let contentTopic: String?
     public let encryptedMessage: String?
-    public let messageType: String?
 
     public var conversationId: String? {
         guard let topic = contentTopic else { return nil }
@@ -97,13 +96,11 @@ public struct ProtocolNotificationData {
         guard let dict = dictionary else {
             self.contentTopic = nil
             self.encryptedMessage = nil
-            self.messageType = nil
             return
         }
 
         self.contentTopic = dict["contentTopic"] as? String
         self.encryptedMessage = dict["encryptedMessage"] as? String
-        self.messageType = dict["messageType"] as? String
     }
 }
 
@@ -195,8 +192,7 @@ public extension PushNotificationPayload {
     }
 
     /// Checks if the notification has valid data for processing
-    /// v2 notifications must have a clientId
     var isValid: Bool {
-        return clientId != nil
+        return inboxId != nil
     }
 }

@@ -4,6 +4,20 @@ import Foundation
 import SwiftProtobuf
 
 extension SignedInvite {
+    public var expiresAt: Date? {
+        payload.expiresAtIfPresent
+    }
+
+    public var hasExpired: Bool {
+        guard let expiresAt else { return false }
+        return Date() > expiresAt
+    }
+
+    public var conversationHasExpired: Bool {
+        guard let conversationExpiresAt else { return false }
+        return Date() > conversationExpiresAt
+    }
+
     public var name: String? {
         payload.nameIfPresent
     }
@@ -14,6 +28,14 @@ extension SignedInvite {
 
     public var imageURL: String? {
         payload.imageURLIfPresent
+    }
+
+    public var conversationExpiresAt: Date? {
+        payload.conversationExpiresAtIfPresent
+    }
+
+    public var expiresAfterUse: Bool {
+        payload.expiresAfterUse
     }
 
     public static func slug(for conversation: DBConversation, privateKey: Data) throws -> String {
@@ -32,6 +54,9 @@ extension SignedInvite {
         if let imageURL = conversation.imageURLString {
             payload.imageURL = imageURL
         }
+        if let conversationExpiresAt = conversation.expiresAt {
+            payload.conversationExpiresAt = .init(date: conversationExpiresAt)
+        }
         payload.tag = conversation.inviteTag
         payload.conversationToken = conversationToken
         payload.creatorInboxID = conversation.inboxId
@@ -44,6 +69,25 @@ extension SignedInvite {
 }
 
 extension InvitePayload {
+    public var expiresAtIfPresent: Date? {
+        get {
+            guard hasExpiresAt else { return nil }
+            return expiresAt.date
+        }
+        set {
+            if let newValue {
+                expiresAt = .init(date: newValue)
+            } else {
+                clearExpiresAt()
+            }
+        }
+    }
+
+    public var conversationExpiresAtIfPresent: Date? {
+        guard hasConversationExpiresAt else { return nil }
+        return conversationExpiresAt.date
+    }
+
     public var nameIfPresent: String? {
         guard hasName else { return nil }
         return name
@@ -163,15 +207,13 @@ extension SignedInvite {
 
         let extractedCode: String
         if let url = URL(string: trimmedInput),
-           let codeFromURL = url.convosInviteCode {
-            // Use the URL extension which handles both v2 query params and app scheme
+           let codeFromURL = url.pathComponents.last(where: { !$0.isEmpty && $0 != "/" }) {
             extractedCode = codeFromURL
         } else {
-            // If URL parsing fails, treat the input as a raw invite code
             extractedCode = trimmedInput
         }
 
-        // Trim again in case the extracted code has whitespace
+        // Trim again in case the extracted path component has whitespace (shouldn't happen, but defensive)
         let finalCode = extractedCode.trimmingCharacters(in: .whitespacesAndNewlines)
         return try fromURLSafeSlug(finalCode)
     }

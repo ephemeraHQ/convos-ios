@@ -31,13 +31,20 @@ class MockBaseAPIClient: ConvosAPIBaseProtocol {
         }
         return URLRequest(url: url)
     }
-
-    func registerDevice(deviceId: String, pushToken: String?) async throws {
-        // Mock implementation - no-op
-    }
 }
 
 class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
+    func getDevice(deviceId: String) async throws -> ConvosAPI.DeviceUpdateResponse {
+        return ConvosAPI.DeviceUpdateResponse(
+            id: deviceId,
+            pushToken: "existing-push-token",
+            pushTokenType: "apns",
+            apnsEnv: "sandbox",
+            updatedAt: Date().ISO8601Format(),
+            pushFailures: 0
+        )
+    }
+
     var identifier: String {
         "\(client.inboxId)\(client.installationId)"
     }
@@ -49,12 +56,27 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         super.init()
     }
 
-    func authenticate(inboxId: String, appCheckToken: String, retryCount: Int = 0) async throws -> String {
+    func authenticate(inboxId: String, installationId: String, appCheckToken: String, signature: String, retryCount: Int = 0) async throws -> String {
         return "mock-jwt-token"
     }
 
     func checkAuth() async throws {
         // Mock implementation - always succeeds
+    }
+
+    func initWithBackend(_ requestBody: ConvosAPI.InitRequest) async throws -> ConvosAPI.InitResponse {
+        return ConvosAPI.InitResponse(
+            device: ConvosAPI.InitResponse.Device(
+                id: "device_1",
+                os: requestBody.device.os,
+                name: requestBody.device.name
+            ),
+            identity: ConvosAPI.InitResponse.Identity(
+                id: "identity_1",
+                identityAddress: requestBody.identity.identityAddress,
+                xmtpId: requestBody.identity.xmtpId
+            )
+        )
     }
 
     func uploadAttachment(
@@ -77,19 +99,21 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
     }
 
     // MARK: - Notifications mocks
-
-    func subscribeToTopics(deviceId: String, clientId: String, topics: [String]) async throws {
+    func registerForNotifications(deviceId: String, pushToken: String, identityId: String, xmtpInstallationId: String) async throws {
         // no-op in mock
     }
 
-    func unsubscribeFromTopics(clientId: String, topics: [String]) async throws {
+    func subscribeToTopics(installationId: String, topics: [String]) async throws {
         // no-op in mock
     }
 
-    func unregisterInstallation(clientId: String) async throws {
+    func unsubscribeFromTopics(installationId: String, topics: [String]) async throws {
         // no-op in mock
     }
 
+    func unregisterInstallation(xmtpInstallationId: String) async throws {
+        // no-op in mock
+    }
     func overrideJWTToken(_ token: String) {
         // no-op in mock
     }

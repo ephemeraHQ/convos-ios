@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "google/protobuf/timestamp.proto";
+
 // InvitePayload represents the core invite data
 message InvitePayload {
     // The encrypted conversation id
@@ -15,6 +17,13 @@ message InvitePayload {
     optional string name = 4;
     optional string description = 5;
     optional string imageURL = 6;
+    optional google.protobuf.Timestamp conversationExpiresAt = 7;
+
+    // optional invite expiration
+    optional google.protobuf.Timestamp expiresAt = 8;
+
+    // Whether the invite should expire after being used once
+    bool expiresAfterUse = 9;
 }
 
 // SignedInvite represents an invite with its cryptographic signature

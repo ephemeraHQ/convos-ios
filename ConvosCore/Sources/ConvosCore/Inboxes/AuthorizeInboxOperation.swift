@@ -17,6 +17,7 @@ protocol AuthorizeInboxOperationProtocol {
     func stopAndDelete() async
     func stopAndDelete()
     func stop()
+    func registerForPushNotifications() async
 }
 
 final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
@@ -31,7 +32,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
-        autoRegistersForPushNotifications: Bool = true
+        registersForPushNotifications: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
             identityStore: identityStore,
@@ -39,7 +40,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: startsStreamingServices,
-            autoRegistersForPushNotifications: autoRegistersForPushNotifications
+            registersForPushNotifications: registersForPushNotifications
         )
         operation.authorize(inboxId: inboxId)
         return operation
@@ -50,7 +51,8 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
-        savesInboxToDatabase: Bool = true
+        savesInboxToDatabase: Bool = true,
+        registersForPushNotifications: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
             identityStore: identityStore,
@@ -58,7 +60,8 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: true,
-            savesInboxToDatabase: savesInboxToDatabase
+            savesInboxToDatabase: savesInboxToDatabase,
+            registersForPushNotifications: registersForPushNotifications
         )
         operation.register()
         return operation
@@ -71,7 +74,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         environment: AppEnvironment,
         startsStreamingServices: Bool,
         savesInboxToDatabase: Bool = true,
-        autoRegistersForPushNotifications: Bool = true
+        registersForPushNotifications: Bool
     ) {
         let syncingManager = startsStreamingServices ? SyncingManager(
             identityStore: identityStore,
@@ -88,8 +91,11 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseWriter: databaseWriter,
             syncingManager: syncingManager,
             inviteJoinRequestsManager: inviteJoinRequestsManager,
+            pushNotificationRegistrar: PushNotificationRegistrar(
+                environment: environment
+            ),
             savesInboxToDatabase: savesInboxToDatabase,
-            autoRegistersForPushNotifications: autoRegistersForPushNotifications,
+            autoRegistersForPushNotifications: registersForPushNotifications,
             environment: environment
         )
     }
@@ -134,5 +140,9 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             guard let self else { return }
             await stateMachine.stop()
         }
+    }
+
+    func registerForPushNotifications() async {
+        await stateMachine.registerForPushNotifications()
     }
 }

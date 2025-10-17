@@ -9,6 +9,7 @@ final class MessagingService: MessagingServiceProtocol {
     internal let identityStore: any KeychainIdentityStoreProtocol
     internal let databaseReader: any DatabaseReader
     internal let databaseWriter: any DatabaseWriter
+    private let environment: AppEnvironment
     private var cancellables: Set<AnyCancellable> = []
 
     static func authorizedMessagingService(
@@ -17,7 +18,7 @@ final class MessagingService: MessagingServiceProtocol {
         databaseReader: any DatabaseReader,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
-        autoRegistersForPushNotifications: Bool = true
+        registersForPushNotifications: Bool = true
     ) -> MessagingService {
         let identityStore = environment.defaultIdentityStore
         let authorizationOperation = AuthorizeInboxOperation.authorize(
@@ -27,20 +28,22 @@ final class MessagingService: MessagingServiceProtocol {
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: startsStreamingServices,
-            autoRegistersForPushNotifications: autoRegistersForPushNotifications
+            registersForPushNotifications: registersForPushNotifications
         )
         return MessagingService(
             authorizationOperation: authorizationOperation,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
-            identityStore: identityStore
+            identityStore: identityStore,
+            environment: environment
         )
     }
 
     static func registeredMessagingService(
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        registersForPushNotifications: Bool = true
     ) async -> MessagingService {
         return await UnusedInboxCache.shared.consumeOrCreateMessagingService(
             databaseWriter: databaseWriter,
@@ -52,12 +55,14 @@ final class MessagingService: MessagingServiceProtocol {
     internal init(authorizationOperation: AuthorizeInboxOperation,
                   databaseWriter: any DatabaseWriter,
                   databaseReader: any DatabaseReader,
-                  identityStore: any KeychainIdentityStoreProtocol) {
+                  identityStore: any KeychainIdentityStoreProtocol,
+                  environment: AppEnvironment) {
         self.identityStore = identityStore
         self.authorizationOperation = authorizationOperation
         self.inboxStateManager = InboxStateManager(stateMachine: authorizationOperation.stateMachine)
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
+        self.environment = environment
     }
 
     deinit {
@@ -78,6 +83,15 @@ final class MessagingService: MessagingServiceProtocol {
         await authorizationOperation.stopAndDelete()
     }
 
+    // MARK: Push Notifications
+
+    /// Registers for push notifications once the inbox is in a ready state.
+    /// If already in ready state, registration happens immediately.
+    /// If not ready, waits for the ready state before registering.
+    func registerForPushNotifications() async {
+        await authorizationOperation.registerForPushNotifications()
+    }
+
     // MARK: My Profile
 
     func myProfileWriter() -> any MyProfileWriterProtocol {
@@ -91,7 +105,8 @@ final class MessagingService: MessagingServiceProtocol {
             inboxStateManager: inboxStateManager,
             identityStore: identityStore,
             databaseReader: databaseReader,
-            databaseWriter: databaseWriter
+            databaseWriter: databaseWriter,
+            environment: environment
         )
     }
 

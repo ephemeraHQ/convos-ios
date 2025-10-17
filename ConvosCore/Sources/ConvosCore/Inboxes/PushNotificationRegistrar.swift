@@ -10,6 +10,9 @@ public final class PushNotificationRegistrar {
     /// Saves the push token to UserDefaults and notifies observers of the change.
     /// Called by AppDelegate when APNS token is received.
     public static func save(token: String) {
+        let existingToken = UserDefaults.standard.string(forKey: tokenKey)
+        guard token != existingToken else { return }
+
         UserDefaults.standard.set(token, forKey: tokenKey)
         NotificationCenter.default.post(name: .convosPushTokenDidChange, object: nil)
     }

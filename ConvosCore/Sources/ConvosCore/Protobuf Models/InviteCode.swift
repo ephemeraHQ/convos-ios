@@ -45,7 +45,7 @@ enum InviteConversationToken {
     private static let authTagLength: Int = 16
 
     /// Minimum valid token size (version + nonce + type_tag + auth_tag)
-    static let minEncodedSize: Int = 1 + nonceLength + 1 + authTagLength // 30 bytes
+    static let minEncodedSize: Int = 1 + nonceLength + 3 + authTagLength // 32 bytes
 
     /// Size of UUID-based tokens (fixed)
     static let uuidCodeSize: Int = 1 + nonceLength + 16 + 1 + authTagLength // 46 bytes
@@ -177,7 +177,13 @@ enum InviteConversationToken {
     }
 
     private static func chachaOpen(combined: Data, key: SymmetricKey, aad: Data) throws -> Data {
-        let box = try ChaChaPoly.SealedBox(combined: combined)
+        let box: ChaChaPoly.SealedBox
+        do {
+            box = try ChaChaPoly.SealedBox(combined: combined)
+        } catch {
+            throw Error.invalidFormat("Malformed encrypted data")
+        }
+
         do {
             return try ChaChaPoly.open(box, using: key, authenticating: aad)
         } catch {
@@ -267,6 +273,12 @@ enum InviteConversationToken {
                 length = (Int(data[offset]) << 8) | Int(data[offset + 1])
                 offset += 2
             }
+
+            // Validate that length is not zero
+            guard length > 0 else {
+                throw Error.emptyConversationId
+            }
+
             guard data.count >= offset + length else {
                 throw Error.invalidFormat("String payload truncated: need \(length) bytes, have \(data.count - offset)")
             }

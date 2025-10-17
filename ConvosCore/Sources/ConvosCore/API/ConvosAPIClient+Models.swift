@@ -1,7 +1,5 @@
 import Foundation
 
-struct EmptyResponse: Decodable {}
-
 public enum ConvosAPI {
     public enum AuthenticatorTransport: String, Codable {
         case ble = "AUTHENTICATOR_TRANSPORT_BLE"
@@ -32,6 +30,36 @@ public enum ConvosAPI {
         public let walletAddress: String
     }
 
+    public struct InitRequest: Encodable {
+        public let device: Device
+        public let identity: Identity
+        public struct Device: Encodable {
+            public let os: String
+            public let name: String?
+            public let id: String
+        }
+        public struct Identity: Encodable {
+            public let identityAddress: String?
+            public let xmtpId: String
+            public let xmtpInstallationId: String?
+        }
+    }
+
+    public struct InitResponse: Decodable {
+        public let device: Device
+        public let identity: Identity
+        public struct Device: Decodable {
+            public let id: String
+            public let os: String
+            public let name: String?
+        }
+        public struct Identity: Decodable {
+            public let id: String
+            public let identityAddress: String?
+            public let xmtpId: String?
+        }
+    }
+
     // MARK: - Device Update Models
 
     struct DeviceUpdateRequest: Codable {
@@ -56,6 +84,7 @@ public enum ConvosAPI {
             self.apnsEnv = apnsEnv
         }
     }
+
     public struct DeviceUpdateResponse: Codable {
         public let id: String
         public let pushToken: String?
@@ -68,110 +97,14 @@ public enum ConvosAPI {
     public struct AuthCheckResponse: Codable {
         public let success: Bool
     }
+}
 
-    // MARK: - v2 Device & Notification Endpoints
-
-    public enum PushTokenType: String, Codable {
-        case apns
-        case fcm
-    }
-
-    public enum ApnsEnvironment: String, Codable {
-        case sandbox
-        case production
-    }
-
-    // MARK: - v2/device/register
-    // POST /v2/device/register
-    // Purpose: Register or update device metadata (independent of push notifications)
-    // Returns: 200 with empty body on success
-    // Errors: 400 (invalid body), 403 (device disabled), 500 (server error)
-
-    public struct RegisterDeviceRequest: Codable {
-        public let deviceId: String
-        public let pushToken: String?
-        public let pushTokenType: String?
-        public let apnsEnv: String?
-
-        public init(deviceId: String, pushToken: String?, pushTokenType: String?, apnsEnv: String?) {
-            self.deviceId = deviceId
-            self.pushToken = pushToken
-            self.pushTokenType = pushTokenType
-            self.apnsEnv = apnsEnv
-        }
-    }
-
-    // MARK: - v2/notifications/subscribe
-    // POST /v2/notifications/subscribe
-    // Returns: 200 with empty body on success
-    // Errors: 400 (invalid body), 404 (device not found), 403 (device disabled), 500 (server error)
-
-    public struct HmacKey: Codable {
-        public let thirtyDayPeriodsSinceEpoch: Int
-        public let key: String // hex string
-
-        public init(thirtyDayPeriodsSinceEpoch: Int, key: String) {
-            self.thirtyDayPeriodsSinceEpoch = thirtyDayPeriodsSinceEpoch
-            self.key = key
-        }
-    }
-
-    public struct TopicSubscription: Codable {
-        public let topic: String
-        public let hmacKeys: [HmacKey]
-
-        public init(topic: String, hmacKeys: [HmacKey]) {
-            self.topic = topic
-            self.hmacKeys = hmacKeys
-        }
-    }
-
-    public struct SubscribeRequest: Codable {
-        public let deviceId: String
-        public let clientId: String
-        public let topics: [TopicSubscription]
-
-        public init(deviceId: String, clientId: String, topics: [TopicSubscription]) {
-            self.deviceId = deviceId
-            self.clientId = clientId
-            self.topics = topics
-        }
-    }
-
-    // MARK: - v2/notifications/unsubscribe
-    // POST /v2/notifications/unsubscribe
-    // Returns: 200 with empty body on success
-    // Errors: 400 (invalid body), 404 (client not found), 500 (server error)
-
-    public struct UnsubscribeRequest: Codable {
-        public let clientId: String
-        public let topics: [String]
-
-        public init(clientId: String, topics: [String]) {
-            self.clientId = clientId
-            self.topics = topics
-        }
-    }
-
-    // MARK: - v2/notifications/unregister
-    // DELETE /v2/notifications/unregister/:clientId
-    // clientId is a URL parameter, not in body
-    // Returns: 200 with empty body on success
-    // Errors: 400 (invalid params), 404 (client not found), 500 (server error)
-
-    // MARK: - Common Error Response
-
-    public struct ErrorResponse: Codable {
-        public let error: String
-        public let details: [ValidationError]?
-        public let hint: String?
-    }
-
-    public struct ValidationError: Codable {
-        public let code: String
-        public let expected: String?
-        public let received: String?
-        public let path: [String]
-        public let message: String
+extension ConvosAPI.InitRequest.Device {
+    static func current() -> Self {
+        return .init(
+            os: DeviceInfo.osString,
+            name: nil,
+            id: DeviceInfo.deviceIdentifier
+        )
     }
 }

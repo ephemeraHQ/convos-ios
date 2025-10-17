@@ -66,7 +66,8 @@ class ConversationWriter: ConversationWriterProtocol {
                 createdAt: Date(),
                 name: signedInvite.name,
                 description: signedInvite.description_p,
-                imageURLString: signedInvite.imageURL
+                imageURLString: signedInvite.imageURL,
+                expiresAt: signedInvite.conversationExpiresAt
             )
             try conversation.save(db)
             let memberProfile = MemberProfile(
@@ -155,6 +156,7 @@ class ConversationWriter: ConversationWriterProtocol {
         let name: String?
         let description: String?
         let imageURLString: String?
+        let expiresAt: Date?
     }
 
     private func extractConversationMetadata(from conversation: XMTPiOS.Conversation) throws -> ConversationMetadata {
@@ -164,14 +166,16 @@ class ConversationWriter: ConversationWriterProtocol {
                 kind: .dm,
                 name: nil,
                 description: nil,
-                imageURLString: nil
+                imageURLString: nil,
+                expiresAt: nil
             )
         case .group(let group):
             return ConversationMetadata(
                 kind: .group,
                 name: try group.name(),
                 description: try group.customDescription,
-                imageURLString: try group.imageUrl()
+                imageURLString: try group.imageUrl(),
+                expiresAt: try group.expiresAt
             )
         }
     }
@@ -191,7 +195,8 @@ class ConversationWriter: ConversationWriterProtocol {
             createdAt: conversation.createdAt,
             name: metadata.name,
             description: metadata.description,
-            imageURLString: metadata.imageURLString
+            imageURLString: metadata.imageURLString,
+            expiresAt: metadata.expiresAt
         )
     }
 

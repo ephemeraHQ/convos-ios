@@ -43,6 +43,20 @@ extension XMTPiOS.Group {
         }
     }
 
+    public var expiresAt: Date? {
+        get throws {
+            let metadata = try currentCustomMetadata
+            guard metadata.hasExpiresAt else { return nil }
+            return metadata.expiresAt.date
+        }
+    }
+
+    public func updateExpiresAt(date: Date) async throws {
+        var customMetadata = try currentCustomMetadata
+        customMetadata.expiresAt = .init(date: date)
+        try await updateDescription(description: customMetadata.toCompactString())
+    }
+
     // This should only be done by the conversation creator
     // Updating the invite tag effectively expires all invites generated with that tag
     // The tag is used by the invitee to verify the conversation they've been added to
@@ -319,8 +333,13 @@ private extension Data {
             result.append(ConversationCustomMetadata.compressionMarker)
 
             // Store original size as UInt32 big-endian (4 bytes)
-            var sizeBytes = UInt32(count).bigEndian
-            result.append(Data(bytes: &sizeBytes, count: 4))
+            let size = UInt32(count)
+            result.append(contentsOf: [
+                UInt8((size >> 24) & 0xFF),
+                UInt8((size >> 16) & 0xFF),
+                UInt8((size >> 8) & 0xFF),
+                UInt8(size & 0xFF)
+            ])
 
             // Append compressed data
             result.append(Data(bytes: destinationBuffer, count: compressedSize))
@@ -343,12 +362,13 @@ private extension Data {
 
         // Read original size (4 bytes, big-endian)
         guard dataAfterMarker.count >= 4 else { return nil }
-        let sizeBytes = dataAfterMarker.prefix(4)
-        let originalSize: UInt32 = sizeBytes.withUnsafeBytes { ptr in
-            // Directly load the 4 bytes as UInt32 and convert from big-endian
-            let raw = ptr.load(as: UInt32.self)
-            return UInt32(bigEndian: raw)
-        }
+        let sizeBytes = Array(dataAfterMarker.prefix(4))
+
+        // Manually construct UInt32 from bytes to avoid alignment issues
+        let originalSize: UInt32 = (UInt32(sizeBytes[0]) << 24) |
+                                    (UInt32(sizeBytes[1]) << 16) |
+                                    (UInt32(sizeBytes[2]) << 8) |
+                                     UInt32(sizeBytes[3])
         // Security check: reject if original size exceeds maximum
         guard originalSize > 0, originalSize <= maxSize else { return nil }
 
