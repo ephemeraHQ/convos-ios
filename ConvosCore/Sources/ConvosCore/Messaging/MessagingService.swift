@@ -18,7 +18,7 @@ final class MessagingService: MessagingServiceProtocol {
         databaseReader: any DatabaseReader,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
-        registersForPushNotifications: Bool = true
+        autoRegistersForPushNotifications: Bool = true
     ) -> MessagingService {
         let identityStore = environment.defaultIdentityStore
         let authorizationOperation = AuthorizeInboxOperation.authorize(
@@ -28,7 +28,7 @@ final class MessagingService: MessagingServiceProtocol {
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: startsStreamingServices,
-            registersForPushNotifications: registersForPushNotifications
+            autoRegistersForPushNotifications: autoRegistersForPushNotifications
         )
         return MessagingService(
             authorizationOperation: authorizationOperation,
@@ -42,8 +42,7 @@ final class MessagingService: MessagingServiceProtocol {
     static func registeredMessagingService(
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
-        environment: AppEnvironment,
-        registersForPushNotifications: Bool = true
+        environment: AppEnvironment
     ) async -> MessagingService {
         return await UnusedInboxCache.shared.consumeOrCreateMessagingService(
             databaseWriter: databaseWriter,
@@ -81,15 +80,6 @@ final class MessagingService: MessagingServiceProtocol {
 
     func stopAndDelete() async {
         await authorizationOperation.stopAndDelete()
-    }
-
-    // MARK: Push Notifications
-
-    /// Registers for push notifications once the inbox is in a ready state.
-    /// If already in ready state, registration happens immediately.
-    /// If not ready, waits for the ready state before registering.
-    func registerForPushNotifications() async {
-        await authorizationOperation.registerForPushNotifications()
     }
 
     // MARK: My Profile

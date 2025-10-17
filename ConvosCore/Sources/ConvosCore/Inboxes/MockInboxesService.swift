@@ -8,6 +8,10 @@ public final class MockInboxesService: SessionManagerProtocol {
         true
     }
 
+    public func inboxId(for conversationId: String) async -> String? {
+        "mock-inbox-id"
+    }
+
     public init() {
     }
 

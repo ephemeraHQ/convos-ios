@@ -5,6 +5,10 @@ extension String {
         "/xmtp/mls/1/g-\(self)/proto"
     }
 
+    var xmtpWelcomeTopicFormat: String {
+        "/xmtp/mls/1/w-\(self)/proto"
+    }
+
     public var conversationIdFromXMTPGroupTopic: String? {
         // Example: /xmtp/mls/1/g-<conversationId>/proto -> <conversationId>
         let parts = split(separator: "/")

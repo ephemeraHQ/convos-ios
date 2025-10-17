@@ -298,6 +298,9 @@ public actor ConversationStateMachine {
     private func handleCreate() async throws {
         emitStateChange(.creating)
 
+        // Request push notification permissions when user creates a conversation
+        await PushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
+
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
         Logger.info("Inbox ready, creating conversation...")
 
@@ -337,14 +340,13 @@ public actor ConversationStateMachine {
         let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
         _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
 
-        // Subscribe to push notifications
-        let topic = externalConversationId.xmtpGroupTopicFormat
-        do {
-            try await apiClient.subscribeToTopics(installationId: client.installationId, topics: [topic])
-            Logger.info("Subscribed to push topic: \(topic)")
-        } catch {
-            Logger.error("Failed subscribing to topic \(topic): \(error)")
-        }
+        // Subscribe to push notifications using clientId from keychain
+        await subscribeToConversationTopics(
+            conversationId: externalConversationId,
+            client: client,
+            apiClient: apiClient,
+            context: "after create"
+        )
 
         // Transition directly to ready state
         emitStateChange(.ready(ConversationReadyResult(
@@ -468,6 +470,9 @@ public actor ConversationStateMachine {
     ) async throws {
         emitStateChange(.joining(invite: invite, placeholder: placeholder))
 
+        // Request push notification permissions when user joins a conversation
+        await PushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
+
         Logger.info("Requesting to join conversation...")
 
         let apiClient = inboxReady.apiClient
@@ -511,14 +516,13 @@ public actor ConversationStateMachine {
                     let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
                     _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
 
-                    // Subscribe to push notifications
-                    let topic = conversation.id.xmtpGroupTopicFormat
-                    do {
-                        try await apiClient.subscribeToTopics(installationId: client.installationId, topics: [topic])
-                        Logger.info("Subscribed to push topic after join: \(topic)")
-                    } catch {
-                        Logger.error("Failed subscribing to topic after join \(topic): \(error)")
-                    }
+                    // Subscribe to push notifications using clientId from keychain
+                    await subscribeToConversationTopics(
+                        conversationId: conversation.id,
+                        client: client,
+                        apiClient: apiClient,
+                        context: "after join"
+                    )
 
                     // Transition directly to ready state
                     await self.emitStateChange(.ready(ConversationReadyResult(
@@ -619,16 +623,24 @@ public actor ConversationStateMachine {
         let externalConversation = try await client.conversationsProvider.findConversation(conversationId: conversationId)
         try await externalConversation?.updateConsentState(state: .denied)
 
-        let topic = conversationId.xmtpGroupTopicFormat
-        do {
-            try await apiClient.unsubscribeFromTopics(installationId: client.installationId, topics: [topic])
-            Logger.info("Unsubscribed from push topic: \(topic)")
-        } catch {
-            Logger.error("Failed unsubscribing from topic \(topic): \(error)")
-            // Continue with cleanup even if unsubscribe fails
+        // Get clientId from keychain (privacy-preserving identifier, not XMTP installationId)
+        if let identity = try? await identityStore.identity(for: client.inboxId) {
+            // Unsubscribe from this conversation's push notification topic only
+            // The welcome topic remains subscribed (it's inbox-level, not conversation-level).
+            // Installation unregistration only happens at inbox level in InboxStateMachine.performInboxCleanup()
+            let topic = conversationId.xmtpGroupTopicFormat
+            do {
+                try await apiClient.unsubscribeFromTopics(clientId: identity.clientId, topics: [topic])
+                Logger.info("Unsubscribed from push topic: \(topic)")
+            } catch {
+                Logger.error("Failed unsubscribing from topic \(topic): \(error)")
+                // Continue with cleanup even if unsubscribe fails
+            }
+        } else {
+            Logger.warning("Identity not found, skipping push notification cleanup for: \(client.inboxId)")
         }
 
-        // Clean up database records
+        // Always clean up database records, even if identity/clientId is missing
         try await databaseWriter.write { db in
             // Delete messages first (due to foreign key constraints)
             try DBMessage
@@ -671,6 +683,33 @@ public actor ConversationStateMachine {
         streamConversationsTask?.cancel()
         messageStreamContinuation?.finish()
         emitStateChange(.uninitialized)
+    }
+
+    private func subscribeToConversationTopics(
+        conversationId: String,
+        client: any XMTPClientProvider,
+        apiClient: any ConvosAPIClientProtocol,
+        context: String
+    ) async {
+        let conversationTopic = conversationId.xmtpGroupTopicFormat
+        let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
+
+        guard let identity = try? await identityStore.identity(for: client.inboxId) else {
+            Logger.warning("Identity not found, skipping push notification subscription")
+            return
+        }
+
+        do {
+            let deviceId = DeviceInfo.deviceIdentifier
+            try await apiClient.subscribeToTopics(
+                deviceId: deviceId,
+                clientId: identity.clientId,
+                topics: [conversationTopic, welcomeTopic]
+            )
+            Logger.info("Subscribed to push topics \(context): \(conversationTopic), \(welcomeTopic)")
+        } catch {
+            Logger.error("Failed subscribing to topics \(context): \(error)")
+        }
     }
 }
 

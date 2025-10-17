@@ -58,12 +58,36 @@ extension MessagingService {
             return nil
         }
 
-        guard let encryptedMessage = protocolData.encryptedMessage,
-           let contentTopic = protocolData.contentTopic,
-           let currentInboxId = payload.inboxId else {
-            Logger.error("Invalid protocolData in notification payload")
+        guard let contentTopic = protocolData.contentTopic else {
+            Logger.error("Missing contentTopic in notification payload")
             return nil
         }
+
+        // Welcome messages don't include encrypted content (too large for push)
+        let isWelcomeTopic = contentTopic.contains("/w-")
+
+        if protocolData.encryptedMessage == nil {
+            // No encrypted content - must be a welcome message
+            guard isWelcomeTopic else {
+                Logger.error("Missing encryptedMessage for non-welcome topic: \(contentTopic)")
+                return nil
+            }
+
+            Logger.info("Handling welcome message notification (no encrypted content)")
+            return try await handleWelcomeMessage(
+                contentTopic: contentTopic,
+                client: client,
+                userInfo: payload.userInfo
+            )
+        }
+
+        // Regular message - decrypt the encrypted content
+        guard let encryptedMessage = protocolData.encryptedMessage else {
+            Logger.error("Missing encryptedMessage after nil check")
+            return nil
+        }
+
+        let currentInboxId = client.inboxId
 
         // Try to decode the text message for notification display
         return try await decodeTextMessageWithSender(
@@ -73,6 +97,86 @@ extension MessagingService {
             userInfo: payload.userInfo,
             client: client
         )
+    }
+
+    /// Handles welcome message notifications by syncing from network
+    /// Welcome messages are too large for push notifications, so we sync from XMTP network
+    /// Welcome messages indicate a new DM conversation with a join request
+    private func handleWelcomeMessage(
+        contentTopic: String,
+        client: any XMTPClientProvider,
+        userInfo: [AnyHashable: Any]
+    ) async throws -> DecodedNotificationContent? {
+        Logger.info("Syncing conversations from network for welcome message (DM with join request)")
+
+        // Sync all conversations to pick up the new DM from the welcome message
+        _ = try await client.conversationsProvider.syncAllConversations(consentStates: nil)
+
+        // Get all DM conversations
+        let conversations = try await client.conversationsProvider.list(
+            createdAfter: nil,
+            createdBefore: nil,
+            limit: nil,
+            consentStates: nil
+        )
+
+        let dmConversations = conversations.filter { conversation in
+            if case .dm = conversation {
+                return true
+            }
+            return false
+        }
+
+        guard !dmConversations.isEmpty else {
+            Logger.warning("No DM conversations found after welcome message sync")
+            return .droppedMessage
+        }
+
+        // Process all DM messages - one of them contains the join request
+        // Use the shared InviteJoinRequestsManager to handle the full flow (including adding to group)
+        let joinRequestsManager = InviteJoinRequestsManager(
+            identityStore: identityStore,
+            databaseReader: databaseReader
+        )
+
+        for dmConversation in dmConversations {
+            // Sync messages in each DM
+            let messages = try await dmConversation.messages(afterNs: nil, direction: .descending)
+
+            // Try to process each message as a join request
+            for message in messages {
+                do {
+                    if let conversationId = try await joinRequestsManager.processJoinRequest(
+                        message: message,
+                        client: client
+                    ) {
+                        // Successfully processed join request and added requester to group
+                        Logger.info("Successfully processed join request from welcome message for conversation: \(conversationId)")
+
+                        // Store the group conversation and sync messages to ensure XMTP has complete group state
+                        if let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) {
+                            try await storeConversation(conversation)
+                        } else {
+                            Logger.error("Group conversation \(conversationId) not found after join")
+                        }
+
+                        return .init(
+                            title: nil,
+                            body: "Someone accepted your invite 👀",
+                            conversationId: conversationId,
+                            userInfo: userInfo
+                        )
+                    }
+                } catch {
+                    // Not a join request or invalid - try next message
+                    continue
+                }
+            }
+        }
+
+        // No valid join request found
+        Logger.warning("No valid join request found in DM messages after welcome message sync")
+        return .droppedMessage
     }
 
     /// Decodes a text message for notification display with sender info
@@ -115,7 +219,8 @@ extension MessagingService {
 
         switch conversation {
         case .dm:
-            // handle all dms as join requests
+            // Handle all DMs as join requests
+            // This can be used to accept subsequent invites for side conversations with the same inbox
             let joinRequestsManager = InviteJoinRequestsManager(
                 identityStore: identityStore,
                 databaseReader: databaseReader
@@ -126,19 +231,14 @@ extension MessagingService {
             }
 
             return .init(
-                title: "Untitled",
-                body: "Someone accepted your invite",
+                title: nil,
+                body: "Someone accepted your invite 👀",
                 conversationId: conversationId,
                 userInfo: userInfo
             )
         case .group:
+            let dbConversation = try await storeConversation(conversation)
             let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-            let conversationWriter = ConversationWriter(
-                identityStore: identityStore,
-                databaseWriter: databaseWriter,
-                messageWriter: messageWriter
-            )
-            let dbConversation = try await conversationWriter.store(conversation: conversation)
             _ = try await messageWriter.store(message: decodedMessage, for: dbConversation)
 
             // Only handle text content type
@@ -172,5 +272,20 @@ extension MessagingService {
                 userInfo: userInfo
             )
         }
+    }
+
+    /// Stores a conversation in the database along with its latest messages
+    /// This ensures XMTP has complete group state for decrypting subsequent messages
+    /// - Parameter conversation: The XMTP conversation to store
+    /// - Returns: The stored database conversation
+    @discardableResult
+    private func storeConversation(_ conversation: XMTPiOS.Conversation) async throws -> DBConversation {
+        let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
+        let conversationWriter = ConversationWriter(
+            identityStore: identityStore,
+            databaseWriter: databaseWriter,
+            messageWriter: messageWriter
+        )
+        return try await conversationWriter.storeWithLatestMessages(conversation: conversation)
     }
 }

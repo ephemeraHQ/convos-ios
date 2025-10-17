@@ -33,4 +33,6 @@ public protocol SessionManagerProtocol: AnyObject {
     // MARK: Notifications
 
     func shouldDisplayNotification(for conversationId: String) async -> Bool
+
+    func inboxId(for conversationId: String) async -> String?
 }
