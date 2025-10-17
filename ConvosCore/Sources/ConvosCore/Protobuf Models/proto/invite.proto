@@ -21,6 +21,9 @@ message InvitePayload {
 
     // optional invite expiration
     optional google.protobuf.Timestamp expiresAt = 8;
+
+    // Whether the invite should expire after being used once
+    bool expiresAfterUse = 9;
 }
 
 // SignedInvite represents an invite with its cryptographic signature

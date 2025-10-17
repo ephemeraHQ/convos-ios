@@ -34,6 +34,10 @@ extension SignedInvite {
         payload.conversationExpiresAtIfPresent
     }
 
+    public var expiresAfterUse: Bool {
+        payload.expiresAfterUse
+    }
+
     public static func slug(for conversation: DBConversation, privateKey: Data) throws -> String {
         let conversationToken = try InviteConversationToken.makeConversationToken(
             conversationId: conversation.id,
