@@ -110,22 +110,16 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         let identity = try await identityStore.identity(for: inboxId)
         let publicKey = identity.keys.privateKey.publicKey.secp256K1Uncompressed.bytes
 
-        let verifiedSignature = try signedInvite.verify(with: publicKey)
-        guard verifiedSignature else {
-            Logger.error("Failed verifying signature for invite from \(senderInboxId) - blocking DM")
-
-            // Block the sender by setting consent state to denied on the DM
-            if let dmConversation = try await client.conversationsProvider.findConversation(
-                conversationId: message.conversationId
-            ) {
-                do {
-                    try await dmConversation.updateConsentState(state: .denied)
-                    Logger.info("Set consent state to .denied for DM with \(senderInboxId)")
-                } catch {
-                    Logger.error("Failed to set consent state to .denied for DM with \(senderInboxId): \(error)")
-                }
+        do {
+            let verifiedSignature = try signedInvite.verify(with: publicKey)
+            guard verifiedSignature else {
+                Logger.error("Failed verifying signature for invite from \(senderInboxId) - blocking DM")
+                await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
+                throw InviteJoinRequestError.invalidSignature
             }
-
+        } catch {
+            Logger.error("Failed verifying signature for invite from \(senderInboxId) - blocking DM")
+            await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
             throw InviteJoinRequestError.invalidSignature
         }
 
@@ -251,5 +245,27 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
     func stop() {
         streamMessagesTask?.cancel()
+    }
+
+    // MARK: - Private Helpers
+
+    /// Blocks a DM conversation by setting its consent state to denied
+    private func blockDMConversation(
+        client: AnyClientProvider,
+        conversationId: String,
+        senderInboxId: String
+    ) async {
+        guard let dmConversation = try? await client.conversationsProvider.findConversation(
+            conversationId: conversationId
+        ) else {
+            return
+        }
+
+        do {
+            try await dmConversation.updateConsentState(state: .denied)
+            Logger.info("Set consent state to .denied for DM with \(senderInboxId)")
+        } catch {
+            Logger.error("Failed to set consent state to .denied for DM with \(senderInboxId): \(error)")
+        }
     }
 }
