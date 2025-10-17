@@ -89,6 +89,8 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         message: XMTPiOS.DecodedMessage,
         client: AnyClientProvider
     ) async throws -> String? {
+        let senderInboxId = message.senderInboxId
+
         let dbMessage = try message.dbRepresentation()
         guard let text = dbMessage.text else {
             Logger.info("Message has no text content, not a join request")
@@ -104,15 +106,22 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             throw InviteJoinRequestError.invalidInviteFormat
         }
 
-        // @jarodl do more validation here, if someone is sending bogus invites, block the inbox id
-
         let inboxId = signedInvite.payload.creatorInboxID
         let identity = try await identityStore.identity(for: inboxId)
         let publicKey = identity.keys.privateKey.publicKey.secp256K1Uncompressed.bytes
 
         let verifiedSignature = try signedInvite.verify(with: publicKey)
         guard verifiedSignature else {
-            Logger.error("Failed verifying signature for invite, not a valid join request")
+            Logger.error("Failed verifying signature for invite from \(senderInboxId) - blocking DM")
+
+            // Block the sender by setting consent state to denied on the DM
+            if let dmConversation = try await client.conversationsProvider.findConversation(
+                conversationId: message.conversationId
+            ) {
+                try await dmConversation.updateConsentState(state: .denied)
+                Logger.info("Set consent state to .denied for DM with \(senderInboxId)")
+            }
+
             throw InviteJoinRequestError.invalidSignature
         }
 
@@ -127,20 +136,17 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         guard let conversation = try await client.conversationsProvider.findConversation(
             conversationId: conversationId
         ), try conversation.consentState() == .allowed else {
-            Logger.warning("Conversation \(conversationId) not found on XMTP")
+            Logger.warning("Conversation \(conversationId) not found for join request from \(senderInboxId)")
             throw InviteJoinRequestError.conversationNotFound(conversationId)
         }
 
         switch conversation {
         case .group(let group):
-            Logger.info("Adding \(message.senderInboxId) to group \(group.id)...")
-            try await group.add(members: [message.senderInboxId])
-            // Optionally store the conversation update
-            // Logger.info("Storing conversation with id: \(conversation.id)")
-            // try await conversationWriter.store(conversation: conversation)
+            Logger.info("Adding \(senderInboxId) to group \(group.id)...")
+            try await group.add(members: [senderInboxId])
             return group.id
         case .dm:
-            Logger.warning("Expected Group but found DM, ignoring invite join request...")
+            Logger.warning("Expected Group but found DM from \(senderInboxId), ignoring invite join request")
             throw InviteJoinRequestError.invalidConversationType
         }
     }

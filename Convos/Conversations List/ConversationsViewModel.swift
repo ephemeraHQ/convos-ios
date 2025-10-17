@@ -207,7 +207,7 @@ final class ConversationsViewModel {
             guard let self else { return }
             do {
                 try await session.deleteAllInboxes()
-                
+
                 // Clear all cached writers
                 self.localStateWriters.removeAll()
             } catch {
@@ -225,7 +225,7 @@ final class ConversationsViewModel {
             guard let self else { return }
             do {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
-                
+
                 // Remove cached writer for deleted inbox
                 self.localStateWriters.removeValue(forKey: conversation.inboxId)
             } catch {

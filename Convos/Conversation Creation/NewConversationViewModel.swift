@@ -130,8 +130,16 @@ class NewConversationViewModel: Identifiable {
             self.conversationViewModel.showsInfoView = false
         }
         if autoCreateConversation {
-            newConversationTask = Task {
-                try await conversationStateManager.createConversation()
+            newConversationTask = Task { [weak self] in
+                guard let self else { return }
+                guard !Task.isCancelled else { return }
+                do {
+                    try await conversationStateManager.createConversation()
+                } catch {
+                    Logger.error("Error auto-creating conversation: \(error.localizedDescription)")
+                    guard !Task.isCancelled else { return }
+                    await handleCreationError(error)
+                }
             }
         }
     }
@@ -228,6 +236,12 @@ class NewConversationViewModel: Identifiable {
                 presentingInvalidInviteSheet = true
             }
         }
+    }
+
+    @MainActor
+    private func handleCreationError(_ error: Error) {
+        currentError = error
+        isCreatingConversation = false
     }
 
     private func setupStateObservation() {
