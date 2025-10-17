@@ -63,11 +63,16 @@ extension MessagingService {
             return nil
         }
 
-        // Check if this is a welcome message (no encrypted content, needs network sync)
-        let isWelcomeMessage = contentTopic.contains("/w-") ||
-                               protocolData.messageType == "v3-welcome"
+        // Welcome messages don't include encrypted content (too large for push)
+        let isWelcomeTopic = contentTopic.contains("/w-")
 
-        if isWelcomeMessage {
+        if protocolData.encryptedMessage == nil {
+            // No encrypted content - must be a welcome message
+            guard isWelcomeTopic else {
+                Logger.error("Missing encryptedMessage for non-welcome topic: \(contentTopic)")
+                return nil
+            }
+
             Logger.info("Handling welcome message notification (no encrypted content)")
             return try await handleWelcomeMessage(
                 contentTopic: contentTopic,
@@ -76,11 +81,8 @@ extension MessagingService {
             )
         }
 
-        // Regular message - must have encrypted content
-        guard let encryptedMessage = protocolData.encryptedMessage else {
-            Logger.error("Missing encryptedMessage for non-welcome message")
-            return nil
-        }
+        // Regular message - decrypt the encrypted content
+        let encryptedMessage = protocolData.encryptedMessage!
 
         let currentInboxId = client.inboxId
 

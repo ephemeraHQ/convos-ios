@@ -338,25 +338,12 @@ public actor ConversationStateMachine {
         _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
 
         // Subscribe to push notifications using clientId from keychain
-        let conversationTopic = externalConversationId.xmtpGroupTopicFormat
-        let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
-
-        if let identity = try? await identityStore.identity(for: client.inboxId) {
-            do {
-                let deviceId = DeviceInfo.deviceIdentifier
-                // Subscribe to both conversation topic and welcome topic in one call
-                try await apiClient.subscribeToTopics(
-                    deviceId: deviceId,
-                    clientId: identity.clientId,
-                    topics: [conversationTopic, welcomeTopic]
-                )
-                Logger.info("Subscribed to push topics: \(conversationTopic), \(welcomeTopic)")
-            } catch {
-                Logger.error("Failed subscribing to topics: \(error)")
-            }
-        } else {
-            Logger.warning("Identity not found, skipping push notification subscription")
-        }
+        await subscribeToConversationTopics(
+            conversationId: externalConversationId,
+            client: client,
+            apiClient: apiClient,
+            context: "after create"
+        )
 
         // Transition directly to ready state
         emitStateChange(.ready(ConversationReadyResult(
@@ -509,25 +496,12 @@ public actor ConversationStateMachine {
                     _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
 
                     // Subscribe to push notifications using clientId from keychain
-                    let conversationTopic = conversation.id.xmtpGroupTopicFormat
-                    let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
-
-                    if let identity = try? await identityStore.identity(for: client.inboxId) {
-                        do {
-                            let deviceId = DeviceInfo.deviceIdentifier
-                            // Subscribe to both conversation topic and welcome topic in one call
-                            try await apiClient.subscribeToTopics(
-                                deviceId: deviceId,
-                                clientId: identity.clientId,
-                                topics: [conversationTopic, welcomeTopic]
-                            )
-                            Logger.info("Subscribed to push topics after join: \(conversationTopic), \(welcomeTopic)")
-                        } catch {
-                            Logger.error("Failed subscribing to topics after join: \(error)")
-                        }
-                    } else {
-                        Logger.warning("Identity not found, skipping push notification subscription")
-                    }
+                    await subscribeToConversationTopics(
+                        conversationId: conversation.id,
+                        client: client,
+                        apiClient: apiClient,
+                        context: "after join"
+                    )
 
                     // Transition directly to ready state
                     await self.emitStateChange(.ready(ConversationReadyResult(
@@ -620,28 +594,20 @@ public actor ConversationStateMachine {
         try await externalConversation?.updateConsentState(state: .denied)
 
         // Get clientId from keychain (privacy-preserving identifier, not XMTP installationId)
-        // Make optional - don't exit early if missing, only skip push notification cleanup
-        let identity = try? await identityStore.identity(for: client.inboxId)
-        if identity == nil {
-            Logger.warning("Identity not found, skipping push notification cleanup for: \(client.inboxId)")
-        }
-
-        let clientId = identity?.clientId
-
-        // Only perform push notification cleanup if we have a clientId
-        if let clientId = clientId {
-            // Unsubscribe from this conversation's push notification topic only.
+        if let identity = try? await identityStore.identity(for: client.inboxId) {
+            // Unsubscribe from this conversation's push notification topic only
             // The welcome topic remains subscribed (it's inbox-level, not conversation-level).
             // Installation unregistration only happens at inbox level in InboxStateMachine.performInboxCleanup()
-
             let topic = conversationId.xmtpGroupTopicFormat
             do {
-                try await apiClient.unsubscribeFromTopics(clientId: clientId, topics: [topic])
+                try await apiClient.unsubscribeFromTopics(clientId: identity.clientId, topics: [topic])
                 Logger.info("Unsubscribed from push topic: \(topic)")
             } catch {
                 Logger.error("Failed unsubscribing from topic \(topic): \(error)")
                 // Continue with cleanup even if unsubscribe fails
             }
+        } else {
+            Logger.warning("Identity not found, skipping push notification cleanup for: \(client.inboxId)")
         }
 
         // Always clean up database records, even if identity/clientId is missing
@@ -687,6 +653,33 @@ public actor ConversationStateMachine {
         streamConversationsTask?.cancel()
         messageStreamContinuation?.finish()
         emitStateChange(.uninitialized)
+    }
+
+    private func subscribeToConversationTopics(
+        conversationId: String,
+        client: any XMTPClientProvider,
+        apiClient: any ConvosAPIClientProtocol,
+        context: String
+    ) async {
+        let conversationTopic = conversationId.xmtpGroupTopicFormat
+        let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
+
+        guard let identity = try? await identityStore.identity(for: client.inboxId) else {
+            Logger.warning("Identity not found, skipping push notification subscription")
+            return
+        }
+
+        do {
+            let deviceId = DeviceInfo.deviceIdentifier
+            try await apiClient.subscribeToTopics(
+                deviceId: deviceId,
+                clientId: identity.clientId,
+                topics: [conversationTopic, welcomeTopic]
+            )
+            Logger.info("Subscribed to push topics \(context): \(conversationTopic), \(welcomeTopic)")
+        } catch {
+            Logger.error("Failed subscribing to topics \(context): \(error)")
+        }
     }
 }
 
