@@ -9,6 +9,7 @@ final class MessagingService: MessagingServiceProtocol {
     internal let identityStore: any KeychainIdentityStoreProtocol
     internal let databaseReader: any DatabaseReader
     internal let databaseWriter: any DatabaseWriter
+    private let environment: AppEnvironment
     private var cancellables: Set<AnyCancellable> = []
 
     static func authorizedMessagingService(
@@ -33,7 +34,8 @@ final class MessagingService: MessagingServiceProtocol {
             authorizationOperation: authorizationOperation,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
-            identityStore: identityStore
+            identityStore: identityStore,
+            environment: environment
         )
     }
 
@@ -52,12 +54,14 @@ final class MessagingService: MessagingServiceProtocol {
     internal init(authorizationOperation: AuthorizeInboxOperation,
                   databaseWriter: any DatabaseWriter,
                   databaseReader: any DatabaseReader,
-                  identityStore: any KeychainIdentityStoreProtocol) {
+                  identityStore: any KeychainIdentityStoreProtocol,
+                  environment: AppEnvironment) {
         self.identityStore = identityStore
         self.authorizationOperation = authorizationOperation
         self.inboxStateManager = InboxStateManager(stateMachine: authorizationOperation.stateMachine)
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
+        self.environment = environment
     }
 
     deinit {
@@ -91,7 +95,8 @@ final class MessagingService: MessagingServiceProtocol {
             inboxStateManager: inboxStateManager,
             identityStore: identityStore,
             databaseReader: databaseReader,
-            databaseWriter: databaseWriter
+            databaseWriter: databaseWriter,
+            environment: environment
         )
     }
 

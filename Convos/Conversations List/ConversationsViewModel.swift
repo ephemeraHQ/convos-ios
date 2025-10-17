@@ -56,7 +56,7 @@ final class ConversationsViewModel {
                 hasCreatedMoreThanOneConvo = true
             }
 
-            hasEarlyAccess = true// conversationsCount > 0
+            hasEarlyAccess = conversationsCount > 0
         }
     }
 
@@ -102,6 +102,7 @@ final class ConversationsViewModel {
     private var localStateWriters: [String: any ConversationLocalStateWriterProtocol] = [:]
     private var cancellables: Set<AnyCancellable> = .init()
     private var leftConversationObserver: Any?
+    private var newConversationViewModelTask: Task<Void, Never>?
 
     init(session: any SessionManagerProtocol) {
         self.session = session
@@ -123,7 +124,8 @@ final class ConversationsViewModel {
             self.hasEarlyAccess = false
         }
         if !hasEarlyAccess {
-            Task {
+            newConversationViewModelTask = Task { [weak self] in
+                guard let self else { return }
                 self.newConversationViewModel = await NewConversationViewModel.create(
                     session: session,
                     showingFullScreenScanner: true,
@@ -135,6 +137,7 @@ final class ConversationsViewModel {
     }
 
     deinit {
+        newConversationViewModelTask?.cancel()
         if let leftConversationObserver {
             NotificationCenter.default.removeObserver(leftConversationObserver)
         }
@@ -157,7 +160,9 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        Task {
+        newConversationViewModelTask?.cancel()
+        newConversationViewModelTask = Task { [weak self] in
+            guard let self else { return }
             newConversationViewModel = await NewConversationViewModel.create(
                 session: session,
                 autoCreateConversation: true,
@@ -171,7 +176,9 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        Task {
+        newConversationViewModelTask?.cancel()
+        newConversationViewModelTask = Task { [weak self] in
+            guard let self else { return }
             newConversationViewModel = await NewConversationViewModel.create(
                 session: session,
                 showingFullScreenScanner: true,
@@ -192,7 +199,9 @@ final class ConversationsViewModel {
             presentingMaxNumberOfConvosReachedInfo = true
             return
         }
-        Task {
+        newConversationViewModelTask?.cancel()
+        newConversationViewModelTask = Task { [weak self] in
+            guard let self else { return }
             newConversationViewModel = await NewConversationViewModel.create(
                 session: session,
                 delegate: self
@@ -209,7 +218,7 @@ final class ConversationsViewModel {
                 try await session.deleteAllInboxes()
 
                 // Clear all cached writers
-                self.localStateWriters.removeAll()
+                await MainActor.run { self.localStateWriters.removeAll() }
             } catch {
                 Logger.error("Error deleting all accounts: \(error)")
             }
@@ -227,7 +236,7 @@ final class ConversationsViewModel {
                 try await session.deleteInbox(inboxId: conversation.inboxId)
 
                 // Remove cached writer for deleted inbox
-                self.localStateWriters.removeValue(forKey: conversation.inboxId)
+                _ = await MainActor.run { self.localStateWriters.removeValue(forKey: conversation.inboxId) }
             } catch {
                 Logger.error("Error leaving convo: \(error.localizedDescription)")
             }

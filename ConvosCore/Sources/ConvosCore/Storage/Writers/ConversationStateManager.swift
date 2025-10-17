@@ -86,7 +86,8 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
         inboxStateManager: any InboxStateManagerProtocol,
         identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
-        databaseWriter: any DatabaseWriter
+        databaseWriter: any DatabaseWriter,
+        environment: AppEnvironment
     ) {
         self.inboxStateManager = inboxStateManager
         self.identityStore = identityStore
@@ -128,7 +129,8 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
             inboxStateManager: inboxStateManager,
             identityStore: identityStore,
             databaseReader: databaseReader,
-            databaseWriter: databaseWriter
+            databaseWriter: databaseWriter,
+            environment: environment
         )
 
         setupStateObservation()
@@ -193,6 +195,7 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
         observer.conversationStateDidChange(currentState)
     }
 
+    @MainActor
     public func removeObserver(_ observer: ConversationStateObserver) {
         observers.removeAll { $0.observer === observer }
     }

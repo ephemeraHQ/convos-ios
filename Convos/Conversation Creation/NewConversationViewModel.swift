@@ -42,31 +42,6 @@ class NewConversationViewModel: Identifiable {
     private(set) var currentError: Error?
     private(set) var conversationState: ConversationStateMachine.State = .uninitialized
 
-    // MARK: - Computed Properties
-
-    /// Whether the conversation is in a loading/processing state
-    var isProcessing: Bool {
-        isCreatingConversation || isValidatingInvite || isWaitingForInviteAcceptance
-    }
-
-    /// Whether there is an active error
-    var hasError: Bool {
-        currentError != nil
-    }
-
-    /// Localized error message for display
-    var errorMessage: String? {
-        currentError?.localizedDescription
-    }
-
-    /// Whether the conversation is ready for use
-    var isConversationReady: Bool {
-        if case .ready = conversationState {
-            return true
-        }
-        return false
-    }
-
     // MARK: - Private
 
     private let conversationStateManager: any ConversationStateManagerProtocol
@@ -189,19 +164,6 @@ class NewConversationViewModel: Identifiable {
                 Logger.error("Failed deleting conversation: \(error.localizedDescription)")
             }
         }
-    }
-
-    func clearError() {
-        currentError = nil
-    }
-
-    func retryAfterError() {
-        guard let error = currentError else { return }
-        Logger.info("Retrying after error: \(error.localizedDescription)")
-        currentError = nil
-
-        // If we were in the middle of joining, could potentially retry
-        // For now, just clear the error and let the user try again
     }
 
     // MARK: - Private

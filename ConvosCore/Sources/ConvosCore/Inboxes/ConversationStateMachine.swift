@@ -65,6 +65,7 @@ public actor ConversationStateMachine {
     private let inboxStateManager: any InboxStateManagerProtocol
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
+    private let environment: AppEnvironment
 
     private var currentTask: Task<Void, Never>?
     private var streamConversationsTask: Task<Void, Never>?
@@ -126,11 +127,13 @@ public actor ConversationStateMachine {
         identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
+        environment: AppEnvironment
     ) {
         self.inboxStateManager = inboxStateManager
         self.identityStore = identityStore
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
+        self.environment = environment
     }
 
     deinit {
@@ -350,6 +353,15 @@ public actor ConversationStateMachine {
             conversationId: externalConversationId,
             origin: .created
         )))
+
+        // Clear unused inbox from keychain now that conversation is successfully created
+        await UnusedInboxCache.shared
+            .clearUnusedInbox(
+                with: client.inboxId,
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment
+            )
     }
 
     private func handleValidate(inviteCode: String, previousResult: ConversationReadyResult?) async throws {
@@ -508,6 +520,15 @@ public actor ConversationStateMachine {
                         conversationId: conversation.id,
                         origin: .joined
                     )))
+
+                    // Clear unused inbox from keychain now that conversation is successfully joined
+                    await UnusedInboxCache.shared
+                        .clearUnusedInbox(
+                            with: client.inboxId,
+                            databaseWriter: databaseWriter,
+                            databaseReader: databaseReader,
+                            environment: environment
+                        )
 
                     // Clean up previous conversation if it exists and is different
                     await self.cleanUpPreviousConversationIfNeeded(
