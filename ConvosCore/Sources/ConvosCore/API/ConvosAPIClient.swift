@@ -357,9 +357,14 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
             switch httpResponse.statusCode {
             case 200...203, 206...299:
-                let decoder = JSONDecoder()
-                decoder.dateDecodingStrategy = .iso8601
-                return try decoder.decode(T.self, from: data)
+                if T.self == EmptyResponse.self,
+                   let emptyResponse = EmptyResponse() as? T {
+                    return emptyResponse
+                } else {
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .iso8601
+                    return try decoder.decode(T.self, from: data)
+                }
             case 204, 205, 304:
                 // Handle no content responses
                 if T.self == EmptyResponse.self,
