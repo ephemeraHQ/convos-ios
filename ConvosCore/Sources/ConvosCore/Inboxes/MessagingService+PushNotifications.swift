@@ -213,13 +213,6 @@ extension MessagingService {
             let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
             _ = try await messageWriter.store(message: decodedMessage, for: dbConversation)
 
-            // Check if the user was removed from the conversation
-            let wasRemovedFromConversation = decodedMessage.update?.removedInboxIds.contains(currentInboxId) ?? false
-            if wasRemovedFromConversation {
-                Logger.info("Removed from conversation, dropping notification")
-                return .droppedMessage
-            }
-
             // Only handle text content type
             let encodedContentType = try decodedMessage.encodedContent.type
             guard encodedContentType == ContentTypeText else {
