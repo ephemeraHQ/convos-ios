@@ -150,7 +150,7 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
         // Determine APNS environment and token type
         let apnsEnv: String?
         let pushTokenType: String?
-        if pushToken != nil {
+        if let token = pushToken, !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             apnsEnv = environment.apnsEnvironment == .sandbox ? "sandbox" : "production"
             pushTokenType = "apns"
         } else {

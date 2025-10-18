@@ -134,8 +134,13 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             throw InviteJoinRequestError.expiredConversation
         }
 
-        let inboxId = signedInvite.payload.creatorInboxID
-        let identity = try await identityStore.identity(for: inboxId)
+        let creatorInboxId = signedInvite.payload.creatorInboxID
+        guard creatorInboxId == client.inboxId else {
+            Logger.error("Received join request for invite not created by this inbox")
+            throw InviteJoinRequestError.invalidSignature
+        }
+        let identity = try await identityStore.identity(for: creatorInboxId)
+
         let publicKey = identity.keys.privateKey.publicKey.secp256K1Uncompressed.bytes
 
         do {

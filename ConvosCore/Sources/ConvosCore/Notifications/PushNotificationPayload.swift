@@ -197,6 +197,7 @@ public extension PushNotificationPayload {
     /// Checks if the notification has valid data for processing
     /// v2 notifications must have a clientId
     var isValid: Bool {
-        return clientId != nil
+        guard let id = clientId else { return false }
+        return !id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
