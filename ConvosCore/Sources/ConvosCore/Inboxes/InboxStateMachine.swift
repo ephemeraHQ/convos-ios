@@ -429,10 +429,15 @@ public actor InboxStateMachine {
         await syncingManager?.start(with: client, apiClient: apiClient)
         inviteJoinRequestsManager?.start(with: client, apiClient: apiClient)
 
-        // Setup push notification observers if auto-registration is enabled
         if autoRegistersForPushNotifications {
+            // Register device on app launch (without push token - that's OK)
+            // This creates the device record in the backend
+            await deviceRegistrationManager.registerDeviceIfNeeded()
+
+            // Setup push token observer to re-register when token arrives
+            // Push permissions are requested when user creates/joins their first conversation
             setupPushTokenObserver()
-            await performPushNotificationRegistration(client: client, apiClient: apiClient)
+            Logger.info("Device registered and push token observer set up. Will request permissions when user creates/joins a conversation.")
         } else {
             Logger.info("Auto push notification registration is disabled, skipping push notification setup")
         }
@@ -709,18 +714,6 @@ public actor InboxStateMachine {
         _ = try await apiClient.checkAuth()
 
         return apiClient
-    }
-
-    // MARK: - Push Notification Registration
-
-    private func performPushNotificationRegistration(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async {
-        Logger.info("Registering for push notifications")
-
-        // Request system notification authorization and trigger APNS registration
-        await PushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
-
-        // Register device with backend (includes deviceId + optional push token)
-        await deviceRegistrationManager.registerDeviceIfNeeded()
     }
 
     // MARK: - Push Token Observer
