@@ -73,14 +73,18 @@ public actor DeviceRegistrationManager {
 
             try await apiClient.registerDevice(deviceId: deviceId, pushToken: pushToken)
 
-            // Only persist registration state if we have a push token
-            // This ensures we keep trying on every launch until we successfully register with a token
+            // Always persist registration state after successful registration
+            // This prevents unnecessary re-registration attempts when token is nil
+            UserDefaults.standard.set(true, forKey: hasRegisteredKey)
+
             if let pushToken = pushToken {
-                UserDefaults.standard.set(true, forKey: hasRegisteredKey)
                 UserDefaults.standard.set(pushToken, forKey: lastTokenKey)
                 Logger.info("Successfully registered device with push token")
             } else {
-                Logger.info("Registered device without push token (will retry when token available)")
+                // Clear lastToken when successfully registering with nil token
+                // This ensures we don't keep retrying with nil on every launch
+                UserDefaults.standard.removeObject(forKey: lastTokenKey)
+                Logger.info("Successfully registered device without push token")
             }
         } catch {
             Logger.error("Failed to register device: \(error). Will retry on next attempt.")
