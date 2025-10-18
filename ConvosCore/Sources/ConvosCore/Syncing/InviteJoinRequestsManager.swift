@@ -33,15 +33,14 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
     private var streamMessagesTask: Task<Void, Never>?
 
-    // Track last successful sync
-    private var lastSynced: Date? {
-        get {
-            let timestamp = UserDefaults.standard.double(forKey: "org.convos.InviteJoinRequestsManager.lastSynced")
-            return timestamp > 0 ? Date(timeIntervalSince1970: timestamp) : nil
-        }
-        set {
-            UserDefaults.standard.set(newValue?.timeIntervalSince1970 ?? 0, forKey: "org.convos.InviteJoinRequestsManager.lastSynced")
-        }
+    // Track last successful sync per inbox
+    private func lastSynced(for inboxId: String) -> Date? {
+        let timestamp = UserDefaults.standard.double(forKey: "org.convos.InviteJoinRequestsManager.lastSynced.\(inboxId)")
+        return timestamp > 0 ? Date(timeIntervalSince1970: timestamp) : nil
+    }
+
+    private func setLastSynced(_ date: Date?, for inboxId: String) {
+        UserDefaults.standard.set(date?.timeIntervalSince1970 ?? 0, forKey: "org.convos.InviteJoinRequestsManager.lastSynced.\(inboxId)")
     }
 
     init(identityStore: any KeychainIdentityStoreProtocol,
@@ -183,7 +182,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             // List all DMs with consent states .unknown
             _ = try await client.conversationsProvider.syncAllConversations(consentStates: [.unknown])
             let dms = try client.conversationsProvider.listDms(
-                createdAfter: lastSynced,
+                createdAfter: lastSynced(for: inboxId),
                 createdBefore: nil,
                 limit: 250, // @jarodl max group size for now
                 consentStates: [.unknown]
@@ -226,7 +225,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             }
 
             // Update last synced timestamp after successful sync
-            lastSynced = syncStartTime
+            setLastSynced(syncStartTime, for: inboxId)
             Logger.info("Completed DM sync for join requests")
         } catch {
             Logger.error("Error syncing DMs: \(error)")
