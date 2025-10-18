@@ -189,14 +189,7 @@ class ConversationViewModel {
     // MARK: - Private
 
     private func setupMyProfileRepository() {
-        do {
-            self.profile = try myProfileRepository.fetch()
-        } catch {
-            Logger.error("Failed fetching my profile: \(error.localizedDescription)")
-        }
-
         myProfileRepository.myProfilePublisher
-            .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] profile in
                 self?.profile = profile
