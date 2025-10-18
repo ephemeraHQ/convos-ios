@@ -25,6 +25,9 @@ protocol InviteJoinRequestsManagerProtocol {
         message: XMTPiOS.DecodedMessage,
         client: AnyClientProvider
     ) async throws -> JoinRequestResult?
+    func syncAndProcessJoinRequests(
+        client: AnyClientProvider
+    ) async -> [JoinRequestResult]
 }
 
 class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
@@ -60,29 +63,38 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
     /// - Parameters:
     ///   - message: The decoded message to process
     ///   - client: The XMTP client provider
+    /// - Returns: The result if successful, nil otherwise
     private func processJoinRequestSafely(
         message: XMTPiOS.DecodedMessage,
         client: AnyClientProvider
-    ) async {
+    ) async -> JoinRequestResult? {
         do {
             if let result = try await processJoinRequest(
                 message: message,
                 client: client
             ) {
                 Logger.info("Successfully added \(message.senderInboxId) to conversation \(result.conversationId)")
+                return result
             }
+            return nil
         } catch InviteJoinRequestError.missingTextContent {
             // Silently skip - not a join request
+            return nil
         } catch InviteJoinRequestError.invalidInviteFormat {
             // Silently skip - not a join request
+            return nil
         } catch InviteJoinRequestError.invalidSignature {
             Logger.error("Invalid signature in join request from \(message.senderInboxId)")
+            return nil
         } catch InviteJoinRequestError.conversationNotFound(let id) {
             Logger.error("Conversation \(id) not found for join request from \(message.senderInboxId)")
+            return nil
         } catch InviteJoinRequestError.invalidConversationType {
             Logger.error("Join request targets a DM instead of a group")
+            return nil
         } catch {
             Logger.error("Error processing join request: \(error)")
+            return nil
         }
     }
 
@@ -171,8 +183,22 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
     // MARK: - Sync Operations
 
+    /// Sync all DMs and process join requests, returning results
+    /// - Parameter client: The XMTP client provider
+    /// - Returns: Array of successfully processed join requests
+    func syncAndProcessJoinRequests(client: AnyClientProvider) async -> [JoinRequestResult] {
+        return await syncAllDms(client: client, collectResults: true)
+    }
+
     /// Sync all DMs to catch up on any missed join requests
-    private func syncAllDms(client: AnyClientProvider) async {
+    /// - Parameters:
+    ///   - client: The XMTP client provider
+    ///   - collectResults: Whether to collect and return results (for push notifications)
+    /// - Returns: Array of results if collectResults is true, empty array otherwise
+    @discardableResult
+    private func syncAllDms(client: AnyClientProvider, collectResults: Bool = false) async -> [JoinRequestResult] {
+        var results: [JoinRequestResult] = []
+
         do {
             Logger.info("Syncing all DMs for join requests...")
 
@@ -191,11 +217,11 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             Logger.info("Found \(dms.count) DMs to check for join requests")
 
             // Process each DM in parallel
-            await withTaskGroup(of: Void.self) { group in
+            await withTaskGroup(of: JoinRequestResult?.self) { group in
                 for dm in dms {
                     group.addTask { [weak self] in
                         do {
-                            guard let self else { return }
+                            guard let self else { return nil }
                             let messages = try await dm.messages(afterNs: nil)
                                 .filter { message in
                                     guard let encodedContentType = try? message.encodedContent.type else {
@@ -210,15 +236,29 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                                     }
                                 }
                             Logger.info("Found \(messages.count) messages as possible join requests")
+
+                            // Process each message and return first successful result for this DM
                             for message in messages {
-                                // Try to process as join request
-                                await self.processJoinRequestSafely(
+                                if let result = await self.processJoinRequestSafely(
                                     message: message,
                                     client: client
-                                )
+                                ) {
+                                    return result
+                                }
                             }
+                            return nil
                         } catch {
                             Logger.error("Error processing messages as join requests: \(error.localizedDescription)")
+                            return nil
+                        }
+                    }
+                }
+
+                // Collect results if requested
+                if collectResults {
+                    for await result in group {
+                        if let result = result {
+                            results.append(result)
                         }
                     }
                 }
@@ -230,6 +270,8 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         } catch {
             Logger.error("Error syncing DMs: \(error)")
         }
+
+        return results
     }
 
     func start(with client: AnyClientProvider,
@@ -252,6 +294,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                         }
                     ).filter({ $0.senderInboxId != inboxId }) {
                     Logger.info("Processing potential join request from \(message.senderInboxId)")
+
                     await self.processJoinRequestSafely(
                         message: message,
                         client: client

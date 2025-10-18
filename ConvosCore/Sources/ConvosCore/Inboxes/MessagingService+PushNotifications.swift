@@ -109,74 +109,36 @@ extension MessagingService {
     ) async throws -> DecodedNotificationContent? {
         Logger.info("Syncing conversations from network for welcome message (DM with join request)")
 
-        // Sync all conversations to pick up the new DM from the welcome message
-        _ = try await client.conversationsProvider.syncAllConversations(consentStates: nil)
-
-        // Get all DM conversations
-        let conversations = try await client.conversationsProvider.list(
-            createdAfter: nil,
-            createdBefore: nil,
-            limit: nil,
-            consentStates: nil
-        )
-
-        let dmConversations = conversations.filter { conversation in
-            if case .dm = conversation {
-                return true
-            }
-            return false
-        }
-
-        guard !dmConversations.isEmpty else {
-            Logger.warning("No DM conversations found after welcome message sync")
-            return .droppedMessage
-        }
-
-        // Process all DM messages - one of them contains the join request
         // Use the shared InviteJoinRequestsManager to handle the full flow (including adding to group)
         let joinRequestsManager = InviteJoinRequestsManager(
             identityStore: identityStore,
             databaseReader: databaseReader
         )
 
-        for dmConversation in dmConversations {
-            // Sync messages in each DM
-            let messages = try await dmConversation.messages(afterNs: nil, direction: .descending)
+        let results = await joinRequestsManager.syncAndProcessJoinRequests(client: client)
 
-            // Try to process each message as a join request
-            for message in messages {
-                do {
-                    if let result = try await joinRequestsManager.processJoinRequest(
-                        message: message,
-                        client: client
-                    ) {
-                        // Successfully processed join request and added requester to group
-                        Logger.info("Successfully processed join request from welcome message for conversation: \(result.conversationId)")
-
-                        // Store the group conversation and sync messages to ensure XMTP has complete group state
-                        if let conversation = try await client.conversationsProvider.findConversation(conversationId: result.conversationId) {
-                            try await storeConversation(conversation)
-                        } else {
-                            Logger.error("Group conversation \(result.conversationId) not found after join")
-                        }
-
-                        return .init(
-                            title: result.conversationName,
-                            body: "Someone accepted your invite 👀",
-                            conversationId: result.conversationId,
-                            userInfo: userInfo
-                        )
-                    }
-                } catch {
-                    // Not a join request or invalid - try next message
-                    continue
-                }
+        // Store all group conversations to ensure XMTP has complete group state
+        for result in results {
+            if let conversation = try await client.conversationsProvider.findConversation(conversationId: result.conversationId) {
+                try await storeConversation(conversation)
+            } else {
+                Logger.error("Group conversation \(result.conversationId) not found after join")
             }
         }
 
-        // No valid join request found
-        Logger.warning("No valid join request found in DM messages after welcome message sync")
-        return .droppedMessage
+        guard let firstResult = results.first else {
+            Logger.warning("No valid join request found in DM messages after welcome message sync")
+            return .droppedMessage
+        }
+
+        Logger.info("Successfully processed \(results.count) join request(s) from welcome message")
+
+        return .init(
+            title: firstResult.conversationName,
+            body: "Someone accepted your invite 👀",
+            conversationId: firstResult.conversationId,
+            userInfo: userInfo
+        )
     }
 
     /// Decodes a text message for notification display with sender info
