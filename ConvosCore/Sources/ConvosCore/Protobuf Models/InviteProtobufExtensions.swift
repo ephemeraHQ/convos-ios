@@ -207,13 +207,15 @@ extension SignedInvite {
 
         let extractedCode: String
         if let url = URL(string: trimmedInput),
-           let codeFromURL = url.pathComponents.last(where: { !$0.isEmpty && $0 != "/" }) {
+           let codeFromURL = url.convosInviteCode {
+            // Use the URL extension which handles both v2 query params and app scheme
             extractedCode = codeFromURL
         } else {
+            // If URL parsing fails, treat the input as a raw invite code
             extractedCode = trimmedInput
         }
 
-        // Trim again in case the extracted path component has whitespace (shouldn't happen, but defensive)
+        // Trim again in case the extracted code has whitespace
         let finalCode = extractedCode.trimmingCharacters(in: .whitespacesAndNewlines)
         return try fromURLSafeSlug(finalCode)
     }

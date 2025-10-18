@@ -80,8 +80,6 @@ actor UnusedInboxCache {
                 Logger.error("Failed to save consumed inbox to database: \(error)")
             }
 
-            await unusedService.registerForPushNotifications()
-
             return unusedService
         }
 
@@ -99,8 +97,7 @@ actor UnusedInboxCache {
                 databaseReader: databaseReader,
                 databaseWriter: databaseWriter,
                 environment: environment,
-                startsStreamingServices: true,
-                registersForPushNotifications: true
+                startsStreamingServices: true
             )
             return MessagingService(
                 authorizationOperation: authorizationOperation,
@@ -130,8 +127,7 @@ actor UnusedInboxCache {
             identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
-            environment: environment,
-            registersForPushNotifications: true
+            environment: environment
         )
 
         return MessagingService(
@@ -158,8 +154,7 @@ actor UnusedInboxCache {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
-            startsStreamingServices: true,
-            registersForPushNotifications: false
+            startsStreamingServices: true
         )
 
         let messagingService = MessagingService(
@@ -223,8 +218,7 @@ actor UnusedInboxCache {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
-            savesInboxToDatabase: false,
-            registersForPushNotifications: false
+            savesInboxToDatabase: false
         )
 
         let tempMessagingService = MessagingService(
