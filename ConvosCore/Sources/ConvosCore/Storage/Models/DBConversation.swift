@@ -270,6 +270,23 @@ extension DBConversation {
         )
     }
 
+    func with(expiresAt: Date) -> Self {
+        .init(
+            id: id,
+            inboxId: inboxId,
+            clientConversationId: clientConversationId,
+            inviteTag: inviteTag,
+            creatorId: creatorId,
+            kind: kind,
+            consent: consent,
+            createdAt: createdAt,
+            name: name,
+            description: description,
+            imageURLString: imageURLString,
+            expiresAt: expiresAt
+        )
+    }
+
     func with(imageURLString: String?) -> Self {
         .init(
             id: id,

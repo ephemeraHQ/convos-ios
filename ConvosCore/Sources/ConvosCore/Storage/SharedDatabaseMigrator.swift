@@ -85,6 +85,7 @@ extension SharedDatabaseMigrator {
                     .notNull()
                 t.column("conversationId", .text)
                     .notNull()
+                t.column("expiresAt", .datetime)
 
                 // Foreign key to the conversation member who created this invite
                 t.foreignKey(

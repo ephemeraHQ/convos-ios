@@ -36,13 +36,14 @@ class InviteWriter: InviteWriterProtocol {
 
         let identity = try await identityStore.identity(for: conversation.inboxId)
         let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
-        let urlSlug = try SignedInvite.slug(for: conversation, privateKey: privateKey)
+        let urlSlug = try SignedInvite.slug(for: conversation, expiresAt: expiresAt, privateKey: privateKey)
         Logger.info("Generated URL slug: \(urlSlug)")
 
         let dbInvite = DBInvite(
             creatorInboxId: conversation.inboxId,
             conversationId: conversation.id,
-            urlSlug: urlSlug
+            urlSlug: urlSlug,
+            expiresAt: expiresAt
         )
         try await databaseWriter.write { db in
             try Member(inboxId: conversation.inboxId).save(db, onConflict: .ignore)
@@ -87,8 +88,13 @@ class InviteWriter: InviteWriterProtocol {
         guard let invite else { throw InviteWriterError.inviteNotFound }
         let identity = try await identityStore.identity(for: conversation.inboxId)
         let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
-        let urlSlug = try SignedInvite.slug(for: conversation, privateKey: privateKey)
-        let updatedInvite = invite.with(urlSlug: urlSlug)
+        let urlSlug = try SignedInvite.slug(
+            for: conversation,
+            expiresAt: invite.expiresAt,
+            privateKey: privateKey
+        )
+        let updatedInvite = invite
+            .with(urlSlug: urlSlug)
         try await databaseWriter.write { db in
             try updatedInvite.save(db)
         }

@@ -17,6 +17,7 @@ public protocol ConversationMetadataWriterProtocol {
     func promoteToSuperAdmin(_ memberInboxId: String, in conversationId: String) async throws
     func demoteFromSuperAdmin(_ memberInboxId: String, in conversationId: String) async throws
     func updateImage(_ image: UIImage, for conversation: Conversation) async throws
+    func updateExpiresAt(_ expiresAt: Date, for conversationId: String) async throws
 }
 
 // MARK: - Conversation Metadata Writer Implementation
@@ -73,6 +74,37 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
         Logger.info("Updated conversation name for \(conversationId): \(truncatedName)")
     }
 
+    func updateExpiresAt(_ expiresAt: Date, for conversationId: String) async throws {
+        let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
+
+        guard let conversation = try await inboxReady.client.conversation(with: conversationId),
+              case .group(let group) = conversation else {
+            throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
+        }
+
+        try await group.updateExpiresAt(date: expiresAt)
+
+        let updatedConversation = try await databaseWriter.write { db in
+            guard let localConversation = try DBConversation
+                .fetchOne(db, key: conversationId) else {
+                throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
+            }
+            let updatedConversation = localConversation.with(expiresAt: expiresAt)
+            try updatedConversation.save(db)
+            Logger.info("Updated local conversation expiresAt for \(conversationId): \(expiresAt)")
+            return updatedConversation
+        }
+
+        _ = try await inviteWriter.update(
+            for: updatedConversation.id,
+            name: updatedConversation.name,
+            description: updatedConversation.description,
+            imageURL: updatedConversation.imageURLString
+        )
+
+        Logger.info("Updated conversation expiresAt for \(conversationId): \(expiresAt)")
+    }
+
     func updateDescription(_ description: String, for conversationId: String) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
@@ -94,7 +126,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             return updatedConversation
         }
 
-        _ = try await inviteWriter .update(
+        _ = try await inviteWriter.update(
             for: updatedConversation.id,
             name: updatedConversation.name,
             description: updatedConversation.description,
