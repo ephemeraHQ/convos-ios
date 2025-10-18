@@ -28,16 +28,13 @@ class NewConversationViewModel: Identifiable {
     var presentingJoinConversationSheet: Bool = false
     var presentingInvalidInviteSheet: Bool = false {
         willSet {
-            if !newValue {
-                qrScannerViewModel.resetScanning()
-            }
+            qrScannerViewModel.presentingInvalidInviteSheet = newValue
         }
     }
     var presentingFailedToJoinSheet: Bool = false
 
     // State tracking
     private(set) var isWaitingForInviteAcceptance: Bool = false
-    private(set) var isValidatingInvite: Bool = false
     private(set) var isCreatingConversation: Bool = false
     private(set) var currentError: Error?
     private(set) var conversationState: ConversationStateMachine.State = .uninitialized
@@ -173,12 +170,13 @@ class NewConversationViewModel: Identifiable {
         presentingJoinConversationSheet = false
         presentingInvalidInviteSheet = false
         conversationViewModel.showsInfoView = true
-        showingFullScreenScanner = false
     }
 
     @MainActor
     private func handleJoinError(_ error: Error) {
         withAnimation {
+            qrScannerViewModel.resetScanning()
+
             if startedWithFullscreenScanner {
                 showingFullScreenScanner = true
                 conversationViewModel.showsInfoView = false
@@ -222,29 +220,27 @@ class NewConversationViewModel: Identifiable {
         switch state {
         case .uninitialized:
             isWaitingForInviteAcceptance = false
-            isValidatingInvite = false
             isCreatingConversation = false
             messagesTopBarTrailingItemEnabled = false
             messagesBottomBarEnabled = false
             currentError = nil
+            qrScannerViewModel.resetScanning()
 
         case .creating:
             isCreatingConversation = true
-            isValidatingInvite = false
             isWaitingForInviteAcceptance = false
             currentError = nil
 
         case .validating:
-            isValidatingInvite = true
             isCreatingConversation = false
             isWaitingForInviteAcceptance = false
             currentError = nil
 
         case .validated:
-            isValidatingInvite = false
             isCreatingConversation = false
             isWaitingForInviteAcceptance = false
             currentError = nil
+            showingFullScreenScanner = false
 
         case .joining:
             // This is the waiting state - user is waiting for inviter to accept
@@ -254,7 +250,6 @@ class NewConversationViewModel: Identifiable {
             isWaitingForInviteAcceptance = true
             shouldConfirmDeletingConversation = false
             conversationViewModel.untitledConversationPlaceholder = "Untitled"
-            isValidatingInvite = false
             isCreatingConversation = false
             currentError = nil
             Logger.info("Waiting for invite acceptance...")
@@ -263,20 +258,18 @@ class NewConversationViewModel: Identifiable {
             messagesTopBarTrailingItemEnabled = true
             messagesBottomBarEnabled = true
             isWaitingForInviteAcceptance = false
-            isValidatingInvite = false
             isCreatingConversation = false
             currentError = nil
             Logger.info("Conversation ready!")
 
         case .deleting:
             isWaitingForInviteAcceptance = false
-            isValidatingInvite = false
             isCreatingConversation = false
             currentError = nil
 
         case .error(let error):
+            qrScannerViewModel.resetScanning()
             isWaitingForInviteAcceptance = false
-            isValidatingInvite = false
             isCreatingConversation = false
             currentError = error
             Logger.error("Conversation state error: \(error.localizedDescription)")

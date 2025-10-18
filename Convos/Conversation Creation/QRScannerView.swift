@@ -12,6 +12,11 @@ class QRScannerViewModel: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     var isScanningEnabled: Bool = true
     var showInvalidInviteCodeFormat: Bool = false
     var invalidInviteCode: String?
+    var presentingInvalidInviteSheet: Bool = false
+
+    // Minimum time to wait before allowing another scan (in seconds)
+    private let minimumScanInterval: TimeInterval = 3.0
+    private var lastScanTime: Date?
 
     func requestAccess() {
         AVCaptureDevice.requestAccess(for: .video) { granted in
@@ -30,8 +35,14 @@ class QRScannerViewModel: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         didOutput metadataObjects: [AVMetadataObject],
         from connection: AVCaptureConnection
     ) {
-        // Only process if scanning is enabled
-        guard isScanningEnabled else { return }
+        // Only process if scanning is enabled and we're not showing an error
+        guard isScanningEnabled && !presentingInvalidInviteSheet else { return }
+
+        // Check if enough time has passed since the last scan
+        if let lastScan = lastScanTime {
+            let timeSinceLastScan = Date().timeIntervalSince(lastScan)
+            guard timeSinceLastScan >= minimumScanInterval else { return }
+        }
 
         if let metadataObject = metadataObjects.first {
             guard let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject else { return }
@@ -39,6 +50,7 @@ class QRScannerViewModel: NSObject, AVCaptureMetadataOutputObjectsDelegate {
 
             AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
             scannedCode = stringValue
+            lastScanTime = Date()
 
             // Disable further scanning after detecting a code
             isScanningEnabled = false
@@ -48,6 +60,8 @@ class QRScannerViewModel: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     func resetScanning() {
         isScanningEnabled = true
         scannedCode = nil
+        // Note: we intentionally do NOT reset lastScanTime here
+        // to maintain the minimum interval even across resets
     }
 }
 
