@@ -409,7 +409,7 @@ public actor InboxStateMachine {
         emitStateChange(.authenticatingBackend(inboxId: client.inboxId))
 
         Logger.info("Authenticating API client...")
-        let apiClient = initializeApiClient(client: client)
+        let apiClient = try await authorizeConvosBackend(client: client)
 
         enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
     }
