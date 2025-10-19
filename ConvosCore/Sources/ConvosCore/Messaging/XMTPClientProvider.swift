@@ -16,25 +16,37 @@ public protocol ConversationSender {
 }
 
 public protocol ConversationsProvider {
+    // swiftlint:disable:next function_parameter_count
     func listGroups(
-        createdAfter: Date?,
-        createdBefore: Date?,
+        createdAfterNs: Int64?,
+        createdBeforeNs: Int64?,
+        lastActivityAfterNs: Int64?,
+        lastActivityBeforeNs: Int64?,
         limit: Int?,
-        consentStates: [ConsentState]?
-    ) throws -> [XMTPiOS.Group]
+        consentStates: [ConsentState]?,
+        orderBy: ConversationsOrderBy
+    ) throws -> [Group]
 
+    // swiftlint:disable:next function_parameter_count
     func list(
-        createdAfter: Date?,
-        createdBefore: Date?,
+        createdAfterNs: Int64?,
+        createdBeforeNs: Int64?,
+        lastActivityBeforeNs: Int64?,
+        lastActivityAfterNs: Int64?,
         limit: Int?,
-        consentStates: [ConsentState]?
+        consentStates: [ConsentState]?,
+        orderBy: ConversationsOrderBy,
     ) async throws -> [XMTPiOS.Conversation]
 
+    // swiftlint:disable:next function_parameter_count
     func listDms(
-        createdAfter: Date?,
-        createdBefore: Date?,
+        createdAfterNs: Int64?,
+        createdBeforeNs: Int64?,
+        lastActivityBeforeNs: Int64?,
+        lastActivityAfterNs: Int64?,
         limit: Int?,
-        consentStates: [ConsentState]?
+        consentStates: [ConsentState]?,
+        orderBy: ConversationsOrderBy
     ) throws -> [Dm]
 
     func stream(

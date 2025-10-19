@@ -213,10 +213,13 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             // List all DMs with consent states .unknown
             _ = try await client.conversationsProvider.syncAllConversations(consentStates: [.unknown])
             let dms = try client.conversationsProvider.listDms(
-                createdAfter: lastSynced(for: inboxId),
-                createdBefore: nil,
+                createdAfterNs: nil,
+                createdBeforeNs: nil,
+                lastActivityBeforeNs: nil,
+                lastActivityAfterNs: lastSynced(for: inboxId)?.nanosecondsSince1970,
                 limit: 250, // @jarodl max group size for now
-                consentStates: [.unknown]
+                consentStates: [.unknown],
+                orderBy: .lastActivity
             )
 
             Logger.info("Found \(dms.count) DMs to check for join requests")
@@ -286,7 +289,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             guard let self else { return }
 
             // Initial sync of all DMs to catch up on missed join requests
-            await self.syncAllDms(client: client)
+//            await self.syncAllDms(client: client)
 
             do {
                 Logger.info("Started streaming messages for invite join requests...")
