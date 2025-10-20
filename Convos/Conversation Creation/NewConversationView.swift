@@ -137,11 +137,8 @@ struct NewConversationView: View {
                         viewModel.joinConversation(inviteCode: inviteCode)
                     }
                 }
-                .selfSizingSheet(isPresented: $viewModel.presentingInvalidInviteSheet) {
-                    InfoView(title: "No convo here", description: "Maybe it already exploded.")
-                }
-                .selfSizingSheet(isPresented: $viewModel.presentingFailedToJoinSheet) {
-                    InfoView(title: "Try again", description: "Joining the convo failed.")
+                .selfSizingSheet(item: $viewModel.displayError) { error in
+                    InfoView(title: error.title, description: error.description)
                 }
             }
         }

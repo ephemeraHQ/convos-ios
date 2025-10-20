@@ -300,7 +300,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                     ).filter({ $0.senderInboxId != inboxId }) {
                     Logger.info("Processing potential join request from \(message.senderInboxId)")
 
-                    await self.processJoinRequestSafely(
+                    _ = await self.processJoinRequestSafely(
                         message: message,
                         client: client
                     )

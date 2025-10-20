@@ -9,6 +9,21 @@ protocol NewConversationsViewModelDelegate: AnyObject {
     )
 }
 
+// MARK: - Error Types
+
+struct IdentifiableError: Identifiable {
+    let id: UUID = UUID()
+    let error: DisplayError
+
+    var title: String { error.title }
+    var description: String { error.description }
+}
+
+struct GenericDisplayError: DisplayError {
+    let title: String
+    let description: String
+}
+
 @Observable
 class NewConversationViewModel: Identifiable {
     // MARK: - Public
@@ -26,18 +41,19 @@ class NewConversationViewModel: Identifiable {
     private let autoCreateConversation: Bool
     private(set) var showingFullScreenScanner: Bool
     var presentingJoinConversationSheet: Bool = false
-    var presentingInvalidInviteSheet: Bool = false {
-        willSet {
-            if !newValue {
+    var displayError: IdentifiableError? {
+        didSet {
+            qrScannerViewModel.presentingInvalidInviteSheet = displayError != nil
+            // Reset scanner when dismissing the error sheet to allow immediate re-scanning
+            if oldValue != nil && displayError == nil {
+                qrScannerViewModel.resetScanTimer()
                 qrScannerViewModel.resetScanning()
             }
         }
     }
-    var presentingFailedToJoinSheet: Bool = false
 
     // State tracking
     private(set) var isWaitingForInviteAcceptance: Bool = false
-    private(set) var isValidatingInvite: Bool = false
     private(set) var isCreatingConversation: Bool = false
     private(set) var currentError: Error?
     private(set) var conversationState: ConversationStateMachine.State = .uninitialized
@@ -171,31 +187,29 @@ class NewConversationViewModel: Identifiable {
     @MainActor
     private func handleJoinSuccess() {
         presentingJoinConversationSheet = false
-        presentingInvalidInviteSheet = false
+        displayError = nil
         conversationViewModel.showsInfoView = true
-        showingFullScreenScanner = false
     }
 
     @MainActor
     private func handleJoinError(_ error: Error) {
         withAnimation {
+            qrScannerViewModel.resetScanning()
+
             if startedWithFullscreenScanner {
                 showingFullScreenScanner = true
                 conversationViewModel.showsInfoView = false
             }
 
-            // Determine which sheet to present based on error type
-            if let stateMachineError = error as? ConversationStateMachineError {
-                switch stateMachineError {
-                case .invalidInviteCodeFormat, .inviteExpired, .conversationExpired:
-                    presentingInvalidInviteSheet = true
-                case .timedOut:
-                    presentingFailedToJoinSheet = true
-                case .failedFindingConversation, .failedVerifyingSignature, .stateMachineError:
-                    presentingInvalidInviteSheet = true
-                }
+            // Set the display error
+            if let displayError = error as? DisplayError {
+                self.displayError = IdentifiableError(error: displayError)
             } else {
-                presentingInvalidInviteSheet = true
+                // Fallback for non-DisplayError errors
+                self.displayError = IdentifiableError(error: GenericDisplayError(
+                    title: "Failed joining",
+                    description: "Please try again."
+                ))
             }
         }
     }
@@ -222,29 +236,27 @@ class NewConversationViewModel: Identifiable {
         switch state {
         case .uninitialized:
             isWaitingForInviteAcceptance = false
-            isValidatingInvite = false
             isCreatingConversation = false
             messagesTopBarTrailingItemEnabled = false
             messagesBottomBarEnabled = false
             currentError = nil
+            qrScannerViewModel.resetScanning()
 
         case .creating:
             isCreatingConversation = true
-            isValidatingInvite = false
             isWaitingForInviteAcceptance = false
             currentError = nil
 
         case .validating:
-            isValidatingInvite = true
             isCreatingConversation = false
             isWaitingForInviteAcceptance = false
             currentError = nil
 
         case .validated:
-            isValidatingInvite = false
             isCreatingConversation = false
             isWaitingForInviteAcceptance = false
             currentError = nil
+            showingFullScreenScanner = false
 
         case .joining:
             // This is the waiting state - user is waiting for inviter to accept
@@ -254,7 +266,6 @@ class NewConversationViewModel: Identifiable {
             isWaitingForInviteAcceptance = true
             shouldConfirmDeletingConversation = false
             conversationViewModel.untitledConversationPlaceholder = "Untitled"
-            isValidatingInvite = false
             isCreatingConversation = false
             currentError = nil
             Logger.info("Waiting for invite acceptance...")
@@ -263,20 +274,18 @@ class NewConversationViewModel: Identifiable {
             messagesTopBarTrailingItemEnabled = true
             messagesBottomBarEnabled = true
             isWaitingForInviteAcceptance = false
-            isValidatingInvite = false
             isCreatingConversation = false
             currentError = nil
             Logger.info("Conversation ready!")
 
         case .deleting:
             isWaitingForInviteAcceptance = false
-            isValidatingInvite = false
             isCreatingConversation = false
             currentError = nil
 
         case .error(let error):
+            qrScannerViewModel.resetScanning()
             isWaitingForInviteAcceptance = false
-            isValidatingInvite = false
             isCreatingConversation = false
             currentError = error
             Logger.error("Conversation state error: \(error.localizedDescription)")
@@ -287,17 +296,15 @@ class NewConversationViewModel: Identifiable {
 
     @MainActor
     private func handleError(_ error: Error) {
-        // Map state machine errors to appropriate UI states
-        if let stateMachineError = error as? ConversationStateMachineError {
-            switch stateMachineError {
-            case .invalidInviteCodeFormat, .inviteExpired, .failedVerifyingSignature, .conversationExpired:
-                presentingInvalidInviteSheet = true
-            case .failedFindingConversation, .stateMachineError, .timedOut:
-                // Generic error - could show a different alert
-                presentingFailedToJoinSheet = true
-            }
+        // Set the display error
+        if let displayError = error as? DisplayError {
+            self.displayError = IdentifiableError(error: displayError)
         } else {
-            presentingFailedToJoinSheet = true
+            // Fallback for non-DisplayError errors
+            self.displayError = IdentifiableError(error: GenericDisplayError(
+                title: "Failed creating",
+                description: "Please try again."
+            ))
         }
 
         if startedWithFullscreenScanner {

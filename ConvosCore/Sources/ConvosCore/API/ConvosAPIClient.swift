@@ -591,6 +591,62 @@ enum APIError: Error {
     case rateLimitExceeded
 }
 
+extension APIError: DisplayError {
+    var title: String {
+        switch self {
+        case .invalidURL:
+            return "Invalid URL"
+        case .authenticationFailed:
+            return "Authentication failed"
+        case .notAuthenticated:
+            return "Not authenticated"
+        case .badRequest:
+            return "Bad request"
+        case .forbidden:
+            return "Access denied"
+        case .notFound:
+            return "Not found"
+        case .noContent:
+            return "No content"
+        case .invalidResponse:
+            return "Invalid response"
+        case .invalidRequest:
+            return "Invalid request"
+        case .serverError:
+            return "Server error"
+        case .rateLimitExceeded:
+            return "Too many requests"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .invalidURL:
+            return "The URL is not valid."
+        case .authenticationFailed:
+            return "Failed to authenticate with the server."
+        case .notAuthenticated:
+            return "Failed to authorize with the server."
+        case .badRequest(let message):
+            return message ?? "The request was invalid."
+        case .forbidden:
+            return "You don't have permission to access this."
+        case .notFound:
+            return "The requested resource was not found."
+        case .noContent:
+            return "No content was returned."
+        case .invalidResponse:
+            return "The server returned an invalid response."
+        case .invalidRequest:
+            return "The request could not be created."
+        case .serverError(let message):
+            return message ?? "The server encountered an error."
+        case .rateLimitExceeded:
+            return "Too many requests. Please try again later."
+        }
+    }
+}
+
 extension TimeInterval {
     public static func calculateExponentialBackoff(for retryCount: Int) -> TimeInterval {
         guard retryCount >= 0 else { return 0.0 }
