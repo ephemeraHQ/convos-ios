@@ -110,23 +110,16 @@ public enum AppEnvironment {
         }
     }
 
-    var apnsEnvironment: ApnsEnvironment {
+    public var apnsEnvironment: ApnsEnvironment {
         #if targetEnvironment(simulator)
-        Logger.info("📱 Simulator detected - using sandbox APNS")
+        Logger.info("Simulator detected - using sandbox APNS")
         return .sandbox
         #else
-        switch self {
-        case .local:
-            Logger.info("Local environment - using sandbox APNS")
+        if Bundle.main.path(forResource: "embedded", ofType: "mobileprovision") != nil {
+            Logger.info("Development build detected (embedded.mobileprovision exists) - using sandbox APNS")
             return .sandbox
-        case .tests:
-            Logger.info("Tests environment - using sandbox APNS")
-            return .sandbox
-        case .dev:
-            Logger.info("Dev environment - using production APNS")
-            return .production
-        case .production:
-            Logger.info("Production environment - using production APNS")
+        } else {
+            Logger.info("Production build detected (no embedded.mobileprovision) - using production APNS")
             return .production
         }
         #endif
