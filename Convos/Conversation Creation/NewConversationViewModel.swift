@@ -44,9 +44,10 @@ class NewConversationViewModel: Identifiable {
     var displayError: IdentifiableError? {
         didSet {
             qrScannerViewModel.presentingInvalidInviteSheet = displayError != nil
-            // Reset scan timer when dismissing the error sheet to allow immediate re-scanning
+            // Reset scanner when dismissing the error sheet to allow immediate re-scanning
             if oldValue != nil && displayError == nil {
                 qrScannerViewModel.resetScanTimer()
+                qrScannerViewModel.resetScanning()
             }
         }
     }
