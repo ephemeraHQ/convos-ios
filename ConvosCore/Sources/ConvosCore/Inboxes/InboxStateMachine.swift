@@ -112,6 +112,10 @@ public actor InboxStateMachine {
     private var isProcessing: Bool = false
     private var pushTokenObserver: NSObjectProtocol?
 
+    deinit {
+        removePushTokenObserver()
+    }
+
     // MARK: - State Observation
 
     private var stateContinuations: [AsyncStream<State>.Continuation] = []
