@@ -146,6 +146,12 @@ struct DebugViewSection: View {
                     }
                 }
                 HStack {
+                    Text("APNS Environment")
+                    Spacer()
+                    Text(ConfigManager.shared.currentEnvironment.apnsEnvironment.rawValue)
+                        .foregroundStyle(.colorTextSecondary)
+                }
+                HStack {
                     Button("Request Now") {
                         Task { await requestNotificationsNow() }
                     }
@@ -205,6 +211,12 @@ struct DebugViewSection: View {
 
             Section {
                 Button {
+                    Task { await registerDeviceAgain() }
+                } label: {
+                    Text("Register Device Again")
+                        .foregroundStyle(.colorTextPrimary)
+                }
+                Button {
                     resetUserDefaults()
                 } label: {
                     Text("Reset User Defaults")
@@ -256,6 +268,16 @@ extension DebugViewSection {
         } catch {
             Logger.error("Debug push request failed: \(error)")
         }
+    }
+
+    private func registerDeviceAgain() async {
+        let apnsEnv = ConfigManager.shared.currentEnvironment.apnsEnvironment.rawValue
+        Logger.info("Debug: Force re-registering device (APNS env: \(apnsEnv))")
+
+        DeviceRegistrationManager.clearRegistrationState()
+
+        let manager = DeviceRegistrationManager(environment: ConfigManager.shared.currentEnvironment)
+        await manager.registerDeviceIfNeeded()
     }
 
     private func resetUserDefaults() {
