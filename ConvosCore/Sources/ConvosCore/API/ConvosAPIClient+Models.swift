@@ -76,11 +76,6 @@ public enum ConvosAPI {
         case fcm
     }
 
-    public enum ApnsEnvironment: String, Codable {
-        case sandbox
-        case production
-    }
-
     // MARK: - v2/device/register
     // POST /v2/device/register
     // Purpose: Register or update device metadata (independent of push notifications)

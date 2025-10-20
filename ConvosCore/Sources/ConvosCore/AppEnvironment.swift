@@ -154,7 +154,6 @@ public enum AppEnvironment {
 }
 
 public extension AppEnvironment {
-
     private var isTestingEnvironment: Bool {
         switch self {
         case .tests:
