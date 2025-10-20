@@ -36,13 +36,18 @@ class QRScannerViewModel: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         from connection: AVCaptureConnection
     ) {
         // Only process if scanning is enabled and we're not showing an error
-        guard isScanningEnabled && !presentingInvalidInviteSheet else { return }
+        guard isScanningEnabled else { return }
+
+        guard !presentingInvalidInviteSheet else { return }
 
         // Check if enough time has passed since the last scan
+        let now = Date()
         if let lastScan = lastScanTime {
-            let timeSinceLastScan = Date().timeIntervalSince(lastScan)
+            let timeSinceLastScan = now.timeIntervalSince(lastScan)
             guard timeSinceLastScan >= minimumScanInterval else { return }
         }
+
+        lastScanTime = now
 
         if let metadataObject = metadataObjects.first {
             guard let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject else { return }
@@ -50,7 +55,6 @@ class QRScannerViewModel: NSObject, AVCaptureMetadataOutputObjectsDelegate {
 
             AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
             scannedCode = stringValue
-            lastScanTime = Date()
 
             // Disable further scanning after detecting a code
             isScanningEnabled = false
@@ -62,6 +66,10 @@ class QRScannerViewModel: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         scannedCode = nil
         // Note: we intentionally do NOT reset lastScanTime here
         // to maintain the minimum interval even across resets
+    }
+
+    func resetScanTimer() {
+        lastScanTime = nil
     }
 }
 

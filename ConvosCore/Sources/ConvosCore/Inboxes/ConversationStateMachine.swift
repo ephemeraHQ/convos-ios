@@ -713,6 +713,13 @@ public actor ConversationStateMachine {
     }
 }
 
+// MARK: - Display Error Protocol
+
+public protocol DisplayError: Error {
+    var title: String { get }
+    var description: String { get }
+}
+
 // MARK: - Errors
 
 public enum ConversationStateMachineError: Error {
@@ -723,4 +730,44 @@ public enum ConversationStateMachineError: Error {
     case conversationExpired
     case invalidInviteCodeFormat(String)
     case timedOut
+}
+
+extension ConversationStateMachineError: DisplayError {
+    public var title: String {
+        switch self {
+        case .failedFindingConversation:
+            return "No convo here"
+        case .failedVerifyingSignature:
+            return "Invalid invite"
+        case .stateMachineError:
+            return "Something went wrong"
+        case .inviteExpired:
+            return "Invite expired"
+        case .conversationExpired:
+            return "Convo expired"
+        case .invalidInviteCodeFormat:
+            return "Invalid code"
+        case .timedOut:
+            return "Try again"
+        }
+    }
+
+    public var description: String {
+        switch self {
+        case .failedFindingConversation:
+            return "Maybe it already exploded."
+        case .failedVerifyingSignature:
+            return "This invite couldn't be verified."
+        case .stateMachineError(let error):
+            return error.localizedDescription
+        case .inviteExpired:
+            return "This invite has expired."
+        case .conversationExpired:
+            return "This convo has expired."
+        case .invalidInviteCodeFormat:
+            return "This code is not valid."
+        case .timedOut:
+            return "Joining the convo failed."
+        }
+    }
 }

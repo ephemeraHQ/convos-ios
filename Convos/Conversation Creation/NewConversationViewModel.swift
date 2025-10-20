@@ -9,6 +9,21 @@ protocol NewConversationsViewModelDelegate: AnyObject {
     )
 }
 
+// MARK: - Error Types
+
+struct IdentifiableError: Identifiable {
+    let id: UUID = UUID()
+    let error: DisplayError
+
+    var title: String { error.title }
+    var description: String { error.description }
+}
+
+struct GenericDisplayError: DisplayError {
+    let title: String
+    let description: String
+}
+
 @Observable
 class NewConversationViewModel: Identifiable {
     // MARK: - Public
@@ -26,12 +41,15 @@ class NewConversationViewModel: Identifiable {
     private let autoCreateConversation: Bool
     private(set) var showingFullScreenScanner: Bool
     var presentingJoinConversationSheet: Bool = false
-    var presentingInvalidInviteSheet: Bool = false {
-        willSet {
-            qrScannerViewModel.presentingInvalidInviteSheet = newValue
+    var displayError: IdentifiableError? {
+        didSet {
+            qrScannerViewModel.presentingInvalidInviteSheet = displayError != nil
+            // Reset scan timer when dismissing the error sheet to allow immediate re-scanning
+            if oldValue != nil && displayError == nil {
+                qrScannerViewModel.resetScanTimer()
+            }
         }
     }
-    var presentingFailedToJoinSheet: Bool = false
 
     // State tracking
     private(set) var isWaitingForInviteAcceptance: Bool = false
@@ -168,7 +186,7 @@ class NewConversationViewModel: Identifiable {
     @MainActor
     private func handleJoinSuccess() {
         presentingJoinConversationSheet = false
-        presentingInvalidInviteSheet = false
+        displayError = nil
         conversationViewModel.showsInfoView = true
     }
 
@@ -182,18 +200,15 @@ class NewConversationViewModel: Identifiable {
                 conversationViewModel.showsInfoView = false
             }
 
-            // Determine which sheet to present based on error type
-            if let stateMachineError = error as? ConversationStateMachineError {
-                switch stateMachineError {
-                case .invalidInviteCodeFormat, .inviteExpired, .conversationExpired:
-                    presentingInvalidInviteSheet = true
-                case .timedOut:
-                    presentingFailedToJoinSheet = true
-                case .failedFindingConversation, .failedVerifyingSignature, .stateMachineError:
-                    presentingInvalidInviteSheet = true
-                }
+            // Set the display error
+            if let displayError = error as? DisplayError {
+                self.displayError = IdentifiableError(error: displayError)
             } else {
-                presentingInvalidInviteSheet = true
+                // Fallback for non-DisplayError errors
+                self.displayError = IdentifiableError(error: GenericDisplayError(
+                    title: "Failed joining",
+                    description: "Please try again."
+                ))
             }
         }
     }
@@ -280,17 +295,15 @@ class NewConversationViewModel: Identifiable {
 
     @MainActor
     private func handleError(_ error: Error) {
-        // Map state machine errors to appropriate UI states
-        if let stateMachineError = error as? ConversationStateMachineError {
-            switch stateMachineError {
-            case .invalidInviteCodeFormat, .inviteExpired, .failedVerifyingSignature, .conversationExpired:
-                presentingInvalidInviteSheet = true
-            case .failedFindingConversation, .stateMachineError, .timedOut:
-                // Generic error - could show a different alert
-                presentingFailedToJoinSheet = true
-            }
+        // Set the display error
+        if let displayError = error as? DisplayError {
+            self.displayError = IdentifiableError(error: displayError)
         } else {
-            presentingFailedToJoinSheet = true
+            // Fallback for non-DisplayError errors
+            self.displayError = IdentifiableError(error: GenericDisplayError(
+                title: "Failed creating",
+                description: "Please try again."
+            ))
         }
 
         if startedWithFullscreenScanner {
