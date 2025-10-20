@@ -18,14 +18,16 @@ public struct JoinRequestResult {
 }
 
 protocol InviteJoinRequestsManagerProtocol {
-    func start(with client: AnyClientProvider,
-               apiClient: any ConvosAPIClientProtocol)
-    func stop()
     func processJoinRequest(
         message: XMTPiOS.DecodedMessage,
         client: AnyClientProvider
     ) async throws -> JoinRequestResult?
     func syncAndProcessJoinRequests(
+        for conversationId: String,
+        client: AnyClientProvider
+    ) async throws -> JoinRequestResult?
+    func processJoinRequests(
+        since: Date,
         client: AnyClientProvider
     ) async -> [JoinRequestResult]
 }
@@ -34,30 +36,13 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
     private let identityStore: any KeychainIdentityStoreProtocol
     private let databaseReader: any DatabaseReader
 
-    private var streamMessagesTask: Task<Void, Never>?
-
-    // Track last successful sync per inbox
-    private func lastSynced(for inboxId: String) -> Date? {
-        let timestamp = UserDefaults.standard.double(forKey: "org.convos.InviteJoinRequestsManager.lastSynced.\(inboxId)")
-        return timestamp > 0 ? Date(timeIntervalSince1970: timestamp) : nil
-    }
-
-    private func setLastSynced(_ date: Date?, for inboxId: String) {
-        UserDefaults.standard.set(date?.timeIntervalSince1970 ?? 0, forKey: "org.convos.InviteJoinRequestsManager.lastSynced.\(inboxId)")
-    }
-
     init(identityStore: any KeychainIdentityStoreProtocol,
          databaseReader: any DatabaseReader) {
         self.identityStore = identityStore
         self.databaseReader = databaseReader
     }
 
-    deinit {
-        streamMessagesTask?.cancel()
-        streamMessagesTask = nil
-    }
-
-    // MARK: - Processing
+    // MARK: - Public
 
     /// Process a message as a potential join request, with error handling
     /// - Parameters:
@@ -108,6 +93,11 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         client: AnyClientProvider
     ) async throws -> JoinRequestResult? {
         let senderInboxId = message.senderInboxId
+
+        guard senderInboxId != client.inboxId else {
+            Logger.info("Ignoring outgoing join request...")
+            return nil
+        }
 
         let dbMessage = try message.dbRepresentation()
         guard let text = dbMessage.text else {
@@ -186,38 +176,33 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         }
     }
 
-    // MARK: - Sync Operations
+    func syncAndProcessJoinRequests(
+        for conversationId: String,
+        client: AnyClientProvider
+    ) async throws -> JoinRequestResult? {
+        _ = try await client.conversationsProvider.syncAllConversations(consentStates: [.unknown])
+        guard let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) else {
+            return nil
+        }
+        return try await processMessages(for: conversation, client: client)
+    }
 
     /// Sync all DMs and process join requests, returning results
     /// - Parameter client: The XMTP client provider
     /// - Returns: Array of successfully processed join requests
-    func syncAndProcessJoinRequests(client: AnyClientProvider) async -> [JoinRequestResult] {
-        return await syncAllDms(client: client, collectResults: true)
-    }
-
-    /// Sync all DMs to catch up on any missed join requests
-    /// - Parameters:
-    ///   - client: The XMTP client provider
-    ///   - collectResults: Whether to collect and return results (for push notifications)
-    /// - Returns: Array of results if collectResults is true, empty array otherwise
-    @discardableResult
-    private func syncAllDms(client: AnyClientProvider, collectResults: Bool = false) async -> [JoinRequestResult] {
+    func processJoinRequests(since: Date, client: AnyClientProvider) async -> [JoinRequestResult] {
         var results: [JoinRequestResult] = []
 
         do {
             Logger.info("Syncing all DMs for join requests...")
 
-            let inboxId = client.inboxId
-            let syncStartTime = Date()
-
             // List all DMs with consent states .unknown
-            _ = try await client.conversationsProvider.syncAllConversations(consentStates: [.unknown])
             let dms = try client.conversationsProvider.listDms(
-                createdAfterNs: nil,
+                createdAfterNs: since.nanosecondsSince1970,
                 createdBeforeNs: nil,
                 lastActivityBeforeNs: nil,
-                lastActivityAfterNs: lastSynced(for: inboxId)?.nanosecondsSince1970,
-                limit: 250, // @jarodl max group size for now
+                lastActivityAfterNs: nil,
+                limit: nil,
                 consentStates: [.unknown],
                 orderBy: .lastActivity
             )
@@ -230,31 +215,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                     group.addTask { [weak self] in
                         do {
                             guard let self else { return nil }
-                            let messages = try await dm.messages(afterNs: nil)
-                                .filter { message in
-                                    guard let encodedContentType = try? message.encodedContent.type else {
-                                        return false
-                                    }
-
-                                    switch encodedContentType {
-                                    case ContentTypeText:
-                                        return message.senderInboxId != inboxId
-                                    default:
-                                        return false
-                                    }
-                                }
-                            Logger.info("Found \(messages.count) messages as possible join requests")
-
-                            // Process each message and return first successful result for this DM
-                            for message in messages {
-                                if let result = await self.processJoinRequestSafely(
-                                    message: message,
-                                    client: client
-                                ) {
-                                    return result
-                                }
-                            }
-                            return nil
+                            return try await processMessages(for: dm, client: client)
                         } catch {
                             Logger.error("Error processing messages as join requests: \(error.localizedDescription)")
                             return nil
@@ -262,18 +223,13 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                     }
                 }
 
-                // Collect results if requested
-                if collectResults {
-                    for await result in group {
-                        if let result = result {
-                            results.append(result)
-                        }
+                for await result in group {
+                    if let result = result {
+                        results.append(result)
                     }
                 }
             }
 
-            // Update last synced timestamp after successful sync
-            setLastSynced(syncStartTime, for: inboxId)
             Logger.info("Completed DM sync for join requests")
         } catch {
             Logger.error("Error syncing DMs: \(error)")
@@ -282,43 +238,41 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         return results
     }
 
-    func start(with client: AnyClientProvider,
-               apiClient: any ConvosAPIClientProtocol) {
-        let inboxId = client.inboxId
-        streamMessagesTask = Task { [weak self, client] in
-            guard let self else { return }
+    // MARK: - Private Helpers
 
-            // Initial sync of all DMs to catch up on missed join requests
-//            await self.syncAllDms(client: client)
+    private func processMessages(for conversation: XMTPiOS.Conversation, client: AnyClientProvider) async throws -> JoinRequestResult? {
+        guard case let .dm(dm) = conversation else { return nil }
+        return try await processMessages(for: dm, client: client)
+    }
 
-            do {
-                Logger.info("Started streaming messages for invite join requests...")
-                for try await message in client.conversationsProvider
-                    .streamAllMessages(
-                        type: .dms,
-                        consentStates: [.unknown],
-                        onClose: {
-                            Logger.warning("Closing streamAllMessages...")
-                        }
-                    ).filter({ $0.senderInboxId != inboxId }) {
-                    Logger.info("Processing potential join request from \(message.senderInboxId)")
-
-                    _ = await self.processJoinRequestSafely(
-                        message: message,
-                        client: client
-                    )
+    private func processMessages(for dm: XMTPiOS.Dm, client: AnyClientProvider) async throws -> JoinRequestResult? {
+        let messages = try await dm.messages(afterNs: nil)
+            .filter { message in
+                guard let encodedContentType = try? message.encodedContent.type else {
+                    return false
                 }
-            } catch {
-                Logger.error("Error streaming all messages: \(error)")
+
+                switch encodedContentType {
+                case ContentTypeText:
+                    return message.senderInboxId != client.inboxId
+                default:
+                    return false
+                }
+            }
+        Logger.info("Found \(messages.count) messages as possible join requests")
+
+        // Process each message and return first successful result for this DM
+        for message in messages {
+            if let result = await self.processJoinRequestSafely(
+                message: message,
+                client: client
+            ) {
+//                try await dm.updateConsentState(state: .allowed)
+                return result
             }
         }
+        return nil
     }
-
-    func stop() {
-        streamMessagesTask?.cancel()
-    }
-
-    // MARK: - Private Helpers
 
     /// Blocks a DM conversation by setting its consent state to denied
     private func blockDMConversation(

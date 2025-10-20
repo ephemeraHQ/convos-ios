@@ -17,12 +17,12 @@ actor SyncingManager: SyncingManagerProtocol {
     private let messageWriter: any IncomingMessageWriterProtocol
     private let profileWriter: any MemberProfileWriterProtocol
     private let localStateWriter: any ConversationLocalStateWriterProtocol
-    private let consentStates: [ConsentState] = [.allowed]
+    private let joinRequestsManager: any InviteJoinRequestsManagerProtocol
+    private let consentStates: [ConsentState] = [.allowed, .unknown]
 
     // Single parent task that manages everything
     private var syncTask: Task<Void, Never>?
 
-    private var lastProcessedMessageAt: Date?
     private var activeConversationId: String?
 
     // Notification handling
@@ -32,7 +32,8 @@ actor SyncingManager: SyncingManagerProtocol {
     // MARK: - Initialization
 
     init(identityStore: any KeychainIdentityStoreProtocol,
-         databaseWriter: any DatabaseWriter) {
+         databaseWriter: any DatabaseWriter,
+         databaseReader: any DatabaseReader) {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(
             identityStore: identityStore,
@@ -42,6 +43,10 @@ actor SyncingManager: SyncingManagerProtocol {
         self.messageWriter = messageWriter
         self.profileWriter = MemberProfileWriter(databaseWriter: databaseWriter)
         self.localStateWriter = ConversationLocalStateWriter(databaseWriter: databaseWriter)
+        self.joinRequestsManager = InviteJoinRequestsManager(
+            identityStore: identityStore,
+            databaseReader: databaseReader
+        )
     }
 
     deinit {
@@ -66,6 +71,15 @@ actor SyncingManager: SyncingManagerProtocol {
         syncTask?.cancel()
         syncTask = Task { [weak self] in
             guard let self else { return }
+
+            do {
+                _ = try await client.conversationsProvider.syncAllConversations(consentStates: [.allowed, .unknown])
+            } catch {
+                Logger.error("Error syncing all conversations: \(error.localizedDescription)")
+            }
+
+            _ = await joinRequestsManager.processJoinRequests(since: Date(), client: client)
+
             await withTaskGroup(of: Void.self) { group in
                 // Message stream with built-in retry
                 group.addTask {
@@ -113,7 +127,7 @@ actor SyncingManager: SyncingManagerProtocol {
 
                 // Stream messages - the loop will exit when onClose is called and continuation.finish() happens
                 for try await message in client.conversationsProvider.streamAllMessages(
-                    type: .groups,
+                    type: .all,
                     consentStates: consentStates,
                     onClose: {
                         Logger.info("Message stream closed via onClose callback")
@@ -194,17 +208,25 @@ actor SyncingManager: SyncingManagerProtocol {
                 return
             }
 
-            // Store conversation and message
-            let dbConversation = try await conversationWriter.store(conversation: conversation)
-            let result = try await messageWriter.store(message: message, for: dbConversation)
-            // Update timestamp
-            lastProcessedMessageAt = max(lastProcessedMessageAt ?? message.sentAt, message.sentAt)
+            switch conversation {
+            case .dm:
+                _ = try await joinRequestsManager.processJoinRequest(
+                    message: message,
+                    client: client
+                )
+            case .group:
+                let consentState = try conversation.consentState()
+                guard consentState == .allowed else { return }
+                // Store conversation and message
+                let dbConversation = try await conversationWriter.store(conversation: conversation)
+                let result = try await messageWriter.store(message: message, for: dbConversation)
 
-            // Mark unread if needed
-            if result.contentType.marksConversationAsUnread,
-               conversation.id != activeConversationId,
-               message.senderInboxId != client.inboxId {
-                try await localStateWriter.setUnread(true, for: conversation.id)
+                // Mark unread if needed
+                if result.contentType.marksConversationAsUnread,
+                   conversation.id != activeConversationId,
+                   message.senderInboxId != client.inboxId {
+                    try await localStateWriter.setUnread(true, for: conversation.id)
+                }
             }
 
             Logger.info("Processed message: \(message.id)")
@@ -226,65 +248,6 @@ actor SyncingManager: SyncingManagerProtocol {
             Logger.error("Error processing conversation: \(error)")
         }
     }
-
-    // MARK: - Sync Operations
-
-    private func syncAllConversationsQuick(client: AnyClientProvider) async {
-        do {
-            _ = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
-        } catch {
-            Logger.error("Error in quick sync: \(error)")
-        }
-    }
-
-//    private func catchUpMessages(
-//        client: AnyClientProvider,
-//        since timestamp: Date,
-//        apiClient: any ConvosAPIClientProtocol
-//    ) async {
-//        do {
-//            let conversations = try await client.conversationsProvider.list(
-//                createdAfter: nil,
-//                createdBefore: nil,
-//                limit: nil,
-//                consentStates: consentStates
-//            )
-//
-//            let timestampNs = timestamp.nanosecondsSince1970
-//
-//            // Process catch-up in parallel
-//            await withTaskGroup(of: Void.self) { group in
-//                for conversation in conversations {
-//                    guard case .group = conversation else { continue }
-//
-//                    group.addTask { [weak self] in
-//                        guard let self else { return }
-//                        do {
-//                            let messages = try await conversation.messages(
-//                                afterNs: timestampNs,
-//                                direction: .ascending
-//                            )
-//
-//                            try Task.checkCancellation()
-//
-//                            for message in messages {
-//                                try Task.checkCancellation()
-//                                await self.processMessage(message, client: client, apiClient: apiClient)
-//                            }
-//
-//                            if !messages.isEmpty {
-//                                Logger.info("Caught up \(messages.count) messages for conversation")
-//                            }
-//                        } catch {
-//                            Logger.error("Error catching up messages: \(error)")
-//                        }
-//                    }
-//                }
-//            }
-//        } catch {
-//            Logger.error("Error in catch-up: \(error)")
-//        }
-//    }
 
     // MARK: - Mutation
 

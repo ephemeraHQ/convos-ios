@@ -109,34 +109,33 @@ extension MessagingService {
     ) async throws -> DecodedNotificationContent? {
         Logger.info("Syncing conversations from network for welcome message (DM with join request)")
 
+        guard let conversationId = contentTopic.conversationIdFromXMTPGroupTopic else {
+            Logger.warning("Unable to extract conversation id from contentTopic: \(contentTopic)")
+            return nil
+        }
+
         // Use the shared InviteJoinRequestsManager to handle the full flow (including adding to group)
         let joinRequestsManager = InviteJoinRequestsManager(
             identityStore: identityStore,
             databaseReader: databaseReader
         )
 
-        let results = await joinRequestsManager.syncAndProcessJoinRequests(client: client)
-
-        // Store all group conversations to ensure XMTP has complete group state
-        for result in results {
-            if let conversation = try await client.conversationsProvider.findConversation(conversationId: result.conversationId) {
-                try await storeConversation(conversation)
-            } else {
-                Logger.error("Group conversation \(result.conversationId) not found after join")
-            }
-        }
-
-        guard let firstResult = results.first else {
+        guard let result = try await joinRequestsManager.syncAndProcessJoinRequests(for: conversationId, client: client) else {
             Logger.warning("No valid join request found in DM messages after welcome message sync")
             return .droppedMessage
         }
 
-        Logger.info("Successfully processed \(results.count) join request(s) from welcome message")
+        // Store all group conversations to ensure XMTP has complete group state
+        if let conversation = try await client.conversationsProvider.findConversation(conversationId: result.conversationId) {
+            try await storeConversation(conversation)
+        } else {
+            Logger.error("Conversation \(result.conversationId) not found after join")
+        }
 
         return .init(
-            title: firstResult.conversationName,
-            body: "Someone accepted your invite 👀",
-            conversationId: firstResult.conversationId,
+            title: result.conversationName,
+            body: "Someone accepted your invite",
+            conversationId: result.conversationId,
             userInfo: userInfo
         )
     }
@@ -194,7 +193,7 @@ extension MessagingService {
                     // Valid join request - show notification
                     return .init(
                         title: result.conversationName,
-                        body: "Someone accepted your invite 👀",
+                        body: "Someone accepted your invite",
                         conversationId: result.conversationId,
                         userInfo: userInfo
                     )
