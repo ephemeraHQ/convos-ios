@@ -529,30 +529,26 @@ public actor ConversationStateMachine {
                     }) {
                     guard !Task.isCancelled else { return }
 
-                    // Accept consent and store the conversation
-                    try await conversation.updateConsentState(state: .allowed)
-                    Logger.info("Joined conversation with id: \(conversation.id)")
-
-                    let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-                    let conversationWriter = ConversationWriter(
-                        identityStore: identityStore,
-                        databaseWriter: databaseWriter,
-                        messageWriter: messageWriter
-                    )
-                    let dbConversation = try await conversationWriter.store(conversation: conversation)
-
-                    // Create invite
-                    let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
-                    _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
-
-                    // Subscribe to push notifications using clientId from keychain
-                    await subscribeToConversationTopics(
-                        conversationId: conversation.id,
-                        client: client,
-                        apiClient: apiClient,
-                        context: "after join"
-                    )
-
+//                    // Accept consent and store the conversation
+//                    try await conversation.updateConsentState(state: .allowed)
+//                    Logger.info("Joined conversation with id: \(conversation.id)")
+//
+//                    let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
+//                    let conversationWriter = ConversationWriter(
+//                        identityStore: identityStore,
+//                        databaseWriter: databaseWriter,
+//                        messageWriter: messageWriter
+//                    )
+//                    let dbConversation = try await conversationWriter.store(conversation: conversation)
+//
+//                    // Subscribe to push notifications using clientId from keychain
+//                    await subscribeToConversationTopics(
+//                        conversationId: conversation.id,
+//                        client: client,
+//                        apiClient: apiClient,
+//                        context: "after join"
+//                    )
+//
                     // Transition directly to ready state
                     await self.emitStateChange(.ready(ConversationReadyResult(
                         conversationId: conversation.id,

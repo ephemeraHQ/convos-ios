@@ -324,7 +324,6 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                 message: message,
                 client: client
             ) {
-//                try await dm.updateConsentState(state: .allowed)
                 return result
             }
         }

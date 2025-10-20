@@ -292,6 +292,8 @@ actor SyncingManager: SyncingManagerProtocol {
 
             Logger.info("Syncing conversation: \(conversation.id)")
             try await conversationWriter.storeWithLatestMessages(conversation: conversation)
+
+            // Subscribe to push 
         } catch {
             Logger.error("Error processing conversation: \(error)")
         }
