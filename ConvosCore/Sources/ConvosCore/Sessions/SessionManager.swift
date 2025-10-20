@@ -260,6 +260,13 @@ public final class SessionManager: SessionManagerProtocol {
         // Delete all from database
         let inboxWriter = InboxWriter(dbWriter: databaseWriter)
         try await inboxWriter.deleteAll()
+
+        await UnusedInboxCache.shared
+            .clearUnusedInbox(
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment
+            )
     }
 
     // MARK: - Messaging Services

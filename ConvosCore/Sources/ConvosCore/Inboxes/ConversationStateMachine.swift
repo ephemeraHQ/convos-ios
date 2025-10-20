@@ -403,6 +403,14 @@ public actor ConversationStateMachine {
         if let existingConversation {
             Logger.info("Found existing convo by invite tag...")
             let prevInboxReady = try await inboxStateManager.waitForInboxReadyResult()
+            // Clear unused inbox since we're deleting it
+            await UnusedInboxCache.shared
+                .clearUnusedInbox(
+                    with: prevInboxReady.client.inboxId,
+                    databaseWriter: databaseWriter,
+                    databaseReader: databaseReader,
+                    environment: environment
+                )
             try await inboxStateManager.delete()
             let inboxReady = try await inboxStateManager.reauthorize(inboxId: existingConversation.inboxId)
             if existingConversation.hasJoined {
@@ -487,6 +495,8 @@ public actor ConversationStateMachine {
         let text = try invite.toURLSafeSlug()
         _ = try await dm.prepare(text: text)
         try await dm.publish()
+        let consentState = try dm.consentState()
+        Logger.info("Consent state for outgoing dm: \(consentState)")
 
         // Clear unused inbox from keychain now that we sent the join request
         await UnusedInboxCache.shared
@@ -514,10 +524,8 @@ public actor ConversationStateMachine {
                     .stream(type: .groups, onClose: nil)
                     .first(where: {
                         guard case .group(let group) = $0 else { return false }
-                        let creatorInboxId = try await group.creatorInboxId()
                         let tag = try group.inviteTag
-                        return (creatorInboxId == invite.payload.creatorInboxID &&
-                                tag == invite.payload.tag)
+                        return tag == invite.payload.tag
                     }) {
                     guard !Task.isCancelled else { return }
 
@@ -586,6 +594,15 @@ public actor ConversationStateMachine {
                 client: inboxReady.client,
                 apiClient: inboxReady.apiClient,
             )
+
+            // Clear unused inbox from keychain now that we sent the join request
+            await UnusedInboxCache.shared
+                .clearUnusedInbox(
+                    with: inboxReady.client.inboxId,
+                    databaseWriter: databaseWriter,
+                    databaseReader: databaseReader,
+                    environment: environment
+                )
 
             try await inboxStateManager.delete()
         }

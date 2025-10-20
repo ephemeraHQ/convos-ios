@@ -26,6 +26,6 @@ extension Date {
     }
 
     public var nanosecondsSince1970: Int64 {
-        Int64(timeIntervalSince1970 * 1_000_000_000)
+        Int64(timeIntervalSince1970 * 1_000_000_000.0)
     }
 }

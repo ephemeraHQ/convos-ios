@@ -4,6 +4,7 @@ import XMTPiOS
 public protocol MessageSender {
     func prepare(text: String) async throws -> String
     func publish() async throws
+    func consentState() throws -> ConsentState
 }
 
 public protocol ConversationSender {

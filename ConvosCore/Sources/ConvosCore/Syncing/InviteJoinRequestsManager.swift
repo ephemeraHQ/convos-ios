@@ -27,9 +27,13 @@ protocol InviteJoinRequestsManagerProtocol {
         client: AnyClientProvider
     ) async throws -> JoinRequestResult?
     func processJoinRequests(
-        since: Date,
+        since: Date?,
         client: AnyClientProvider
     ) async -> [JoinRequestResult]
+    func hasOutgoingJoinRequest(
+        for conversation: XMTPiOS.Conversation,
+        client: AnyClientProvider
+    ) async throws -> Bool
 }
 
 class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
@@ -187,21 +191,74 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         return try await processMessages(for: conversation, client: client)
     }
 
+    func hasOutgoingJoinRequest(for conversation: XMTPiOS.Conversation, client: AnyClientProvider) async throws -> Bool {
+        let inviteTag = try conversation.inviteTag
+
+        // List all DMs
+        let dms = try client.conversationsProvider.listDms(
+            createdAfterNs: nil,
+            createdBeforeNs: nil,
+            lastActivityBeforeNs: nil,
+            lastActivityAfterNs: nil,
+            limit: nil,
+            consentStates: [.allowed],
+            orderBy: .lastActivity
+        )
+
+        Logger.info("Found \(dms.count) possible DMs containing outgoing join requests")
+
+        for dm in dms {
+            do {
+                let messages = try await dm.messages(afterNs: nil)
+                    .filter { message in
+                        // Filter by outgoing text content messages
+                        guard let encodedContentType = try? message.encodedContent.type else {
+                            return false
+                        }
+
+                        switch encodedContentType {
+                        case ContentTypeText:
+                            return message.senderInboxId == client.inboxId
+                        default:
+                            return false
+                        }
+                    }
+                Logger.info("Found \(messages.count) outgoing messages as possible join requests")
+
+                let invites: [SignedInvite] = messages.compactMap { message in
+                    guard let text: String = try? message.content() else {
+                        return nil
+                    }
+                    return try? SignedInvite.fromURLSafeSlug(text)
+                }
+
+                // return true if we've sent an outgoing join request for this conversation
+                if invites.contains(where: { $0.payload.tag == inviteTag }) {
+                    return true
+                }
+            } catch {
+                Logger.error("Error processing messages as join requests: \(error.localizedDescription)")
+            }
+        }
+
+        return false
+    }
+
     /// Sync all DMs and process join requests, returning results
     /// - Parameter client: The XMTP client provider
     /// - Returns: Array of successfully processed join requests
-    func processJoinRequests(since: Date, client: AnyClientProvider) async -> [JoinRequestResult] {
+    func processJoinRequests(since: Date?, client: AnyClientProvider) async -> [JoinRequestResult] {
         var results: [JoinRequestResult] = []
 
         do {
-            Logger.info("Syncing all DMs for join requests...")
+            Logger.info("Listing all DMs for join requests...")
 
             // List all DMs with consent states .unknown
             let dms = try client.conversationsProvider.listDms(
-                createdAfterNs: since.nanosecondsSince1970,
+                createdAfterNs: nil,
                 createdBeforeNs: nil,
                 lastActivityBeforeNs: nil,
-                lastActivityAfterNs: nil,
+                lastActivityAfterNs: since?.nanosecondsSince1970,
                 limit: nil,
                 consentStates: [.unknown],
                 orderBy: .lastActivity

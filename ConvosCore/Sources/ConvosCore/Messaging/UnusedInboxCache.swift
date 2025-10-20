@@ -295,6 +295,28 @@ actor UnusedInboxCache {
         Logger.info("Cleared unused inbox from keychain: \(inboxId)")
     }
 
+    /// Clears the unused inbox from keychain if it matches the provided inboxId
+    /// Should be called when successfully creating or joining a conversation
+    func clearUnusedInbox(
+        databaseWriter: any DatabaseWriter,
+        databaseReader: any DatabaseReader,
+        environment: AppEnvironment
+    ) async {
+        clearUnusedInboxFromKeychain()
+
+        // Schedule creation of a new unused inbox for next time
+        Task(priority: .background) { [weak self] in
+            guard let self else { return }
+            await createNewUnusedInbox(
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment
+            )
+        }
+
+        Logger.info("Cleared unused inbox from keychain")
+    }
+
     private func clearUnusedInboxFromKeychain() {
         do {
             try keychainService.delete(UnusedInboxKeychainItem())

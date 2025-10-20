@@ -20,6 +20,9 @@ actor SyncingManager: SyncingManagerProtocol {
     private let joinRequestsManager: any InviteJoinRequestsManagerProtocol
     private let consentStates: [ConsentState] = [.allowed, .unknown]
 
+    // UserDefaults key prefix for last sync timestamp
+    private static let lastSyncedAtKeyPrefix: String = "convos.syncing.lastSyncedAt"
+
     // Single parent task that manages everything
     private var syncTask: Task<Void, Never>?
 
@@ -72,13 +75,24 @@ actor SyncingManager: SyncingManagerProtocol {
         syncTask = Task { [weak self] in
             guard let self else { return }
 
+            // Save the sync start time
+            let lastSyncedAt = await self.getLastSyncedAt(for: client.inboxId)
+            if let lastSyncedAt {
+                Logger.info("Starting, last synced \(lastSyncedAt.relativeShort()) ago...")
+            } else {
+                Logger.info("Syncing for the first time...")
+            }
+            await self.setLastSyncedAt(Date(), for: client.inboxId)
+
             do {
-                _ = try await client.conversationsProvider.syncAllConversations(consentStates: [.allowed, .unknown])
+                _ = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
             } catch {
                 Logger.error("Error syncing all conversations: \(error.localizedDescription)")
+                // if we encounter an error, revert the last synced date
+                await self.setLastSyncedAt(lastSyncedAt, for: client.inboxId)
             }
 
-            _ = await joinRequestsManager.processJoinRequests(since: Date(), client: client)
+            _ = await joinRequestsManager.processJoinRequests(since: lastSyncedAt, client: client)
 
             await withTaskGroup(of: Void.self) { group in
                 // Message stream with built-in retry
@@ -123,7 +137,7 @@ actor SyncingManager: SyncingManagerProtocol {
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 }
 
-                Logger.info("Starting message stream (attempt \(retryCount + 1)")
+                Logger.info("Starting message stream (attempt \(retryCount + 1))")
 
                 // Stream messages - the loop will exit when onClose is called and continuation.finish() happens
                 for try await message in client.conversationsProvider.streamAllMessages(
@@ -163,7 +177,7 @@ actor SyncingManager: SyncingManagerProtocol {
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 }
 
-                Logger.info("Starting conversation stream (attempt \(retryCount + 1)")
+                Logger.info("Starting conversation stream (attempt \(retryCount + 1))")
 
                 // Stream conversations - the loop will exit when onClose is called
                 for try await conversation in client.conversationsProvider.stream(
@@ -194,6 +208,33 @@ actor SyncingManager: SyncingManagerProtocol {
 
     // MARK: - Processing
 
+    /// Checks if a conversation should be processed based on its consent state.
+    /// If consent is unknown but there's an outgoing join request, updates consent to allowed.
+    /// - Parameters:
+    ///   - conversation: The conversation to check
+    ///   - client: The client provider
+    /// - Returns: True if the conversation has allowed consent and should be processed
+    private func shouldProcessConversation(
+        _ conversation: XMTPiOS.Conversation,
+        client: AnyClientProvider
+    ) async throws -> Bool {
+        var consentState = try conversation.consentState()
+
+        if consentState == .unknown {
+            let hasOutgoingJoinRequest = try await joinRequestsManager.hasOutgoingJoinRequest(
+                for: conversation,
+                client: client
+            )
+
+            if hasOutgoingJoinRequest {
+                try await conversation.updateConsentState(state: .allowed)
+                consentState = try conversation.consentState()
+            }
+        }
+
+        return consentState == .allowed
+    }
+
     private func processMessage(
         _ message: DecodedMessage,
         client: AnyClientProvider,
@@ -215,8 +256,8 @@ actor SyncingManager: SyncingManagerProtocol {
                     client: client
                 )
             case .group:
-                let consentState = try conversation.consentState()
-                guard consentState == .allowed else { return }
+                guard try await shouldProcessConversation(conversation, client: client) else { return }
+
                 // Store conversation and message
                 let dbConversation = try await conversationWriter.store(conversation: conversation)
                 let result = try await messageWriter.store(message: message, for: dbConversation)
@@ -242,6 +283,13 @@ actor SyncingManager: SyncingManagerProtocol {
     ) async {
         do {
             // Store with latest messages
+            guard case .group = conversation else {
+                Logger.info("Streamed DM, ignoring...")
+                return
+            }
+
+            guard try await shouldProcessConversation(conversation, client: client) else { return }
+
             Logger.info("Syncing conversation: \(conversation.id)")
             try await conversationWriter.storeWithLatestMessages(conversation: conversation)
         } catch {
@@ -254,6 +302,18 @@ actor SyncingManager: SyncingManagerProtocol {
     func setActiveConversationId(_ conversationId: String?) {
         // Update the active conversation
         activeConversationId = conversationId
+    }
+
+    // MARK: - Last Synced At
+
+    private func getLastSyncedAt(for inboxId: String) -> Date? {
+        let key = "\(Self.lastSyncedAtKeyPrefix).\(inboxId)"
+        return UserDefaults.standard.object(forKey: key) as? Date
+    }
+
+    private func setLastSyncedAt(_ date: Date?, for inboxId: String) {
+        let key = "\(Self.lastSyncedAtKeyPrefix).\(inboxId)"
+        UserDefaults.standard.set(date, forKey: key)
     }
 
     // MARK: - Notification Observers

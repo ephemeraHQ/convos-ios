@@ -388,6 +388,10 @@ extension MockMessagingService: MessageSender {
         unpublishedMessages.removeAll()
         messagesSubject.send(messages)
     }
+
+    public func consentState() throws -> ConsentState {
+        .allowed
+    }
 }
 
 // MARK: - Mock Data Generation
