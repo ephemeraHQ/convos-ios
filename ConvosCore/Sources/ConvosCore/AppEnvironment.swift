@@ -5,6 +5,12 @@ public enum ApnsEnvironment: String, Codable {
     case production
 }
 
+public enum BuildEnvironment {
+    case simulator
+    case development
+    case distribution
+}
+
 public enum AppEnvironment {
     case local(config: ConvosConfiguration)
     case tests
@@ -111,19 +117,43 @@ public enum AppEnvironment {
     }
 
     public var apnsEnvironment: ApnsEnvironment {
-        #if targetEnvironment(simulator)
-        Logger.info("Simulator detected - using sandbox APNS")
-        return .sandbox
-        #else
-        if Bundle.main.path(forResource: "embedded", ofType: "mobileprovision") != nil {
-            Logger.info("Development build detected (embedded.mobileprovision exists) - using sandbox APNS")
+        switch buildEnvironment {
+        case .simulator:
+            Logger.info("Simulator build detected - using sandbox APNS")
             return .sandbox
-        } else {
-            Logger.info("Production build detected (no embedded.mobileprovision) - using production APNS")
+        case .development:
+            Logger.info("Development build detected (has embedded.mobileprovision) - using sandbox APNS")
+            return .sandbox
+        case .distribution:
+            Logger.info("Distribution build detected (TestFlight/App Store) - using production APNS")
             return .production
         }
+    }
+
+    public var buildEnvironment: BuildEnvironment {
+        if isSimulator() {
+            return .simulator
+        } else if hasEmbeddedMobileProvision() {
+            return .development
+        } else {
+            return .distribution
+        }
+    }
+
+    public func isSimulator() -> Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return false
         #endif
     }
+
+    public func hasEmbeddedMobileProvision() -> Bool {
+        Bundle.main.path(forResource: "embedded", ofType: "mobileprovision") != nil
+    }
+}
+
+public extension AppEnvironment {
 
     private var isTestingEnvironment: Bool {
         switch self {
@@ -134,7 +164,7 @@ public enum AppEnvironment {
         }
     }
 
-    public var isProduction: Bool {
+    var isProduction: Bool {
         switch self {
         case .production:
             true
