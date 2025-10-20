@@ -207,6 +207,11 @@ actor UnusedInboxCache {
             return
         }
 
+        guard getUnusedInboxFromKeychain() == nil else {
+            Logger.debug("Unused inbox exists, skipping create...")
+            return
+        }
+
         isCreatingUnusedInbox = true
         defer { isCreatingUnusedInbox = false }
 
@@ -295,8 +300,7 @@ actor UnusedInboxCache {
         Logger.info("Cleared unused inbox from keychain: \(inboxId)")
     }
 
-    /// Clears the unused inbox from keychain if it matches the provided inboxId
-    /// Should be called when successfully creating or joining a conversation
+    /// Clears the unused inbox from keychain
     func clearUnusedInbox(
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
