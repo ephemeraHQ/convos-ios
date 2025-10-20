@@ -488,6 +488,23 @@ public actor ConversationStateMachine {
         _ = try await dm.prepare(text: text)
         try await dm.publish()
 
+        // Clear unused inbox from keychain now that we sent the join request
+        await UnusedInboxCache.shared
+            .clearUnusedInbox(
+                with: client.inboxId,
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment
+            )
+
+        // Clean up previous conversation if it exists and is different
+        await self.cleanUpPreviousConversationIfNeeded(
+            previousResult: previousReadyResult,
+            newConversationId: nil,
+            client: client,
+            apiClient: apiClient
+        )
+
         // Stream conversations to wait for the joined conversation
         streamConversationsTask = Task { [weak self] in
             guard let self else { return }
@@ -533,23 +550,6 @@ public actor ConversationStateMachine {
                         conversationId: conversation.id,
                         origin: .joined
                     )))
-
-                    // Clear unused inbox from keychain now that conversation is successfully joined
-                    await UnusedInboxCache.shared
-                        .clearUnusedInbox(
-                            with: client.inboxId,
-                            databaseWriter: databaseWriter,
-                            databaseReader: databaseReader,
-                            environment: environment
-                        )
-
-                    // Clean up previous conversation if it exists and is different
-                    await self.cleanUpPreviousConversationIfNeeded(
-                        previousResult: previousReadyResult,
-                        newConversationId: conversation.id,
-                        client: client,
-                        apiClient: apiClient
-                    )
                 } else {
                     Logger.error("Error waiting for conversation to join")
                     await self.emitStateChange(.error(ConversationStateMachineError.timedOut))
@@ -595,7 +595,7 @@ public actor ConversationStateMachine {
 
     private func cleanUpPreviousConversationIfNeeded(
         previousResult: ConversationReadyResult?,
-        newConversationId: String,
+        newConversationId: String?,
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol
     ) async {
