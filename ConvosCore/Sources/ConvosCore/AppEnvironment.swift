@@ -5,6 +5,12 @@ public enum ApnsEnvironment: String, Codable {
     case production
 }
 
+public enum BuildEnvironment {
+    case simulator
+    case development
+    case distribution
+}
+
 public enum AppEnvironment {
     case local(config: ConvosConfiguration)
     case tests
@@ -110,28 +116,44 @@ public enum AppEnvironment {
         }
     }
 
-    var apnsEnvironment: ApnsEnvironment {
-        #if targetEnvironment(simulator)
-        Logger.info("📱 Simulator detected - using sandbox APNS")
-        return .sandbox
-        #else
-        switch self {
-        case .local:
-            Logger.info("Local environment - using sandbox APNS")
+    public var apnsEnvironment: ApnsEnvironment {
+        switch buildEnvironment {
+        case .simulator:
+            Logger.info("Simulator build detected - using sandbox APNS")
             return .sandbox
-        case .tests:
-            Logger.info("Tests environment - using sandbox APNS")
+        case .development:
+            Logger.info("Development build detected (has embedded.mobileprovision) - using sandbox APNS")
             return .sandbox
-        case .dev:
-            Logger.info("Dev environment - using production APNS")
-            return .production
-        case .production:
-            Logger.info("Production environment - using production APNS")
+        case .distribution:
+            Logger.info("Distribution build detected (TestFlight/App Store) - using production APNS")
             return .production
         }
+    }
+
+    public var buildEnvironment: BuildEnvironment {
+        if isSimulator() {
+            return .simulator
+        } else if hasEmbeddedMobileProvision() {
+            return .development
+        } else {
+            return .distribution
+        }
+    }
+
+    public func isSimulator() -> Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return false
         #endif
     }
 
+    public func hasEmbeddedMobileProvision() -> Bool {
+        Bundle.main.path(forResource: "embedded", ofType: "mobileprovision") != nil
+    }
+}
+
+public extension AppEnvironment {
     private var isTestingEnvironment: Bool {
         switch self {
         case .tests:
@@ -141,7 +163,7 @@ public enum AppEnvironment {
         }
     }
 
-    public var isProduction: Bool {
+    var isProduction: Bool {
         switch self {
         case .production:
             true
