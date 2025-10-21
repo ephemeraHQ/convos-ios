@@ -13,6 +13,7 @@ protocol SyncingManagerProtocol: Actor {
 actor SyncingManager: SyncingManagerProtocol {
     // MARK: - Properties
 
+    private let identityStore: any KeychainIdentityStoreProtocol
     private let conversationWriter: any ConversationWriterProtocol
     private let messageWriter: any IncomingMessageWriterProtocol
     private let profileWriter: any MemberProfileWriterProtocol
@@ -37,6 +38,7 @@ actor SyncingManager: SyncingManagerProtocol {
     init(identityStore: any KeychainIdentityStoreProtocol,
          databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader) {
+        self.identityStore = identityStore
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(
             identityStore: identityStore,
@@ -290,10 +292,24 @@ actor SyncingManager: SyncingManagerProtocol {
 
             guard try await shouldProcessConversation(conversation, client: client) else { return }
 
+            let creatorInboxId = try await conversation.creatorInboxId
+            if creatorInboxId == client.inboxId,
+               case .group(let group) = conversation {
+                // we created the conversaiton, update permissions and set inviteTag
+                try await group.updateAddMemberPermission(newPermissionOption: .allow)
+                try await group.updateInviteTag()
+            }
+
             Logger.info("Syncing conversation: \(conversation.id)")
             try await conversationWriter.storeWithLatestMessages(conversation: conversation)
 
-            // Subscribe to push 
+            // Subscribe to push notifications
+            await subscribeToConversationTopics(
+                conversationId: conversation.id,
+                client: client,
+                apiClient: apiClient,
+                context: "on stream"
+            )
         } catch {
             Logger.error("Error processing conversation: \(error)")
         }
@@ -304,6 +320,35 @@ actor SyncingManager: SyncingManagerProtocol {
     func setActiveConversationId(_ conversationId: String?) {
         // Update the active conversation
         activeConversationId = conversationId
+    }
+
+    // MARK: - Push Notifications
+
+    private func subscribeToConversationTopics(
+        conversationId: String,
+        client: AnyClientProvider,
+        apiClient: any ConvosAPIClientProtocol,
+        context: String
+    ) async {
+        let conversationTopic = conversationId.xmtpGroupTopicFormat
+        let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
+
+        guard let identity = try? await identityStore.identity(for: client.inboxId) else {
+            Logger.warning("Identity not found, skipping push notification subscription")
+            return
+        }
+
+        do {
+            let deviceId = DeviceInfo.deviceIdentifier
+            try await apiClient.subscribeToTopics(
+                deviceId: deviceId,
+                clientId: identity.clientId,
+                topics: [conversationTopic, welcomeTopic]
+            )
+            Logger.info("Subscribed to push topics \(context): \(conversationTopic), \(welcomeTopic)")
+        } catch {
+            Logger.error("Failed subscribing to topics \(context): \(error)")
+        }
     }
 
     // MARK: - Last Synced At

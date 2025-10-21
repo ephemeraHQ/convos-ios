@@ -307,7 +307,6 @@ public actor ConversationStateMachine {
         Logger.info("Inbox ready, creating conversation...")
 
         let client = inboxReady.client
-        let apiClient = inboxReady.apiClient
 
         // Create the optimistic conversation
         let optimisticConversation = try client.prepareConversation()
@@ -315,40 +314,6 @@ public actor ConversationStateMachine {
 
         // Publish the conversation
         try await optimisticConversation.publish()
-
-        // Fetch the created conversation
-        guard let createdConversation = try await client.conversation(with: externalConversationId) else {
-            throw ConversationStateMachineError.failedFindingConversation
-        }
-
-        guard case .group(let group) = createdConversation else {
-            throw ConversationStateMachineError.failedFindingConversation
-        }
-
-        // Update permissions for group conversations
-        try await group.updateAddMemberPermission(newPermissionOption: .allow)
-        try await group.updateInviteTag()
-
-        // Store the conversation
-        let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-        let conversationWriter = ConversationWriter(
-            identityStore: identityStore,
-            databaseWriter: databaseWriter,
-            messageWriter: messageWriter
-        )
-        let dbConversation = try await conversationWriter.store(conversation: createdConversation)
-
-        // Create invite
-        let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
-        _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
-
-        // Subscribe to push notifications using clientId from keychain
-        await subscribeToConversationTopics(
-            conversationId: externalConversationId,
-            client: client,
-            apiClient: apiClient,
-            context: "after create"
-        )
 
         // Transition directly to ready state
         emitStateChange(.ready(ConversationReadyResult(
@@ -529,26 +494,6 @@ public actor ConversationStateMachine {
                     }) {
                     guard !Task.isCancelled else { return }
 
-//                    // Accept consent and store the conversation
-//                    try await conversation.updateConsentState(state: .allowed)
-//                    Logger.info("Joined conversation with id: \(conversation.id)")
-//
-//                    let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-//                    let conversationWriter = ConversationWriter(
-//                        identityStore: identityStore,
-//                        databaseWriter: databaseWriter,
-//                        messageWriter: messageWriter
-//                    )
-//                    let dbConversation = try await conversationWriter.store(conversation: conversation)
-//
-//                    // Subscribe to push notifications using clientId from keychain
-//                    await subscribeToConversationTopics(
-//                        conversationId: conversation.id,
-//                        client: client,
-//                        apiClient: apiClient,
-//                        context: "after join"
-//                    )
-//
                     // Transition directly to ready state
                     await self.emitStateChange(.ready(ConversationReadyResult(
                         conversationId: conversation.id,
