@@ -137,15 +137,22 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
         let publicKey = identity.keys.privateKey.publicKey.secp256K1Uncompressed.bytes
 
+        // Verify the signature - explicitly handle both failure and errors
+        let verifiedSignature: Bool
         do {
-            let verifiedSignature = try signedInvite.verify(with: publicKey)
-            guard verifiedSignature else {
-                Logger.error("Failed verifying signature for invite from \(senderInboxId) - blocking DM")
-                await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
-                throw InviteJoinRequestError.invalidSignature
-            }
+            verifiedSignature = try signedInvite.verify(with: publicKey)
         } catch {
-            Logger.error("Failed verifying signature for invite from \(senderInboxId) - blocking DM")
+            // Verification threw an exception (e.g., malformed signature, invalid key format)
+            // This is different from a signature that doesn't match
+            Logger.error("Exception during signature verification for invite from \(senderInboxId): \(error) - blocking DM")
+            await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
+            throw InviteJoinRequestError.invalidSignature
+        }
+
+        // Explicitly check that verification succeeded
+        guard verifiedSignature == true else {
+            // Signature verification returned false - signature doesn't match
+            Logger.error("Signature verification failed for invite from \(senderInboxId) - blocking DM")
             await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
             throw InviteJoinRequestError.invalidSignature
         }
