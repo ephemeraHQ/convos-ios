@@ -275,6 +275,7 @@ class NewConversationViewModel: Identifiable {
             messagesBottomBarEnabled = true
             isWaitingForInviteAcceptance = false
             isCreatingConversation = false
+            showingFullScreenScanner = false
             currentError = nil
             Logger.info("Conversation ready!")
 

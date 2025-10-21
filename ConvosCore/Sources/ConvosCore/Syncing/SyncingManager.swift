@@ -259,6 +259,10 @@ actor SyncingManager: SyncingManagerProtocol {
         _ conversation: XMTPiOS.Conversation,
         client: AnyClientProvider
     ) async throws -> Bool {
+        guard try await conversation.creatorInboxId != client.inboxId else {
+            return true
+        }
+
         var consentState = try conversation.consentState()
 
         if consentState == .unknown {
