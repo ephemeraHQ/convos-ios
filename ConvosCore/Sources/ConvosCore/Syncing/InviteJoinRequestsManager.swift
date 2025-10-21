@@ -201,9 +201,9 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
     }
 
     func hasOutgoingJoinRequest(for conversation: XMTPiOS.Conversation, client: AnyClientProvider) async throws -> Bool {
-        guard case .group = conversation else { return false }
+        guard case .group(let group) = conversation else { return false }
 
-        let inviteTag = try conversation.inviteTag
+        let inviteTag = try group.inviteTag
 
         // List all DMs
         let dms = try client.conversationsProvider.listDms(

@@ -80,13 +80,13 @@ actor SyncingManager: SyncingManagerProtocol {
             return
         }
 
+        // Mark as syncing
+        setSyncing(true)
+
         // Cancel any existing sync task
         syncTask?.cancel()
         syncTask = Task { [weak self] in
             guard let self else { return }
-
-            // Mark as syncing
-            await self.setSyncing(true)
 
             // Ensure we clean up the syncing flag when done
             defer {
