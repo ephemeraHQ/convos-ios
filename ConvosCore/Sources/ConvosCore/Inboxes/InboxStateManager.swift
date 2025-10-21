@@ -95,7 +95,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
 
         for await state in await stateMachine.stateSequence {
             switch state {
-            case .ready(let result):
+            case .ready(_, let result):
                 return result
             case .error(let error):
                 throw error
@@ -120,7 +120,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         }
 
         // Check if we're already authorized with this inbox
-        if case .ready(let result) = currentState, result.client.inboxId == inboxId {
+        if case .ready(_, let result) = currentState, result.client.inboxId == inboxId {
             Logger.info("Already authorized with inbox \(inboxId), skipping reauthorization")
             return result
         }
@@ -144,7 +144,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         // Wait for ready state with the new inboxId
         for await state in await stateMachine.stateSequence {
             switch state {
-            case .ready(let result):
+            case .ready(_, let result):
                 // Verify this is the inbox we requested
                 if result.client.inboxId == inboxId {
                     Logger.info("Successfully reauthorized to inbox \(inboxId)")

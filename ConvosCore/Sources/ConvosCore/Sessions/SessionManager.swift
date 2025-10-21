@@ -239,6 +239,39 @@ public final class SessionManager: SessionManagerProtocol {
         try await inboxWriter.delete(inboxId: inboxId)
     }
 
+    public func deleteInbox(clientId: String) async throws {
+        // First, find the messaging service by looking up the inbox from the database
+        let inboxId = try await databaseReader.read { db in
+            guard let inbox = try DBInbox
+                .filter(DBInbox.Columns.clientId == clientId)
+                .fetchOne(db) else {
+                throw SessionManagerError.inboxNotFound
+            }
+            return inbox.inboxId
+        }
+
+        let service: AnyMessagingService? = serviceQueue.sync {
+            guard let index = messagingServices.firstIndex(where: { $0.matches(inboxId: inboxId) }) else {
+                return nil
+            }
+            let service = messagingServices[index]
+            messagingServices.remove(at: index)
+            return service
+        }
+
+        guard let service = service else {
+            Logger.error("Messaging service not found for clientId \(clientId)")
+            throw SessionManagerError.inboxNotFound
+        }
+
+        Logger.info("Stopping messaging service for clientId: \(clientId), inboxId: \(inboxId)")
+        await service.stopAndDelete()
+
+        // Delete from database
+        let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+        try await inboxWriter.delete(clientId: clientId)
+    }
+
     public func deleteAllInboxes() async throws {
         // Always clear device registration state, even if deletion fails
         defer { DeviceRegistrationManager.clearRegistrationState() }

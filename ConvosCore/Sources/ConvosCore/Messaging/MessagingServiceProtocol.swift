@@ -8,7 +8,7 @@ public enum MessagingServiceState {
 extension MessagingServiceProtocol {
     public var state: MessagingServiceState {
         switch inboxStateManager.currentState {
-        case .ready(let result):
+        case .ready(_, let result):
             return .authorized(result.client.inboxId)
         default:
             return .registering

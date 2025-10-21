@@ -181,6 +181,7 @@ public protocol KeychainIdentityStoreProtocol: Actor {
     func generateKeys() throws -> KeychainIdentityKeys
     func save(inboxId: String, clientId: String, keys: KeychainIdentityKeys) throws -> KeychainIdentity
     func identity(for inboxId: String) throws -> KeychainIdentity
+    func identity(forClientId clientId: String) throws -> KeychainIdentity
     func loadAll() throws -> [KeychainIdentity]
     func delete(inboxId: String) throws
     func deleteAll() throws
@@ -223,6 +224,15 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
         )
         let data = try loadData(with: query)
         return try JSONDecoder().decode(KeychainIdentity.self, from: data)
+    }
+
+    public func identity(forClientId clientId: String) throws -> KeychainIdentity {
+        // Load all identities and find by clientId
+        let allIdentities = try loadAll()
+        guard let identity = allIdentities.first(where: { $0.clientId == clientId }) else {
+            throw KeychainIdentityStoreError.identityNotFound("Identity with clientId \(clientId) not found")
+        }
+        return identity
     }
 
     public func loadAll() throws -> [KeychainIdentity] {

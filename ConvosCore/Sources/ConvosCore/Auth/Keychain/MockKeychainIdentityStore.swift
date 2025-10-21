@@ -20,6 +20,13 @@ actor MockKeychainIdentityStore: KeychainIdentityStoreProtocol {
         return identity
     }
 
+    func identity(forClientId clientId: String) throws -> KeychainIdentity {
+        guard let identity = savedIdentities.values.first(where: { $0.clientId == clientId }) else {
+            throw KeychainIdentityStoreError.identityNotFound("Identity not found for clientId: \(clientId)")
+        }
+        return identity
+    }
+
     func loadAll() throws -> [KeychainIdentity] {
         return Array(savedIdentities.values)
     }

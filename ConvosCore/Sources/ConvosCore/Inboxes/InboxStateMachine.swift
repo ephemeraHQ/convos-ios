@@ -41,16 +41,18 @@ extension InboxStateMachine.State: Equatable {
     public static func == (lhs: InboxStateMachine.State, rhs: InboxStateMachine.State) -> Bool {
         switch (lhs, rhs) {
         case (.uninitialized, .uninitialized),
-            (.registering, .registering),
             (.stopping, .stopping),
             (.error, .error):
             return true
-        case let (.authorizing(lhsId), .authorizing(rhsId)),
-             let (.authenticatingBackend(lhsId), .authenticatingBackend(rhsId)),
-             let (.deleting(lhsId), .deleting(rhsId)):
-            return lhsId == rhsId
-        case let (.ready(lhsResult), .ready(rhsResult)):
-            return (lhsResult.client.inboxId == rhsResult.client.inboxId &&
+        case let (.registering(lhsClientId), .registering(rhsClientId)):
+            return lhsClientId == rhsClientId
+        case let (.authorizing(lhsClientId, lhsInboxId), .authorizing(rhsClientId, rhsInboxId)),
+             let (.authenticatingBackend(lhsClientId, lhsInboxId), .authenticatingBackend(rhsClientId, rhsInboxId)),
+             let (.deleting(lhsClientId, lhsInboxId), .deleting(rhsClientId, rhsInboxId)):
+            return lhsClientId == rhsClientId && lhsInboxId == rhsInboxId
+        case let (.ready(lhsClientId, lhsResult), .ready(rhsClientId, rhsResult)):
+            return (lhsClientId == rhsClientId &&
+                    lhsResult.client.inboxId == rhsResult.client.inboxId &&
                     lhsResult.client.installationId == rhsResult.client.installationId &&
                     lhsResult.apiClient.identifier == rhsResult.apiClient.identifier)
         default:
@@ -75,20 +77,20 @@ public actor InboxStateMachine {
     enum Action {
         case authorize(inboxId: String),
              register,
-             clientAuthorized(any XMTPClientProvider),
-             clientRegistered(any XMTPClientProvider),
-             authorized(InboxReadyResult),
+             clientAuthorized(clientId: String, client: any XMTPClientProvider),
+             clientRegistered(clientId: String, client: any XMTPClientProvider),
+             authorized(clientId: String, result: InboxReadyResult),
              delete,
              stop
     }
 
     public enum State {
         case uninitialized
-        case authorizing(inboxId: String)
-        case registering
-        case authenticatingBackend(inboxId: String)
-        case ready(InboxReadyResult)
-        case deleting(inboxId: String)
+        case authorizing(clientId: String, inboxId: String)
+        case registering(clientId: String?)
+        case authenticatingBackend(clientId: String, inboxId: String)
+        case ready(clientId: String, result: InboxReadyResult)
+        case deleting(clientId: String, inboxId: String)
         case stopping
         case error(Error)
     }
@@ -128,12 +130,27 @@ public actor InboxStateMachine {
 
     var inboxId: String? {
         switch _state {
-        case .authorizing(let id),
-             .authenticatingBackend(let id),
-             .deleting(let id):
-            return id
-        case .ready(let result):
+        case .authorizing(_, let inboxId),
+             .authenticatingBackend(_, let inboxId),
+             .deleting(_, let inboxId):
+            return inboxId
+        case .ready(_, let result):
             return result.client.inboxId
+        default:
+            return nil
+        }
+    }
+
+    var clientId: String? {
+        switch _state {
+        case .registering(let clientId):
+            return clientId
+        case .authorizing(let clientId, _),
+             .authenticatingBackend(let clientId, _),
+             .deleting(let clientId, _):
+            return clientId
+        case .ready(let clientId, _):
+            return clientId
         default:
             return nil
         }
@@ -301,19 +318,20 @@ public actor InboxStateMachine {
                 try await handleStop()
                 try await handleRegister()
 
-            case (.authorizing, let .clientAuthorized(client)):
-                try await handleClientAuthorized(client)
-            case (.registering, let .clientRegistered(client)):
-                try await handleClientRegistered(client)
+            case (.authorizing, let .clientAuthorized(clientId, client)):
+                try await handleClientAuthorized(clientId: clientId, client: client)
+            case (.registering, let .clientRegistered(clientId, client)):
+                try await handleClientRegistered(clientId: clientId, client: client)
 
-            case (.authenticatingBackend, let .authorized(result)):
+            case (.authenticatingBackend, let .authorized(clientId, result)):
                 try await handleAuthorized(
+                    clientId: clientId,
                     client: result.client,
                     apiClient: result.apiClient
                 )
 
-            case (let .ready(result), .delete):
-                try await handleDelete(client: result.client, apiClient: result.apiClient)
+            case (let .ready(clientId, result), .delete):
+                try await handleDelete(clientId: clientId, client: result.client, apiClient: result.apiClient)
             case (.error, .delete):
                 try await handleDeleteFromError()
             case (.ready, .stop), (.error, .stop), (.deleting, .stop):
@@ -334,10 +352,12 @@ public actor InboxStateMachine {
     }
 
     private func handleAuthorize(inboxId: String) async throws {
-        emitStateChange(.authorizing(inboxId: inboxId))
-        Logger.info("Started authorization flow for inbox: \(inboxId)")
-
         let identity = try await identityStore.identity(for: inboxId)
+        let clientId = identity.clientId
+
+        emitStateChange(.authorizing(clientId: clientId, inboxId: inboxId))
+        Logger.info("Started authorization flow for inbox: \(inboxId), clientId: \(clientId)")
+
         let keys = identity.clientKeys
         let clientOptions = clientOptions(keys: keys)
         let client: any XMTPClientProvider
@@ -354,7 +374,7 @@ public actor InboxStateMachine {
                 options: clientOptions
             )
             // Update state to match the newly created client's inboxId
-            emitStateChange(.authorizing(inboxId: client.inboxId))
+            emitStateChange(.authorizing(clientId: clientId, inboxId: client.inboxId))
             Logger.info("Updated state with new client inboxId: \(client.inboxId)")
         }
 
@@ -368,20 +388,22 @@ public actor InboxStateMachine {
             Logger.warning("Skipping save to database during authorization")
         }
 
-        enqueueAction(.clientAuthorized(client))
+        enqueueAction(.clientAuthorized(clientId: clientId, client: client))
     }
 
     private func handleRegister() async throws {
-        emitStateChange(.registering)
-        Logger.info("Started registration flow...")
+        // Generate a clientId for privacy first
+        let clientId = ClientId.generate()
+
+        emitStateChange(.registering(clientId: clientId.value))
+        Logger.info("Started registration flow with clientId: \(clientId.value)")
+
         let keys = try await identityStore.generateKeys()
         let client = try await createXmtpClient(
             signingKey: keys.signingKey,
             options: clientOptions(keys: keys)
         )
 
-        // Generate a clientId for privacy
-        let clientId = ClientId.generate()
         Logger.info("Generated clientId: \(clientId.value) for inboxId: \(client.inboxId)")
 
         // Save to keychain with clientId
@@ -403,27 +425,27 @@ public actor InboxStateMachine {
             Logger.info("Skipping database save for inbox: \(client.inboxId) (unused inbox)")
         }
 
-        enqueueAction(.clientRegistered(client))
+        enqueueAction(.clientRegistered(clientId: clientId.value, client: client))
     }
 
-    private func handleClientAuthorized(_ client: any XMTPClientProvider) async throws {
-        emitStateChange(.authenticatingBackend(inboxId: client.inboxId))
+    private func handleClientAuthorized(clientId: String, client: any XMTPClientProvider) async throws {
+        emitStateChange(.authenticatingBackend(clientId: clientId, inboxId: client.inboxId))
 
         Logger.info("Authenticating API client...")
         let apiClient = try await authorizeConvosBackend(client: client)
 
-        enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
+        enqueueAction(.authorized(clientId: clientId, result: .init(client: client, apiClient: apiClient)))
     }
 
-    private func handleClientRegistered(_ client: any XMTPClientProvider) async throws {
-        emitStateChange(.authenticatingBackend(inboxId: client.inboxId))
+    private func handleClientRegistered(clientId: String, client: any XMTPClientProvider) async throws {
+        emitStateChange(.authenticatingBackend(clientId: clientId, inboxId: client.inboxId))
         Logger.info("Authenticating backend for registration...")
         let apiClient = try await authorizeConvosBackend(client: client)
-        enqueueAction(.authorized(.init(client: client, apiClient: apiClient)))
+        enqueueAction(.authorized(clientId: clientId, result: .init(client: client, apiClient: apiClient)))
     }
 
-    private func handleAuthorized(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
-        emitStateChange(.ready(.init(client: client, apiClient: apiClient)))
+    private func handleAuthorized(clientId: String, client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
+        emitStateChange(.ready(clientId: clientId, result: .init(client: client, apiClient: apiClient)))
 
         Logger.info("Authorized, state machine is ready.")
 
@@ -443,13 +465,13 @@ public actor InboxStateMachine {
         }
     }
 
-    private func handleDelete(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
-        Logger.info("Deleting inbox...")
+    private func handleDelete(clientId: String, client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
+        Logger.info("Deleting inbox with clientId: \(clientId)...")
         let inboxId = client.inboxId
-        emitStateChange(.deleting(inboxId: inboxId))
+        emitStateChange(.deleting(clientId: clientId, inboxId: inboxId))
 
         // Perform common cleanup operations
-        try await performInboxCleanup(client: client, apiClient: apiClient)
+        try await performInboxCleanup(clientId: clientId, client: client, apiClient: apiClient)
 
         enqueueAction(.stop)
     }
@@ -458,8 +480,11 @@ public actor InboxStateMachine {
         Logger.info("Deleting inbox from error state...")
         defer { enqueueAction(.stop) }
 
-        if let inboxId {
-            emitStateChange(.deleting(inboxId: inboxId))
+        let currentClientId = clientId
+        let currentInboxId = inboxId
+
+        if let clientId = currentClientId, let inboxId = currentInboxId {
+            emitStateChange(.deleting(clientId: clientId, inboxId: inboxId))
         } else {
             emitStateChange(.stopping)
         }
@@ -467,7 +492,7 @@ public actor InboxStateMachine {
         await syncingManager?.stop()
 
         // Clean up database records and keychain if we have an inbox ID
-        if let inboxId {
+        if let inboxId = currentInboxId {
             try await cleanupInboxData(inboxId: inboxId)
             try await identityStore.delete(inboxId: inboxId)
             Logger.info("Deleted inbox \(inboxId)")
@@ -483,35 +508,30 @@ public actor InboxStateMachine {
     }
 
     /// Performs common cleanup operations when deleting an inbox
-    private func performInboxCleanup(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
+    private func performInboxCleanup(clientId: String, client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
         // Stop all services
         await syncingManager?.stop()
 
         // Unsubscribe from inbox-level welcome topic and unregister installation from backend
         // Note: Conversation topics are handled by ConversationStateMachine.cleanUp()
-        if let identity = try? await identityStore.identity(for: client.inboxId) {
-            let clientId = identity.clientId
-            let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
+        let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
 
-            // Unsubscribe from welcome topic (inbox-level topic only)
-            do {
-                try await apiClient.unsubscribeFromTopics(clientId: clientId, topics: [welcomeTopic])
-                Logger.info("Unsubscribed from welcome topic: \(welcomeTopic)")
-            } catch {
-                Logger.error("Failed to unsubscribe from welcome topic: \(error)")
-                // Continue with cleanup even if unsubscribe fails
-            }
+        // Unsubscribe from welcome topic (inbox-level topic only)
+        do {
+            try await apiClient.unsubscribeFromTopics(clientId: clientId, topics: [welcomeTopic])
+            Logger.info("Unsubscribed from welcome topic: \(welcomeTopic)")
+        } catch {
+            Logger.error("Failed to unsubscribe from welcome topic: \(error)")
+            // Continue with cleanup even if unsubscribe fails
+        }
 
-            // Unregister installation
-            do {
-                try await apiClient.unregisterInstallation(clientId: clientId)
-                Logger.info("Unregistered installation from backend: \(clientId)")
-            } catch {
-                // Ignore errors during unregistration (common during account deletion when auth may be invalid)
-                Logger.info("Could not unregister installation (likely during account deletion): \(error)")
-            }
-        } else {
-            Logger.warning("Identity not found, skipping backend unregistration")
+        // Unregister installation
+        do {
+            try await apiClient.unregisterInstallation(clientId: clientId)
+            Logger.info("Unregistered installation from backend: \(clientId)")
+        } catch {
+            // Ignore errors during unregistration (common during account deletion when auth may be invalid)
+            Logger.info("Could not unregister installation (likely during account deletion): \(error)")
         }
 
         // Revoke installation if identity is available
@@ -539,7 +559,7 @@ public actor InboxStateMachine {
         // Delete database files
         deleteDatabaseFiles(for: client.inboxId)
 
-        Logger.info("Deleted inbox \(client.inboxId)")
+        Logger.info("Deleted inbox \(client.inboxId) with clientId \(clientId)")
     }
 
     private func deleteDatabaseFiles(for inboxId: String) {
