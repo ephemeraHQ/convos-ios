@@ -319,7 +319,7 @@ public actor InboxStateMachine {
             case (.ready, .stop), (.error, .stop), (.deleting, .stop):
                 try await handleStop()
 
-            case (.uninitialized, .stop):
+            case (.uninitialized, .stop), (.stopping, .stop):
                 break
 
             default:

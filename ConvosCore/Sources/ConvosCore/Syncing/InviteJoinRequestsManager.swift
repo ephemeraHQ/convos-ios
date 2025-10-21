@@ -22,10 +22,6 @@ protocol InviteJoinRequestsManagerProtocol {
         message: XMTPiOS.DecodedMessage,
         client: AnyClientProvider
     ) async throws -> JoinRequestResult?
-    func syncAndProcessJoinRequests(
-        for conversationId: String,
-        client: AnyClientProvider
-    ) async throws -> JoinRequestResult?
     func processJoinRequests(
         since: Date?,
         client: AnyClientProvider
@@ -189,17 +185,6 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         }
     }
 
-    func syncAndProcessJoinRequests(
-        for conversationId: String,
-        client: AnyClientProvider
-    ) async throws -> JoinRequestResult? {
-        _ = try await client.conversationsProvider.syncAllConversations(consentStates: [.unknown])
-        guard let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) else {
-            return nil
-        }
-        return try await processMessages(for: conversation, client: client)
-    }
-
     func hasOutgoingJoinRequest(for conversation: XMTPiOS.Conversation, client: AnyClientProvider) async throws -> Bool {
         guard case .group(let group) = conversation else { return false }
 
@@ -284,11 +269,6 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
     }
 
     // MARK: - Private Helpers
-
-    private func processMessages(for conversation: XMTPiOS.Conversation, client: AnyClientProvider) async throws -> JoinRequestResult? {
-        guard case let .dm(dm) = conversation else { return nil }
-        return try await processMessages(for: dm, client: client)
-    }
 
     private func processMessages(for dm: XMTPiOS.Dm, client: AnyClientProvider) async throws -> JoinRequestResult? {
         let messages = try await dm.messages(afterNs: nil)
