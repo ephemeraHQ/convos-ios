@@ -283,7 +283,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             }
             // Use exponential backoff for rate limit retries
             let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
-            Logger.info("Auth rate limited - retrying in \(delay)s (attempt \(retryCount + 1)) of \(maxRetryCount))")
+            Logger.info("Auth rate limited - retrying in \(delay)s (attempt \(retryCount + 1) of \(maxRetryCount))")
 
             // Sleep and then retry
             try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
@@ -405,7 +405,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
                 // Try to re-authenticate and retry the request
                 do {
-                    Logger.info("Attempting re-authentication (attempt \(retryCount + 1)) of \(maxRetryCount))")
+                    Logger.info("Attempting re-authentication (attempt \(retryCount + 1) of \(maxRetryCount))")
                     _ = try await reAuthenticate()
                     // Create a new request with the fresh token
                     var newRequest = request
