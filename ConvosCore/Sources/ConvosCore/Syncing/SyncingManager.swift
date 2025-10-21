@@ -27,6 +27,9 @@ actor SyncingManager: SyncingManagerProtocol {
     // Single parent task that manages everything
     private var syncTask: Task<Void, Never>?
 
+    // Track if a sync is currently in progress
+    private var isSyncing: Bool = false
+
     private var activeConversationId: String?
 
     // Notification handling
@@ -72,10 +75,26 @@ actor SyncingManager: SyncingManagerProtocol {
             setupNotificationObservers()
         }
 
+        // If already syncing, just cancel and restart
+        // This prevents race conditions with multiple rapid start() calls
+        if isSyncing {
+            Logger.info("Sync already in progress, restarting...")
+        }
+
         // Cancel existing sync
         syncTask?.cancel()
         syncTask = Task { [weak self] in
             guard let self else { return }
+
+            // Mark as syncing
+            await self.setSyncing(true)
+
+            // Ensure we clean up the syncing flag when done
+            defer {
+                Task { [weak self] in
+                    await self?.setSyncing(false)
+                }
+            }
 
             // Save the sync start time
             let lastSyncedAt = await self.getLastSyncedAt(for: client.inboxId)
@@ -84,14 +103,17 @@ actor SyncingManager: SyncingManagerProtocol {
             } else {
                 Logger.info("Syncing for the first time...")
             }
-            await self.setLastSyncedAt(Date(), for: client.inboxId)
+
+            // Perform the initial sync
+            let syncStartTime = Date()
 
             do {
                 _ = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
+                // Only update timestamp after successful sync
+                await self.setLastSyncedAt(syncStartTime, for: client.inboxId)
             } catch {
                 Logger.error("Error syncing all conversations: \(error.localizedDescription)")
-                // if we encounter an error, revert the last synced date
-                await self.setLastSyncedAt(lastSyncedAt, for: client.inboxId)
+                // Don't update timestamp on failure - keep the old one
             }
 
             _ = await joinRequestsManager.processJoinRequests(since: lastSyncedAt, client: client)
@@ -116,6 +138,9 @@ actor SyncingManager: SyncingManagerProtocol {
         // Cancel sync tasks
         syncTask?.cancel()
         syncTask = nil
+
+        // Clear syncing flag
+        isSyncing = false
 
         activeConversationId = nil
 
@@ -322,6 +347,10 @@ actor SyncingManager: SyncingManagerProtocol {
         activeConversationId = conversationId
     }
 
+    private func setSyncing(_ syncing: Bool) {
+        isSyncing = syncing
+    }
+
     // MARK: - Push Notifications
 
     private func subscribeToConversationTopics(
@@ -378,15 +407,5 @@ actor SyncingManager: SyncingManagerProtocol {
             }
         }
         notificationObservers.append(activeConversationObserver)
-    }
-}
-
-// MARK: - Extensions
-
-extension Array {
-    func chunked(into size: Int) -> [[Element]] {
-        stride(from: 0, to: count, by: size).map {
-            Array(self[$0..<Swift.min($0 + size, count)])
-        }
     }
 }
