@@ -23,10 +23,6 @@ protocol InviteJoinRequestsManagerProtocol {
         client: AnyClientProvider
     ) async throws -> JoinRequestResult?
     func processJoinRequests(
-        for conversation: XMTPiOS.Conversation,
-        client: AnyClientProvider
-    ) async throws -> JoinRequestResult?
-    func processJoinRequests(
         since: Date?,
         client: AnyClientProvider
     ) async -> [JoinRequestResult]
@@ -187,14 +183,6 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             Logger.warning("Expected Group but found DM from \(senderInboxId), ignoring invite join request")
             throw InviteJoinRequestError.invalidConversationType
         }
-    }
-
-    func processJoinRequests(
-        for conversation: XMTPiOS.Conversation,
-        client: AnyClientProvider
-    ) async throws -> JoinRequestResult? {
-        guard case let .dm(dm) = conversation else { return nil }
-        return try await processMessages(for: dm, client: client)
     }
 
     func hasOutgoingJoinRequest(for conversation: XMTPiOS.Conversation, client: AnyClientProvider) async throws -> Bool {
