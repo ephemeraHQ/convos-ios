@@ -40,15 +40,17 @@ extension InboxStateMachine.State: Equatable {
 
     public static func == (lhs: InboxStateMachine.State, rhs: InboxStateMachine.State) -> Bool {
         switch (lhs, rhs) {
-        case (.uninitialized, .uninitialized),
-            (.stopping, .stopping),
-            (.error, .error):
+        case (.uninitialized, .uninitialized):
             return true
-        case let (.registering(lhsClientId), .registering(rhsClientId)):
+        case let (.registering(lhsClientId), .registering(rhsClientId)),
+             let (.stopping(lhsClientId), .stopping(rhsClientId)):
+            return lhsClientId == rhsClientId
+        case let (.error(lhsClientId, _), .error(rhsClientId, _)):
             return lhsClientId == rhsClientId
         case let (.authorizing(lhsClientId, lhsInboxId), .authorizing(rhsClientId, rhsInboxId)),
-             let (.authenticatingBackend(lhsClientId, lhsInboxId), .authenticatingBackend(rhsClientId, rhsInboxId)),
-             let (.deleting(lhsClientId, lhsInboxId), .deleting(rhsClientId, rhsInboxId)):
+             let (.authenticatingBackend(lhsClientId, lhsInboxId), .authenticatingBackend(rhsClientId, rhsInboxId)):
+            return lhsClientId == rhsClientId && lhsInboxId == rhsInboxId
+        case let (.deleting(lhsClientId, lhsInboxId), .deleting(rhsClientId, rhsInboxId)):
             return lhsClientId == rhsClientId && lhsInboxId == rhsInboxId
         case let (.ready(lhsClientId, lhsResult), .ready(rhsClientId, rhsResult)):
             return (lhsClientId == rhsClientId &&
@@ -87,12 +89,12 @@ public actor InboxStateMachine {
     public enum State {
         case uninitialized
         case authorizing(clientId: String, inboxId: String)
-        case registering(clientId: String?)
+        case registering(clientId: String)
         case authenticatingBackend(clientId: String, inboxId: String)
         case ready(clientId: String, result: InboxReadyResult)
-        case deleting(clientId: String, inboxId: String)
-        case stopping
-        case error(Error)
+        case deleting(clientId: String, inboxId: String?)
+        case stopping(clientId: String)
+        case error(clientId: String, error: Error)
     }
 
     // MARK: -
@@ -131,8 +133,9 @@ public actor InboxStateMachine {
     var inboxId: String? {
         switch _state {
         case .authorizing(_, let inboxId),
-             .authenticatingBackend(_, let inboxId),
-             .deleting(_, let inboxId):
+                .authenticatingBackend(_, let inboxId):
+            return inboxId
+        case .deleting(_, let inboxId):
             return inboxId
         case .ready(_, let result):
             return result.client.inboxId
@@ -143,7 +146,10 @@ public actor InboxStateMachine {
 
     var clientId: String? {
         switch _state {
-        case .registering(let clientId):
+        case .uninitialized:
+            return nil
+        case .registering(let clientId),
+             .stopping(let clientId):
             return clientId
         case .authorizing(let clientId, _),
              .authenticatingBackend(let clientId, _),
@@ -151,8 +157,8 @@ public actor InboxStateMachine {
             return clientId
         case .ready(let clientId, _):
             return clientId
-        default:
-            return nil
+        case .error(let clientId, _):
+            return clientId
         }
     }
 
@@ -332,8 +338,8 @@ public actor InboxStateMachine {
 
             case (let .ready(clientId, result), .delete):
                 try await handleDelete(clientId: clientId, client: result.client, apiClient: result.apiClient)
-            case (.error, .delete):
-                try await handleDeleteFromError()
+            case (let .error(clientId, _), .delete):
+                try await handleDeleteFromError(clientId: clientId)
             case (.ready, .stop), (.error, .stop), (.deleting, .stop):
                 try await handleStop()
 
@@ -347,7 +353,15 @@ public actor InboxStateMachine {
             Logger.error(
                 "Failed state transition \(_state) -> \(action): \(error.localizedDescription)"
             )
-            emitStateChange(.error(error))
+            // Use current clientId if available, otherwise this will crash
+            // In practice, errors should only happen after we have a clientId
+            if let clientId = clientId {
+                emitStateChange(.error(clientId: clientId, error: error))
+            } else {
+                // Fallback for errors during very early initialization
+                Logger.error("Error occurred before clientId was available, transitioning to uninitialized")
+                emitStateChange(.uninitialized)
+            }
         }
     }
 
@@ -476,17 +490,17 @@ public actor InboxStateMachine {
         enqueueAction(.stop)
     }
 
-    private func handleDeleteFromError() async throws {
+    private func handleDeleteFromError(clientId: String) async throws {
         Logger.info("Deleting inbox from error state...")
         defer { enqueueAction(.stop) }
 
-        let currentClientId = clientId
         let currentInboxId = inboxId
 
-        if let clientId = currentClientId, let inboxId = currentInboxId {
+        if let inboxId = currentInboxId {
             emitStateChange(.deleting(clientId: clientId, inboxId: inboxId))
         } else {
-            emitStateChange(.stopping)
+            // No clientId available, go back to uninitialized
+            emitStateChange(.uninitialized)
         }
 
         await syncingManager?.stop()
@@ -501,7 +515,13 @@ public actor InboxStateMachine {
 
     private func handleStop() async throws {
         Logger.info("Stopping inbox...")
-        emitStateChange(.stopping)
+        let currentClientId = clientId
+        if let clientId = currentClientId {
+            emitStateChange(.stopping(clientId: clientId))
+        } else {
+            // If no clientId, we're already basically uninitialized
+            emitStateChange(.uninitialized)
+        }
         await syncingManager?.stop()
         removePushTokenObserver()
         emitStateChange(.uninitialized)

@@ -59,7 +59,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         isReady = state.isReady
 
         switch state {
-        case .error(let error):
+        case .error(_, let error):
             hasError = true
             errorMessage = error.localizedDescription
         default:
@@ -97,7 +97,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
             switch state {
             case .ready(_, let result):
                 return result
-            case .error(let error):
+            case .error(_, let error):
                 throw error
             default:
                 continue
@@ -154,7 +154,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
                     Logger.info("Waiting for correct inbox... current: \(result.client.inboxId), expected: \(inboxId)")
                     continue
                 }
-            case .error(let error):
+            case .error(_, let error):
                 throw error
             default:
                 continue
