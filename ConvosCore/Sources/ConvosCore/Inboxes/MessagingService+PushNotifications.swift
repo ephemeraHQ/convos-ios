@@ -109,11 +109,6 @@ extension MessagingService {
     ) async throws -> DecodedNotificationContent? {
         Logger.info("Syncing conversations from network for welcome message (DM with join request)")
 
-        guard let conversationId = contentTopic.conversationIdFromXMTPGroupTopic else {
-            Logger.warning("Unable to extract conversation id from contentTopic: \(contentTopic)")
-            return nil
-        }
-
         // Use the shared InviteJoinRequestsManager to handle the full flow (including adding to group)
         let joinRequestsManager = InviteJoinRequestsManager(
             identityStore: identityStore,
@@ -121,16 +116,10 @@ extension MessagingService {
         )
 
         _ = try await client.conversationsProvider.syncAllConversations(consentStates: [.unknown])
-        guard let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) else {
+        let results = await joinRequestsManager.processJoinRequests(since: nil, client: client)
+        guard let result = results.first else {
             return .droppedMessage
         }
-
-        guard let result = try await joinRequestsManager.processJoinRequests(for: conversation, client: client) else {
-            Logger.warning("No valid join request found for conversation after welcome message sync")
-            return .droppedMessage
-        }
-
-        try await storeConversation(conversation)
 
         return .init(
             title: result.conversationName,
