@@ -87,7 +87,11 @@ final class ConversationsViewModel {
 
     private(set) var hasEarlyAccess: Bool {
         get {
-            UserDefaults.standard.bool(forKey: "hasEarlyAccess")
+            guard !hasCreatedMoreThanOneConvo else {
+                return true
+            }
+
+            return UserDefaults.standard.bool(forKey: "hasEarlyAccess")
         }
         set {
             UserDefaults.standard.set(newValue, forKey: "hasEarlyAccess")

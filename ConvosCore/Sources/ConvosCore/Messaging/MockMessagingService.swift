@@ -226,20 +226,42 @@ extension MockMessagingService: ConversationSender {
 }
 
 class MockConversations: ConversationsProvider {
-    func listGroups(createdAfter: Date?, createdBefore: Date?, limit: Int?, consentStates: [ConsentState]?) throws -> [XMTPiOS.Group] {
-        []
-    }
-
-    func listDms(createdAfter: Date?, createdBefore: Date?, limit: Int?, consentStates: [ConsentState]?) throws -> [Dm] {
-        []
-    }
-
+    // swiftlint:disable:next function_parameter_count
     func list(
-        createdAfter: Date?,
-        createdBefore: Date?,
+        createdAfterNs: Int64?,
+        createdBeforeNs: Int64?,
+        lastActivityBeforeNs: Int64?,
+        lastActivityAfterNs: Int64?,
         limit: Int?,
-        consentStates: [XMTPiOS.ConsentState]?
+        consentStates: [XMTPiOS.ConsentState]?,
+        orderBy: XMTPiOS.ConversationsOrderBy
     ) async throws -> [XMTPiOS.Conversation] {
+        []
+    }
+
+    // swiftlint:disable:next function_parameter_count
+    func listGroups(
+        createdAfterNs: Int64?,
+        createdBeforeNs: Int64?,
+        lastActivityAfterNs: Int64?,
+        lastActivityBeforeNs: Int64?,
+        limit: Int?,
+        consentStates: [ConsentState]?,
+        orderBy: ConversationsOrderBy
+    ) throws -> [Group] {
+        []
+    }
+
+    // swiftlint:disable:next function_parameter_count
+    func listDms(
+        createdAfterNs: Int64?,
+        createdBeforeNs: Int64?,
+        lastActivityBeforeNs: Int64?,
+        lastActivityAfterNs: Int64?,
+        limit: Int?,
+        consentStates: [ConsentState]?,
+        orderBy: ConversationsOrderBy
+    ) throws -> [Dm] {
         []
     }
 
@@ -253,6 +275,9 @@ class MockConversations: ConversationsProvider {
 
     func syncAllConversations(consentStates: [XMTPiOS.ConsentState]?) async throws -> UInt32 {
         0
+    }
+
+    func sync() async throws {
     }
 
     func findConversation(conversationId: String) async throws -> XMTPiOS.Conversation? {
@@ -365,6 +390,10 @@ extension MockMessagingService: MessageSender {
         messages.append(contentsOf: unpublishedMessages)
         unpublishedMessages.removeAll()
         messagesSubject.send(messages)
+    }
+
+    public func consentState() throws -> ConsentState {
+        .allowed
     }
 }
 

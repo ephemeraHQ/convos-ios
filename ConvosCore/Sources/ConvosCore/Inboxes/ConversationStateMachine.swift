@@ -307,7 +307,6 @@ public actor ConversationStateMachine {
         Logger.info("Inbox ready, creating conversation...")
 
         let client = inboxReady.client
-        let apiClient = inboxReady.apiClient
 
         // Create the optimistic conversation
         let optimisticConversation = try client.prepareConversation()
@@ -315,40 +314,6 @@ public actor ConversationStateMachine {
 
         // Publish the conversation
         try await optimisticConversation.publish()
-
-        // Fetch the created conversation
-        guard let createdConversation = try await client.conversation(with: externalConversationId) else {
-            throw ConversationStateMachineError.failedFindingConversation
-        }
-
-        guard case .group(let group) = createdConversation else {
-            throw ConversationStateMachineError.failedFindingConversation
-        }
-
-        // Update permissions for group conversations
-        try await group.updateAddMemberPermission(newPermissionOption: .allow)
-        try await group.updateInviteTag()
-
-        // Store the conversation
-        let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-        let conversationWriter = ConversationWriter(
-            identityStore: identityStore,
-            databaseWriter: databaseWriter,
-            messageWriter: messageWriter
-        )
-        let dbConversation = try await conversationWriter.store(conversation: createdConversation)
-
-        // Create invite
-        let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
-        _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
-
-        // Subscribe to push notifications using clientId from keychain
-        await subscribeToConversationTopics(
-            conversationId: externalConversationId,
-            client: client,
-            apiClient: apiClient,
-            context: "after create"
-        )
 
         // Transition directly to ready state
         emitStateChange(.ready(ConversationReadyResult(
@@ -403,6 +368,14 @@ public actor ConversationStateMachine {
         if let existingConversation {
             Logger.info("Found existing convo by invite tag...")
             let prevInboxReady = try await inboxStateManager.waitForInboxReadyResult()
+            // Clear unused inbox since we're deleting it
+            await UnusedInboxCache.shared
+                .clearUnusedInbox(
+                    with: prevInboxReady.client.inboxId,
+                    databaseWriter: databaseWriter,
+                    databaseReader: databaseReader,
+                    environment: environment
+                )
             try await inboxStateManager.delete()
             let inboxReady = try await inboxStateManager.reauthorize(inboxId: existingConversation.inboxId)
             if existingConversation.hasJoined {
@@ -488,6 +461,26 @@ public actor ConversationStateMachine {
         _ = try await dm.prepare(text: text)
         try await dm.publish()
 
+        // Clear unused inbox from keychain now that we sent the join request
+        await UnusedInboxCache.shared
+            .clearUnusedInbox(
+                with: client.inboxId,
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment
+            )
+
+        // Clean up previous conversation, do this without matching the `conversationId`.
+        // We don't need the created conversation during the 'joining' state and
+        // want to make sure it is deleted even if the conversation never shows in
+        // `streamConversationsTask`
+        await self.cleanUpPreviousConversationIfNeeded(
+            previousResult: previousReadyResult,
+            newConversationId: nil,
+            client: client,
+            apiClient: apiClient
+        )
+
         // Stream conversations to wait for the joined conversation
         streamConversationsTask = Task { [weak self] in
             guard let self else { return }
@@ -497,59 +490,20 @@ public actor ConversationStateMachine {
                     .stream(type: .groups, onClose: nil)
                     .first(where: {
                         guard case .group(let group) = $0 else { return false }
-                        let creatorInboxId = try await group.creatorInboxId()
                         let tag = try group.inviteTag
-                        return (creatorInboxId == invite.payload.creatorInboxID &&
-                                tag == invite.payload.tag)
+                        return tag == invite.payload.tag
                     }) {
                     guard !Task.isCancelled else { return }
 
-                    // Accept consent and store the conversation
-                    try await conversation.updateConsentState(state: .allowed)
-                    Logger.info("Joined conversation with id: \(conversation.id)")
-
-                    let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-                    let conversationWriter = ConversationWriter(
-                        identityStore: identityStore,
-                        databaseWriter: databaseWriter,
-                        messageWriter: messageWriter
-                    )
-                    let dbConversation = try await conversationWriter.store(conversation: conversation)
-
-                    // Create invite
-                    let inviteWriter = InviteWriter(identityStore: identityStore, databaseWriter: databaseWriter)
-                    _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
-
-                    // Subscribe to push notifications using clientId from keychain
-                    await subscribeToConversationTopics(
-                        conversationId: conversation.id,
-                        client: client,
-                        apiClient: apiClient,
-                        context: "after join"
-                    )
+                    // This stream just waits for the conversation to show up
+                    // Writing the conversation to the database and invite creation
+                    // happens in `SyncingManager`
 
                     // Transition directly to ready state
                     await self.emitStateChange(.ready(ConversationReadyResult(
                         conversationId: conversation.id,
                         origin: .joined
                     )))
-
-                    // Clear unused inbox from keychain now that conversation is successfully joined
-                    await UnusedInboxCache.shared
-                        .clearUnusedInbox(
-                            with: client.inboxId,
-                            databaseWriter: databaseWriter,
-                            databaseReader: databaseReader,
-                            environment: environment
-                        )
-
-                    // Clean up previous conversation if it exists and is different
-                    await self.cleanUpPreviousConversationIfNeeded(
-                        previousResult: previousReadyResult,
-                        newConversationId: conversation.id,
-                        client: client,
-                        apiClient: apiClient
-                    )
                 } else {
                     Logger.error("Error waiting for conversation to join")
                     await self.emitStateChange(.error(ConversationStateMachineError.timedOut))
@@ -587,6 +541,15 @@ public actor ConversationStateMachine {
                 apiClient: inboxReady.apiClient,
             )
 
+            // Clear unused inbox from keychain now that we sent the join request
+            await UnusedInboxCache.shared
+                .clearUnusedInbox(
+                    with: inboxReady.client.inboxId,
+                    databaseWriter: databaseWriter,
+                    databaseReader: databaseReader,
+                    environment: environment
+                )
+
             try await inboxStateManager.delete()
         }
 
@@ -595,7 +558,7 @@ public actor ConversationStateMachine {
 
     private func cleanUpPreviousConversationIfNeeded(
         previousResult: ConversationReadyResult?,
-        newConversationId: String,
+        newConversationId: String?,
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol
     ) async {

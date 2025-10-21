@@ -4,6 +4,7 @@ import XMTPiOS
 public protocol MessageSender {
     func prepare(text: String) async throws -> String
     func publish() async throws
+    func consentState() throws -> ConsentState
 }
 
 public protocol ConversationSender {
@@ -16,25 +17,37 @@ public protocol ConversationSender {
 }
 
 public protocol ConversationsProvider {
+    // swiftlint:disable:next function_parameter_count
     func listGroups(
-        createdAfter: Date?,
-        createdBefore: Date?,
+        createdAfterNs: Int64?,
+        createdBeforeNs: Int64?,
+        lastActivityAfterNs: Int64?,
+        lastActivityBeforeNs: Int64?,
         limit: Int?,
-        consentStates: [ConsentState]?
-    ) throws -> [XMTPiOS.Group]
+        consentStates: [ConsentState]?,
+        orderBy: ConversationsOrderBy
+    ) throws -> [Group]
 
+    // swiftlint:disable:next function_parameter_count
     func list(
-        createdAfter: Date?,
-        createdBefore: Date?,
+        createdAfterNs: Int64?,
+        createdBeforeNs: Int64?,
+        lastActivityBeforeNs: Int64?,
+        lastActivityAfterNs: Int64?,
         limit: Int?,
-        consentStates: [ConsentState]?
+        consentStates: [ConsentState]?,
+        orderBy: ConversationsOrderBy,
     ) async throws -> [XMTPiOS.Conversation]
 
+    // swiftlint:disable:next function_parameter_count
     func listDms(
-        createdAfter: Date?,
-        createdBefore: Date?,
+        createdAfterNs: Int64?,
+        createdBeforeNs: Int64?,
+        lastActivityBeforeNs: Int64?,
+        lastActivityAfterNs: Int64?,
         limit: Int?,
-        consentStates: [ConsentState]?
+        consentStates: [ConsentState]?,
+        orderBy: ConversationsOrderBy
     ) throws -> [Dm]
 
     func stream(
@@ -45,6 +58,7 @@ public protocol ConversationsProvider {
     func findConversation(conversationId: String) async throws
     -> XMTPiOS.Conversation?
 
+    func sync() async throws
     func syncAllConversations(consentStates: [XMTPiOS.ConsentState]?) async throws -> UInt32
     func streamAllMessages(
         type: XMTPiOS.ConversationFilterType,

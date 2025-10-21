@@ -99,7 +99,6 @@ public actor InboxStateMachine {
     private let invitesRepository: any InvitesRepositoryProtocol
     private let environment: AppEnvironment
     private let syncingManager: AnySyncingManager?
-    private let inviteJoinRequestsManager: AnyInviteJoinRequestsManager?
     private let savesInboxToDatabase: Bool
     private let autoRegistersForPushNotifications: Bool
     private let databaseWriter: any DatabaseWriter
@@ -186,7 +185,6 @@ public actor InboxStateMachine {
         invitesRepository: any InvitesRepositoryProtocol,
         databaseWriter: any DatabaseWriter,
         syncingManager: AnySyncingManager?,
-        inviteJoinRequestsManager: AnyInviteJoinRequestsManager?,
         savesInboxToDatabase: Bool = true,
         autoRegistersForPushNotifications: Bool = true,
         environment: AppEnvironment
@@ -195,7 +193,6 @@ public actor InboxStateMachine {
         self.invitesRepository = invitesRepository
         self.databaseWriter = databaseWriter
         self.syncingManager = syncingManager
-        self.inviteJoinRequestsManager = inviteJoinRequestsManager
         self.savesInboxToDatabase = savesInboxToDatabase
         self.autoRegistersForPushNotifications = autoRegistersForPushNotifications
         self.environment = environment
@@ -431,7 +428,6 @@ public actor InboxStateMachine {
         Logger.info("Authorized, state machine is ready.")
 
         await syncingManager?.start(with: client, apiClient: apiClient)
-        inviteJoinRequestsManager?.start(with: client, apiClient: apiClient)
 
         if autoRegistersForPushNotifications {
             // Register device on app launch (without push token - that's OK)
@@ -460,6 +456,7 @@ public actor InboxStateMachine {
 
     private func handleDeleteFromError() async throws {
         Logger.info("Deleting inbox from error state...")
+        defer { enqueueAction(.stop) }
 
         if let inboxId {
             emitStateChange(.deleting(inboxId: inboxId))
@@ -468,7 +465,6 @@ public actor InboxStateMachine {
         }
 
         await syncingManager?.stop()
-        inviteJoinRequestsManager?.stop()
 
         // Clean up database records and keychain if we have an inbox ID
         if let inboxId {
@@ -476,15 +472,12 @@ public actor InboxStateMachine {
             try await identityStore.delete(inboxId: inboxId)
             Logger.info("Deleted inbox \(inboxId)")
         }
-
-        enqueueAction(.stop)
     }
 
     private func handleStop() async throws {
         Logger.info("Stopping inbox...")
         emitStateChange(.stopping)
         await syncingManager?.stop()
-        inviteJoinRequestsManager?.stop()
         removePushTokenObserver()
         emitStateChange(.uninitialized)
     }
@@ -493,7 +486,6 @@ public actor InboxStateMachine {
     private func performInboxCleanup(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
         // Stop all services
         await syncingManager?.stop()
-        inviteJoinRequestsManager?.stop()
 
         // Unsubscribe from inbox-level welcome topic and unregister installation from backend
         // Note: Conversation topics are handled by ConversationStateMachine.cleanUp()

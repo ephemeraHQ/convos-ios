@@ -17,7 +17,8 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", exact: "7.5.0"),
-        .package(url: "https://github.com/xmtp/xmtp-ios.git", from: "4.4.0"),
+        .package(url: "https://github.com/xmtp/xmtp-ios.git", from: "4.6.0-dev.0e073de"),
+        .package(url: "https://github.com/tesseract-one/CSecp256k1.swift.git", from: "0.2.0"),
         .package(url: "https://github.com/SimplyDanny/SwiftLintPlugins", from: "0.61.0"),
         .package(url: "https://github.com/firebase/firebase-ios-sdk", from: "12.1.0"),
         .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.31.1")
@@ -30,7 +31,8 @@ let package = Package(
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "FirebaseCore", package: "firebase-ios-sdk"),
                 .product(name: "FirebaseAppCheck", package: "firebase-ios-sdk"),
-                .product(name: "SwiftProtobuf", package: "swift-protobuf")
+                .product(name: "SwiftProtobuf", package: "swift-protobuf"),
+                .product(name: "CSecp256k1", package: "CSecp256k1.swift"),
             ],
             swiftSettings: [
                 .swiftLanguageMode(.v5),

@@ -207,6 +207,11 @@ actor UnusedInboxCache {
             return
         }
 
+        guard getUnusedInboxFromKeychain() == nil else {
+            Logger.debug("Unused inbox exists, skipping create...")
+            return
+        }
+
         isCreatingUnusedInbox = true
         defer { isCreatingUnusedInbox = false }
 
@@ -293,6 +298,27 @@ actor UnusedInboxCache {
         }
 
         Logger.info("Cleared unused inbox from keychain: \(inboxId)")
+    }
+
+    /// Clears the unused inbox from keychain
+    func clearUnusedInbox(
+        databaseWriter: any DatabaseWriter,
+        databaseReader: any DatabaseReader,
+        environment: AppEnvironment
+    ) async {
+        clearUnusedInboxFromKeychain()
+
+        // Schedule creation of a new unused inbox for next time
+        Task(priority: .background) { [weak self] in
+            guard let self else { return }
+            await createNewUnusedInbox(
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment
+            )
+        }
+
+        Logger.info("Cleared unused inbox from keychain")
     }
 
     private func clearUnusedInboxFromKeychain() {

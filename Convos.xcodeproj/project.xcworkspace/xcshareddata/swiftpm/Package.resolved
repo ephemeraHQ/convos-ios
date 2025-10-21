@@ -1,5 +1,5 @@
 {
-  "originHash" : "15b26d6dcb1a9a45b3cefff4a0e60090225be49907355ff7fbad7f00e141d64c",
+  "originHash" : "00a5323182c11f78eca80299753a89effd5bec733ed0cdb05c64178b88af83f0",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -146,15 +146,6 @@
       }
     },
     {
-      "identity" : "libxmtp-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/xmtp/libxmtp-swift.git",
-      "state" : {
-        "revision" : "6bbb0aacd82070cdef041e808402836c768e2f0e",
-        "version" : "4.4.0"
-      }
-    },
-    {
       "identity" : "nanopb",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/firebase/nanopb.git",
@@ -258,8 +249,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/xmtp/xmtp-ios.git",
       "state" : {
-        "revision" : "6b990f9ea6d9356a4df6866c68639b22f42a5aa8",
-        "version" : "4.4.0"
+        "revision" : "b5da4c470b151fc7ef9a45de70fb88b71bae31ea",
+        "version" : "4.6.1-dev.b5da4c4"
       }
     }
   ],
