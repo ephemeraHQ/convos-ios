@@ -91,17 +91,22 @@ public final class SessionManager: SessionManagerProtocol {
             .addObserver(forName: .leftConversationNotification, object: nil, queue: .main) { notification in
                 Task { [weak self] in
                     guard let self else { return }
-                    guard let inboxId: String = notification.userInfo?["inboxId"] as? String else {
+                    guard let clientId = notification.userInfo?["clientId"] as? String,
+                          let inboxId = notification.userInfo?["inboxId"] as? String else {
                         return
                     }
 
                     // Schedule explosion notification if conversationId is provided
                     if let conversationId: String = notification.userInfo?["conversationId"] as? String {
-                        await self.scheduleExplosionNotification(inboxId: inboxId, conversationId: conversationId)
+                        await self.scheduleExplosionNotification(
+                            inboxId: inboxId,
+                            clientId: clientId,
+                            conversationId: conversationId
+                        )
                     }
 
                     do {
-                        try await self.deleteInbox(inboxId: inboxId)
+                        try await self.deleteInbox(clientId: clientId)
                     } catch {
                         Logger.error("Error deleting inbox from left conversation notification: \(error.localizedDescription)")
                     }
@@ -125,11 +130,12 @@ public final class SessionManager: SessionManagerProtocol {
 
     // MARK: - Local Notification
 
-    private func scheduleExplosionNotification(inboxId: String, conversationId: String) async {
+    private func scheduleExplosionNotification(inboxId: String, clientId: String, conversationId: String) async {
         do {
             let conversation = try fetchConversationDetails(
                 conversationId: conversationId,
-                inboxId: inboxId
+                inboxId: inboxId,
+                clientId: clientId
             )
 
             let content = UNMutableNotificationContent()
@@ -176,8 +182,8 @@ public final class SessionManager: SessionManagerProtocol {
         }
     }
 
-    private func fetchConversationDetails(conversationId: String, inboxId: String) throws -> Conversation {
-        let conversationRepository = conversationRepository(for: conversationId, inboxId: inboxId)
+    private func fetchConversationDetails(conversationId: String, inboxId: String, clientId: String) throws -> Conversation {
+        let conversationRepository = conversationRepository(for: conversationId, inboxId: inboxId, clientId: clientId)
         guard let conversation = try conversationRepository.fetchConversation() else {
             throw ConversationRepositoryError.failedFetchingConversation
         }
@@ -198,61 +204,9 @@ public final class SessionManager: SessionManagerProtocol {
         return messagingService
     }
 
-    public func deleteInbox(for messagingService: AnyMessagingService) async throws {
-        let service: AnyMessagingService? = serviceQueue.sync {
-            guard let index = messagingServices.firstIndex(where: { $0 === messagingService }) else {
-                return nil
-            }
-            let service = messagingServices[index]
-            messagingServices.remove(at: index)
-            return service
-        }
-
-        guard let service = service else {
-            Logger.error("Inbox to delete for messaging service not found")
-            return
-        }
-
-        Logger.info("Stopping messaging service for inbox")
-        await service.stopAndDelete()
-    }
-
-    public func deleteInbox(inboxId: String) async throws {
-        let service: AnyMessagingService? = serviceQueue.sync {
-            guard let index = messagingServices.firstIndex(where: { $0.matches(inboxId: inboxId) }) else {
-                return nil
-            }
-            let service = messagingServices[index]
-            messagingServices.remove(at: index)
-            return service
-        }
-
-        guard let service = service else {
-            Logger.error("Messaging service not found for inbox id \(inboxId)")
-            throw SessionManagerError.inboxNotFound
-        }
-
-        Logger.info("Stopping messaging service for inbox: \(inboxId)")
-        await service.stopAndDelete()
-
-        // Delete from database
-        let inboxWriter = InboxWriter(dbWriter: databaseWriter)
-        try await inboxWriter.delete(inboxId: inboxId)
-    }
-
     public func deleteInbox(clientId: String) async throws {
-        // First, find the messaging service by looking up the inbox from the database
-        let inboxId = try await databaseReader.read { db in
-            guard let inbox = try DBInbox
-                .filter(DBInbox.Columns.clientId == clientId)
-                .fetchOne(db) else {
-                throw SessionManagerError.inboxNotFound
-            }
-            return inbox.inboxId
-        }
-
         let service: AnyMessagingService? = serviceQueue.sync {
-            guard let index = messagingServices.firstIndex(where: { $0.matches(inboxId: inboxId) }) else {
+            guard let index = messagingServices.firstIndex(where: { $0.matches(clientId: clientId) }) else {
                 return nil
             }
             let service = messagingServices[index]
@@ -265,7 +219,7 @@ public final class SessionManager: SessionManagerProtocol {
             throw SessionManagerError.inboxNotFound
         }
 
-        Logger.info("Stopping messaging service for clientId: \(clientId), inboxId: \(inboxId)")
+        Logger.info("Stopping messaging service for clientId: \(clientId)")
         await service.stopAndDelete()
 
         // Delete from database
@@ -305,32 +259,17 @@ public final class SessionManager: SessionManagerProtocol {
 
     // MARK: - Messaging Services
 
-    public func messagingService(for inboxId: String) -> AnyMessagingService {
+    public func messagingService(for clientId: String, inboxId: String) -> AnyMessagingService {
         // Check if we already have a messaging service for this inbox
         let existingService = serviceQueue.sync {
-            messagingServices.first(where: { $0.matches(inboxId: inboxId) })
+            messagingServices.first(where: { $0.matches(clientId: clientId) })
         }
 
         if let existingService = existingService {
             return existingService
         }
 
-        // Look up the inbox from database to get clientId
-        Logger.info("Starting messaging service for inbox: \(inboxId)")
-        let inboxesRepository = InboxesRepository(databaseReader: databaseReader)
-        guard let inbox = try? inboxesRepository.inbox(for: inboxId) else {
-            Logger.error("Failed to find inbox \(inboxId) in database")
-            // Return a messaging service anyway, it will fail when it tries to authorize
-            return MessagingService.authorizedMessagingService(
-                for: inboxId,
-                clientId: "unknown",  // This will fail validation in handleAuthorize
-                databaseWriter: databaseWriter,
-                databaseReader: databaseReader,
-                environment: environment,
-                startsStreamingServices: true
-            )
-        }
-
+        let inbox = Inbox(inboxId: inboxId, clientId: clientId)
         let newService = startMessagingService(for: inbox)
 
         serviceQueue.sync {
@@ -350,8 +289,8 @@ public final class SessionManager: SessionManagerProtocol {
         )
     }
 
-    public func conversationRepository(for conversationId: String, inboxId: String) -> any ConversationRepositoryProtocol {
-        let messagingService = messagingService(for: inboxId)
+    public func conversationRepository(for conversationId: String, inboxId: String, clientId: String) -> any ConversationRepositoryProtocol {
+        let messagingService = messagingService(for: clientId, inboxId: inboxId)
         return ConversationRepository(
             conversationId: conversationId,
             dbReader: databaseReader,

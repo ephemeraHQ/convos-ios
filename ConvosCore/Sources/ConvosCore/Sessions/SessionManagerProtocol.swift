@@ -5,13 +5,12 @@ public protocol SessionManagerProtocol: AnyObject {
     // MARK: Inbox Management
 
     func addInbox() async -> AnyMessagingService
-    func deleteInbox(inboxId: String) async throws
-    func deleteInbox(for messagingService: AnyMessagingService) async throws
+    func deleteInbox(clientId: String) async throws
     func deleteAllInboxes() async throws
 
     // MARK: Messaging Services
 
-    func messagingService(for inboxId: String) -> AnyMessagingService
+    func messagingService(for clientId: String, inboxId: String) -> AnyMessagingService
 
     // MARK: Factory methods for repositories
 
@@ -19,7 +18,8 @@ public protocol SessionManagerProtocol: AnyObject {
 
     func conversationRepository(
         for conversationId: String,
-        inboxId: String
+        inboxId: String,
+        clientId: String
     ) -> any ConversationRepositoryProtocol
 
     func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol

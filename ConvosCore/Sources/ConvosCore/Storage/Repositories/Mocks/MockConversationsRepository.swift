@@ -18,6 +18,7 @@ extension Conversation {
         .init(
             id: id,
             inboxId: UUID().uuidString,
+            clientId: UUID().uuidString,
             creator: creator,
             createdAt: Date(),
             consent: consent,
@@ -41,6 +42,7 @@ extension Conversation {
         .init(
             id: id,
             inboxId: "",
+            clientId: "",
             creator: .empty(isCurrentUser: true),
             createdAt: .distantFuture,
             consent: .allowed,

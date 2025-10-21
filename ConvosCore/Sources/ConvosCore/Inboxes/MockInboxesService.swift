@@ -21,7 +21,7 @@ public final class MockInboxesService: SessionManagerProtocol {
         mockMessagingService
     }
 
-    public func deleteInbox(inboxId: String) async throws {
+    public func deleteInbox(clientId: String) async throws {
     }
 
     public func deleteInbox(for messagingService: AnyMessagingService) async throws {
@@ -32,7 +32,7 @@ public final class MockInboxesService: SessionManagerProtocol {
 
     // MARK: - Messaging Services
 
-    public func messagingService(for inboxId: String) -> AnyMessagingService {
+    public func messagingService(for clientId: String, inboxId: String) -> AnyMessagingService {
         mockMessagingService
     }
 
@@ -50,7 +50,7 @@ public final class MockInboxesService: SessionManagerProtocol {
         MockInviteRepository()
     }
 
-    public func conversationRepository(for conversationId: String, inboxId: String) -> any ConversationRepositoryProtocol {
+    public func conversationRepository(for conversationId: String, inboxId: String, clientId: String) -> any ConversationRepositoryProtocol {
         MockConversationRepository()
     }
 

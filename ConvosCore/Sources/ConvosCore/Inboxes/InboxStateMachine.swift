@@ -28,7 +28,7 @@ private extension AppEnvironment {
     }
 }
 
-extension InboxStateMachine.State: Equatable {
+extension InboxStateMachine.State {
     var isReady: Bool {
         switch self {
         case .ready:
@@ -38,26 +38,17 @@ extension InboxStateMachine.State: Equatable {
         }
     }
 
-    public static func == (lhs: InboxStateMachine.State, rhs: InboxStateMachine.State) -> Bool {
-        switch (lhs, rhs) {
-        case let (.idle(lhsClientId), .idle(rhsClientId)),
-             let (.registering(lhsClientId), .registering(rhsClientId)),
-             let (.stopping(lhsClientId), .stopping(rhsClientId)):
-            return lhsClientId == rhsClientId
-        case let (.error(lhsClientId, _), .error(rhsClientId, _)):
-            return lhsClientId == rhsClientId
-        case let (.authorizing(lhsClientId, lhsInboxId), .authorizing(rhsClientId, rhsInboxId)),
-             let (.authenticatingBackend(lhsClientId, lhsInboxId), .authenticatingBackend(rhsClientId, rhsInboxId)):
-             return lhsClientId == rhsClientId && lhsInboxId == rhsInboxId
-        case let (.deleting(lhsClientId, lhsInboxId), .deleting(rhsClientId, rhsInboxId)):
-            return lhsClientId == rhsClientId && lhsInboxId == rhsInboxId
-        case let (.ready(lhsClientId, lhsResult), .ready(rhsClientId, rhsResult)):
-            return (lhsClientId == rhsClientId &&
-                    lhsResult.client.inboxId == rhsResult.client.inboxId &&
-                    lhsResult.client.installationId == rhsResult.client.installationId &&
-                    lhsResult.apiClient.identifier == rhsResult.apiClient.identifier)
-        default:
-            return false
+    var clientId: String {
+        switch self {
+        case .idle(let clientId),
+             .authorizing(let clientId, _),
+             .registering(let clientId),
+             .authenticatingBackend(let clientId, _),
+             .ready(let clientId, _),
+             .deleting(let clientId, _),
+             .stopping(let clientId),
+             .error(let clientId, _):
+            return clientId
         }
     }
 }

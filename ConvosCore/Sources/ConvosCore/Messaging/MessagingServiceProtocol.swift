@@ -15,13 +15,8 @@ extension MessagingServiceProtocol {
         }
     }
 
-    public func matches(inboxId: String) -> Bool {
-        switch state {
-        case .registering:
-            false
-        case .authorized(let messagingInboxId):
-            messagingInboxId == inboxId
-        }
+    public func matches(clientId: String) -> Bool {
+        inboxStateManager.currentState.clientId == clientId
     }
 }
 
