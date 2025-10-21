@@ -167,6 +167,7 @@ actor SyncingManager: SyncingManagerProtocol {
                 Logger.info("Starting message stream (attempt \(retryCount + 1))")
 
                 // Stream messages - the loop will exit when onClose is called and continuation.finish() happens
+                var isFirstMessage = true
                 for try await message in client.conversationsProvider.streamAllMessages(
                     type: .all,
                     consentStates: consentStates,
@@ -176,6 +177,12 @@ actor SyncingManager: SyncingManagerProtocol {
                 ) {
                     // Check cancellation
                     try Task.checkCancellation()
+
+                    // Reset retry count after first successful message (stream is healthy)
+                    if isFirstMessage {
+                        retryCount = 0
+                        isFirstMessage = false
+                    }
 
                     // Process message
                     await processMessage(message, client: client, apiClient: apiClient)
@@ -207,6 +214,7 @@ actor SyncingManager: SyncingManagerProtocol {
                 Logger.info("Starting conversation stream (attempt \(retryCount + 1))")
 
                 // Stream conversations - the loop will exit when onClose is called
+                var isFirstConversation = true
                 for try await conversation in client.conversationsProvider.stream(
                     type: .groups,
                     onClose: {
@@ -215,6 +223,12 @@ actor SyncingManager: SyncingManagerProtocol {
                 ) {
                     // Check cancellation
                     try Task.checkCancellation()
+
+                    // Reset retry count after first successful conversation (stream is healthy)
+                    if isFirstConversation {
+                        retryCount = 0
+                        isFirstConversation = false
+                    }
 
                     // Process conversation
                     await processConversation(conversation, client: client, apiClient: apiClient)
@@ -324,6 +338,8 @@ actor SyncingManager: SyncingManagerProtocol {
                 try await group.updateAddMemberPermission(newPermissionOption: .allow)
                 try await group.updateInviteTag()
             }
+
+            // clean up the previous conversation?
 
             Logger.info("Syncing conversation: \(conversation.id)")
             try await conversationWriter.storeWithLatestMessages(conversation: conversation)

@@ -460,8 +460,6 @@ public actor ConversationStateMachine {
         let text = try invite.toURLSafeSlug()
         _ = try await dm.prepare(text: text)
         try await dm.publish()
-        let consentState = try dm.consentState()
-        Logger.info("Consent state for outgoing dm: \(consentState)")
 
         // Clear unused inbox from keychain now that we sent the join request
         await UnusedInboxCache.shared
