@@ -107,19 +107,30 @@ extension MessagingService {
         client: any XMTPClientProvider,
         userInfo: [AnyHashable: Any]
     ) async throws -> DecodedNotificationContent? {
-        Logger.info("Syncing conversations from network for welcome message (DM with join request)")
+        Logger.info("Syncing conversations after receiving welcome message")
 
-        // Use the shared InviteJoinRequestsManager to handle the full flow (including adding to group)
+        // Capture timestamp first to avoid missing messages
+        let processTime = Date()
+
+        // Get last processed time
+        let lastProcessed = getLastWelcomeProcessed(for: client.inboxId)
+        if let lastProcessed {
+            Logger.info("Last processed welcome message \(lastProcessed.relativeShort()) ago...")
+        }
+
         let joinRequestsManager = InviteJoinRequestsManager(
             identityStore: identityStore,
             databaseReader: databaseReader
         )
 
         _ = try await client.conversationsProvider.syncAllConversations(consentStates: [.unknown])
-        let results = await joinRequestsManager.processJoinRequests(since: nil, client: client)
+        let results = await joinRequestsManager.processJoinRequests(since: lastProcessed, client: client)
         guard let result = results.first else {
             return .droppedMessage
         }
+
+        // Update timestamp after successful processing
+        setLastWelcomeProcessed(processTime, for: client.inboxId)
 
         return .init(
             title: result.conversationName,
@@ -247,5 +258,19 @@ extension MessagingService {
             messageWriter: messageWriter
         )
         return try await conversationWriter.storeWithLatestMessages(conversation: conversation)
+    }
+
+    // MARK: - Welcome Message Tracking
+
+    private static let lastWelcomeProcessedKeyPrefix: String = "convos.pushNotifications.lastWelcomeProcessed"
+
+    private func getLastWelcomeProcessed(for inboxId: String) -> Date? {
+        let key = "\(Self.lastWelcomeProcessedKeyPrefix).\(inboxId)"
+        return UserDefaults.standard.object(forKey: key) as? Date
+    }
+
+    private func setLastWelcomeProcessed(_ date: Date?, for inboxId: String) {
+        let key = "\(Self.lastWelcomeProcessedKeyPrefix).\(inboxId)"
+        UserDefaults.standard.set(date, forKey: key)
     }
 }
