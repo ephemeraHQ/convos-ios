@@ -28,6 +28,16 @@ actor MockKeychainIdentityStore: KeychainIdentityStoreProtocol {
         savedIdentities.removeValue(forKey: inboxId)
     }
 
+    func delete(clientId: String) throws {
+        // Find the identity with matching clientId
+        guard let identity = savedIdentities.values.first(where: { $0.clientId == clientId }) else {
+            throw KeychainIdentityStoreError.identityNotFound("No identity found with clientId: \(clientId)")
+        }
+
+        // Delete using the inboxId key
+        savedIdentities.removeValue(forKey: identity.inboxId)
+    }
+
     func deleteAll() throws {
         savedIdentities.removeAll()
     }

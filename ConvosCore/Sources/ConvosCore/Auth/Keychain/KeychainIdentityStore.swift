@@ -183,6 +183,7 @@ public protocol KeychainIdentityStoreProtocol: Actor {
     func identity(for inboxId: String) throws -> KeychainIdentity
     func loadAll() throws -> [KeychainIdentity]
     func delete(inboxId: String) throws
+    func delete(clientId: String) throws
     func deleteAll() throws
 }
 
@@ -265,6 +266,18 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
         )
 
         try deleteData(with: query)
+    }
+
+    public func delete(clientId: String) throws {
+        // Load all identities to find the one with matching clientId
+        let identities = try loadAll()
+
+        guard let identity = identities.first(where: { $0.clientId == clientId }) else {
+            throw KeychainIdentityStoreError.identityNotFound("No identity found with clientId: \(clientId)")
+        }
+
+        // Delete using the inboxId (which is the account key in keychain)
+        try delete(inboxId: identity.inboxId)
     }
 
     public func deleteAll() throws {

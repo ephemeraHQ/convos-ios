@@ -318,7 +318,8 @@ public actor InboxStateMachine {
             case (let .error(clientId, _), .delete):
                 try await handleDeleteFromError(clientId: clientId)
             case let (.ready(clientId, _), .stop),
-                let (.error(clientId, _), .stop):
+                let (.error(clientId, _), .stop),
+                let (.deleting(clientId, _), .stop):
                 try await handleStop(clientId: clientId)
 
             case (.idle, .stop), (.stopping, .stop):
@@ -476,11 +477,9 @@ public actor InboxStateMachine {
         await syncingManager?.stop()
 
         // Clean up database records and keychain if we have an inbox ID
-        if let inboxId = currentInboxId {
-            try await cleanupInboxData(inboxId: inboxId)
-            try await identityStore.delete(inboxId: inboxId)
-            Logger.info("Deleted inbox \(inboxId)")
-        }
+        try await cleanupInboxData(clientId: clientId)
+        try await identityStore.delete(clientId: clientId)
+        Logger.info("Deleted inbox with clientId \(clientId)")
     }
 
     private func handleStop(clientId: String) async throws {
@@ -534,10 +533,10 @@ public actor InboxStateMachine {
         }
 
         // Clean up all database records for this inbox
-        try await cleanupInboxData(inboxId: client.inboxId)
+        try await cleanupInboxData(clientId: clientId)
 
         // Delete identity and local database
-        try await identityStore.delete(inboxId: client.inboxId)
+        try await identityStore.delete(clientId: clientId)
         try client.deleteLocalDatabase()
 
         // Delete database files
@@ -587,17 +586,17 @@ public actor InboxStateMachine {
     }
 
     /// Deletes all database records associated with a given inboxId
-    private func cleanupInboxData(inboxId: String) async throws {
-        Logger.info("Cleaning up all data for inbox: \(inboxId)")
+    private func cleanupInboxData(clientId: String) async throws {
+        Logger.info("Cleaning up all data for inbox clientId: \(clientId)")
 
         try await databaseWriter.write { db in
             // First, fetch all conversation IDs for this inbox
             let conversationIds = try DBConversation
-                .filter(DBConversation.Columns.inboxId == inboxId)
+                .filter(DBConversation.Columns.clientId == clientId)
                 .fetchAll(db)
                 .map { $0.id }
 
-            Logger.info("Found \(conversationIds.count) conversations to clean up for inbox: \(inboxId)")
+            Logger.info("Found \(conversationIds.count) conversations to clean up for inbox clientId: \(clientId)")
 
             // Delete messages for all conversations belonging to this inbox
             for conversationId in conversationIds {
@@ -635,21 +634,26 @@ public actor InboxStateMachine {
             }
 
             // Delete the member record for this inbox
-            try Member
-                .filter(Member.Columns.inboxId == inboxId)
-                .deleteAll(db)
+            if let inboxId: String = try? DBInbox
+                .filter(DBInbox.Columns.clientId == clientId)
+                .fetchOne(db)?
+                .inboxId {
+                try Member
+                    .filter(Member.Columns.inboxId == inboxId)
+                    .deleteAll(db)
+            }
 
             // Delete all conversations for this inbox
             try DBConversation
-                .filter(DBConversation.Columns.inboxId == inboxId)
+                .filter(DBConversation.Columns.clientId == clientId)
                 .deleteAll(db)
 
             // Finally, delete the inbox record itself
             try DBInbox
-                .filter(DBInbox.Columns.inboxId == inboxId)
+                .filter(DBInbox.Columns.clientId == clientId)
                 .deleteAll(db)
 
-            Logger.info("Successfully cleaned up all data for inbox: \(inboxId)")
+            Logger.info("Successfully cleaned up all data for inbox clientId: \(clientId)")
         }
     }
 
