@@ -120,17 +120,17 @@ extension MessagingService {
             databaseReader: databaseReader
         )
 
-        guard let result = try await joinRequestsManager.syncAndProcessJoinRequests(for: conversationId, client: client) else {
-            Logger.warning("No valid join request found in DM messages after welcome message sync")
+        _ = try await client.conversationsProvider.syncAllConversations(consentStates: [.unknown])
+        guard let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) else {
             return .droppedMessage
         }
 
-        // Store all group conversations to ensure XMTP has complete group state
-        if let conversation = try await client.conversationsProvider.findConversation(conversationId: result.conversationId) {
-            try await storeConversation(conversation)
-        } else {
-            Logger.error("Conversation \(result.conversationId) not found after join")
+        guard let result = try await joinRequestsManager.processJoinRequests(for: conversation, client: client) else {
+            Logger.warning("No valid join request found for conversation after welcome message sync")
+            return .droppedMessage
         }
+
+        try await storeConversation(conversation)
 
         return .init(
             title: result.conversationName,
