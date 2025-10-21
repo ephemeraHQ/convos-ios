@@ -391,7 +391,7 @@ public actor InboxStateMachine {
             options: clientOptions(keys: keys)
         )
 
-        Logger.info("Generated clientId: \(clientId.value) for inboxId: \(client.inboxId)")
+        Logger.info("Generated clientId: \(clientId) for inboxId: \(client.inboxId)")
 
         // Save to keychain with clientId
         _ = try await identityStore.save(inboxId: client.inboxId, clientId: clientId, keys: keys)
