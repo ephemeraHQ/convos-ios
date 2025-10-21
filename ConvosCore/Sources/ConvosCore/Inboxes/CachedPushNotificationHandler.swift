@@ -71,7 +71,7 @@ public actor CachedPushNotificationHandler {
 
         // Process with timeout
         return try await withTimeout(seconds: timeout, timeoutError: NotificationProcessingError.timeout) {
-            let messagingService = await self.getOrCreateMessagingService(for: inboxId)
+            let messagingService = await self.getOrCreateMessagingService(for: inboxId, clientId: clientId)
             return try await messagingService.processPushNotification(payload: payload)
         }
     }
@@ -106,7 +106,7 @@ public actor CachedPushNotificationHandler {
 
     // MARK: - Private Methods
 
-    private func getOrCreateMessagingService(for inboxId: String) -> MessagingService {
+    private func getOrCreateMessagingService(for inboxId: String, clientId: String) -> MessagingService {
         // Update access time
         lastAccessTime[inboxId] = Date()
 
@@ -115,9 +115,10 @@ public actor CachedPushNotificationHandler {
             return existing
         }
 
-        Logger.info("Creating new messaging service for inbox: \(inboxId)")
+        Logger.info("Creating new messaging service for inbox: \(inboxId), clientId: \(clientId)")
         let messagingService = MessagingService.authorizedMessagingService(
             for: inboxId,
+            clientId: clientId,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment,

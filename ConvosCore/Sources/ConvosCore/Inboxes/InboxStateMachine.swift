@@ -40,16 +40,15 @@ extension InboxStateMachine.State: Equatable {
 
     public static func == (lhs: InboxStateMachine.State, rhs: InboxStateMachine.State) -> Bool {
         switch (lhs, rhs) {
-        case (.uninitialized, .uninitialized):
-            return true
-        case let (.registering(lhsClientId), .registering(rhsClientId)),
+        case let (.idle(lhsClientId), .idle(rhsClientId)),
+             let (.registering(lhsClientId), .registering(rhsClientId)),
              let (.stopping(lhsClientId), .stopping(rhsClientId)):
             return lhsClientId == rhsClientId
         case let (.error(lhsClientId, _), .error(rhsClientId, _)):
             return lhsClientId == rhsClientId
         case let (.authorizing(lhsClientId, lhsInboxId), .authorizing(rhsClientId, rhsInboxId)),
              let (.authenticatingBackend(lhsClientId, lhsInboxId), .authenticatingBackend(rhsClientId, rhsInboxId)):
-            return lhsClientId == rhsClientId && lhsInboxId == rhsInboxId
+             return lhsClientId == rhsClientId && lhsInboxId == rhsInboxId
         case let (.deleting(lhsClientId, lhsInboxId), .deleting(rhsClientId, rhsInboxId)):
             return lhsClientId == rhsClientId && lhsInboxId == rhsInboxId
         case let (.ready(lhsClientId, lhsResult), .ready(rhsClientId, rhsResult)):
@@ -87,7 +86,7 @@ public actor InboxStateMachine {
     }
 
     public enum State {
-        case uninitialized
+        case idle(clientId: String)
         case authorizing(clientId: String, inboxId: String)
         case registering(clientId: String)
         case authenticatingBackend(clientId: String, inboxId: String)
@@ -122,7 +121,8 @@ public actor InboxStateMachine {
     // MARK: - State Observation
 
     private var stateContinuations: [AsyncStream<State>.Continuation] = []
-    private var _state: State = .uninitialized
+    let clientId: String
+    private var _state: State
 
     var state: State {
         get async {
@@ -141,24 +141,6 @@ public actor InboxStateMachine {
             return result.client.inboxId
         default:
             return nil
-        }
-    }
-
-    var clientId: String? {
-        switch _state {
-        case .uninitialized:
-            return nil
-        case .registering(let clientId),
-             .stopping(let clientId):
-            return clientId
-        case .authorizing(let clientId, _),
-             .authenticatingBackend(let clientId, _),
-             .deleting(let clientId, _):
-            return clientId
-        case .ready(let clientId, _):
-            return clientId
-        case .error(let clientId, _):
-            return clientId
         }
     }
 
@@ -204,6 +186,7 @@ public actor InboxStateMachine {
     // MARK: - Init
 
     init(
+        clientId: String,
         identityStore: any KeychainIdentityStoreProtocol,
         invitesRepository: any InvitesRepositoryProtocol,
         databaseWriter: any DatabaseWriter,
@@ -212,6 +195,8 @@ public actor InboxStateMachine {
         autoRegistersForPushNotifications: Bool = true,
         environment: AppEnvironment
     ) {
+        self.clientId = clientId
+        self._state = .idle(clientId: clientId)
         self.identityStore = identityStore
         self.invitesRepository = invitesRepository
         self.databaseWriter = databaseWriter
@@ -312,13 +297,13 @@ public actor InboxStateMachine {
     private func processAction(_ action: Action) async {
         do {
             switch (_state, action) {
-            case (.uninitialized, .authorize(let inboxId)):
+            case (.idle, .authorize(let inboxId)):
                 try await handleAuthorize(inboxId: inboxId)
             case (.error, .authorize(let inboxId)):
                 try await handleStop()
                 try await handleAuthorize(inboxId: inboxId)
 
-            case (.uninitialized, .register):
+            case (.idle, .register):
                 try await handleRegister()
             case (.error, .register):
                 try await handleStop()
@@ -343,7 +328,7 @@ public actor InboxStateMachine {
             case (.ready, .stop), (.error, .stop), (.deleting, .stop):
                 try await handleStop()
 
-            case (.uninitialized, .stop), (.stopping, .stop):
+            case (.idle, .stop), (.stopping, .stop):
                 break
 
             default:
@@ -353,24 +338,21 @@ public actor InboxStateMachine {
             Logger.error(
                 "Failed state transition \(_state) -> \(action): \(error.localizedDescription)"
             )
-            // Use current clientId if available, otherwise this will crash
-            // In practice, errors should only happen after we have a clientId
-            if let clientId = clientId {
-                emitStateChange(.error(clientId: clientId, error: error))
-            } else {
-                // Fallback for errors during very early initialization
-                Logger.error("Error occurred before clientId was available, transitioning to uninitialized")
-                emitStateChange(.uninitialized)
-            }
+            // We always have a clientId now
+            emitStateChange(.error(clientId: clientId, error: error))
         }
     }
 
     private func handleAuthorize(inboxId: String) async throws {
-        let identity = try await identityStore.identity(for: inboxId)
-        let clientId = identity.clientId
-
         emitStateChange(.authorizing(clientId: clientId, inboxId: inboxId))
         Logger.info("Started authorization flow for inbox: \(inboxId), clientId: \(clientId)")
+
+        let identity = try await identityStore.identity(for: inboxId)
+
+        // Verify clientId matches
+        guard identity.clientId == clientId else {
+            throw KeychainIdentityStoreError.identityNotFound("ClientId mismatch: expected \(clientId), got \(identity.clientId)")
+        }
 
         let keys = identity.clientKeys
         let clientOptions = clientOptions(keys: keys)
@@ -496,12 +478,7 @@ public actor InboxStateMachine {
 
         let currentInboxId = inboxId
 
-        if let inboxId = currentInboxId {
-            emitStateChange(.deleting(clientId: clientId, inboxId: inboxId))
-        } else {
-            // No clientId available, go back to uninitialized
-            emitStateChange(.uninitialized)
-        }
+        emitStateChange(.deleting(clientId: clientId, inboxId: currentInboxId))
 
         await syncingManager?.stop()
 
@@ -515,16 +492,10 @@ public actor InboxStateMachine {
 
     private func handleStop() async throws {
         Logger.info("Stopping inbox...")
-        let currentClientId = clientId
-        if let clientId = currentClientId {
-            emitStateChange(.stopping(clientId: clientId))
-        } else {
-            // If no clientId, we're already basically uninitialized
-            emitStateChange(.uninitialized)
-        }
+        emitStateChange(.stopping(clientId: clientId))
         await syncingManager?.stop()
         removePushTokenObserver()
-        emitStateChange(.uninitialized)
+        emitStateChange(.idle(clientId: clientId))
     }
 
     /// Performs common cleanup operations when deleting an inbox

@@ -34,13 +34,17 @@ actor UnusedInboxCache {
         // Check if we have an unused inbox ID in keychain
         if let unusedInboxId = getUnusedInboxFromKeychain() {
             Logger.info("Found unused inbox ID in keychain: \(unusedInboxId)")
-            await authorizeUnusedInbox(
-                inboxId: unusedInboxId,
-                databaseWriter: databaseWriter,
-                databaseReader: databaseReader,
-                environment: environment
-            )
-            return
+            do {
+                try await authorizeUnusedInbox(
+                    inboxId: unusedInboxId,
+                    databaseWriter: databaseWriter,
+                    databaseReader: databaseReader,
+                    environment: environment
+                )
+                return
+            } catch {
+                Logger.error("Failed authorizing unused inbox: \(error.localizedDescription)")
+            }
         }
 
         // No unused inbox exists, create a new one
@@ -91,21 +95,30 @@ actor UnusedInboxCache {
             // Note: The authorize flow in InboxStateMachine.handleAuthorize() will
             // automatically save this inbox to the database
             let identityStore = environment.defaultIdentityStore
-            let authorizationOperation = AuthorizeInboxOperation.authorize(
-                inboxId: unusedInboxId,
-                identityStore: identityStore,
-                databaseReader: databaseReader,
-                databaseWriter: databaseWriter,
-                environment: environment,
-                startsStreamingServices: true
-            )
-            return MessagingService(
-                authorizationOperation: authorizationOperation,
-                databaseWriter: databaseWriter,
-                databaseReader: databaseReader,
-                identityStore: identityStore,
-                environment: environment
-            )
+
+            // Look up clientId from keychain
+            do {
+                let identity = try await identityStore.identity(for: unusedInboxId)
+                let authorizationOperation = AuthorizeInboxOperation.authorize(
+                    inboxId: unusedInboxId,
+                    clientId: identity.clientId,
+                    identityStore: identityStore,
+                    databaseReader: databaseReader,
+                    databaseWriter: databaseWriter,
+                    environment: environment,
+                    startsStreamingServices: true
+                )
+                return MessagingService(
+                    authorizationOperation: authorizationOperation,
+                    databaseWriter: databaseWriter,
+                    databaseReader: databaseReader,
+                    identityStore: identityStore,
+                    environment: environment
+                )
+            } catch {
+                Logger.error("Failed to look up identity for unused inbox: \(error)")
+                // Fall through to create new one
+            }
         }
 
         // No unused inbox available, create a new one
@@ -146,10 +159,14 @@ actor UnusedInboxCache {
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
         environment: AppEnvironment
-    ) async {
+    ) async throws {
         let identityStore = environment.defaultIdentityStore
+
+        // Look up clientId from keychain
+        let identity = try await identityStore.identity(for: inboxId)
         let authorizationOperation = AuthorizeInboxOperation.authorize(
             inboxId: inboxId,
+            clientId: identity.clientId,
             identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,

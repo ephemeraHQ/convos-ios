@@ -91,7 +91,7 @@ public class MockMessagingService: MessagingServiceProtocol {
 
 extension MockMessagingService: InboxStateManagerProtocol {
     public var currentState: InboxStateMachine.State {
-        .uninitialized
+        .idle(clientId: "mock-messaging-service")
     }
 
     public func waitForInboxReadyResult() async throws -> InboxReadyResult {

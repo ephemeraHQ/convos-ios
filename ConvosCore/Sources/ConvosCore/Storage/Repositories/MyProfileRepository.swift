@@ -80,7 +80,7 @@ class MyProfileRepository: MyProfileRepositoryProtocol {
         case .ready(_, let result):
             let inboxId = result.client.inboxId
             startObservingProfile(for: inboxId, conversationId: conversationId)
-        case .uninitialized, .stopping:
+        case .idle, .stopping:
             profileSubject.send(nil)
         default:
             break

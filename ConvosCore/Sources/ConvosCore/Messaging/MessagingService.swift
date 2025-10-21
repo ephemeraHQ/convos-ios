@@ -14,6 +14,7 @@ final class MessagingService: MessagingServiceProtocol {
 
     static func authorizedMessagingService(
         for inboxId: String,
+        clientId: String,
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
         environment: AppEnvironment,
@@ -23,6 +24,7 @@ final class MessagingService: MessagingServiceProtocol {
         let identityStore = environment.defaultIdentityStore
         let authorizationOperation = AuthorizeInboxOperation.authorize(
             inboxId: inboxId,
+            clientId: clientId,
             identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,

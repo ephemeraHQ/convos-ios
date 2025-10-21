@@ -20,7 +20,7 @@ public protocol InboxStateManagerProtocol: AnyObject {
 
 @Observable
 public final class InboxStateManager: InboxStateManagerProtocol {
-    public private(set) var currentState: InboxStateMachine.State = .uninitialized
+    public private(set) var currentState: InboxStateMachine.State
     public private(set) var isReady: Bool = false
     public private(set) var hasError: Bool = false
     public private(set) var errorMessage: String?
@@ -34,6 +34,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
     }
 
     public init(stateMachine: InboxStateMachine) {
+        currentState = .idle(clientId: stateMachine.clientId)
         observe(stateMachine)
     }
 
@@ -132,7 +133,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
             await stateMachine.stop()
             // Wait for the stop to complete (state should transition away from ready)
             for await state in await stateMachine.stateSequence {
-                if case .uninitialized = state {
+                if case .idle = state {
                     break
                 }
             }

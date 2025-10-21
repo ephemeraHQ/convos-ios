@@ -69,15 +69,16 @@ public final class SessionManager: SessionManagerProtocol {
     private func startMessagingServices(for inboxes: [Inbox]) {
         let inboxIds = inboxes.map { $0.inboxId }
         Logger.info("Starting messaging services for inboxes: \(inboxIds)")
-        let services = inboxes.map { startMessagingService(for: $0.inboxId) }
+        let services = inboxes.map { startMessagingService(for: $0) }
         serviceQueue.sync {
             messagingServices.append(contentsOf: services)
         }
     }
 
-    private func startMessagingService(for inboxId: String) -> AnyMessagingService {
+    private func startMessagingService(for inbox: Inbox) -> AnyMessagingService {
         MessagingService.authorizedMessagingService(
-            for: inboxId,
+            for: inbox.inboxId,
+            clientId: inbox.clientId,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment,
@@ -314,9 +315,23 @@ public final class SessionManager: SessionManagerProtocol {
             return existingService
         }
 
-        // Start a new messaging service for this inbox
+        // Look up the inbox from database to get clientId
         Logger.info("Starting messaging service for inbox: \(inboxId)")
-        let newService = startMessagingService(for: inboxId)
+        let inboxesRepository = InboxesRepository(databaseReader: databaseReader)
+        guard let inbox = try? inboxesRepository.inbox(for: inboxId) else {
+            Logger.error("Failed to find inbox \(inboxId) in database")
+            // Return a messaging service anyway, it will fail when it tries to authorize
+            return MessagingService.authorizedMessagingService(
+                for: inboxId,
+                clientId: "unknown",  // This will fail validation in handleAuthorize
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment,
+                startsStreamingServices: true
+            )
+        }
+
+        let newService = startMessagingService(for: inbox)
 
         serviceQueue.sync {
             messagingServices.append(newService)

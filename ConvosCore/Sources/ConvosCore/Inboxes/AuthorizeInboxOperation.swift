@@ -24,8 +24,10 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     private var cancellables: Set<AnyCancellable> = []
     private var task: Task<Void, Never>?
 
+    // swiftlint:disable:next function_parameter_count
     static func authorize(
         inboxId: String,
+        clientId: String,
         identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
@@ -34,6 +36,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         autoRegistersForPushNotifications: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
+            clientId: clientId,
             identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
@@ -52,7 +55,10 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         environment: AppEnvironment,
         savesInboxToDatabase: Bool = true
     ) -> AuthorizeInboxOperation {
+        // Generate clientId before creating state machine
+        let clientId = ClientId.generate().value
         let operation = AuthorizeInboxOperation(
+            clientId: clientId,
             identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
@@ -65,6 +71,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     }
 
     private init(
+        clientId: String,
         identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
@@ -80,6 +87,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         ) : nil
         let invitesRepository = InvitesRepository(databaseReader: databaseReader)
         stateMachine = InboxStateMachine(
+            clientId: clientId,
             identityStore: identityStore,
             invitesRepository: invitesRepository,
             databaseWriter: databaseWriter,
