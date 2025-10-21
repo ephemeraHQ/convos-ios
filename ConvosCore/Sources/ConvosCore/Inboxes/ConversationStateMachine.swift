@@ -365,7 +365,25 @@ public actor ConversationStateMachine {
                 .hydrateConversation()
         }
 
-        if let existingConversation {
+        let existingIdentity: KeychainIdentity?
+        if let existingConversation, let identity = try? await identityStore.identity(for: existingConversation.inboxId) {
+            existingIdentity = identity
+        } else {
+            existingIdentity = nil
+        }
+
+        // In case cleanup failed while deleting an inbox/conversation
+        if existingConversation != nil,
+           existingIdentity == nil {
+            Logger.warning("Found existing conversation for identity that does not exist, deleting...")
+            _ = try await databaseWriter.write { db in
+                try DBConversation
+                    .filter(DBConversation.Columns.inviteTag == signedInvite.payload.tag)
+                    .deleteAll(db)
+            }
+        }
+
+        if let existingConversation, existingIdentity != nil {
             Logger.info("Found existing convo by invite tag...")
             let prevInboxReady = try await inboxStateManager.waitForInboxReadyResult()
             // Clear unused inbox since we're deleting it
