@@ -277,6 +277,9 @@ class MockConversations: ConversationsProvider {
         0
     }
 
+    func sync() async throws {
+    }
+
     func findConversation(conversationId: String) async throws -> XMTPiOS.Conversation? {
         nil
     }

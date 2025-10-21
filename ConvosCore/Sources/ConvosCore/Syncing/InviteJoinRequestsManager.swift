@@ -106,6 +106,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         let dbMessage = try message.dbRepresentation()
         guard let text = dbMessage.text else {
             Logger.info("Message has no text content, not a join request")
+            // @jarodl we should probably block the DM here too
             throw InviteJoinRequestError.missingTextContent
         }
 
@@ -130,7 +131,8 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
         let creatorInboxId = signedInvite.payload.creatorInboxID
         guard creatorInboxId == client.inboxId else {
-            Logger.error("Received join request for invite not created by this inbox")
+            Logger.error("Received join request for invite not created by this inbox - blocking DM")
+            await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
             throw InviteJoinRequestError.invalidSignature
         }
         let identity = try await identityStore.identity(for: creatorInboxId)
@@ -199,6 +201,8 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
     }
 
     func hasOutgoingJoinRequest(for conversation: XMTPiOS.Conversation, client: AnyClientProvider) async throws -> Bool {
+        guard case .group = conversation else { return false }
+
         let inviteTag = try conversation.inviteTag
 
         // List all DMs
@@ -239,7 +243,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
             // List all DMs with consent states .unknown
             let dms = try client.conversationsProvider.listDms(
-                createdAfterNs: nil,
+                createdAfterNs: since?.nanosecondsSince1970,
                 createdBeforeNs: nil,
                 lastActivityBeforeNs: nil,
                 lastActivityAfterNs: nil,
@@ -308,6 +312,9 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                 message: message,
                 client: client
             ) {
+                // update the consent state so we don't process this dm again
+                // NOTE: this will have to change if we start supporting 1+ convos per inbox
+                try await dm.updateConsentState(state: .allowed)
                 return result
             }
         }

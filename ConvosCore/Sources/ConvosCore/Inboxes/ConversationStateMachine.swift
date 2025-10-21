@@ -470,7 +470,10 @@ public actor ConversationStateMachine {
                 environment: environment
             )
 
-        // Clean up previous conversation if it exists and is different
+        // Clean up previous conversation, do this without matching the `conversationId`.
+        // We don't need the created conversation during the 'joining' state and
+        // want to make sure it is deleted even if the conversation never shows in
+        // `streamConversationsTask`
         await self.cleanUpPreviousConversationIfNeeded(
             previousResult: previousReadyResult,
             newConversationId: nil,
@@ -491,6 +494,10 @@ public actor ConversationStateMachine {
                         return tag == invite.payload.tag
                     }) {
                     guard !Task.isCancelled else { return }
+
+                    // This stream just waits for the conversation to show up
+                    // Writing the conversation to the database and invite creation
+                    // happens in `SyncingManager`
 
                     // Transition directly to ready state
                     await self.emitStateChange(.ready(ConversationReadyResult(

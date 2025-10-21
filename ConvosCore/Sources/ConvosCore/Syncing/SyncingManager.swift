@@ -75,13 +75,12 @@ actor SyncingManager: SyncingManagerProtocol {
             setupNotificationObservers()
         }
 
-        // If already syncing, just cancel and restart
-        // This prevents race conditions with multiple rapid start() calls
-        if isSyncing {
-            Logger.info("Sync already in progress, restarting...")
+        guard !isSyncing else {
+            Logger.info("Sync already in progress, ignoring redundant start() call")
+            return
         }
 
-        // Cancel existing sync
+        // Cancel any existing sync task
         syncTask?.cancel()
         syncTask = Task { [weak self] in
             guard let self else { return }
@@ -96,7 +95,10 @@ actor SyncingManager: SyncingManagerProtocol {
                 }
             }
 
-            // Save the sync start time
+            // Capture sync start time first
+            let syncStartTime = Date()
+
+            // Get the last sync time for logging and join requests
             let lastSyncedAt = await self.getLastSyncedAt(for: client.inboxId)
             if let lastSyncedAt {
                 Logger.info("Starting, last synced \(lastSyncedAt.relativeShort()) ago...")
@@ -105,10 +107,9 @@ actor SyncingManager: SyncingManagerProtocol {
             }
 
             // Perform the initial sync
-            let syncStartTime = Date()
-
             do {
-                _ = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
+                let count = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
+                Logger.info("syncAllConversations returned count: \(count)")
                 // Only update timestamp after successful sync
                 await self.setLastSyncedAt(syncStartTime, for: client.inboxId)
             } catch {
@@ -116,6 +117,8 @@ actor SyncingManager: SyncingManagerProtocol {
                 // Don't update timestamp on failure - keep the old one
             }
 
+            // @jarodl we won't need this once the issue with messages in the streams not re-playing
+            // is fixed
             _ = await joinRequestsManager.processJoinRequests(since: lastSyncedAt, client: client)
 
             await withTaskGroup(of: Void.self) { group in
@@ -259,11 +262,14 @@ actor SyncingManager: SyncingManagerProtocol {
         _ conversation: XMTPiOS.Conversation,
         client: AnyClientProvider
     ) async throws -> Bool {
-        guard try await conversation.creatorInboxId != client.inboxId else {
+        var consentState = try conversation.consentState()
+        guard consentState != .allowed else {
             return true
         }
 
-        var consentState = try conversation.consentState()
+        guard try await conversation.creatorInboxId != client.inboxId else {
+            return true
+        }
 
         if consentState == .unknown {
             let hasOutgoingJoinRequest = try await joinRequestsManager.hasOutgoingJoinRequest(
@@ -301,7 +307,10 @@ actor SyncingManager: SyncingManagerProtocol {
                     client: client
                 )
             case .group:
-                guard try await shouldProcessConversation(conversation, client: client) else { return }
+                guard try await shouldProcessConversation(conversation, client: client) else {
+                    Logger.warning("Received invalid group message, skipping...")
+                    return
+                }
 
                 // Store conversation and message
                 let dbConversation = try await conversationWriter.store(conversation: conversation)

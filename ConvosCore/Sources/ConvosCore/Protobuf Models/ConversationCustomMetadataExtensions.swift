@@ -63,6 +63,7 @@ extension XMTPiOS.Group {
     // is the one that corresponds to the invite they are requesting to join
     public func updateInviteTag() async throws {
         var customMetadata = try currentCustomMetadata
+        guard customMetadata.tag.isEmpty else { return }
         customMetadata.tag = try generateSecureRandomString(length: 10)
         try await updateDescription(description: customMetadata.toCompactString())
     }

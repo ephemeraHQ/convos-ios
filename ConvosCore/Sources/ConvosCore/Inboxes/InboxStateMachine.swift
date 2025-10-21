@@ -456,6 +456,7 @@ public actor InboxStateMachine {
 
     private func handleDeleteFromError() async throws {
         Logger.info("Deleting inbox from error state...")
+        defer { enqueueAction(.stop) }
 
         if let inboxId {
             emitStateChange(.deleting(inboxId: inboxId))
@@ -471,8 +472,6 @@ public actor InboxStateMachine {
             try await identityStore.delete(inboxId: inboxId)
             Logger.info("Deleted inbox \(inboxId)")
         }
-
-        enqueueAction(.stop)
     }
 
     private func handleStop() async throws {
