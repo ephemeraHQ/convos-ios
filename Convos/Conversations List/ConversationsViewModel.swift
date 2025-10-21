@@ -230,6 +230,10 @@ final class ConversationsViewModel {
     }
 
     func leave(conversation: Conversation) {
+        if let index = conversations.firstIndex(of: conversation) {
+            conversations.remove(at: index)
+        }
+
         if selectedConversation == conversation {
             selectedConversation = nil
         }

@@ -67,8 +67,8 @@ typealias AnyInviteJoinRequestsManager = (any InviteJoinRequestsManagerProtocol)
 
 public actor InboxStateMachine {
     enum Action {
-        case authorize(inboxId: String),
-             register,
+        case authorize(inboxId: String, clientId: String),
+             register(clientId: String),
              clientAuthorized(clientId: String, client: any XMTPClientProvider),
              clientRegistered(clientId: String, client: any XMTPClientProvider),
              authorized(clientId: String, result: InboxReadyResult),
@@ -112,7 +112,7 @@ public actor InboxStateMachine {
     // MARK: - State Observation
 
     private var stateContinuations: [AsyncStream<State>.Continuation] = []
-    let clientId: String
+    let initialClientId: String
     private var _state: State
 
     var state: State {
@@ -186,7 +186,7 @@ public actor InboxStateMachine {
         autoRegistersForPushNotifications: Bool = true,
         environment: AppEnvironment
     ) {
-        self.clientId = clientId
+        self.initialClientId = clientId
         self._state = .idle(clientId: clientId)
         self.identityStore = identityStore
         self.invitesRepository = invitesRepository
@@ -215,12 +215,13 @@ public actor InboxStateMachine {
 
     // MARK: - Public
 
-    func authorize(inboxId: String) {
-        enqueueAction(.authorize(inboxId: inboxId))
+    func authorize(inboxId: String, clientId: String) {
+        enqueueAction(.authorize(inboxId: inboxId, clientId: clientId))
     }
 
     func register() {
-        enqueueAction(.register)
+        let clientId = ClientId.generate()
+        enqueueAction(.register(clientId: clientId.value))
     }
 
     func stop() {
@@ -288,17 +289,17 @@ public actor InboxStateMachine {
     private func processAction(_ action: Action) async {
         do {
             switch (_state, action) {
-            case (.idle, .authorize(let inboxId)):
-                try await handleAuthorize(inboxId: inboxId)
-            case (.error, .authorize(let inboxId)):
-                try await handleStop()
-                try await handleAuthorize(inboxId: inboxId)
+            case let (.idle, .authorize(inboxId, clientId)):
+                try await handleAuthorize(inboxId: inboxId, clientId: clientId)
+            case let (.error(erroredClientId, _), .authorize(inboxId, clientId)):
+                try await handleStop(clientId: erroredClientId)
+                try await handleAuthorize(inboxId: inboxId, clientId: clientId)
 
-            case (.idle, .register):
-                try await handleRegister()
-            case (.error, .register):
-                try await handleStop()
-                try await handleRegister()
+            case (.idle, let .register(clientId)):
+                try await handleRegister(clientId: clientId)
+            case let (.error(erroredClientId, _), .register(clientId)):
+                try await handleStop(clientId: erroredClientId)
+                try await handleRegister(clientId: clientId)
 
             case (.authorizing, let .clientAuthorized(clientId, client)):
                 try await handleClientAuthorized(clientId: clientId, client: client)
@@ -316,8 +317,9 @@ public actor InboxStateMachine {
                 try await handleDelete(clientId: clientId, client: result.client, apiClient: result.apiClient)
             case (let .error(clientId, _), .delete):
                 try await handleDeleteFromError(clientId: clientId)
-            case (.ready, .stop), (.error, .stop), (.deleting, .stop):
-                try await handleStop()
+            case let (.ready(clientId, _), .stop),
+                let (.error(clientId, _), .stop):
+                try await handleStop(clientId: clientId)
 
             case (.idle, .stop), (.stopping, .stop):
                 break
@@ -330,11 +332,11 @@ public actor InboxStateMachine {
                 "Failed state transition \(_state) -> \(action): \(error.localizedDescription)"
             )
             // We always have a clientId now
-            emitStateChange(.error(clientId: clientId, error: error))
+            emitStateChange(.error(clientId: _state.clientId, error: error))
         }
     }
 
-    private func handleAuthorize(inboxId: String) async throws {
+    private func handleAuthorize(inboxId: String, clientId: String) async throws {
         emitStateChange(.authorizing(clientId: clientId, inboxId: inboxId))
         Logger.info("Started authorization flow for inbox: \(inboxId), clientId: \(clientId)")
 
@@ -378,7 +380,7 @@ public actor InboxStateMachine {
         enqueueAction(.clientAuthorized(clientId: clientId, client: client))
     }
 
-    private func handleRegister() async throws {
+    private func handleRegister(clientId: String) async throws {
         // Generate a clientId for privacy first
         let clientId = ClientId.generate()
 
@@ -481,7 +483,7 @@ public actor InboxStateMachine {
         }
     }
 
-    private func handleStop() async throws {
+    private func handleStop(clientId: String) async throws {
         Logger.info("Stopping inbox...")
         emitStateChange(.stopping(clientId: clientId))
         await syncingManager?.stop()

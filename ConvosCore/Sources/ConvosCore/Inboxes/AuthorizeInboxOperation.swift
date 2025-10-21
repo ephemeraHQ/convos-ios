@@ -44,7 +44,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             startsStreamingServices: startsStreamingServices,
             autoRegistersForPushNotifications: autoRegistersForPushNotifications
         )
-        operation.authorize(inboxId: inboxId)
+        operation.authorize(inboxId: inboxId, clientId: clientId)
         return operation
     }
 
@@ -103,11 +103,11 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         task = nil
     }
 
-    private func authorize(inboxId: String) {
+    private func authorize(inboxId: String, clientId: String) {
         task?.cancel()
         task = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
-            await stateMachine.authorize(inboxId: inboxId)
+            await stateMachine.authorize(inboxId: inboxId, clientId: clientId)
         }
     }
 

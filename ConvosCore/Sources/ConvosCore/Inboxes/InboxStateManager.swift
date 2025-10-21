@@ -9,7 +9,7 @@ public protocol InboxStateManagerProtocol: AnyObject {
     var currentState: InboxStateMachine.State { get }
 
     func waitForInboxReadyResult() async throws -> InboxReadyResult
-    func reauthorize(inboxId: String) async throws -> InboxReadyResult
+    func reauthorize(inboxId: String, clientId: String) async throws -> InboxReadyResult
     func delete() async throws
 
     func addObserver(_ observer: InboxStateObserver)
@@ -34,7 +34,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
     }
 
     public init(stateMachine: InboxStateMachine) {
-        currentState = .idle(clientId: stateMachine.clientId)
+        currentState = .idle(clientId: stateMachine.initialClientId)
         observe(stateMachine)
     }
 
@@ -115,7 +115,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         await stateMachine.stopAndDelete()
     }
 
-    public func reauthorize(inboxId: String) async throws -> InboxReadyResult {
+    public func reauthorize(inboxId: String, clientId: String) async throws -> InboxReadyResult {
         guard let stateMachine = stateMachine else {
             throw InboxStateError.inboxNotReady
         }
@@ -140,7 +140,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         }
 
         // Authorize with the new inbox
-        await stateMachine.authorize(inboxId: inboxId)
+        await stateMachine.authorize(inboxId: inboxId, clientId: clientId)
 
         // Wait for ready state with the new inboxId
         for await state in await stateMachine.stateSequence {
@@ -201,37 +201,5 @@ public final class StateObserverHandle {
 
     deinit {
         cancel()
-    }
-}
-
-@MainActor
-open class InboxAwareComponent {
-    private var observerHandle: StateObserverHandle?
-    private let stateManager: InboxStateManager
-    var state: InboxStateMachine.State?
-
-    public init(stateManager: InboxStateManager) {
-        self.stateManager = stateManager
-        observerHandle = stateManager.observeState { state in
-            self.state = state
-        }
-    }
-
-    deinit {
-        observerHandle?.cancel()
-    }
-
-    open func inboxStateDidChange(_ state: InboxStateMachine.State) {}
-
-    public var isInboxReady: Bool {
-        stateManager.isReady
-    }
-
-    public var currentInboxState: InboxStateMachine.State {
-        stateManager.currentState
-    }
-
-    public func waitForInboxReadyResult() async throws -> InboxReadyResult {
-        try await stateManager.waitForInboxReadyResult()
     }
 }
