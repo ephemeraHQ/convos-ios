@@ -382,11 +382,8 @@ public actor InboxStateMachine {
     }
 
     private func handleRegister(clientId: String) async throws {
-        // Generate a clientId for privacy first
-        let clientId = ClientId.generate()
-
-        emitStateChange(.registering(clientId: clientId.value))
-        Logger.info("Started registration flow with clientId: \(clientId.value)")
+        emitStateChange(.registering(clientId: clientId))
+        Logger.info("Started registration flow with clientId: \(clientId)")
 
         let keys = try await identityStore.generateKeys()
         let client = try await createXmtpClient(
@@ -397,14 +394,14 @@ public actor InboxStateMachine {
         Logger.info("Generated clientId: \(clientId.value) for inboxId: \(client.inboxId)")
 
         // Save to keychain with clientId
-        _ = try await identityStore.save(inboxId: client.inboxId, clientId: clientId.value, keys: keys)
+        _ = try await identityStore.save(inboxId: client.inboxId, clientId: clientId, keys: keys)
 
         // Conditionally save to database based on configuration
         if savesInboxToDatabase {
             do {
                 let inboxWriter = InboxWriter(dbWriter: databaseWriter)
-                try await inboxWriter.save(inboxId: client.inboxId, clientId: clientId.value)
-                Logger.info("Saved inbox to database with clientId: \(clientId.value)")
+                try await inboxWriter.save(inboxId: client.inboxId, clientId: clientId)
+                Logger.info("Saved inbox to database with clientId: \(clientId)")
             } catch {
                 // Rollback keychain entry on database failure to maintain consistency
                 Logger.error("Failed to save inbox to database, rolling back keychain: \(error)")
@@ -415,7 +412,7 @@ public actor InboxStateMachine {
             Logger.info("Skipping database save for inbox: \(client.inboxId) (unused inbox)")
         }
 
-        enqueueAction(.clientRegistered(clientId: clientId.value, client: client))
+        enqueueAction(.clientRegistered(clientId: clientId, client: client))
     }
 
     private func handleClientAuthorized(clientId: String, client: any XMTPClientProvider) async throws {
