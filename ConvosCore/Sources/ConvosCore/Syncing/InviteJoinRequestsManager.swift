@@ -215,36 +215,13 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         Logger.info("Found \(dms.count) possible DMs containing outgoing join requests")
 
         for dm in dms {
-            do {
-                let messages = try await dm.messages(afterNs: nil)
-                    .filter { message in
-                        // Filter by outgoing text content messages
-                        guard let encodedContentType = try? message.encodedContent.type else {
-                            return false
-                        }
+            guard let invite = await dm.lastMessageAsSignedInvite(sentBy: client.inboxId) else {
+                continue
+            }
 
-                        switch encodedContentType {
-                        case ContentTypeText:
-                            return message.senderInboxId == client.inboxId
-                        default:
-                            return false
-                        }
-                    }
-                Logger.info("Found \(messages.count) outgoing messages as possible join requests")
-
-                let invites: [SignedInvite] = messages.compactMap { message in
-                    guard let text: String = try? message.content() else {
-                        return nil
-                    }
-                    return try? SignedInvite.fromURLSafeSlug(text)
-                }
-
-                // return true if we've sent an outgoing join request for this conversation
-                if invites.contains(where: { $0.payload.tag == inviteTag }) {
-                    return true
-                }
-            } catch {
-                Logger.error("Error processing messages as join requests: \(error.localizedDescription)")
+            // Check if this invite matches our target conversation
+            if invite.payload.tag == inviteTag {
+                return true
             }
         }
 
@@ -265,7 +242,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                 createdAfterNs: nil,
                 createdBeforeNs: nil,
                 lastActivityBeforeNs: nil,
-                lastActivityAfterNs: since?.nanosecondsSince1970,
+                lastActivityAfterNs: nil,
                 limit: nil,
                 consentStates: [.unknown],
                 orderBy: .lastActivity
@@ -355,5 +332,37 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         } catch {
             Logger.error("Failed to set consent state to .denied for DM with \(senderInboxId): \(error)")
         }
+    }
+}
+
+// MARK: - Extensions
+
+extension XMTPiOS.Dm {
+    /// Returns the last message as a SignedInvite if it exists and is valid
+    /// - Parameter clientInboxId: The inbox ID of the current client (to verify sender)
+    /// - Returns: A SignedInvite if the last message is a valid text invite, nil otherwise
+    func lastMessageAsSignedInvite(sentBy clientInboxId: String) async -> SignedInvite? {
+        guard let lastMessage = try? await self.lastMessage() else {
+            return nil
+        }
+
+        // Only check messages sent by us
+        guard lastMessage.senderInboxId == clientInboxId else {
+            return nil
+        }
+
+        // Only check text messages
+        guard let encodedContentType = try? lastMessage.encodedContent.type,
+              encodedContentType == ContentTypeText else {
+            return nil
+        }
+
+        // Try to parse as text and then as SignedInvite
+        guard let text: String = try? lastMessage.content(),
+              let invite = try? SignedInvite.fromURLSafeSlug(text) else {
+            return nil
+        }
+
+        return invite
     }
 }
