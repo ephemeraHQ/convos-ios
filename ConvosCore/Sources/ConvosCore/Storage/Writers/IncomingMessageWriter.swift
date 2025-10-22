@@ -38,11 +38,7 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
             let wasRemovedFromConversation = message.update?.removedInboxIds.contains(conversation.inboxId) ?? false
             guard !wasRemovedFromConversation else {
                 Logger.info("Removed from conversation, skipping message store and deleting conversation...")
-                NotificationCenter.default.post(
-                    name: .leftConversationNotification,
-                    object: nil,
-                    userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
-                )
+                conversation.postLeftConversationNotification()
                 return result
             }
 

@@ -456,10 +456,10 @@ public actor InboxStateMachine {
         let inboxId = client.inboxId
         emitStateChange(.deleting(clientId: clientId, inboxId: inboxId))
 
+        defer { enqueueAction(.stop) }
+
         // Perform common cleanup operations
         try await performInboxCleanup(clientId: clientId, client: client, apiClient: apiClient)
-
-        enqueueAction(.stop)
     }
 
     private func handleDeleteFromError(clientId: String) async throws {

@@ -49,4 +49,17 @@ public extension Conversation {
         let totalCount = members.count
         return "\(totalCount) \(totalCount == 1 ? "member" : "members")"
     }
+
+    /// Posts a notification that the current user has left this conversation.
+    func postLeftConversationNotification() {
+        NotificationCenter.default.post(
+            name: .leftConversationNotification,
+            object: nil,
+            userInfo: [
+                "clientId": clientId,
+                "inboxId": inboxId,
+                "conversationId": id
+            ]
+        )
+    }
 }
