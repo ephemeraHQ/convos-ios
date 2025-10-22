@@ -121,8 +121,9 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         }
 
         // Check if we're already authorized with this inbox
-        if case .ready(_, let result) = currentState, result.client.inboxId == inboxId {
-            Logger.info("Already authorized with inbox \(inboxId), skipping reauthorization")
+        if case .ready(let currentClientId, let result) = currentState,
+           result.client.inboxId == inboxId && currentClientId == clientId {
+            Logger.info("Already authorized with inbox \(inboxId) and clientId \(clientId), skipping reauthorization")
             return result
         }
 
