@@ -112,22 +112,34 @@ LOCAL_IP=$(get_local_ip)
 # Read .env overrides if they exist
 ENV_BACKEND_URL=""
 ENV_XMTP_HOST=""
+ENV_HAS_BACKEND_URL=false
+ENV_HAS_XMTP_HOST=false
 
 if [ -f ".env" ]; then
     echo "📋 Checking .env for overrides..."
-    # Check for uncommented values in .env
-    ENV_BACKEND_URL=$(grep -v '^#' ".env" | grep '^CONVOS_API_BASE_URL=' | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
-    ENV_XMTP_HOST=$(grep -v '^#' ".env" | grep '^XMTP_CUSTOM_HOST=' | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
+    # Check if keys exist in .env (even if empty)
+    if grep -v '^#' ".env" | grep -q '^CONVOS_API_BASE_URL='; then
+        ENV_HAS_BACKEND_URL=true
+        ENV_BACKEND_URL=$(grep -v '^#' ".env" | grep '^CONVOS_API_BASE_URL=' | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
+    fi
+    if grep -v '^#' ".env" | grep -q '^XMTP_CUSTOM_HOST='; then
+        ENV_HAS_XMTP_HOST=true
+        ENV_XMTP_HOST=$(grep -v '^#' ".env" | grep '^XMTP_CUSTOM_HOST=' | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
+    fi
 fi
 
-# Determine final values (priority: .env override > auto-detected IP > config.json default > empty)
+# Determine final values (priority: .env override (even if empty) > auto-detected IP > config.json default > empty)
 FINAL_BACKEND_URL=""
 FINAL_XMTP_HOST=""
 
 # CONVOS_API_BASE_URL logic
-if [ -n "$ENV_BACKEND_URL" ]; then
+if [ "$ENV_HAS_BACKEND_URL" = true ]; then
     FINAL_BACKEND_URL="$ENV_BACKEND_URL"
-    echo "✅ Using CONVOS_API_BASE_URL from .env: $FINAL_BACKEND_URL"
+    if [ -n "$ENV_BACKEND_URL" ]; then
+        echo "✅ Using CONVOS_API_BASE_URL from .env: $FINAL_BACKEND_URL"
+    else
+        echo "✅ Using CONVOS_API_BASE_URL from .env: (empty - will use config.json default)"
+    fi
 elif [ -n "$LOCAL_IP" ]; then
     FINAL_BACKEND_URL="http://$LOCAL_IP:4000/api"
     echo "✅ Auto-detected CONVOS_API_BASE_URL: $FINAL_BACKEND_URL"
@@ -140,9 +152,13 @@ else
 fi
 
 # XMTP_CUSTOM_HOST logic
-if [ -n "$ENV_XMTP_HOST" ]; then
+if [ "$ENV_HAS_XMTP_HOST" = true ]; then
     FINAL_XMTP_HOST="$ENV_XMTP_HOST"
-    echo "✅ Using XMTP_CUSTOM_HOST from .env: $FINAL_XMTP_HOST"
+    if [ -n "$ENV_XMTP_HOST" ]; then
+        echo "✅ Using XMTP_CUSTOM_HOST from .env: $FINAL_XMTP_HOST"
+    else
+        echo "✅ Using XMTP_CUSTOM_HOST from .env: (empty - will use default network)"
+    fi
 elif [ -n "$LOCAL_IP" ]; then
     FINAL_XMTP_HOST="$LOCAL_IP"
     echo "✅ Auto-detected XMTP_CUSTOM_HOST: $FINAL_XMTP_HOST"

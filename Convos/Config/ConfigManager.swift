@@ -26,9 +26,10 @@ final class ConfigManager {
 
         switch envString {
         case "local":
-            // For local, use Secrets for API URL if not overridden in config
+            // For local, use Secrets for API URL (from .env or auto-detected IP), fallback to config.json
+            let effectiveApiUrl = Secrets.CONVOS_API_BASE_URL.isEmpty ? (backendURLOverride ?? "") : Secrets.CONVOS_API_BASE_URL
             let config = ConvosConfiguration(
-                apiBaseURL: backendURLOverride ?? Secrets.CONVOS_API_BASE_URL,
+                apiBaseURL: effectiveApiUrl,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
                 xmtpEndpoint: Secrets.XMTP_CUSTOM_HOST.isEmpty ? nil : Secrets.XMTP_CUSTOM_HOST,
