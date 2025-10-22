@@ -66,7 +66,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             startsStreamingServices: true,
             savesInboxToDatabase: savesInboxToDatabase
         )
-        operation.register()
+        operation.register(clientId: clientId)
         return operation
     }
 
@@ -111,11 +111,11 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         }
     }
 
-    private func register() {
+    private func register(clientId: String) {
         task?.cancel()
         task = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
-            await stateMachine.register()
+            await stateMachine.register(clientId: clientId)
         }
     }
 

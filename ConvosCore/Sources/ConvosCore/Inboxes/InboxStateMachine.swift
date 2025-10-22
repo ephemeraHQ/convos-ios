@@ -219,9 +219,8 @@ public actor InboxStateMachine {
         enqueueAction(.authorize(inboxId: inboxId, clientId: clientId))
     }
 
-    func register() {
-        let clientId = ClientId.generate()
-        enqueueAction(.register(clientId: clientId.value))
+    func register(clientId: String) {
+        enqueueAction(.register(clientId: clientId))
     }
 
     func stop() {
