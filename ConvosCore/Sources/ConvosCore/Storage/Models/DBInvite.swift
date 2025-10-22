@@ -11,6 +11,7 @@ struct DBInvite: Codable, FetchableRecord, PersistableRecord, Hashable {
         static let conversationId: Column = Column(CodingKeys.conversationId)
         static let urlSlug: Column = Column(CodingKeys.urlSlug)
         static let expiresAt: Column = Column(CodingKeys.expiresAt)
+        static let expiresAfterUse: Column = Column(CodingKeys.expiresAfterUse)
     }
 
     let creatorInboxId: String
