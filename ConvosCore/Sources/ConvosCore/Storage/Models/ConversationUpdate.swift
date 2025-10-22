@@ -9,6 +9,15 @@ public struct ConversationUpdate: Hashable, Codable {
                  expiresAt = "expiresAt",
                  custom = "custom",
                  unknown
+
+            var showsInMessagesList: Bool {
+                switch self {
+                case .custom, .expiresAt:
+                    false
+                default:
+                    true
+                }
+            }
         }
         public let field: Field
         public let oldValue: String?
@@ -21,7 +30,7 @@ public struct ConversationUpdate: Hashable, Codable {
     public let metadataChanges: [MetadataChange]
 
     var showsInMessagesList: Bool {
-        guard metadataChanges.allSatisfy({ $0.field != .custom }) else {
+        guard metadataChanges.allSatisfy({ $0.field.showsInMessagesList }) else {
             return false
         }
         return true
