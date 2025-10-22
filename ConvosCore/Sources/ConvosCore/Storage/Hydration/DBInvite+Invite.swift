@@ -6,9 +6,8 @@ extension DBInvite {
         .init(
             conversationId: conversationId,
             urlSlug: urlSlug,
-            expiresAt: nil,
-            maxUses: nil,
-            usesCount: 0
+            expiresAt: expiresAt,
+            maxUses: nil
         )
     }
 }
