@@ -178,15 +178,14 @@ extension XMTPiOS.DecodedMessage {
         let metadataFieldChanges: [DBMessage.Update.MetadataChange] = try groupUpdated.metadataFieldChanges
             .map {
                 if $0.fieldName == ConversationUpdate.MetadataChange.Field.description.rawValue {
-                    let oldCustomValue = try ConversationCustomMetadata.fromCompactString($0.oldValue)
-                    let newCustomValue = try ConversationCustomMetadata.fromCompactString($0.newValue)
-                    if oldCustomValue.description_p == newCustomValue.description_p {
-                        // custom change
-                        if oldCustomValue.expiresAt != newCustomValue.expiresAt {
+                    let oldCustomValue = $0.hasOldValue ? try ConversationCustomMetadata.fromCompactString($0.oldValue) : nil
+                    let newCustomValue = $0.hasNewValue ? try ConversationCustomMetadata.fromCompactString($0.newValue) : nil
+                    if let old = oldCustomValue, let new = newCustomValue, old.description_p == new.description_p {
+                        if old.expiresAt != new.expiresAt {
                             return .init(
                                 field: ConversationUpdate.MetadataChange.Field.expiresAt.rawValue,
-                                oldValue: oldCustomValue.expiresAt.date.ISO8601Format(),
-                                newValue: newCustomValue.expiresAt.date.ISO8601Format()
+                                oldValue: old.expiresAt.date.ISO8601Format(),
+                                newValue: new.expiresAt.date.ISO8601Format()
                             )
                         }
                         return .init(
@@ -197,8 +196,8 @@ extension XMTPiOS.DecodedMessage {
                     } else {
                         return .init(
                             field: ConversationUpdate.MetadataChange.Field.description.rawValue,
-                            oldValue: $0.hasOldValue ? oldCustomValue.description_p : nil,
-                            newValue: $0.hasNewValue ? newCustomValue.description_p : nil
+                            oldValue: $0.hasOldValue ? oldCustomValue?.description_p : nil,
+                            newValue: $0.hasNewValue ? newCustomValue?.description_p : nil
                         )
                     }
                 } else {

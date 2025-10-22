@@ -34,7 +34,7 @@ struct InboxWriter {
     }
 
     func delete(clientId: String) async throws {
-        try await dbWriter.write { db in
+        _ = try await dbWriter.write { db in
             try DBInbox
                 .filter(DBInbox.Columns.clientId == clientId)
                 .deleteAll(db)
