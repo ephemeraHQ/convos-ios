@@ -69,8 +69,7 @@ extension Invite {
             conversationId: "conversation_123",
             urlSlug: "invite_code_123",
             expiresAt: nil,
-            maxUses: nil,
-            usesCount: 0,
+            expiresAfterUse: false
         )
     }
 }

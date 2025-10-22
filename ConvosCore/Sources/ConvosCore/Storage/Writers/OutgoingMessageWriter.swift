@@ -8,11 +8,11 @@ public protocol OutgoingMessageWriterProtocol {
     func send(text: String) async throws
 }
 
-class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
-    enum OutgoingMessageWriterError: Error {
-        case missingClientProvider
-    }
+enum OutgoingMessageWriterError: Error {
+    case missingClientProvider
+}
 
+class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
     private let inboxStateManager: any InboxStateManagerProtocol
     private let databaseWriter: any DatabaseWriter
     private let conversationId: String

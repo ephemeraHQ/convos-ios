@@ -369,6 +369,8 @@ extension MockMessagingService: XMTPClientProvider {
 }
 
 extension MockMessagingService: MessageSender {
+    public func sendExplode(expiresAt: Date) async throws {}
+
     public func prepare(text: String) async throws -> String {
         guard let conversation = currentConversation else { return "" }
         let message: AnyMessage = .message(
@@ -554,6 +556,7 @@ public class MockConversationMetadataWriter: ConversationMetadataWriterProtocol 
     public func promoteToSuperAdmin(_ memberInboxId: String, in conversationId: String) async throws {}
     public func demoteFromSuperAdmin(_ memberInboxId: String, in conversationId: String) async throws {}
     public func updateImage(_ image: UIImage, for conversation: Conversation) async throws {}
+    public func updateExpiresAt(_ expiresAt: Date, for conversationId: String) async throws {}
 }
 
 class MockConversationPermissionsRepository: ConversationPermissionsRepositoryProtocol {

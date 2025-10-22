@@ -6,8 +6,18 @@ public struct ConversationUpdate: Hashable, Codable {
             case name = "group_name",
                  description = "description",
                  image = "group_image_url_square",
+                 expiresAt = "expiresAt",
                  custom = "custom",
                  unknown
+
+            var showsInMessagesList: Bool {
+                switch self {
+                case .custom, .expiresAt, .unknown:
+                    false
+                default:
+                    true
+                }
+            }
         }
         public let field: Field
         public let oldValue: String?
@@ -20,10 +30,10 @@ public struct ConversationUpdate: Hashable, Codable {
     public let metadataChanges: [MetadataChange]
 
     var showsInMessagesList: Bool {
-        guard metadataChanges.allSatisfy({ $0.field != .custom }) else {
+        guard metadataChanges.allSatisfy({ $0.field.showsInMessagesList }) else {
             return false
         }
-        return true
+        return !summary.isEmpty
     }
 
     public var summary: String {
@@ -46,7 +56,7 @@ public struct ConversationUpdate: Hashable, Codable {
                   let newValue = metadataChange.newValue {
             "\(creator.displayName) changed the convo description to \"\(newValue)\""
         } else {
-            "Unknown update"
+            ""
         }
     }
 }

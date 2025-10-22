@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 
 public protocol InviteWriterProtocol {
-    func generate(for conversation: DBConversation, expiresAt: Date?) async throws -> Invite
+    func generate(for conversation: DBConversation, expiresAt: Date?, expiresAfterUse: Bool) async throws -> Invite
     func update(for conversationId: String, name: String?, description: String?, imageURL: String?) async throws -> Invite
 }
 
@@ -22,7 +22,10 @@ class InviteWriter: InviteWriterProtocol {
         self.databaseWriter = databaseWriter
     }
 
-    func generate(for conversation: DBConversation, expiresAt: Date? = nil) async throws -> Invite {
+    func generate(
+        for conversation: DBConversation,
+        expiresAt: Date? = nil,
+        expiresAfterUse: Bool = false) async throws -> Invite {
         let existingInvite = try? await self.databaseWriter.read { db in
             try? DBInvite
                 .filter(DBInvite.Columns.conversationId == conversation.id)
@@ -36,13 +39,20 @@ class InviteWriter: InviteWriterProtocol {
 
         let identity = try await identityStore.identity(for: conversation.inboxId)
         let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
-        let urlSlug = try SignedInvite.slug(for: conversation, privateKey: privateKey)
+        let urlSlug = try SignedInvite.slug(
+            for: conversation,
+            expiresAt: expiresAt,
+            expiresAfterUse: expiresAfterUse,
+            privateKey: privateKey
+        )
         Logger.info("Generated URL slug: \(urlSlug)")
 
         let dbInvite = DBInvite(
             creatorInboxId: conversation.inboxId,
             conversationId: conversation.id,
-            urlSlug: urlSlug
+            urlSlug: urlSlug,
+            expiresAt: expiresAt,
+            expiresAfterUse: expiresAfterUse
         )
         try await databaseWriter.write { db in
             try Member(inboxId: conversation.inboxId).save(db, onConflict: .ignore)
@@ -87,8 +97,14 @@ class InviteWriter: InviteWriterProtocol {
         guard let invite else { throw InviteWriterError.inviteNotFound }
         let identity = try await identityStore.identity(for: conversation.inboxId)
         let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
-        let urlSlug = try SignedInvite.slug(for: conversation, privateKey: privateKey)
-        let updatedInvite = invite.with(urlSlug: urlSlug)
+        let urlSlug = try SignedInvite.slug(
+            for: conversation,
+            expiresAt: invite.expiresAt,
+            expiresAfterUse: invite.expiresAfterUse,
+            privateKey: privateKey
+        )
+        let updatedInvite = invite
+            .with(urlSlug: urlSlug)
         try await databaseWriter.write { db in
             try updatedInvite.save(db)
         }

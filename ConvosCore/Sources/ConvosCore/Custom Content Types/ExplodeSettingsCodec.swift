@@ -61,6 +61,6 @@ public struct ExplodeSettingsCodec: ContentCodec {
     }
 
     public func shouldPush(content: ExplodeSettings) throws -> Bool {
-        false
+        true
     }
 }

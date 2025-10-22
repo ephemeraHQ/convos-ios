@@ -5,6 +5,7 @@ import XMTPiOS
 public struct IncomingMessageWriterResult {
     public let contentType: MessageContentType
     public let wasRemovedFromConversation: Bool
+    public let messageAlreadyExists: Bool
 }
 
 public protocol IncomingMessageWriterProtocol {
@@ -33,15 +34,9 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
             try? senderProfile.insert(db)
             let message = try message.dbRepresentation()
 
+            let messageExistsInDB = try DBMessage.exists(db, key: message.id)
             // @jarodl temporary, this should happen somewhere else more explicitly
             let wasRemovedFromConversation = message.update?.removedInboxIds.contains(conversation.inboxId) ?? false
-            guard !wasRemovedFromConversation else {
-                Logger.info("Removed from conversation, skipping message store and deleting conversation...")
-                return IncomingMessageWriterResult(
-                    contentType: message.contentType,
-                    wasRemovedFromConversation: true
-                )
-            }
 
             Logger.info("Storing incoming message \(message.id) localId \(message.clientMessageId)")
             // see if this message has a local version
@@ -70,12 +65,13 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
 
             return IncomingMessageWriterResult(
                 contentType: message.contentType,
-                wasRemovedFromConversation: false
+                wasRemovedFromConversation: wasRemovedFromConversation,
+                messageAlreadyExists: messageExistsInDB
             )
         }
 
         // Post notification after transaction commits
-        if result.wasRemovedFromConversation {
+        if result.wasRemovedFromConversation && !result.messageAlreadyExists {
             conversation.postLeftConversationNotification()
         }
 

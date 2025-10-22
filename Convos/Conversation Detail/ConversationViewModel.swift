@@ -392,6 +392,9 @@ class ConversationViewModel {
                 let memberIdsToRemove = conversation.members
                     .filter { !$0.isCurrentUser } // @jarodl fix when we have self removal
                     .map { $0.profile.inboxId }
+                // set the expiration to now
+                try await metadataWriter.updateExpiresAt(Date(), for: conversation.id)
+                // remove everyone anyway
                 try await metadataWriter.removeMembers(
                     memberIdsToRemove,
                     from: conversation.id

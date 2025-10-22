@@ -51,16 +51,19 @@ public class MockConversationStateManager: ConversationStateManagerProtocol {
 
     // MARK: - Observer Management
 
+    @MainActor
     public func addObserver(_ observer: ConversationStateObserver) {
         observers.removeAll { $0.observer == nil }
         observers.append(WeakObserver(observer: observer))
         observer.conversationStateDidChange(currentState)
     }
 
+    @MainActor
     public func removeObserver(_ observer: ConversationStateObserver) {
         observers.removeAll { $0.observer === observer }
     }
 
+    @MainActor
     public func observeState(_ handler: @escaping (ConversationStateMachine.State) -> Void) -> ConversationStateObserverHandle {
         let observer = ClosureConversationStateObserver(handler: handler)
         addObserver(observer)

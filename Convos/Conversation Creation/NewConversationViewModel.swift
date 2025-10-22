@@ -115,7 +115,9 @@ class NewConversationViewModel: Identifiable {
             myProfileRepository: conversationStateManager.draftConversationRepository.myProfileRepository
         )
         setupObservations()
-        setupStateObservation()
+        DispatchQueue.main.async {
+            self.setupStateObservation()
+        }
         self.conversationViewModel.untitledConversationPlaceholder = "New convo"
         if showingFullScreenScanner {
             self.conversationViewModel.showsInfoView = false
@@ -129,7 +131,9 @@ class NewConversationViewModel: Identifiable {
                 } catch {
                     Logger.error("Error auto-creating conversation: \(error.localizedDescription)")
                     guard !Task.isCancelled else { return }
-                    await handleCreationError(error)
+                    await MainActor.run { [weak self] in
+                        self?.handleCreationError(error)
+                    }
                 }
             }
         }
@@ -220,12 +224,10 @@ class NewConversationViewModel: Identifiable {
         isCreatingConversation = false
     }
 
+    @MainActor
     private func setupStateObservation() {
         stateObserverHandle = conversationStateManager.observeState { [weak self] state in
-            Task { @MainActor in
-                guard let self else { return }
-                self.handleStateChange(state)
-            }
+            self?.handleStateChange(state)
         }
     }
 

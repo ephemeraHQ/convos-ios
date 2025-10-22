@@ -13,6 +13,7 @@ class SharedDatabaseMigrator {
 }
 
 extension SharedDatabaseMigrator {
+    // swiftlint:disable:next function_body_length
     private func createMigrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
 
@@ -85,6 +86,9 @@ extension SharedDatabaseMigrator {
                     .notNull()
                 t.column("conversationId", .text)
                     .notNull()
+                t.column("expiresAt", .datetime)
+                t.column("expiresAfterUse", .boolean)
+                    .defaults(to: false)
 
                 // Foreign key to the conversation member who created this invite
                 t.foreignKey(

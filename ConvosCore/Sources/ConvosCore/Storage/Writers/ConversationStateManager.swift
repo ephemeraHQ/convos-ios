@@ -16,9 +16,8 @@ public protocol ConversationStateManagerProtocol: AnyObject, DraftConversationWr
     var currentState: ConversationStateMachine.State { get }
 
     // Observer Management
-    func addObserver(_ observer: ConversationStateObserver)
-    func removeObserver(_ observer: ConversationStateObserver)
-    func observeState(_ handler: @escaping (ConversationStateMachine.State) -> Void) -> ConversationStateObserverHandle
+    @MainActor func removeObserver(_ observer: ConversationStateObserver)
+    @MainActor func observeState(_ handler: @escaping (ConversationStateMachine.State) -> Void) -> ConversationStateObserverHandle
 
     // Dependencies
     var myProfileWriter: any MyProfileWriterProtocol { get }
@@ -189,7 +188,7 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
     // MARK: - Observer Management
 
     @MainActor
-    public func addObserver(_ observer: ConversationStateObserver) {
+    private func addObserver(_ observer: ConversationStateObserver) {
         observers.removeAll { $0.observer == nil }
         observers.append(WeakObserver(observer: observer))
         observer.conversationStateDidChange(currentState)
@@ -214,32 +213,10 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
         observers.removeAll { $0.observer == nil }
     }
 
-    @MainActor
     public func observeState(_ handler: @escaping (ConversationStateMachine.State) -> Void) -> ConversationStateObserverHandle {
         let observer = ClosureConversationStateObserver(handler: handler)
         addObserver(observer)
         return ConversationStateObserverHandle(observer: observer, manager: self)
-    }
-
-    // MARK: - State Management
-
-    public func waitForConversationReadyResult(timeout: TimeInterval = 10.0) async throws -> ConversationReadyResult {
-        return try await withTimeout(
-            seconds: timeout,
-            timeoutError: ConversationStateMachineError.timedOut
-        ) {
-            for await state in await self.stateMachine.stateSequence {
-                switch state {
-                case .ready(let result):
-                    return result
-                case .error(let error):
-                    throw error
-                default:
-                    continue
-                }
-            }
-            throw ConversationStateMachineError.timedOut
-        }
     }
 
     // MARK: - DraftConversationWriterProtocol Methods
@@ -289,50 +266,11 @@ public final class ConversationStateObserverHandle {
 
     public func cancel() {
         if let observer = observer {
-            manager?.removeObserver(observer)
+            DispatchQueue.main.async { [weak self] in
+                self?.manager?.removeObserver(observer)
+            }
         }
         observer = nil
         manager = nil
-    }
-
-    deinit {
-        cancel()
-    }
-}
-
-// MARK: - Component Helper
-
-@MainActor
-open class ConversationStateAwareComponent {
-    private var observerHandle: ConversationStateObserverHandle?
-    private let stateManager: ConversationStateManager
-    public var state: ConversationStateMachine.State?
-
-    public init(stateManager: ConversationStateManager) {
-        self.stateManager = stateManager
-        observerHandle = stateManager.observeState { [weak self] state in
-            Task { @MainActor in
-                self?.state = state
-                self?.conversationStateDidChange(state)
-            }
-        }
-    }
-
-    deinit {
-        observerHandle?.cancel()
-    }
-
-    open func conversationStateDidChange(_ state: ConversationStateMachine.State) {}
-
-    public var isConversationReady: Bool {
-        stateManager.isReady
-    }
-
-    public var currentConversationState: ConversationStateMachine.State {
-        stateManager.currentState
-    }
-
-    public func waitForConversationReadyResult() async throws -> ConversationReadyResult {
-        try await stateManager.waitForConversationReadyResult(timeout: 10.0)
     }
 }

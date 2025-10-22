@@ -138,7 +138,11 @@ class ConversationWriter: ConversationWriterProtocol {
         )
 
         // Create invite
-        _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
+        _ = try await inviteWriter.generate(
+            for: dbConversation,
+            expiresAt: nil,
+            expiresAfterUse: false
+        )
 
         // Fetch and store latest messages if requested
         if withLatestMessages {
@@ -256,6 +260,7 @@ class ConversationWriter: ConversationWriterProtocol {
     }
 
     private func saveConversation(_ dbConversation: DBConversation, in db: Database) throws {
+        let firstTimeSeeingConversationExpired: Bool
         if let localConversation = try DBConversation
             .filter(DBConversation.Columns.inviteTag == dbConversation.inviteTag)
             .filter(DBConversation.Columns.clientConversationId != dbConversation.clientConversationId)
@@ -265,14 +270,20 @@ class ConversationWriter: ConversationWriterProtocol {
             let updatedConversation = dbConversation
                 .with(clientConversationId: localConversation.clientConversationId)
             try updatedConversation.save(db, onConflict: .replace)
+            firstTimeSeeingConversationExpired = updatedConversation.isExpired && updatedConversation.expiresAt != localConversation.expiresAt
             Logger.info("Updated incoming conversation with local \(localConversation.clientConversationId)")
         } else {
             do {
                 try dbConversation.save(db)
+                firstTimeSeeingConversationExpired = dbConversation.isExpired
             } catch {
                 Logger.error("Failed saving incoming conversation \(dbConversation.id): \(error)")
                 throw error
             }
+        }
+
+        if firstTimeSeeingConversationExpired {
+            Logger.info("Encountered expired conversation for the first time.")
         }
     }
 

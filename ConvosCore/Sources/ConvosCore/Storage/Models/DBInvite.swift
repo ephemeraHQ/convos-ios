@@ -10,11 +10,15 @@ struct DBInvite: Codable, FetchableRecord, PersistableRecord, Hashable {
         static let creatorInboxId: Column = Column(CodingKeys.creatorInboxId)
         static let conversationId: Column = Column(CodingKeys.conversationId)
         static let urlSlug: Column = Column(CodingKeys.urlSlug)
+        static let expiresAt: Column = Column(CodingKeys.expiresAt)
+        static let expiresAfterUse: Column = Column(CodingKeys.expiresAfterUse)
     }
 
     let creatorInboxId: String
     let conversationId: String
     let urlSlug: String
+    let expiresAt: Date?
+    let expiresAfterUse: Bool
 
     // Foreign key to the member who created this invite
     static let creatorForeignKey: ForeignKey = ForeignKey(
@@ -38,11 +42,23 @@ struct DBInvite: Codable, FetchableRecord, PersistableRecord, Hashable {
 }
 
 extension DBInvite {
+    func with(expiresAt: Date?) -> Self {
+        .init(
+            creatorInboxId: creatorInboxId,
+            conversationId: conversationId,
+            urlSlug: urlSlug,
+            expiresAt: expiresAt,
+            expiresAfterUse: expiresAfterUse
+        )
+    }
+
     func with(urlSlug: String) -> Self {
         .init(
             creatorInboxId: creatorInboxId,
             conversationId: conversationId,
-            urlSlug: urlSlug
+            urlSlug: urlSlug,
+            expiresAt: expiresAt,
+            expiresAfterUse: expiresAfterUse
         )
     }
 }
