@@ -117,6 +117,7 @@ actor UnusedInboxCache {
                 )
             } catch {
                 Logger.error("Failed to look up identity for unused inbox: \(error)")
+                clearUnusedInboxFromKeychain()
                 // Fall through to create new one
             }
         }
@@ -163,7 +164,13 @@ actor UnusedInboxCache {
         let identityStore = environment.defaultIdentityStore
 
         // Look up clientId from keychain
-        let identity = try await identityStore.identity(for: inboxId)
+        var identity: KeychainIdentity
+        do {
+            identity = try await identityStore.identity(for: inboxId)
+        } catch {
+            clearUnusedInboxFromKeychain()
+            throw error
+        }
         let authorizationOperation = AuthorizeInboxOperation.authorize(
             inboxId: inboxId,
             clientId: identity.clientId,
