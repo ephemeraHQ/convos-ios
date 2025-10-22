@@ -175,29 +175,63 @@ extension XMTPiOS.DecodedMessage {
         guard let groupUpdated = content as? GroupUpdated else {
             throw DecodedMessageDBRepresentationError.mismatchedContentType
         }
-        let metadataFieldChanges: [DBMessage.Update.MetadataChange] = try groupUpdated.metadataFieldChanges
-            .map {
+        let metadataFieldChanges: [DBMessage.Update.MetadataChange] = groupUpdated.metadataFieldChanges
+            .compactMap {
                 if $0.fieldName == ConversationUpdate.MetadataChange.Field.description.rawValue {
-                    let oldCustomValue = $0.hasOldValue ? try ConversationCustomMetadata.fromCompactString($0.oldValue) : nil
-                    let newCustomValue = $0.hasNewValue ? try ConversationCustomMetadata.fromCompactString($0.newValue) : nil
-                    if let old = oldCustomValue, let new = newCustomValue, old.description_p == new.description_p {
-                        if old.expiresAt != new.expiresAt {
-                            return .init(
-                                field: ConversationUpdate.MetadataChange.Field.expiresAt.rawValue,
-                                oldValue: old.expiresAt.date.ISO8601Format(),
-                                newValue: new.expiresAt.date.ISO8601Format()
-                            )
+                    let oldCustomValue: ConversationCustomMetadata?
+                    if $0.hasOldValue {
+                        do {
+                            oldCustomValue = try ConversationCustomMetadata.fromCompactString($0.oldValue)
+                        } catch {
+                            Logger.error("Failed to decode old custom metadata: \(error)")
+                            oldCustomValue = nil
                         }
+                    } else {
+                        oldCustomValue = nil
+                    }
+
+                    let newCustomValue: ConversationCustomMetadata?
+                    if $0.hasNewValue {
+                        do {
+                            newCustomValue = try ConversationCustomMetadata.fromCompactString($0.newValue)
+                        } catch {
+                            Logger.error("Failed to decode new custom metadata: \(error)")
+                            newCustomValue = nil
+                        }
+                    } else {
+                        newCustomValue = nil
+                    }
+
+                    // Extract values, using empty string as default for description
+                    let oldDescription = oldCustomValue?.description_p ?? ""
+                    let newDescription = newCustomValue?.description_p ?? ""
+                    let descriptionChanged = oldDescription != newDescription
+
+                    // Extract expiresAt values (only if explicitly set)
+                    let oldExpiresAt = (oldCustomValue?.hasExpiresAt == true) ? oldCustomValue?.expiresAt : nil
+                    let newExpiresAt = (newCustomValue?.hasExpiresAt == true) ? newCustomValue?.expiresAt : nil
+                    let expiresAtChanged = oldExpiresAt != newExpiresAt
+
+                    // Determine what to report based on what actually changed
+                    if expiresAtChanged {
+                        // expiresAt changed, prioritize it
+                        return .init(
+                            field: ConversationUpdate.MetadataChange.Field.expiresAt.rawValue,
+                            oldValue: oldExpiresAt?.date.ISO8601Format(),
+                            newValue: newExpiresAt?.date.ISO8601Format()
+                        )
+                    } else if descriptionChanged {
+                        return .init(
+                            field: ConversationUpdate.MetadataChange.Field.description.rawValue,
+                            oldValue: oldDescription.isEmpty ? nil : oldDescription,
+                            newValue: newDescription.isEmpty ? nil : newDescription
+                        )
+                    } else {
+                        // Neither description nor expiresAt changed - some other custom field changed (tag, profiles, etc.)
                         return .init(
                             field: ConversationUpdate.MetadataChange.Field.custom.rawValue,
                             oldValue: nil,
                             newValue: nil
-                        )
-                    } else {
-                        return .init(
-                            field: ConversationUpdate.MetadataChange.Field.description.rawValue,
-                            oldValue: $0.hasOldValue ? oldCustomValue?.description_p : nil,
-                            newValue: $0.hasNewValue ? newCustomValue?.description_p : nil
                         )
                     }
                 } else {
