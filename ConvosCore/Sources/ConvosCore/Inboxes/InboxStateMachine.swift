@@ -487,7 +487,11 @@ public actor InboxStateMachine {
     }
 
     /// Performs common cleanup operations when deleting an inbox
-    private func performInboxCleanup(clientId: String, client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
+    private func performInboxCleanup(
+        clientId: String,
+        client: any XMTPClientProvider,
+        apiClient: any ConvosAPIClientProtocol
+    ) async throws {
         // Stop all services
         await syncingManager?.stop()
 
