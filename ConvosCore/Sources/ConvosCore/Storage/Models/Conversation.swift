@@ -27,6 +27,10 @@ public struct Conversation: Codable, Hashable, Identifiable {
 }
 
 public extension Conversation {
+    var isForked: Bool {
+        debugInfo.commitLogForkStatus == .forked
+    }
+
     var hasJoined: Bool {
         members.contains(where: { $0.isCurrentUser })
     }

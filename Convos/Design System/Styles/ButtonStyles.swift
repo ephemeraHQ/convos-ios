@@ -3,7 +3,7 @@ import SwiftUI
 enum ConvosButtonStyleType {
     case outline(fullWidth: Bool)
     case text
-    case rounded(fullWidth: Bool)
+    case rounded(fullWidth: Bool, backgroundColor: Color = .colorFillPrimary)
     case action(iconColor: Color = .primary, isDestructive: Bool = false)
 }
 
@@ -14,8 +14,8 @@ extension Button {
             return AnyView(self.buttonStyle(OutlineButtonStyle(fullWidth: fullWidth)))
         case .text:
             return AnyView(self.buttonStyle(TextButtonStyle()))
-        case let .rounded(fullWidth):
-            return AnyView(self.buttonStyle(RoundedButtonStyle(fullWidth: fullWidth)))
+        case let .rounded(fullWidth, backgroundColor):
+            return AnyView(self.buttonStyle(RoundedButtonStyle(fullWidth: fullWidth, backgroundColor: backgroundColor)))
         case let .action(iconColor, isDestructive):
             return AnyView(self.buttonStyle(ActionButtonStyle(iconColor: iconColor, isDestructive: isDestructive)))
         }
@@ -40,6 +40,7 @@ struct RoundedButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled: Bool
 
     let fullWidth: Bool
+    let backgroundColor: Color
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -50,7 +51,7 @@ struct RoundedButtonStyle: ButtonStyle {
             .padding(.vertical, DesignConstants.Spacing.step3x)
             .padding(.horizontal, DesignConstants.Spacing.step4x)
             .opacity(configuration.isPressed ? 0.6 : 1.0)
-            .background(.colorFillPrimary)
+            .background(backgroundColor)
             .clipShape(Capsule())
             .foregroundColor(isEnabled ? .colorTextPrimaryInverted : .colorTextTertiary)
     }
