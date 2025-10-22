@@ -13,16 +13,19 @@ public struct ConvosConfiguration {
     public let appGroupIdentifier: String
     public let relyingPartyIdentifier: String
     public let xmtpEndpoint: String?
+    public let xmtpNetwork: String?
 
     public init(
         apiBaseURL: String,
         appGroupIdentifier: String,
         relyingPartyIdentifier: String,
         xmtpEndpoint: String? = nil,
+        xmtpNetwork: String? = nil
     ) {
         self.apiBaseURL = apiBaseURL
         self.appGroupIdentifier = appGroupIdentifier
         self.relyingPartyIdentifier = relyingPartyIdentifier
         self.xmtpEndpoint = xmtpEndpoint
+        self.xmtpNetwork = xmtpNetwork
     }
 }

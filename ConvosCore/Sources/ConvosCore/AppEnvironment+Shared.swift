@@ -9,6 +9,7 @@ public struct SharedAppConfiguration: Codable {
     public let appGroupIdentifier: String
     public let relyingPartyIdentifier: String
     public let xmtpEndpoint: String?
+    public let xmtpNetwork: String?
 
     public init(environment: AppEnvironment) {
         self.environment = environment.name
@@ -16,6 +17,7 @@ public struct SharedAppConfiguration: Codable {
         self.appGroupIdentifier = environment.appGroupIdentifier
         self.relyingPartyIdentifier = environment.relyingPartyIdentifier
         self.xmtpEndpoint = environment.xmtpEndpoint
+        self.xmtpNetwork = environment.xmtpNetwork
     }
 
     public func toAppEnvironment() -> AppEnvironment {
@@ -24,6 +26,7 @@ public struct SharedAppConfiguration: Codable {
             appGroupIdentifier: appGroupIdentifier,
             relyingPartyIdentifier: relyingPartyIdentifier,
             xmtpEndpoint: xmtpEndpoint,
+            xmtpNetwork: xmtpNetwork
         )
 
         switch environment {

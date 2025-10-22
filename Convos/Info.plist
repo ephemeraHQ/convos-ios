@@ -3,6 +3,7 @@
 <plist version="1.0">
 <dict>
 	ATS_DICTIONARY
+	LOCAL_NETWORK_USAGE
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

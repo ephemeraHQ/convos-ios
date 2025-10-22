@@ -4,6 +4,16 @@ import XMTPiOS
 
 private extension AppEnvironment {
     var xmtpEnv: XMTPEnvironment {
+        if let network = self.xmtpNetwork {
+            switch network.lowercased() {
+            case "local": return .local
+            case "dev": return .dev
+            case "production", "prod": return .production
+            default:
+                Logger.warning("Unknown xmtpNetwork '\(network)', falling back to environment default")
+            }
+        }
+
         switch self {
         case .local, .tests: return .local
         case .dev: return .dev
@@ -19,6 +29,17 @@ private extension AppEnvironment {
     }
 
     var isSecure: Bool {
+        if let network = self.xmtpNetwork {
+            switch network.lowercased() {
+            case "local":
+                return false
+            case "dev", "production", "prod":
+                return true
+            default:
+                Logger.warning("Unknown xmtpNetwork '\(network)', falling back to environment default")
+            }
+        }
+
         switch self {
         case .local, .tests:
             return false
