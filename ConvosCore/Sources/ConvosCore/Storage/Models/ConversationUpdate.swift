@@ -12,7 +12,7 @@ public struct ConversationUpdate: Hashable, Codable {
 
             var showsInMessagesList: Bool {
                 switch self {
-                case .custom, .expiresAt:
+                case .custom, .expiresAt, .unknown:
                     false
                 default:
                     true
@@ -33,7 +33,7 @@ public struct ConversationUpdate: Hashable, Codable {
         guard metadataChanges.allSatisfy({ $0.field.showsInMessagesList }) else {
             return false
         }
-        return true
+        return !summary.isEmpty
     }
 
     public var summary: String {
@@ -56,7 +56,7 @@ public struct ConversationUpdate: Hashable, Codable {
                   let newValue = metadataChange.newValue {
             "\(creator.displayName) changed the convo description to \"\(newValue)\""
         } else {
-            "Unknown update"
+            ""
         }
     }
 }
