@@ -45,7 +45,8 @@ extension DBConversationDetails {
             lastMessage: lastMessage,
             imageURL: imageURL,
             isDraft: conversation.isDraft,
-            invite: conversationInvite?.hydrateInvite()
+            invite: conversationInvite?.hydrateInvite(),
+            debugInfo: conversation.debugInfo
         )
     }
 }

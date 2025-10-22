@@ -34,6 +34,8 @@ class ConversationViewModel {
             if oldValue.description != conversation.description {
                 conversationDescription = conversation.description ?? ""
             }
+
+            presentingConversationForked = conversation.isForked
         }
     }
     var messages: [AnyMessage]
@@ -74,6 +76,7 @@ class ConversationViewModel {
     var presentingConversationSettings: Bool = false
     var presentingProfileSettings: Bool = false
     var presentingProfileForMember: ConversationMember?
+    var presentingConversationForked: Bool = false
 
     var useDisplayNameForNewConvos: Bool = false
 
@@ -125,6 +128,8 @@ class ConversationViewModel {
         if conversationDescription.isEmpty {
             conversationDescription = conversation.description ?? ""
         }
+
+        presentingConversationForked = conversation.isForked
 
         Logger.info("Created for conversation: \(conversation.id)")
 

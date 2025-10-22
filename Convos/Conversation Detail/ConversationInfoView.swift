@@ -258,6 +258,42 @@ struct ConversationInfoView: View {
                         .foregroundStyle(.colorTextSecondary)
                 }
 
+                if !ConfigManager.shared.currentEnvironment.isProduction {
+                    Section {
+                        HStack {
+                            Text("Fork status")
+                            Spacer()
+                            Text(viewModel.conversation.debugInfo.commitLogForkStatus.rawValue)
+                                .foregroundStyle(.colorTextSecondary)
+                        }
+                        HStack {
+                            Text("Epoch")
+                            Spacer()
+                            Text("\(viewModel.conversation.debugInfo.epoch)")
+                                .foregroundStyle(.colorTextSecondary)
+                        }
+                        NavigationLink {
+                            DebugLogsTextView(logs: viewModel.conversation.debugInfo.forkDetails)
+                        } label: {
+                            Text("Fork details")
+                        }
+                        NavigationLink {
+                            DebugLogsTextView(logs: viewModel.conversation.debugInfo.localCommitLog)
+                        } label: {
+                            Text("Local commit log")
+                        }
+                        NavigationLink {
+                            DebugLogsTextView(logs: viewModel.conversation.debugInfo.remoteCommitLog)
+                        } label: {
+                            Text("Remote commit log")
+                        }
+                    } header: {
+                        Text("Debug info")
+                            .font(.system(size: 14.0, weight: .semibold))
+                            .foregroundStyle(.colorTextSecondary)
+                    }
+                }
+
                 if viewModel.canRemoveMembers {
                     Section {
                         Button {
@@ -286,6 +322,30 @@ struct ConversationInfoView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(role: .cancel) {
                         dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct DebugLogsTextView: View {
+    @State var logs: String
+    var body: some View {
+        VStack {
+            ScrollView {
+                ScrollViewReader { proxy in
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        Text(logs)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(.primary)
+                            .padding()
+                            .id("logs")
+                    }
+                    .onChange(of: logs) {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            proxy.scrollTo("logs", anchor: .bottom)
+                        }
                     }
                 }
             }

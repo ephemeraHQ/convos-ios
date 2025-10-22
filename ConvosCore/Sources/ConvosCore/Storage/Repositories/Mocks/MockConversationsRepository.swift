@@ -34,7 +34,8 @@ extension Conversation {
             lastMessage: lastMessage,
             imageURL: nil,
             isDraft: false,
-            invite: .mock()
+            invite: .mock(),
+            debugInfo: .empty
         )
     }
 
@@ -58,7 +59,8 @@ extension Conversation {
             lastMessage: nil,
             imageURL: nil,
             isDraft: true,
-            invite: nil
+            invite: nil,
+            debugInfo: .empty
         )
     }
 }

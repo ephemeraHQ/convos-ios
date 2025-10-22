@@ -192,6 +192,7 @@
 				"Conversation Creation/NewConversationView.swift",
 				"Conversation Creation/NewConversationViewModel.swift",
 				"Conversation Creation/QRScannerView.swift",
+				"Conversation Detail/ConversationForkedInfoView.swift",
 				"Conversation Detail/ConversationInfoEditView.swift",
 				"Conversation Detail/ConversationInfoView.swift",
 				"Conversation Detail/ConversationMembersListView.swift",

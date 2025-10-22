@@ -41,6 +41,11 @@ struct ConversationView<MessagesBottomBar: View>: View {
             onProfileSettings: viewModel.onProfileSettings,
             bottomBarContent: bottomBarContent
         )
+        .sheet(isPresented: $viewModel.presentingConversationForked) {
+            ConversationForkedInfoView {
+                viewModel.leaveConvo()
+            }
+        }
         .sheet(isPresented: $viewModel.presentingProfileSettings) {
             ProfileView(viewModel: viewModel)
         }

@@ -63,6 +63,7 @@ extension SharedDatabaseMigrator {
                 t.column("description", .text)
                 t.column("imageURLString", .text)
                 t.column("expiresAt", .datetime)
+                t.column("debugInfo", .jsonText)
                 t.uniqueKey(["id", "inboxId", "clientId"])
             }
 

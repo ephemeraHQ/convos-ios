@@ -23,9 +23,14 @@ public struct Conversation: Codable, Hashable, Identifiable {
     public let imageURL: URL?
     public let isDraft: Bool
     public let invite: Invite?
+    public let debugInfo: DBConversation.DebugInfo
 }
 
 public extension Conversation {
+    var isForked: Bool {
+        debugInfo.commitLogForkStatus == .forked
+    }
+
     var hasJoined: Bool {
         members.contains(where: { $0.isCurrentUser })
     }
