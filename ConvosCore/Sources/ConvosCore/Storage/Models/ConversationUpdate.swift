@@ -6,6 +6,7 @@ public struct ConversationUpdate: Hashable, Codable {
             case name = "group_name",
                  description = "description",
                  image = "group_image_url_square",
+                 expiresAt = "expiresAt",
                  custom = "custom",
                  unknown
         }

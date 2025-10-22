@@ -369,6 +369,8 @@ extension MockMessagingService: XMTPClientProvider {
 }
 
 extension MockMessagingService: MessageSender {
+    public func sendExplode(expiresAt: Date) async throws {}
+
     public func prepare(text: String) async throws -> String {
         guard let conversation = currentConversation else { return "" }
         let message: AnyMessage = .message(

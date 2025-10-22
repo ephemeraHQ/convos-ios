@@ -84,6 +84,16 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
 
         try await group.updateExpiresAt(date: expiresAt)
 
+        if expiresAt <= Date() {
+            guard let sender = try await inboxReady.client.messageSender(
+                for: conversationId
+            ) else {
+                throw OutgoingMessageWriterError.missingClientProvider
+            }
+
+            try await sender.sendExplode(expiresAt: expiresAt)
+        }
+
         let updatedConversation = try await databaseWriter.write { db in
             guard let localConversation = try DBConversation
                 .fetchOne(db, key: conversationId) else {

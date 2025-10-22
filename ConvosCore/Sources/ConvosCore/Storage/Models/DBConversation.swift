@@ -274,6 +274,7 @@ extension DBConversation {
         .init(
             id: id,
             inboxId: inboxId,
+            clientId: clientId,
             clientConversationId: clientConversationId,
             inviteTag: inviteTag,
             creatorId: creatorId,

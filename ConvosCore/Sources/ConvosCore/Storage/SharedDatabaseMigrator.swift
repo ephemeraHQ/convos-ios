@@ -13,6 +13,7 @@ class SharedDatabaseMigrator {
 }
 
 extension SharedDatabaseMigrator {
+    // swiftlint:disable:next function_body_length
     private func createMigrator() -> DatabaseMigrator {
         var migrator = DatabaseMigrator()
 

@@ -2,6 +2,7 @@ import Foundation
 import XMTPiOS
 
 public protocol MessageSender {
+    func sendExplode(expiresAt: Date) async throws
     func prepare(text: String) async throws -> String
     func publish() async throws
     func consentState() throws -> ConsentState
@@ -189,6 +190,13 @@ extension XMTPiOS.Client: XMTPClientProvider {
 }
 
 extension XMTPiOS.Conversation: MessageSender {
+    public func sendExplode(expiresAt: Date) async throws {
+        try await send(
+            content: ExplodeSettings(expiresAt: expiresAt),
+            options: .init(contentType: ExplodeSettingsCodec().contentType)
+        )
+    }
+
     public func prepare(text: String) async throws -> String {
         return try await prepareMessage(content: text)
     }

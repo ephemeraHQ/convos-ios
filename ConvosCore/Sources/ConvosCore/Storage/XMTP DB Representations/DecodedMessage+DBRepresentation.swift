@@ -175,37 +175,46 @@ extension XMTPiOS.DecodedMessage {
         guard let groupUpdated = content as? GroupUpdated else {
             throw DecodedMessageDBRepresentationError.mismatchedContentType
         }
+        let metadataFieldChanges: [DBMessage.Update.MetadataChange] = try groupUpdated.metadataFieldChanges
+            .map {
+                if $0.fieldName == ConversationUpdate.MetadataChange.Field.description.rawValue {
+                    let oldCustomValue = try ConversationCustomMetadata.fromCompactString($0.oldValue)
+                    let newCustomValue = try ConversationCustomMetadata.fromCompactString($0.newValue)
+                    if oldCustomValue.description_p == newCustomValue.description_p {
+                        // custom change
+                        if oldCustomValue.expiresAt != newCustomValue.expiresAt {
+                            return .init(
+                                field: ConversationUpdate.MetadataChange.Field.expiresAt.rawValue,
+                                oldValue: oldCustomValue.expiresAt.date.ISO8601Format(),
+                                newValue: newCustomValue.expiresAt.date.ISO8601Format()
+                            )
+                        }
+                        return .init(
+                            field: ConversationUpdate.MetadataChange.Field.custom.rawValue,
+                            oldValue: nil,
+                            newValue: nil
+                        )
+                    } else {
+                        return .init(
+                            field: ConversationUpdate.MetadataChange.Field.description.rawValue,
+                            oldValue: $0.hasOldValue ? oldCustomValue.description_p : nil,
+                            newValue: $0.hasNewValue ? newCustomValue.description_p : nil
+                        )
+                    }
+                } else {
+                    return .init(
+                        field: $0.fieldName,
+                        oldValue: $0.hasOldValue ? $0.oldValue : nil,
+                        newValue: $0.hasNewValue ? $0.newValue : nil
+                    )
+                }
+            }
         let update = DBMessage.Update(
             initiatedByInboxId: groupUpdated.initiatedByInboxID,
             addedInboxIds: groupUpdated.addedInboxes.map { $0.inboxID },
             removedInboxIds: groupUpdated.removedInboxes.map { $0.inboxID },
-            metadataChanges: try groupUpdated.metadataFieldChanges
-                .map {
-                    if $0.fieldName == ConversationUpdate.MetadataChange.Field.description.rawValue {
-                        let oldCustomValue = try ConversationCustomMetadata.fromCompactString($0.oldValue)
-                        let newCustomValue = try ConversationCustomMetadata.fromCompactString($0.newValue)
-                        if oldCustomValue.description_p == newCustomValue.description_p {
-                            // custom change
-                            return .init(
-                                field: ConversationUpdate.MetadataChange.Field.custom.rawValue,
-                                oldValue: nil,
-                                newValue: nil
-                            )
-                        } else {
-                            return .init(
-                                field: ConversationUpdate.MetadataChange.Field.description.rawValue,
-                                oldValue: $0.hasOldValue ? oldCustomValue.description_p : nil,
-                                newValue: $0.hasNewValue ? newCustomValue.description_p : nil
-                            )
-                        }
-                    } else {
-                        return .init(
-                            field: $0.fieldName,
-                            oldValue: $0.hasOldValue ? $0.oldValue : nil,
-                            newValue: $0.hasNewValue ? $0.newValue : nil
-                        )
-                    }
-                }
+            metadataChanges: metadataFieldChanges,
+            expiresAt: nil
         )
         return DBMessageComponents(
             messageType: .original,
@@ -225,12 +234,12 @@ extension XMTPiOS.DecodedMessage {
         }
 
         Logger.info("Received explode settings: \(explodeSettings)")
-        // @jarod Create an update that represents the conversation expiration
         let update = DBMessage.Update(
             initiatedByInboxId: senderInboxId,
             addedInboxIds: [],
             removedInboxIds: [],
-            metadataChanges: []
+            metadataChanges: [],
+            expiresAt: explodeSettings.expiresAt
         )
 
         return DBMessageComponents(
