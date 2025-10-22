@@ -338,15 +338,15 @@ public actor InboxStateMachine {
     }
 
     private func handleAuthorize(inboxId: String, clientId: String) async throws {
-        emitStateChange(.authorizing(clientId: clientId, inboxId: inboxId))
-        Logger.info("Started authorization flow for inbox: \(inboxId), clientId: \(clientId)")
-
         let identity = try await identityStore.identity(for: inboxId)
 
         // Verify clientId matches
         guard identity.clientId == clientId else {
             throw KeychainIdentityStoreError.identityNotFound("ClientId mismatch: expected \(clientId), got \(identity.clientId)")
         }
+
+        emitStateChange(.authorizing(clientId: clientId, inboxId: inboxId))
+        Logger.info("Started authorization flow for inbox: \(inboxId), clientId: \(clientId)")
 
         let keys = identity.clientKeys
         let clientOptions = clientOptions(keys: keys)
