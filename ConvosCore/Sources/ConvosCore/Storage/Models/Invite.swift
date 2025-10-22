@@ -7,7 +7,7 @@ public struct Invite: Codable, Hashable, Identifiable, Equatable {
     public let conversationId: String
     public let urlSlug: String
     public let expiresAt: Date?
-    public let maxUses: Int?
+    public let expiresAfterUse: Bool
 }
 
 public extension Invite {
@@ -16,7 +16,7 @@ public extension Invite {
             conversationId: "",
             urlSlug: "",
             expiresAt: nil,
-            maxUses: nil
+            expiresAfterUse: false
         )
     }
 

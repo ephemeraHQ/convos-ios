@@ -138,7 +138,11 @@ class ConversationWriter: ConversationWriterProtocol {
         )
 
         // Create invite
-        _ = try await inviteWriter.generate(for: dbConversation, expiresAt: nil)
+        _ = try await inviteWriter.generate(
+            for: dbConversation,
+            expiresAt: nil,
+            expiresAfterUse: false
+        )
 
         // Fetch and store latest messages if requested
         if withLatestMessages {

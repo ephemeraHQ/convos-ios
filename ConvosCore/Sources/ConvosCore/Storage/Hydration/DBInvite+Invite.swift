@@ -7,7 +7,7 @@ extension DBInvite {
             conversationId: conversationId,
             urlSlug: urlSlug,
             expiresAt: expiresAt,
-            maxUses: nil
+            expiresAfterUse: expiresAfterUse
         )
     }
 }

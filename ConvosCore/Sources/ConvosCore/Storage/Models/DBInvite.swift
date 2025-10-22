@@ -17,6 +17,7 @@ struct DBInvite: Codable, FetchableRecord, PersistableRecord, Hashable {
     let conversationId: String
     let urlSlug: String
     let expiresAt: Date?
+    let expiresAfterUse: Bool
 
     // Foreign key to the member who created this invite
     static let creatorForeignKey: ForeignKey = ForeignKey(
@@ -45,7 +46,8 @@ extension DBInvite {
             creatorInboxId: creatorInboxId,
             conversationId: conversationId,
             urlSlug: urlSlug,
-            expiresAt: expiresAt
+            expiresAt: expiresAt,
+            expiresAfterUse: expiresAfterUse
         )
     }
 
@@ -54,7 +56,8 @@ extension DBInvite {
             creatorInboxId: creatorInboxId,
             conversationId: conversationId,
             urlSlug: urlSlug,
-            expiresAt: expiresAt
+            expiresAt: expiresAt,
+            expiresAfterUse: expiresAfterUse
         )
     }
 }

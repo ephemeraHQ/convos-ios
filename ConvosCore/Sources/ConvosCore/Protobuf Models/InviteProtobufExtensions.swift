@@ -38,7 +38,12 @@ extension SignedInvite {
         payload.expiresAfterUse
     }
 
-    public static func slug(for conversation: DBConversation, expiresAt: Date?, privateKey: Data) throws -> String {
+    public static func slug(
+        for conversation: DBConversation,
+        expiresAt: Date?,
+        expiresAfterUse: Bool,
+        privateKey: Data,
+    ) throws -> String {
         let conversationToken = try InviteConversationToken.makeConversationToken(
             conversationId: conversation.id,
             creatorInboxId: conversation.inboxId,
@@ -57,6 +62,7 @@ extension SignedInvite {
         if let conversationExpiresAt = conversation.expiresAt {
             payload.conversationExpiresAt = .init(date: conversationExpiresAt)
         }
+        payload.expiresAfterUse = expiresAfterUse
         payload.tag = conversation.inviteTag
         payload.conversationToken = conversationToken
         payload.creatorInboxID = conversation.inboxId
