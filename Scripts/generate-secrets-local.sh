@@ -27,14 +27,11 @@ import Foundation
 // This is a minimal Secrets.swift file created automatically.
 // Building the "Convos (Local)" scheme will replace this with auto-detected IP addresses.
 
-// swiftlint:disable all
-
 enum Secrets {
     static let CONVOS_API_BASE_URL: String = ""
     static let XMTP_CUSTOM_HOST: String = ""
 }
 
-// swiftlint:enable all
 MINIMAL_EOF
         echo "✅ Created minimal Secrets.swift file"
         return 0
@@ -167,8 +164,6 @@ import Foundation
 // Priority: .env overrides > auto-detected IP > config.json defaults > empty string
 // For other environments, edit the .env file and run ./Scripts/generate-secrets.sh
 
-// swiftlint:disable all
-
 /// Secrets are generated automatically for Local development
 enum Secrets {
     static let CONVOS_API_BASE_URL: String = "$FINAL_BACKEND_URL"
@@ -199,11 +194,9 @@ else
     echo "⚠️  No .env file found, using defaults from config.json"
 fi
 
-# Close the enum and add SwiftLint enable comment
 cat >>"$SECRETS_FILE" <<'EOF'
 }
 
-// swiftlint:enable all
 EOF
 
 echo "🏁 Generated $SECRETS_FILE successfully"
