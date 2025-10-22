@@ -188,17 +188,4 @@ public extension AppEnvironment {
     var defaultDatabasesDirectory: String {
         defaultDatabasesDirectoryURL.path
     }
-
-    var reactNativeDatabaseDirectory: URL {
-        guard !isTestingEnvironment else {
-            return FileManager.default.temporaryDirectory
-        }
-
-        guard let groupUrl = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: appGroupIdentifier
-        ) else {
-            fatalError("Failed getting container URL for group identifier: \(appGroupIdentifier)")
-        }
-        return groupUrl
-    }
 }

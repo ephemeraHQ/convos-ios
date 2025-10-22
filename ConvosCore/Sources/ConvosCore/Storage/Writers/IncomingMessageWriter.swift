@@ -4,6 +4,7 @@ import XMTPiOS
 
 public struct IncomingMessageWriterResult {
     public let contentType: MessageContentType
+    public let wasRemovedFromConversation: Bool
 }
 
 public protocol IncomingMessageWriterProtocol {
@@ -20,7 +21,7 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
 
     func store(message: DecodedMessage,
                for conversation: DBConversation) async throws -> IncomingMessageWriterResult {
-        try await databaseWriter.write { db in
+        let result = try await databaseWriter.write { db in
             let sender = Member(inboxId: message.senderInboxId)
             try sender.save(db)
             let senderProfile = MemberProfile(
@@ -32,14 +33,14 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
             try? senderProfile.insert(db)
             let message = try message.dbRepresentation()
 
-            let result: IncomingMessageWriterResult = .init(contentType: message.contentType)
-
             // @jarodl temporary, this should happen somewhere else more explicitly
             let wasRemovedFromConversation = message.update?.removedInboxIds.contains(conversation.inboxId) ?? false
             guard !wasRemovedFromConversation else {
                 Logger.info("Removed from conversation, skipping message store and deleting conversation...")
-                conversation.postLeftConversationNotification()
-                return result
+                return IncomingMessageWriterResult(
+                    contentType: message.contentType,
+                    wasRemovedFromConversation: true
+                )
             }
 
             Logger.info("Storing incoming message \(message.id) localId \(message.clientMessageId)")
@@ -67,7 +68,17 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
                 }
             }
 
-            return result
+            return IncomingMessageWriterResult(
+                contentType: message.contentType,
+                wasRemovedFromConversation: false
+            )
         }
+
+        // Post notification after transaction commits
+        if result.wasRemovedFromConversation {
+            conversation.postLeftConversationNotification()
+        }
+
+        return result
     }
 }

@@ -33,7 +33,7 @@ public final class DatabaseManager: DatabaseManagerProtocol {
         let fileManager = FileManager.default
         // Use the shared App Group container so the main app and NSE share the same DB
         let groupDirURL = environment.defaultDatabasesDirectoryURL
-        let dbURL = groupDirURL.appendingPathComponent("convos_v2.sqlite")
+        let dbURL = groupDirURL.appendingPathComponent("convos.sqlite")
 
         // Ensure the App Group directory exists
         try fileManager.createDirectory(at: groupDirURL, withIntermediateDirectories: true)

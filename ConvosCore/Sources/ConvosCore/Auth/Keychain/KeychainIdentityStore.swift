@@ -104,6 +104,7 @@ public enum KeychainIdentityStoreError: Error, LocalizedError {
     case identityNotFound(String)
     case rollbackFailed(String)
     case invalidAccessGroup
+    case duplicateClientId(String, Int)
 
     public var errorDescription: String? {
         switch self {
@@ -123,6 +124,8 @@ public enum KeychainIdentityStoreError: Error, LocalizedError {
             return "Rollback failed for \(context)"
         case .invalidAccessGroup:
             return "Invalid or missing keychain access group"
+        case let .duplicateClientId(clientId, count):
+            return "Duplicate clientId detected: '\(clientId)' found \(count) times in keychain"
         }
     }
 }
@@ -248,11 +251,37 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
             kSecAttrAccessGroup as String: keychainAccessGroup,
             kSecAttrGeneric as String: clientIdData,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitAll
         ]
 
-        let data = try loadData(with: query)
-        return try JSONDecoder().decode(KeychainIdentity.self, from: data)
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        guard status != errSecItemNotFound else {
+            throw KeychainIdentityStoreError.identityNotFound("No identity found with clientId: \(clientId)")
+        }
+
+        guard status == errSecSuccess else {
+            throw KeychainIdentityStoreError.keychainOperationFailed(status, "identity(forClientId:)")
+        }
+
+        // Verify exactly one match exists
+        let items: [Data]
+        if let singleItem = result as? Data {
+            // Single item returned
+            items = [singleItem]
+        } else if let multipleItems = result as? [Data] {
+            // Multiple items returned
+            items = multipleItems
+        } else {
+            throw KeychainIdentityStoreError.keychainOperationFailed(errSecUnknownFormat, "identity(forClientId:)")
+        }
+
+        guard items.count == 1 else {
+            throw KeychainIdentityStoreError.duplicateClientId(clientId, items.count)
+        }
+
+        return try JSONDecoder().decode(KeychainIdentity.self, from: items[0])
     }
 
     public func loadAll() throws -> [KeychainIdentity] {
@@ -321,6 +350,24 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
     // MARK: - Private Methods
 
     private func save(identity: KeychainIdentity) throws {
+        // First, check if a different identity with the same clientId already exists
+        // This enforces clientId uniqueness before saving
+        do {
+            let existingIdentity = try self.identity(forClientId: identity.clientId)
+
+            // If we found an identity with this clientId, make sure it's the same inboxId
+            // (updating the same identity is OK, but a different identity with same clientId is not)
+            if existingIdentity.inboxId != identity.inboxId {
+                throw KeychainIdentityStoreError.duplicateClientId(
+                    identity.clientId,
+                    2 // At least 2: the existing one and the one we're trying to save
+                )
+            }
+            // If inboxId matches, we're updating the same identity, which is allowed
+        } catch KeychainIdentityStoreError.identityNotFound {
+            // No existing identity with this clientId - good, we can proceed
+        }
+
         let data = try JSONEncoder().encode(identity)
 
         // Create access control for enhanced security
