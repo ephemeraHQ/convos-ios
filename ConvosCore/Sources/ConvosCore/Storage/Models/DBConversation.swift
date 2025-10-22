@@ -287,4 +287,16 @@ extension DBConversation {
             expiresAt: expiresAt
         )
     }
+
+    func postLeftConversationNotification() {
+        NotificationCenter.default.post(
+            name: .leftConversationNotification,
+            object: nil,
+            userInfo: [
+                "clientId": clientId,
+                "inboxId": inboxId,
+                "conversationId": id
+            ]
+        )
+    }
 }
