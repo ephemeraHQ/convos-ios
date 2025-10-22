@@ -142,6 +142,11 @@ extension DBConversation {
         Self.isDraft(id: id) && Self.isDraft(id: clientConversationId)
     }
 
+    var isExpired: Bool {
+        guard let expiresAt else { return false }
+        return expiresAt < Date()
+    }
+
     func with(id: String) -> Self {
         .init(
             id: id,

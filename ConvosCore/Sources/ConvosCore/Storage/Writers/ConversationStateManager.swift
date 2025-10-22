@@ -16,8 +16,8 @@ public protocol ConversationStateManagerProtocol: AnyObject, DraftConversationWr
     var currentState: ConversationStateMachine.State { get }
 
     // Observer Management
-    func removeObserver(_ observer: ConversationStateObserver)
-    func observeState(_ handler: @escaping (ConversationStateMachine.State) -> Void) -> ConversationStateObserverHandle
+    @MainActor func removeObserver(_ observer: ConversationStateObserver)
+    @MainActor func observeState(_ handler: @escaping (ConversationStateMachine.State) -> Void) -> ConversationStateObserverHandle
 
     // Dependencies
     var myProfileWriter: any MyProfileWriterProtocol { get }
@@ -213,7 +213,6 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
         observers.removeAll { $0.observer == nil }
     }
 
-    @MainActor
     public func observeState(_ handler: @escaping (ConversationStateMachine.State) -> Void) -> ConversationStateObserverHandle {
         let observer = ClosureConversationStateObserver(handler: handler)
         addObserver(observer)
@@ -267,13 +266,11 @@ public final class ConversationStateObserverHandle {
 
     public func cancel() {
         if let observer = observer {
-            manager?.removeObserver(observer)
+            DispatchQueue.main.async { [weak self] in
+                self?.manager?.removeObserver(observer)
+            }
         }
         observer = nil
         manager = nil
-    }
-
-    deinit {
-        cancel()
     }
 }
