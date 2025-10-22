@@ -257,23 +257,15 @@ public final class SessionManager: SessionManagerProtocol {
     // MARK: - Messaging Services
 
     public func messagingService(for clientId: String, inboxId: String) -> AnyMessagingService {
-        // Check if we already have a messaging service for this inbox
-        let existingService = serviceQueue.sync {
-            messagingServices[clientId]
-        }
-
-        if let existingService = existingService {
-            return existingService
-        }
-
-        let inbox = Inbox(inboxId: inboxId, clientId: clientId)
-        let newService = startMessagingService(for: inbox)
-
         serviceQueue.sync {
+            if let existingService = messagingServices[clientId] {
+                return existingService
+            }
+            let inbox = Inbox(inboxId: inboxId, clientId: clientId)
+            let newService = startMessagingService(for: inbox)
             messagingServices[clientId] = newService
+            return newService
         }
-
-        return newService
     }
 
     // MARK: - Factory methods for repositories
