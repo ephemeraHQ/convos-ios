@@ -104,6 +104,7 @@ public enum KeychainIdentityStoreError: Error, LocalizedError {
     case identityNotFound(String)
     case rollbackFailed(String)
     case invalidAccessGroup
+    case duplicateClientId(String, Int)
 
     public var errorDescription: String? {
         switch self {
@@ -123,6 +124,8 @@ public enum KeychainIdentityStoreError: Error, LocalizedError {
             return "Rollback failed for \(context)"
         case .invalidAccessGroup:
             return "Invalid or missing keychain access group"
+        case let .duplicateClientId(clientId, count):
+            return "Duplicate clientId detected: '\(clientId)' found \(count) times in keychain"
         }
     }
 }
@@ -135,19 +138,22 @@ private struct KeychainQuery {
     let accessGroup: String
     let accessible: CFString
     let accessControl: SecAccessControl?
+    let clientId: String?
 
     init(
         account: String,
         service: String,
         accessGroup: String,
         accessible: CFString = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-        accessControl: SecAccessControl? = nil
+        accessControl: SecAccessControl? = nil,
+        clientId: String? = nil
     ) {
         self.account = account
         self.service = service
         self.accessGroup = accessGroup
         self.accessible = accessible
         self.accessControl = accessControl
+        self.clientId = clientId
     }
 
     func toDictionary() -> [String: Any] {
@@ -157,6 +163,11 @@ private struct KeychainQuery {
             kSecAttrService as String: service,
             kSecAttrAccessGroup as String: accessGroup
         ]
+
+        // Add clientId as generic attribute for direct lookup
+        if let clientId = clientId, let clientIdData = clientId.data(using: .utf8) {
+            query[kSecAttrGeneric as String] = clientIdData
+        }
 
         if let accessControl = accessControl {
             query[kSecAttrAccessControl as String] = accessControl
@@ -183,6 +194,7 @@ public protocol KeychainIdentityStoreProtocol: Actor {
     func identity(for inboxId: String) throws -> KeychainIdentity
     func loadAll() throws -> [KeychainIdentity]
     func delete(inboxId: String) throws
+    func delete(clientId: String) throws
     func deleteAll() throws
 }
 
@@ -223,6 +235,53 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
         )
         let data = try loadData(with: query)
         return try JSONDecoder().decode(KeychainIdentity.self, from: data)
+    }
+
+    // MARK: - Private lookup by clientId
+
+    private func identity(forClientId clientId: String) throws -> KeychainIdentity {
+        // Query keychain directly using clientId as generic attribute
+        guard let clientIdData = clientId.data(using: .utf8) else {
+            throw KeychainIdentityStoreError.identityNotFound("Invalid clientId encoding: \(clientId)")
+        }
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccessGroup as String: keychainAccessGroup,
+            kSecAttrGeneric as String: clientIdData,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitAll
+        ]
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+
+        guard status != errSecItemNotFound else {
+            throw KeychainIdentityStoreError.identityNotFound("No identity found with clientId: \(clientId)")
+        }
+
+        guard status == errSecSuccess else {
+            throw KeychainIdentityStoreError.keychainOperationFailed(status, "identity(forClientId:)")
+        }
+
+        // Verify exactly one match exists
+        let items: [Data]
+        if let singleItem = result as? Data {
+            // Single item returned
+            items = [singleItem]
+        } else if let multipleItems = result as? [Data] {
+            // Multiple items returned
+            items = multipleItems
+        } else {
+            throw KeychainIdentityStoreError.keychainOperationFailed(errSecUnknownFormat, "identity(forClientId:)")
+        }
+
+        guard items.count == 1 else {
+            throw KeychainIdentityStoreError.duplicateClientId(clientId, items.count)
+        }
+
+        return try JSONDecoder().decode(KeychainIdentity.self, from: items[0])
     }
 
     public func loadAll() throws -> [KeychainIdentity] {
@@ -267,6 +326,14 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
         try deleteData(with: query)
     }
 
+    public func delete(clientId: String) throws {
+        // Direct lookup using clientId as a keychain attribute
+        let identity = try identity(forClientId: clientId)
+
+        // Delete using the inboxId (which is the account key in keychain)
+        try delete(inboxId: identity.inboxId)
+    }
+
     public func deleteAll() throws {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -283,6 +350,24 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
     // MARK: - Private Methods
 
     private func save(identity: KeychainIdentity) throws {
+        // First, check if a different identity with the same clientId already exists
+        // This enforces clientId uniqueness before saving
+        do {
+            let existingIdentity = try self.identity(forClientId: identity.clientId)
+
+            // If we found an identity with this clientId, make sure it's the same inboxId
+            // (updating the same identity is OK, but a different identity with same clientId is not)
+            if existingIdentity.inboxId != identity.inboxId {
+                throw KeychainIdentityStoreError.duplicateClientId(
+                    identity.clientId,
+                    2 // At least 2: the existing one and the one we're trying to save
+                )
+            }
+            // If inboxId matches, we're updating the same identity, which is allowed
+        } catch KeychainIdentityStoreError.identityNotFound {
+            // No existing identity with this clientId - good, we can proceed
+        }
+
         let data = try JSONEncoder().encode(identity)
 
         // Create access control for enhanced security
@@ -300,7 +385,8 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
             service: keychainService,
             accessGroup: keychainAccessGroup,
             accessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-            accessControl: accessControl
+            accessControl: accessControl,
+            clientId: identity.clientId
         )
 
         try saveData(data, with: query)

@@ -395,7 +395,10 @@ public actor ConversationStateMachine {
                     environment: environment
                 )
             try await inboxStateManager.delete()
-            let inboxReady = try await inboxStateManager.reauthorize(inboxId: existingConversation.inboxId)
+            let inboxReady = try await inboxStateManager.reauthorize(
+                inboxId: existingConversation.inboxId,
+                clientId: existingConversation.clientId
+            )
             if existingConversation.hasJoined {
                 Logger.info("Already joined conversation... moving to ready state.")
                 emitStateChange(.ready(.init(conversationId: existingConversation.id, origin: .existing)))

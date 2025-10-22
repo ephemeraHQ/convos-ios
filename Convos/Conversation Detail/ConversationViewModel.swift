@@ -90,7 +90,8 @@ class ConversationViewModel {
         self.profile = .empty(inboxId: conversation.inboxId)
         self.conversationRepository = session.conversationRepository(
             for: conversation.id,
-            inboxId: conversation.inboxId
+            inboxId: conversation.inboxId,
+            clientId: conversation.clientId
         )
         self.messagesRepository = session.messagesRepository(for: conversation.id)
         do {
@@ -101,7 +102,10 @@ class ConversationViewModel {
             self.messages = []
         }
 
-        let messagingService = session.messagingService(for: conversation.inboxId)
+        let messagingService = session.messagingService(
+            for: conversation.clientId,
+            inboxId: conversation.inboxId
+        )
         myProfileWriter = messagingService.myProfileWriter()
         myProfileRepository = conversationRepository.myProfileRepository
         outgoingMessageWriter = messagingService.messageWriter(for: conversation.id)
@@ -370,13 +374,9 @@ class ConversationViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await session.deleteInbox(inboxId: conversation.inboxId)
+                try await session.deleteInbox(clientId: conversation.clientId)
                 presentingConversationSettings = false
-                NotificationCenter.default.post(
-                    name: .leftConversationNotification,
-                    object: nil,
-                    userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
-                )
+                conversation.postLeftConversationNotification()
             } catch {
                 Logger.error("Error leaving convo: \(error.localizedDescription)")
             }
@@ -385,12 +385,6 @@ class ConversationViewModel {
 
     func explodeConvo() {
         guard canRemoveMembers else { return }
-
-        NotificationCenter.default.post(
-            name: .leftConversationNotification,
-            object: nil,
-            userInfo: ["inboxId": conversation.inboxId, "conversationId": conversation.id]
-        )
 
         Task { [weak self] in
             guard let self else { return }
@@ -402,7 +396,8 @@ class ConversationViewModel {
                     memberIdsToRemove,
                     from: conversation.id
                 )
-                try await session.deleteInbox(inboxId: conversation.inboxId)
+                try await session.deleteInbox(clientId: conversation.clientId)
+                conversation.postLeftConversationNotification()
                 presentingConversationSettings = false
             } catch {
                 Logger.error("Error exploding convo: \(error.localizedDescription)")

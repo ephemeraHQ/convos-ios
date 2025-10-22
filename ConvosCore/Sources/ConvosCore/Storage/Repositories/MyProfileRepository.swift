@@ -64,7 +64,7 @@ class MyProfileRepository: MyProfileRepositoryProtocol {
             Logger.info("Updating conversation id to \(conversationId)")
             self.conversationIdSubject.send(conversationId)
             // Re-observe profile for the new conversation
-            if case .ready(let result) = self.inboxStateManager.currentState {
+            if case .ready(_, let result) = self.inboxStateManager.currentState {
                 self.startObservingProfile(for: result.client.inboxId, conversationId: conversationId)
             }
         }
@@ -77,10 +77,10 @@ class MyProfileRepository: MyProfileRepositoryProtocol {
 
     private func handleInboxStateChange(_ state: InboxStateMachine.State) {
         switch state {
-        case .ready(let result):
+        case .ready(_, let result):
             let inboxId = result.client.inboxId
             startObservingProfile(for: inboxId, conversationId: conversationId)
-        case .uninitialized, .stopping:
+        case .idle, .stopping:
             profileSubject.send(nil)
         default:
             break
@@ -108,7 +108,7 @@ class MyProfileRepository: MyProfileRepositoryProtocol {
     }
 
     func fetch() throws -> Profile {
-        guard case .ready(let result) = inboxStateManager.currentState else {
+        guard case .ready(_, let result) = inboxStateManager.currentState else {
             throw MyProfileRepositoryError.inboxNotReady
         }
         let inboxId = result.client.inboxId

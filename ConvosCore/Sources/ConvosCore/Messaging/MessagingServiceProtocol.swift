@@ -8,19 +8,10 @@ public enum MessagingServiceState {
 extension MessagingServiceProtocol {
     public var state: MessagingServiceState {
         switch inboxStateManager.currentState {
-        case .ready(let result):
+        case .ready(_, let result):
             return .authorized(result.client.inboxId)
         default:
             return .registering
-        }
-    }
-
-    public func matches(inboxId: String) -> Bool {
-        switch state {
-        case .registering:
-            false
-        case .authorized(let messagingInboxId):
-            messagingInboxId == inboxId
         }
     }
 }

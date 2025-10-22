@@ -9,6 +9,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
     public enum Columns {
         static let id: Column = Column(CodingKeys.id)
         static let inboxId: Column = Column(CodingKeys.inboxId)
+        static let clientId: Column = Column(CodingKeys.clientId)
         static let clientConversationId: Column = Column(CodingKeys.clientConversationId)
         static let inviteTag: Column = Column(CodingKeys.inviteTag)
         static let creatorId: Column = Column(CodingKeys.creatorId)
@@ -23,6 +24,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
 
     public let id: String
     public let inboxId: String
+    public let clientId: String
     public let clientConversationId: String // used for conversation drafts
     public let inviteTag: String
     public let creatorId: String
@@ -144,6 +146,7 @@ extension DBConversation {
         .init(
             id: id,
             inboxId: inboxId,
+            clientId: clientId,
             clientConversationId: clientConversationId,
             inviteTag: inviteTag,
             creatorId: creatorId,
@@ -161,6 +164,7 @@ extension DBConversation {
         .init(
             id: id,
             inboxId: inboxId,
+            clientId: clientId,
             clientConversationId: clientConversationId,
             inviteTag: inviteTag,
             creatorId: creatorId,
@@ -178,6 +182,7 @@ extension DBConversation {
         .init(
             id: id,
             inboxId: inboxId,
+            clientId: clientId,
             clientConversationId: clientConversationId,
             inviteTag: inviteTag,
             creatorId: creatorId,
@@ -195,6 +200,7 @@ extension DBConversation {
         .init(
             id: id,
             inboxId: inboxId,
+            clientId: clientId,
             clientConversationId: clientConversationId,
             inviteTag: inviteTag,
             creatorId: creatorId,
@@ -212,6 +218,7 @@ extension DBConversation {
         .init(
             id: id,
             inboxId: inboxId,
+            clientId: clientId,
             clientConversationId: clientConversationId,
             inviteTag: inviteTag,
             creatorId: creatorId,
@@ -231,6 +238,7 @@ extension DBConversation {
         .init(
             id: id,
             inboxId: inboxId,
+            clientId: clientId,
             clientConversationId: clientConversationId,
             inviteTag: inviteTag,
             creatorId: creatorId,
@@ -248,6 +256,7 @@ extension DBConversation {
         .init(
             id: id,
             inboxId: inboxId,
+            clientId: clientId,
             clientConversationId: clientConversationId,
             inviteTag: inviteTag,
             creatorId: creatorId,
@@ -265,6 +274,7 @@ extension DBConversation {
         .init(
             id: id,
             inboxId: inboxId,
+            clientId: clientId,
             clientConversationId: clientConversationId,
             inviteTag: inviteTag,
             creatorId: creatorId,
@@ -275,6 +285,18 @@ extension DBConversation {
             description: description,
             imageURLString: imageURLString,
             expiresAt: expiresAt
+        )
+    }
+
+    func postLeftConversationNotification() {
+        NotificationCenter.default.post(
+            name: .leftConversationNotification,
+            object: nil,
+            userInfo: [
+                "clientId": clientId,
+                "inboxId": inboxId,
+                "conversationId": id
+            ]
         )
     }
 }

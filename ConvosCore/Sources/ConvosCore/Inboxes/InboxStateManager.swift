@@ -9,7 +9,7 @@ public protocol InboxStateManagerProtocol: AnyObject {
     var currentState: InboxStateMachine.State { get }
 
     func waitForInboxReadyResult() async throws -> InboxReadyResult
-    func reauthorize(inboxId: String) async throws -> InboxReadyResult
+    func reauthorize(inboxId: String, clientId: String) async throws -> InboxReadyResult
     func delete() async throws
 
     func addObserver(_ observer: InboxStateObserver)
@@ -20,7 +20,7 @@ public protocol InboxStateManagerProtocol: AnyObject {
 
 @Observable
 public final class InboxStateManager: InboxStateManagerProtocol {
-    public private(set) var currentState: InboxStateMachine.State = .uninitialized
+    public private(set) var currentState: InboxStateMachine.State
     public private(set) var isReady: Bool = false
     public private(set) var hasError: Bool = false
     public private(set) var errorMessage: String?
@@ -34,6 +34,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
     }
 
     public init(stateMachine: InboxStateMachine) {
+        currentState = .idle(clientId: stateMachine.initialClientId)
         observe(stateMachine)
     }
 
@@ -59,7 +60,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         isReady = state.isReady
 
         switch state {
-        case .error(let error):
+        case .error(_, let error):
             hasError = true
             errorMessage = error.localizedDescription
         default:
@@ -95,9 +96,9 @@ public final class InboxStateManager: InboxStateManagerProtocol {
 
         for await state in await stateMachine.stateSequence {
             switch state {
-            case .ready(let result):
+            case .ready(_, let result):
                 return result
-            case .error(let error):
+            case .error(_, let error):
                 throw error
             default:
                 continue
@@ -114,14 +115,15 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         await stateMachine.stopAndDelete()
     }
 
-    public func reauthorize(inboxId: String) async throws -> InboxReadyResult {
+    public func reauthorize(inboxId: String, clientId: String) async throws -> InboxReadyResult {
         guard let stateMachine = stateMachine else {
             throw InboxStateError.inboxNotReady
         }
 
         // Check if we're already authorized with this inbox
-        if case .ready(let result) = currentState, result.client.inboxId == inboxId {
-            Logger.info("Already authorized with inbox \(inboxId), skipping reauthorization")
+        if case .ready(let currentClientId, let result) = currentState,
+           result.client.inboxId == inboxId && currentClientId == clientId {
+            Logger.info("Already authorized with inbox \(inboxId) and clientId \(clientId), skipping reauthorization")
             return result
         }
 
@@ -132,19 +134,19 @@ public final class InboxStateManager: InboxStateManagerProtocol {
             await stateMachine.stop()
             // Wait for the stop to complete (state should transition away from ready)
             for await state in await stateMachine.stateSequence {
-                if case .uninitialized = state {
+                if case .idle = state {
                     break
                 }
             }
         }
 
         // Authorize with the new inbox
-        await stateMachine.authorize(inboxId: inboxId)
+        await stateMachine.authorize(inboxId: inboxId, clientId: clientId)
 
         // Wait for ready state with the new inboxId
         for await state in await stateMachine.stateSequence {
             switch state {
-            case .ready(let result):
+            case .ready(_, let result):
                 // Verify this is the inbox we requested
                 if result.client.inboxId == inboxId {
                     Logger.info("Successfully reauthorized to inbox \(inboxId)")
@@ -154,7 +156,7 @@ public final class InboxStateManager: InboxStateManagerProtocol {
                     Logger.info("Waiting for correct inbox... current: \(result.client.inboxId), expected: \(inboxId)")
                     continue
                 }
-            case .error(let error):
+            case .error(_, let error):
                 throw error
             default:
                 continue
@@ -200,37 +202,5 @@ public final class StateObserverHandle {
 
     deinit {
         cancel()
-    }
-}
-
-@MainActor
-open class InboxAwareComponent {
-    private var observerHandle: StateObserverHandle?
-    private let stateManager: InboxStateManager
-    var state: InboxStateMachine.State?
-
-    public init(stateManager: InboxStateManager) {
-        self.stateManager = stateManager
-        observerHandle = stateManager.observeState { state in
-            self.state = state
-        }
-    }
-
-    deinit {
-        observerHandle?.cancel()
-    }
-
-    open func inboxStateDidChange(_ state: InboxStateMachine.State) {}
-
-    public var isInboxReady: Bool {
-        stateManager.isReady
-    }
-
-    public var currentInboxState: InboxStateMachine.State {
-        stateManager.currentState
-    }
-
-    public func waitForInboxReadyResult() async throws -> InboxReadyResult {
-        try await stateManager.waitForInboxReadyResult()
     }
 }

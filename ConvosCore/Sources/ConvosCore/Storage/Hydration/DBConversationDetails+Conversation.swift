@@ -29,6 +29,7 @@ extension DBConversationDetails {
         return Conversation(
             id: conversation.id,
             inboxId: conversation.inboxId,
+            clientId: conversation.clientId,
             creator: creator,
             createdAt: conversation.createdAt,
             consent: conversation.consent,

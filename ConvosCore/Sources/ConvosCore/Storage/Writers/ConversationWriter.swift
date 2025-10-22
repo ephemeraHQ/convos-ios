@@ -55,9 +55,15 @@ class ConversationWriter: ConversationWriterProtocol {
         // Create the draft conversation and necessary records
         let creatorInboxId = signedInvite.payload.creatorInboxID // @jarodl the creator of the invite is not necessarily the invite creator, but do we care?
         let conversation = try await databaseWriter.write { db in
+            // Look up clientId from inbox
+            guard let inbox = try DBInbox.fetchOne(db, id: inboxId) else {
+                throw ConversationWriterError.inboxNotFound(inboxId)
+            }
+
             let conversation = DBConversation(
                 id: draftConversationId,
                 inboxId: inboxId,
+                clientId: inbox.clientId,
                 clientConversationId: draftConversationId,
                 inviteTag: signedInvite.payload.tag,
                 creatorId: creatorInboxId,
@@ -187,9 +193,20 @@ class ConversationWriter: ConversationWriterProtocol {
         from conversation: XMTPiOS.Conversation,
         metadata: ConversationMetadata
     ) async throws -> DBConversation {
+        let inboxId = conversation.client.inboxID
+
+        // Look up clientId from inbox
+        let clientId = try await databaseWriter.read { db in
+            guard let inbox = try DBInbox.fetchOne(db, id: inboxId) else {
+                throw ConversationWriterError.inboxNotFound(inboxId)
+            }
+            return inbox.clientId
+        }
+
         return DBConversation(
             id: conversation.id,
-            inboxId: conversation.client.inboxID,
+            inboxId: inboxId,
+            clientId: clientId,
             clientConversationId: conversation.id,
             inviteTag: try conversation.inviteTag,
             creatorId: try await conversation.creatorInboxId,

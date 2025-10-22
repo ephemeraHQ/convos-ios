@@ -45,6 +45,8 @@ extension SharedDatabaseMigrator {
                     .primaryKey()
                 t.column("inboxId", .text)
                     .notNull()
+                t.column("clientId", .text)
+                    .notNull()
                 t.column("clientConversationId", .text)
                     .notNull()
                     .unique(onConflict: .replace)
@@ -60,7 +62,7 @@ extension SharedDatabaseMigrator {
                 t.column("description", .text)
                 t.column("imageURLString", .text)
                 t.column("expiresAt", .datetime)
-                t.uniqueKey(["id", "inboxId"])
+                t.uniqueKey(["id", "inboxId", "clientId"])
             }
 
             try db.create(table: "memberProfile") { t in

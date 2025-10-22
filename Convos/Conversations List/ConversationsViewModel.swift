@@ -230,6 +230,10 @@ final class ConversationsViewModel {
     }
 
     func leave(conversation: Conversation) {
+        if let index = conversations.firstIndex(of: conversation) {
+            conversations.remove(at: index)
+        }
+
         if selectedConversation == conversation {
             selectedConversation = nil
         }
@@ -237,7 +241,7 @@ final class ConversationsViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                try await session.deleteInbox(inboxId: conversation.inboxId)
+                try await session.deleteInbox(clientId: conversation.clientId)
 
                 // Remove cached writer for deleted inbox
                 _ = await MainActor.run { self.localStateWriters.removeValue(forKey: conversation.inboxId) }
@@ -331,7 +335,10 @@ final class ConversationsViewModel {
                     writer = localStateWriter
                 } else {
                     // Create new writer outside of MainActor context
-                    let messagingService = session.messagingService(for: conversation.inboxId)
+                    let messagingService = session.messagingService(
+                        for: conversation.clientId,
+                        inboxId: conversation.inboxId
+                    )
                     let newWriter = messagingService.conversationLocalStateWriter()
 
                     // Store it atomically on MainActor

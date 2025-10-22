@@ -24,8 +24,10 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     private var cancellables: Set<AnyCancellable> = []
     private var task: Task<Void, Never>?
 
+    // swiftlint:disable:next function_parameter_count
     static func authorize(
         inboxId: String,
+        clientId: String,
         identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
@@ -34,6 +36,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         autoRegistersForPushNotifications: Bool = true
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
+            clientId: clientId,
             identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
@@ -41,7 +44,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             startsStreamingServices: startsStreamingServices,
             autoRegistersForPushNotifications: autoRegistersForPushNotifications
         )
-        operation.authorize(inboxId: inboxId)
+        operation.authorize(inboxId: inboxId, clientId: clientId)
         return operation
     }
 
@@ -52,7 +55,10 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         environment: AppEnvironment,
         savesInboxToDatabase: Bool = true
     ) -> AuthorizeInboxOperation {
+        // Generate clientId before creating state machine
+        let clientId = ClientId.generate().value
         let operation = AuthorizeInboxOperation(
+            clientId: clientId,
             identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
@@ -60,11 +66,12 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             startsStreamingServices: true,
             savesInboxToDatabase: savesInboxToDatabase
         )
-        operation.register()
+        operation.register(clientId: clientId)
         return operation
     }
 
     private init(
+        clientId: String,
         identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
@@ -80,6 +87,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         ) : nil
         let invitesRepository = InvitesRepository(databaseReader: databaseReader)
         stateMachine = InboxStateMachine(
+            clientId: clientId,
             identityStore: identityStore,
             invitesRepository: invitesRepository,
             databaseWriter: databaseWriter,
@@ -95,19 +103,19 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         task = nil
     }
 
-    private func authorize(inboxId: String) {
+    private func authorize(inboxId: String, clientId: String) {
         task?.cancel()
         task = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
-            await stateMachine.authorize(inboxId: inboxId)
+            await stateMachine.authorize(inboxId: inboxId, clientId: clientId)
         }
     }
 
-    private func register() {
+    private func register(clientId: String) {
         task?.cancel()
         task = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
-            await stateMachine.register()
+            await stateMachine.register(clientId: clientId)
         }
     }
 
