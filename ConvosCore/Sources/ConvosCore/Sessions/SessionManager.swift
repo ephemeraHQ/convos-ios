@@ -21,7 +21,7 @@ public final class SessionManager: SessionManagerProtocol {
 
     // Thread-safe access to messaging services
     private let serviceQueue: DispatchQueue = DispatchQueue(label: "com.convos.sessionmanager.services")
-    private var messagingServices: [AnyMessagingService] = []
+    private var messagingServices: [String: AnyMessagingService] = [:] // Keyed by clientId
     private var activeConversationId: String?
 
     private let databaseWriter: any DatabaseWriter
@@ -34,7 +34,6 @@ public final class SessionManager: SessionManagerProtocol {
         self.databaseWriter = databaseWriter
         self.databaseReader = databaseReader
         self.environment = environment
-        self.messagingServices = []
 
         let inboxesRepository = InboxesRepository(databaseReader: databaseReader)
         do {
@@ -69,9 +68,11 @@ public final class SessionManager: SessionManagerProtocol {
     private func startMessagingServices(for inboxes: [Inbox]) {
         let inboxIds = inboxes.map { $0.inboxId }
         Logger.info("Starting messaging services for inboxes: \(inboxIds)")
-        let services = inboxes.map { startMessagingService(for: $0) }
         serviceQueue.sync {
-            messagingServices.append(contentsOf: services)
+            for inbox in inboxes {
+                let service = startMessagingService(for: inbox)
+                messagingServices[inbox.clientId] = service
+            }
         }
     }
 
@@ -199,19 +200,15 @@ public final class SessionManager: SessionManagerProtocol {
             environment: environment
         )
         serviceQueue.sync {
-            messagingServices.append(messagingService)
+            let clientId = messagingService.inboxStateManager.currentState.clientId
+            messagingServices[clientId] = messagingService
         }
         return messagingService
     }
 
     public func deleteInbox(clientId: String) async throws {
         let service: AnyMessagingService? = serviceQueue.sync {
-            guard let index = messagingServices.firstIndex(where: { $0.matches(clientId: clientId) }) else {
-                return nil
-            }
-            let service = messagingServices[index]
-            messagingServices.remove(at: index)
-            return service
+            messagingServices.removeValue(forKey: clientId)
         }
 
         guard let service = service else {
@@ -232,7 +229,7 @@ public final class SessionManager: SessionManagerProtocol {
         defer { DeviceRegistrationManager.clearRegistrationState() }
 
         let services = serviceQueue.sync(flags: .barrier) {
-            let copy = messagingServices
+            let copy = Array(messagingServices.values)
             messagingServices.removeAll()
             return copy
         }
@@ -262,7 +259,7 @@ public final class SessionManager: SessionManagerProtocol {
     public func messagingService(for clientId: String, inboxId: String) -> AnyMessagingService {
         // Check if we already have a messaging service for this inbox
         let existingService = serviceQueue.sync {
-            messagingServices.first(where: { $0.matches(clientId: clientId) })
+            messagingServices[clientId]
         }
 
         if let existingService = existingService {
@@ -273,7 +270,7 @@ public final class SessionManager: SessionManagerProtocol {
         let newService = startMessagingService(for: inbox)
 
         serviceQueue.sync {
-            messagingServices.append(newService)
+            messagingServices[clientId] = newService
         }
 
         return newService

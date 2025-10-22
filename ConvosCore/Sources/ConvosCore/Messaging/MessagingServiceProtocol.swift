@@ -14,10 +14,6 @@ extension MessagingServiceProtocol {
             return .registering
         }
     }
-
-    public func matches(clientId: String) -> Bool {
-        inboxStateManager.currentState.clientId == clientId
-    }
 }
 
 public protocol MessagingServiceProtocol: AnyObject {
