@@ -347,12 +347,10 @@ actor SyncingManager: SyncingManagerProtocol {
             let creatorInboxId = try await conversation.creatorInboxId
             if creatorInboxId == client.inboxId,
                case .group(let group) = conversation {
-                // we created the conversaiton, update permissions and set inviteTag
+                // we created the conversation, update permissions and set inviteTag
                 try await group.updateAddMemberPermission(newPermissionOption: .allow)
                 try await group.updateInviteTag()
             }
-
-            // clean up the previous conversation?
 
             Logger.info("Syncing conversation: \(conversation.id)")
             try await conversationWriter.storeWithLatestMessages(conversation: conversation)
