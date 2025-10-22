@@ -23,6 +23,7 @@ public struct Conversation: Codable, Hashable, Identifiable {
     public let imageURL: URL?
     public let isDraft: Bool
     public let invite: Invite?
+    public let debugInfo: DBConversation.DebugInfo
 }
 
 public extension Conversation {

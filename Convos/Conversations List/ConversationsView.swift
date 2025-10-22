@@ -5,7 +5,6 @@ struct ConversationsView: View {
     @State var viewModel: ConversationsViewModel
 
     @Namespace private var namespace: Namespace.ID
-    @State private var presentingDebugView: Bool = false
     @State private var presentingAppSettings: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
 

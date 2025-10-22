@@ -23,10 +23,16 @@ final class ConversationsViewModel {
             }
 
             // Notify that active conversation has changed
+            let userInfo: [AnyHashable: Any]
+            if let newConversationId = newValue?.id {
+                userInfo = ["conversationId": newConversationId]
+            } else {
+                userInfo = [:]
+            }
             NotificationCenter.default.post(
                 name: .activeConversationChanged,
                 object: nil,
-                userInfo: ["conversationId": newValue?.id as Any]
+                userInfo: userInfo
             )
         }
     }
@@ -37,7 +43,7 @@ final class ConversationsViewModel {
                 NotificationCenter.default.post(
                     name: .activeConversationChanged,
                     object: nil,
-                    userInfo: ["conversationId": nil]
+                    userInfo: [:] // leave out conversationId
                 )
             }
         }

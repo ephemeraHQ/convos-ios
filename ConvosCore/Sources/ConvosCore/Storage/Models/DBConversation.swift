@@ -3,8 +3,21 @@ import GRDB
 
 // MARK: - DBConversation
 
+public enum CommitLogForkStatus: String, Codable, Hashable {
+    case forked, notForked = "not_forked", unknown
+}
+
 public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
     public static var databaseTableName: String = "conversation"
+
+    public struct DebugInfo: Codable, Hashable {
+        public let epoch: UInt64
+        public let maybeForked: Bool
+        public let forkDetails: String
+        public let localCommitLog: String
+        public let remoteCommitLog: String
+        public let commitLogForkStatus: CommitLogForkStatus
+    }
 
     public enum Columns {
         static let id: Column = Column(CodingKeys.id)
@@ -20,6 +33,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
         static let description: Column = Column(CodingKeys.description)
         static let imageURLString: Column = Column(CodingKeys.imageURLString)
         static let expiresAt: Column = Column(CodingKeys.expiresAt)
+        static let debugInfo: Column = Column(CodingKeys.debugInfo)
     }
 
     public let id: String
@@ -35,6 +49,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
     public let description: String?
     public let imageURLString: String?
     public let expiresAt: Date?
+    public let debugInfo: DebugInfo
 
     static let creatorForeignKey: ForeignKey = ForeignKey(
         [Columns.creatorId, Columns.id],
@@ -127,6 +142,19 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
 
 // MARK: - DBConversation Extensions
 
+extension DBConversation.DebugInfo {
+    static var empty: Self {
+        .init(
+            epoch: 0,
+            maybeForked: false,
+            forkDetails: "",
+            localCommitLog: "",
+            remoteCommitLog: "",
+            commitLogForkStatus: .unknown
+        )
+    }
+}
+
 extension DBConversation {
     private static var draftPrefix: String { "draft-" }
 
@@ -161,7 +189,8 @@ extension DBConversation {
             name: name,
             description: description,
             imageURLString: imageURLString,
-            expiresAt: expiresAt
+            expiresAt: expiresAt,
+            debugInfo: debugInfo
         )
     }
 
@@ -179,7 +208,8 @@ extension DBConversation {
             name: name,
             description: description,
             imageURLString: imageURLString,
-            expiresAt: expiresAt
+            expiresAt: expiresAt,
+            debugInfo: debugInfo
         )
     }
 
@@ -197,7 +227,8 @@ extension DBConversation {
             name: name,
             description: description,
             imageURLString: imageURLString,
-            expiresAt: expiresAt
+            expiresAt: expiresAt,
+            debugInfo: debugInfo
         )
     }
 
@@ -215,7 +246,8 @@ extension DBConversation {
             name: name,
             description: description,
             imageURLString: imageURLString,
-            expiresAt: expiresAt
+            expiresAt: expiresAt,
+            debugInfo: debugInfo
         )
     }
 
@@ -233,7 +265,8 @@ extension DBConversation {
             name: name,
             description: description,
             imageURLString: imageURLString,
-            expiresAt: expiresAt
+            expiresAt: expiresAt,
+            debugInfo: debugInfo
         )
     }
 
@@ -253,7 +286,8 @@ extension DBConversation {
             name: name,
             description: description,
             imageURLString: imageURLString,
-            expiresAt: expiresAt
+            expiresAt: expiresAt,
+            debugInfo: debugInfo
         )
     }
 
@@ -271,7 +305,8 @@ extension DBConversation {
             name: name,
             description: description,
             imageURLString: imageURLString,
-            expiresAt: expiresAt
+            expiresAt: expiresAt,
+            debugInfo: debugInfo
         )
     }
 
@@ -289,7 +324,8 @@ extension DBConversation {
             name: name,
             description: description,
             imageURLString: imageURLString,
-            expiresAt: expiresAt
+            expiresAt: expiresAt,
+            debugInfo: debugInfo
         )
     }
 
@@ -307,7 +343,8 @@ extension DBConversation {
             name: name,
             description: description,
             imageURLString: imageURLString,
-            expiresAt: expiresAt
+            expiresAt: expiresAt,
+            debugInfo: debugInfo
         )
     }
 

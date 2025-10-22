@@ -73,7 +73,8 @@ class ConversationWriter: ConversationWriterProtocol {
                 name: signedInvite.name,
                 description: signedInvite.description_p,
                 imageURLString: signedInvite.imageURL,
-                expiresAt: signedInvite.conversationExpiresAt
+                expiresAt: signedInvite.conversationExpiresAt,
+                debugInfo: .empty
             )
             try conversation.save(db)
             let memberProfile = MemberProfile(
@@ -116,7 +117,7 @@ class ConversationWriter: ConversationWriterProtocol {
         withLatestMessages: Bool = false
     ) async throws -> DBConversation {
         // Extract conversation metadata
-        let metadata = try extractConversationMetadata(from: conversation)
+        let metadata = try await extractConversationMetadata(from: conversation)
         let members = try await conversation.members()
         let dbMembers = members.map { $0.dbRepresentation(conversationId: conversation.id) }
         guard case .group(let group) = conversation else {
@@ -170,25 +171,29 @@ class ConversationWriter: ConversationWriterProtocol {
         let description: String?
         let imageURLString: String?
         let expiresAt: Date?
+        let debugInfo: DBConversation.DebugInfo
     }
 
-    private func extractConversationMetadata(from conversation: XMTPiOS.Conversation) throws -> ConversationMetadata {
+    private func extractConversationMetadata(from conversation: XMTPiOS.Conversation) async throws -> ConversationMetadata {
         switch conversation {
-        case .dm:
+        case .dm(let dm):
             return ConversationMetadata(
                 kind: .dm,
                 name: nil,
                 description: nil,
                 imageURLString: nil,
-                expiresAt: nil
+                expiresAt: nil,
+                debugInfo: try await dm.getDebugInformation().toDBDebugInfo()
             )
         case .group(let group):
+            let debugInfo = try await group.getDebugInformation().toDBDebugInfo()
             return ConversationMetadata(
                 kind: .group,
                 name: try group.name(),
                 description: try group.customDescription,
                 imageURLString: try group.imageUrl(),
-                expiresAt: try group.expiresAt
+                expiresAt: try group.expiresAt,
+                debugInfo: debugInfo
             )
         }
     }
@@ -220,7 +225,8 @@ class ConversationWriter: ConversationWriterProtocol {
             name: metadata.name,
             description: metadata.description,
             imageURLString: metadata.imageURLString,
-            expiresAt: metadata.expiresAt
+            expiresAt: metadata.expiresAt,
+            debugInfo: metadata.debugInfo
         )
     }
 
@@ -426,6 +432,29 @@ fileprivate extension XMTPiOS.ConsentState {
         switch self {
         case .allowed: return .allowed
         case .denied: return .denied
+        case .unknown: return .unknown
+        }
+    }
+}
+
+fileprivate extension XMTPiOS.ConversationDebugInfo {
+    func toDBDebugInfo() -> DBConversation.DebugInfo {
+        DBConversation.DebugInfo(
+            epoch: epoch,
+            maybeForked: maybeForked,
+            forkDetails: forkDetails,
+            localCommitLog: localCommitLog,
+            remoteCommitLog: remoteCommitLog,
+            commitLogForkStatus: commitLogForkStatus.toDBStatus()
+        )
+    }
+}
+
+fileprivate extension XMTPiOS.CommitLogForkStatus {
+    func toDBStatus() -> CommitLogForkStatus {
+        switch self {
+        case .forked: return .forked
+        case .notForked: return .notForked
         case .unknown: return .unknown
         }
     }
