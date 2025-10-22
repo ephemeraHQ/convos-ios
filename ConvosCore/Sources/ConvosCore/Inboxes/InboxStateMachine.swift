@@ -404,7 +404,7 @@ public actor InboxStateMachine {
             } catch {
                 // Rollback keychain entry on database failure to maintain consistency
                 Logger.error("Failed to save inbox to database, rolling back keychain: \(error)")
-                try? await identityStore.delete(inboxId: client.inboxId)
+                try? await identityStore.delete(clientId: clientId)
                 throw error
             }
         } else {
