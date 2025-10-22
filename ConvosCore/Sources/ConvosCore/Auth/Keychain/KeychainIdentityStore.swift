@@ -135,19 +135,22 @@ private struct KeychainQuery {
     let accessGroup: String
     let accessible: CFString
     let accessControl: SecAccessControl?
+    let clientId: String?
 
     init(
         account: String,
         service: String,
         accessGroup: String,
         accessible: CFString = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-        accessControl: SecAccessControl? = nil
+        accessControl: SecAccessControl? = nil,
+        clientId: String? = nil
     ) {
         self.account = account
         self.service = service
         self.accessGroup = accessGroup
         self.accessible = accessible
         self.accessControl = accessControl
+        self.clientId = clientId
     }
 
     func toDictionary() -> [String: Any] {
@@ -157,6 +160,11 @@ private struct KeychainQuery {
             kSecAttrService as String: service,
             kSecAttrAccessGroup as String: accessGroup
         ]
+
+        // Add clientId as generic attribute for direct lookup
+        if let clientId = clientId, let clientIdData = clientId.data(using: .utf8) {
+            query[kSecAttrGeneric as String] = clientIdData
+        }
 
         if let accessControl = accessControl {
             query[kSecAttrAccessControl as String] = accessControl
@@ -226,6 +234,27 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
         return try JSONDecoder().decode(KeychainIdentity.self, from: data)
     }
 
+    // MARK: - Private lookup by clientId
+
+    private func identity(forClientId clientId: String) throws -> KeychainIdentity {
+        // Query keychain directly using clientId as generic attribute
+        guard let clientIdData = clientId.data(using: .utf8) else {
+            throw KeychainIdentityStoreError.identityNotFound("Invalid clientId encoding: \(clientId)")
+        }
+
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccessGroup as String: keychainAccessGroup,
+            kSecAttrGeneric as String: clientIdData,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+
+        let data = try loadData(with: query)
+        return try JSONDecoder().decode(KeychainIdentity.self, from: data)
+    }
+
     public func loadAll() throws -> [KeychainIdentity] {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -269,12 +298,8 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
     }
 
     public func delete(clientId: String) throws {
-        // Load all identities to find the one with matching clientId
-        let identities = try loadAll()
-
-        guard let identity = identities.first(where: { $0.clientId == clientId }) else {
-            throw KeychainIdentityStoreError.identityNotFound("No identity found with clientId: \(clientId)")
-        }
+        // Direct lookup using clientId as a keychain attribute
+        let identity = try identity(forClientId: clientId)
 
         // Delete using the inboxId (which is the account key in keychain)
         try delete(inboxId: identity.inboxId)
@@ -313,7 +338,8 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
             service: keychainService,
             accessGroup: keychainAccessGroup,
             accessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-            accessControl: accessControl
+            accessControl: accessControl,
+            clientId: identity.clientId
         )
 
         try saveData(data, with: query)
