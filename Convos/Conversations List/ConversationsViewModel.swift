@@ -131,11 +131,14 @@ final class ConversationsViewModel {
         if !hasEarlyAccess {
             newConversationViewModelTask = Task { [weak self] in
                 guard let self else { return }
-                self.newConversationViewModel = await NewConversationViewModel.create(
+                let viewModel = await NewConversationViewModel.create(
                     session: session,
                     showingFullScreenScanner: true,
                     allowsDismissingScanner: false
                 )
+                await MainActor.run {
+                    self.newConversationViewModel = viewModel
+                }
             }
         }
         observe()
@@ -168,11 +171,14 @@ final class ConversationsViewModel {
         newConversationViewModelTask?.cancel()
         newConversationViewModelTask = Task { [weak self] in
             guard let self else { return }
-            newConversationViewModel = await NewConversationViewModel.create(
+            let viewModel = await NewConversationViewModel.create(
                 session: session,
                 autoCreateConversation: true,
                 delegate: self
             )
+            await MainActor.run {
+                self.newConversationViewModel = viewModel
+            }
         }
     }
 
@@ -184,11 +190,14 @@ final class ConversationsViewModel {
         newConversationViewModelTask?.cancel()
         newConversationViewModelTask = Task { [weak self] in
             guard let self else { return }
-            newConversationViewModel = await NewConversationViewModel.create(
+            let viewModel = await NewConversationViewModel.create(
                 session: session,
                 showingFullScreenScanner: true,
                 delegate: self
             )
+            await MainActor.run {
+                self.newConversationViewModel = viewModel
+            }
         }
     }
 
@@ -200,11 +209,14 @@ final class ConversationsViewModel {
         newConversationViewModelTask?.cancel()
         newConversationViewModelTask = Task { [weak self] in
             guard let self else { return }
-            newConversationViewModel = await NewConversationViewModel.create(
+            let viewModel = await NewConversationViewModel.create(
                 session: session,
                 delegate: self
             )
-            newConversationViewModel?.joinConversation(inviteCode: inviteCode)
+            viewModel.joinConversation(inviteCode: inviteCode)
+            await MainActor.run {
+                self.newConversationViewModel = viewModel
+            }
         }
     }
 
