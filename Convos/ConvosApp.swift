@@ -22,8 +22,8 @@ struct ConvosApp: App {
 
         Logger.info("App starting with environment: \(environment)")
 
-        // Run migration to wipe app data
-        Self.runDataWipeMigration(environment: environment)
+        // Run migration to wipe app data (must be done synchronously before app starts)
+        Self.runDataWipeMigrationSync(environment: environment)
 
         let convos: ConvosClient = .client(environment: environment)
         self.session = convos.session
@@ -46,7 +46,7 @@ struct ConvosApp: App {
 
     // MARK: - Migration
 
-    private static func runDataWipeMigration(environment: AppEnvironment) {
+    private static func runDataWipeMigrationSync(environment: AppEnvironment) {
         let migrationKey = "data_wipe_migration_v1_completed"
         let defaults = UserDefaults.standard
 

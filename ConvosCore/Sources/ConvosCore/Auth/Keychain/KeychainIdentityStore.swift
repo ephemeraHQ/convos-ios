@@ -204,11 +204,13 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
     private let keychainService: String
     private let keychainAccessGroup: String
 
+    static let defaultService: String = "org.convos.ios.KeychainIdentityStore.v2"
+
     // MARK: - Initialization
 
-    public init(accessGroup: String, service: String = "org.convos.ios.KeychainIdentityStore") {
+    public init(accessGroup: String) {
         self.keychainAccessGroup = accessGroup
-        self.keychainService = service
+        self.keychainService = Self.defaultService
     }
 
     // MARK: - Public Interface

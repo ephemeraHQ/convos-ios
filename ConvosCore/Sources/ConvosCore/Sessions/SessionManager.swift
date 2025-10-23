@@ -35,7 +35,6 @@ public final class SessionManager: SessionManagerProtocol {
         self.databaseReader = databaseReader
         self.environment = environment
         let identityStore = environment.defaultIdentityStore
-
         Task {
             do {
                 let identities = try await identityStore.loadAll()
