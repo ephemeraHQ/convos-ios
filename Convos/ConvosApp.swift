@@ -51,7 +51,7 @@ struct ConvosApp: App {
         let defaults = UserDefaults.standard
 
         // Check if migration has already been run
-        if defaults.bool(forKey: migrationKey) {
+        guard !defaults.bool(forKey: migrationKey) else {
             Logger.info("Data wipe migration already completed, skipping")
             return
         }
