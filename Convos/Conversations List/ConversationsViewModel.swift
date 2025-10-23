@@ -49,7 +49,6 @@ final class ConversationsViewModel {
         }
     }
     var presentingExplodeInfo: Bool = false
-    var presentingEarlyAccessInfo: Bool = false
     let maxNumberOfConvos: Int = 20
     var presentingMaxNumberOfConvosReachedInfo: Bool = false
     private var maxNumberOfConvosReached: Bool {
@@ -61,8 +60,9 @@ final class ConversationsViewModel {
             if conversationsCount > 1 {
                 hasCreatedMoreThanOneConvo = true
             }
-
-            hasEarlyAccess = conversationsCount > 0
+            if conversationsCount > 0 {
+                hasEarlyAccess = true
+            }
         }
     }
 
@@ -82,24 +82,15 @@ final class ConversationsViewModel {
         }
     }
 
-    private var hasSeenEarlyAccessInfo: Bool {
-        get {
-            UserDefaults.standard.bool(forKey: "hasSeenEarlyAccessInfo")
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: "hasSeenEarlyAccessInfo")
-        }
-    }
-
     private(set) var hasEarlyAccess: Bool {
         get {
-            guard !hasCreatedMoreThanOneConvo else {
-                return true
-            }
-
-            return UserDefaults.standard.bool(forKey: "hasEarlyAccess")
+            UserDefaults.standard.bool(forKey: "hasEarlyAccess")
         }
         set {
+            // once a user has early access, don't reset it
+            guard newValue else {
+                return
+            }
             UserDefaults.standard.set(newValue, forKey: "hasEarlyAccess")
         }
     }
@@ -126,21 +117,28 @@ final class ConversationsViewModel {
         do {
             self.conversations = try conversationsRepository.fetchAll()
             self.conversationsCount = try conversationsCountRepository.fetchCount()
-            self.hasEarlyAccess = conversationsCount > 0
+            if conversationsCount > 1 {
+                hasCreatedMoreThanOneConvo = true
+            }
+            if conversationsCount > 0 {
+                hasEarlyAccess = true
+            }
         } catch {
             Logger.error("Error fetching conversations: \(error)")
             self.conversations = []
             self.conversationsCount = 0
-            self.hasEarlyAccess = false
         }
         if !hasEarlyAccess {
             newConversationViewModelTask = Task { [weak self] in
                 guard let self else { return }
-                self.newConversationViewModel = await NewConversationViewModel.create(
+                let viewModel = await NewConversationViewModel.create(
                     session: session,
                     showingFullScreenScanner: true,
                     allowsDismissingScanner: false
                 )
+                await MainActor.run {
+                    self.newConversationViewModel = viewModel
+                }
             }
         }
         observe()
@@ -173,11 +171,14 @@ final class ConversationsViewModel {
         newConversationViewModelTask?.cancel()
         newConversationViewModelTask = Task { [weak self] in
             guard let self else { return }
-            newConversationViewModel = await NewConversationViewModel.create(
+            let viewModel = await NewConversationViewModel.create(
                 session: session,
                 autoCreateConversation: true,
                 delegate: self
             )
+            await MainActor.run {
+                self.newConversationViewModel = viewModel
+            }
         }
     }
 
@@ -189,18 +190,14 @@ final class ConversationsViewModel {
         newConversationViewModelTask?.cancel()
         newConversationViewModelTask = Task { [weak self] in
             guard let self else { return }
-            newConversationViewModel = await NewConversationViewModel.create(
+            let viewModel = await NewConversationViewModel.create(
                 session: session,
                 showingFullScreenScanner: true,
                 delegate: self
             )
-        }
-    }
-
-    func checkShouldShowEarlyAccessInfo() {
-        if !hasSeenEarlyAccessInfo {
-            presentingEarlyAccessInfo = true
-            hasSeenEarlyAccessInfo = true
+            await MainActor.run {
+                self.newConversationViewModel = viewModel
+            }
         }
     }
 
@@ -212,11 +209,14 @@ final class ConversationsViewModel {
         newConversationViewModelTask?.cancel()
         newConversationViewModelTask = Task { [weak self] in
             guard let self else { return }
-            newConversationViewModel = await NewConversationViewModel.create(
+            let viewModel = await NewConversationViewModel.create(
                 session: session,
                 delegate: self
             )
-            newConversationViewModel?.joinConversation(inviteCode: inviteCode)
+            viewModel.joinConversation(inviteCode: inviteCode)
+            await MainActor.run {
+                self.newConversationViewModel = viewModel
+            }
         }
     }
 

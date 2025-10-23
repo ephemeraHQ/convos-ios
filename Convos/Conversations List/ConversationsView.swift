@@ -73,9 +73,6 @@ struct ConversationsView: View {
                                 )
                         }
                         .listStyle(.plain)
-                        .onAppear {
-                            viewModel.checkShouldShowEarlyAccessInfo()
-                        }
                     }
                 }
                 .onGeometryChange(for: CGSize.self) {
@@ -174,9 +171,6 @@ struct ConversationsView: View {
         }
         .selfSizingSheet(isPresented: $viewModel.presentingExplodeInfo) {
             ExplodeInfoView()
-        }
-        .selfSizingSheet(isPresented: $viewModel.presentingEarlyAccessInfo) {
-            EarlyAccessInfoView()
         }
         .selfSizingSheet(isPresented: $viewModel.presentingMaxNumberOfConvosReachedInfo) {
             MaxedOutInfoView(maxNumberOfConvos: viewModel.maxNumberOfConvos)

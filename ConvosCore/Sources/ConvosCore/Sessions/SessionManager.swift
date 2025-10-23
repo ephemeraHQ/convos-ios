@@ -34,13 +34,14 @@ public final class SessionManager: SessionManagerProtocol {
         self.databaseWriter = databaseWriter
         self.databaseReader = databaseReader
         self.environment = environment
-
-        let inboxesRepository = InboxesRepository(databaseReader: databaseReader)
-        do {
-            let inboxes = try inboxesRepository.allInboxes()
-            self.startMessagingServices(for: inboxes)
-        } catch {
-            Logger.error("Error starting messaging services: \(error.localizedDescription)")
+        let identityStore = environment.defaultIdentityStore
+        Task {
+            do {
+                let identities = try await identityStore.loadAll()
+                self.startMessagingServices(for: identities)
+            } catch {
+                Logger.error("Error starting messaging services: \(error.localizedDescription)")
+            }
         }
 
         observe()
@@ -65,21 +66,21 @@ public final class SessionManager: SessionManagerProtocol {
 
     // MARK: - Private Methods
 
-    private func startMessagingServices(for inboxes: [Inbox]) {
-        let inboxIds = inboxes.map { $0.inboxId }
+    private func startMessagingServices(for identities: [KeychainIdentity]) {
+        let inboxIds = identities.map { $0.inboxId }
         Logger.info("Starting messaging services for inboxes: \(inboxIds)")
         serviceQueue.sync {
-            for inbox in inboxes {
-                let service = startMessagingService(for: inbox)
-                messagingServices[inbox.clientId] = service
+            for identity in identities {
+                let service = startMessagingService(for: identity.inboxId, clientId: identity.clientId)
+                messagingServices[identity.clientId] = service
             }
         }
     }
 
-    private func startMessagingService(for inbox: Inbox) -> AnyMessagingService {
+    private func startMessagingService(for inboxId: String, clientId: String) -> AnyMessagingService {
         MessagingService.authorizedMessagingService(
-            for: inbox.inboxId,
-            clientId: inbox.clientId,
+            for: inboxId,
+            clientId: clientId,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment,
@@ -261,8 +262,7 @@ public final class SessionManager: SessionManagerProtocol {
             if let existingService = messagingServices[clientId] {
                 return existingService
             }
-            let inbox = Inbox(inboxId: inboxId, clientId: clientId)
-            let newService = startMessagingService(for: inbox)
+            let newService = startMessagingService(for: inboxId, clientId: clientId)
             messagingServices[clientId] = newService
             return newService
         }

@@ -41,7 +41,7 @@ struct ConversationView<MessagesBottomBar: View>: View {
             onProfileSettings: viewModel.onProfileSettings,
             bottomBarContent: bottomBarContent
         )
-        .sheet(isPresented: $viewModel.presentingConversationForked) {
+        .selfSizingSheet(isPresented: $viewModel.presentingConversationForked) {
             ConversationForkedInfoView {
                 viewModel.leaveConvo()
             }

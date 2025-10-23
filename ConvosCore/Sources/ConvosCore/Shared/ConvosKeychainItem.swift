@@ -2,7 +2,7 @@ import Foundation
 
 extension KeychainItemProtocol {
     static var service: String {
-        return "org.convos.ios"
+        return "org.convos.ios.KeychainItemProtocol.v2"
     }
 }
 
@@ -11,14 +11,6 @@ struct ConvosJWTKeychainItem: KeychainItemProtocol {
 
     var account: String {
         return inboxId
-    }
-}
-
-struct LastRegisteredPushTokenKeychainItem: KeychainItemProtocol {
-    let inboxId: String
-
-    var account: String {
-        return "push-token-\(inboxId)"
     }
 }
 
