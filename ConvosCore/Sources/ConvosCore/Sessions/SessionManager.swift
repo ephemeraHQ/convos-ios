@@ -69,16 +69,31 @@ public final class SessionManager: SessionManagerProtocol {
     private func startMessagingServices(for identities: [KeychainIdentity]) {
         let inboxIds = identities.map { $0.inboxId }
         Logger.info("Starting messaging services for inboxes: \(inboxIds)")
-        serviceQueue.sync {
+
+        Task {
+            var servicesToCreate: [KeychainIdentity] = []
+
             for identity in identities {
-                let service = startMessagingService(for: identity.inboxId, clientId: identity.clientId)
-                messagingServices[identity.clientId] = service
+                let isUnused = await UnusedInboxCache.shared.isUnusedInbox(identity.inboxId)
+                if isUnused {
+                    Logger.info("Skipping unused inbox: \(identity.inboxId)")
+                } else {
+                    servicesToCreate.append(identity)
+                }
+            }
+
+            serviceQueue.sync {
+                for identity in servicesToCreate {
+                    let service = startMessagingService(for: identity.inboxId, clientId: identity.clientId)
+                    messagingServices[identity.clientId] = service
+                }
             }
         }
     }
 
     private func startMessagingService(for inboxId: String, clientId: String) -> AnyMessagingService {
-        MessagingService.authorizedMessagingService(
+        Logger.info("Starting messaging service for inboxId: \(inboxId) clientId: \(clientId)")
+        return MessagingService.authorizedMessagingService(
             for: inboxId,
             clientId: clientId,
             databaseWriter: databaseWriter,

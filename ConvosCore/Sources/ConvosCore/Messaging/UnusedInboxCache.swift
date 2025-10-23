@@ -212,6 +212,11 @@ public actor UnusedInboxCache {
         }
     }
 
+    /// Checks if the given inbox ID is the unused inbox
+    func isUnusedInbox(_ inboxId: String) -> Bool {
+        return getUnusedInboxFromKeychain() == inboxId
+    }
+
     // MARK: - Private Methods
 
     private func authorizeUnusedInbox(
