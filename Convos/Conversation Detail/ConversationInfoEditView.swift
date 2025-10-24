@@ -37,10 +37,7 @@ struct ConversationInfoEditView: View {
                 Section {
                     TextField(
                         viewModel.conversationNamePlaceholder,
-                        text: Binding(
-                            get: { viewModel.editingConversationName },
-                            set: { viewModel.editingConversationName = $0 }
-                        )
+                        text: $viewModel.editingConversationName
                     )
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -56,15 +53,11 @@ struct ConversationInfoEditView: View {
 
                     TextField(
                         viewModel.conversationDescriptionPlaceholder,
-                        text: Binding(
-                            get: { viewModel.editingDescription },
-                            set: { viewModel.editingDescription = $0 }
-                        )
+                        text: $viewModel.editingDescription
                     )
                     .lineLimit(5)
                     .onAppear {
                         viewModel.isEditingDescription = true
-                        viewModel.editingDescription = viewModel.conversation.description ?? ""
                     }
                 }
             }
