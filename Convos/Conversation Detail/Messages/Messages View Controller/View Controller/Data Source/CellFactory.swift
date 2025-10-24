@@ -100,6 +100,7 @@ final class CellFactory {
         }
     }
 
+    // swiftlint:disable:next function_parameter_count
     private static func createTextCell(
         in collectionView: UICollectionView,
         for indexPath: IndexPath,

@@ -39,16 +39,14 @@ public struct ConversationUpdate: Hashable, Codable {
                 return nil
             }
         } else if let metadataChange = metadataChanges.first,
-                  metadataChange.field == .name,
-                  let updatedName = metadataChange.newValue {
+                  metadataChange.field == .name {
             return creator.profile
         } else if let metadataChange = metadataChanges.first,
                   metadataChange.field == .image,
                   metadataChange.newValue != nil {
             return creator.profile
         } else if let metadataChange = metadataChanges.first,
-                  metadataChange.field == .description,
-                  let newValue = metadataChange.newValue {
+                  metadataChange.field == .description {
             return creator.profile
         } else if !removedMembers.isEmpty {
             return nil
