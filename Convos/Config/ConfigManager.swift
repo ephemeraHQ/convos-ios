@@ -26,13 +26,15 @@ final class ConfigManager {
 
         switch envString {
         case "local":
-            // For local, use Secrets for API URL (from .env or auto-detected IP), fallback to config.json
             let effectiveApiUrl = Secrets.CONVOS_API_BASE_URL.isEmpty ? (backendURLOverride ?? "") : Secrets.CONVOS_API_BASE_URL
+            let effectiveGatewayUrl = Secrets.GATEWAY_URL.isEmpty ? nil : Secrets.GATEWAY_URL
             let config = ConvosConfiguration(
                 apiBaseURL: effectiveApiUrl,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
                 xmtpEndpoint: Secrets.XMTP_CUSTOM_HOST.isEmpty ? nil : Secrets.XMTP_CUSTOM_HOST,
+                xmtpNetwork: xmtpNetwork,
+                gatewayUrl: effectiveGatewayUrl
             )
             environment = .local(config: config)
 
@@ -41,6 +43,7 @@ final class ConfigManager {
                 apiBaseURL: apiBaseURL,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
+                xmtpNetwork: xmtpNetwork
             )
             environment = .dev(config: config)
 
@@ -49,6 +52,7 @@ final class ConfigManager {
                 apiBaseURL: apiBaseURL,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
+                xmtpNetwork: xmtpNetwork
             )
             environment = .production(config: config)
 
@@ -113,5 +117,10 @@ final class ConfigManager {
             fatalError("Missing 'appUrlScheme' in config.json")
         }
         return scheme
+    }
+
+    /// XMTP Network from config (optional)
+    var xmtpNetwork: String? {
+        config["xmtpNetwork"] as? String
     }
 }

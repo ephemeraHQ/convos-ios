@@ -9,18 +9,21 @@ set -o pipefail
 # It also ensures the file exists with minimal content if needed
 # Usage: ./generate-secrets-local.sh
 
-# The path to the Secrets.swift file
-SECRETS_FILE="Convos/Config/Secrets.swift"
+# The paths to the Secrets.swift files (main app and app clip)
+SECRETS_FILE_APP="Convos/Config/Secrets.swift"
+SECRETS_FILE_APPCLIP="ConvosAppClip/Config/Secrets.swift"
 
-# Create the output directory if it doesn't exist
+# Create the output directories if they don't exist
 mkdir -p "Convos/Config"
+mkdir -p "ConvosAppClip/Config"
 
 # Function to create minimal Secrets.swift if it doesn't exist or is empty
 ensure_minimal_secrets() {
-    if [ ! -f "$SECRETS_FILE" ] || [ ! -s "$SECRETS_FILE" ]; then
-        echo "🔑 Creating minimal Secrets.swift file first"
+    local secrets_file=$1
+    if [ ! -f "$secrets_file" ] || [ ! -s "$secrets_file" ]; then
+        echo "🔑 Creating minimal Secrets.swift file first: $secrets_file"
 
-        cat >"$SECRETS_FILE" <<'MINIMAL_EOF'
+        cat >"$secrets_file" <<'MINIMAL_EOF'
 import Foundation
 
 // WARNING:
@@ -30,6 +33,7 @@ import Foundation
 enum Secrets {
     static let CONVOS_API_BASE_URL: String = ""
     static let XMTP_CUSTOM_HOST: String = ""
+    static let GATEWAY_URL: String = ""
 }
 
 MINIMAL_EOF
@@ -41,18 +45,24 @@ MINIMAL_EOF
 
 # If called with --ensure-only flag, just ensure minimal file exists and exit
 if [ "$1" = "--ensure-only" ]; then
-    if ensure_minimal_secrets; then
-        echo "✅ Minimal Secrets.swift created - ready for building"
+    if ensure_minimal_secrets "$SECRETS_FILE_APP"; then
+        echo "✅ Minimal Secrets.swift created for main app - ready for building"
     else
-        echo "✅ Secrets.swift already exists"
+        echo "✅ Secrets.swift already exists for main app"
+    fi
+    if ensure_minimal_secrets "$SECRETS_FILE_APPCLIP"; then
+        echo "✅ Minimal Secrets.swift created for app clip - ready for building"
+    else
+        echo "✅ Secrets.swift already exists for app clip"
     fi
     exit 0
 fi
 
 echo "🔍 Detecting configuration for Local development..."
 
-# Ensure minimal file exists first (in case this is the first run)
-ensure_minimal_secrets || true  # Don't exit if file already exists
+# Ensure minimal files exist first (in case this is the first run)
+ensure_minimal_secrets "$SECRETS_FILE_APP" || true  # Don't exit if file already exists
+ensure_minimal_secrets "$SECRETS_FILE_APPCLIP" || true  # Don't exit if file already exists
 
 # Function to get the first routable IPv4 address
 get_local_ip() {
@@ -112,8 +122,10 @@ LOCAL_IP=$(get_local_ip)
 # Read .env overrides if they exist
 ENV_BACKEND_URL=""
 ENV_XMTP_HOST=""
+ENV_GATEWAY_URL=""
 ENV_HAS_BACKEND_URL=false
 ENV_HAS_XMTP_HOST=false
+ENV_HAS_GATEWAY_URL=false
 
 if [ -f ".env" ]; then
     echo "📋 Checking .env for overrides..."
@@ -126,11 +138,16 @@ if [ -f ".env" ]; then
         ENV_HAS_XMTP_HOST=true
         ENV_XMTP_HOST=$(grep -v '^#' ".env" | grep '^XMTP_CUSTOM_HOST=' | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
     fi
+    if grep -v '^#' ".env" | grep -q '^GATEWAY_URL='; then
+        ENV_HAS_GATEWAY_URL=true
+        ENV_GATEWAY_URL=$(grep -v '^#' ".env" | grep '^GATEWAY_URL=' | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
+    fi
 fi
 
 # Determine final values (priority: .env override (even if empty) > auto-detected IP > config.json default > empty)
 FINAL_BACKEND_URL=""
 FINAL_XMTP_HOST=""
+FINAL_GATEWAY_URL=""
 
 # CONVOS_API_BASE_URL logic
 if [ "$ENV_HAS_BACKEND_URL" = true ]; then
@@ -167,10 +184,26 @@ else
     echo "⚠️  XMTP_CUSTOM_HOST will be empty"
 fi
 
-echo "🔑 Generating $SECRETS_FILE for Local development"
+# GATEWAY_URL logic (for d14n - decentralized network)
+if [ "$ENV_HAS_GATEWAY_URL" = true ]; then
+    FINAL_GATEWAY_URL="$ENV_GATEWAY_URL"
+    if [ -n "$ENV_GATEWAY_URL" ]; then
+        echo "✅ Using GATEWAY_URL from .env: $FINAL_GATEWAY_URL (d14n mode)"
+    else
+        echo "✅ Using GATEWAY_URL from .env: (empty - will use direct XMTP connection)"
+    fi
+else
+    FINAL_GATEWAY_URL=""
+    echo "ℹ️  GATEWAY_URL not set - using direct XMTP connection"
+fi
 
-# Generate Secrets.swift with determined values
-cat >"$SECRETS_FILE" <<EOF
+# Function to generate a Secrets.swift file
+generate_secrets_file() {
+    local secrets_file=$1
+    echo "🔑 Generating $secrets_file for Local development"
+
+    # Generate Secrets.swift with determined values
+    cat >"$secrets_file" <<EOF
 import Foundation
 
 // WARNING:
@@ -184,6 +217,7 @@ import Foundation
 enum Secrets {
     static let CONVOS_API_BASE_URL: String = "$FINAL_BACKEND_URL"
     static let XMTP_CUSTOM_HOST: String = "$FINAL_XMTP_HOST"
+    static let GATEWAY_URL: String = "$FINAL_GATEWAY_URL"
 EOF
 
 # Check if .env file exists and add any additional secrets from it
@@ -199,22 +233,29 @@ if [ -f ".env" ]; then
         # Skip the keys we already handled
         [[ "$key" == "CONVOS_API_BASE_URL" ]] && continue
         [[ "$key" == "XMTP_CUSTOM_HOST" ]] && continue
+        [[ "$key" == "GATEWAY_URL" ]] && continue
 
         # Remove any quotes from the value
         value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
 
         # Add the secret to the Swift file
-        echo "    static let $key: String = \"$value\"" >>"$SECRETS_FILE"
+        echo "    static let $key: String = \"$value\"" >>"$secrets_file"
     done <.env
 else
     echo "⚠️  No .env file found, using defaults from config.json"
 fi
 
-cat >>"$SECRETS_FILE" <<'EOF'
+cat >>"$secrets_file" <<'EOF'
 }
 
 EOF
+}
 
-echo "🏁 Generated $SECRETS_FILE successfully"
+# Generate Secrets.swift for both targets
+generate_secrets_file "$SECRETS_FILE_APP"
+generate_secrets_file "$SECRETS_FILE_APPCLIP"
+
+echo "🏁 Generated Secrets.swift files successfully"
 echo "🔗 CONVOS_API_BASE_URL: $FINAL_BACKEND_URL"
 echo "🌐 XMTP_CUSTOM_HOST: $FINAL_XMTP_HOST"
+echo "🌍 GATEWAY_URL: ${FINAL_GATEWAY_URL:-'(not set - using XMTP v3 network)'}"
