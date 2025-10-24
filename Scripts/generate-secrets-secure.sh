@@ -4,6 +4,17 @@ set -e
 set -o pipefail
 # NO set -x to avoid exposing secrets in logs
 
+# Swift string escape function to prevent injection attacks
+swift_escape() {
+    local s="$1"
+    s="${s//\\/\\\\}"      # Escape backslashes first
+    s="${s//\"/\\\"}"      # Escape quotes
+    s="${s//$'\n'/\\n}"    # Escape newlines
+    s="${s//$'\t'/\\t}"    # Escape tabs
+    s="${s//$'\r'/\\r}"    # Escape carriage returns
+    echo "$s"
+}
+
 SECRETS_FILE="Convos/Config/Secrets.swift"
 APPCLIP_SECRETS_FILE="ConvosAppClip/Config/Secrets.swift"
 
@@ -14,6 +25,11 @@ echo "🔑 Generating Secrets.swift from environment variables"
 # Create directories if needed
 mkdir -p "Convos/Config"
 mkdir -p "ConvosAppClip/Config"
+
+# Escape values to prevent injection
+ESCAPED_API_URL=$(swift_escape "${CONVOS_API_BASE_URL:-}")
+ESCAPED_XMTP_HOST=$(swift_escape "${XMTP_CUSTOM_HOST:-}")
+ESCAPED_GATEWAY_URL=$(swift_escape "${GATEWAY_URL:-}")
 
 # Generate Secrets.swift WITHOUT exposing values in logs
 cat >"$SECRETS_FILE" <<EOF
@@ -26,8 +42,9 @@ import Foundation
 
 /// Secrets are generated from environment variables by ./Scripts/generate-secrets-secure.sh
 enum Secrets {
-    static let CONVOS_API_BASE_URL: String = "${CONVOS_API_BASE_URL:-}"
-    static let XMTP_CUSTOM_HOST: String = "${XMTP_CUSTOM_HOST:-}"
+    static let CONVOS_API_BASE_URL: String = "$ESCAPED_API_URL"
+    static let XMTP_CUSTOM_HOST: String = "$ESCAPED_XMTP_HOST"
+    static let GATEWAY_URL: String = "$ESCAPED_GATEWAY_URL"
 }
 EOF
 
@@ -47,6 +64,12 @@ if [[ -z "$XMTP_CUSTOM_HOST" ]]; then
     echo "  - XMTP_CUSTOM_HOST: (empty - will use default)"
 else
     echo "  - XMTP_CUSTOM_HOST: $XMTP_CUSTOM_HOST"
+fi
+
+if [[ -z "$GATEWAY_URL" ]]; then
+    echo "  - GATEWAY_URL: (empty - will use direct XMTP connection)"
+else
+    echo "  - GATEWAY_URL: $GATEWAY_URL"
 fi
 
 echo ""

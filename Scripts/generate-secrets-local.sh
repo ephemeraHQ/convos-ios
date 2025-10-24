@@ -17,6 +17,22 @@ SECRETS_FILE_APPCLIP="ConvosAppClip/Config/Secrets.swift"
 mkdir -p "Convos/Config"
 mkdir -p "ConvosAppClip/Config"
 
+# Swift string escape function to prevent injection attacks
+swift_escape() {
+    local s="$1"
+    s="${s//\\/\\\\}"      # Escape backslashes first
+    s="${s//\"/\\\"}"      # Escape quotes
+    s="${s//$'\n'/\\n}"    # Escape newlines
+    s="${s//$'\t'/\\t}"    # Escape tabs
+    s="${s//$'\r'/\\r}"    # Escape carriage returns
+    echo "$s"
+}
+
+# Validate Swift identifier
+is_valid_swift_identifier() {
+    [[ "$1" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]
+}
+
 # Function to create minimal Secrets.swift if it doesn't exist or is empty
 ensure_minimal_secrets() {
     local secrets_file=$1
@@ -215,9 +231,9 @@ import Foundation
 
 /// Secrets are generated automatically for Local development
 enum Secrets {
-    static let CONVOS_API_BASE_URL: String = "$FINAL_BACKEND_URL"
-    static let XMTP_CUSTOM_HOST: String = "$FINAL_XMTP_HOST"
-    static let GATEWAY_URL: String = "$FINAL_GATEWAY_URL"
+    static let CONVOS_API_BASE_URL: String = "$(swift_escape "$FINAL_BACKEND_URL")"
+    static let XMTP_CUSTOM_HOST: String = "$(swift_escape "$FINAL_XMTP_HOST")"
+    static let GATEWAY_URL: String = "$(swift_escape "$FINAL_GATEWAY_URL")"
 EOF
 
 # Check if .env file exists and add any additional secrets from it
@@ -235,11 +251,20 @@ if [ -f ".env" ]; then
         [[ "$key" == "XMTP_CUSTOM_HOST" ]] && continue
         [[ "$key" == "GATEWAY_URL" ]] && continue
 
+        # Validate Swift identifier
+        if ! is_valid_swift_identifier "$key"; then
+            echo "⚠️  Skipping invalid Swift identifier: $key" >&2
+            continue
+        fi
+
         # Remove any quotes from the value
         value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//')
 
+        # Escape the value to prevent injection
+        escaped_value=$(swift_escape "$value")
+
         # Add the secret to the Swift file
-        echo "    static let $key: String = \"$value\"" >>"$secrets_file"
+        echo "    static let $key: String = \"$escaped_value\"" >>"$secrets_file"
     done <.env
 else
     echo "⚠️  No .env file found, using defaults from config.json"
@@ -247,7 +272,6 @@ fi
 
 cat >>"$secrets_file" <<'EOF'
 }
-
 EOF
 }
 
