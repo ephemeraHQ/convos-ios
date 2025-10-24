@@ -24,9 +24,9 @@ public struct ConversationUpdate: Hashable, Codable {
         public let newValue: String?
     }
 
-    public let creator: Profile
-    public let addedMembers: [Profile]
-    public let removedMembers: [Profile]
+    public let creator: ConversationMember
+    public let addedMembers: [ConversationMember]
+    public let removedMembers: [ConversationMember]
     public let metadataChanges: [MetadataChange]
 
     var showsInMessagesList: Bool {
@@ -37,26 +37,32 @@ public struct ConversationUpdate: Hashable, Codable {
     }
 
     public var summary: String {
+        let creatorDisplayName = creator.isCurrentUser ? "You" : creator.profile.displayName
         if !addedMembers.isEmpty && !removedMembers.isEmpty {
-            "\(creator.displayName) added and removed members from the convo"
+            return "\(creatorDisplayName) added and removed members from the convo"
         } else if !addedMembers.isEmpty {
-            "\(addedMembers.formattedNamesString) joined by invitation"
+            if addedMembers.count == 1, let member = addedMembers.first,
+               member.isCurrentUser {
+                let asString = member.profile.name != nil ? "as \(member.profile.displayName)" : "anonymously as \(member.profile.displayName)"
+                return "You joined \(asString)"
+            }
+            return "\(addedMembers.formattedNamesString) joined by invitation"
         } else if let metadataChange = metadataChanges.first,
                   metadataChange.field == .name,
                   let updatedName = metadataChange.newValue {
-            "\(creator.displayName) changed the convo name to \"\(updatedName)\""
+            return "\(creatorDisplayName) changed the convo name to \"\(updatedName)\""
         } else if let metadataChange = metadataChanges.first,
                   metadataChange.field == .image,
                   metadataChange.newValue != nil {
-            "\(creator.displayName) changed the convo photo"
+            return "\(creatorDisplayName) changed the convo photo"
         } else if let metadataChange = metadataChanges.first,
                   metadataChange.field == .description,
                   let newValue = metadataChange.newValue {
-            "\(creator.displayName) changed the convo description to \"\(newValue)\""
+            return "\(creatorDisplayName) changed the convo description to \"\(newValue)\""
         } else if !removedMembers.isEmpty {
-            ""
+            return ""
         } else {
-            ""
+            return ""
         }
     }
 }

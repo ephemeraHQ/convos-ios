@@ -123,7 +123,7 @@ extension Array where Element == MessageWithDetails {
                     messageContent = .emoji(dbMessage.emoji ?? "")
                 case .update:
                     guard let update = dbMessage.update,
-                          let initiatedByMember = try MemberProfile.fetchOne(
+                          let initiatedByMember = try ConversationMemberProfileWithRole.fetchOne(
                             database,
                             conversationId: conversation.id,
                             inboxId: update.initiatedByInboxId
@@ -131,21 +131,21 @@ extension Array where Element == MessageWithDetails {
                         Logger.error("Update message type is missing update object")
                         return nil
                     }
-                    let addedMembers = try MemberProfile.fetchAll(
+                    let addedMembers = try ConversationMemberProfileWithRole.fetchAll(
                         database,
                         conversationId: conversation.id,
                         inboxIds: update.addedInboxIds
                     )
-                    let removedMembers = try MemberProfile.fetchAll(
+                    let removedMembers = try ConversationMemberProfileWithRole.fetchAll(
                         database,
                         conversationId: conversation.id,
                         inboxIds: update.removedInboxIds
                     )
                     messageContent = .update(
                         .init(
-                            creator: initiatedByMember.hydrateProfile(),
-                            addedMembers: addedMembers.map { $0.hydrateProfile() },
-                            removedMembers: removedMembers.map { $0.hydrateProfile() },
+                            creator: initiatedByMember.hydrateConversationMember(currentInboxId: conversation.inboxId),
+                            addedMembers: addedMembers.map { $0.hydrateConversationMember(currentInboxId: conversation.inboxId) },
+                            removedMembers: removedMembers.map { $0.hydrateConversationMember(currentInboxId: conversation.inboxId) },
                             metadataChanges: update.metadataChanges
                                 .map {
                                     .init(
