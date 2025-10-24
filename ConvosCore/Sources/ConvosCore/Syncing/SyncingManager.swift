@@ -139,7 +139,7 @@ actor SyncingManager: SyncingManagerProtocol {
                         createdAfterNs: nil,
                         createdBeforeNs: nil,
                         lastActivityBeforeNs: nil,
-                        lastActivityAfterNs: nil,
+                        lastActivityAfterNs: lastSyncedAt?.nanosecondsSince1970,
                         limit: nil,
                         consentStates: consentStates,
                         orderBy: .lastActivity
