@@ -302,6 +302,13 @@ class ConversationViewModel {
         presentingConversationSettings = false
     }
 
+    func onConversationSettingsCancelled() {
+        isEditingConversationName = false
+        isEditingDescription = false
+        editingConversationName = conversation.name ?? ""
+        editingDescription = conversation.description ?? ""
+    }
+
     func onProfilePhotoTap() {
         focus = .displayName
     }

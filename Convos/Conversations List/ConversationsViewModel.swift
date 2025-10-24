@@ -49,7 +49,7 @@ final class ConversationsViewModel {
         }
     }
     var presentingExplodeInfo: Bool = false
-    let maxNumberOfConvos: Int = 20
+    let maxNumberOfConvos: Int = 50
     var presentingMaxNumberOfConvosReachedInfo: Bool = false
     private var maxNumberOfConvosReached: Bool {
         conversationsCount >= maxNumberOfConvos

@@ -65,8 +65,7 @@ struct ConversationInfoEditView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(role: .cancel) {
-                        viewModel.isEditingConversationName = false
-                        viewModel.isEditingDescription = false
+                        viewModel.onConversationSettingsCancelled()
                         dismiss()
                     }
                 }
