@@ -160,20 +160,4 @@ final class MessagingService: MessagingServiceProtocol {
             afterUpload: afterUpload
         )
     }
-
-    // MARK: - Public Unused Inbox Methods
-
-    static func createUnusedInboxIfNeeded(
-        databaseWriter: any DatabaseWriter,
-        databaseReader: any DatabaseReader,
-        environment: AppEnvironment
-    ) {
-        Task(priority: .background) {
-            await UnusedInboxCache.shared.prepareUnusedInboxIfNeeded(
-                databaseWriter: databaseWriter,
-                databaseReader: databaseReader,
-                environment: environment
-            )
-        }
-    }
 }

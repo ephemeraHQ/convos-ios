@@ -463,7 +463,7 @@ public actor InboxStateMachine {
     }
 
     private func handleDeleteFromError(clientId: String) async throws {
-        Logger.info("Deleting inbox from error state...")
+        Logger.info("Deleting inbox with clientId \(clientId) from error state...")
         defer { enqueueAction(.stop) }
 
         let currentInboxId = inboxId
@@ -479,7 +479,7 @@ public actor InboxStateMachine {
     }
 
     private func handleStop(clientId: String) async throws {
-        Logger.info("Stopping inbox...")
+        Logger.info("Stopping inbox with clientId \(clientId)...")
         emitStateChange(.stopping(clientId: clientId))
         await syncingManager?.stop()
         removePushTokenObserver()

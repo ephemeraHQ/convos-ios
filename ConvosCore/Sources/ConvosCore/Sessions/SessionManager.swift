@@ -27,6 +27,7 @@ public final class SessionManager: SessionManagerProtocol {
     private let databaseWriter: any DatabaseWriter
     private let databaseReader: any DatabaseReader
     private let environment: AppEnvironment
+    private var initializationTask: Task<Void, Never>?
 
     init(databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader,
@@ -34,27 +35,32 @@ public final class SessionManager: SessionManagerProtocol {
         self.databaseWriter = databaseWriter
         self.databaseReader = databaseReader
         self.environment = environment
+        observe()
+
         let identityStore = environment.defaultIdentityStore
-        Task {
+        initializationTask = Task { [weak self] in
+            guard let self else { return }
             do {
                 let identities = try await identityStore.loadAll()
-                self.startMessagingServices(for: identities)
+                guard !Task.isCancelled else { return }
+                await self.startMessagingServices(for: identities)
             } catch {
                 Logger.error("Error starting messaging services: \(error.localizedDescription)")
             }
+            guard !Task.isCancelled else { return }
+            Task(priority: .background) {
+                guard !Task.isCancelled else { return }
+                await UnusedInboxCache.shared.prepareUnusedInboxIfNeeded(
+                    databaseWriter: databaseWriter,
+                    databaseReader: databaseReader,
+                    environment: environment
+                )
+            }
         }
-
-        observe()
-
-        // Schedule creation of unused inbox on app startup
-        MessagingService.createUnusedInboxIfNeeded(
-            databaseWriter: databaseWriter,
-            databaseReader: databaseReader,
-            environment: environment
-        )
     }
 
     deinit {
+        initializationTask?.cancel()
         if let leftConversationObserver {
             NotificationCenter.default.removeObserver(leftConversationObserver)
         }
@@ -66,19 +72,38 @@ public final class SessionManager: SessionManagerProtocol {
 
     // MARK: - Private Methods
 
-    private func startMessagingServices(for identities: [KeychainIdentity]) {
+    private func startMessagingServices(for identities: [KeychainIdentity]) async {
         let inboxIds = identities.map { $0.inboxId }
         Logger.info("Starting messaging services for inboxes: \(inboxIds)")
-        serviceQueue.sync {
+
+        var servicesToCreate: [KeychainIdentity] = []
+
+        await withTaskGroup(of: KeychainIdentity?.self) { group in
             for identity in identities {
-                let service = startMessagingService(for: identity.inboxId, clientId: identity.clientId)
-                messagingServices[identity.clientId] = service
+                group.addTask {
+                    let isUnused = await UnusedInboxCache.shared.isUnusedInbox(identity.inboxId)
+                    return isUnused ? nil : identity
+                }
+            }
+
+            for await identity in group {
+                if let identity {
+                    servicesToCreate.append(identity)
+                }
+            }
+        }
+
+        serviceQueue.sync {
+            for identity in servicesToCreate {
+                let service = self.startMessagingService(for: identity.inboxId, clientId: identity.clientId)
+                self.messagingServices[identity.clientId] = service
             }
         }
     }
 
     private func startMessagingService(for inboxId: String, clientId: String) -> AnyMessagingService {
-        MessagingService.authorizedMessagingService(
+        Logger.info("Starting messaging service for inboxId: \(inboxId) clientId: \(clientId)")
+        return MessagingService.authorizedMessagingService(
             for: inboxId,
             clientId: clientId,
             databaseWriter: databaseWriter,
