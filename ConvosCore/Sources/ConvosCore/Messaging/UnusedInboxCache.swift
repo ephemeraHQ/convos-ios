@@ -2,6 +2,17 @@ import Foundation
 import GRDB
 
 /// Manages pre-created unused inboxes for faster user onboarding
+///
+/// UnusedInboxCache implements an optimization pattern where XMTP inboxes are
+/// pre-created and cached before users need them, reducing perceived latency
+/// when creating or joining conversations. The cache:
+/// - Pre-creates a single "unused" inbox in the background
+/// - Stores only the inbox ID in keychain (not in database until consumed)
+/// - Immediately provides the pre-created inbox when needed
+/// - Automatically creates a new unused inbox after consumption
+///
+/// This allows the app to skip the XMTP client creation step when users
+/// create/join their first conversation, making the UX feel instant.
 @globalActor
 public actor UnusedInboxCache {
     public static let shared: UnusedInboxCache = .init()

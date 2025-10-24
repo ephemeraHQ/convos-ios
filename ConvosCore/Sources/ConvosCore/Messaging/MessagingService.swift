@@ -3,6 +3,13 @@ import Foundation
 import GRDB
 import XMTPiOS
 
+/// Service for managing XMTP messaging for a single inbox
+///
+/// MessagingService coordinates all messaging operations for one inbox identity,
+/// including message sending/receiving, conversation management, and member operations.
+/// Each service instance manages one XMTP client through the InboxStateManager and
+/// provides factory methods for creating writers and repositories scoped to this inbox.
+/// The service handles authorization, streaming, and push notification registration.
 final class MessagingService: MessagingServiceProtocol {
     private let authorizationOperation: any AuthorizeInboxOperationProtocol
     internal let inboxStateManager: any InboxStateManagerProtocol

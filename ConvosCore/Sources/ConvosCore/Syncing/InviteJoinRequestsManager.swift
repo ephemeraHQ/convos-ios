@@ -32,6 +32,29 @@ protocol InviteJoinRequestsManagerProtocol {
     ) async throws -> Bool
 }
 
+/// Manages processing of conversation join requests via XMTP DMs
+///
+/// InviteJoinRequestsManager implements the server-less join approval flow:
+///
+/// **Join Request Processing:**
+/// 1. Monitors incoming DMs for text messages containing signed invites
+/// 2. Validates invite signature using recovered public key
+/// 3. Decrypts conversation token to get conversation ID
+/// 4. Verifies conversation exists and creator matches current inbox
+/// 5. Adds requester to conversation if all checks pass
+/// 6. Blocks DM and denies consent if invite is invalid (anti-spam)
+///
+/// **Security Checks:**
+/// - Signature verification using secp256k1 ECDSA
+/// - Creator inbox ID must match current user
+/// - Invite and conversation expiration validation
+/// - Conversation token decryption ensures only creator can process requests
+///
+/// **Spam Prevention:**
+/// - Invalid invites result in immediate DM blocking (consent = denied)
+/// - Prevents attackers from flooding DMs with fake join requests
+///
+/// This enables invitation-only conversations without a centralized approval server.
 class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
     private let identityStore: any KeychainIdentityStoreProtocol
     private let databaseReader: any DatabaseReader

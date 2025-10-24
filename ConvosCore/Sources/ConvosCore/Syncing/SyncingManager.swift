@@ -10,6 +10,19 @@ protocol SyncingManagerProtocol: Actor {
     func stop()
 }
 
+/// Manages real-time synchronization of conversations and messages
+///
+/// SyncingManager coordinates continuous synchronization between the local database
+/// and XMTP network. It handles:
+/// - Initial sync of all conversations and messages
+/// - Real-time streaming of new conversations and messages
+/// - Processing join requests via DMs
+/// - Managing conversation consent states
+/// - Push notification topic subscriptions
+/// - Exponential backoff retry logic for network failures
+///
+/// The manager maintains separate streams for conversations and messages with
+/// automatic retry and backoff handling.
 actor SyncingManager: SyncingManagerProtocol {
     // MARK: - Properties
 

@@ -65,6 +65,18 @@ public struct InboxReadyResult {
 typealias AnySyncingManager = (any SyncingManagerProtocol)
 typealias AnyInviteJoinRequestsManager = (any InviteJoinRequestsManagerProtocol)
 
+/// State machine managing the lifecycle of an XMTP inbox
+///
+/// InboxStateMachine coordinates the complex lifecycle of an inbox from creation/authorization
+/// through ready state and eventual deletion. It handles:
+/// - Creating new XMTP clients or building existing ones from keychain
+/// - Authenticating with the Convos backend
+/// - Starting sync services for conversations and messages
+/// - Registering for push notifications
+/// - Cleaning up all resources on deletion
+///
+/// The state machine ensures proper sequencing of operations through an action queue
+/// and maintains state through idle → authorizing/registering → authenticating → ready → deleting → stopping.
 public actor InboxStateMachine {
     enum Action {
         case authorize(inboxId: String, clientId: String),

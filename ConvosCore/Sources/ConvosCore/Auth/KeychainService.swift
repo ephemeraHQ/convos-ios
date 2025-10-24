@@ -12,6 +12,11 @@ protocol KeychainItemProtocol {
     var account: String { get }
 }
 
+/// Generic keychain service for storing and retrieving items
+///
+/// Provides type-safe keychain operations for storing string and data values.
+/// Items are identified by service and account identifiers, with automatic
+/// updates for duplicate entries. Used internally by higher-level stores.
 final class KeychainService<T: KeychainItemProtocol> {
     func saveString(_ value: String, for item: T) throws {
         guard let valueData = value.data(using: .utf8) else {

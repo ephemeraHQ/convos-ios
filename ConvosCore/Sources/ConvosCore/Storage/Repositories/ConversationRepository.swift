@@ -14,6 +14,10 @@ enum ConversationRepositoryError: Error {
     case failedFetchingConversation
 }
 
+/// Repository for fetching and observing a single conversation
+///
+/// Provides read-only access to conversation data with reactive updates via Combine.
+/// Aggregates conversation details, members, and metadata from the database.
 class ConversationRepository: ConversationRepositoryProtocol {
     private let dbReader: any DatabaseReader
     let conversationId: String

@@ -18,6 +18,13 @@ public protocol InboxStateManagerProtocol: AnyObject {
     func observeState(_ handler: @escaping (InboxStateMachine.State) -> Void) -> StateObserverHandle
 }
 
+/// Manages and observes the state of an XMTP inbox
+///
+/// InboxStateManager provides Observable state tracking for an inbox's lifecycle
+/// (idle, authorizing, ready, error). It wraps the InboxStateMachine and exposes
+/// the current state to SwiftUI views and other observers. The manager handles
+/// waiting for ready states, reauthorization flows, and provides both protocol-based
+/// and closure-based observation patterns.
 @Observable
 public final class InboxStateManager: InboxStateManagerProtocol {
     public private(set) var currentState: InboxStateMachine.State

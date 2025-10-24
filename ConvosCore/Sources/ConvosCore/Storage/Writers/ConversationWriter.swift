@@ -19,6 +19,12 @@ public protocol ConversationWriterProtocol {
     ) async throws -> String
 }
 
+/// Writer for persisting conversations and their members to the database
+///
+/// ConversationWriter handles converting XMTP conversations to database representations
+/// and managing all related data including members, profiles, invites, and messages.
+/// Handles both initial storage and updates, with special logic for matching
+/// placeholder conversations created during invite flows.
 class ConversationWriter: ConversationWriterProtocol {
     private let databaseWriter: any DatabaseWriter
     private let inviteWriter: any InviteWriterProtocol

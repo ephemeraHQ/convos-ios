@@ -66,6 +66,10 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     func overrideJWTToken(_ token: String)
 }
 
+/// Base HTTP client for Convos backend API
+///
+/// Provides unauthenticated API operations including device registration
+/// with Firebase AppCheck authentication.
 internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
     internal let baseURL: URL
     internal let session: URLSession
@@ -207,6 +211,17 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
     }
 }
 
+/// Authenticated HTTP client for Convos backend API
+///
+/// ConvosAPIClient provides authenticated access to the Convos backend, handling:
+/// - JWT authentication with automatic token refresh
+/// - Attachment uploads via S3 presigned URLs
+/// - Push notification topic subscriptions
+/// - Device and installation management
+/// - Exponential backoff retry logic
+///
+/// The client automatically re-authenticates on 401 responses up to a maximum
+/// retry count and stores JWT tokens in keychain for persistence.
 final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     private let client: any XMTPClientProvider
     private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()

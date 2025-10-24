@@ -7,6 +7,13 @@ public protocol DatabaseManagerProtocol {
     var dbReader: DatabaseReader { get }
 }
 
+/// Manages the SQLite database for Convos
+///
+/// DatabaseManager initializes and configures the GRDB database pool with WAL mode
+/// for concurrent access between the main app and notification extension. The database
+/// is stored in the shared App Group container to enable multi-process access.
+/// Configures connection pooling, busy timeouts, and persistent WAL mode for
+/// read-only processes.
 public final class DatabaseManager: DatabaseManagerProtocol {
     let environment: AppEnvironment
 
