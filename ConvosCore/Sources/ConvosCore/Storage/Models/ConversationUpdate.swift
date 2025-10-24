@@ -41,8 +41,6 @@ public struct ConversationUpdate: Hashable, Codable {
             "\(creator.displayName) added and removed members from the convo"
         } else if !addedMembers.isEmpty {
             "\(addedMembers.formattedNamesString) joined by invitation"
-        } else if !removedMembers.isEmpty {
-            "\(removedMembers.formattedNamesString) left the convo"
         } else if let metadataChange = metadataChanges.first,
                   metadataChange.field == .name,
                   let updatedName = metadataChange.newValue {
@@ -55,6 +53,8 @@ public struct ConversationUpdate: Hashable, Codable {
                   metadataChange.field == .description,
                   let newValue = metadataChange.newValue {
             "\(creator.displayName) changed the convo description to \"\(newValue)\""
+        } else if !removedMembers.isEmpty {
+            ""
         } else {
             ""
         }
