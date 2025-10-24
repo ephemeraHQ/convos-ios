@@ -236,6 +236,11 @@ public actor InboxStateMachine {
             // XMTP d14n - using gateway
             Logger.info("   Mode = XMTP d14n")
             Logger.info("   GATEWAY_URL = \(gatewayUrl)")
+            // Clear any previous custom address when using gateway
+            if XMTPEnvironment.customLocalAddress != nil {
+                Logger.info("   Clearing previous customLocalAddress for gateway mode")
+                XMTPEnvironment.customLocalAddress = nil
+            }
         } else {
             // XMTP v3
             Logger.info("   Mode = XMTP v3")
@@ -244,13 +249,14 @@ public actor InboxStateMachine {
             Logger.info("   xmtpEnv = \(environment.xmtpEnv)")
             Logger.info("   isSecure = \(environment.isSecure)")
 
-            // Log the actual XMTPEnvironment.customLocalAddress after setting
+            // Update XMTPEnvironment.customLocalAddress (clear if nil)
             if let customHost = environment.customLocalAddress {
                 Logger.info("Setting XMTPEnvironment.customLocalAddress = \(customHost)")
                 XMTPEnvironment.customLocalAddress = customHost
                 Logger.info("Actual XMTPEnvironment.customLocalAddress = \(XMTPEnvironment.customLocalAddress ?? "nil")")
             } else {
-                Logger.info("Using default XMTP endpoints")
+                Logger.info("Clearing XMTPEnvironment.customLocalAddress")
+                XMTPEnvironment.customLocalAddress = nil
             }
         }
     }
@@ -525,6 +531,12 @@ public actor InboxStateMachine {
         emitStateChange(.stopping(clientId: clientId))
         await syncingManager?.stop()
         removePushTokenObserver()
+
+        if XMTPEnvironment.customLocalAddress != nil {
+            Logger.info("Clearing XMTPEnvironment.customLocalAddress on stop")
+            XMTPEnvironment.customLocalAddress = nil
+        }
+
         emitStateChange(.idle(clientId: clientId))
     }
 
@@ -536,6 +548,11 @@ public actor InboxStateMachine {
     ) async throws {
         // Stop all services
         await syncingManager?.stop()
+
+        if XMTPEnvironment.customLocalAddress != nil {
+            Logger.info("Clearing XMTPEnvironment.customLocalAddress on cleanup")
+            XMTPEnvironment.customLocalAddress = nil
+        }
 
         // Unsubscribe from inbox-level welcome topic and unregister installation from backend
         // Note: Conversation topics are handled by ConversationStateMachine.cleanUp()

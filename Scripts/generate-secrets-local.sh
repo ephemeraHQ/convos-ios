@@ -9,29 +9,16 @@ set -o pipefail
 # It also ensures the file exists with minimal content if needed
 # Usage: ./generate-secrets-local.sh
 
+# Source shared utility functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/secrets-utils.sh"
+
 # The paths to the Secrets.swift files (main app and app clip)
 SECRETS_FILE_APP="Convos/Config/Secrets.swift"
 SECRETS_FILE_APPCLIP="ConvosAppClip/Config/Secrets.swift"
 
 # Create the output directories if they don't exist
-mkdir -p "Convos/Config"
-mkdir -p "ConvosAppClip/Config"
-
-# Swift string escape function to prevent injection attacks
-swift_escape() {
-    local s="$1"
-    s="${s//\\/\\\\}"      # Escape backslashes first
-    s="${s//\"/\\\"}"      # Escape quotes
-    s="${s//$'\n'/\\n}"    # Escape newlines
-    s="${s//$'\t'/\\t}"    # Escape tabs
-    s="${s//$'\r'/\\r}"    # Escape carriage returns
-    echo "$s"
-}
-
-# Validate Swift identifier
-is_valid_swift_identifier() {
-    [[ "$1" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]
-}
+ensure_secrets_directories
 
 # Function to create minimal Secrets.swift if it doesn't exist or is empty
 ensure_minimal_secrets() {

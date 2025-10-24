@@ -6,6 +6,8 @@ final class ConfigManager {
     static let shared: ConfigManager = ConfigManager()
 
     private let config: [String: Any]
+    private var _currentEnvironment: AppEnvironment?
+    private let environmentLock: NSLock = NSLock()
 
     private init() {
         guard let url = Bundle.main.url(forResource: "config", withExtension: "json"),
@@ -16,8 +18,21 @@ final class ConfigManager {
         self.config = dict
     }
 
-    /// Get the current AppEnvironment from config
-    lazy var currentEnvironment: AppEnvironment = {
+    /// Get the current AppEnvironment from config (thread-safe)
+    var currentEnvironment: AppEnvironment {
+        environmentLock.lock()
+        defer { environmentLock.unlock() }
+
+        if let environment = _currentEnvironment {
+            return environment
+        }
+
+        let environment = createEnvironment()
+        _currentEnvironment = environment
+        return environment
+    }
+
+    private func createEnvironment() -> AppEnvironment {
         guard let envString = config["environment"] as? String else {
             fatalError("Missing 'environment' key in config.json")
         }
@@ -64,7 +79,7 @@ final class ConfigManager {
         environment.storeSecureConfigurationForNotificationExtension()
 
         return environment
-    }()
+    }
 
     /// API base URL from config (optional for local, required for dev/prod)
     var apiBaseURL: String {

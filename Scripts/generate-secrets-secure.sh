@@ -4,16 +4,9 @@ set -e
 set -o pipefail
 # NO set -x to avoid exposing secrets in logs
 
-# Swift string escape function to prevent injection attacks
-swift_escape() {
-    local s="$1"
-    s="${s//\\/\\\\}"      # Escape backslashes first
-    s="${s//\"/\\\"}"      # Escape quotes
-    s="${s//$'\n'/\\n}"    # Escape newlines
-    s="${s//$'\t'/\\t}"    # Escape tabs
-    s="${s//$'\r'/\\r}"    # Escape carriage returns
-    echo "$s"
-}
+# Source shared utility functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/secrets-utils.sh"
 
 SECRETS_FILE="Convos/Config/Secrets.swift"
 APPCLIP_SECRETS_FILE="ConvosAppClip/Config/Secrets.swift"
@@ -23,8 +16,7 @@ echo "🔑 Generating Secrets.swift from environment variables"
 # CONVOS_API_BASE_URL and XMTP_CUSTOM_HOST are optional (can be empty)
 
 # Create directories if needed
-mkdir -p "Convos/Config"
-mkdir -p "ConvosAppClip/Config"
+ensure_secrets_directories
 
 # Escape values to prevent injection
 ESCAPED_API_URL=$(swift_escape "${CONVOS_API_BASE_URL:-}")
