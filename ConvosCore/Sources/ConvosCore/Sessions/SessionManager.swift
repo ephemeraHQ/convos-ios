@@ -27,6 +27,7 @@ public final class SessionManager: SessionManagerProtocol {
     private let databaseWriter: any DatabaseWriter
     private let databaseReader: any DatabaseReader
     private let environment: AppEnvironment
+    private var initializationTask: Task<Void, Never>?
 
     init(databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader,
@@ -37,16 +38,18 @@ public final class SessionManager: SessionManagerProtocol {
         observe()
 
         let identityStore = environment.defaultIdentityStore
-        Task { [weak self] in
+        initializationTask = Task { [weak self] in
             guard let self else { return }
             do {
                 let identities = try await identityStore.loadAll()
+                guard !Task.isCancelled else { return }
                 await self.startMessagingServices(for: identities)
             } catch {
                 Logger.error("Error starting messaging services: \(error.localizedDescription)")
             }
-
+            guard !Task.isCancelled else { return }
             Task(priority: .background) {
+                guard !Task.isCancelled else { return }
                 await UnusedInboxCache.shared.prepareUnusedInboxIfNeeded(
                     databaseWriter: databaseWriter,
                     databaseReader: databaseReader,
@@ -57,6 +60,7 @@ public final class SessionManager: SessionManagerProtocol {
     }
 
     deinit {
+        initializationTask?.cancel()
         if let leftConversationObserver {
             NotificationCenter.default.removeObserver(leftConversationObserver)
         }
