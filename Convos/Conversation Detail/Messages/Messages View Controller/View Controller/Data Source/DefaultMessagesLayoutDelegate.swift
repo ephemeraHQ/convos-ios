@@ -98,8 +98,6 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
 
         let item = sections[indexPath.section].cells[indexPath.item]
         switch item {
-        case .messageGroup, .date:
-            originalAttributes.center.y += originalAttributes.frame.height
         case let .message(message, bubbleType: _):
             switch message.base.content {
             case .text, .attachment, .attachments, .emoji:
@@ -125,8 +123,6 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
 
         let oldItem = oldSections[indexPath.section].cells[indexPath.item]
         switch oldItem {
-        case .messageGroup, .date:
-            originalAttributes.center.y += originalAttributes.frame.height
         case let .message(message, bubbleType: _):
             switch message.base.content {
             case .text, .attachment, .attachments, .emoji:
