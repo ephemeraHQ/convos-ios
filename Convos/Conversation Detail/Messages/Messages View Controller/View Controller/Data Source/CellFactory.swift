@@ -167,7 +167,7 @@ final class CellFactory {
             withReuseIdentifier: TextTitleCell.reuseIdentifier,
             for: indexPath
         ) as! TextTitleCell
-        cell.setup(title: update.summary)
+        cell.setup(title: update.summary, profile: update.profile)
         return cell
     }
 
@@ -178,7 +178,7 @@ final class CellFactory {
             withReuseIdentifier: TextTitleCell.reuseIdentifier,
             for: indexPath
         ) as! TextTitleCell
-        cell.setup(title: title)
+        cell.setup(title: title, profile: nil)
         return cell
     }
 }

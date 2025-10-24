@@ -29,6 +29,34 @@ public struct ConversationUpdate: Hashable, Codable {
     public let removedMembers: [ConversationMember]
     public let metadataChanges: [MetadataChange]
 
+    public var profile: Profile? {
+        if !addedMembers.isEmpty && !removedMembers.isEmpty {
+            return creator.profile
+        } else if !addedMembers.isEmpty {
+            if addedMembers.count == 1, let member = addedMembers.first {
+                return member.profile
+            } else {
+                return nil
+            }
+        } else if let metadataChange = metadataChanges.first,
+                  metadataChange.field == .name,
+                  let updatedName = metadataChange.newValue {
+            return creator.profile
+        } else if let metadataChange = metadataChanges.first,
+                  metadataChange.field == .image,
+                  metadataChange.newValue != nil {
+            return creator.profile
+        } else if let metadataChange = metadataChanges.first,
+                  metadataChange.field == .description,
+                  let newValue = metadataChange.newValue {
+            return creator.profile
+        } else if !removedMembers.isEmpty {
+            return nil
+        } else {
+            return nil
+        }
+    }
+
     var showsInMessagesList: Bool {
         guard metadataChanges.allSatisfy({ $0.field.showsInMessagesList }) else {
             return false
