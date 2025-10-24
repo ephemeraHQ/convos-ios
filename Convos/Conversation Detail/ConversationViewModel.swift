@@ -332,6 +332,9 @@ class ConversationViewModel {
     }
 
     func onTapMessage(_ message: AnyMessage) {
+    }
+
+    func onTapAvatar(_ message: AnyMessage) {
         presentingProfileForMember = message.base.sender
     }
 

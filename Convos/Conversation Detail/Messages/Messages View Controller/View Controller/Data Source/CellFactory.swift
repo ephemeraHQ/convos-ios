@@ -6,10 +6,11 @@ import UIKit
 final class CellFactory {
     static func createCell(in collectionView: UICollectionView,
                            for indexPath: IndexPath,
-                           with item: MessagesCollectionCell) -> UICollectionViewCell {
+                           with item: MessagesCollectionCell,
+                           onTapAvatar: @escaping () -> Void) -> UICollectionViewCell {
         switch item {
         case let .message(message, bubbleType: bubbleType):
-            return createMessageCell(in: collectionView, for: indexPath, message: message, bubbleType: bubbleType)
+            return createMessageCell(in: collectionView, for: indexPath, message: message, bubbleType: bubbleType, onTapAvatar: onTapAvatar)
         case let .messageGroup(group):
             return createGroupTitle(in: collectionView, for: indexPath, title: group.title, source: group.source)
         case let .date(group):
@@ -43,7 +44,8 @@ final class CellFactory {
     private static func createMessageCell(in collectionView: UICollectionView,
                                           for indexPath: IndexPath,
                                           message: AnyMessage,
-                                          bubbleType: MessagesCollectionCell.BubbleType) -> UICollectionViewCell {
+                                          bubbleType: MessagesCollectionCell.BubbleType,
+                                          onTapAvatar: @escaping () -> Void) -> UICollectionViewCell {
         switch message {
         case .message(let message):
             switch message.content {
@@ -56,7 +58,8 @@ final class CellFactory {
                     text: string,
                     bubbleType: bubbleType,
                     messageType: message.source,
-                    profile: message.sender.profile
+                    profile: message.sender.profile,
+                    onTapAvatar: onTapAvatar
                 )
             case .attachment(let attachmentURL):
                 return createImageCell(
@@ -79,7 +82,8 @@ final class CellFactory {
                     text: string,
                     bubbleType: bubbleType,
                     messageType: reply.source,
-                    profile: reply.sender.profile
+                    profile: reply.sender.profile,
+                    onTapAvatar: onTapAvatar
                 )
             case .attachment(let attachmentURL):
                 return createImageCell(
@@ -102,11 +106,12 @@ final class CellFactory {
         text: String,
         bubbleType: MessagesCollectionCell.BubbleType,
         messageType: MessageSource,
-        profile: Profile
+        profile: Profile,
+        onTapAvatar: @escaping () -> Void
     ) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TextMessageCollectionCell.reuseIdentifier,
                                                       for: indexPath) as! TextMessageCollectionCell
-        cell.setup(message: text, messageType: messageType, style: bubbleType, profile: profile)
+        cell.setup(message: text, messageType: messageType, style: bubbleType, profile: profile, onTapAvatar: onTapAvatar)
         return cell
     }
 

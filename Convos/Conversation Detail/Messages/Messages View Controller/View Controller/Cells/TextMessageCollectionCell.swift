@@ -28,7 +28,8 @@ class TextMessageCollectionCell: UICollectionViewCell {
         message: String,
         messageType: MessageSource,
         style: MessagesCollectionCell.BubbleType,
-        profile: Profile
+        profile: Profile,
+        onTapAvatar: (() -> Void)?
     ) {
         self.messageType = messageType
         contentConfiguration = UIHostingConfiguration {
@@ -37,7 +38,8 @@ class TextMessageCollectionCell: UICollectionViewCell {
                     style: style,
                     message: message,
                     isOutgoing: messageType == .outgoing,
-                    profile: profile
+                    profile: profile,
+                    onTapAvatar: onTapAvatar
                 )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -63,6 +65,7 @@ struct MessageBubble: View {
     let message: String
     let isOutgoing: Bool
     let profile: Profile
+    let onTapAvatar: (() -> Void)?
 
     private var textColor: Color {
         // Match the text color based on message type (same as MessageContainer)
@@ -92,6 +95,8 @@ struct MessageBubble: View {
                         }
                     }
                 }
+            } onTapAvatar: {
+                onTapAvatar?()
             }
         }
     }
@@ -104,19 +109,22 @@ struct MessageBubble: View {
                 style: .normal,
                 message: "Hello world!",
                 isOutgoing: type == .outgoing,
-                profile: .mock()
+                profile: .mock(),
+                onTapAvatar: nil
             )
             MessageBubble(
                 style: .normal,
                 message: "Check out https://convos.org for more info",
                 isOutgoing: type == .outgoing,
-                profile: .mock()
+                profile: .mock(),
+                onTapAvatar: nil
             )
             MessageBubble(
                 style: .tailed,
                 message: "Visit www.example.com or email us at hello@example.com",
                 isOutgoing: type == .outgoing,
-                profile: .mock()
+                profile: .mock(),
+                onTapAvatar: nil
             )
         }
     }

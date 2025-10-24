@@ -37,6 +37,7 @@ struct ConversationView<MessagesBottomBar: View>: View {
             onProfilePhotoTap: viewModel.onProfilePhotoTap,
             onSendMessage: viewModel.onSendMessage,
             onTapMessage: viewModel.onTapMessage(_:),
+            onTapAvatar: viewModel.onTapAvatar(_:),
             onDisplayNameEndedEditing: viewModel.onDisplayNameEndedEditing,
             onProfileSettings: viewModel.onProfileSettings,
             bottomBarContent: bottomBarContent

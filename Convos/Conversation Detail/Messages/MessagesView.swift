@@ -27,6 +27,7 @@ struct MessagesView<BottomBarContent: View>: View {
     let onProfilePhotoTap: () -> Void
     let onSendMessage: () -> Void
     let onTapMessage: (AnyMessage) -> Void
+    let onTapAvatar: (AnyMessage) -> Void
     let onDisplayNameEndedEditing: () -> Void
     let onProfileSettings: () -> Void
     @ViewBuilder let bottomBarContent: () -> BottomBarContent
@@ -39,6 +40,7 @@ struct MessagesView<BottomBarContent: View>: View {
                 messages: messages,
                 invite: invite,
                 onTapMessage: onTapMessage,
+                onTapAvatar: onTapAvatar,
                 bottomBarHeight: bottomBarHeight
             )
             .ignoresSafeArea()
