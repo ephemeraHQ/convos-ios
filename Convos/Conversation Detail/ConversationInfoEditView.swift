@@ -47,7 +47,6 @@ struct ConversationInfoEditView: View {
                     .frame(maxWidth: 166.0)
                     .onAppear {
                         viewModel.isEditingConversationName = true
-                        viewModel.editingConversationName = viewModel.conversation.name ?? ""
                     }
                     .onChange(of: viewModel.editingConversationName) { _, newValue in
                         if newValue.count > NameLimits.maxConversationNameLength {

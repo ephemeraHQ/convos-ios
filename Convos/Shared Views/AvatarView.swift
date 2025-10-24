@@ -7,7 +7,7 @@ struct AvatarView: View {
     let imageURL: URL?
     let fallbackName: String
     let cacheableObject: any ImageCacheable
-    @State var placeholderImage: UIImage?
+    let placeholderImage: UIImage?
     @State private var cachedImage: UIImage?
     @State private var isLoading: Bool = false
 
@@ -76,7 +76,7 @@ struct AvatarView: View {
 
 struct ProfileAvatarView: View {
     let profile: Profile
-    @State var profileImage: UIImage?
+    let profileImage: UIImage?
 
     var body: some View {
         AvatarView(

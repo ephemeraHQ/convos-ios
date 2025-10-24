@@ -80,7 +80,21 @@ class ConversationViewModel {
     var profileImage: UIImage?
     /// we manage focus in the view model along with @FocusState in the view
     /// since programatically changing @FocusState doesn't always propagate to child views
-    var focus: MessagesViewInputFocus?
+    var focus: MessagesViewInputFocus? {
+        didSet {
+            switch focus {
+            case .displayName:
+                isEditingDisplayName = true
+                isEditingConversationName = false
+            case .conversationName:
+                isEditingConversationName = true
+                isEditingDisplayName = false
+            default:
+                isEditingConversationName = false
+                isEditingDisplayName = false
+            }
+        }
+    }
     var presentingConversationSettings: Bool = false
     var presentingProfileSettings: Bool = false
     var presentingProfileForMember: ConversationMember?
@@ -371,8 +385,10 @@ class ConversationViewModel {
             guard let self else { return }
             do {
                 try await session.deleteInbox(clientId: conversation.clientId)
-                presentingConversationSettings = false
-                conversation.postLeftConversationNotification()
+                await MainActor.run {
+                    self.presentingConversationSettings = false
+                    self.conversation.postLeftConversationNotification()
+                }
             } catch {
                 Logger.error("Error leaving convo: \(error.localizedDescription)")
             }
