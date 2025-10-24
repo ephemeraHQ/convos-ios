@@ -18,23 +18,12 @@ class ConversationViewModel {
     private let messagesRepository: any MessagesRepositoryProtocol
 
     private var cancellables: Set<AnyCancellable> = []
-    private var loadProfileImageTask: Task<Void, Never>?
-    private var loadConversationImageTask: Task<Void, Never>?
 
     // MARK: - Public
 
     var showsInfoView: Bool = true
     private(set) var conversation: Conversation {
         didSet {
-            // Only update if the actual name changed (not just last message)
-            if oldValue.name != conversation.name {
-                conversationName = conversation.name ?? ""
-            }
-            // Only update if the actual description changed
-            if oldValue.description != conversation.description {
-                conversationDescription = conversation.description ?? ""
-            }
-
             presentingConversationForked = conversation.isForked
         }
     }
@@ -53,9 +42,28 @@ class ConversationViewModel {
     var conversationDescriptionPlaceholder: String = "Description"
     var joinEnabled: Bool = true
     var notificationsEnabled: Bool = true
-    var displayName: String = ""
-    var conversationName: String = ""
-    var conversationDescription: String = ""
+    // Editing state flags
+    var isEditingDisplayName: Bool = false
+    var isEditingConversationName: Bool = false
+    var isEditingDescription: Bool = false
+
+    // Editing values
+    var editingDisplayName: String = ""
+    var editingConversationName: String = ""
+    var editingDescription: String = ""
+
+    // Computed properties for display
+    var displayName: String {
+        isEditingDisplayName ? editingDisplayName : profile.name ?? ""
+    }
+
+    var conversationName: String {
+        isEditingConversationName ? editingConversationName : conversation.name ?? ""
+    }
+
+    var conversationDescription: String {
+        isEditingDescription ? editingDescription : conversation.description ?? ""
+    }
     var conversationImage: UIImage?
     var messageText: String = "" {
         didSet {
@@ -88,8 +96,8 @@ class ConversationViewModel {
     ) {
         self.conversation = conversation
         self.session = session
-        self.conversationName = conversation.name ?? ""
-        self.conversationDescription = conversation.description ?? ""
+        self.editingConversationName = conversation.name ?? ""
+        self.editingDescription = conversation.description ?? ""
         self.profile = .empty(inboxId: conversation.inboxId)
         self.conversationRepository = session.conversationRepository(
             for: conversation.id,
@@ -118,16 +126,9 @@ class ConversationViewModel {
 
         setupMyProfileRepository()
 
-        // Initialize UI state only if not already set
-        if displayName.isEmpty {
-            displayName = profile.name ?? ""
-        }
-        if conversationName.isEmpty {
-            conversationName = conversation.name ?? ""
-        }
-        if conversationDescription.isEmpty {
-            conversationDescription = conversation.description ?? ""
-        }
+        editingDisplayName = profile.name ?? ""
+        editingConversationName = conversation.name ?? ""
+        editingDescription = conversation.description ?? ""
 
         presentingConversationForked = conversation.isForked
 
@@ -147,8 +148,8 @@ class ConversationViewModel {
     ) {
         self.conversation = conversation
         self.session = session
-        self.conversationName = conversation.name ?? ""
-        self.conversationDescription = conversation.description ?? ""
+        self.editingConversationName = conversation.name ?? ""
+        self.editingDescription = conversation.description ?? ""
         self.profile = .empty(inboxId: conversation.inboxId)
 
         // Extract dependencies from conversation state manager
@@ -173,16 +174,9 @@ class ConversationViewModel {
         observe()
         setupMyProfileRepository()
 
-        // Initialize UI state only if not already set
-        if displayName.isEmpty {
-            self.displayName = profile.name ?? ""
-        }
-        if conversationName.isEmpty {
-            self.conversationName = conversation.name ?? ""
-        }
-        if conversationDescription.isEmpty {
-            self.conversationDescription = conversation.description ?? ""
-        }
+        self.editingDisplayName = profile.name ?? ""
+        self.editingConversationName = conversation.name ?? ""
+        self.editingDescription = conversation.description ?? ""
 
         KeyboardListener.shared.add(delegate: self)
     }
@@ -190,8 +184,6 @@ class ConversationViewModel {
     deinit {
         Logger.info("🗑️ deallocated for conversation: \(conversation.id)")
         cancellables.removeAll()
-        loadProfileImageTask?.cancel()
-        loadConversationImageTask?.cancel()
         KeyboardListener.shared.remove(delegate: self)
     }
 
@@ -236,8 +228,8 @@ class ConversationViewModel {
     func onConversationNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
         focus = nextFocus
 
-        let trimmedConversationName = conversationName.trimmingCharacters(in: .whitespacesAndNewlines)
-        conversationName = trimmedConversationName
+        let trimmedConversationName = editingConversationName.trimmingCharacters(in: .whitespacesAndNewlines)
+        editingConversationName = trimmedConversationName
 
         if trimmedConversationName != (conversation.name ?? "") {
             Task { [weak self] in
@@ -269,8 +261,8 @@ class ConversationViewModel {
             }
         }
 
-        let trimmedConversationDescription = conversationDescription.trimmingCharacters(in: .whitespacesAndNewlines)
-        conversationDescription = trimmedConversationDescription
+        let trimmedConversationDescription = editingDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        editingDescription = trimmedConversationDescription
 
         if trimmedConversationDescription != (conversation.description ?? "") {
             Task { [weak self] in
@@ -330,8 +322,8 @@ class ConversationViewModel {
     private func onDisplayNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
         focus = nextFocus
 
-        let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
-        displayName = trimmedDisplayName
+        let trimmedDisplayName = editingDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        editingDisplayName = trimmedDisplayName
 
         if (profile.name ?? "") != trimmedDisplayName {
             Task { [weak self] in

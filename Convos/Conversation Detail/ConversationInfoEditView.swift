@@ -35,31 +35,53 @@ struct ConversationInfoEditView: View {
                 .listSectionSeparator(.hidden)
 
                 Section {
-                    TextField(viewModel.conversationNamePlaceholder, text: $viewModel.conversationName)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(maxWidth: 166.0)
-                        .onChange(of: viewModel.conversationName) { _, newValue in
-                            if newValue.count > NameLimits.maxConversationNameLength {
-                                viewModel.conversationName = String(newValue.prefix(NameLimits.maxConversationNameLength))
-                            }
+                    TextField(
+                        viewModel.conversationNamePlaceholder,
+                        text: Binding(
+                            get: { viewModel.editingConversationName },
+                            set: { viewModel.editingConversationName = $0 }
+                        )
+                    )
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: 166.0)
+                    .onAppear {
+                        viewModel.isEditingConversationName = true
+                        viewModel.editingConversationName = viewModel.conversation.name ?? ""
+                    }
+                    .onChange(of: viewModel.editingConversationName) { _, newValue in
+                        if newValue.count > NameLimits.maxConversationNameLength {
+                            viewModel.editingConversationName = String(newValue.prefix(NameLimits.maxConversationNameLength))
                         }
+                    }
+
                     TextField(
                         viewModel.conversationDescriptionPlaceholder,
-                        text: $viewModel.conversationDescription
+                        text: Binding(
+                            get: { viewModel.editingDescription },
+                            set: { viewModel.editingDescription = $0 }
+                        )
                     )
                     .lineLimit(5)
+                    .onAppear {
+                        viewModel.isEditingDescription = true
+                        viewModel.editingDescription = viewModel.conversation.description ?? ""
+                    }
                 }
             }
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(role: .cancel) {
+                        viewModel.isEditingConversationName = false
+                        viewModel.isEditingDescription = false
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(role: .confirm) {
+                        viewModel.isEditingConversationName = false
+                        viewModel.isEditingDescription = false
                         viewModel.onConversationSettingsDismissed()
                     }
                     .tint(.colorBackgroundInverted)
