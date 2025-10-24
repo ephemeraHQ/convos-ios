@@ -96,8 +96,6 @@ class ConversationViewModel {
     ) {
         self.conversation = conversation
         self.session = session
-        self.editingConversationName = conversation.name ?? ""
-        self.editingDescription = conversation.description ?? ""
         self.profile = .empty(inboxId: conversation.inboxId)
         self.conversationRepository = session.conversationRepository(
             for: conversation.id,
@@ -105,13 +103,6 @@ class ConversationViewModel {
             clientId: conversation.clientId
         )
         self.messagesRepository = session.messagesRepository(for: conversation.id)
-        do {
-            self.messages = try messagesRepository.fetchAll()
-            self.conversation = try conversationRepository.fetchConversation() ?? conversation
-        } catch {
-            Logger.error("Error fetching messages or conversation: \(error.localizedDescription)")
-            self.messages = []
-        }
 
         let messagingService = session.messagingService(
             for: conversation.clientId,
@@ -123,6 +114,15 @@ class ConversationViewModel {
         consentWriter = messagingService.conversationConsentWriter()
         localStateWriter = messagingService.conversationLocalStateWriter()
         metadataWriter = messagingService.conversationMetadataWriter()
+
+        do {
+            self.messages = try messagesRepository.fetchAll()
+            self.conversation = try conversationRepository.fetchConversation() ?? conversation
+            self.profile = try myProfileRepository.fetch()
+        } catch {
+            Logger.error("Error fetching messages or conversation: \(error.localizedDescription)")
+            self.messages = []
+        }
 
         setupMyProfileRepository()
 
@@ -148,8 +148,6 @@ class ConversationViewModel {
     ) {
         self.conversation = conversation
         self.session = session
-        self.editingConversationName = conversation.name ?? ""
-        self.editingDescription = conversation.description ?? ""
         self.profile = .empty(inboxId: conversation.inboxId)
 
         // Extract dependencies from conversation state manager
@@ -164,6 +162,7 @@ class ConversationViewModel {
         do {
             self.messages = try messagesRepository.fetchAll()
             self.conversation = try conversationRepository.fetchConversation() ?? conversation
+            self.profile = try myProfileRepository.fetch()
         } catch {
             Logger.error("Error fetching messages or conversation: \(error.localizedDescription)")
             self.messages = []
