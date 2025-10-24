@@ -132,8 +132,9 @@ struct ConversationInfoView: View {
                             Text(ConfigManager.shared.currentEnvironment.relyingPartyIdentifier)
                                 .font(.caption)
                                 .foregroundStyle(.colorTextSecondary)
-                            Text(viewModel.invite.inviteURLString)
+                            Text(viewModel.invite.urlSlug)
                                 .foregroundStyle(.colorTextPrimary)
+                                .lineLimit(1)
                         }
 
                         Spacer()
