@@ -74,14 +74,22 @@ struct JoinConversationView: View {
                                     .multilineTextAlignment(.center)
                                     .foregroundStyle(.white)
                             } else {
-                                HStack(spacing: DesignConstants.Spacing.step2x) {
-                                    Image(systemName: "qrcode")
-                                        .foregroundStyle(.white)
-                                    Text("Join a convo")
+                                VStack(spacing: DesignConstants.Spacing.step3x) {
+                                    HStack(spacing: DesignConstants.Spacing.step2x) {
+                                        Image(systemName: "qrcode")
+                                            .foregroundStyle(.white)
+                                        Text("Join a convo by invitation only")
+                                            .font(.system(size: 16.0))
+                                            .multilineTextAlignment(.center)
+                                            .foregroundStyle(.white)
+                                    }
+                                    Text("Ask a friend to invite you to a convo, then scan its code or tap its link to enter the app.")
                                         .font(.system(size: 16.0))
                                         .multilineTextAlignment(.center)
                                         .foregroundStyle(.white)
+                                        .opacity(0.6)
                                 }
+                                .padding(.horizontal, DesignConstants.Spacing.step10x)
                             }
                         }
 
