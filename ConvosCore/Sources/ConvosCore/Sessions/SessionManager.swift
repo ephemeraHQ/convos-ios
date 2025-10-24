@@ -34,24 +34,26 @@ public final class SessionManager: SessionManagerProtocol {
         self.databaseWriter = databaseWriter
         self.databaseReader = databaseReader
         self.environment = environment
+        observe()
+
         let identityStore = environment.defaultIdentityStore
-        Task {
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 let identities = try await identityStore.loadAll()
-                self.startMessagingServices(for: identities)
+                await self.startMessagingServices(for: identities)
             } catch {
                 Logger.error("Error starting messaging services: \(error.localizedDescription)")
             }
+
+            Task(priority: .background) {
+                await UnusedInboxCache.shared.prepareUnusedInboxIfNeeded(
+                    databaseWriter: databaseWriter,
+                    databaseReader: databaseReader,
+                    environment: environment
+                )
+            }
         }
-
-        observe()
-
-        // Schedule creation of unused inbox on app startup
-        MessagingService.createUnusedInboxIfNeeded(
-            databaseWriter: databaseWriter,
-            databaseReader: databaseReader,
-            environment: environment
-        )
     }
 
     deinit {
@@ -66,27 +68,31 @@ public final class SessionManager: SessionManagerProtocol {
 
     // MARK: - Private Methods
 
-    private func startMessagingServices(for identities: [KeychainIdentity]) {
+    private func startMessagingServices(for identities: [KeychainIdentity]) async {
         let inboxIds = identities.map { $0.inboxId }
         Logger.info("Starting messaging services for inboxes: \(inboxIds)")
 
-        Task {
-            var servicesToCreate: [KeychainIdentity] = []
+        var servicesToCreate: [KeychainIdentity] = []
 
+        await withTaskGroup(of: (KeychainIdentity?, Bool).self) { group in
             for identity in identities {
-                let isUnused = await UnusedInboxCache.shared.isUnusedInbox(identity.inboxId)
-                if isUnused {
-                    Logger.info("Skipping unused inbox: \(identity.inboxId)")
-                } else {
-                    servicesToCreate.append(identity)
+                group.addTask {
+                    let isUnused = await UnusedInboxCache.shared.isUnusedInbox(identity.inboxId)
+                    return isUnused ? (nil, true) : (identity, false)
                 }
             }
 
-            serviceQueue.sync {
-                for identity in servicesToCreate {
-                    let service = startMessagingService(for: identity.inboxId, clientId: identity.clientId)
-                    messagingServices[identity.clientId] = service
+            for await result in group {
+                if let identity = result.0 {
+                    servicesToCreate.append(identity)
                 }
+            }
+        }
+
+        serviceQueue.sync {
+            for identity in servicesToCreate {
+                let service = self.startMessagingService(for: identity.inboxId, clientId: identity.clientId)
+                self.messagingServices[identity.clientId] = service
             }
         }
     }
