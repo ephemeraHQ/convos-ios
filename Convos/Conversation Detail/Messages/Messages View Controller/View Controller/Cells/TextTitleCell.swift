@@ -1,54 +1,56 @@
+import ConvosCore
 import SwiftUI
 import UIKit
 
 class TextTitleCell: UICollectionViewCell {
-    private let titleLabel: UILabel = {
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.numberOfLines = 1
-        label.font = .preferredFont(forTextStyle: .caption2)
-        label.textColor = .gray
-        label.textAlignment = .center
-        return label
-    }()
-
-    private let verticalPadding: CGFloat = 16.0
-    private let horizontalPadding: CGFloat = 8.0
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        setupView()
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        self.contentConfiguration = nil
     }
 
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-
-    private func setupView() {
-        contentView.addSubview(titleLabel)
-
-        NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: verticalPadding),
-            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: horizontalPadding),
-            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -horizontalPadding),
-            titleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -verticalPadding)
-        ])
-    }
-
-    func setup(title: String) {
-        titleLabel.text = title
-        invalidateIntrinsicContentSize()
+    func setup(title: String, profile: Profile?) {
+        contentConfiguration = UIHostingConfiguration {
+            TextTitleContentView(title: title, profile: profile)
+        }
+        .margins(.horizontal, 8.0)
+        .margins(.vertical, 16.0)
     }
 
     override func preferredLayoutAttributesFitting(
         _ layoutAttributes: UICollectionViewLayoutAttributes
     ) -> UICollectionViewLayoutAttributes {
-        let width = layoutAttributes.frame.width - (2 * horizontalPadding)
-        let labelSize = titleLabel.sizeThatFits(
-            CGSize(width: width, height: .greatestFiniteMagnitude)
-        )
-        let totalHeight = labelSize.height + (2 * verticalPadding)
-        layoutAttributes.frame.size.height = totalHeight
-        return layoutAttributes
+        layoutAttributesForHorizontalFittingRequired(layoutAttributes)
     }
+}
+
+struct TextTitleContentView: View {
+    let title: String
+    let profile: Profile?
+
+    var body: some View {
+        HStack(spacing: DesignConstants.Spacing.step2x) {
+            if let profile {
+                ProfileAvatarView(profile: profile, profileImage: nil)
+                    .frame(width: 16.0, height: 16.0)
+            }
+
+            Text(title)
+                .lineLimit(1)
+                .font(.caption2)
+                .foregroundStyle(.colorTextSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+}
+
+#Preview {
+    let cell = TextTitleCell()
+    cell.setup(title: "Sample Title", profile: .mock())
+    return cell
+}
+
+#Preview {
+    let cell = TextTitleCell()
+    cell.setup(title: "A Much Longer Title That Should Be Centered", profile: .mock())
+    return cell
 }

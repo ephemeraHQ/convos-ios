@@ -116,8 +116,8 @@ extension XMTPiOS.Group {
                 .init(
                     conversationId: id,
                     inboxId: $0.inboxID,
-                    name: $0.name,
-                    avatar: $0.image
+                    name: $0.hasName ? $0.name : nil,
+                    avatar: $0.hasImage ? $0.image : nil
                 )
             }
         }
@@ -241,9 +241,13 @@ extension ConversationProfile {
         self.inboxID = inboxId
         if let name = name {
             self.name = name
+        } else {
+            self.clearName()
         }
         if let imageUrl = imageUrl {
             self.image = imageUrl
+        } else {
+            self.clearImage()
         }
     }
 }

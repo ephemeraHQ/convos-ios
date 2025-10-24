@@ -42,6 +42,7 @@ struct AvatarView: View {
         }
 
         guard let imageURL else {
+            cachedImage = nil
             return
         }
 

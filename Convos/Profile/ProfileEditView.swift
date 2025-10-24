@@ -38,7 +38,7 @@ struct ProfileView: View {
 
                 Section {
                     HStack {
-                        TextField("Somebody", text: $viewModel.displayName)
+                        TextField("Somebody", text: $viewModel.editingDisplayName)
 
 //                        Button {
 //                        } label: {

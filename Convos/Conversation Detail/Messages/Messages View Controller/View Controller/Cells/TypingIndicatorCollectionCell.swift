@@ -28,6 +28,8 @@ struct TypingIndicatorView: View {
             .padding(.vertical, 4)
         } avatarView: {
             Spacer()
+        } onTapAvatar: {
+            //
         }
     }
 }

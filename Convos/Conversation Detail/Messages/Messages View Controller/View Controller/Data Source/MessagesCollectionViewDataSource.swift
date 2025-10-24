@@ -12,6 +12,8 @@ final class MessagesCollectionViewDataSource: NSObject {
         }
     }
 
+    var onTapAvatar: ((IndexPath) -> Void)?
+
     private lazy var layoutDelegate: DefaultMessagesLayoutDelegate = DefaultMessagesLayoutDelegate(sections: sections,
                                                                                                    oldSections: [])
 
@@ -58,7 +60,9 @@ extension MessagesCollectionViewDataSource: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView,
                         cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let item = sections[indexPath.section].cells[indexPath.item]
-        return CellFactory.createCell(in: collectionView, for: indexPath, with: item)
+        return CellFactory.createCell(in: collectionView, for: indexPath, with: item) { [weak self] in
+            self?.onTapAvatar?(indexPath)
+        }
     }
 
     func collectionView(_ collectionView: UICollectionView,

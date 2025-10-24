@@ -6,6 +6,7 @@ struct MessageContainer<Content: View, AvatarView: View>: View {
     let cornerRadius: CGFloat = Constant.bubbleCornerRadius
     let content: () -> Content
     let avatarView: () -> AvatarView
+    let onTapAvatar: (() -> Void)?
 
     var spacer: some View {
         Group {
@@ -47,6 +48,9 @@ struct MessageContainer<Content: View, AvatarView: View>: View {
         avatarView()
             .frame(width: DesignConstants.ImageSizes.smallAvatar,
                    height: DesignConstants.ImageSizes.smallAvatar)
+            .onTapGesture {
+                onTapAvatar?()
+            }
     }
 
     var body: some View {

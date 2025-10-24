@@ -36,17 +36,17 @@ class MyProfileWriter: MyProfileWriterProtocol {
             }
             return name
         }()
-        guard !trimmedDisplayName.isEmpty else { return }
         let inboxId = inboxReady.client.inboxId
+        let name = trimmedDisplayName.isEmpty ? nil : trimmedDisplayName
         let profile = try await databaseWriter.write { db in
             let member = Member(inboxId: inboxId)
             try member.save(db)
             let profile = (try MemberProfile.fetchOne(db, conversationId: conversationId, inboxId: inboxId) ?? .init(
                 conversationId: conversationId,
                 inboxId: inboxId,
-                name: trimmedDisplayName,
+                name: name,
                 avatar: nil
-            )).with(name: trimmedDisplayName)
+            )).with(name: name)
             try profile.save(db)
             return profile
         }

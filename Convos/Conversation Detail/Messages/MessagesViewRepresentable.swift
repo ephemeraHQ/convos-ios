@@ -6,6 +6,7 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
     let messages: [AnyMessage]
     let invite: Invite
     let onTapMessage: (AnyMessage) -> Void
+    let onTapAvatar: (AnyMessage) -> Void
     let bottomBarHeight: CGFloat
 
     func makeUIViewController(context: Context) -> MessagesViewController {
@@ -15,6 +16,7 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
     func updateUIViewController(_ messagesViewController: MessagesViewController, context: Context) {
         messagesViewController.bottomBarHeight = bottomBarHeight
         messagesViewController.onTapMessage = onTapMessage
+        messagesViewController.onTapAvatar = onTapAvatar
         messagesViewController.state = .init(
             conversation: conversation,
             messages: messages,
@@ -33,6 +35,7 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
         messages: messages,
         invite: invite,
         onTapMessage: { _ in },
+        onTapAvatar: { _ in },
         bottomBarHeight: bottomBarHeight
     )
     .ignoresSafeArea()

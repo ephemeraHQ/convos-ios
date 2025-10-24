@@ -113,6 +113,7 @@ final class MessagesViewController: UIViewController {
     }
 
     var onTapMessage: ((AnyMessage) -> Void)?
+    var onTapAvatar: ((AnyMessage) -> Void)?
 
     deinit {
         KeyboardListener.shared.remove(delegate: self)
@@ -203,6 +204,14 @@ final class MessagesViewController: UIViewController {
         messagesLayout.supportSelfSizingInvalidation = true
 
         dataSource.prepare(with: collectionView)
+
+        dataSource.onTapAvatar = { [weak self] indexPath in
+            guard let self = self else { return }
+            let cell = self.dataSource.sections[indexPath.section].cells[indexPath.item]
+            if case .message(let message, _) = cell {
+                self.onTapAvatar?(message)
+            }
+        }
     }
 
     private func handleViewTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
