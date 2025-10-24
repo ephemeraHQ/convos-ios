@@ -74,16 +74,16 @@ public final class SessionManager: SessionManagerProtocol {
 
         var servicesToCreate: [KeychainIdentity] = []
 
-        await withTaskGroup(of: (KeychainIdentity?, Bool).self) { group in
+        await withTaskGroup(of: KeychainIdentity?.self) { group in
             for identity in identities {
                 group.addTask {
                     let isUnused = await UnusedInboxCache.shared.isUnusedInbox(identity.inboxId)
-                    return isUnused ? (nil, true) : (identity, false)
+                    return isUnused ? nil : identity
                 }
             }
 
-            for await result in group {
-                if let identity = result.0 {
+            for await identity in group {
+                if let identity {
                     servicesToCreate.append(identity)
                 }
             }
