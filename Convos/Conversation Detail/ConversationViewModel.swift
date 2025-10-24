@@ -25,6 +25,12 @@ class ConversationViewModel {
     private(set) var conversation: Conversation {
         didSet {
             presentingConversationForked = conversation.isForked
+            if !isEditingConversationName {
+                editingConversationName = conversation.name ?? ""
+            }
+            if !isEditingDescription {
+                editingDescription = conversation.description ?? ""
+            }
         }
     }
     var messages: [AnyMessage]

@@ -14,6 +14,19 @@ public struct ConversationReadyResult {
     public let origin: Origin
 }
 
+/// State machine managing conversation creation and joining flows
+///
+/// ConversationStateMachine handles the lifecycle of creating a new conversation or joining
+/// an existing one via invite code. It coordinates:
+/// - Creating new group conversations
+/// - Validating and verifying signed invite codes
+/// - Joining conversations through XMTP direct messages
+/// - Managing placeholder conversations during async join flows
+/// - Queueing and sending messages before conversation is ready
+/// - Cleaning up when switching between conversations
+///
+/// The state machine maintains states from uninitialized → creating/validating → validated →
+/// joining → ready, with automatic message queuing and delivery once ready.
 public actor ConversationStateMachine {
     enum Action {
         case create

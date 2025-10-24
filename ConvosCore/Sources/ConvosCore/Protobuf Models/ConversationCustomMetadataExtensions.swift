@@ -3,6 +3,25 @@ import Foundation
 import SwiftProtobuf
 import XMTPiOS
 
+// swiftlint:disable:next orphaned_doc_comment
+/// XMTP groups have a limited description field that Convos uses to store structured
+/// metadata as a compressed, base64-encoded protobuf. This metadata includes:
+/// - Invite tag: Unique identifier linking invites to conversations
+/// - Description: User-visible conversation description
+/// - Expiration date: Optional timestamp when conversation auto-deletes
+/// - Member profiles: Name and avatar URL for each member (per-conversation identities)
+///
+/// **Compression Strategy:**
+/// - Small metadata (<100 bytes): Stored as uncompressed protobuf + base64
+/// - Large metadata (multiple profiles): Compressed with zlib if beneficial
+/// - Format: [marker byte][size][data] for safe decompression with size limits
+///
+/// **Migration Support:**
+/// - Gracefully handles plain text descriptions from older versions
+/// - `parseDescriptionField()` auto-detects format and migrates seamlessly
+///
+/// This allows Convos to store rich conversation metadata without requiring a backend.
+
 // MARK: - Errors
 
 enum ConversationCustomMetadataError: Error, LocalizedError {

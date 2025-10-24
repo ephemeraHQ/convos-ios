@@ -2,6 +2,13 @@ import Combine
 import Foundation
 import GRDB
 
+/// Main client interface for ConvosCore
+///
+/// ConvosClient provides the primary entry point for interacting with the Convos
+/// messaging system. It manages the session lifecycle, database access, and environment
+/// configuration. The client coordinates between the SessionManager (which handles
+/// multiple messaging service instances) and the DatabaseManager (which provides
+/// persistent storage).
 public final class ConvosClient {
     private let sessionManager: any SessionManagerProtocol
     private let databaseManager: any DatabaseManagerProtocol

@@ -1,16 +1,24 @@
 import Foundation
 
+/// APNS environment for push notifications
 public enum ApnsEnvironment: String, Codable {
     case sandbox
     case production
 }
 
+/// Build environment based on provisioning and target
 public enum BuildEnvironment {
     case simulator
     case development
     case distribution
 }
 
+/// Application environment configuration
+///
+/// Defines the runtime environment (local, dev, production, tests) and provides
+/// environment-specific configuration including API URLs, database paths, XMTP endpoints,
+/// and keychain/app group settings. The environment determines build behavior, logging,
+/// and service configuration throughout the app.
 public enum AppEnvironment {
     case local(config: ConvosConfiguration)
     case tests

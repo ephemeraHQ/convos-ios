@@ -1,5 +1,14 @@
 import Foundation
 
+/// Structured logging system with file persistence and production filtering
+///
+/// Logger provides leveled logging (debug, info, warning, error) with file-based
+/// persistence in the shared App Group container. Supports both main app and
+/// notification extension logging to a unified log file. Includes:
+/// - Automatic log rotation when file size exceeds limit
+/// - Production mode filtering to exclude sensitive data
+/// - Buffered writes for performance
+/// - Async log retrieval with tail support
 public enum Logger {
     public enum LogLevel: Int, Comparable {
         case debug = 0

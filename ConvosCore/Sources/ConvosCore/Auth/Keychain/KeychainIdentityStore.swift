@@ -198,6 +198,18 @@ public protocol KeychainIdentityStoreProtocol: Actor {
     func deleteAll() throws
 }
 
+/// Secure storage for XMTP identity keys in device keychain
+///
+/// KeychainIdentityStore manages XMTP signing keys and database encryption keys
+/// in the device's secure keychain. Each identity is stored with:
+/// - inboxId: XMTP inbox identifier (account key in keychain)
+/// - clientId: Privacy-preserving client identifier (generic attribute)
+/// - Private key for XMTP message signing
+/// - Database encryption key for local XMTP database
+///
+/// Keys are stored in the app group keychain with AfterFirstUnlock protection,
+/// allowing access to the notification extension. Enforces clientId uniqueness
+/// to prevent duplicate identities.
 public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
     // MARK: - Properties
 

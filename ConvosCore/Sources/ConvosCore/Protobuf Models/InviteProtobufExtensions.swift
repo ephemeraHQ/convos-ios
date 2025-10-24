@@ -3,6 +3,28 @@ import CSecp256k1
 import Foundation
 import SwiftProtobuf
 
+/// Extensions for cryptographically signed conversation invites
+///
+/// Convos uses a secure invite system based on secp256k1 signatures:
+///
+/// **Invite Creation Flow:**
+/// 1. Creator generates an invite containing: conversation token (encrypted conversation ID),
+///    invite tag, metadata (name, image, description), and optional expiry
+/// 2. Creator signs the invite payload with their private key
+/// 3. Invite is encoded to a URL-safe base64 string (the "invite code")
+///
+/// **Join Request Flow:**
+/// 1. Joiner receives invite code (QR, link, airdrop, etc.)
+/// 2. Joiner sends the invite code as a text message in a DM to the creator
+/// 3. Creator's app validates signature and decrypts conversation token
+/// 4. If valid, creator adds joiner to the conversation
+///
+/// **Security Properties:**
+/// - Only the creator can decrypt the conversation ID (via encrypted token)
+/// - Signature proves the invite was created by conversation owner
+/// - Public key can be recovered from signature for verification
+/// - Invites can have expiration dates and single-use flags
+/// - Invalid invites result in blocked DMs to prevent spam
 extension SignedInvite {
     public var expiresAt: Date? {
         payload.expiresAtIfPresent

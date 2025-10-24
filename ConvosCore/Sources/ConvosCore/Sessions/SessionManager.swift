@@ -15,6 +15,13 @@ enum SessionManagerError: Error {
     case inboxNotFound
 }
 
+/// Manages multiple inbox sessions and their lifecycle
+///
+/// SessionManager coordinates multiple MessagingService instances (one per inbox/identity),
+/// handling their creation, lifecycle, and cleanup. It maintains thread-safe access to
+/// active messaging services and provides factory methods for creating repositories.
+/// The manager also handles inbox deletion, conversation notifications, and manages
+/// the UnusedInboxCache for pre-creating inboxes.
 public final class SessionManager: SessionManagerProtocol {
     private var leftConversationObserver: Any?
     private var activeConversationObserver: Any?
