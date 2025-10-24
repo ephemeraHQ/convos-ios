@@ -154,7 +154,6 @@
 				"_Archive/Convos Client/Auth/Turnkey/TurnkeyPresentationAnchorProvider.swift",
 				"Design System/Animation/DraggableSpringyView.swift",
 				"Design System/Components/LabeledTextField.swift",
-				Info.plist,
 				"Shared Views/BackspaceTextField.swift",
 				"Shared Views/FlowLayout.swift",
 				"Shared Views/FlowLayoutTextEditor.swift",
@@ -1541,7 +1540,7 @@
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Convos/Info.plist;
+				INFOPLIST_FILE = Convos/Config/Info.Dev.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Convos Dev";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "To join a convo, scan its QR code";
@@ -1549,8 +1548,7 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_PREFIX_HEADER = "$(SRCROOT)/Convos/Config/InfoPlistPrefix.Dev.h";
-				INFOPLIST_PREPROCESS = YES;
+				INFOPLIST_PREPROCESS = NO;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1587,7 +1585,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Convos/Info.plist;
+				INFOPLIST_FILE = Convos/Config/Info.Prod.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Convos;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "To join a convo, scan its QR code";
@@ -1595,8 +1593,7 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_PREFIX_HEADER = "$(SRCROOT)/Convos/Config/InfoPlistPrefix.Prod.h";
-				INFOPLIST_PREPROCESS = YES;
+				INFOPLIST_PREPROCESS = NO;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1824,7 +1821,7 @@
 				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Convos/Info.plist;
+				INFOPLIST_FILE = Convos/Config/Info.Local.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Convos Local";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "To join a convo, scan its QR code";
@@ -1832,8 +1829,7 @@
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_PREFIX_HEADER = "$(SRCROOT)/Convos/Config/InfoPlistPrefix.Local.h";
-				INFOPLIST_PREPROCESS = YES;
+				INFOPLIST_PREPROCESS = NO;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
