@@ -178,6 +178,8 @@ actor SyncingManager: SyncingManagerProtocol {
                 await self.setLastSyncedAt(syncStartTime, for: client.inboxId)
             } catch {
                 Logger.error("Error syncing all conversations: \(error.localizedDescription)")
+                // attempt to process join requests anyway
+                _ = await joinRequestsManager.processJoinRequests(since: lastSyncedAt, client: client)
                 // Don't update timestamp on failure - keep the old one
             }
         }
