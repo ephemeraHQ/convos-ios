@@ -332,12 +332,12 @@ class ConversationWriter: ConversationWriterProtocol {
         // Store messages and track if conversation should be marked unread
         var marksConversationAsUnread = false
         for message in messages {
-            Logger.info("Catching up with message: \(message) sent at: \(message.sentAt.nanosecondsSince1970)")
+            Logger.info("Catching up with message sent at: \(message.sentAt.nanosecondsSince1970)")
             let result = try await messageWriter.store(message: message, for: dbConversation)
             if result.contentType.marksConversationAsUnread {
                 marksConversationAsUnread = true
             }
-            Logger.info("Saved message: \(result)")
+            Logger.info("Saved caught up message sent at: \(message.sentAt.nanosecondsSince1970)")
         }
 
         // Update unread status if needed

@@ -33,6 +33,8 @@ actor SyncingManager: SyncingManagerProtocol {
     private let localStateWriter: any ConversationLocalStateWriterProtocol
     private let joinRequestsManager: any InviteJoinRequestsManagerProtocol
     private let consentStates: [ConsentState] = [.allowed, .unknown]
+    private var messageStreamTask: Task<Void, Never>?
+    private var conversationStreamTask: Task<Void, Never>?
 
     // UserDefaults key prefix for last sync timestamp
     private static let lastSyncedAtKeyPrefix: String = "convos.syncing.lastSyncedAt"
@@ -96,6 +98,18 @@ actor SyncingManager: SyncingManagerProtocol {
         // Mark as syncing
         setSyncing(true)
 
+        // Start the streams first
+        messageStreamTask?.cancel()
+        messageStreamTask = Task { [weak self] in
+            guard let self else { return }
+            await self.runMessageStream(client: client, apiClient: apiClient)
+        }
+        conversationStreamTask?.cancel()
+        conversationStreamTask = Task { [weak self] in
+            guard let self else { return }
+            await self.runConversationStream(client: client, apiClient: apiClient)
+        }
+
         // Cancel any existing sync task
         syncTask?.cancel()
         syncTask = Task { [weak self] in
@@ -123,55 +137,50 @@ actor SyncingManager: SyncingManagerProtocol {
             do {
                 let count = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
                 Logger.info("syncAllConversations returned count: \(count)")
+
+                // we need to list all the conversations that have been updated since `lastSyncedAt` and then list
+                // messages since `lastSyncedAt`, then process the conversation + messages
+                // this is a band aid fix until the issue with streams is resolved
+                do {
+                    let updatedConversations = try await client.conversationsProvider
+                        .list(
+                            createdAfterNs: nil,
+                            createdBeforeNs: nil,
+                            lastActivityBeforeNs: nil,
+                            lastActivityAfterNs: lastSyncedAt?.nanosecondsSince1970,
+                            limit: nil,
+                            consentStates: consentStates,
+                            orderBy: .lastActivity
+                        )
+                    Logger.info("Found \(updatedConversations.count) conversations since last sync, processing...")
+                    await withThrowingTaskGroup { [weak self] group in
+                        guard let self else { return }
+                        for conversation in updatedConversations {
+                            group.addTask {
+                                try await self.processConversation(
+                                    conversation,
+                                    client: client,
+                                    apiClient: apiClient
+                                )
+                            }
+                        }
+                    }
+                } catch {
+                    Logger.error("Error catching up on missed conversation updates: \(error.localizedDescription)")
+                    throw error
+                }
+
+                // @jarodl we won't need this once the issue with messages in the streams not re-playing
+                // is fixed
+                _ = await joinRequestsManager.processJoinRequests(since: lastSyncedAt, client: client)
+
                 // Only update timestamp after successful sync
                 await self.setLastSyncedAt(syncStartTime, for: client.inboxId)
             } catch {
                 Logger.error("Error syncing all conversations: \(error.localizedDescription)")
+                // attempt to process join requests anyway
+                _ = await joinRequestsManager.processJoinRequests(since: lastSyncedAt, client: client)
                 // Don't update timestamp on failure - keep the old one
-            }
-
-            // we need to list all the conversations that have been updated since `lastSyncedAt` and then list
-            // messages since `lastSyncedAt`, then process the conversation + messages
-            // this is a band aid fix until the issue with streams is resolved
-            do {
-                let updatedConversations = try await client.conversationsProvider
-                    .list(
-                        createdAfterNs: nil,
-                        createdBeforeNs: nil,
-                        lastActivityBeforeNs: nil,
-                        lastActivityAfterNs: nil,
-                        limit: nil,
-                        consentStates: consentStates,
-                        orderBy: .lastActivity
-                    )
-                Logger.info("Found \(updatedConversations.count) conversations since last sync, processing...")
-                await withTaskGroup { [weak self] group in
-                    guard let self else { return }
-                    for conversation in updatedConversations {
-                        group.addTask {
-                            await self.processConversation(conversation, client: client, apiClient: apiClient)
-                        }
-                    }
-                }
-            } catch {
-                Logger.error("Error catching up on missed conversation updates: \(error.localizedDescription)")
-            }
-
-            // @jarodl we won't need this once the issue with messages in the streams not re-playing
-            // is fixed
-            _ = await joinRequestsManager.processJoinRequests(since: lastSyncedAt, client: client)
-
-            await withTaskGroup(of: Void.self) { [weak self] group in
-                guard let self else { return }
-                // Message stream with built-in retry
-                group.addTask {
-                    await self.runMessageStream(client: client, apiClient: apiClient)
-                }
-
-                // Conversation stream with built-in retry
-                group.addTask {
-                    await self.runConversationStream(client: client, apiClient: apiClient)
-                }
             }
         }
     }
@@ -180,6 +189,10 @@ actor SyncingManager: SyncingManagerProtocol {
         Logger.info("Stopping...")
 
         // Cancel sync tasks
+        messageStreamTask?.cancel()
+        messageStreamTask = nil
+        conversationStreamTask?.cancel()
+        conversationStreamTask = nil
         syncTask?.cancel()
         syncTask = nil
 
@@ -275,7 +288,11 @@ actor SyncingManager: SyncingManagerProtocol {
                     }
 
                     // Process conversation
-                    await processConversation(conversation, client: client, apiClient: apiClient)
+                    try await processConversation(
+                        conversation,
+                        client: client,
+                        apiClient: apiClient
+                    )
                 }
 
                 // Stream ended (onClose was called and continuation finished)
@@ -375,37 +392,36 @@ actor SyncingManager: SyncingManagerProtocol {
         _ conversation: XMTPiOS.Conversation,
         client: AnyClientProvider,
         apiClient: any ConvosAPIClientProtocol
-    ) async {
-        do {
-            // Store with latest messages
-            guard case .group = conversation else {
-                Logger.info("Streamed DM, ignoring...")
-                return
-            }
-
-            guard try await shouldProcessConversation(conversation, client: client) else { return }
-
-            let creatorInboxId = try await conversation.creatorInboxId
-            if creatorInboxId == client.inboxId,
-               case .group(let group) = conversation {
-                // we created the conversation, update permissions and set inviteTag
-                try await group.updateAddMemberPermission(newPermissionOption: .allow)
-                try await group.updateInviteTag()
-            }
-
-            Logger.info("Syncing conversation: \(conversation.id)")
-            try await conversationWriter.storeWithLatestMessages(conversation: conversation)
-
-            // Subscribe to push notifications
-            await subscribeToConversationTopics(
-                conversationId: conversation.id,
-                client: client,
-                apiClient: apiClient,
-                context: "on stream"
-            )
-        } catch {
-            Logger.error("Error processing conversation: \(error)")
+    ) async throws {
+        // Store with latest messages
+        guard case .group = conversation else {
+            Logger.info("Streamed DM, ignoring...")
+            return
         }
+
+        guard try await shouldProcessConversation(conversation, client: client) else { return }
+
+        let creatorInboxId = try await conversation.creatorInboxId
+        if creatorInboxId == client.inboxId,
+           case .group(let group) = conversation {
+            // we created the conversation, update permissions and set inviteTag
+            let permissions = try group.permissionPolicySet()
+            if permissions.addMemberPolicy != .allow {
+                try await group.updateAddMemberPermission(newPermissionOption: .allow)
+            }
+            try await group.updateInviteTag()
+        }
+
+        Logger.info("Syncing conversation: \(conversation.id)")
+        try await conversationWriter.storeWithLatestMessages(conversation: conversation)
+
+        // Subscribe to push notifications
+        await subscribeToConversationTopics(
+            conversationId: conversation.id,
+            client: client,
+            apiClient: apiClient,
+            context: "on stream"
+        )
     }
 
     // MARK: - Mutation
