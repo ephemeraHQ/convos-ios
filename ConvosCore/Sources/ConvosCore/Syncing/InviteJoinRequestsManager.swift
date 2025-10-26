@@ -356,6 +356,9 @@ extension XMTPiOS.Dm {
             return nil
         }
 
+        let content: String? = try? lastMessage.content()
+        Logger.info("Received last message: \(content ?? "nil") sender: \(lastMessage.senderInboxId)")
+
         // Only check messages sent by us
         guard lastMessage.senderInboxId == clientInboxId else {
             return nil

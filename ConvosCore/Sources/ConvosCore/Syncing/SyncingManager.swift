@@ -108,6 +108,20 @@ actor SyncingManager: SyncingManagerProtocol {
                 }
             }
 
+            // Start the streams first
+            await withTaskGroup(of: Void.self) { [weak self] group in
+                guard let self else { return }
+                // Message stream with built-in retry
+                group.addTask {
+                    await self.runMessageStream(client: client, apiClient: apiClient)
+                }
+
+                // Conversation stream with built-in retry
+                group.addTask {
+                    await self.runConversationStream(client: client, apiClient: apiClient)
+                }
+            }
+
             // Capture sync start time first
             let syncStartTime = Date()
 
@@ -139,16 +153,21 @@ actor SyncingManager: SyncingManagerProtocol {
                             orderBy: .lastActivity
                         )
                     Logger.info("Found \(updatedConversations.count) conversations since last sync, processing...")
-                    await withTaskGroup { [weak self] group in
+                    await withThrowingTaskGroup { [weak self] group in
                         guard let self else { return }
                         for conversation in updatedConversations {
                             group.addTask {
-                                await self.processConversation(conversation, client: client, apiClient: apiClient)
+                                try await self.processConversation(
+                                    conversation,
+                                    client: client,
+                                    apiClient: apiClient
+                                )
                             }
                         }
                     }
                 } catch {
                     Logger.error("Error catching up on missed conversation updates: \(error.localizedDescription)")
+                    throw error
                 }
 
                 // @jarodl we won't need this once the issue with messages in the streams not re-playing
@@ -160,19 +179,6 @@ actor SyncingManager: SyncingManagerProtocol {
             } catch {
                 Logger.error("Error syncing all conversations: \(error.localizedDescription)")
                 // Don't update timestamp on failure - keep the old one
-            }
-
-            await withTaskGroup(of: Void.self) { [weak self] group in
-                guard let self else { return }
-                // Message stream with built-in retry
-                group.addTask {
-                    await self.runMessageStream(client: client, apiClient: apiClient)
-                }
-
-                // Conversation stream with built-in retry
-                group.addTask {
-                    await self.runConversationStream(client: client, apiClient: apiClient)
-                }
             }
         }
     }
@@ -276,7 +282,11 @@ actor SyncingManager: SyncingManagerProtocol {
                     }
 
                     // Process conversation
-                    await processConversation(conversation, client: client, apiClient: apiClient)
+                    try await processConversation(
+                        conversation,
+                        client: client,
+                        apiClient: apiClient
+                    )
                 }
 
                 // Stream ended (onClose was called and continuation finished)
@@ -376,37 +386,36 @@ actor SyncingManager: SyncingManagerProtocol {
         _ conversation: XMTPiOS.Conversation,
         client: AnyClientProvider,
         apiClient: any ConvosAPIClientProtocol
-    ) async {
-        do {
-            // Store with latest messages
-            guard case .group = conversation else {
-                Logger.info("Streamed DM, ignoring...")
-                return
-            }
-
-            guard try await shouldProcessConversation(conversation, client: client) else { return }
-
-            let creatorInboxId = try await conversation.creatorInboxId
-            if creatorInboxId == client.inboxId,
-               case .group(let group) = conversation {
-                // we created the conversation, update permissions and set inviteTag
-                try await group.updateAddMemberPermission(newPermissionOption: .allow)
-                try await group.updateInviteTag()
-            }
-
-            Logger.info("Syncing conversation: \(conversation.id)")
-            try await conversationWriter.storeWithLatestMessages(conversation: conversation)
-
-            // Subscribe to push notifications
-            await subscribeToConversationTopics(
-                conversationId: conversation.id,
-                client: client,
-                apiClient: apiClient,
-                context: "on stream"
-            )
-        } catch {
-            Logger.error("Error processing conversation: \(error)")
+    ) async throws {
+        // Store with latest messages
+        guard case .group = conversation else {
+            Logger.info("Streamed DM, ignoring...")
+            return
         }
+
+        guard try await shouldProcessConversation(conversation, client: client) else { return }
+
+        let creatorInboxId = try await conversation.creatorInboxId
+        if creatorInboxId == client.inboxId,
+           case .group(let group) = conversation {
+            // we created the conversation, update permissions and set inviteTag
+            let permissions = try group.permissionPolicySet()
+            if permissions.addMemberPolicy != .allow {
+                try await group.updateAddMemberPermission(newPermissionOption: .allow)
+            }
+            try await group.updateInviteTag()
+        }
+
+        Logger.info("Syncing conversation: \(conversation.id)")
+        try await conversationWriter.storeWithLatestMessages(conversation: conversation)
+
+        // Subscribe to push notifications
+        await subscribeToConversationTopics(
+            conversationId: conversation.id,
+            client: client,
+            apiClient: apiClient,
+            context: "on stream"
+        )
     }
 
     // MARK: - Mutation
