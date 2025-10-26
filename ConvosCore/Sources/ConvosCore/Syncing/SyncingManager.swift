@@ -109,17 +109,13 @@ actor SyncingManager: SyncingManagerProtocol {
             }
 
             // Start the streams first
-            await withTaskGroup(of: Void.self) { [weak self] group in
+            Task.detached { [weak self] in
                 guard let self else { return }
-                // Message stream with built-in retry
-                group.addTask {
-                    await self.runMessageStream(client: client, apiClient: apiClient)
-                }
-
-                // Conversation stream with built-in retry
-                group.addTask {
-                    await self.runConversationStream(client: client, apiClient: apiClient)
-                }
+                await self.runMessageStream(client: client, apiClient: apiClient)
+            }
+            Task.detached { [weak self] in
+                guard let self else { return }
+                await self.runConversationStream(client: client, apiClient: apiClient)
             }
 
             // Capture sync start time first
