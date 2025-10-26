@@ -33,6 +33,8 @@ actor SyncingManager: SyncingManagerProtocol {
     private let localStateWriter: any ConversationLocalStateWriterProtocol
     private let joinRequestsManager: any InviteJoinRequestsManagerProtocol
     private let consentStates: [ConsentState] = [.allowed, .unknown]
+    private var messageStreamTask: Task<Void, Never>?
+    private var conversationStreamTask: Task<Void, Never>?
 
     // UserDefaults key prefix for last sync timestamp
     private static let lastSyncedAtKeyPrefix: String = "convos.syncing.lastSyncedAt"
@@ -96,6 +98,18 @@ actor SyncingManager: SyncingManagerProtocol {
         // Mark as syncing
         setSyncing(true)
 
+        // Start the streams first
+        messageStreamTask?.cancel()
+        messageStreamTask = Task { [weak self] in
+            guard let self else { return }
+            await self.runMessageStream(client: client, apiClient: apiClient)
+        }
+        conversationStreamTask?.cancel()
+        conversationStreamTask = Task { [weak self] in
+            guard let self else { return }
+            await self.runConversationStream(client: client, apiClient: apiClient)
+        }
+
         // Cancel any existing sync task
         syncTask?.cancel()
         syncTask = Task { [weak self] in
@@ -106,16 +120,6 @@ actor SyncingManager: SyncingManagerProtocol {
                 Task { [weak self] in
                     await self?.setSyncing(false)
                 }
-            }
-
-            // Start the streams first
-            Task.detached { [weak self] in
-                guard let self else { return }
-                await self.runMessageStream(client: client, apiClient: apiClient)
-            }
-            Task.detached { [weak self] in
-                guard let self else { return }
-                await self.runConversationStream(client: client, apiClient: apiClient)
             }
 
             // Capture sync start time first
@@ -185,6 +189,10 @@ actor SyncingManager: SyncingManagerProtocol {
         Logger.info("Stopping...")
 
         // Cancel sync tasks
+        messageStreamTask?.cancel()
+        messageStreamTask = nil
+        conversationStreamTask?.cancel()
+        conversationStreamTask = nil
         syncTask?.cancel()
         syncTask = nil
 
