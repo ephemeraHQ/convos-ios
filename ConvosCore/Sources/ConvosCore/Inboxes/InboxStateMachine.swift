@@ -722,7 +722,7 @@ public actor InboxStateMachine {
         // When gatewayUrl is provided, we're using d14n
         // The gateway handles env/isSecure automatically, so we don't set them
         let apiOptions: ClientOptions.Api
-        if let gatewayUrl = environment.gatewayUrl {
+        if let gatewayUrl = environment.gatewayUrl, !gatewayUrl.isEmpty {
             // d14n mode: gateway handles network selection
             Logger.info("Using XMTP d14n - Gateway: \(gatewayUrl)")
             apiOptions = .init(
