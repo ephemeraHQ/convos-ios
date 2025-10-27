@@ -25,4 +25,8 @@ public struct ConvosConfiguration {
         self.relyingPartyIdentifier = relyingPartyIdentifier
         self.xmtpEndpoint = xmtpEndpoint
     }
+
+    static func empty() -> Self {
+        .init(apiBaseURL: "", appGroupIdentifier: "", relyingPartyIdentifier: "")
+    }
 }

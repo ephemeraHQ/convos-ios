@@ -6,9 +6,39 @@ import GRDB
 public enum NotificationProcessingError: Error {
     case timeout
     case invalidPayload
+    case notInitialized
 }
 
+// MARK: - Global Actor
+@globalActor
 public actor CachedPushNotificationHandler {
+    public static var shared: CachedPushNotificationHandler = .uninitialized
+
+    private static let uninitialized: CachedPushNotificationHandler = CachedPushNotificationHandler(
+        // swiftlint:disable:next force_try
+        databaseReader: try! DatabaseQueue(),
+        // swiftlint:disable:next force_try
+        databaseWriter: try! DatabaseQueue(),
+        environment: .local(config: .empty())
+    )
+
+    /// Initialize the shared instance with required dependencies
+    /// - Parameters:
+    ///   - databaseReader: Database reader instance
+    ///   - databaseWriter: Database writer instance
+    ///   - environment: App environment
+    public static func initialize(
+        databaseReader: any DatabaseReader,
+        databaseWriter: any DatabaseWriter,
+        environment: AppEnvironment
+    ) {
+        shared = CachedPushNotificationHandler(
+            databaseReader: databaseReader,
+            databaseWriter: databaseWriter,
+            environment: environment
+        )
+    }
+
     private var messagingServices: [String: MessagingService] = [:] // Keyed by inboxId
 
     // Track last access time for cleanup (keyed by inboxId)
@@ -24,10 +54,10 @@ public actor CachedPushNotificationHandler {
     private let databaseWriter: any DatabaseWriter
     private let environment: AppEnvironment
 
-    public init(
+    private init(
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
-        environment: AppEnvironment,
+        environment: AppEnvironment
     ) {
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter

@@ -39,10 +39,11 @@ public struct NotificationExtensionEnvironment {
 
         Logger.info("Creating CachedPushNotificationHandler with environment: \(environment.name)")
 
-        return CachedPushNotificationHandler(
+        CachedPushNotificationHandler.initialize(
             databaseReader: databaseManager.dbReader,
             databaseWriter: databaseManager.dbWriter,
             environment: environment
         )
+        return CachedPushNotificationHandler.shared
     }
 }
