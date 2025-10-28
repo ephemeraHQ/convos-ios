@@ -243,7 +243,6 @@ class ConversationWriter: ConversationWriterProtocol {
     ) async throws {
         try await databaseWriter.write { [weak self] db in
             guard let self else { return }
-//            // Save creator
             let creator = Member(inboxId: dbConversation.creatorId)
             try creator.save(db)
 

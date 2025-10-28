@@ -196,7 +196,6 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         switch conversation {
         case .group(let group):
             Logger.info("Adding \(senderInboxId) to group \(group.id)...")
-            try await group.sync()
             try await group.add(members: [senderInboxId])
             let conversationName = try? group.name()
             return JoinRequestResult(
