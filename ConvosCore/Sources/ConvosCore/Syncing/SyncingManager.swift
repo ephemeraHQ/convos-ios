@@ -360,31 +360,39 @@ actor SyncingManager: SyncingManagerProtocol {
 
             switch conversation {
             case .dm:
-                _ = try await joinRequestsManager.processJoinRequest(
-                    message: message,
-                    client: client
-                )
-            case .group:
-                guard try await shouldProcessConversation(conversation, client: client) else {
-                    Logger.warning("Received invalid group message, skipping...")
-                    return
+                do {
+                    _ = try await joinRequestsManager.processJoinRequest(
+                        message: message,
+                        client: client
+                    )
+                } catch {
+                    Logger.error("Failed processing join request: \(error)")
                 }
+            case .group:
+                do {
+                    guard try await shouldProcessConversation(conversation, client: client) else {
+                        Logger.warning("Received invalid group message, skipping...")
+                        return
+                    }
 
-                // Store conversation and message
-                let dbConversation = try await conversationWriter.store(conversation: conversation)
-                let result = try await messageWriter.store(message: message, for: dbConversation)
+                    // Store conversation and message
+                    let dbConversation = try await conversationWriter.store(conversation: conversation)
+                    let result = try await messageWriter.store(message: message, for: dbConversation)
 
-                // Mark unread if needed
-                if result.contentType.marksConversationAsUnread,
-                   conversation.id != activeConversationId,
-                   message.senderInboxId != client.inboxId {
-                    try await localStateWriter.setUnread(true, for: conversation.id)
+                    // Mark unread if needed
+                    if result.contentType.marksConversationAsUnread,
+                       conversation.id != activeConversationId,
+                       message.senderInboxId != client.inboxId {
+                        try await localStateWriter.setUnread(true, for: conversation.id)
+                    }
+                } catch {
+                    Logger.error("Failed processing group message: \(error.localizedDescription)")
                 }
             }
 
             Logger.info("Processed message: \(message.id)")
         } catch {
-            Logger.error("Error processing message: \(error)")
+            Logger.warning("Stopped processing message from error.")
         }
     }
 

@@ -243,7 +243,7 @@ class ConversationWriter: ConversationWriterProtocol {
     ) async throws {
         try await databaseWriter.write { [weak self] db in
             guard let self else { return }
-            // Save creator
+//            // Save creator
             let creator = Member(inboxId: dbConversation.creatorId)
             try creator.save(db)
 
@@ -266,8 +266,12 @@ class ConversationWriter: ConversationWriterProtocol {
                 .deleteAll(db)
             // Save members
             try saveMembers(dbMembers, in: db)
-            // Update profiles
-            try memberProfiles.forEach { try $0.save(db) }
+            // Update profiles - ensure Member exists first
+            try memberProfiles.forEach { profile in
+                let member = Member(inboxId: profile.inboxId)
+                try member.save(db)
+                try profile.save(db)
+            }
         }
     }
 

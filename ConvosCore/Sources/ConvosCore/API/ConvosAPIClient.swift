@@ -32,13 +32,11 @@ enum ConvosAPIClientFactory: ConvosAPIClientFactoryType {
         client: any XMTPClientProvider,
         environment: AppEnvironment
     ) -> any ConvosAPIClientProtocol {
-        ConvosAPIClient(client: client, environment: environment)
+        ConvosAPIClient(environment: environment)
     }
 }
 
 public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
-    var identifier: String { get }
-
     func authenticate(appCheckToken: String,
                       retryCount: Int) async throws -> String
 
@@ -222,25 +220,12 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
 /// The client automatically re-authenticates on 401 responses up to a maximum
 /// retry count and stores JWT tokens in keychain for persistence.
 final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
-    private let client: any XMTPClientProvider
     private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
 
     private var _overrideJWTToken: String?
     private let tokenAccessQueue: DispatchQueue = DispatchQueue(label: "org.convos.api.tokenAccess")
 
     private let maxRetryCount: Int = 3
-
-    var identifier: String {
-        "\(client.inboxId)-\(client.installationId)"
-    }
-
-    fileprivate init(
-        client: any XMTPClientProvider,
-        environment: AppEnvironment
-    ) {
-        self.client = client
-        super.init(environment: environment)
-    }
 
     private func reAuthenticate() async throws -> String {
         // we shouldn't do this at all in the notification extension
@@ -348,7 +333,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         let deviceId = DeviceInfo.deviceIdentifier
         if let overridenJWT = overrideToken {
             request.setValue(overridenJWT, forHTTPHeaderField: "X-Convos-AuthToken")
-        } else if let keychainJWT = try? keychainService.retrieveString(.init(deviceId: deviceId)) {
+        } else if let keychainJWT = try keychainService.retrieveString(.init(deviceId: deviceId)) {
             request.setValue(keychainJWT, forHTTPHeaderField: "X-Convos-AuthToken")
         }
         // If no JWT, send request anyway - server will respond 401 and performRequest() will handle reauth
