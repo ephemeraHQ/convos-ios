@@ -6,7 +6,6 @@ import GRDB
 public enum NotificationProcessingError: Error {
     case timeout
     case invalidPayload
-    case notInitialized
 }
 
 // MARK: - Global Actor
