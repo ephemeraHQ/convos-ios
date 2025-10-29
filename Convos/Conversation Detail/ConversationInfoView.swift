@@ -304,12 +304,11 @@ struct ConversationInfoView: View {
                             .foregroundStyle(.colorTextSecondary)
                     }
                     .task {
-                        exportedLogsURL = nil
                         do {
                             let url = try await viewModel.exportDebugLogs()
                             exportedLogsURL = url
                         } catch {
-                            Logger.error("Failed to export logs: \(error.localizedDescription)")
+                            Logger.error("Failed to export logs for conversation: \(error.localizedDescription)")
                         }
                     }
                 }
