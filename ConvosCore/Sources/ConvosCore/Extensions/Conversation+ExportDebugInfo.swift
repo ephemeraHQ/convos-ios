@@ -28,7 +28,8 @@ public extension XMTPiOS.Conversation {
 
         // Create temporary file
         let tempDir = FileManager.default.temporaryDirectory
-        let fileName = "conversation-\(id)-debug-\(Date().timeIntervalSince1970).json"
+        let safeId = id.replacingOccurrences(of: "/", with: "_")
+        let fileName = "conversation-\(safeId)-debug-\(Date().timeIntervalSince1970).json"
         let fileURL = tempDir.appendingPathComponent(fileName)
 
         try jsonData.write(to: fileURL)
