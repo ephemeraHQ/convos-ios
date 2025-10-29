@@ -1,12 +1,6 @@
 import Foundation
 
 public protocol ConvosAPIBaseProtocol {
-    // turnkey specific
-    func createSubOrganization(
-        ephemeralPublicKey: String,
-        passkey: ConvosAPI.Passkey
-    ) async throws -> ConvosAPI.CreateSubOrganizationResponse
-
     func request(for path: String,
                  method: String,
                  queryParameters: [String: String]?) throws -> URLRequest
@@ -16,22 +10,11 @@ public protocol ConvosAPIBaseProtocol {
 }
 
 protocol ConvosAPIClientFactoryType {
-    static func client(environment: AppEnvironment) -> any ConvosAPIBaseProtocol
-    static func authenticatedClient(
-        client: any XMTPClientProvider,
-        environment: AppEnvironment
-    ) -> any ConvosAPIClientProtocol
+    static func client(environment: AppEnvironment) -> any ConvosAPIClientProtocol
 }
 
 enum ConvosAPIClientFactory: ConvosAPIClientFactoryType {
-    static func client(environment: AppEnvironment) -> any ConvosAPIBaseProtocol {
-        BaseConvosAPIClient(environment: environment)
-    }
-
-    static func authenticatedClient(
-        client: any XMTPClientProvider,
-        environment: AppEnvironment
-    ) -> any ConvosAPIClientProtocol {
+    static func client(environment: AppEnvironment) -> any ConvosAPIClientProtocol {
         ConvosAPIClient(environment: environment)
     }
 }
@@ -79,44 +62,6 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
         self.baseURL = apiBaseURL
         self.session = URLSession(configuration: .default)
         self.environment = environment
-    }
-
-    func createSubOrganization(
-        ephemeralPublicKey: String,
-        passkey: ConvosAPI.Passkey
-    ) async throws -> ConvosAPI.CreateSubOrganizationResponse {
-        let url = baseURL.appendingPathComponent("v1/wallets")
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let requestBody: [String: Any] = [
-            "ephemeralPublicKey": ephemeralPublicKey,
-            "challenge": passkey.challenge,
-            "attestation": [
-                "credentialId": passkey.attestation.credentialId,
-                "clientDataJson": passkey.attestation.clientDataJson,
-                "attestationObject": passkey.attestation.attestationObject,
-                "transports": passkey.attestation.transports.map { $0.rawValue }
-            ]
-        ]
-
-        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
-
-        do {
-            let (data, response) = try await session.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
-                throw APIError.authenticationFailed
-            }
-
-            let result = try JSONDecoder().decode(ConvosAPI.CreateSubOrganizationResponse.self, from: data)
-            return result
-        } catch {
-            throw APIError.serverError(error.localizedDescription)
-        }
     }
 
     func request(for path: String,

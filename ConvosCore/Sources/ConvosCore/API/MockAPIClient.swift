@@ -1,15 +1,8 @@
 import Foundation
 
 class MockAPIClientFactory: ConvosAPIClientFactoryType {
-    static func client(environment: AppEnvironment) -> any ConvosAPIBaseProtocol {
-        MockBaseAPIClient()
-    }
-
-    static func authenticatedClient(
-        client: any XMTPClientProvider,
-        environment: AppEnvironment
-    ) -> any ConvosAPIClientProtocol {
-        MockAPIClient(client: client)
+    static func client(environment: AppEnvironment) -> any ConvosAPIClientProtocol {
+        MockAPIClient()
     }
 }
 
@@ -18,13 +11,6 @@ enum MockAPIError: Error {
 }
 
 class MockBaseAPIClient: ConvosAPIBaseProtocol {
-    func createSubOrganization(
-        ephemeralPublicKey: String,
-        passkey: ConvosAPI.Passkey
-    ) async throws -> ConvosAPI.CreateSubOrganizationResponse {
-        .init(subOrgId: UUID().uuidString, walletAddress: UUID().uuidString)
-    }
-
     func request(for path: String, method: String, queryParameters: [String: String]?) throws -> URLRequest {
         guard let url = URL(string: "http://example.com") else {
             throw MockAPIError.invalidURL
@@ -38,17 +24,6 @@ class MockBaseAPIClient: ConvosAPIBaseProtocol {
 }
 
 class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
-    var identifier: String {
-        "\(client.inboxId)\(client.installationId)"
-    }
-
-    let client: any XMTPClientProvider
-
-    init(client: any XMTPClientProvider) {
-        self.client = client
-        super.init()
-    }
-
     func authenticate(appCheckToken: String, retryCount: Int = 0) async throws -> String {
         return "mock-jwt-token"
     }

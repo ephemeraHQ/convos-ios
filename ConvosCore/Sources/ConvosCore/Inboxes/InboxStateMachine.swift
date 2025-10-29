@@ -714,8 +714,7 @@ public actor InboxStateMachine {
 
     private func initializeApiClient(client: any XMTPClientProvider) -> any ConvosAPIClientProtocol {
         Logger.info("Initializing API client...")
-        return ConvosAPIClientFactory.authenticatedClient(
-            client: client,
+        return ConvosAPIClientFactory.client(
             environment: environment
         )
     }

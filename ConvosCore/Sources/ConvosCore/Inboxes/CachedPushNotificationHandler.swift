@@ -21,14 +21,6 @@ public actor CachedPushNotificationHandler {
     }
     private static var _shared: CachedPushNotificationHandler?
 
-    private static let uninitialized: CachedPushNotificationHandler = CachedPushNotificationHandler(
-        // swiftlint:disable:next force_try
-        databaseReader: try! DatabaseQueue(),
-        // swiftlint:disable:next force_try
-        databaseWriter: try! DatabaseQueue(),
-        environment: .local(config: .empty())
-    )
-
     /// Initialize the shared instance with required dependencies
     /// - Parameters:
     ///   - databaseReader: Database reader instance
