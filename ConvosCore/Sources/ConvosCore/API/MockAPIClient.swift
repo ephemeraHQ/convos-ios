@@ -7,9 +7,10 @@ class MockAPIClientFactory: ConvosAPIClientFactoryType {
 
     static func authenticatedClient(
         client: any XMTPClientProvider,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        isNSEContext: Bool = false
     ) -> any ConvosAPIClientProtocol {
-        MockAPIClient(client: client)
+        MockAPIClient(client: client, isNSEContext: isNSEContext)
     }
 }
 
@@ -42,10 +43,12 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         "\(client.inboxId)\(client.installationId)"
     }
 
+    let isNSEContext: Bool
     let client: any XMTPClientProvider
 
-    init(client: any XMTPClientProvider) {
+    init(client: any XMTPClientProvider, isNSEContext: Bool = false) {
         self.client = client
+        self.isNSEContext = isNSEContext
         super.init()
     }
 
@@ -91,6 +94,10 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
     }
 
     func overrideJWTToken(_ token: String) {
+        // no-op in mock
+    }
+
+    func clearOverrideJWTToken() {
         // no-op in mock
     }
 }

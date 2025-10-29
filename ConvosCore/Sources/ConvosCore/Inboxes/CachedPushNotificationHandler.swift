@@ -123,7 +123,7 @@ public actor CachedPushNotificationHandler {
             databaseReader: databaseReader,
             environment: environment,
             startsStreamingServices: false,
-            autoRegistersForPushNotifications: false  // NSE: Skip push notification registration
+            isNSEContext: true
         )
         messagingServices[inboxId] = messagingService
         return messagingService

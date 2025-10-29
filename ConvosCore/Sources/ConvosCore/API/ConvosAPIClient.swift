@@ -19,7 +19,8 @@ protocol ConvosAPIClientFactoryType {
     static func client(environment: AppEnvironment) -> any ConvosAPIBaseProtocol
     static func authenticatedClient(
         client: any XMTPClientProvider,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        isNSEContext: Bool
     ) -> any ConvosAPIClientProtocol
 }
 
@@ -30,14 +31,16 @@ enum ConvosAPIClientFactory: ConvosAPIClientFactoryType {
 
     static func authenticatedClient(
         client: any XMTPClientProvider,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        isNSEContext: Bool = false
     ) -> any ConvosAPIClientProtocol {
-        ConvosAPIClient(client: client, environment: environment)
+        ConvosAPIClient(client: client, environment: environment, isNSEContext: isNSEContext)
     }
 }
 
 public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     var identifier: String { get }
+    var isNSEContext: Bool { get }
 
     func authenticate(inboxId: String,
                       appCheckToken: String,
@@ -64,6 +67,7 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     func unregisterInstallation(clientId: String) async throws
 
     func overrideJWTToken(_ token: String)
+    func clearOverrideJWTToken()
 }
 
 /// Base HTTP client for Convos backend API
@@ -227,6 +231,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
 
     private var _overrideJWTToken: String?
+    let isNSEContext: Bool  // Track if we're in NSE context (immutable after init)
     private let tokenAccessQueue: DispatchQueue = DispatchQueue(label: "org.convos.api.tokenAccess")
 
     private let maxRetryCount: Int = 3
@@ -237,9 +242,11 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
     fileprivate init(
         client: any XMTPClientProvider,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        isNSEContext: Bool = false
     ) {
         self.client = client
+        self.isNSEContext = isNSEContext
         super.init(environment: environment)
     }
 
@@ -335,6 +342,16 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         tokenAccessQueue.sync {
             _overrideJWTToken = token
         }
+        Logger.info("Set override JWT token for NSE context")
+    }
+
+    /// Clears the override JWT token.
+    /// Should be called after NSE processing completes to prevent token reuse.
+    func clearOverrideJWTToken() {
+        tokenAccessQueue.sync {
+            _overrideJWTToken = nil
+        }
+        Logger.debug("Cleared override JWT token")
     }
 
     // MARK: - Private Helpers
@@ -347,15 +364,40 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         var request = try request(for: path, method: method, queryParameters: queryParameters)
 
         // Prioritize override JWT token (from notification payload) over keychain JWT
-        // Capture the override token in a synchronized block to avoid race conditions
+        // Capture token in a synchronized block to avoid race conditions
         let overrideToken = tokenAccessQueue.sync { _overrideJWTToken }
 
         if let overridenJWT = overrideToken {
+            Logger.debug("Using override JWT token from notification payload")
             request.setValue(overridenJWT, forHTTPHeaderField: "X-Convos-AuthToken")
-        } else if let keychainJWT = try? keychainService.retrieveString(.init(inboxId: client.inboxId)) {
-            request.setValue(keychainJWT, forHTTPHeaderField: "X-Convos-AuthToken")
+        } else {
+            do {
+                if let keychainJWT = try keychainService.retrieveString(.init(inboxId: client.inboxId)) {
+                    Logger.debug("Using JWT token from keychain")
+                    request.setValue(keychainJWT, forHTTPHeaderField: "X-Convos-AuthToken")
+                } else {
+                    // No JWT available
+                    if isNSEContext {
+                        // In NSE context, we cannot re-authenticate (no AppCheck available)
+                        // Fail fast instead of sending unauthenticated request
+                        Logger.error("NSE context detected but no JWT available - cannot proceed without authentication")
+                        throw APIError.notAuthenticated
+                    }
+                    Logger.debug("No JWT token found - request will trigger re-authentication")
+                }
+            } catch let error as APIError {
+                throw error
+            } catch {
+                // Keychain retrieval failed
+                if isNSEContext {
+                    // In NSE context, fail fast - cannot recover from keychain errors
+                    Logger.error("Failed to retrieve JWT from keychain in NSE context: \(error.localizedDescription)")
+                    throw APIError.notAuthenticated
+                }
+                Logger.warning("Failed to retrieve JWT from keychain: \(error.localizedDescription)")
+                // In main app context, continue without JWT - will trigger re-authentication
+            }
         }
-        // If no JWT, send request anyway - server will respond 401 and performRequest() will handle reauth
 
         return request
     }
@@ -404,11 +446,10 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 }
                 throw APIError.badRequest(errorMessage)
             case 401:
-                // If using override JWT token (notification service extension), don't attempt re-auth
-                // since app attest is not available in notification service extension
-                let hasOverrideToken = tokenAccessQueue.sync { _overrideJWTToken != nil }
-                guard !hasOverrideToken else {
-                    Logger.error("Authentication failed with override JWT token - cannot re-authenticate in notification service extension")
+                // In NSE context, never attempt re-authentication
+                // (App Attest not available in notification service extension)
+                if isNSEContext {
+                    Logger.error("Authentication failed in NSE context - cannot re-authenticate without AppCheck")
                     throw APIError.notAuthenticated
                 }
 

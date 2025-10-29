@@ -114,7 +114,7 @@ class NotificationService: UNNotificationServiceExtension {
         }
     }
 
-        override func serviceExtensionTimeWillExpire() {
+    override func serviceExtensionTimeWillExpire() {
         // Called just before the extension will be terminated by the system
         Logger.warning("[Instance: \(instanceId)] Service extension time expiring")
 
@@ -130,7 +130,7 @@ class NotificationService: UNNotificationServiceExtension {
         }
     }
 
-        // MARK: - Helper Methods
+    // MARK: - Helper Methods
 
     deinit {
         Logger.info("[Instance: \(instanceId)] NotificationService instance deallocated")

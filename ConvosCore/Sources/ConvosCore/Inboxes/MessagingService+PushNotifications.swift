@@ -13,6 +13,13 @@ extension MessagingService {
     ) async throws -> DecodedNotificationContent? {
         Logger.info("processPushNotification called")
         let inboxReadyResult = try await inboxStateManager.waitForInboxReadyResult()
+
+        // Ensure we clear any override JWT token after processing completes
+        defer {
+            inboxReadyResult.apiClient.clearOverrideJWTToken()
+            Logger.debug("Cleared override JWT token after notification processing")
+        }
+
         return try await self.handlePushNotification(
             inboxReadyResult: inboxReadyResult,
             payload: payload
