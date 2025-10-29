@@ -436,6 +436,7 @@ class ConversationViewModel {
         }
     }
 
+    @MainActor
     func exportDebugLogs() async throws -> URL {
         // Get the XMTP client for this conversation
         let messagingService = session.messagingService(
