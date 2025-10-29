@@ -350,7 +350,6 @@ actor SyncingManager: SyncingManagerProtocol {
         apiClient: any ConvosAPIClientProtocol
     ) async {
         do {
-            // Find conversation
             guard let conversation = try await client.conversationsProvider.findConversation(
                 conversationId: message.conversationId
             ) else {

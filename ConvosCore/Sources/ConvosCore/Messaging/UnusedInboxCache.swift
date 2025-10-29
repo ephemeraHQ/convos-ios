@@ -53,16 +53,12 @@ public actor UnusedInboxCache {
                     databaseReader: databaseReader,
                     environment: environment
                 )
-                return
             } catch {
                 Logger.error("Failed authorizing unused inbox: \(error.localizedDescription)")
             }
-        }
-
-        // No unused inbox exists, create a new one
-        Logger.info("No unused inbox found, creating new one")
-        Task(priority: .background) { [weak self] in
-            guard let self else { return }
+        } else {
+            // No unused inbox exists, create a new one
+            Logger.info("No unused inbox found, creating new one")
             await createNewUnusedInbox(
                 databaseWriter: databaseWriter,
                 databaseReader: databaseReader,

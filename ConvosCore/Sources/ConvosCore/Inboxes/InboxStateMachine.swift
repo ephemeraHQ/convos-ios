@@ -343,7 +343,6 @@ public actor InboxStateMachine {
             Logger.error(
                 "Failed state transition \(_state) -> \(action): \(error.localizedDescription)"
             )
-            // We always have a clientId now
             emitStateChange(.error(clientId: _state.clientId, error: error))
         }
     }
