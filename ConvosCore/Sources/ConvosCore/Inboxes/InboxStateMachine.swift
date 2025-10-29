@@ -643,21 +643,8 @@ public actor InboxStateMachine {
     // MARK: - Helpers
 
     private func clientOptions(keys: any XMTPClientKeys) -> ClientOptions {
-        // When gatewayUrl is provided, we're using d14n
-        // The gateway handles env/isSecure automatically, so we don't set them
-        let apiOptions: ClientOptions.Api
-        if let gatewayUrl = environment.gatewayUrl, !gatewayUrl.isEmpty {
-            // d14n mode: gateway handles network selection
-            // Note: gatewayUrl parameter is only available in d14n ClientOptions.Api
-            Logger.info("Using XMTP d14n - Gateway: \(gatewayUrl)")
-            apiOptions = .init(
-                appVersion: "convos/\(Bundle.appVersion)",
-                // gatewayUrl: gatewayUrl
-            )
-        } else {
-            // Direct XMTP connection: we specify env and isSecure
-            Logger.info("🔗 Using direct XMTP connection with env: \(environment.xmtpEnv)")
-            apiOptions = .init(
+        ClientOptions(
+            api: .init(
                 env: environment.xmtpEnv,
                 isSecure: environment.isSecure,
                 appVersion: "convos/\(Bundle.appVersion)"
