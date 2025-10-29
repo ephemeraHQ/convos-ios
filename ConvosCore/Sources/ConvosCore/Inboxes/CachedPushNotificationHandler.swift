@@ -12,7 +12,14 @@ public enum NotificationProcessingError: Error {
 // MARK: - Global Actor
 @globalActor
 public actor CachedPushNotificationHandler {
-    public static var shared: CachedPushNotificationHandler = .uninitialized
+    public static var shared: CachedPushNotificationHandler {
+        guard _shared != nil else {
+            fatalError("CachedPushNotificationHandler.initialize() must be called before accessing shared")
+        }
+        // swiftlint:disable:next force_unwrapping
+        return _shared!
+    }
+    private static var _shared: CachedPushNotificationHandler?
 
     private static let uninitialized: CachedPushNotificationHandler = CachedPushNotificationHandler(
         // swiftlint:disable:next force_try
@@ -32,7 +39,7 @@ public actor CachedPushNotificationHandler {
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment
     ) {
-        shared = CachedPushNotificationHandler(
+        _shared = CachedPushNotificationHandler(
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment

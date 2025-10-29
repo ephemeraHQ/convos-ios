@@ -365,6 +365,7 @@ actor SyncingManager: SyncingManagerProtocol {
                         message: message,
                         client: client
                     )
+                    Logger.info("Processed potential join request: \(message.id)")
                 } catch {
                     Logger.error("Failed processing join request: \(error)")
                 }
@@ -385,12 +386,12 @@ actor SyncingManager: SyncingManagerProtocol {
                        message.senderInboxId != client.inboxId {
                         try await localStateWriter.setUnread(true, for: conversation.id)
                     }
+
+                    Logger.info("Processed message: \(message.id)")
                 } catch {
                     Logger.error("Failed processing group message: \(error.localizedDescription)")
                 }
             }
-
-            Logger.info("Processed message: \(message.id)")
         } catch {
             Logger.warning("Stopped processing message from error.")
         }
