@@ -33,7 +33,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
-        isNSEContext: Bool = false
+        useJWTOverride: Bool = false
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
             clientId: clientId,
@@ -42,7 +42,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: startsStreamingServices,
-            isNSEContext: isNSEContext
+            useJWTOverride: useJWTOverride
         )
         operation.authorize(inboxId: inboxId, clientId: clientId)
         return operation
@@ -78,7 +78,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         environment: AppEnvironment,
         startsStreamingServices: Bool,
         savesInboxToDatabase: Bool = true,
-        isNSEContext: Bool = false
+        useJWTOverride: Bool = false
     ) {
         let syncingManager = startsStreamingServices ? SyncingManager(
             identityStore: identityStore,
@@ -93,7 +93,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseWriter: databaseWriter,
             syncingManager: syncingManager,
             savesInboxToDatabase: savesInboxToDatabase,
-            isNSEContext: isNSEContext,
+            useJWTOverride: useJWTOverride,
             environment: environment
         )
     }

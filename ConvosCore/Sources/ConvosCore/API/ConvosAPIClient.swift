@@ -20,7 +20,7 @@ protocol ConvosAPIClientFactoryType {
     static func authenticatedClient(
         client: any XMTPClientProvider,
         environment: AppEnvironment,
-        isNSEContext: Bool
+        useJWTOverride: Bool
     ) -> any ConvosAPIClientProtocol
 }
 
@@ -32,15 +32,15 @@ enum ConvosAPIClientFactory: ConvosAPIClientFactoryType {
     static func authenticatedClient(
         client: any XMTPClientProvider,
         environment: AppEnvironment,
-        isNSEContext: Bool = false
+        useJWTOverride: Bool = false
     ) -> any ConvosAPIClientProtocol {
-        ConvosAPIClient(client: client, environment: environment, isNSEContext: isNSEContext)
+        ConvosAPIClient(client: client, environment: environment, useJWTOverride: useJWTOverride)
     }
 }
 
 public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     var identifier: String { get }
-    var isNSEContext: Bool { get }
+    var useJWTOverride: Bool { get }
 
     func authenticate(inboxId: String,
                       appCheckToken: String,
@@ -231,7 +231,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
 
     private var _overrideJWTToken: String?
-    let isNSEContext: Bool  // Track if we're in NSE context (immutable after init)
+    let useJWTOverride: Bool  // Track if we're using JWT override from APNS payload (immutable after init)
     private let tokenAccessQueue: DispatchQueue = DispatchQueue(label: "org.convos.api.tokenAccess")
 
     private let maxRetryCount: Int = 3
@@ -243,10 +243,10 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     fileprivate init(
         client: any XMTPClientProvider,
         environment: AppEnvironment,
-        isNSEContext: Bool = false
+        useJWTOverride: Bool = false
     ) {
         self.client = client
-        self.isNSEContext = isNSEContext
+        self.useJWTOverride = useJWTOverride
         super.init(environment: environment)
     }
 
@@ -377,10 +377,10 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                     request.setValue(keychainJWT, forHTTPHeaderField: "X-Convos-AuthToken")
                 } else {
                     // No JWT available
-                    if isNSEContext {
-                        // In NSE context, we cannot re-authenticate (no AppCheck available)
+                    if useJWTOverride {
+                        // When using JWT override, we cannot re-authenticate (no AppCheck available)
                         // Fail fast instead of sending unauthenticated request
-                        Logger.error("NSE context detected but no JWT available - cannot proceed without authentication")
+                        Logger.error("JWT override mode detected but no JWT available - cannot proceed without authentication")
                         throw APIError.notAuthenticated
                     }
                     Logger.debug("No JWT token found - request will trigger re-authentication")
@@ -389,9 +389,9 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 throw error
             } catch {
                 // Keychain retrieval failed
-                if isNSEContext {
-                    // In NSE context, fail fast - cannot recover from keychain errors
-                    Logger.error("Failed to retrieve JWT from keychain in NSE context: \(error.localizedDescription)")
+                if useJWTOverride {
+                    // When using JWT override, fail fast - cannot recover from keychain errors
+                    Logger.error("Failed to retrieve JWT from keychain in JWT override mode: \(error.localizedDescription)")
                     throw APIError.notAuthenticated
                 }
                 Logger.warning("Failed to retrieve JWT from keychain: \(error.localizedDescription)")
@@ -446,10 +446,10 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 }
                 throw APIError.badRequest(errorMessage)
             case 401:
-                // In NSE context, never attempt re-authentication
-                // (App Attest not available in notification service extension)
-                if isNSEContext {
-                    Logger.error("Authentication failed in NSE context - cannot re-authenticate without AppCheck")
+                // When using JWT override, never attempt re-authentication
+                // (AppCheck not available when using JWT from APNS payload)
+                if useJWTOverride {
+                    Logger.error("Authentication failed in JWT override mode - cannot re-authenticate without AppCheck")
                     throw APIError.notAuthenticated
                 }
 

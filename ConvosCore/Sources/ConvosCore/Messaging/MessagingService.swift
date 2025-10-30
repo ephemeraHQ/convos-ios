@@ -26,7 +26,7 @@ final class MessagingService: MessagingServiceProtocol {
         databaseReader: any DatabaseReader,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
-        isNSEContext: Bool = false
+        useJWTOverride: Bool = false
     ) -> MessagingService {
         let identityStore = environment.defaultIdentityStore
         let authorizationOperation = AuthorizeInboxOperation.authorize(
@@ -37,7 +37,7 @@ final class MessagingService: MessagingServiceProtocol {
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: startsStreamingServices,
-            isNSEContext: isNSEContext
+            useJWTOverride: useJWTOverride
         )
         return MessagingService(
             authorizationOperation: authorizationOperation,

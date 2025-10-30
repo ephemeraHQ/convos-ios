@@ -123,7 +123,7 @@ public actor CachedPushNotificationHandler {
             databaseReader: databaseReader,
             environment: environment,
             startsStreamingServices: false,
-            isNSEContext: true
+            useJWTOverride: true
         )
         messagingServices[inboxId] = messagingService
         return messagingService

@@ -106,7 +106,7 @@ public actor InboxStateMachine {
     private let environment: AppEnvironment
     private let syncingManager: AnySyncingManager?
     private let savesInboxToDatabase: Bool
-    private let isNSEContext: Bool
+    private let useJWTOverride: Bool
     private let databaseWriter: any DatabaseWriter
     private lazy var deviceRegistrationManager: DeviceRegistrationManager = {
         DeviceRegistrationManager(environment: environment)
@@ -195,7 +195,7 @@ public actor InboxStateMachine {
         databaseWriter: any DatabaseWriter,
         syncingManager: AnySyncingManager?,
         savesInboxToDatabase: Bool = true,
-        isNSEContext: Bool = false,
+        useJWTOverride: Bool = false,
         environment: AppEnvironment
     ) {
         self.initialClientId = clientId
@@ -205,7 +205,7 @@ public actor InboxStateMachine {
         self.databaseWriter = databaseWriter
         self.syncingManager = syncingManager
         self.savesInboxToDatabase = savesInboxToDatabase
-        self.isNSEContext = isNSEContext
+        self.useJWTOverride = useJWTOverride
         self.environment = environment
 
         // Set custom XMTP host if provided
@@ -420,7 +420,7 @@ public actor InboxStateMachine {
 
         await syncingManager?.start(with: client, apiClient: apiClient)
 
-        if !isNSEContext {
+        if !useJWTOverride {
             // Register device on app launch (without push token - that's OK)
             // This creates the device record in the backend
             await deviceRegistrationManager.registerDeviceIfNeeded()
@@ -430,7 +430,7 @@ public actor InboxStateMachine {
             setupPushTokenObserver()
             Logger.info("Device registered and push token observer set up. Will request permissions when user creates/joins a conversation.")
         } else {
-            Logger.info("Running in NSE context, skipping push notification registration")
+            Logger.info("Using JWT override mode, skipping push notification registration")
         }
     }
 
@@ -685,21 +685,21 @@ public actor InboxStateMachine {
     }
 
     private func initializeApiClient(client: any XMTPClientProvider) -> any ConvosAPIClientProtocol {
-        Logger.info("Initializing API client (NSE context: \(isNSEContext))...")
+        Logger.info("Initializing API client (JWT override: \(useJWTOverride))...")
         return ConvosAPIClientFactory.authenticatedClient(
             client: client,
             environment: environment,
-            isNSEContext: isNSEContext
+            useJWTOverride: useJWTOverride
         )
     }
 
     private func authorizeConvosBackend(client: any XMTPClientProvider) async throws -> any ConvosAPIClientProtocol {
         let apiClient = initializeApiClient(client: client)
 
-        // In NSE context, skip authentication check
+        // When using JWT override, skip authentication check
         // We'll use the JWT token from the push notification payload
-        if isNSEContext {
-            Logger.info("NSE context: skipping auth-check, will use JWT from push payload")
+        if useJWTOverride {
+            Logger.info("JWT override mode: skipping auth-check, will use JWT from push payload")
             return apiClient
         }
 
