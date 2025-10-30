@@ -55,6 +55,11 @@ public actor UnusedInboxCache {
                 )
             } catch {
                 Logger.error("Failed authorizing unused inbox: \(error.localizedDescription)")
+                await createNewUnusedInbox(
+                    databaseWriter: databaseWriter,
+                    databaseReader: databaseReader,
+                    environment: environment
+                )
             }
         } else {
             // No unused inbox exists, create a new one
@@ -174,19 +179,11 @@ public actor UnusedInboxCache {
             return
         }
 
-        clearUnusedInboxFromKeychain()
-
-        // Schedule creation of a new unused inbox for next time
-        Task(priority: .background) { [weak self] in
-            guard let self else { return }
-            await createNewUnusedInbox(
-                databaseWriter: databaseWriter,
-                databaseReader: databaseReader,
-                environment: environment
-            )
-        }
-
-        Logger.info("Cleared unused inbox from keychain: \(inboxId)")
+        await clearUnusedInbox(
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            environment: environment
+        )
     }
 
     /// Clears the unused inbox from keychain
@@ -196,6 +193,10 @@ public actor UnusedInboxCache {
         environment: AppEnvironment
     ) async {
         clearUnusedInboxFromKeychain()
+
+        // Clean up the messaging service
+        await unusedMessagingService?.stopAndDelete()
+        unusedMessagingService = nil
 
         // Schedule creation of a new unused inbox for next time
         Task(priority: .background) { [weak self] in
@@ -275,15 +276,7 @@ public actor UnusedInboxCache {
             // Clean up the messaging service
             await messagingService.stopAndDelete()
 
-            // Create a new unused inbox
-            Task(priority: .background) { [weak self] in
-                guard let self else { return }
-                await createNewUnusedInbox(
-                    databaseWriter: databaseWriter,
-                    databaseReader: databaseReader,
-                    environment: environment
-                )
-            }
+            throw error
         }
     }
 
