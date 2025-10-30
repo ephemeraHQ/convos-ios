@@ -343,7 +343,6 @@ public actor InboxStateMachine {
             Logger.error(
                 "Failed state transition \(_state) -> \(action): \(error.localizedDescription)"
             )
-            // We always have a clientId now
             emitStateChange(.error(clientId: _state.clientId, error: error))
         }
     }
@@ -715,8 +714,7 @@ public actor InboxStateMachine {
 
     private func initializeApiClient(client: any XMTPClientProvider) -> any ConvosAPIClientProtocol {
         Logger.info("Initializing API client...")
-        return ConvosAPIClientFactory.authenticatedClient(
-            client: client,
+        return ConvosAPIClientFactory.client(
             environment: environment
         )
     }

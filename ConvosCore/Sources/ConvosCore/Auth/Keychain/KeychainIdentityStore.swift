@@ -75,6 +75,7 @@ public struct KeychainIdentityKeys: Codable, XMTPClientKeys {
 
 protocol KeychainIdentityType {
     var inboxId: String { get }
+    var clientId: String { get }
     var clientKeys: any XMTPClientKeys { get }
 }
 

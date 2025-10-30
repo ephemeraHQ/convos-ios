@@ -1,12 +1,6 @@
 import Foundation
 
 public protocol ConvosAPIBaseProtocol {
-    // turnkey specific
-    func createSubOrganization(
-        ephemeralPublicKey: String,
-        passkey: ConvosAPI.Passkey
-    ) async throws -> ConvosAPI.CreateSubOrganizationResponse
-
     func request(for path: String,
                  method: String,
                  queryParameters: [String: String]?) throws -> URLRequest
@@ -16,31 +10,17 @@ public protocol ConvosAPIBaseProtocol {
 }
 
 protocol ConvosAPIClientFactoryType {
-    static func client(environment: AppEnvironment) -> any ConvosAPIBaseProtocol
-    static func authenticatedClient(
-        client: any XMTPClientProvider,
-        environment: AppEnvironment
-    ) -> any ConvosAPIClientProtocol
+    static func client(environment: AppEnvironment) -> any ConvosAPIClientProtocol
 }
 
 enum ConvosAPIClientFactory: ConvosAPIClientFactoryType {
-    static func client(environment: AppEnvironment) -> any ConvosAPIBaseProtocol {
-        BaseConvosAPIClient(environment: environment)
-    }
-
-    static func authenticatedClient(
-        client: any XMTPClientProvider,
-        environment: AppEnvironment
-    ) -> any ConvosAPIClientProtocol {
-        ConvosAPIClient(client: client, environment: environment)
+    static func client(environment: AppEnvironment) -> any ConvosAPIClientProtocol {
+        ConvosAPIClient(environment: environment)
     }
 }
 
 public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
-    var identifier: String { get }
-
-    func authenticate(inboxId: String,
-                      appCheckToken: String,
+    func authenticate(appCheckToken: String,
                       retryCount: Int) async throws -> String
 
     func checkAuth() async throws
@@ -82,44 +62,6 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
         self.baseURL = apiBaseURL
         self.session = URLSession(configuration: .default)
         self.environment = environment
-    }
-
-    func createSubOrganization(
-        ephemeralPublicKey: String,
-        passkey: ConvosAPI.Passkey
-    ) async throws -> ConvosAPI.CreateSubOrganizationResponse {
-        let url = baseURL.appendingPathComponent("v1/wallets")
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-        let requestBody: [String: Any] = [
-            "ephemeralPublicKey": ephemeralPublicKey,
-            "challenge": passkey.challenge,
-            "attestation": [
-                "credentialId": passkey.attestation.credentialId,
-                "clientDataJson": passkey.attestation.clientDataJson,
-                "attestationObject": passkey.attestation.attestationObject,
-                "transports": passkey.attestation.transports.map { $0.rawValue }
-            ]
-        ]
-
-        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
-
-        do {
-            let (data, response) = try await session.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
-                throw APIError.authenticationFailed
-            }
-
-            let result = try JSONDecoder().decode(ConvosAPI.CreateSubOrganizationResponse.self, from: data)
-            return result
-        } catch {
-            throw APIError.serverError(error.localizedDescription)
-        }
     }
 
     func request(for path: String,
@@ -223,7 +165,6 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
 /// The client automatically re-authenticates on 401 responses up to a maximum
 /// retry count and stores JWT tokens in keychain for persistence.
 final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
-    private let client: any XMTPClientProvider
     private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
 
     private var _overrideJWTToken: String?
@@ -231,24 +172,11 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
     private let maxRetryCount: Int = 3
 
-    var identifier: String {
-        "\(client.inboxId)-\(client.installationId)"
-    }
-
-    fileprivate init(
-        client: any XMTPClientProvider,
-        environment: AppEnvironment
-    ) {
-        self.client = client
-        super.init(environment: environment)
-    }
-
     private func reAuthenticate() async throws -> String {
-        let inboxId = client.inboxId
+        // we shouldn't do this at all in the notification extension
         let firebaseAppCheckToken = try await FirebaseHelperCore.getAppCheckToken()
 
         return try await authenticate(
-            inboxId: inboxId,
             appCheckToken: firebaseAppCheckToken,
             retryCount: 0
         )
@@ -258,12 +186,10 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
     /// Authenticates with the backend to obtain a JWT token
     /// - Parameters:
-    ///   - inboxId: Used to store the JWT token in keychain (not sent to backend)
     ///   - appCheckToken: Firebase AppCheck token for authentication
     ///   - retryCount: Number of retry attempts (for rate limiting)
     /// - Returns: JWT token string
-    func authenticate(inboxId: String,
-                      appCheckToken: String,
+    func authenticate(appCheckToken: String,
                       retryCount: Int = 0) async throws -> String {
         let url = baseURL.appendingPathComponent("v2/auth/token")
         var request = URLRequest(url: url)
@@ -302,8 +228,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
             // Sleep and then retry
             try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-            return try await authenticate(inboxId: inboxId,
-                                          appCheckToken: appCheckToken,
+            return try await authenticate(appCheckToken: appCheckToken,
                                           retryCount: retryCount + 1)
         }
 
@@ -318,7 +243,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         }
 
         let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
-        try keychainService.saveString(authResponse.token, for: .init(inboxId: inboxId))
+        try keychainService.saveString(authResponse.token, for: .init(deviceId: deviceId))
         Logger.info("Successfully authenticated and stored JWT token")
         return authResponse.token
     }
@@ -350,9 +275,10 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         // Capture the override token in a synchronized block to avoid race conditions
         let overrideToken = tokenAccessQueue.sync { _overrideJWTToken }
 
+        let deviceId = DeviceInfo.deviceIdentifier
         if let overridenJWT = overrideToken {
             request.setValue(overridenJWT, forHTTPHeaderField: "X-Convos-AuthToken")
-        } else if let keychainJWT = try? keychainService.retrieveString(.init(inboxId: client.inboxId)) {
+        } else if let keychainJWT = try keychainService.retrieveString(.init(deviceId: deviceId)) {
             request.setValue(keychainJWT, forHTTPHeaderField: "X-Convos-AuthToken")
         }
         // If no JWT, send request anyway - server will respond 401 and performRequest() will handle reauth
@@ -424,7 +350,8 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                     _ = try await reAuthenticate()
                     // Create a new request with the fresh token
                     var newRequest = request
-                    if let jwt = try keychainService.retrieveString(.init(inboxId: client.inboxId)) {
+                    let deviceId = DeviceInfo.deviceIdentifier
+                    if let jwt = try keychainService.retrieveString(.init(deviceId: deviceId)) {
                         newRequest.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
                     }
                     // Retry the request with incremented retry count

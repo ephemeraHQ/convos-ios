@@ -166,10 +166,10 @@ public final class ConversationStateManager: ConversationStateManagerProtocol {
         switch state {
         case .ready(let result),
                 .joining(invite: _, placeholder: let result):
+            conversationIdSubject.send(result.conversationId)
             isReady = true
             hasError = false
             errorMessage = nil
-            conversationIdSubject.send(result.conversationId)
 
         case .error(let error):
             isReady = false

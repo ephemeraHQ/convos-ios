@@ -95,7 +95,7 @@ extension MockMessagingService: InboxStateManagerProtocol {
     }
 
     public func waitForInboxReadyResult() async throws -> InboxReadyResult {
-        .init(client: self, apiClient: MockAPIClient(client: self))
+        .init(client: self, apiClient: MockAPIClient())
     }
 
     public func delete() async throws {}
@@ -107,7 +107,7 @@ extension MockMessagingService: InboxStateManagerProtocol {
     }
 
     public func reauthorize(inboxId: String, clientId: String) async throws -> InboxReadyResult {
-        .init(client: self, apiClient: MockAPIClient(client: self))
+        .init(client: self, apiClient: MockAPIClient())
     }
 
     public func observeState(_ handler: @escaping (InboxStateMachine.State) -> Void) -> StateObserverHandle {

@@ -8,7 +8,35 @@ public enum NotificationProcessingError: Error {
     case invalidPayload
 }
 
+// MARK: - Global Actor
+@globalActor
 public actor CachedPushNotificationHandler {
+    public static var shared: CachedPushNotificationHandler {
+        guard _shared != nil else {
+            fatalError("CachedPushNotificationHandler.initialize() must be called before accessing shared")
+        }
+        // swiftlint:disable:next force_unwrapping
+        return _shared!
+    }
+    private static var _shared: CachedPushNotificationHandler?
+
+    /// Initialize the shared instance with required dependencies
+    /// - Parameters:
+    ///   - databaseReader: Database reader instance
+    ///   - databaseWriter: Database writer instance
+    ///   - environment: App environment
+    public static func initialize(
+        databaseReader: any DatabaseReader,
+        databaseWriter: any DatabaseWriter,
+        environment: AppEnvironment
+    ) {
+        _shared = CachedPushNotificationHandler(
+            databaseReader: databaseReader,
+            databaseWriter: databaseWriter,
+            environment: environment
+        )
+    }
+
     private var messagingServices: [String: MessagingService] = [:] // Keyed by inboxId
 
     // Track last access time for cleanup (keyed by inboxId)
@@ -24,10 +52,10 @@ public actor CachedPushNotificationHandler {
     private let databaseWriter: any DatabaseWriter
     private let environment: AppEnvironment
 
-    public init(
+    private init(
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
-        environment: AppEnvironment,
+        environment: AppEnvironment
     ) {
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
