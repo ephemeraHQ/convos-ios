@@ -129,4 +129,3 @@ public actor CachedPushNotificationHandler {
         return messagingService
     }
 }
-
