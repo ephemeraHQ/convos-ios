@@ -42,7 +42,8 @@ extension MessagingService {
             Logger.info("Using apiJWT from notification payload")
             apiClient.overrideJWTToken(apiJWT)
         } else {
-            Logger.warning("No apiJWT in payload, might not be able to use the Convos API")
+            Logger.warning("No apiJWT in payload, clearing any existing override token")
+            apiClient.clearOverrideJWTToken()
         }
 
         Logger.debug("Payload notification data: \(payload.notificationData != nil ? "present" : "nil")")
