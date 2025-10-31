@@ -79,7 +79,7 @@ extension XMTPiOS.Group {
     // Updating the invite tag effectively expires all invites generated with that tag
     // The tag is used by the invitee to verify the conversation they've been added to
     // is the one that corresponds to the invite they are requesting to join
-    public func updateInviteTag() async throws {
+    public func ensureInviteTag() async throws {
         var customMetadata = try currentCustomMetadata
         guard customMetadata.tag.isEmpty else { return }
         customMetadata.tag = try generateSecureRandomString(length: 10)

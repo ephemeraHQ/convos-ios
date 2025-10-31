@@ -13,8 +13,13 @@ public protocol ConversationSender {
     func add(members inboxIds: [String]) async throws
     func remove(members inboxIds: [String]) async throws
     func prepare(text: String) async throws -> String
-    func updateInviteTag() async throws
+    func ensureInviteTag() async throws
     func publish() async throws
+}
+
+public protocol GroupConversationSender: ConversationSender {
+    func permissionPolicySet() throws -> PermissionPolicySet
+    func updateAddMemberPermission(newPermissionOption: PermissionOption) async throws
 }
 
 public protocol ConversationsProvider {
@@ -77,7 +82,7 @@ public protocol XMTPClientProvider: AnyObject {
     func messageSender(for conversationId: String) async throws -> (any MessageSender)?
     func canMessage(identity: String) async throws -> Bool
     func canMessage(identities: [String]) async throws -> [String: Bool]
-    func prepareConversation() throws -> ConversationSender
+    func prepareConversation() throws -> GroupConversationSender
     func newConversation(with memberInboxIds: [String],
                          name: String,
                          description: String,
@@ -96,7 +101,7 @@ enum XMTPClientProviderError: Error {
     case conversationNotFound(id: String)
 }
 
-extension XMTPiOS.Group: ConversationSender {
+extension XMTPiOS.Group: GroupConversationSender {
     public func add(members inboxIds: [String]) async throws {
         _ = try await addMembers(inboxIds: inboxIds)
     }
@@ -136,7 +141,7 @@ extension XMTPiOS.Client: XMTPClientProvider {
         )
     }
 
-    public func prepareConversation() throws -> ConversationSender {
+    public func prepareConversation() throws -> GroupConversationSender {
         return try conversations.newGroupOptimistic()
     }
 
