@@ -62,9 +62,9 @@ class ConversationWriter: ConversationWriterProtocol {
         // Create the draft conversation and necessary records
         let creatorInboxId = signedInvite.payload.creatorInboxIdString
 
-        // Validate that the hex conversion succeeded and produced a valid inbox ID
+        // validate that the invite contains a non-empty creator inbox ID
         guard !creatorInboxId.isEmpty else {
-            throw ConversationWriterError.invalidInvite("Malformed creator inbox ID")
+            throw ConversationWriterError.invalidInvite("Empty creator inbox ID")
         }
 
         let conversation = try await databaseWriter.write { db in

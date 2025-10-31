@@ -247,7 +247,6 @@ extension SignedInvite {
         if let firstByte = data.first, firstByte == Data.compressionMarker {
             let dataWithoutMarker = data.dropFirst()
             guard let decompressed = dataWithoutMarker.decompressedWithSize(maxSize: maxDecompressedSize) else {
-                Logger.error("Failed to decompress invite data")
                 throw EncodableSignatureError.invalidFormat
             }
             protobufData = decompressed

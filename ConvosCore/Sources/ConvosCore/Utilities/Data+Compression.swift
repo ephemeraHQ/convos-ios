@@ -79,13 +79,14 @@ extension Data {
     }
 
     /// Decompress DEFLATE-compressed data with size metadata
-    /// - Parameter maxSize: Maximum allowed decompressed size to prevent decompression bombs
-    /// - Returns: Decompressed data or nil if decompression fails or exceeds maxSize
+    /// - Parameters:
+    ///   - maxSize: Maximum allowed decompressed size to prevent decompression bombs
+    ///   - maxCompressionRatio: Maximum allowed compression ratio to detect zip bombs (default: 100)
+    /// - Returns: Decompressed data or nil if decompression fails, exceeds limits, or has suspicious compression ratio
     /// - Note: Expected format: [size: 4 bytes big-endian][compressed data] (marker already stripped by caller)
-    func decompressedWithSize(maxSize: UInt32) -> Data? {
+    func decompressedWithSize(maxSize: UInt32, maxCompressionRatio: UInt32 = 100) -> Data? {
         guard count >= 5 else { return nil }
 
-        guard count >= 4 else { return nil }
         let sizeBytes = Array(prefix(4))
 
         let originalSize: UInt32 = (UInt32(sizeBytes[0]) << 24) |
@@ -97,6 +98,10 @@ extension Data {
 
         let compressedData = dropFirst(4)
         guard !compressedData.isEmpty else { return nil }
+
+        // validate compression ratio to prevent zip bombs
+        let compressionRatio = originalSize / UInt32(compressedData.count)
+        guard compressionRatio <= maxCompressionRatio else { return nil }
 
         return compressedData.withUnsafeBytes { bytes in
             guard let baseAddress = bytes.baseAddress else { return nil }

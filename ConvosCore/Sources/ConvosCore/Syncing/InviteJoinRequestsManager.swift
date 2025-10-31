@@ -154,9 +154,8 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
         let creatorInboxId = signedInvite.payload.creatorInboxIdString
 
-        // Validate that the hex conversion succeeded and produced a valid inbox ID
+        // validate that the invite contains a non-empty creator inbox ID
         guard !creatorInboxId.isEmpty else {
-            Logger.error("Malformed creator inbox ID in invite - blocking DM")
             await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
             throw InviteJoinRequestError.malformedInboxId
         }
