@@ -95,7 +95,7 @@ extension SignedInvite {
         payload.conversationToken = conversationTokenBytes
 
         // Convert hex-encoded inbox ID to raw bytes
-        guard let inboxIdBytes = Data(hexString: conversation.inboxId) else {
+        guard let inboxIdBytes = Data(hexString: conversation.inboxId), !inboxIdBytes.isEmpty else {
             throw EncodableSignatureError.invalidFormat
         }
         payload.creatorInboxID = inboxIdBytes

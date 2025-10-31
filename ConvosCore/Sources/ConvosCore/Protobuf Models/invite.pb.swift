@@ -31,7 +31,7 @@ public struct InvitePayload: Sendable {
   public var conversationToken: Data = Data()
 
   /// The creator's inbox ID as raw bytes (hex-decoded for compactness)
-  /// Required for joiner to know who to DM
+  /// Required for: 1) conversation token decryption AAD, 2) joiner to know who to DM
   public var creatorInboxID: Data = Data()
 
   /// The tag to mark which conversation this corresponds to, lives in `ConversationCustomMetadata`
