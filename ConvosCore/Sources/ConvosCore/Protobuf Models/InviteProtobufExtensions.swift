@@ -145,7 +145,7 @@ extension InvitePayload {
 
 // MARK: - Signing
 
-enum EncodableSignatureError: Error {
+enum EncodableSignatureError: Error, Equatable {
     case invalidContext
     case signatureFailure
     case encodingFailure
