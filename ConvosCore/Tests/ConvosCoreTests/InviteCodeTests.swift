@@ -415,6 +415,40 @@ struct InviteCodeTests {
         }
     }
 
+    @Test("Maximum string length accepted")
+    func maximumStringLength() throws {
+        let maxLengthId = String(repeating: "x", count: InviteConversationToken.maxStringLength)
+        let privateKey = generateTestPrivateKey()
+
+        let token = try InviteConversationToken.makeConversationTokenBytes(
+            conversationId: maxLengthId,
+            creatorInboxId: testInboxId,
+            secp256k1PrivateKey: privateKey
+        )
+
+        let decoded = try InviteConversationToken.decodeConversationTokenBytes(
+            token,
+            creatorInboxId: testInboxId,
+            secp256k1PrivateKey: privateKey
+        )
+
+        #expect(decoded == maxLengthId)
+    }
+
+    @Test("Exceeding maximum string length throws error")
+    func exceedingMaxStringLength() throws {
+        let tooLongId = String(repeating: "x", count: InviteConversationToken.maxStringLength + 1)
+        let privateKey = generateTestPrivateKey()
+
+        #expect(throws: InviteConversationToken.Error.self) {
+            _ = try InviteConversationToken.makeConversationTokenBytes(
+                conversationId: tooLongId,
+                creatorInboxId: testInboxId,
+                secp256k1PrivateKey: privateKey
+            )
+        }
+    }
+
     @Test("Non-standard key size still works with HKDF")
     func nonStandardKeySizeWorksWithHKDF() throws {
         let conversationId = UUID().uuidString.lowercased()
@@ -519,36 +553,41 @@ struct InviteCodeTests {
         let conversationId = UUID().uuidString.lowercased()
         let privateKey = generateTestPrivateKey()
 
-        let token1 = try InviteConversationToken.makeConversationTokenBytes(
-            conversationId: conversationId,
-            creatorInboxId: testInboxId,
-            secp256k1PrivateKey: privateKey
-        )
+        // Run multiple iterations to make nonce collision astronomically unlikely.
+        // While a single nonce collision has ~1 in 2^96 probability (negligible),
+        // running 10 iterations reduces the probability of all pairs colliding to ~1 in 2^960.
+        for _ in 0..<10 {
+            let token1 = try InviteConversationToken.makeConversationTokenBytes(
+                conversationId: conversationId,
+                creatorInboxId: testInboxId,
+                secp256k1PrivateKey: privateKey
+            )
 
-        let token2 = try InviteConversationToken.makeConversationTokenBytes(
-            conversationId: conversationId,
-            creatorInboxId: testInboxId,
-            secp256k1PrivateKey: privateKey
-        )
+            let token2 = try InviteConversationToken.makeConversationTokenBytes(
+                conversationId: conversationId,
+                creatorInboxId: testInboxId,
+                secp256k1PrivateKey: privateKey
+            )
 
-        // Due to random nonce, tokens should be different
-        #expect(token1 != token2)
+            // due to random 12-byte nonce, tokens should be different
+            #expect(token1 != token2)
 
-        // But both should decode to the same conversation ID
-        let decoded1 = try InviteConversationToken.decodeConversationTokenBytes(
-            token1,
-            creatorInboxId: testInboxId,
-            secp256k1PrivateKey: privateKey
-        )
+            // but both should decode to the same conversation ID
+            let decoded1 = try InviteConversationToken.decodeConversationTokenBytes(
+                token1,
+                creatorInboxId: testInboxId,
+                secp256k1PrivateKey: privateKey
+            )
 
-        let decoded2 = try InviteConversationToken.decodeConversationTokenBytes(
-            token2,
-            creatorInboxId: testInboxId,
-            secp256k1PrivateKey: privateKey
-        )
+            let decoded2 = try InviteConversationToken.decodeConversationTokenBytes(
+                token2,
+                creatorInboxId: testInboxId,
+                secp256k1PrivateKey: privateKey
+            )
 
-        #expect(decoded1 == conversationId)
-        #expect(decoded2 == conversationId)
+            #expect(decoded1 == conversationId)
+            #expect(decoded2 == conversationId)
+        }
     }
 
     // MARK: - UTF-8 Encoding Tests

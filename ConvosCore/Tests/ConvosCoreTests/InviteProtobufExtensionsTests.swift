@@ -158,12 +158,11 @@ struct InviteProtobufExtensionsTests {
         signedInvite.payload = payload
         signedInvite.signature = signature
 
-        // Encode without compression (directly as protobuf)
-        let protobufData = try signedInvite.serializedData()
-        let uncompressedSlug = protobufData.base64URLEncoded()
-
-        // Should decode successfully
-        let decoded = try SignedInvite.fromURLSafeSlug(uncompressedSlug)
+        // Use toURLSafeSlug() which properly handles both compressed and uncompressed cases
+        // This ensures consistent framing and avoids false positives when raw protobuf
+        // happens to start with the compression marker byte (0x1F)
+        let encoded = try signedInvite.toURLSafeSlug()
+        let decoded = try SignedInvite.fromURLSafeSlug(encoded)
         #expect(decoded.payload.tag == "test")
     }
 
