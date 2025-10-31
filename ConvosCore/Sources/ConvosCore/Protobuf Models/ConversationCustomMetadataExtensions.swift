@@ -28,6 +28,7 @@ import XMTPiOS
 enum ConversationCustomMetadataError: Error, LocalizedError {
     case randomGenerationFailed
     case invalidLength(Int)
+    case invalidInboxIdHex(String)
 
     var errorDescription: String? {
         switch self {
@@ -35,6 +36,8 @@ enum ConversationCustomMetadataError: Error, LocalizedError {
             return "Failed to generate secure random bytes"
         case .invalidLength(let length):
             return "Invalid length for random string generation: \(length). Length must be positive."
+        case .invalidInboxIdHex(let inboxId):
+            return "Failed to convert MemberProfile to ConversationProfile - invalid inbox ID hex: \(inboxId)"
         }
     }
 }
@@ -145,8 +148,7 @@ extension XMTPiOS.Group {
 
     public func updateProfile(_ profile: MemberProfile) async throws {
         guard let conversationProfile = profile.conversationProfile else {
-            Logger.warning("Failed to convert MemberProfile to ConversationProfile - invalid inbox ID hex: \(profile.inboxId)")
-            return
+            throw ConversationCustomMetadataError.invalidInboxIdHex(profile.inboxId)
         }
         var customMetadata = try currentCustomMetadata
         customMetadata.upsertProfile(conversationProfile)
