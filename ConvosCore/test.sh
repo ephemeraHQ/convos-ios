@@ -35,8 +35,17 @@ fi
 echo -e "${YELLOW}🧪 Running tests on iOS Simulator...${NC}"
 echo ""
 
-# Use specific simulator to avoid "multiple devices matched" error
-SIMULATOR_ID="33952F25-0448-4A75-BDC4-8E767645AA09" # iPhone 16 Pro
+# Find first available iPhone simulator dynamically
+SIMULATOR_ID=$(xcrun simctl list devices available iPhone | grep -m 1 "iPhone" | sed -n 's/.* (\(.*\)).*/\1/p')
+
+if [ -z "$SIMULATOR_ID" ]; then
+  echo -e "${RED}❌ No iPhone simulator found${NC}"
+  echo "Please install an iPhone simulator via Xcode"
+  exit 1
+fi
+
+echo "Using simulator: $(xcrun simctl list devices | grep "$SIMULATOR_ID" | sed 's/^[[:space:]]*//')"
+echo ""
 
 xcodebuild test \
   -scheme ConvosCore \
@@ -59,4 +68,3 @@ echo "Test results saved to: TestResults.xcresult"
 echo ""
 echo "To view detailed results:"
 echo "  open TestResults.xcresult"
-
