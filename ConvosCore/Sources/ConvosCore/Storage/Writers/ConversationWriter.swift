@@ -5,6 +5,7 @@ import XMTPiOS
 enum ConversationWriterError: Error {
     case inboxNotFound(String)
     case expectedGroup
+    case invalidInvite(String)
 }
 
 public protocol ConversationWriterProtocol {
@@ -60,6 +61,12 @@ class ConversationWriter: ConversationWriterProtocol {
 
         // Create the draft conversation and necessary records
         let creatorInboxId = signedInvite.payload.creatorInboxIdString
+
+        // Validate that the hex conversion succeeded and produced a valid inbox ID
+        guard !creatorInboxId.isEmpty else {
+            throw ConversationWriterError.invalidInvite("Malformed creator inbox ID")
+        }
+
         let conversation = try await databaseWriter.write { db in
             // Look up clientId from inbox
             guard let inbox = try DBInbox.fetchOne(db, id: inboxId) else {

@@ -243,9 +243,11 @@ extension SignedInvite {
         let data = try slug.base64URLDecoded()
 
         let protobufData: Data
-        if data.first == Data.compressionMarker {
-            guard let decompressed = data.decompressedWithSize(maxSize: maxDecompressedSize) else {
-                Logger.error("Failed to decompress invite data with compression marker")
+        // validate compression marker value explicitly
+        if let firstByte = data.first, firstByte == Data.compressionMarker {
+            let dataWithoutMarker = data.dropFirst()
+            guard let decompressed = dataWithoutMarker.decompressedWithSize(maxSize: maxDecompressedSize) else {
+                Logger.error("Failed to decompress invite data")
                 throw EncodableSignatureError.invalidFormat
             }
             protobufData = decompressed
@@ -288,12 +290,12 @@ extension SignedInvite {
         // If the expected key is uncompressed (65 bytes) and recovered is compressed (33 bytes),
         // or vice versa, we need to handle the comparison properly
         if recoveredPublicKey.count == expectedPublicKey.count {
-            return recoveredPublicKey == expectedPublicKey
+            return recoveredPublicKey.constantTimeEquals(expectedPublicKey)
         } else {
             // Convert both to the same format for comparison
             let normalizedRecovered = try recoveredPublicKey.normalizePublicKey()
             let normalizedExpected = try expectedPublicKey.normalizePublicKey()
-            return normalizedRecovered == normalizedExpected
+            return normalizedRecovered.constantTimeEquals(normalizedExpected)
         }
     }
 
@@ -318,6 +320,11 @@ extension SignedInvite {
         // Extract signature and recovery ID from the signature parameter
         let signatureData = signature.prefix(64)
         let recid = Int32(signature[64])
+
+        // Validate recovery ID is in valid range (0-3)
+        guard recid >= 0 && recid <= 3 else {
+            throw EncodableSignatureError.invalidSignature
+        }
 
         // Parse the recoverable signature
         var recoverableSignature = secp256k1_ecdsa_recoverable_signature()
@@ -418,5 +425,24 @@ extension Data {
     func sha256Hash() -> Data {
         let hash = SHA256.hash(data: self)
         return Data(hash)
+    }
+
+    /// Constant-time comparison to prevent timing attacks
+    /// - Parameter other: The data to compare against
+    /// - Returns: true if the data are equal, false otherwise
+    /// - Note: Always compares all bytes regardless of when a mismatch is found
+    func constantTimeEquals(_ other: Data) -> Bool {
+        // early exit if lengths don't match - this is safe to leak
+        guard self.count == other.count else {
+            return false
+        }
+
+        // compare all bytes in constant time
+        var result: UInt8 = 0
+        for i in 0..<self.count {
+            result |= self[i] ^ other[i]
+        }
+
+        return result == 0
     }
 }

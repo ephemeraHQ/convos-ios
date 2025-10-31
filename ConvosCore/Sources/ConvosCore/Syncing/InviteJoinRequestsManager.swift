@@ -10,6 +10,7 @@ public enum InviteJoinRequestError: Error {
     case invalidInviteFormat
     case expired
     case expiredConversation
+    case malformedInboxId
 }
 
 public struct JoinRequestResult {
@@ -94,6 +95,9 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         } catch InviteJoinRequestError.invalidSignature {
             Logger.error("Invalid signature in join request from \(message.senderInboxId)")
             return nil
+        } catch InviteJoinRequestError.malformedInboxId {
+            Logger.error("Malformed inbox ID in join request from \(message.senderInboxId)")
+            return nil
         } catch InviteJoinRequestError.conversationNotFound(let id) {
             Logger.error("Conversation \(id) not found for join request from \(message.senderInboxId)")
             return nil
@@ -149,6 +153,14 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         }
 
         let creatorInboxId = signedInvite.payload.creatorInboxIdString
+
+        // Validate that the hex conversion succeeded and produced a valid inbox ID
+        guard !creatorInboxId.isEmpty else {
+            Logger.error("Malformed creator inbox ID in invite - blocking DM")
+            await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
+            throw InviteJoinRequestError.malformedInboxId
+        }
+
         guard creatorInboxId == client.inboxId else {
             Logger.error("Received join request for invite not created by this inbox - blocking DM")
             await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)

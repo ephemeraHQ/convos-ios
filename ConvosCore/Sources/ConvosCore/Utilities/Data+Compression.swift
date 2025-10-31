@@ -1,6 +1,22 @@
 import Compression
 import Foundation
 
+/// DEFLATE compression utilities for protobuf payloads
+///
+/// Used by SignedInvite and ConversationCustomMetadata to reduce size by 20-40%.
+///
+/// **Compressed Format:** `[marker: 1 byte][size: 4 bytes][compressed data]`
+///
+/// **Usage:**
+/// ```swift
+/// // Compression
+/// let compressed = data.compressedIfSmaller()
+///
+/// // Decompression (caller strips marker first)
+/// if data.first == Data.compressionMarker {
+///     let decompressed = data.dropFirst().decompressedWithSize(maxSize: limit)
+/// }
+/// ```
 extension Data {
     /// Magic byte prefix for compressed data
     static let compressionMarker: UInt8 = 0x1F
@@ -44,6 +60,10 @@ extension Data {
             result.append(marker)
 
             // Store original size as UInt32 big-endian
+            // validate count fits in UInt32 to prevent integer overflow
+            guard count <= Int(UInt32.max) else {
+                return nil
+            }
             let size = UInt32(count)
             result.append(contentsOf: [
                 UInt8((size >> 24) & 0xFF),
@@ -58,17 +78,15 @@ extension Data {
         }
     }
 
-    /// Decompress data using zlib inflate with size metadata
-    /// - Parameter maxSize: Maximum allowed decompressed size (safety limit)
+    /// Decompress DEFLATE-compressed data with size metadata
+    /// - Parameter maxSize: Maximum allowed decompressed size to prevent decompression bombs
     /// - Returns: Decompressed data or nil if decompression fails or exceeds maxSize
-    /// - Note: Expected format: [marker: 1 byte][size: 4 bytes big-endian][compressed data]
+    /// - Note: Expected format: [size: 4 bytes big-endian][compressed data] (marker already stripped by caller)
     func decompressedWithSize(maxSize: UInt32) -> Data? {
-        guard count >= 6 else { return nil }
+        guard count >= 5 else { return nil }
 
-        let dataAfterMarker = self.dropFirst()
-
-        guard dataAfterMarker.count >= 4 else { return nil }
-        let sizeBytes = Array(dataAfterMarker.prefix(4))
+        guard count >= 4 else { return nil }
+        let sizeBytes = Array(prefix(4))
 
         let originalSize: UInt32 = (UInt32(sizeBytes[0]) << 24) |
                                     (UInt32(sizeBytes[1]) << 16) |
@@ -77,7 +95,7 @@ extension Data {
 
         guard originalSize > 0, originalSize <= maxSize else { return nil }
 
-        let compressedData = dataAfterMarker.dropFirst(4)
+        let compressedData = dropFirst(4)
         guard !compressedData.isEmpty else { return nil }
 
         return compressedData.withUnsafeBytes { bytes in

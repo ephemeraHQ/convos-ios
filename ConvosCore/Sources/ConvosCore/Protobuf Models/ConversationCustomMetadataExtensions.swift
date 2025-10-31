@@ -180,8 +180,10 @@ extension ConversationCustomMetadata {
         let data = try string.base64URLDecoded()
 
         let protobufData: Data
-        if data.first == Data.compressionMarker {
-            guard let decompressed = data.decompressedWithSize(maxSize: maxDecompressedSize) else {
+        // validate compression marker value explicitly
+        if let firstByte = data.first, firstByte == Data.compressionMarker {
+            let dataWithoutMarker = data.dropFirst()
+            guard let decompressed = dataWithoutMarker.decompressedWithSize(maxSize: maxDecompressedSize) else {
                 throw DecodingError.dataCorrupted(
                     DecodingError.Context(codingPath: [], debugDescription: "Failed to decompress metadata")
                 )
