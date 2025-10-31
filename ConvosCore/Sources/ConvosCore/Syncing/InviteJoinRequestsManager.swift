@@ -148,7 +148,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             throw InviteJoinRequestError.expiredConversation
         }
 
-        let creatorInboxId = signedInvite.payload.creatorInboxID
+        let creatorInboxId = signedInvite.payload.creatorInboxIdString
         guard creatorInboxId == client.inboxId else {
             Logger.error("Received join request for invite not created by this inbox - blocking DM")
             await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)

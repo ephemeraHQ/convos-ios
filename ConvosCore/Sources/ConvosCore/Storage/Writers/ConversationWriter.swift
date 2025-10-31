@@ -59,7 +59,7 @@ class ConversationWriter: ConversationWriterProtocol {
         let draftConversationId = draftConversationId ?? DBConversation.generateDraftConversationId()
 
         // Create the draft conversation and necessary records
-        let creatorInboxId = signedInvite.payload.creatorInboxID // @jarodl the creator of the invite is not necessarily the invite creator, but do we care?
+        let creatorInboxId = signedInvite.payload.creatorInboxIdString
         let conversation = try await databaseWriter.write { db in
             // Look up clientId from inbox
             guard let inbox = try DBInbox.fetchOne(db, id: inboxId) else {

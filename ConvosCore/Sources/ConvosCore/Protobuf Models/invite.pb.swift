@@ -30,8 +30,9 @@ public struct InvitePayload: Sendable {
   /// The encrypted conversation id (stored as raw bytes for compactness)
   public var conversationToken: Data = Data()
 
-  /// The creator's inbox ID (required for conversation token decryption AAD)
-  public var creatorInboxID: String = String()
+  /// The creator's inbox ID as raw bytes (hex-decoded for compactness)
+  /// Required for joiner to know who to DM
+  public var creatorInboxID: Data = Data()
 
   /// The tag to mark which conversation this corresponds to, lives in `ConversationCustomMetadata`
   public var tag: String = String()
@@ -138,7 +139,7 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularBytesField(value: &self.conversationToken) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.creatorInboxID) }()
+      case 2: try { try decoder.decodeSingularBytesField(value: &self.creatorInboxID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.tag) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self._name) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self._description_p) }()
@@ -160,7 +161,7 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
       try visitor.visitSingularBytesField(value: self.conversationToken, fieldNumber: 1)
     }
     if !self.creatorInboxID.isEmpty {
-      try visitor.visitSingularStringField(value: self.creatorInboxID, fieldNumber: 2)
+      try visitor.visitSingularBytesField(value: self.creatorInboxID, fieldNumber: 2)
     }
     if !self.tag.isEmpty {
       try visitor.visitSingularStringField(value: self.tag, fieldNumber: 3)

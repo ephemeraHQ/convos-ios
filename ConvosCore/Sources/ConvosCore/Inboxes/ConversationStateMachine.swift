@@ -503,7 +503,7 @@ public actor ConversationStateMachine {
         let apiClient = inboxReady.apiClient
         let client = inboxReady.client
 
-        let inviterInboxId = invite.payload.creatorInboxID
+        let inviterInboxId = invite.payload.creatorInboxIdString
         let dm = try await client.newConversation(with: inviterInboxId)
         let text = try invite.toURLSafeSlug()
         _ = try await dm.prepare(text: text)

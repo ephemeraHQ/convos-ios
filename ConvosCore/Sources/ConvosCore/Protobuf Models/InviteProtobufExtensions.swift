@@ -88,7 +88,15 @@ extension SignedInvite {
         payload.expiresAfterUse = expiresAfterUse
         payload.tag = conversation.inviteTag
         payload.conversationToken = conversationTokenBytes
-        payload.creatorInboxID = conversation.inboxId
+
+        // Store inbox ID as bytes (hex-decoded) for compactness
+        if let inboxIdBytes = Data(hexString: conversation.inboxId) {
+            payload.creatorInboxID = inboxIdBytes
+        } else {
+            // Fallback for non-hex inbox IDs (shouldn't happen in XMTP v3)
+            payload.creatorInboxID = Data(conversation.inboxId.utf8)
+        }
+
         if let expiresAt {
             payload.expiresAtUnix = Int64(expiresAt.timeIntervalSince1970)
         }
@@ -101,6 +109,11 @@ extension SignedInvite {
 }
 
 extension InvitePayload {
+    /// Get creator inbox ID as a hex string (convenience for accessing the bytes field)
+    public var creatorInboxIdString: String {
+        return creatorInboxID.hexEncodedString()
+    }
+
     public var expiresAtUnixIfPresent: Date? {
         guard hasExpiresAtUnix else { return nil }
         return Date(timeIntervalSince1970: TimeInterval(expiresAtUnix))
