@@ -10,12 +10,12 @@ public protocol ConvosAPIBaseProtocol {
 }
 
 protocol ConvosAPIClientFactoryType {
-    static func client(environment: AppEnvironment) -> any ConvosAPIClientProtocol
+    static func client(environment: AppEnvironment, overrideJWTToken: String?) -> any ConvosAPIClientProtocol
 }
 
 enum ConvosAPIClientFactory: ConvosAPIClientFactoryType {
-    static func client(environment: AppEnvironment) -> any ConvosAPIClientProtocol {
-        ConvosAPIClient(environment: environment)
+    static func client(environment: AppEnvironment, overrideJWTToken: String? = nil) -> any ConvosAPIClientProtocol {
+        ConvosAPIClient(environment: environment, overrideJWTToken: overrideJWTToken)
     }
 }
 
@@ -42,8 +42,6 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     func subscribeToTopics(deviceId: String, clientId: String, topics: [String]) async throws
     func unsubscribeFromTopics(clientId: String, topics: [String]) async throws
     func unregisterInstallation(clientId: String) async throws
-
-    func overrideJWTToken(_ token: String)
 }
 
 /// Base HTTP client for Convos backend API
@@ -167,13 +165,16 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
 final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
 
-    private var _overrideJWTToken: String?
-    private let tokenAccessQueue: DispatchQueue = DispatchQueue(label: "org.convos.api.tokenAccess")
+    let overrideJWTToken: String?  // Immutable JWT override from APNS payload
 
     private let maxRetryCount: Int = 3
 
+    fileprivate init(environment: AppEnvironment, overrideJWTToken: String? = nil) {
+        self.overrideJWTToken = overrideJWTToken
+        super.init(environment: environment)
+    }
+
     private func reAuthenticate() async throws -> String {
-        // we shouldn't do this at all in the notification extension
         let firebaseAppCheckToken = try await FirebaseHelperCore.getAppCheckToken()
 
         return try await authenticate(
@@ -253,15 +254,6 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         let _: ConvosAPI.AuthCheckResponse = try await performRequest(request)
     }
 
-    /// Sets a JWT token in RAM for use in notification service extension.
-    /// This token will be prioritized over the keychain-stored JWT for authenticated requests.
-    /// - Parameter token: The JWT token to use for authentication
-    func overrideJWTToken(_ token: String) {
-        tokenAccessQueue.sync {
-            _overrideJWTToken = token
-        }
-    }
-
     // MARK: - Private Helpers
 
     private func authenticatedRequest(
@@ -271,17 +263,26 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
     ) throws -> URLRequest {
         var request = try request(for: path, method: method, queryParameters: queryParameters)
 
-        // Prioritize override JWT token (from notification payload) over keychain JWT
-        // Capture the override token in a synchronized block to avoid race conditions
-        let overrideToken = tokenAccessQueue.sync { _overrideJWTToken }
-
         let deviceId = DeviceInfo.deviceIdentifier
-        if let overridenJWT = overrideToken {
-            request.setValue(overridenJWT, forHTTPHeaderField: "X-Convos-AuthToken")
-        } else if let keychainJWT = try keychainService.retrieveString(.init(deviceId: deviceId)) {
-            request.setValue(keychainJWT, forHTTPHeaderField: "X-Convos-AuthToken")
+
+        // Prioritize override JWT token (from notification payload) over keychain JWT
+        if let overrideJWT = overrideJWTToken {
+            Logger.debug("Using override JWT token from notification payload")
+            request.setValue(overrideJWT, forHTTPHeaderField: "X-Convos-AuthToken")
+        } else {
+            // No override JWT - try keychain
+            do {
+                if let keychainJWT = try keychainService.retrieveString(.init(deviceId: deviceId)) {
+                    Logger.debug("Using JWT token from keychain")
+                    request.setValue(keychainJWT, forHTTPHeaderField: "X-Convos-AuthToken")
+                } else {
+                    Logger.debug("No JWT token found - request will trigger re-authentication")
+                }
+            } catch {
+                Logger.warning("Failed to retrieve JWT from keychain: \(error.localizedDescription)")
+                // In main app context, continue without JWT - will trigger re-authentication
+            }
         }
-        // If no JWT, send request anyway - server will respond 401 and performRequest() will handle reauth
 
         return request
     }
@@ -330,11 +331,10 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 }
                 throw APIError.badRequest(errorMessage)
             case 401:
-                // If using override JWT token (notification service extension), don't attempt re-auth
-                // since app attest is not available in notification service extension
-                let hasOverrideToken = tokenAccessQueue.sync { _overrideJWTToken != nil }
-                guard !hasOverrideToken else {
-                    Logger.error("Authentication failed with override JWT token - cannot re-authenticate in notification service extension")
+                // When using JWT override, never attempt re-authentication
+                // (AppCheck not available when using JWT from APNS payload)
+                guard overrideJWTToken == nil else {
+                    Logger.error("Authentication failed in JWT override mode - cannot re-authenticate without AppCheck")
                     throw APIError.notAuthenticated
                 }
 

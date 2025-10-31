@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Structured logging system with file persistence and production filtering
 ///
@@ -47,6 +48,39 @@ public enum Logger {
         private var isProduction: Bool = false
         private var logFileURL: URL?
         private var environment: AppEnvironment?
+
+        /// os.Logger for Console.app visibility (only used in local/dev)
+        private lazy var systemLogger: os.Logger = {
+            let bundleId = Bundle.main.bundleIdentifier ?? "org.convos.ios"
+            let isNSE = bundleId.contains(".NotificationService")
+            let subsystem = isNSE ? "org.convos.ios.NSE" : "org.convos.ios"
+            let category = isNSE ? "NotificationService" : "General"
+
+            #if DEBUG
+            print("Logger: Creating system logger with subsystem=\(subsystem), category=\(category)")
+            #endif
+
+            return os.Logger(subsystem: subsystem, category: category)
+        }()
+        private var shouldUseSystemLogger: Bool {
+            guard let environment = environment else {
+                #if DEBUG
+                print("Logger: shouldUseSystemLogger = false (no environment)")
+                #endif
+                return false
+            }
+            let result: Bool
+            switch environment {
+            case .local, .dev:
+                result = true
+            case .production, .tests:
+                result = false
+            }
+            #if DEBUG
+            print("Logger: shouldUseSystemLogger = \(result) (environment: \(environment.name))")
+            #endif
+            return result
+        }
 
         /// Configure the logger for production mode
         public static func configureForProduction(_ isProduction: Bool) {
@@ -247,6 +281,21 @@ public enum Logger {
             let fileName = (file as NSString).lastPathComponent
             let timestamp = ISO8601DateFormatter().string(from: Date())
             let logMessage = "\(level.emoji) [\(timestamp)] [\(level)] [\(fileName):\(line)] \(function): \(message)"
+
+            // Bridge to os.Logger for Console.app visibility (local/dev only)
+            if shouldUseSystemLogger {
+                let osMessage = "\(level.emoji) [\(fileName):\(line)] \(function): \(message)"
+                switch level {
+                case .debug:
+                    systemLogger.debug("\(osMessage, privacy: .public)")
+                case .info:
+                    systemLogger.info("\(osMessage, privacy: .public)")
+                case .warning:
+                    systemLogger.warning("\(osMessage, privacy: .public)")
+                case .error:
+                    systemLogger.error("\(osMessage, privacy: .public)")
+                }
+            }
 
             // Use both compilation condition and runtime check for maximum compatibility
             #if DEBUG

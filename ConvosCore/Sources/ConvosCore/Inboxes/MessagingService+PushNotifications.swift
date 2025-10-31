@@ -13,6 +13,7 @@ extension MessagingService {
     ) async throws -> DecodedNotificationContent? {
         Logger.info("processPushNotification called")
         let inboxReadyResult = try await inboxStateManager.waitForInboxReadyResult()
+
         return try await self.handlePushNotification(
             inboxReadyResult: inboxReadyResult,
             payload: payload
@@ -30,14 +31,7 @@ extension MessagingService {
         let client = inboxReadyResult.client
         let apiClient = inboxReadyResult.apiClient
 
-        // If the payload contains an apiJWT token, use it as override for this NSE process
-        if let apiJWT = payload.apiJWT {
-            Logger.info("Using apiJWT from notification payload")
-            apiClient.overrideJWTToken(apiJWT)
-        } else {
-            Logger.warning("No apiJWT in payload, might not be able to use the Convos API")
-        }
-
+        Logger.debug("Processing notification with JWT override: \(payload.apiJWT != nil)")
         Logger.debug("Payload notification data: \(payload.notificationData != nil ? "present" : "nil")")
 
         return try await handleProtocolMessage(

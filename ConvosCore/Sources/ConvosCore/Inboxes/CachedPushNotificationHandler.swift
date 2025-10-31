@@ -37,20 +37,17 @@ public actor CachedPushNotificationHandler {
         )
     }
 
-    private var messagingServices: [String: MessagingService] = [:] // Keyed by inboxId
+    private let databaseReader: any DatabaseReader
+    private let databaseWriter: any DatabaseWriter
+    private let environment: AppEnvironment
+
+    private var messagingServices: [String: MessagingService] = [:] // Keyed by inboxId or inboxId:jwt
 
     // Track last access time for cleanup (keyed by inboxId)
     private var lastAccessTime: [String: Date] = [:]
 
-    // Maximum age for cached services (10 minutes)
-    private let maxServiceAge: TimeInterval = 600
-
-    // Store the processed payload for NSE access
-    private var processedPayload: PushNotificationPayload?
-
-    private let databaseReader: any DatabaseReader
-    private let databaseWriter: any DatabaseWriter
-    private let environment: AppEnvironment
+    // Maximum age for cached services (15 minutes)
+    private let maxServiceAge: TimeInterval = 900
 
     private init(
         databaseReader: any DatabaseReader,
@@ -99,7 +96,7 @@ public actor CachedPushNotificationHandler {
 
         // Process with timeout
         return try await withTimeout(seconds: timeout, timeoutError: NotificationProcessingError.timeout) {
-            let messagingService = await self.getOrCreateMessagingService(for: inboxId, clientId: clientId)
+            let messagingService = await self.getOrCreateMessagingService(for: inboxId, clientId: clientId, overrideJWTToken: payload.apiJWT)
             return try await messagingService.processPushNotification(payload: payload)
         }
     }
@@ -110,7 +107,6 @@ public actor CachedPushNotificationHandler {
         messagingServices.values.forEach { $0.stop() }
         messagingServices.removeAll()
         lastAccessTime.removeAll()
-        processedPayload = nil
     }
 
     /// Cleans up stale services that haven't been used recently
@@ -134,7 +130,7 @@ public actor CachedPushNotificationHandler {
 
     // MARK: - Private Methods
 
-    private func getOrCreateMessagingService(for inboxId: String, clientId: String) -> MessagingService {
+    private func getOrCreateMessagingService(for inboxId: String, clientId: String, overrideJWTToken: String?) -> MessagingService {
         // Update access time
         lastAccessTime[inboxId] = Date()
 
@@ -143,7 +139,7 @@ public actor CachedPushNotificationHandler {
             return existing
         }
 
-        Logger.info("Creating new messaging service for inbox: \(inboxId), clientId: \(clientId)")
+        Logger.info("Creating new messaging service for inbox: \(inboxId), clientId: \(clientId), with JWT: \(overrideJWTToken != nil)")
         let messagingService = MessagingService.authorizedMessagingService(
             for: inboxId,
             clientId: clientId,
@@ -151,7 +147,7 @@ public actor CachedPushNotificationHandler {
             databaseReader: databaseReader,
             environment: environment,
             startsStreamingServices: false,
-            autoRegistersForPushNotifications: false  // NSE: Skip push notification registration
+            overrideJWTToken: overrideJWTToken
         )
         messagingServices[inboxId] = messagingService
         return messagingService
