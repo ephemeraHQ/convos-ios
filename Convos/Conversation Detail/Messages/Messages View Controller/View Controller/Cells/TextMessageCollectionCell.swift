@@ -44,7 +44,8 @@ class TextMessageCollectionCell: UICollectionViewCell {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .margins(.vertical, 0.0)
+        .margins(.top, DesignConstants.Spacing.stepX)
+        .margins(.bottom, 0.0)
     }
 
     override func preferredLayoutAttributesFitting(

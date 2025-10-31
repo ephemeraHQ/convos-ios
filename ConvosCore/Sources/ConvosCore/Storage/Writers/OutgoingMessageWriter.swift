@@ -74,9 +74,27 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
             Logger.info("Saved local message with local id: \(localMessage.clientMessageId)")
         }
 
-        Logger.info("Sending local message with local id: \(clientMessageId)")
-        try await sender.publish()
-        sentMessageSubject.send(text)
-        Logger.info("Sent local message with local id: \(clientMessageId)")
+        do {
+            Logger.info("Sending local message with local id: \(clientMessageId)")
+            try await sender.publish()
+            sentMessageSubject.send(text)
+            Logger.info("Sent local message with local id: \(clientMessageId)")
+        } catch {
+            Logger.error("Failed sending message")
+            do {
+                try await databaseWriter.write { db in
+                    guard let localMessage = try DBMessage.fetchOne(db, key: clientMessageId) else {
+                        Logger.warning("Local message not found after failing to send")
+                        return
+                    }
+
+                    try localMessage.with(status: .failed).save(db)
+                }
+            } catch {
+                Logger.error("Failed updating failed message status: \(error.localizedDescription)")
+            }
+
+            throw error
+        }
     }
 }

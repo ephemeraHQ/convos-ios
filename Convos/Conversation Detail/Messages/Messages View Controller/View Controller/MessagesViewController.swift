@@ -356,7 +356,9 @@ extension MessagesViewController {
             let bubbleType: MessagesCollectionCell.BubbleType
             if index < visibleMessages.count - 1 {
                 let nextMessage = visibleMessages[index + 1]
-                bubbleType = message.base.sender.id == nextMessage.base.sender.id ? .normal : .tailed
+                let timeDifference = nextMessage.base.date.timeIntervalSince(message.base.date)
+                let willShowTimestamp = timeDifference > 3600
+                bubbleType = message.base.sender.id == nextMessage.base.sender.id && !willShowTimestamp ? .normal : .tailed
             } else {
                 bubbleType = .tailed
             }
