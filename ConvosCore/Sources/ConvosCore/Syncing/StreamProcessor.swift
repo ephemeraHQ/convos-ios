@@ -168,7 +168,7 @@ actor StreamProcessor: StreamProcessorProtocol {
                 }
             }
         } catch {
-            Logger.warning("Stopped processing message from error.")
+            Logger.warning("Stopped processing message from error: \(error.localizedDescription)")
         }
     }
 

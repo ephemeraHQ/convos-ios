@@ -40,9 +40,6 @@ actor SyncingManager: SyncingManagerProtocol {
     // Single parent task that manages everything
     private var syncTask: Task<Void, Never>?
 
-    // Track if a sync is currently in progress
-    private var isSyncing: Bool = false
-
     private var activeConversationId: String?
 
     // Notification handling
@@ -85,13 +82,10 @@ actor SyncingManager: SyncingManagerProtocol {
             setupNotificationObservers()
         }
 
-        guard !isSyncing else {
+        guard syncTask == nil else {
             Logger.info("Sync already in progress, ignoring redundant start() call")
             return
         }
-
-        // Mark as syncing
-        setSyncing(true)
 
         // Start the streams first
         messageStreamTask?.cancel()
@@ -105,17 +99,9 @@ actor SyncingManager: SyncingManagerProtocol {
             await self.runConversationStream(client: client, apiClient: apiClient)
         }
 
-        // Cancel any existing sync task
-        syncTask?.cancel()
+        // Create sync task
         syncTask = Task { [weak self] in
             guard let self else { return }
-
-            // Ensure we clean up the syncing flag when done
-            defer {
-                Task { [weak self] in
-                    await self?.setSyncing(false)
-                }
-            }
 
             // Capture sync start time first
             let syncStartTime = Date()
@@ -180,6 +166,9 @@ actor SyncingManager: SyncingManagerProtocol {
                 _ = await joinRequestsManager.processJoinRequests(since: lastSyncedAt, client: client)
                 // Don't update timestamp on failure - keep the old one
             }
+
+            // Clean up sync task reference
+            await self.cleanupSyncTask()
         }
     }
 
@@ -193,9 +182,6 @@ actor SyncingManager: SyncingManagerProtocol {
         conversationStreamTask = nil
         syncTask?.cancel()
         syncTask = nil
-
-        // Clear syncing flag
-        isSyncing = false
 
         activeConversationId = nil
 
@@ -322,8 +308,8 @@ actor SyncingManager: SyncingManagerProtocol {
         activeConversationId = conversationId
     }
 
-    private func setSyncing(_ syncing: Bool) {
-        isSyncing = syncing
+    private func cleanupSyncTask() {
+        syncTask = nil
     }
 
     // MARK: - Last Synced At
