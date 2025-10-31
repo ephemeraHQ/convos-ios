@@ -148,16 +148,19 @@ actor SyncingManager: SyncingManagerProtocol {
                             orderBy: .lastActivity
                         )
                     Logger.info("Found \(updatedConversations.count) conversations since last sync, processing...")
-                    await withThrowingTaskGroup { [weak self] group in
-                        guard let self else { return }
+                    try await withThrowingTaskGroup { [weak self] group in
                         for conversation in updatedConversations {
                             group.addTask {
+                                guard let self else { return }
                                 try await self.streamProcessor.processConversation(
                                     conversation,
                                     client: client,
                                     apiClient: apiClient
                                 )
                             }
+                        }
+                        for try await _ in group {
+                            // log completion
                         }
                     }
                 } catch {

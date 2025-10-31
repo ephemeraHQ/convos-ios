@@ -78,7 +78,7 @@ actor StreamProcessor: StreamProcessorProtocol {
         apiClient: any ConvosAPIClientProtocol
     ) async throws {
         guard let group = conversation as? XMTPiOS.Group else {
-            Logger.info("Passed type other than Group")
+            Logger.warning("Passed type other than Group")
             return
         }
         try await processConversation(group, client: client, apiClient: apiClient)
