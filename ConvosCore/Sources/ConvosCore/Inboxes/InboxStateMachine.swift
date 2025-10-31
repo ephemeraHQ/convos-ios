@@ -696,7 +696,7 @@ public actor InboxStateMachine {
 
         // When using JWT override, skip authentication check
         // We'll use the JWT token from the push notification payload
-        if overrideJWTToken != nil {
+        if let token = overrideJWTToken, !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             Logger.info("JWT override mode: skipping auth-check, will use JWT from push payload")
             return apiClient
         }
