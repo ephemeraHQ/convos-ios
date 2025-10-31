@@ -115,7 +115,7 @@ public actor InboxStateMachine {
     private var currentTask: Task<Void, Never>?
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
-    private var pushTokenObserver: NSObjectProtocol?
+    nonisolated(unsafe) private var pushTokenObserver: NSObjectProtocol?
 
     deinit {
         removePushTokenObserver()
@@ -747,6 +747,7 @@ public actor InboxStateMachine {
         }
     }
 
+    nonisolated
     private func removePushTokenObserver() {
         if let observer = pushTokenObserver {
             NotificationCenter.default.removeObserver(observer)

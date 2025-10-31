@@ -27,10 +27,8 @@ actor SyncingManager: SyncingManagerProtocol {
     // MARK: - Properties
 
     private let identityStore: any KeychainIdentityStoreProtocol
-    private let conversationWriter: any ConversationWriterProtocol
-    private let messageWriter: any IncomingMessageWriterProtocol
+    private let streamProcessor: any StreamProcessorProtocol
     private let profileWriter: any MemberProfileWriterProtocol
-    private let localStateWriter: any ConversationLocalStateWriterProtocol
     private let joinRequestsManager: any InviteJoinRequestsManagerProtocol
     private let consentStates: [ConsentState] = [.allowed, .unknown]
     private var messageStreamTask: Task<Void, Never>?
@@ -41,9 +39,6 @@ actor SyncingManager: SyncingManagerProtocol {
 
     // Single parent task that manages everything
     private var syncTask: Task<Void, Never>?
-
-    // Track if a sync is currently in progress
-    private var isSyncing: Bool = false
 
     private var activeConversationId: String?
 
@@ -57,15 +52,12 @@ actor SyncingManager: SyncingManagerProtocol {
          databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader) {
         self.identityStore = identityStore
-        let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
-        self.conversationWriter = ConversationWriter(
+        self.streamProcessor = StreamProcessor(
             identityStore: identityStore,
             databaseWriter: databaseWriter,
-            messageWriter: messageWriter
+            databaseReader: databaseReader
         )
-        self.messageWriter = messageWriter
         self.profileWriter = MemberProfileWriter(databaseWriter: databaseWriter)
-        self.localStateWriter = ConversationLocalStateWriter(databaseWriter: databaseWriter)
         self.joinRequestsManager = InviteJoinRequestsManager(
             identityStore: identityStore,
             databaseReader: databaseReader
@@ -90,13 +82,10 @@ actor SyncingManager: SyncingManagerProtocol {
             setupNotificationObservers()
         }
 
-        guard !isSyncing else {
+        guard syncTask == nil else {
             Logger.info("Sync already in progress, ignoring redundant start() call")
             return
         }
-
-        // Mark as syncing
-        setSyncing(true)
 
         // Start the streams first
         messageStreamTask?.cancel()
@@ -110,17 +99,9 @@ actor SyncingManager: SyncingManagerProtocol {
             await self.runConversationStream(client: client, apiClient: apiClient)
         }
 
-        // Cancel any existing sync task
-        syncTask?.cancel()
+        // Create sync task
         syncTask = Task { [weak self] in
             guard let self else { return }
-
-            // Ensure we clean up the syncing flag when done
-            defer {
-                Task { [weak self] in
-                    await self?.setSyncing(false)
-                }
-            }
 
             // Capture sync start time first
             let syncStartTime = Date()
@@ -143,26 +124,29 @@ actor SyncingManager: SyncingManagerProtocol {
                 // this is a band aid fix until the issue with streams is resolved
                 do {
                     let updatedConversations = try await client.conversationsProvider
-                        .list(
+                        .listGroups(
                             createdAfterNs: nil,
                             createdBeforeNs: nil,
-                            lastActivityBeforeNs: nil,
                             lastActivityAfterNs: lastSyncedAt?.nanosecondsSince1970,
+                            lastActivityBeforeNs: nil,
                             limit: nil,
                             consentStates: consentStates,
                             orderBy: .lastActivity
                         )
                     Logger.info("Found \(updatedConversations.count) conversations since last sync, processing...")
-                    await withThrowingTaskGroup { [weak self] group in
-                        guard let self else { return }
+                    try await withThrowingTaskGroup { [weak self] group in
                         for conversation in updatedConversations {
                             group.addTask {
-                                try await self.processConversation(
+                                guard let self else { return }
+                                try await self.streamProcessor.processConversation(
                                     conversation,
                                     client: client,
                                     apiClient: apiClient
                                 )
                             }
+                        }
+                        for try await _ in group {
+                            // log completion
                         }
                     }
                 } catch {
@@ -182,6 +166,9 @@ actor SyncingManager: SyncingManagerProtocol {
                 _ = await joinRequestsManager.processJoinRequests(since: lastSyncedAt, client: client)
                 // Don't update timestamp on failure - keep the old one
             }
+
+            // Clean up sync task reference
+            await self.cleanupSyncTask()
         }
     }
 
@@ -195,9 +182,6 @@ actor SyncingManager: SyncingManagerProtocol {
         conversationStreamTask = nil
         syncTask?.cancel()
         syncTask = nil
-
-        // Clear syncing flag
-        isSyncing = false
 
         activeConversationId = nil
 
@@ -242,7 +226,12 @@ actor SyncingManager: SyncingManagerProtocol {
                     }
 
                     // Process message
-                    await processMessage(message, client: client, apiClient: apiClient)
+                    await streamProcessor.processMessage(
+                        message,
+                        client: client,
+                        apiClient: apiClient,
+                        activeConversationId: activeConversationId
+                    )
                 }
 
                 // Stream ended (onClose was called and continuation finished)
@@ -278,6 +267,10 @@ actor SyncingManager: SyncingManagerProtocol {
                         Logger.info("Conversation stream closed via onClose callback")
                     }
                 ) {
+                    guard case .group(let conversation) = conversation else {
+                        continue
+                    }
+
                     // Check cancellation
                     try Task.checkCancellation()
 
@@ -288,7 +281,7 @@ actor SyncingManager: SyncingManagerProtocol {
                     }
 
                     // Process conversation
-                    try await processConversation(
+                    try await streamProcessor.processConversation(
                         conversation,
                         client: client,
                         apiClient: apiClient
@@ -308,130 +301,6 @@ actor SyncingManager: SyncingManagerProtocol {
         }
     }
 
-    // MARK: - Processing
-
-    /// Checks if a conversation should be processed based on its consent state.
-    /// If consent is unknown but there's an outgoing join request, updates consent to allowed.
-    /// - Parameters:
-    ///   - conversation: The conversation to check
-    ///   - client: The client provider
-    /// - Returns: True if the conversation has allowed consent and should be processed
-    private func shouldProcessConversation(
-        _ conversation: XMTPiOS.Conversation,
-        client: AnyClientProvider
-    ) async throws -> Bool {
-        var consentState = try conversation.consentState()
-        guard consentState != .allowed else {
-            return true
-        }
-
-        guard try await conversation.creatorInboxId != client.inboxId else {
-            return true
-        }
-
-        if consentState == .unknown {
-            let hasOutgoingJoinRequest = try await joinRequestsManager.hasOutgoingJoinRequest(
-                for: conversation,
-                client: client
-            )
-
-            if hasOutgoingJoinRequest {
-                try await conversation.updateConsentState(state: .allowed)
-                consentState = try conversation.consentState()
-            }
-        }
-
-        return consentState == .allowed
-    }
-
-    private func processMessage(
-        _ message: DecodedMessage,
-        client: AnyClientProvider,
-        apiClient: any ConvosAPIClientProtocol
-    ) async {
-        do {
-            guard let conversation = try await client.conversationsProvider.findConversation(
-                conversationId: message.conversationId
-            ) else {
-                Logger.error("Conversation not found for message")
-                return
-            }
-
-            switch conversation {
-            case .dm:
-                do {
-                    _ = try await joinRequestsManager.processJoinRequest(
-                        message: message,
-                        client: client
-                    )
-                    Logger.info("Processed potential join request: \(message.id)")
-                } catch {
-                    Logger.error("Failed processing join request: \(error)")
-                }
-            case .group:
-                do {
-                    guard try await shouldProcessConversation(conversation, client: client) else {
-                        Logger.warning("Received invalid group message, skipping...")
-                        return
-                    }
-
-                    // Store conversation and message
-                    let dbConversation = try await conversationWriter.store(conversation: conversation)
-                    let result = try await messageWriter.store(message: message, for: dbConversation)
-
-                    // Mark unread if needed
-                    if result.contentType.marksConversationAsUnread,
-                       conversation.id != activeConversationId,
-                       message.senderInboxId != client.inboxId {
-                        try await localStateWriter.setUnread(true, for: conversation.id)
-                    }
-
-                    Logger.info("Processed message: \(message.id)")
-                } catch {
-                    Logger.error("Failed processing group message: \(error.localizedDescription)")
-                }
-            }
-        } catch {
-            Logger.warning("Stopped processing message from error.")
-        }
-    }
-
-    private func processConversation(
-        _ conversation: XMTPiOS.Conversation,
-        client: AnyClientProvider,
-        apiClient: any ConvosAPIClientProtocol
-    ) async throws {
-        // Store with latest messages
-        guard case .group = conversation else {
-            Logger.info("Streamed DM, ignoring...")
-            return
-        }
-
-        guard try await shouldProcessConversation(conversation, client: client) else { return }
-
-        let creatorInboxId = try await conversation.creatorInboxId
-        if creatorInboxId == client.inboxId,
-           case .group(let group) = conversation {
-            // we created the conversation, update permissions and set inviteTag
-            let permissions = try group.permissionPolicySet()
-            if permissions.addMemberPolicy != .allow {
-                try await group.updateAddMemberPermission(newPermissionOption: .allow)
-            }
-            try await group.updateInviteTag()
-        }
-
-        Logger.info("Syncing conversation: \(conversation.id)")
-        try await conversationWriter.storeWithLatestMessages(conversation: conversation)
-
-        // Subscribe to push notifications
-        await subscribeToConversationTopics(
-            conversationId: conversation.id,
-            client: client,
-            apiClient: apiClient,
-            context: "on stream"
-        )
-    }
-
     // MARK: - Mutation
 
     func setActiveConversationId(_ conversationId: String?) {
@@ -439,37 +308,8 @@ actor SyncingManager: SyncingManagerProtocol {
         activeConversationId = conversationId
     }
 
-    private func setSyncing(_ syncing: Bool) {
-        isSyncing = syncing
-    }
-
-    // MARK: - Push Notifications
-
-    private func subscribeToConversationTopics(
-        conversationId: String,
-        client: AnyClientProvider,
-        apiClient: any ConvosAPIClientProtocol,
-        context: String
-    ) async {
-        let conversationTopic = conversationId.xmtpGroupTopicFormat
-        let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
-
-        guard let identity = try? await identityStore.identity(for: client.inboxId) else {
-            Logger.warning("Identity not found, skipping push notification subscription")
-            return
-        }
-
-        do {
-            let deviceId = DeviceInfo.deviceIdentifier
-            try await apiClient.subscribeToTopics(
-                deviceId: deviceId,
-                clientId: identity.clientId,
-                topics: [conversationTopic, welcomeTopic]
-            )
-            Logger.info("Subscribed to push topics \(context): \(conversationTopic), \(welcomeTopic)")
-        } catch {
-            Logger.error("Failed subscribing to topics \(context): \(error)")
-        }
+    private func cleanupSyncTask() {
+        syncTask = nil
     }
 
     // MARK: - Last Synced At
