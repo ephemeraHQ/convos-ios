@@ -1,13 +1,11 @@
 syntax = "proto3";
 
-import "google/protobuf/timestamp.proto";
-
 // InvitePayload represents the core invite data
 message InvitePayload {
-    // The encrypted conversation id
-    string conversationToken = 1;
+    // The encrypted conversation id (stored as raw bytes for compactness)
+    bytes conversationToken = 1;
 
-    // The creator's inbox ID
+    // The creator's inbox ID (required for conversation token decryption AAD)
     string creator_inbox_id = 2;
 
     // The tag to mark which conversation this corresponds to, lives in `ConversationCustomMetadata`
@@ -17,10 +15,13 @@ message InvitePayload {
     optional string name = 4;
     optional string description = 5;
     optional string imageURL = 6;
-    optional google.protobuf.Timestamp conversationExpiresAt = 7;
 
-    // optional invite expiration
-    optional google.protobuf.Timestamp expiresAt = 8;
+    // Compact timestamp encoding: Unix timestamp in seconds (8 bytes fixed)
+    // More compact than google.protobuf.Timestamp which uses two varints
+    optional sfixed64 conversationExpiresAtUnix = 7;
+
+    // Compact invite expiration: Unix timestamp in seconds (8 bytes fixed)
+    optional sfixed64 expiresAtUnix = 8;
 
     // Whether the invite should expire after being used once
     bool expiresAfterUse = 9;

@@ -62,14 +62,14 @@ enum InviteConversationToken {
     /// Make a public invite conversation token that the creator can later decrypt to the conversationId.
     /// - Parameters:
     ///   - conversationId: The conversation id (UUID string recommended; detected & packed into 16 bytes).
-    ///   - creatorInboxId: The creator’s inbox id (used for domain separation & AAD).
+    ///   - creatorInboxId: The creator's inbox id (used for domain separation & AAD).
     ///   - secp256k1PrivateKey: 32-byte raw secp256k1 private key data.
-    /// - Returns: Base64URL (no padding) opaque conversation token suitable for URLs.
-    static func makeConversationToken(
+    /// - Returns: Raw bytes of opaque conversation token.
+    static func makeConversationTokenBytes(
         conversationId: String,
         creatorInboxId: String,
         secp256k1PrivateKey: Data
-    ) throws -> String {
+    ) throws -> Data {
         let key = try deriveKey(privateKey: secp256k1PrivateKey, inboxId: creatorInboxId)
 
         // Pack plaintext as either UUID(16) or UTF-8 with a tiny tag
@@ -85,7 +85,58 @@ enum InviteConversationToken {
         out.append(version)
         out.append(sealed.combined)
 
-        return out.base64URLEncoded()
+        return out
+    }
+
+    /// Make a public invite conversation token that the creator can later decrypt to the conversationId.
+    /// - Parameters:
+    ///   - conversationId: The conversation id (UUID string recommended; detected & packed into 16 bytes).
+    ///   - creatorInboxId: The creator's inbox id (used for domain separation & AAD).
+    ///   - secp256k1PrivateKey: 32-byte raw secp256k1 private key data.
+    /// - Returns: Base64URL (no padding) opaque conversation token suitable for URLs.
+    @available(*, deprecated, message: "Use makeConversationTokenBytes instead for better compression")
+    static func makeConversationToken(
+        conversationId: String,
+        creatorInboxId: String,
+        secp256k1PrivateKey: Data
+    ) throws -> String {
+        return try makeConversationTokenBytes(
+            conversationId: conversationId,
+            creatorInboxId: creatorInboxId,
+            secp256k1PrivateKey: secp256k1PrivateKey
+        ).base64URLEncoded()
+    }
+
+    /// Recover the original conversationId from a public invite conversation token (raw bytes).
+    /// - Parameters:
+    ///   - conversationTokenBytes: Raw bytes produced by `makeConversationTokenBytes`.
+    ///   - creatorInboxId: Same inbox id used when generating the token.
+    ///   - secp256k1PrivateKey: Same 32-byte private key used when generating.
+    /// - Returns: The original conversationId on success.
+    static func decodeConversationTokenBytes(
+        _ conversationTokenBytes: Data,
+        creatorInboxId: String,
+        secp256k1PrivateKey: Data
+    ) throws -> String {
+        // Validate minimum size
+        guard conversationTokenBytes.count >= minEncodedSize else {
+            throw Error.invalidFormat("Code too short: \(conversationTokenBytes.count) bytes, minimum \(minEncodedSize)")
+        }
+
+        guard let ver = conversationTokenBytes.first else {
+            throw Error.missingVersion
+        }
+        guard ver == formatVersion else {
+            throw Error.unsupportedVersion(ver)
+        }
+
+        // Strip version; what remains must be a valid ChaChaPoly combined box
+        let combined = conversationTokenBytes.dropFirst()
+        let key = try deriveKey(privateKey: secp256k1PrivateKey, inboxId: creatorInboxId)
+        let aad = Data(creatorInboxId.utf8)
+
+        let plaintext = try chachaOpen(combined: combined, key: key, aad: aad)
+        return try unpackConversationId(plaintext)
     }
 
     /// Recover the original conversationId from a public invite conversation token.
@@ -94,32 +145,18 @@ enum InviteConversationToken {
     ///   - creatorInboxId: Same inbox id used when generating the token.
     ///   - secp256k1PrivateKey: Same 32-byte private key used when generating.
     /// - Returns: The original conversationId on success.
+    @available(*, deprecated, message: "Use decodeConversationTokenBytes instead for better compression")
     static func decodeConversationToken(
         _ conversationToken: String,
         creatorInboxId: String,
         secp256k1PrivateKey: Data
     ) throws -> String {
         let data = try conversationToken.base64URLDecoded()
-
-        // Validate minimum size
-        guard data.count >= minEncodedSize else {
-            throw Error.invalidFormat("Code too short: \(data.count) bytes, minimum \(minEncodedSize)")
-        }
-
-        guard let ver = data.first else {
-            throw Error.missingVersion
-        }
-        guard ver == formatVersion else {
-            throw Error.unsupportedVersion(ver)
-        }
-
-        // Strip version; what remains must be a valid ChaChaPoly combined box
-        let combined = data.dropFirst()
-        let key = try deriveKey(privateKey: secp256k1PrivateKey, inboxId: creatorInboxId)
-        let aad = Data(creatorInboxId.utf8)
-
-        let plaintext = try chachaOpen(combined: combined, key: key, aad: aad)
-        return try unpackConversationId(plaintext)
+        return try decodeConversationTokenBytes(
+            data,
+            creatorInboxId: creatorInboxId,
+            secp256k1PrivateKey: secp256k1PrivateKey
+        )
     }
 
     // MARK: - Errors
