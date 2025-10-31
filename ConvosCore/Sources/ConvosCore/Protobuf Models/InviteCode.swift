@@ -7,30 +7,23 @@ import Foundation
 /// - **Key Derivation**: HKDF-SHA256(privateKey, salt="ConvosInviteV1", info="inbox:<inboxId>")
 /// - **AEAD**: ChaCha20-Poly1305 with AAD = creatorInboxId (binds token to creator's identity)
 ///
-/// ## Binary Format Specification
+/// ## Binary Format
 /// ```
-/// | version (1 byte) | chacha20poly1305_combined |
+/// | version (1 byte) | nonce (12 bytes) | ciphertext (variable) | auth_tag (16 bytes) |
+/// ```
 ///
-/// Where chacha20poly1305_combined contains:
-/// | nonce (12 bytes) | ciphertext (variable) | auth_tag (16 bytes) |
-///
-/// And ciphertext decrypts to:
+/// The ciphertext decrypts to:
+/// ```
 /// | type_tag (1 byte) | payload (variable) |
 /// ```
 ///
 /// ### Payload Types
-/// - `type_tag = 0x01`: UUID format
-///   - Payload: 16 bytes (raw UUID bytes)
-///   - Total ciphertext: 17 bytes (before encryption)
-/// - `type_tag = 0x02`: UTF-8 String format
-///   - Payload (≤255 chars): | length (1 byte) | utf8_data |
-///   - Payload (>255 chars): | 0x00 | length_high (1 byte) | length_low (1 byte) | utf8_data |
-///   - Variable size based on string length
+/// - `type_tag = 0x01`: UUID format (16 bytes)
+/// - `type_tag = 0x02`: UTF-8 string with length prefix
 ///
-/// ## Size Analysis
-/// - **Minimum size**: 46 bytes (version + nonce + type_tag + auth_tag = 1 + 12 + 1 + 16 = 30 bytes encoded)
-/// - **UUID token**: 46 bytes encrypted → ~62 chars base64url
-/// - **String token**: 30 + string_length bytes → varies by conversation ID length
+/// ## Size
+/// - **UUID token**: 46 bytes (stored as raw bytes in protobuf)
+/// - **String token**: 30 + string_length bytes
 enum InviteConversationToken {
     // MARK: - Format Constants
 
@@ -59,12 +52,12 @@ enum InviteConversationToken {
 
     // MARK: - Public API
 
-    /// Make a public invite conversation token that the creator can later decrypt to the conversationId.
+    /// Generate an encrypted conversation token as raw bytes
     /// - Parameters:
-    ///   - conversationId: The conversation id (UUID string recommended; detected & packed into 16 bytes).
-    ///   - creatorInboxId: The creator's inbox id (used for domain separation & AAD).
-    ///   - secp256k1PrivateKey: 32-byte raw secp256k1 private key data.
-    /// - Returns: Raw bytes of opaque conversation token.
+    ///   - conversationId: Conversation ID (UUIDs are packed into 16 bytes)
+    ///   - creatorInboxId: Creator's inbox ID (used in key derivation and AAD)
+    ///   - secp256k1PrivateKey: 32-byte private key
+    /// - Returns: Encrypted token bytes
     static func makeConversationTokenBytes(
         conversationId: String,
         creatorInboxId: String,
@@ -88,37 +81,17 @@ enum InviteConversationToken {
         return out
     }
 
-    /// Make a public invite conversation token that the creator can later decrypt to the conversationId.
+    /// Decrypt a conversation token from raw bytes
     /// - Parameters:
-    ///   - conversationId: The conversation id (UUID string recommended; detected & packed into 16 bytes).
-    ///   - creatorInboxId: The creator's inbox id (used for domain separation & AAD).
-    ///   - secp256k1PrivateKey: 32-byte raw secp256k1 private key data.
-    /// - Returns: Base64URL (no padding) opaque conversation token suitable for URLs.
-    @available(*, deprecated, message: "Use makeConversationTokenBytes instead for better compression")
-    static func makeConversationToken(
-        conversationId: String,
-        creatorInboxId: String,
-        secp256k1PrivateKey: Data
-    ) throws -> String {
-        return try makeConversationTokenBytes(
-            conversationId: conversationId,
-            creatorInboxId: creatorInboxId,
-            secp256k1PrivateKey: secp256k1PrivateKey
-        ).base64URLEncoded()
-    }
-
-    /// Recover the original conversationId from a public invite conversation token (raw bytes).
-    /// - Parameters:
-    ///   - conversationTokenBytes: Raw bytes produced by `makeConversationTokenBytes`.
-    ///   - creatorInboxId: Same inbox id used when generating the token.
-    ///   - secp256k1PrivateKey: Same 32-byte private key used when generating.
-    /// - Returns: The original conversationId on success.
+    ///   - conversationTokenBytes: Encrypted token bytes
+    ///   - creatorInboxId: Creator's inbox ID (must match token generation)
+    ///   - secp256k1PrivateKey: 32-byte private key (must match token generation)
+    /// - Returns: Decrypted conversation ID
     static func decodeConversationTokenBytes(
         _ conversationTokenBytes: Data,
         creatorInboxId: String,
         secp256k1PrivateKey: Data
     ) throws -> String {
-        // Validate minimum size
         guard conversationTokenBytes.count >= minEncodedSize else {
             throw Error.invalidFormat("Code too short: \(conversationTokenBytes.count) bytes, minimum \(minEncodedSize)")
         }
@@ -130,33 +103,12 @@ enum InviteConversationToken {
             throw Error.unsupportedVersion(ver)
         }
 
-        // Strip version; what remains must be a valid ChaChaPoly combined box
         let combined = conversationTokenBytes.dropFirst()
         let key = try deriveKey(privateKey: secp256k1PrivateKey, inboxId: creatorInboxId)
         let aad = Data(creatorInboxId.utf8)
 
         let plaintext = try chachaOpen(combined: combined, key: key, aad: aad)
         return try unpackConversationId(plaintext)
-    }
-
-    /// Recover the original conversationId from a public invite conversation token.
-    /// - Parameters:
-    ///   - conversationToken: Base64URL opaque string produced by `makeConversationToken`.
-    ///   - creatorInboxId: Same inbox id used when generating the token.
-    ///   - secp256k1PrivateKey: Same 32-byte private key used when generating.
-    /// - Returns: The original conversationId on success.
-    @available(*, deprecated, message: "Use decodeConversationTokenBytes instead for better compression")
-    static func decodeConversationToken(
-        _ conversationToken: String,
-        creatorInboxId: String,
-        secp256k1PrivateKey: Data
-    ) throws -> String {
-        let data = try conversationToken.base64URLDecoded()
-        return try decodeConversationTokenBytes(
-            data,
-            creatorInboxId: creatorInboxId,
-            secp256k1PrivateKey: secp256k1PrivateKey
-        )
     }
 
     // MARK: - Errors
@@ -233,7 +185,7 @@ enum InviteConversationToken {
     /// Plaintext layout:
     ///   [tag:1][payload...]
     ///   tag = 0x01 -> UUID (16 bytes)
-    ///   tag = 0x02 -> UTF-8 string (1 byte length if <=255, else 2 bytes big-endian + data)
+    ///   tag = 0x02 -> UTF-8 string (1-byte length if 1-255 bytes, 0x00 + 2-byte big-endian length if >255 bytes)
     private enum PlainTag: UInt8 { case uuid16 = 0x01, utf8 = 0x02 }
 
     private static func packConversationId(_ id: String) throws -> Data {
@@ -253,16 +205,14 @@ enum InviteConversationToken {
             out.append(PlainTag.utf8.rawValue)
             let bytes = Data(id.utf8)
 
-            // Validate string length
             guard bytes.count <= maxStringLength else {
                 throw Error.stringTooLong(bytes.count)
             }
 
-            if !bytes.isEmpty && bytes.count <= 255 {
+            if bytes.count <= 255 {
                 out.append(UInt8(bytes.count))
             } else {
-                // 0 length byte is a sentinel for 2-byte big-endian length
-                // Use this format for empty strings (count == 0) and long strings (count > 255)
+                // 0 length byte is a sentinel for 2-byte big-endian length (for strings > 255 bytes)
                 out.append(0)
                 out.append(UInt8((bytes.count >> 8) & 0xff))
                 out.append(UInt8(bytes.count & 0xff))
