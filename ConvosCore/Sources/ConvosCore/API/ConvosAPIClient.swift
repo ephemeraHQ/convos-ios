@@ -333,7 +333,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             case 401:
                 // When using JWT override, never attempt re-authentication
                 // (AppCheck not available when using JWT from APNS payload)
-                if overrideJWTToken != nil {
+                guard overrideJWTToken == nil else {
                     Logger.error("Authentication failed in JWT override mode - cannot re-authenticate without AppCheck")
                     throw APIError.notAuthenticated
                 }
