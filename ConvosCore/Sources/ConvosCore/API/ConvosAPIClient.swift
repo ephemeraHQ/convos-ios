@@ -270,29 +270,15 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             Logger.debug("Using override JWT token from notification payload")
             request.setValue(overrideJWT, forHTTPHeaderField: "X-Convos-AuthToken")
         } else {
+            // No override JWT - try keychain
             do {
                 if let keychainJWT = try keychainService.retrieveString(.init(deviceId: deviceId)) {
                     Logger.debug("Using JWT token from keychain")
                     request.setValue(keychainJWT, forHTTPHeaderField: "X-Convos-AuthToken")
                 } else {
-                    // No JWT available
-                    if overrideJWTToken != nil {
-                        // When using JWT override, we cannot re-authenticate (no AppCheck available)
-                        // This should never happen since we check for override token above
-                        Logger.error("JWT override mode but no JWT available - cannot proceed without authentication")
-                        throw APIError.notAuthenticated
-                    }
                     Logger.debug("No JWT token found - request will trigger re-authentication")
                 }
-            } catch let error as APIError {
-                throw error
             } catch {
-                // Keychain retrieval failed
-                if overrideJWTToken != nil {
-                    // When using JWT override, fail fast - cannot recover from keychain errors
-                    Logger.error("Failed to retrieve JWT from keychain in JWT override mode: \(error.localizedDescription)")
-                    throw APIError.notAuthenticated
-                }
                 Logger.warning("Failed to retrieve JWT from keychain: \(error.localizedDescription)")
                 // In main app context, continue without JWT - will trigger re-authentication
             }
