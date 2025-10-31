@@ -37,17 +37,6 @@ public actor CachedPushNotificationHandler {
         )
     }
 
-    private var messagingServices: [String: MessagingService] = [:] // Keyed by inboxId
-
-    // Track last access time for cleanup (keyed by inboxId)
-    private var lastAccessTime: [String: Date] = [:]
-
-    // Maximum age for cached services (10 minutes)
-    private let maxServiceAge: TimeInterval = 600
-
-    // Store the processed payload for NSE access
-    private var processedPayload: PushNotificationPayload?
-
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
     private let environment: AppEnvironment
@@ -72,9 +61,6 @@ public actor CachedPushNotificationHandler {
         timeout: TimeInterval = 25
     ) async throws -> DecodedNotificationContent? {
         Logger.info("Processing push notification")
-
-        // Clean up old services before processing
-        cleanupStaleServices()
 
         guard payload.isValid else {
             Logger.info("Dropping notification without clientId (v1/legacy)")
@@ -104,51 +90,12 @@ public actor CachedPushNotificationHandler {
         }
     }
 
-    /// Cleans up all resources
-    public func cleanup() {
-        Logger.info("Cleaning up \(messagingServices.count) messaging services")
-        messagingServices.values.forEach { $0.stop() }
-        messagingServices.removeAll()
-        lastAccessTime.removeAll()
-        processedPayload = nil
-    }
-
-    /// Cleans up stale services that haven't been used recently
-    private func cleanupStaleServices() {
-        let now = Date()
-        var staleInboxIds: [String] = []
-
-        for (inboxId, accessTime) in lastAccessTime where now.timeIntervalSince(accessTime) > maxServiceAge {
-            staleInboxIds.append(inboxId)
-        }
-
-        if !staleInboxIds.isEmpty {
-            Logger.info("Cleaning up \(staleInboxIds.count) stale messaging services")
-            for inboxId in staleInboxIds {
-                let removedService = messagingServices.removeValue(forKey: inboxId)
-                removedService?.stop()
-                lastAccessTime.removeValue(forKey: inboxId)
-            }
-        }
-    }
-
     // MARK: - Private Methods
 
     private func getOrCreateMessagingService(for inboxId: String, clientId: String, overrideJWTToken: String?) -> MessagingService {
-        // Update access time
-        lastAccessTime[inboxId] = Date()
-
-        // Create a cache key that includes both inboxId and JWT token (if present)
-        // This ensures different JWTs get different service instances
-        let cacheKey = overrideJWTToken != nil ? "\(inboxId):\(overrideJWTToken!)" : inboxId
-
-        if let existing = messagingServices[cacheKey] {
-            Logger.info("Reusing existing messaging service for inbox: \(inboxId)")
-            return existing
-        }
-
-        Logger.info("Creating new messaging service for inbox: \(inboxId), clientId: \(clientId), with JWT: \(overrideJWTToken != nil)")
-        let messagingService = MessagingService.authorizedMessagingService(
+        // Each notification has a unique JWT, so we always create a fresh MessagingService
+        Logger.info("Creating new messaging service for notification with JWT override")
+        return MessagingService.authorizedMessagingService(
             for: inboxId,
             clientId: clientId,
             databaseWriter: databaseWriter,
@@ -157,7 +104,5 @@ public actor CachedPushNotificationHandler {
             startsStreamingServices: false,
             overrideJWTToken: overrideJWTToken
         )
-        messagingServices[cacheKey] = messagingService
-        return messagingService
     }
 }
