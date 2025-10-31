@@ -99,7 +99,7 @@ public actor CachedPushNotificationHandler {
 
         // Process with timeout
         return try await withTimeout(seconds: timeout, timeoutError: NotificationProcessingError.timeout) {
-            let messagingService = await self.getOrCreateMessagingService(for: inboxId, clientId: clientId)
+            let messagingService = await self.getOrCreateMessagingService(for: inboxId, clientId: clientId, overrideJWTToken: payload.apiJWT)
             return try await messagingService.processPushNotification(payload: payload)
         }
     }
@@ -134,16 +134,20 @@ public actor CachedPushNotificationHandler {
 
     // MARK: - Private Methods
 
-    private func getOrCreateMessagingService(for inboxId: String, clientId: String) -> MessagingService {
+    private func getOrCreateMessagingService(for inboxId: String, clientId: String, overrideJWTToken: String?) -> MessagingService {
         // Update access time
         lastAccessTime[inboxId] = Date()
 
-        if let existing = messagingServices[inboxId] {
+        // Create a cache key that includes both inboxId and JWT token (if present)
+        // This ensures different JWTs get different service instances
+        let cacheKey = overrideJWTToken != nil ? "\(inboxId):\(overrideJWTToken!)" : inboxId
+
+        if let existing = messagingServices[cacheKey] {
             Logger.info("Reusing existing messaging service for inbox: \(inboxId)")
             return existing
         }
 
-        Logger.info("Creating new messaging service for inbox: \(inboxId), clientId: \(clientId)")
+        Logger.info("Creating new messaging service for inbox: \(inboxId), clientId: \(clientId), with JWT: \(overrideJWTToken != nil)")
         let messagingService = MessagingService.authorizedMessagingService(
             for: inboxId,
             clientId: clientId,
@@ -151,9 +155,9 @@ public actor CachedPushNotificationHandler {
             databaseReader: databaseReader,
             environment: environment,
             startsStreamingServices: false,
-            useJWTOverride: true
+            overrideJWTToken: overrideJWTToken
         )
-        messagingServices[inboxId] = messagingService
+        messagingServices[cacheKey] = messagingService
         return messagingService
     }
 }

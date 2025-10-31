@@ -1,6 +1,6 @@
 {
   "environment": "dev",
-  "backendUrl": "https://api.dev.convos.xyz/api/",
+  "backendUrl": "http://192.168.68.69:4000/api/",
   "bundleId": "org.convos.ios-preview",
   "appGroupIdentifier": "group.org.convos.ios-preview",
   "relyingPartyIdentifier": "dev.convos.org",

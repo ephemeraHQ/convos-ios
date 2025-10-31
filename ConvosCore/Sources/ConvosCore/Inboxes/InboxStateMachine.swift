@@ -106,7 +106,7 @@ public actor InboxStateMachine {
     private let environment: AppEnvironment
     private let syncingManager: AnySyncingManager?
     private let savesInboxToDatabase: Bool
-    private let useJWTOverride: Bool
+    private let overrideJWTToken: String?
     private let databaseWriter: any DatabaseWriter
     private lazy var deviceRegistrationManager: DeviceRegistrationManager = {
         DeviceRegistrationManager(environment: environment)
@@ -195,7 +195,7 @@ public actor InboxStateMachine {
         databaseWriter: any DatabaseWriter,
         syncingManager: AnySyncingManager?,
         savesInboxToDatabase: Bool = true,
-        useJWTOverride: Bool = false,
+        overrideJWTToken: String? = nil,
         environment: AppEnvironment
     ) {
         self.initialClientId = clientId
@@ -205,7 +205,7 @@ public actor InboxStateMachine {
         self.databaseWriter = databaseWriter
         self.syncingManager = syncingManager
         self.savesInboxToDatabase = savesInboxToDatabase
-        self.useJWTOverride = useJWTOverride
+        self.overrideJWTToken = overrideJWTToken
         self.environment = environment
 
         // Set custom XMTP host if provided
@@ -419,7 +419,7 @@ public actor InboxStateMachine {
 
         await syncingManager?.start(with: client, apiClient: apiClient)
 
-        if !useJWTOverride {
+        if overrideJWTToken == nil {
             // Register device on app launch (without push token - that's OK)
             // This creates the device record in the backend
             await deviceRegistrationManager.registerDeviceIfNeeded()
@@ -684,10 +684,10 @@ public actor InboxStateMachine {
     }
 
     private func initializeApiClient(client: any XMTPClientProvider) -> any ConvosAPIClientProtocol {
-        Logger.info("Initializing API client (JWT override: \(useJWTOverride))...")
+        Logger.info("Initializing API client (JWT override: \(overrideJWTToken != nil))...")
         return ConvosAPIClientFactory.client(
             environment: environment,
-            useJWTOverride: useJWTOverride
+            overrideJWTToken: overrideJWTToken
         )
     }
 
@@ -696,7 +696,7 @@ public actor InboxStateMachine {
 
         // When using JWT override, skip authentication check
         // We'll use the JWT token from the push notification payload
-        if useJWTOverride {
+        if overrideJWTToken != nil {
             Logger.info("JWT override mode: skipping auth-check, will use JWT from push payload")
             return apiClient
         }

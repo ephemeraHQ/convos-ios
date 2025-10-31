@@ -1,8 +1,8 @@
 import Foundation
 
 class MockAPIClientFactory: ConvosAPIClientFactoryType {
-    static func client(environment: AppEnvironment) -> any ConvosAPIClientProtocol {
-        MockAPIClient()
+    static func client(environment: AppEnvironment, overrideJWTToken: String? = nil) -> any ConvosAPIClientProtocol {
+        MockAPIClient(overrideJWTToken: overrideJWTToken)
     }
 }
 
@@ -24,6 +24,13 @@ class MockBaseAPIClient: ConvosAPIBaseProtocol {
 }
 
 class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
+    let overrideJWTToken: String?
+
+    init(overrideJWTToken: String? = nil) {
+        self.overrideJWTToken = overrideJWTToken
+        super.init()
+    }
+
     func authenticate(appCheckToken: String, retryCount: Int = 0) async throws -> String {
         return "mock-jwt-token"
     }
@@ -62,14 +69,6 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
     }
 
     func unregisterInstallation(clientId: String) async throws {
-        // no-op in mock
-    }
-
-    func overrideJWTToken(_ token: String) {
-        // no-op in mock
-    }
-
-    func clearOverrideJWTToken() {
         // no-op in mock
     }
 }
