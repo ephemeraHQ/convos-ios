@@ -157,6 +157,25 @@ extension DBMessage {
         )
     }
 
+    func with(status: MessageStatus) -> Self {
+        .init(
+            id: id,
+            clientMessageId: clientMessageId,
+            conversationId: conversationId,
+            senderId: senderId,
+            dateNs: dateNs,
+            date: date,
+            status: status,
+            messageType: messageType,
+            contentType: contentType,
+            text: text,
+            emoji: emoji,
+            sourceMessageId: sourceMessageId,
+            attachmentUrls: attachmentUrls,
+            update: update
+        )
+    }
+
     func with(clientMessageId: String) -> DBMessage {
         .init(
             id: id,
