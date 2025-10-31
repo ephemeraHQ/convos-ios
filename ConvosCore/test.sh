@@ -51,6 +51,7 @@ xcodebuild test \
   -scheme ConvosCore \
   -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
   -enableCodeCoverage YES \
+  -skipPackagePluginValidation \
   -resultBundlePath TestResults.xcresult
 
 TEST_EXIT_CODE=$?
