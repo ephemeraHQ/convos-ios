@@ -29,6 +29,7 @@ struct QRCodeView: View {
             foregroundColor: UIColor(foregroundColor),
             backgroundColor: UIColor(backgroundColor),
         )
+        Logger.info("Generating QR code for:\n \(url.absoluteString)")
         return await QRCodeGenerator.generate(from: url.absoluteString, options: options)
     }
 
