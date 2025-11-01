@@ -113,7 +113,7 @@ enum InviteConversationToken {
 
     // MARK: - Errors
 
-    enum Error: Swift.Error, LocalizedError {
+    enum Error: Swift.Error, LocalizedError, Equatable {
         case truncated
         case missingVersion
         case unsupportedVersion(UInt8)
