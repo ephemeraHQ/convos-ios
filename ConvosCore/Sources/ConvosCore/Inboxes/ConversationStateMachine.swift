@@ -503,7 +503,13 @@ public actor ConversationStateMachine {
         let apiClient = inboxReady.apiClient
         let client = inboxReady.client
 
-        let inviterInboxId = invite.payload.creatorInboxID
+        let inviterInboxId = invite.payload.creatorInboxIdString
+
+        // Validate that the hex conversion succeeded and produced a valid inbox ID
+        guard !inviterInboxId.isEmpty else {
+            throw ConversationStateMachineError.invalidInviteCodeFormat("Malformed creator inbox ID")
+        }
+
         let dm = try await client.newConversation(with: inviterInboxId)
         let text = try invite.toURLSafeSlug()
         _ = try await dm.prepare(text: text)

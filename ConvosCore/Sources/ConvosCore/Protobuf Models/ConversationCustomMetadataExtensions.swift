@@ -1,4 +1,3 @@
-import Compression
 import Foundation
 import SwiftProtobuf
 import XMTPiOS
@@ -152,33 +151,21 @@ extension XMTPiOS.Group {
 // MARK: - Serialization Extensions
 
 extension ConversationCustomMetadata {
-    /// Magic byte to identify compressed vs uncompressed data
-    internal static let compressionMarker: UInt8 = 0x1F  // GZIP-like marker
-    private static let uncompressedMarker: UInt8 = 0x0A  // Common protobuf first byte
-
-    /// Maximum allowed decompressed size (10 MB) to prevent decompression bombs
+    /// Maximum allowed decompressed size to prevent decompression bombs
     private static let maxDecompressedSize: UInt32 = 10 * 1024 * 1024
 
+    /// Minimum size threshold for compression - compression overhead makes it counterproductive below this size
+    private static let compressionThreshold: Int = 100
+
     /// Serialize the metadata to the most compact string representation possible
-    /// - Returns: Base64URL-encoded string (with optional compression for larger data)
+    /// - Returns: Base64URL-encoded string with optional compression
     public func toCompactString() throws -> String {
         let protobufData = try self.serializedData()
 
-        // For small data (< 100 bytes), compression usually makes it larger
-        // For larger data (multiple profiles), compression can save significant space
+        // For small data, compression usually makes it larger
         let data: Data
-        if protobufData.count > 100 {
-            // Try compression
-            if let compressed = protobufData.compressedWithSize() {
-                // Only use compression if it actually saves space (including size overhead)
-                if compressed.count < protobufData.count {
-                    data = compressed
-                } else {
-                    data = protobufData
-                }
-            } else {
-                data = protobufData
-            }
+        if protobufData.count > Self.compressionThreshold, let compressed = protobufData.compressedIfSmaller() {
+            data = compressed
         } else {
             data = protobufData
         }
@@ -192,11 +179,11 @@ extension ConversationCustomMetadata {
     public static func fromCompactString(_ string: String) throws -> ConversationCustomMetadata {
         let data = try string.base64URLDecoded()
 
-        // Check if data is compressed by looking at the first byte
         let protobufData: Data
-        if data.first == compressionMarker {
-            // Data format: [marker: 1 byte][size: 4 bytes][compressed data]
-            guard let decompressed = data.decompressedWithSize(maxSize: maxDecompressedSize) else {
+        // validate compression marker value explicitly
+        if let firstByte = data.first, firstByte == Data.compressionMarker {
+            let dataWithoutMarker = data.dropFirst()
+            guard let decompressed = dataWithoutMarker.decompressedWithSize(maxSize: maxDecompressedSize) else {
                 throw DecodingError.dataCorrupted(
                     DecodingError.Context(codingPath: [], debugDescription: "Failed to decompress metadata")
                 )
@@ -322,111 +309,5 @@ extension ConversationCustomMetadata {
 
         // Fall back to treating it as plain text description
         return ConversationCustomMetadata(description: descriptionField)
-    }
-}
-
-// MARK: - Compression Helpers
-
-private extension Data {
-    /// Compress data using zlib deflate and prepend format metadata
-    /// Format: [marker: 1 byte][original size: 4 bytes big-endian][compressed data]
-    func compressedWithSize() -> Data? {
-        return self.withUnsafeBytes { bytes in
-            guard let baseAddress = bytes.baseAddress else { return nil }
-
-            let sourceBuffer = UnsafeBufferPointer<UInt8>(
-                start: baseAddress.assumingMemoryBound(to: UInt8.self),
-                count: count
-            )
-
-            let destinationBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: count)
-            defer { destinationBuffer.deallocate() }
-
-            guard let baseAddress = sourceBuffer.baseAddress else { return nil }
-
-            let compressedSize = compression_encode_buffer(
-                destinationBuffer, count,
-                baseAddress, count,
-                nil, COMPRESSION_ZLIB
-            )
-
-            guard compressedSize > 0 else { return nil }
-
-            // Build the final data: [marker][size][compressed]
-            var result = Data()
-            result.append(ConversationCustomMetadata.compressionMarker)
-
-            // Store original size as UInt32 big-endian (4 bytes)
-            let size = UInt32(count)
-            result.append(contentsOf: [
-                UInt8((size >> 24) & 0xFF),
-                UInt8((size >> 16) & 0xFF),
-                UInt8((size >> 8) & 0xFF),
-                UInt8(size & 0xFF)
-            ])
-
-            // Append compressed data
-            result.append(Data(bytes: destinationBuffer, count: compressedSize))
-
-            return result
-        }
-    }
-
-    /// Decompress data using zlib inflate with size metadata
-    /// Expected format: [marker: 1 byte][original size: 4 bytes big-endian][compressed data]
-    /// - Parameter maxSize: Maximum allowed decompressed size (safety limit)
-    /// - Returns: Decompressed data or nil if decompression fails or exceeds maxSize
-    func decompressedWithSize(maxSize: UInt32) -> Data? {
-        // Expected format: [marker][size: 4 bytes][compressed data]
-        // Minimum: 1 (marker) + 4 (size) + 1 (data) = 6 bytes
-        guard count >= 6 else { return nil }
-
-        // Skip marker byte (already checked by caller)
-        let dataAfterMarker = self.dropFirst()
-
-        // Read original size (4 bytes, big-endian)
-        guard dataAfterMarker.count >= 4 else { return nil }
-        let sizeBytes = Array(dataAfterMarker.prefix(4))
-
-        // Manually construct UInt32 from bytes to avoid alignment issues
-        let originalSize: UInt32 = (UInt32(sizeBytes[0]) << 24) |
-                                    (UInt32(sizeBytes[1]) << 16) |
-                                    (UInt32(sizeBytes[2]) << 8) |
-                                     UInt32(sizeBytes[3])
-        // Security check: reject if original size exceeds maximum
-        guard originalSize > 0, originalSize <= maxSize else { return nil }
-
-        // Get compressed data (everything after size bytes)
-        let compressedData = dataAfterMarker.dropFirst(4)
-        guard !compressedData.isEmpty else { return nil }
-
-        // Decompress with exact buffer size
-        return compressedData.withUnsafeBytes { bytes in
-            guard let baseAddress = bytes.baseAddress else { return nil }
-
-            let sourceBuffer = UnsafeBufferPointer<UInt8>(
-                start: baseAddress.assumingMemoryBound(to: UInt8.self),
-                count: compressedData.count
-            )
-
-            guard let sourceBaseAddress = sourceBuffer.baseAddress else { return nil }
-
-            // Allocate exactly the size we expect
-            let destinationBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: Int(originalSize))
-            defer { destinationBuffer.deallocate() }
-
-            let decompressedSize = compression_decode_buffer(
-                destinationBuffer, Int(originalSize),
-                sourceBaseAddress, compressedData.count,
-                nil, COMPRESSION_ZLIB
-            )
-
-            // Verify decompression succeeded and matches expected size
-            guard decompressedSize > 0, decompressedSize == Int(originalSize) else {
-                return nil
-            }
-
-            return Data(bytes: destinationBuffer, count: decompressedSize)
-        }
     }
 }

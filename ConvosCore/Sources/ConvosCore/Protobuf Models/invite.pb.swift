@@ -27,11 +27,12 @@ public struct InvitePayload: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// The encrypted conversation id
-  public var conversationToken: String = String()
+  /// The encrypted conversation id (stored as raw bytes for compactness)
+  public var conversationToken: Data = Data()
 
-  /// The creator's inbox ID
-  public var creatorInboxID: String = String()
+  /// The creator's inbox ID as raw bytes (hex-decoded for compactness)
+  /// Required for joiner to know who to DM
+  public var creatorInboxID: Data = Data()
 
   /// The tag to mark which conversation this corresponds to, lives in `ConversationCustomMetadata`
   public var tag: String = String()
@@ -64,24 +65,26 @@ public struct InvitePayload: Sendable {
   /// Clears the value of `imageURL`. Subsequent reads from it will return its default value.
   public mutating func clearImageURL() {self._imageURL = nil}
 
-  public var conversationExpiresAt: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {return _conversationExpiresAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_conversationExpiresAt = newValue}
+  /// Compact timestamp encoding: Unix timestamp in seconds (8 bytes fixed)
+  /// More compact than google.protobuf.Timestamp which uses two varints
+  public var conversationExpiresAtUnix: Int64 {
+    get {return _conversationExpiresAtUnix ?? 0}
+    set {_conversationExpiresAtUnix = newValue}
   }
-  /// Returns true if `conversationExpiresAt` has been explicitly set.
-  public var hasConversationExpiresAt: Bool {return self._conversationExpiresAt != nil}
-  /// Clears the value of `conversationExpiresAt`. Subsequent reads from it will return its default value.
-  public mutating func clearConversationExpiresAt() {self._conversationExpiresAt = nil}
+  /// Returns true if `conversationExpiresAtUnix` has been explicitly set.
+  public var hasConversationExpiresAtUnix: Bool {return self._conversationExpiresAtUnix != nil}
+  /// Clears the value of `conversationExpiresAtUnix`. Subsequent reads from it will return its default value.
+  public mutating func clearConversationExpiresAtUnix() {self._conversationExpiresAtUnix = nil}
 
-  /// optional invite expiration
-  public var expiresAt: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {return _expiresAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_expiresAt = newValue}
+  /// Compact invite expiration: Unix timestamp in seconds (8 bytes fixed)
+  public var expiresAtUnix: Int64 {
+    get {return _expiresAtUnix ?? 0}
+    set {_expiresAtUnix = newValue}
   }
-  /// Returns true if `expiresAt` has been explicitly set.
-  public var hasExpiresAt: Bool {return self._expiresAt != nil}
-  /// Clears the value of `expiresAt`. Subsequent reads from it will return its default value.
-  public mutating func clearExpiresAt() {self._expiresAt = nil}
+  /// Returns true if `expiresAtUnix` has been explicitly set.
+  public var hasExpiresAtUnix: Bool {return self._expiresAtUnix != nil}
+  /// Clears the value of `expiresAtUnix`. Subsequent reads from it will return its default value.
+  public mutating func clearExpiresAtUnix() {self._expiresAtUnix = nil}
 
   /// Whether the invite should expire after being used once
   public var expiresAfterUse: Bool = false
@@ -93,8 +96,8 @@ public struct InvitePayload: Sendable {
   fileprivate var _name: String? = nil
   fileprivate var _description_p: String? = nil
   fileprivate var _imageURL: String? = nil
-  fileprivate var _conversationExpiresAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
-  fileprivate var _expiresAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+  fileprivate var _conversationExpiresAtUnix: Int64? = nil
+  fileprivate var _expiresAtUnix: Int64? = nil
 }
 
 /// SignedInvite represents an invite with its cryptographic signature
@@ -127,7 +130,7 @@ public struct SignedInvite: Sendable {
 
 extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = "InvitePayload"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}conversationToken\0\u{3}creator_inbox_id\0\u{1}tag\0\u{1}name\0\u{1}description\0\u{1}imageURL\0\u{1}conversationExpiresAt\0\u{1}expiresAt\0\u{1}expiresAfterUse\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}conversationToken\0\u{3}creator_inbox_id\0\u{1}tag\0\u{1}name\0\u{1}description\0\u{1}imageURL\0\u{1}conversationExpiresAtUnix\0\u{1}expiresAtUnix\0\u{1}expiresAfterUse\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -135,14 +138,14 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.conversationToken) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.creatorInboxID) }()
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.conversationToken) }()
+      case 2: try { try decoder.decodeSingularBytesField(value: &self.creatorInboxID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.tag) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self._name) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self._description_p) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self._imageURL) }()
-      case 7: try { try decoder.decodeSingularMessageField(value: &self._conversationExpiresAt) }()
-      case 8: try { try decoder.decodeSingularMessageField(value: &self._expiresAt) }()
+      case 7: try { try decoder.decodeSingularSFixed64Field(value: &self._conversationExpiresAtUnix) }()
+      case 8: try { try decoder.decodeSingularSFixed64Field(value: &self._expiresAtUnix) }()
       case 9: try { try decoder.decodeSingularBoolField(value: &self.expiresAfterUse) }()
       default: break
       }
@@ -155,10 +158,10 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
     if !self.conversationToken.isEmpty {
-      try visitor.visitSingularStringField(value: self.conversationToken, fieldNumber: 1)
+      try visitor.visitSingularBytesField(value: self.conversationToken, fieldNumber: 1)
     }
     if !self.creatorInboxID.isEmpty {
-      try visitor.visitSingularStringField(value: self.creatorInboxID, fieldNumber: 2)
+      try visitor.visitSingularBytesField(value: self.creatorInboxID, fieldNumber: 2)
     }
     if !self.tag.isEmpty {
       try visitor.visitSingularStringField(value: self.tag, fieldNumber: 3)
@@ -172,11 +175,11 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
     try { if let v = self._imageURL {
       try visitor.visitSingularStringField(value: v, fieldNumber: 6)
     } }()
-    try { if let v = self._conversationExpiresAt {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    try { if let v = self._conversationExpiresAtUnix {
+      try visitor.visitSingularSFixed64Field(value: v, fieldNumber: 7)
     } }()
-    try { if let v = self._expiresAt {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    try { if let v = self._expiresAtUnix {
+      try visitor.visitSingularSFixed64Field(value: v, fieldNumber: 8)
     } }()
     if self.expiresAfterUse != false {
       try visitor.visitSingularBoolField(value: self.expiresAfterUse, fieldNumber: 9)
@@ -191,8 +194,8 @@ extension InvitePayload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
     if lhs._name != rhs._name {return false}
     if lhs._description_p != rhs._description_p {return false}
     if lhs._imageURL != rhs._imageURL {return false}
-    if lhs._conversationExpiresAt != rhs._conversationExpiresAt {return false}
-    if lhs._expiresAt != rhs._expiresAt {return false}
+    if lhs._conversationExpiresAtUnix != rhs._conversationExpiresAtUnix {return false}
+    if lhs._expiresAtUnix != rhs._expiresAtUnix {return false}
     if lhs.expiresAfterUse != rhs.expiresAfterUse {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
