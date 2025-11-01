@@ -8,6 +8,7 @@
 // For information on using the generated types, please see the documentation:
 //   https://github.com/apple/swift-protobuf/
 
+import Foundation
 import SwiftProtobuf
 
 // If the compiler emits an error on this type, it is because this file
@@ -30,23 +31,23 @@ public struct ConversationCustomMetadata: Sendable {
 
   public var tag: String = String()
 
-  /// Array of participant profiles
   public var profiles: [ConversationProfile] = []
 
-  public var expiresAt: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {return _expiresAt ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_expiresAt = newValue}
+  /// Unix timestamp in seconds (compact encoding)
+  public var expiresAtUnix: Int64 {
+    get {return _expiresAtUnix ?? 0}
+    set {_expiresAtUnix = newValue}
   }
-  /// Returns true if `expiresAt` has been explicitly set.
-  public var hasExpiresAt: Bool {return self._expiresAt != nil}
-  /// Clears the value of `expiresAt`. Subsequent reads from it will return its default value.
-  public mutating func clearExpiresAt() {self._expiresAt = nil}
+  /// Returns true if `expiresAtUnix` has been explicitly set.
+  public var hasExpiresAtUnix: Bool {return self._expiresAtUnix != nil}
+  /// Clears the value of `expiresAtUnix`. Subsequent reads from it will return its default value.
+  public mutating func clearExpiresAtUnix() {self._expiresAtUnix = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _expiresAt: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+  fileprivate var _expiresAtUnix: Int64? = nil
 }
 
 /// ConversationProfile represents a participant in the conversation
@@ -55,7 +56,8 @@ public struct ConversationProfile: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var inboxID: String = String()
+  /// Hex-decoded for compactness (~32 bytes instead of ~64 chars)
+  public var inboxID: Data = Data()
 
   public var name: String {
     get {return _name ?? String()}
@@ -87,7 +89,7 @@ public struct ConversationProfile: Sendable {
 
 extension ConversationCustomMetadata: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = "ConversationCustomMetadata"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}description\0\u{1}tag\0\u{1}profiles\0\u{1}expiresAt\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}description\0\u{1}tag\0\u{1}profiles\0\u{1}expiresAtUnix\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -98,7 +100,7 @@ extension ConversationCustomMetadata: SwiftProtobuf.Message, SwiftProtobuf._Mess
       case 1: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.tag) }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.profiles) }()
-      case 4: try { try decoder.decodeSingularMessageField(value: &self._expiresAt) }()
+      case 4: try { try decoder.decodeSingularSFixed64Field(value: &self._expiresAtUnix) }()
       default: break
       }
     }
@@ -118,8 +120,8 @@ extension ConversationCustomMetadata: SwiftProtobuf.Message, SwiftProtobuf._Mess
     if !self.profiles.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.profiles, fieldNumber: 3)
     }
-    try { if let v = self._expiresAt {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    try { if let v = self._expiresAtUnix {
+      try visitor.visitSingularSFixed64Field(value: v, fieldNumber: 4)
     } }()
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -128,7 +130,7 @@ extension ConversationCustomMetadata: SwiftProtobuf.Message, SwiftProtobuf._Mess
     if lhs.description_p != rhs.description_p {return false}
     if lhs.tag != rhs.tag {return false}
     if lhs.profiles != rhs.profiles {return false}
-    if lhs._expiresAt != rhs._expiresAt {return false}
+    if lhs._expiresAtUnix != rhs._expiresAtUnix {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -144,7 +146,7 @@ extension ConversationProfile: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.inboxID) }()
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.inboxID) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self._name) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self._image) }()
       default: break
@@ -158,7 +160,7 @@ extension ConversationProfile: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
     if !self.inboxID.isEmpty {
-      try visitor.visitSingularStringField(value: self.inboxID, fieldNumber: 1)
+      try visitor.visitSingularBytesField(value: self.inboxID, fieldNumber: 1)
     }
     try { if let v = self._name {
       try visitor.visitSingularStringField(value: v, fieldNumber: 2)

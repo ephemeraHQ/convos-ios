@@ -21,7 +21,7 @@ extension Data {
     /// Magic byte prefix for compressed data
     static let compressionMarker: UInt8 = 0x1F
 
-    /// Compress data using zlib deflate with size metadata, only if result is smaller
+    /// Compress data using DEFLATE, only if result is smaller than input
     /// - Parameter marker: Optional compression marker byte (defaults to standard marker)
     /// - Returns: Compressed data with metadata, or nil if compression doesn't reduce size
     func compressedIfSmaller(marker: UInt8 = Data.compressionMarker) -> Data? {
@@ -31,7 +31,7 @@ extension Data {
         return compressed
     }
 
-    /// Compress data using zlib deflate and prepend format metadata
+    /// Compress data using DEFLATE and prepend format metadata
     /// - Parameter marker: Compression marker byte to prepend
     /// - Returns: Compressed data in format: [marker: 1 byte][size: 4 bytes big-endian][compressed data]
     func compressedWithSize(marker: UInt8 = Data.compressionMarker) -> Data? {
