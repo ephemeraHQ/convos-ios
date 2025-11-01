@@ -136,7 +136,7 @@ struct InviteProtobufExtensionsTests {
         #expect(decoded.payload.description_p == payload.description_p)
     }
 
-    @Test("Uncompressed invite decoding")
+    @Test("Uncompressed invite decoding (backward compatibility)")
     func uncompressedInviteDecoding() throws {
         let privateKey = generateTestPrivateKey()
         let conversationId = UUID().uuidString.lowercased()
@@ -158,11 +158,18 @@ struct InviteProtobufExtensionsTests {
         signedInvite.payload = payload
         signedInvite.signature = signature
 
-        // Use toURLSafeSlug() which properly handles both compressed and uncompressed cases
-        // This ensures consistent framing and avoids false positives when raw protobuf
-        // happens to start with the compression marker byte (0x1F)
-        let encoded = try signedInvite.toURLSafeSlug()
-        let decoded = try SignedInvite.fromURLSafeSlug(encoded)
+        // Create truly uncompressed slug by encoding protobuf directly
+        let protobufData = try signedInvite.serializedData()
+
+        // Only test uncompressed if protobuf doesn't start with compression marker
+        // (avoiding collision with 0x1F marker)
+        guard protobufData.first != Data.compressionMarker else {
+            // Skip this iteration if collision occurs (very rare: ~1/256 probability)
+            return
+        }
+
+        let uncompressedSlug = protobufData.base64URLEncoded()
+        let decoded = try SignedInvite.fromURLSafeSlug(uncompressedSlug)
         #expect(decoded.payload.tag == "test")
     }
 
