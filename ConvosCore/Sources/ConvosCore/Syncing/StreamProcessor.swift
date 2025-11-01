@@ -94,11 +94,12 @@ actor StreamProcessor: StreamProcessorProtocol {
         let creatorInboxId = try await conversation.creatorInboxId()
         if creatorInboxId == client.inboxId {
             // we created the conversation, update permissions and set inviteTag
+            try await conversation.ensureInviteTag()
             let permissions = try conversation.permissionPolicySet()
             if permissions.addMemberPolicy != .allow {
+                // by default allow all members to invite others
                 try await conversation.updateAddMemberPermission(newPermissionOption: .allow)
             }
-            try await conversation.updateInviteTag()
         }
 
         Logger.info("Syncing conversation: \(conversation.id)")
