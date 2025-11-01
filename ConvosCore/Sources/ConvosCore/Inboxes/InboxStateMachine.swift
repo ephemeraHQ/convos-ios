@@ -4,6 +4,16 @@ import XMTPiOS
 
 private extension AppEnvironment {
     var xmtpEnv: XMTPEnvironment {
+        if let network = self.xmtpNetwork {
+            switch network.lowercased() {
+            case "local": return .local
+            case "dev": return .dev
+            case "production", "prod": return .production
+            default:
+                Logger.warning("Unknown xmtpNetwork '\(network)', falling back to environment default")
+            }
+        }
+
         switch self {
         case .local, .tests: return .local
         case .dev: return .dev
@@ -19,6 +29,17 @@ private extension AppEnvironment {
     }
 
     var isSecure: Bool {
+        if let network = self.xmtpNetwork {
+            switch network.lowercased() {
+            case "local":
+                return false
+            case "dev", "production", "prod":
+                return true
+            default:
+                Logger.warning("Unknown xmtpNetwork '\(network)', falling back to environment default")
+            }
+        }
+
         switch self {
         case .local, .tests:
             return false
@@ -210,18 +231,33 @@ public actor InboxStateMachine {
 
         // Set custom XMTP host if provided
         Logger.info("🔧 XMTP Configuration:")
-        Logger.info("   XMTP_CUSTOM_HOST = \(environment.xmtpEndpoint ?? "nil")")
-        Logger.info("   customLocalAddress = \(environment.customLocalAddress ?? "nil")")
-        Logger.info("   xmtpEnv = \(environment.xmtpEnv)")
-        Logger.info("   isSecure = \(environment.isSecure)")
 
-        // Log the actual XMTPEnvironment.customLocalAddress after setting
-        if let customHost = environment.customLocalAddress {
-            Logger.info("🌐 Setting XMTPEnvironment.customLocalAddress = \(customHost)")
-            XMTPEnvironment.customLocalAddress = customHost
-            Logger.info("🌐 Actual XMTPEnvironment.customLocalAddress = \(XMTPEnvironment.customLocalAddress ?? "nil")")
+        if let gatewayUrl = environment.gatewayUrl {
+            // XMTP d14n - using gateway
+            Logger.info("   Mode = XMTP d14n")
+            Logger.info("   GATEWAY_URL = \(gatewayUrl)")
+            // Clear any previous custom address when using gateway
+            if XMTPEnvironment.customLocalAddress != nil {
+                Logger.info("   Clearing previous customLocalAddress for gateway mode")
+                XMTPEnvironment.customLocalAddress = nil
+            }
         } else {
-            Logger.info("🌐 Using default XMTP endpoints")
+            // XMTP v3
+            Logger.info("   Mode = XMTP v3")
+            Logger.info("   XMTP_CUSTOM_HOST = \(environment.xmtpEndpoint ?? "nil")")
+            Logger.info("   customLocalAddress = \(environment.customLocalAddress ?? "nil")")
+            Logger.info("   xmtpEnv = \(environment.xmtpEnv)")
+            Logger.info("   isSecure = \(environment.isSecure)")
+
+            // Update XMTPEnvironment.customLocalAddress (clear if nil)
+            if let customHost = environment.customLocalAddress {
+                Logger.info("Setting XMTPEnvironment.customLocalAddress = \(customHost)")
+                XMTPEnvironment.customLocalAddress = customHost
+                Logger.info("Actual XMTPEnvironment.customLocalAddress = \(XMTPEnvironment.customLocalAddress ?? "nil")")
+            } else {
+                Logger.info("Clearing XMTPEnvironment.customLocalAddress")
+                XMTPEnvironment.customLocalAddress = nil
+            }
         }
     }
 
@@ -465,6 +501,12 @@ public actor InboxStateMachine {
         emitStateChange(.stopping(clientId: clientId))
         await syncingManager?.stop()
         removePushTokenObserver()
+
+        if XMTPEnvironment.customLocalAddress != nil {
+            Logger.info("Clearing XMTPEnvironment.customLocalAddress on stop")
+            XMTPEnvironment.customLocalAddress = nil
+        }
+
         emitStateChange(.idle(clientId: clientId))
     }
 
@@ -476,6 +518,11 @@ public actor InboxStateMachine {
     ) async throws {
         // Stop all services
         await syncingManager?.stop()
+
+        if XMTPEnvironment.customLocalAddress != nil {
+            Logger.info("Clearing XMTPEnvironment.customLocalAddress on cleanup")
+            XMTPEnvironment.customLocalAddress = nil
+        }
 
         // Unsubscribe from inbox-level welcome topic and unregister installation from backend
         // Note: Conversation topics are handled by ConversationStateMachine.cleanUp()
@@ -642,12 +689,28 @@ public actor InboxStateMachine {
     // MARK: - Helpers
 
     private func clientOptions(keys: any XMTPClientKeys) -> ClientOptions {
-        ClientOptions(
-            api: .init(
+        // When gatewayUrl is provided, we're using d14n
+        // The gateway handles env/isSecure automatically, so we don't set them
+        let apiOptions: ClientOptions.Api
+        if let gatewayUrl = environment.gatewayUrl, !gatewayUrl.isEmpty {
+            // d14n mode: gateway handles network selection
+            Logger.info("Using XMTP d14n - Gateway: \(gatewayUrl)")
+            apiOptions = .init(
+                appVersion: "convos/\(Bundle.appVersion)",
+                gatewayUrl: gatewayUrl
+            )
+        } else {
+            // Direct XMTP connection: we specify env and isSecure
+            Logger.info("🔗 Using direct XMTP connection with env: \(environment.xmtpEnv)")
+            apiOptions = .init(
                 env: environment.xmtpEnv,
                 isSecure: environment.isSecure,
                 appVersion: "convos/\(Bundle.appVersion)"
-            ),
+            )
+        }
+
+        return ClientOptions(
+            api: apiOptions,
             codecs: [
                 TextCodec(),
                 ReplyCodec(),

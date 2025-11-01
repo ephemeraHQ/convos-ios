@@ -1,5 +1,7 @@
 {
   "environment": "local",
+  "backendUrl": "https://api.dev.convos.xyz/api/",
+  "xmtpNetwork": "dev",
   "bundleId": "org.convos.ios-local",
   "appGroupIdentifier": "group.org.convos.ios-local",
   "relyingPartyIdentifier": "local.convos.org",

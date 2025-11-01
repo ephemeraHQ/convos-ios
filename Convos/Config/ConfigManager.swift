@@ -6,6 +6,8 @@ final class ConfigManager {
     static let shared: ConfigManager = ConfigManager()
 
     private let config: [String: Any]
+    private var _currentEnvironment: AppEnvironment?
+    private let environmentLock: NSLock = NSLock()
 
     private init() {
         guard let url = Bundle.main.url(forResource: "config", withExtension: "json"),
@@ -16,8 +18,21 @@ final class ConfigManager {
         self.config = dict
     }
 
-    /// Get the current AppEnvironment from config
-    lazy var currentEnvironment: AppEnvironment = {
+    /// Get the current AppEnvironment from config (thread-safe)
+    var currentEnvironment: AppEnvironment {
+        environmentLock.lock()
+        defer { environmentLock.unlock() }
+
+        if let environment = _currentEnvironment {
+            return environment
+        }
+
+        let environment = createEnvironment()
+        _currentEnvironment = environment
+        return environment
+    }
+
+    private func createEnvironment() -> AppEnvironment {
         guard let envString = config["environment"] as? String else {
             fatalError("Missing 'environment' key in config.json")
         }
@@ -26,12 +41,15 @@ final class ConfigManager {
 
         switch envString {
         case "local":
-            // For local, use Secrets for API URL if not overridden in config
+            let effectiveApiUrl = Secrets.CONVOS_API_BASE_URL.isEmpty ? (backendURLOverride ?? "") : Secrets.CONVOS_API_BASE_URL
+            let effectiveGatewayUrl = Secrets.GATEWAY_URL.isEmpty ? nil : Secrets.GATEWAY_URL
             let config = ConvosConfiguration(
-                apiBaseURL: backendURLOverride ?? Secrets.CONVOS_API_BASE_URL,
+                apiBaseURL: effectiveApiUrl,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
                 xmtpEndpoint: Secrets.XMTP_CUSTOM_HOST.isEmpty ? nil : Secrets.XMTP_CUSTOM_HOST,
+                xmtpNetwork: xmtpNetwork,
+                gatewayUrl: effectiveGatewayUrl
             )
             environment = .local(config: config)
 
@@ -40,6 +58,7 @@ final class ConfigManager {
                 apiBaseURL: apiBaseURL,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
+                xmtpNetwork: xmtpNetwork
             )
             environment = .dev(config: config)
 
@@ -48,6 +67,7 @@ final class ConfigManager {
                 apiBaseURL: apiBaseURL,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
+                xmtpNetwork: xmtpNetwork
             )
             environment = .production(config: config)
 
@@ -59,7 +79,7 @@ final class ConfigManager {
         environment.storeSecureConfigurationForNotificationExtension()
 
         return environment
-    }()
+    }
 
     /// API base URL from config (optional for local, required for dev/prod)
     var apiBaseURL: String {
@@ -112,5 +132,10 @@ final class ConfigManager {
             fatalError("Missing 'appUrlScheme' in config.json")
         }
         return scheme
+    }
+
+    /// XMTP Network from config (optional)
+    var xmtpNetwork: String? {
+        config["xmtpNetwork"] as? String
     }
 }
