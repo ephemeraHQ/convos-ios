@@ -7,6 +7,17 @@ set -o pipefail
 # This script generates the Secrets.swift file for Local development
 # It automatically detects the local IP address and populates the secrets
 # It also ensures the file exists with minimal content if needed
+#
+# Configuration Priority (.env values):
+# - Missing/Empty/Commented: Auto-detect local IP (default)
+# - "USE_CONFIG": Use value from config.local.json (or empty for XMTP/Gateway)
+# - Custom value: Use that value explicitly
+#
+# Examples:
+#   CONVOS_API_BASE_URL=                    → Auto-detect IP
+#   CONVOS_API_BASE_URL=USE_CONFIG          → Use config.json default
+#   CONVOS_API_BASE_URL=http://10.0.1.5:4000/api → Use custom URL
+#
 # Usage: ./generate-secrets-local.sh
 
 # Source shared utility functions
@@ -147,55 +158,64 @@ if [ -f ".env" ]; then
     fi
 fi
 
-# Determine final values (priority: .env override (even if empty) > auto-detected IP > config.json default > empty)
+# Determine final values for Secrets.swift
+# Logic: .env "USE_CONFIG" > .env custom value > auto-detected IP > config.json default (fallback)
 FINAL_BACKEND_URL=""
 FINAL_XMTP_HOST=""
 FINAL_GATEWAY_URL=""
 
 # CONVOS_API_BASE_URL logic
-if [ "$ENV_HAS_BACKEND_URL" = true ]; then
+if [ "$ENV_HAS_BACKEND_URL" = true ] && [ "$ENV_BACKEND_URL" = "USE_CONFIG" ]; then
+    # Explicitly requesting config.json default
+    FINAL_BACKEND_URL="$DEFAULT_BACKEND_URL"
+    echo "✅ Using CONVOS_API_BASE_URL from config.json (explicit USE_CONFIG): $FINAL_BACKEND_URL"
+elif [ "$ENV_HAS_BACKEND_URL" = true ] && [ -n "$ENV_BACKEND_URL" ]; then
+    # Custom value from .env
     FINAL_BACKEND_URL="$ENV_BACKEND_URL"
-    if [ -n "$ENV_BACKEND_URL" ]; then
-        echo "✅ Using CONVOS_API_BASE_URL from .env: $FINAL_BACKEND_URL"
-    else
-        echo "✅ Using CONVOS_API_BASE_URL from .env: (empty - will use config.json default)"
-    fi
+    echo "✅ Using CONVOS_API_BASE_URL from .env: $FINAL_BACKEND_URL"
 elif [ -n "$LOCAL_IP" ]; then
+    # Auto-detect (when .env missing, empty, or commented)
     FINAL_BACKEND_URL="http://$LOCAL_IP:4000/api"
     echo "✅ Auto-detected CONVOS_API_BASE_URL: $FINAL_BACKEND_URL"
 elif [ -n "$DEFAULT_BACKEND_URL" ]; then
+    # Fallback when IP detection fails
     FINAL_BACKEND_URL="$DEFAULT_BACKEND_URL"
-    echo "✅ Using CONVOS_API_BASE_URL from config.json: $FINAL_BACKEND_URL"
+    echo "✅ Using CONVOS_API_BASE_URL from config.json (fallback): $FINAL_BACKEND_URL"
 else
     FINAL_BACKEND_URL=""
     echo "⚠️  CONVOS_API_BASE_URL will be empty"
 fi
 
 # XMTP_CUSTOM_HOST logic
-if [ "$ENV_HAS_XMTP_HOST" = true ]; then
+if [ "$ENV_HAS_XMTP_HOST" = true ] && [ "$ENV_XMTP_HOST" = "USE_CONFIG" ]; then
+    # Explicitly requesting no custom host (use default XMTP network)
+    FINAL_XMTP_HOST=""
+    echo "✅ Using XMTP_CUSTOM_HOST from config (explicit USE_CONFIG): empty (default network)"
+elif [ "$ENV_HAS_XMTP_HOST" = true ] && [ -n "$ENV_XMTP_HOST" ]; then
+    # Custom value from .env
     FINAL_XMTP_HOST="$ENV_XMTP_HOST"
-    if [ -n "$ENV_XMTP_HOST" ]; then
-        echo "✅ Using XMTP_CUSTOM_HOST from .env: $FINAL_XMTP_HOST"
-    else
-        echo "✅ Using XMTP_CUSTOM_HOST from .env: (empty - will use default network)"
-    fi
+    echo "✅ Using XMTP_CUSTOM_HOST from .env: $FINAL_XMTP_HOST"
 elif [ -n "$LOCAL_IP" ]; then
+    # Auto-detect (when .env missing, empty, or commented)
     FINAL_XMTP_HOST="$LOCAL_IP"
     echo "✅ Auto-detected XMTP_CUSTOM_HOST: $FINAL_XMTP_HOST"
 else
+    # Fallback when IP detection fails (use default network)
     FINAL_XMTP_HOST=""
-    echo "⚠️  XMTP_CUSTOM_HOST will be empty"
+    echo "✅ XMTP_CUSTOM_HOST will be empty (default network)"
 fi
 
 # GATEWAY_URL logic (for d14n - decentralized network)
-if [ "$ENV_HAS_GATEWAY_URL" = true ]; then
+if [ "$ENV_HAS_GATEWAY_URL" = true ] && [ "$ENV_GATEWAY_URL" = "USE_CONFIG" ]; then
+    # Explicitly requesting no gateway (direct XMTP connection)
+    FINAL_GATEWAY_URL=""
+    echo "✅ Using GATEWAY_URL from config (explicit USE_CONFIG): empty (direct connection)"
+elif [ "$ENV_HAS_GATEWAY_URL" = true ] && [ -n "$ENV_GATEWAY_URL" ]; then
+    # Custom gateway URL from .env
     FINAL_GATEWAY_URL="$ENV_GATEWAY_URL"
-    if [ -n "$ENV_GATEWAY_URL" ]; then
-        echo "✅ Using GATEWAY_URL from .env: $FINAL_GATEWAY_URL (d14n mode)"
-    else
-        echo "✅ Using GATEWAY_URL from .env: (empty - will use direct XMTP connection)"
-    fi
+    echo "✅ Using GATEWAY_URL from .env: $FINAL_GATEWAY_URL (d14n mode)"
 else
+    # Default: no gateway, direct XMTP connection
     FINAL_GATEWAY_URL=""
     echo "ℹ️  GATEWAY_URL not set - using direct XMTP connection"
 fi
