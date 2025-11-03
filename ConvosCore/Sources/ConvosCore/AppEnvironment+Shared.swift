@@ -28,9 +28,8 @@ public struct SharedAppConfiguration: Codable {
             appGroupIdentifier: appGroupIdentifier,
             relyingPartyIdentifier: relyingPartyIdentifier,
             xmtpEndpoint: xmtpEndpoint,
-            xmtpNetwork: xmtpNetwork
-            // @lourou: Enable when ready for XMTP v4 d14n
-            // gatewayUrl: gatewayUrl
+            xmtpNetwork: xmtpNetwork,
+            gatewayUrl: gatewayUrl
         )
 
         switch environment {

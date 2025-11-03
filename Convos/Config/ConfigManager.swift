@@ -83,9 +83,8 @@ final class ConfigManager {
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
                 xmtpEndpoint: isEmptyOrWhitespace(Secrets.XMTP_CUSTOM_HOST) ? nil : Secrets.XMTP_CUSTOM_HOST.trimmingCharacters(in: .whitespacesAndNewlines),
-                xmtpNetwork: xmtpNetwork
-                // @lourou: Enable when ready for XMTP v4 d14n
-                // gatewayUrl: isEmptyOrWhitespace(Secrets.GATEWAY_URL) ? nil : Secrets.GATEWAY_URL.trimmingCharacters(in: .whitespacesAndNewlines)
+                xmtpNetwork: xmtpNetwork,
+                gatewayUrl: isEmptyOrWhitespace(Secrets.GATEWAY_URL) ? nil : Secrets.GATEWAY_URL.trimmingCharacters(in: .whitespacesAndNewlines)
             )
             environment = .local(config: config)
 
