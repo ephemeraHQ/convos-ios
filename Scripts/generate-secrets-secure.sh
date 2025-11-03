@@ -23,6 +23,16 @@ ESCAPED_API_URL=$(swift_escape "${CONVOS_API_BASE_URL:-}")
 ESCAPED_XMTP_HOST=$(swift_escape "${XMTP_CUSTOM_HOST:-}")
 ESCAPED_GATEWAY_URL=$(swift_escape "${GATEWAY_URL:-}")
 
+# Handle Sentry DSN - use SENTRY_DSN_DEV for dev builds, empty for prod
+if [[ -n "${SENTRY_DSN_DEV}" ]]; then
+    ESCAPED_SENTRY_DSN=$(swift_escape "${SENTRY_DSN_DEV}")
+elif [[ -n "${SENTRY_DSN_PROD}" ]]; then
+    ESCAPED_SENTRY_DSN=""
+    echo "🚫 Production build detected - Sentry DSN explicitly disabled"
+else
+    ESCAPED_SENTRY_DSN=$(swift_escape "${SENTRY_DSN:-}")
+fi
+
 # Generate Secrets.swift WITHOUT exposing values in logs
 cat >"$SECRETS_FILE" <<EOF
 import Foundation
@@ -37,6 +47,7 @@ enum Secrets {
     static let CONVOS_API_BASE_URL: String = "$ESCAPED_API_URL"
     static let XMTP_CUSTOM_HOST: String = "$ESCAPED_XMTP_HOST"
     static let GATEWAY_URL: String = "$ESCAPED_GATEWAY_URL"
+    static let SENTRY_DSN: String = "$ESCAPED_SENTRY_DSN"
 }
 EOF
 
@@ -62,6 +73,12 @@ if [[ -z "$GATEWAY_URL" ]]; then
     echo "  - GATEWAY_URL: (empty - will use direct XMTP connection)"
 else
     echo "  - GATEWAY_URL: $GATEWAY_URL"
+fi
+
+if [[ -n "$ESCAPED_SENTRY_DSN" ]]; then
+    echo "  - SENTRY_DSN: (configured - not displayed for security)"
+else
+    echo "  - SENTRY_DSN: (empty - Sentry disabled)"
 fi
 
 echo ""

@@ -48,6 +48,7 @@ enum Secrets {
     static let CONVOS_API_BASE_URL: String = ""
     static let XMTP_CUSTOM_HOST: String = ""
     static let GATEWAY_URL: String = ""
+    static let SENTRY_DSN: String = ""
 }
 
 MINIMAL_EOF
@@ -137,6 +138,7 @@ LOCAL_IP=$(get_local_ip)
 ENV_BACKEND_URL=""
 ENV_XMTP_HOST=""
 ENV_GATEWAY_URL=""
+ENV_SENTRY_DSN=""
 ENV_HAS_BACKEND_URL=false
 ENV_HAS_XMTP_HOST=false
 ENV_HAS_GATEWAY_URL=false
@@ -155,6 +157,9 @@ if [ -f ".env" ]; then
     if grep -v '^#' ".env" | grep -q '^GATEWAY_URL='; then
         ENV_HAS_GATEWAY_URL=true
         ENV_GATEWAY_URL=$(grep -v '^#' ".env" | grep '^GATEWAY_URL=' | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
+    fi
+    if grep -v '^#' ".env" | grep -q '^SENTRY_DSN='; then
+        ENV_SENTRY_DSN=$(grep -v '^#' ".env" | grep '^SENTRY_DSN=' | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
     fi
 fi
 
@@ -242,6 +247,7 @@ enum Secrets {
     static let CONVOS_API_BASE_URL: String = "$(swift_escape "$FINAL_BACKEND_URL")"
     static let XMTP_CUSTOM_HOST: String = "$(swift_escape "$FINAL_XMTP_HOST")"
     static let GATEWAY_URL: String = "$(swift_escape "$FINAL_GATEWAY_URL")"
+    static let SENTRY_DSN: String = "$(swift_escape "$ENV_SENTRY_DSN")"
 EOF
 
 # Check if .env file exists and add any additional secrets from it
@@ -258,6 +264,7 @@ if [ -f ".env" ]; then
         [[ "$key" == "CONVOS_API_BASE_URL" ]] && continue
         [[ "$key" == "XMTP_CUSTOM_HOST" ]] && continue
         [[ "$key" == "GATEWAY_URL" ]] && continue
+        [[ "$key" == "SENTRY_DSN" ]] && continue
 
         # Validate Swift identifier
         if ! is_valid_swift_identifier "$key"; then
