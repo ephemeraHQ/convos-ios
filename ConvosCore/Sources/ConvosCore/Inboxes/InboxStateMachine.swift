@@ -251,15 +251,6 @@ public actor InboxStateMachine {
         Logger.info("   xmtpEnv = \(environment.xmtpEnv)")
         Logger.info("   isSecure = \(environment.isSecure)")
 
-        // Update XMTPEnvironment.customLocalAddress (clear if nil)
-        if let customHost = environment.customLocalAddress {
-            Logger.info("Setting XMTPEnvironment.customLocalAddress = \(customHost)")
-            XMTPEnvironment.customLocalAddress = customHost
-            Logger.info("Actual XMTPEnvironment.customLocalAddress = \(XMTPEnvironment.customLocalAddress ?? "nil")")
-        } else {
-            Logger.info("Clearing XMTPEnvironment.customLocalAddress")
-            XMTPEnvironment.customLocalAddress = nil
-        }
         // }
     }
 
@@ -397,6 +388,10 @@ public actor InboxStateMachine {
         emitStateChange(.authorizing(clientId: clientId, inboxId: inboxId))
         Logger.info("Started authorization flow for inbox: \(inboxId), clientId: \(clientId)")
 
+        // Set custom local address before building/creating client
+        // This fixes the retry bug where handleStop clears it
+        setCustomLocalAddress()
+
         let keys = identity.clientKeys
         let clientOptions = clientOptions(keys: keys)
         let client: any XMTPClientProvider
@@ -433,6 +428,9 @@ public actor InboxStateMachine {
     private func handleRegister(clientId: String) async throws {
         emitStateChange(.registering(clientId: clientId))
         Logger.info("Started registration flow with clientId: \(clientId)")
+
+        // Set custom local address before creating client
+        setCustomLocalAddress()
 
         let keys = try await identityStore.generateKeys()
         let client = try await createXmtpClient(
@@ -534,11 +532,6 @@ public actor InboxStateMachine {
         await syncingManager?.stop()
         removePushTokenObserver()
 
-        if XMTPEnvironment.customLocalAddress != nil {
-            Logger.info("Clearing XMTPEnvironment.customLocalAddress on stop")
-            XMTPEnvironment.customLocalAddress = nil
-        }
-
         emitStateChange(.idle(clientId: clientId))
     }
 
@@ -551,10 +544,6 @@ public actor InboxStateMachine {
         // Stop all services
         await syncingManager?.stop()
 
-        if XMTPEnvironment.customLocalAddress != nil {
-            Logger.info("Clearing XMTPEnvironment.customLocalAddress on cleanup")
-            XMTPEnvironment.customLocalAddress = nil
-        }
 
         // Unsubscribe from inbox-level welcome topic and unregister installation from backend
         // Note: Conversation topics are handled by ConversationStateMachine.cleanUp()
@@ -756,6 +745,18 @@ public actor InboxStateMachine {
             dbEncryptionKey: keys.databaseKey,
             dbDirectory: environment.defaultDatabasesDirectory
         )
+    }
+
+    /// Sets XMTPEnvironment.customLocalAddress from current environment
+    /// Must be called before building/creating XMTP client
+    private func setCustomLocalAddress() {
+        if let customHost = environment.customLocalAddress {
+            Logger.info("Setting XMTPEnvironment.customLocalAddress = \(customHost)")
+            XMTPEnvironment.customLocalAddress = customHost
+        } else {
+            Logger.info("Clearing XMTPEnvironment.customLocalAddress")
+            XMTPEnvironment.customLocalAddress = nil
+        }
     }
 
     private func createXmtpClient(signingKey: SigningKey,
