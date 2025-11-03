@@ -158,8 +158,9 @@ if [ -f ".env" ]; then
     fi
 fi
 
-# Determine final values for Secrets.swift
-# Logic: .env "USE_CONFIG" > .env custom value > auto-detected IP > config.json default (fallback)
+# Determine final values for Secrets.swift (Tier 1 of two-tier system)
+# Priority: .env "USE_CONFIG" > .env custom value > auto-detected IP > config.json default
+# Swift (ConfigManager.swift) provides isEmpty fallback to config.json as Tier 2
 FINAL_BACKEND_URL=""
 FINAL_XMTP_HOST=""
 FINAL_GATEWAY_URL=""

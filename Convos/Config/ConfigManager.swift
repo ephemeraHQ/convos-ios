@@ -39,9 +39,9 @@ final class ConfigManager {
 
         let environment: AppEnvironment
 
-        // Priority: .env "USE_CONFIG" or custom value > auto-detected IP > config.json default
-        // Empty Secrets (from missing/empty .env) trigger auto-detection, which may produce empty if IP detection fails
-        // This code provides fallback to config.json when Secrets are empty
+        // Two-tier priority: Bash script (generate-secrets-local.sh) writes prioritized value to Secrets.
+        // Priority: .env > auto-detected IP > config.json
+        // This code: Use Secrets if non-empty, else fallback to config.json (safety when Secrets fails)
         switch envString {
         case "local":
             let effectiveApiUrl = Secrets.CONVOS_API_BASE_URL.isEmpty ? (backendURLDefault ?? "") : Secrets.CONVOS_API_BASE_URL
