@@ -32,6 +32,17 @@ final class ConfigManager {
         return environment
     }
 
+    private func resolveAndValidateURL(secretsOverride: String, configDefault: String?, environmentName: String) -> String {
+        let url = secretsOverride.isEmpty ? (configDefault ?? "") : secretsOverride
+        guard !url.isEmpty else {
+            fatalError("Missing 'backendUrl' for \(environmentName) environment (Secrets or config.json)")
+        }
+        guard URL(string: url) != nil else {
+            fatalError("Invalid API URL for \(environmentName) environment: '\(url)'")
+        }
+        return url
+    }
+
     private func createEnvironment() -> AppEnvironment {
         guard let envString = config["environment"] as? String else {
             fatalError("Missing 'environment' key in config.json")
@@ -44,9 +55,13 @@ final class ConfigManager {
         // This code: Use Secrets if non-empty, else fallback to config.json (safety when Secrets fails)
         switch envString {
         case "local":
-            let effectiveApiUrl = Secrets.CONVOS_API_BASE_URL.isEmpty ? (backendURLDefault ?? "") : Secrets.CONVOS_API_BASE_URL
+            let url = resolveAndValidateURL(
+                secretsOverride: Secrets.CONVOS_API_BASE_URL,
+                configDefault: apiBaseURL,
+                environmentName: "local"
+            )
             let config = ConvosConfiguration(
-                apiBaseURL: effectiveApiUrl,
+                apiBaseURL: url,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
                 xmtpEndpoint: Secrets.XMTP_CUSTOM_HOST.isEmpty ? nil : Secrets.XMTP_CUSTOM_HOST,
@@ -57,17 +72,29 @@ final class ConfigManager {
             environment = .local(config: config)
 
         case "dev":
+            // Allow override via Secrets for dev environment (useful for local backend testing)
+            let url = resolveAndValidateURL(
+                secretsOverride: Secrets.CONVOS_API_BASE_URL,
+                configDefault: apiBaseURL,
+                environmentName: "dev"
+            )
             let config = ConvosConfiguration(
-                apiBaseURL: apiBaseURL,
+                apiBaseURL: url,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
+                xmtpEndpoint: Secrets.XMTP_CUSTOM_HOST.isEmpty ? nil : Secrets.XMTP_CUSTOM_HOST,
                 xmtpNetwork: xmtpNetwork
             )
             environment = .dev(config: config)
 
         case "production":
+            let url = resolveAndValidateURL(
+                secretsOverride: Secrets.CONVOS_API_BASE_URL,
+                configDefault: apiBaseURL,
+                environmentName: "production"
+            )
             let config = ConvosConfiguration(
-                apiBaseURL: apiBaseURL,
+                apiBaseURL: url,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
                 xmtpNetwork: xmtpNetwork
@@ -84,16 +111,8 @@ final class ConfigManager {
         return environment
     }
 
-    /// API base URL from config (optional for local, required for dev/prod)
-    var apiBaseURL: String {
-        guard let url = config["backendUrl"] as? String else {
-            fatalError("Missing 'backendUrl' in config.json")
-        }
-        return url
-    }
-
-    /// Backend URL default from config.json (used as fallback)
-    var backendURLDefault: String? {
+    /// API base URL from config.json (used as default/fallback when Secrets not provided)
+    var apiBaseURL: String? {
         config["backendUrl"] as? String
     }
 
