@@ -33,7 +33,8 @@ final class ConfigManager {
     }
 
     private func resolveAndValidateURL(secretsOverride: String, configDefault: String?, environmentName: String) -> String {
-        let url = secretsOverride.isEmpty ? (configDefault ?? "") : secretsOverride
+        let url = (secretsOverride.isEmpty ? (configDefault ?? "") : secretsOverride)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !url.isEmpty else {
             fatalError("Missing 'backendUrl' for \(environmentName) environment (Secrets or config.json)")
         }
