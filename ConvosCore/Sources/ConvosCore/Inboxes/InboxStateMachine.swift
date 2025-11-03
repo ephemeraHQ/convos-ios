@@ -389,7 +389,7 @@ public actor InboxStateMachine {
         Logger.info("Started authorization flow for inbox: \(inboxId), clientId: \(clientId)")
 
         // Set custom local address before building/creating client
-        // This fixes the retry bug where handleStop clears it
+        // Only updates if different, avoiding unnecessary mutations
         setCustomLocalAddress()
 
         let keys = identity.clientKeys
@@ -430,6 +430,7 @@ public actor InboxStateMachine {
         Logger.info("Started registration flow with clientId: \(clientId)")
 
         // Set custom local address before creating client
+        // Only updates if different, avoiding unnecessary mutations
         setCustomLocalAddress()
 
         let keys = try await identityStore.generateKeys()
@@ -523,6 +524,12 @@ public actor InboxStateMachine {
         // Clean up database records and keychain if we have an inbox ID
         try await cleanupInboxData(clientId: clientId)
         try await identityStore.delete(clientId: clientId)
+
+        // Delete database files to match behavior of handleDelete
+        if let inboxId = currentInboxId {
+            deleteDatabaseFiles(for: inboxId)
+        }
+
         Logger.info("Deleted inbox with clientId \(clientId)")
     }
 
@@ -753,7 +760,7 @@ public actor InboxStateMachine {
             Logger.info("Setting XMTPEnvironment.customLocalAddress = \(customHost)")
             XMTPEnvironment.customLocalAddress = customHost
         } else {
-            Logger.info("Clearing XMTPEnvironment.customLocalAddress")
+            Logger.debug("Clearing XMTPEnvironment.customLocalAddress")
             XMTPEnvironment.customLocalAddress = nil
         }
     }
