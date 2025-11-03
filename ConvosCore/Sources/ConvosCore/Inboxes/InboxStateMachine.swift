@@ -544,7 +544,6 @@ public actor InboxStateMachine {
         // Stop all services
         await syncingManager?.stop()
 
-
         // Unsubscribe from inbox-level welcome topic and unregister installation from backend
         // Note: Conversation topics are handled by ConversationStateMachine.cleanUp()
         let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat

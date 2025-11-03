@@ -10,7 +10,7 @@ swift_escape() {
     s="${s//$'\n'/\\n}"    # Escape newlines
     s="${s//$'\t'/\\t}"    # Escape tabs
     s="${s//$'\r'/\\r}"    # Escape carriage returns
-    echo "$s"
+    printf '%s\n' "$s"
 }
 
 # Validate Swift identifier
