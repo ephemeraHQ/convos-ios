@@ -21,19 +21,30 @@ final class ConfigManager {
     /// Get the current AppEnvironment from config (thread-safe)
     var currentEnvironment: AppEnvironment {
         environmentLock.lock()
-        defer { environmentLock.unlock() }
+        let cachedEnvironment = _currentEnvironment
+        environmentLock.unlock()
 
-        if let environment = _currentEnvironment {
+        if let environment = cachedEnvironment {
             return environment
         }
 
+        // Create environment outside the lock to avoid holding lock during potential fatalError
         let environment = createEnvironment()
+
+        environmentLock.lock()
         _currentEnvironment = environment
+        environmentLock.unlock()
+
         return environment
     }
 
+    /// Checks if a string is empty or contains only whitespace
+    private func isEmptyOrWhitespace(_ string: String) -> Bool {
+        string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     private func resolveAndValidateURL(secretsOverride: String, configDefault: String?, environmentName: String) -> String {
-        let url = (secretsOverride.isEmpty ? (configDefault ?? "") : secretsOverride)
+        let url = (isEmptyOrWhitespace(secretsOverride) ? (configDefault ?? "") : secretsOverride)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !url.isEmpty else {
             fatalError("Missing 'backendUrl' for \(environmentName) environment (Secrets or config.json)")
@@ -65,10 +76,10 @@ final class ConfigManager {
                 apiBaseURL: url,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
-                xmtpEndpoint: Secrets.XMTP_CUSTOM_HOST.isEmpty ? nil : Secrets.XMTP_CUSTOM_HOST,
+                xmtpEndpoint: isEmptyOrWhitespace(Secrets.XMTP_CUSTOM_HOST) ? nil : Secrets.XMTP_CUSTOM_HOST.trimmingCharacters(in: .whitespacesAndNewlines),
                 xmtpNetwork: xmtpNetwork
                 // @lourou: Enable when ready for XMTP v4 d14n
-                // gatewayUrl: Secrets.GATEWAY_URL.isEmpty ? nil : Secrets.GATEWAY_URL
+                // gatewayUrl: isEmptyOrWhitespace(Secrets.GATEWAY_URL) ? nil : Secrets.GATEWAY_URL.trimmingCharacters(in: .whitespacesAndNewlines)
             )
             environment = .local(config: config)
 
@@ -83,7 +94,7 @@ final class ConfigManager {
                 apiBaseURL: url,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
-                xmtpEndpoint: Secrets.XMTP_CUSTOM_HOST.isEmpty ? nil : Secrets.XMTP_CUSTOM_HOST,
+                xmtpEndpoint: isEmptyOrWhitespace(Secrets.XMTP_CUSTOM_HOST) ? nil : Secrets.XMTP_CUSTOM_HOST.trimmingCharacters(in: .whitespacesAndNewlines),
                 xmtpNetwork: xmtpNetwork
             )
             environment = .dev(config: config)

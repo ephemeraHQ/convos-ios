@@ -76,8 +76,13 @@ fi
 echo "🔍 Detecting configuration for Local development..."
 
 # Ensure minimal files exist first (in case this is the first run)
-ensure_minimal_secrets "$SECRETS_FILE_APP" || true  # Don't exit if file already exists
-ensure_minimal_secrets "$SECRETS_FILE_APPCLIP" || true  # Don't exit if file already exists
+# The function returns 0 if file was created, 1 if it already exists
+if ensure_minimal_secrets "$SECRETS_FILE_APP"; then
+    echo "Created minimal secrets for app"
+fi
+if ensure_minimal_secrets "$SECRETS_FILE_APPCLIP"; then
+    echo "Created minimal secrets for app clip"
+fi
 
 # Function to get the first routable IPv4 address
 get_local_ip() {

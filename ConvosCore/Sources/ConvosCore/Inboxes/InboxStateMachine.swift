@@ -524,6 +524,10 @@ public actor InboxStateMachine {
                 .inboxId
         }
 
+        if resolvedInboxId == nil {
+            Logger.warning("Could not resolve inboxId for clientId \(clientId) - database files will not be cleaned up")
+        }
+
         emitStateChange(.deleting(clientId: clientId, inboxId: resolvedInboxId))
 
         await syncingManager?.stop()
