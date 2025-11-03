@@ -20,18 +20,24 @@ final class ConfigManager {
 
     /// Get the current AppEnvironment from config (thread-safe)
     var currentEnvironment: AppEnvironment {
+        // First check without lock (fast path)
         environmentLock.lock()
-        let cachedEnvironment = _currentEnvironment
-        environmentLock.unlock()
-
-        if let environment = cachedEnvironment {
+        if let environment = _currentEnvironment {
+            environmentLock.unlock()
             return environment
         }
+        environmentLock.unlock()
 
         // Create environment outside the lock to avoid holding lock during potential fatalError
         let environment = createEnvironment()
 
+        // Double-checked locking: re-check after creating to prevent race condition
         environmentLock.lock()
+        if let existingEnvironment = _currentEnvironment {
+            // Another thread initialized it while we were creating
+            environmentLock.unlock()
+            return existingEnvironment
+        }
         _currentEnvironment = environment
         environmentLock.unlock()
 

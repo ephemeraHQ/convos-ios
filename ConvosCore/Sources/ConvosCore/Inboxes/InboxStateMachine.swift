@@ -416,8 +416,16 @@ public actor InboxStateMachine {
             // Ensure inbox is saved to database when authorizing
             // (in case it was registered as unused but is now being used)
             let inboxWriter = InboxWriter(dbWriter: databaseWriter)
-            try await inboxWriter.save(inboxId: client.inboxId, clientId: identity.clientId)
-            Logger.info("Ensured inbox is saved to database: \(client.inboxId)")
+            do {
+                try await inboxWriter.save(inboxId: client.inboxId, clientId: identity.clientId)
+                Logger.info("Ensured inbox is saved to database: \(client.inboxId)")
+            } catch {
+                Logger.error("Failed to save inbox to database during authorization: \(error)")
+                // Clean up newly created/built client local state to avoid orphaned files
+                try? client.deleteLocalDatabase()
+                deleteDatabaseFiles(for: client.inboxId)
+                throw error
+            }
         } else {
             Logger.warning("Skipping save to database during authorization")
         }
@@ -451,9 +459,11 @@ public actor InboxStateMachine {
                 try await inboxWriter.save(inboxId: client.inboxId, clientId: clientId)
                 Logger.info("Saved inbox to database with clientId: \(clientId)")
             } catch {
-                // Rollback keychain entry on database failure to maintain consistency
-                Logger.error("Failed to save inbox to database, rolling back keychain: \(error)")
+                // Rollback keychain entry and clean up XMTP files on database failure
+                Logger.error("Failed to save inbox to database, rolling back keychain and cleaning up files: \(error)")
                 try? await identityStore.delete(clientId: clientId)
+                try? client.deleteLocalDatabase()
+                deleteDatabaseFiles(for: client.inboxId)
                 throw error
             }
         } else {
