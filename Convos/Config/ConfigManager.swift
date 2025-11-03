@@ -157,8 +157,19 @@ final class ConfigManager {
         return scheme
     }
 
-    /// XMTP Network from config (optional)
+    /// XMTP Network from config (optional, validated)
     var xmtpNetwork: String? {
-        config["xmtpNetwork"] as? String
+        guard let network = config["xmtpNetwork"] as? String else {
+            return nil
+        }
+
+        let validNetworks = ["local", "dev", "production", "prod"]
+        let normalizedNetwork = network.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard validNetworks.contains(normalizedNetwork) else {
+            fatalError("Invalid 'xmtpNetwork' value '\(network)' in config.json. Must be one of: local, dev, production, prod")
+        }
+
+        return normalizedNetwork
     }
 }
