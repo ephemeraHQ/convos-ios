@@ -45,14 +45,14 @@ final class ConfigManager {
             // Empty Secrets (from missing/empty .env) trigger auto-detection, which may produce empty if IP detection fails
             // This code provides fallback to config.json when Secrets are empty
             let effectiveApiUrl = Secrets.CONVOS_API_BASE_URL.isEmpty ? (backendURLDefault ?? "") : Secrets.CONVOS_API_BASE_URL
-            let effectiveGatewayUrl = Secrets.GATEWAY_URL.isEmpty ? nil : Secrets.GATEWAY_URL
             let config = ConvosConfiguration(
                 apiBaseURL: effectiveApiUrl,
                 appGroupIdentifier: appGroupIdentifier,
                 relyingPartyIdentifier: relyingPartyIdentifier,
                 xmtpEndpoint: Secrets.XMTP_CUSTOM_HOST.isEmpty ? nil : Secrets.XMTP_CUSTOM_HOST,
-                xmtpNetwork: xmtpNetwork,
-                gatewayUrl: effectiveGatewayUrl
+                xmtpNetwork: xmtpNetwork
+                // @lourou: Enable when ready for XMTP v4 d14n
+                // gatewayUrl: Secrets.GATEWAY_URL.isEmpty ? nil : Secrets.GATEWAY_URL
             )
             environment = .local(config: config)
 

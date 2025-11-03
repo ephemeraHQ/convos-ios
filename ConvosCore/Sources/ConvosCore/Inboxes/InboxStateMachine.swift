@@ -232,33 +232,35 @@ public actor InboxStateMachine {
         // Set custom XMTP host if provided
         Logger.info("🔧 XMTP Configuration:")
 
-        if let gatewayUrl = environment.gatewayUrl {
-            // XMTP d14n - using gateway
-            Logger.info("   Mode = XMTP d14n")
-            Logger.info("   GATEWAY_URL = \(gatewayUrl)")
-            // Clear any previous custom address when using gateway
-            if XMTPEnvironment.customLocalAddress != nil {
-                Logger.info("   Clearing previous customLocalAddress for gateway mode")
-                XMTPEnvironment.customLocalAddress = nil
-            }
-        } else {
-            // XMTP v3
-            Logger.info("   Mode = XMTP v3")
-            Logger.info("   XMTP_CUSTOM_HOST = \(environment.xmtpEndpoint ?? "nil")")
-            Logger.info("   customLocalAddress = \(environment.customLocalAddress ?? "nil")")
-            Logger.info("   xmtpEnv = \(environment.xmtpEnv)")
-            Logger.info("   isSecure = \(environment.isSecure)")
+        // @lourou: Enable XMTP v4 d14n when ready
+        // if let gatewayUrl = environment.gatewayUrl {
+        //     // XMTP d14n - using gateway
+        //     Logger.info("   Mode = XMTP d14n")
+        //     Logger.info("   GATEWAY_URL = \(gatewayUrl)")
+        //     // Clear any previous custom address when using gateway
+        //     if XMTPEnvironment.customLocalAddress != nil {
+        //         Logger.info("   Clearing previous customLocalAddress for gateway mode")
+        //         XMTPEnvironment.customLocalAddress = nil
+        //     }
+        // } else {
 
-            // Update XMTPEnvironment.customLocalAddress (clear if nil)
-            if let customHost = environment.customLocalAddress {
-                Logger.info("Setting XMTPEnvironment.customLocalAddress = \(customHost)")
-                XMTPEnvironment.customLocalAddress = customHost
-                Logger.info("Actual XMTPEnvironment.customLocalAddress = \(XMTPEnvironment.customLocalAddress ?? "nil")")
-            } else {
-                Logger.info("Clearing XMTPEnvironment.customLocalAddress")
-                XMTPEnvironment.customLocalAddress = nil
-            }
+        // XMTP v3
+        Logger.info("   Mode = XMTP v3")
+        Logger.info("   XMTP_CUSTOM_HOST = \(environment.xmtpEndpoint ?? "nil")")
+        Logger.info("   customLocalAddress = \(environment.customLocalAddress ?? "nil")")
+        Logger.info("   xmtpEnv = \(environment.xmtpEnv)")
+        Logger.info("   isSecure = \(environment.isSecure)")
+
+        // Update XMTPEnvironment.customLocalAddress (clear if nil)
+        if let customHost = environment.customLocalAddress {
+            Logger.info("Setting XMTPEnvironment.customLocalAddress = \(customHost)")
+            XMTPEnvironment.customLocalAddress = customHost
+            Logger.info("Actual XMTPEnvironment.customLocalAddress = \(XMTPEnvironment.customLocalAddress ?? "nil")")
+        } else {
+            Logger.info("Clearing XMTPEnvironment.customLocalAddress")
+            XMTPEnvironment.customLocalAddress = nil
         }
+        // }
     }
 
     // MARK: - Public
@@ -719,25 +721,26 @@ public actor InboxStateMachine {
     // MARK: - Helpers
 
     private func clientOptions(keys: any XMTPClientKeys) -> ClientOptions {
+        // @lourou: Enable XMTP v4 d14n when ready
         // When gatewayUrl is provided, we're using d14n
         // The gateway handles env/isSecure automatically, so we don't set them
-        let apiOptions: ClientOptions.Api
-        if let gatewayUrl = environment.gatewayUrl, !gatewayUrl.isEmpty {
-            // d14n mode: gateway handles network selection
-            Logger.info("Using XMTP d14n - Gateway: \(gatewayUrl)")
-            apiOptions = .init(
-                appVersion: "convos/\(Bundle.appVersion)",
-                gatewayUrl: gatewayUrl
-            )
-        } else {
-            // Direct XMTP connection: we specify env and isSecure
-            Logger.info("🔗 Using direct XMTP connection with env: \(environment.xmtpEnv)")
-            apiOptions = .init(
-                env: environment.xmtpEnv,
-                isSecure: environment.isSecure,
-                appVersion: "convos/\(Bundle.appVersion)"
-            )
-        }
+        // if let gatewayUrl = environment.gatewayUrl, !gatewayUrl.isEmpty {
+        //     // d14n mode: gateway handles network selection
+        //     Logger.info("Using XMTP d14n - Gateway: \(gatewayUrl)")
+        //     apiOptions = .init(
+        //         appVersion: "convos/\(Bundle.appVersion)",
+        //         gatewayUrl: gatewayUrl
+        //     )
+        // } else {
+
+        // Direct XMTP v3 connection: we specify env and isSecure
+        Logger.info("🔗 Using direct XMTP connection with env: \(environment.xmtpEnv)")
+        let apiOptions: ClientOptions.Api = .init(
+            env: environment.xmtpEnv,
+            isSecure: environment.isSecure,
+            appVersion: "convos/\(Bundle.appVersion)"
+        )
+        // }
 
         return ClientOptions(
             api: apiOptions,
