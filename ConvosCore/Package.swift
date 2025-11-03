@@ -22,7 +22,7 @@ let package = Package(
         .package(url: "https://github.com/SimplyDanny/SwiftLintPlugins", from: "0.61.0"),
         .package(url: "https://github.com/firebase/firebase-ios-sdk", from: "12.1.0"),
         .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.31.1"),
-        .package(url: "https://github.com/getsentry/sentry-cocoa.git", from: "9.0.0")
+        .package(url: "https://github.com/getsentry/sentry-cocoa.git", from: "8.9.0")
     ],
     targets: [
         .target(
