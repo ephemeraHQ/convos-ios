@@ -28,7 +28,7 @@ if [[ -n "${SENTRY_DSN_DEV}" ]]; then
     ESCAPED_SENTRY_DSN=$(swift_escape "${SENTRY_DSN_DEV}")
 elif [[ -n "${SENTRY_DSN_PROD}" ]]; then
     ESCAPED_SENTRY_DSN=""
-    echo "🚫 Production build detected - Sentry DSN explicitly disabled"
+    echo "Production build - Sentry disabled"
 else
     ESCAPED_SENTRY_DSN=$(swift_escape "${SENTRY_DSN:-}")
 fi
