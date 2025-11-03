@@ -515,9 +515,16 @@ public actor InboxStateMachine {
         Logger.info("Deleting inbox with clientId \(clientId) from error state...")
         defer { enqueueAction(.stop) }
 
-        let currentInboxId = inboxId
+        // Resolve inboxId from database since it might be nil in error state
+        var resolvedInboxId: String?
+        try await databaseWriter.write { db in
+            resolvedInboxId = try? DBInbox
+                .filter(DBInbox.Columns.clientId == clientId)
+                .fetchOne(db)?
+                .inboxId
+        }
 
-        emitStateChange(.deleting(clientId: clientId, inboxId: currentInboxId))
+        emitStateChange(.deleting(clientId: clientId, inboxId: resolvedInboxId))
 
         await syncingManager?.stop()
 
@@ -526,7 +533,7 @@ public actor InboxStateMachine {
         try await identityStore.delete(clientId: clientId)
 
         // Delete database files to match behavior of handleDelete
-        if let inboxId = currentInboxId {
+        if let inboxId = resolvedInboxId {
             deleteDatabaseFiles(for: inboxId)
         }
 
