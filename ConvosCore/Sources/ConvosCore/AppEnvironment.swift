@@ -120,7 +120,8 @@ public enum AppEnvironment {
         case .local(config: let config), .dev(config: let config), .production(config: let config):
             return config.xmtpEndpoint
         case .tests:
-            return nil
+            // Point to local Docker XMTP node for tests
+            return "localhost"
         }
     }
 

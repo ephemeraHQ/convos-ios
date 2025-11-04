@@ -57,7 +57,7 @@ enum InboxStateError: Error {
     case inboxNotReady
 }
 
-public struct InboxReadyResult {
+public struct InboxReadyResult: Sendable {
     public let client: any XMTPClientProvider
     public let apiClient: any ConvosAPIClientProtocol
 }
@@ -88,7 +88,7 @@ public actor InboxStateMachine {
              stop
     }
 
-    public enum State {
+    public enum State: Sendable {
         case idle(clientId: String)
         case authorizing(clientId: String, inboxId: String)
         case registering(clientId: String)
@@ -96,7 +96,7 @@ public actor InboxStateMachine {
         case ready(clientId: String, result: InboxReadyResult)
         case deleting(clientId: String, inboxId: String?)
         case stopping(clientId: String)
-        case error(clientId: String, error: Error)
+        case error(clientId: String, error: any Error)
     }
 
     // MARK: -

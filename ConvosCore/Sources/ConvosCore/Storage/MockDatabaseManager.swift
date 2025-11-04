@@ -30,4 +30,21 @@ class MockDatabaseManager: DatabaseManagerProtocol {
             fatalError("Failed to initialize database: \(error)")
         }
     }
+
+    /// Create a fresh test database with a unique name for test isolation
+    static func makeTestDatabase() -> MockDatabaseManager {
+        // Create unique instance with in-memory database for test isolation
+        do {
+            let instance = try DatabaseQueue()
+            try SharedDatabaseMigrator.shared.migrate(database: instance)
+            return MockDatabaseManager(dbPool: instance)
+        } catch {
+            fatalError("Failed to create test database: \(error)")
+        }
+    }
+
+    /// Private init for creating test instances with custom database
+    private init(dbPool: DatabaseQueue) {
+        self.dbPool = dbPool
+    }
 }

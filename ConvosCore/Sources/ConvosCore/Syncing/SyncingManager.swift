@@ -1,6 +1,5 @@
 import Foundation
 import GRDB
-import UIKit
 import XMTPiOS
 
 // MARK: - Protocol
