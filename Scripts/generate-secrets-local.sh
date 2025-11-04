@@ -126,7 +126,8 @@ get_config_value() {
     local key=$2
     if [ -f "$config_file" ]; then
         # Use python to parse JSON (available on macOS by default)
-        python3 -c "import json; print(json.load(open('$config_file')).get('$key', ''))" 2>/dev/null || echo ""
+        # Type-check to avoid printing "None" for null values
+        python3 -c "import json; v=json.load(open('$config_file')).get('$key', ''); print(v if isinstance(v, str) else '')" 2>/dev/null || echo ""
     else
         echo ""
     fi
@@ -153,18 +154,18 @@ if [ -f ".env" ]; then
     # Check if keys exist in .env (even if empty)
     if grep -v '^#' ".env" | grep -q '^CONVOS_API_BASE_URL='; then
         ENV_HAS_BACKEND_URL=true
-        ENV_BACKEND_URL=$(grep -v '^#' ".env" | grep '^CONVOS_API_BASE_URL=' | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
+        ENV_BACKEND_URL=$(grep -v '^#' ".env" | grep '^CONVOS_API_BASE_URL=' | tail -n1 | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
     fi
     if grep -v '^#' ".env" | grep -q '^XMTP_CUSTOM_HOST='; then
         ENV_HAS_XMTP_HOST=true
-        ENV_XMTP_HOST=$(grep -v '^#' ".env" | grep '^XMTP_CUSTOM_HOST=' | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
+        ENV_XMTP_HOST=$(grep -v '^#' ".env" | grep '^XMTP_CUSTOM_HOST=' | tail -n1 | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
     fi
     if grep -v '^#' ".env" | grep -q '^GATEWAY_URL='; then
         ENV_HAS_GATEWAY_URL=true
-        ENV_GATEWAY_URL=$(grep -v '^#' ".env" | grep '^GATEWAY_URL=' | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
+        ENV_GATEWAY_URL=$(grep -v '^#' ".env" | grep '^GATEWAY_URL=' | tail -n1 | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
     fi
     if grep -v '^#' ".env" | grep -q '^SENTRY_DSN='; then
-        ENV_SENTRY_DSN=$(grep -v '^#' ".env" | grep '^SENTRY_DSN=' | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
+        ENV_SENTRY_DSN=$(grep -v '^#' ".env" | grep '^SENTRY_DSN=' | tail -n1 | cut -d'=' -f2- | sed -e 's/^"//' -e 's/"$//' || true)
     fi
 fi
 
