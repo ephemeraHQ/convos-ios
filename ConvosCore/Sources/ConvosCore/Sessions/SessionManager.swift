@@ -35,6 +35,8 @@ public final class SessionManager: SessionManagerProtocol {
     private let databaseReader: any DatabaseReader
     private let environment: AppEnvironment
     private var initializationTask: Task<Void, Never>?
+    private var unusedInboxPrepTask: Task<Void, Never>?
+    private let deviceRegistrationManager: any DeviceRegistrationManagerProtocol
 
     init(databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader,
@@ -42,11 +44,22 @@ public final class SessionManager: SessionManagerProtocol {
         self.databaseWriter = databaseWriter
         self.databaseReader = databaseReader
         self.environment = environment
+        self.deviceRegistrationManager = DeviceRegistrationManager(environment: environment)
         observe()
 
         let identityStore = environment.defaultIdentityStore
         initializationTask = Task { [weak self] in
             guard let self else { return }
+            guard !Task.isCancelled else { return }
+
+            // Register device on app launch
+            await self.deviceRegistrationManager.registerDeviceIfNeeded()
+            guard !Task.isCancelled else { return }
+
+            // Start observing push token changes for automatic re-registration
+            await self.deviceRegistrationManager.startObservingPushTokenChanges()
+            guard !Task.isCancelled else { return }
+
             do {
                 let identities = try await identityStore.loadAll()
                 guard !Task.isCancelled else { return }
@@ -55,12 +68,12 @@ public final class SessionManager: SessionManagerProtocol {
                 Logger.error("Error starting messaging services: \(error.localizedDescription)")
             }
             guard !Task.isCancelled else { return }
-            Task(priority: .background) {
-                guard !Task.isCancelled else { return }
+            self.unusedInboxPrepTask = Task(priority: .background) { [weak self] in
+                guard let self, !Task.isCancelled else { return }
                 await UnusedInboxCache.shared.prepareUnusedInboxIfNeeded(
-                    databaseWriter: databaseWriter,
-                    databaseReader: databaseReader,
-                    environment: environment
+                    databaseWriter: self.databaseWriter,
+                    databaseReader: self.databaseReader,
+                    environment: self.environment
                 )
             }
         }
@@ -68,6 +81,7 @@ public final class SessionManager: SessionManagerProtocol {
 
     deinit {
         initializationTask?.cancel()
+        unusedInboxPrepTask?.cancel()
         if let leftConversationObserver {
             NotificationCenter.default.removeObserver(leftConversationObserver)
         }
@@ -116,7 +130,8 @@ public final class SessionManager: SessionManagerProtocol {
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment,
-            startsStreamingServices: true
+            startsStreamingServices: true,
+            deviceRegistrationManager: deviceRegistrationManager
         )
     }
 

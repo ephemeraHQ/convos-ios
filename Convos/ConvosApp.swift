@@ -25,16 +25,23 @@ struct ConvosApp: App {
         // Run migration to wipe app data (must be done synchronously before app starts)
         Self.runDataWipeMigrationSync(environment: environment)
 
+        // Configure Firebase BEFORE creating ConvosClient
+        // This prevents a race condition where SessionManager tries to use AppCheck before it's configured
+        switch environment {
+        case .tests:
+            Logger.info("Running in test environment, skipping Firebase config...")
+        default:
+            if let url = ConfigManager.shared.currentEnvironment.firebaseConfigURL {
+                FirebaseHelperCore.configure(with: url)
+            } else {
+                Logger.error("Missing Firebase plist URL for current environment")
+            }
+        }
+
         let convos: ConvosClient = .client(environment: environment)
         self.session = convos.session
         self.conversationsViewModel = .init(session: session)
         appDelegate.session = session
-
-        if let url = ConfigManager.shared.currentEnvironment.firebaseConfigURL {
-            FirebaseHelperCore.configure(with: url)
-        } else {
-            Logger.error("Missing Firebase plist URL for current environment")
-        }
     }
 
     var body: some Scene {

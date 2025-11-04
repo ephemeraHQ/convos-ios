@@ -163,7 +163,7 @@ public enum AppEnvironment {
 }
 
 public extension AppEnvironment {
-    private var isTestingEnvironment: Bool {
+    var isTestingEnvironment: Bool {
         switch self {
         case .tests:
             true

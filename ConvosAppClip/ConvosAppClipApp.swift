@@ -21,16 +21,18 @@ struct ConvosAppClipApp: App {
 
         Logger.info("App starting with environment: \(environment)")
 
-        let convos: ConvosClient = .client(environment: environment)
-        self.session = convos.session
-        self.conversationsViewModel = .init(session: session)
-        appDelegate.session = session
-
+        // Configure Firebase BEFORE creating ConvosClient
+        // This prevents a race condition where SessionManager tries to use AppCheck before it's configured
         if let url = ConfigManager.shared.currentEnvironment.firebaseConfigURL {
             FirebaseHelperCore.configure(with: url)
         } else {
             Logger.error("Missing Firebase plist URL for current environment")
         }
+
+        let convos: ConvosClient = .client(environment: environment)
+        self.session = convos.session
+        self.conversationsViewModel = .init(session: session)
+        appDelegate.session = session
     }
 
     var body: some Scene {

@@ -23,8 +23,6 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     func authenticate(appCheckToken: String,
                       retryCount: Int) async throws -> String
 
-    func checkAuth() async throws
-
     func uploadAttachment(
         data: Data,
         filename: String,
@@ -38,7 +36,6 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     ) async throws -> String
 
     // Push notifications
-    func registerDevice(deviceId: String, pushToken: String?) async throws
     func subscribeToTopics(deviceId: String, clientId: String, topics: [String]) async throws
     func unsubscribeFromTopics(clientId: String, topics: [String]) async throws
     func unregisterInstallation(clientId: String) async throws
@@ -176,7 +173,6 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
     private func reAuthenticate() async throws -> String {
         let firebaseAppCheckToken = try await FirebaseHelperCore.getAppCheckToken()
-
         return try await authenticate(
             appCheckToken: firebaseAppCheckToken,
             retryCount: 0
@@ -247,11 +243,6 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         try keychainService.saveString(authResponse.token, for: .init(deviceId: deviceId))
         Logger.info("Successfully authenticated and stored JWT token")
         return authResponse.token
-    }
-
-    func checkAuth() async throws {
-        let request = try authenticatedRequest(for: "v2/auth-check")
-        let _: ConvosAPI.AuthCheckResponse = try await performRequest(request)
     }
 
     // MARK: - Private Helpers

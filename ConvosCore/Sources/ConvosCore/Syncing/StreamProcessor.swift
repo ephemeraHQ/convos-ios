@@ -46,6 +46,7 @@ actor StreamProcessor: StreamProcessorProtocol {
     private let messageWriter: any IncomingMessageWriterProtocol
     private let localStateWriter: any ConversationLocalStateWriterProtocol
     private let joinRequestsManager: any InviteJoinRequestsManagerProtocol
+    private let deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)?
     private let consentStates: [ConsentState] = [.allowed, .unknown]
 
     // MARK: - Initialization
@@ -53,9 +54,11 @@ actor StreamProcessor: StreamProcessorProtocol {
     init(
         identityStore: any KeychainIdentityStoreProtocol,
         databaseWriter: any DatabaseWriter,
-        databaseReader: any DatabaseReader
+        databaseReader: any DatabaseReader,
+        deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)? = nil
     ) {
         self.identityStore = identityStore
+        self.deviceRegistrationManager = deviceRegistrationManager
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(
             identityStore: identityStore,
@@ -217,6 +220,14 @@ actor StreamProcessor: StreamProcessorProtocol {
         apiClient: any ConvosAPIClientProtocol,
         context: String
     ) async {
+        // Ensure device is registered before subscribing to topics
+        // This is a defensive check - the device should already be registered on app launch,
+        // but we want to ensure it's registered before we attempt topic subscription
+        guard let deviceManager = deviceRegistrationManager else {
+            Logger.warning("DeviceRegistrationManager not available, skipping topic subscription")
+            return
+        }
+
         let conversationTopic = conversationId.xmtpGroupTopicFormat
         let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
 
@@ -224,6 +235,8 @@ actor StreamProcessor: StreamProcessorProtocol {
             Logger.warning("Identity not found, skipping push notification subscription")
             return
         }
+
+        await deviceManager.registerDeviceIfNeeded()
 
         do {
             let deviceId = DeviceInfo.deviceIdentifier

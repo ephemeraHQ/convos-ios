@@ -108,18 +108,11 @@ public actor InboxStateMachine {
     private let savesInboxToDatabase: Bool
     private let overrideJWTToken: String?
     private let databaseWriter: any DatabaseWriter
-    private lazy var deviceRegistrationManager: DeviceRegistrationManager = {
-        DeviceRegistrationManager(environment: environment)
-    }()
+    private let apiClient: any ConvosAPIClientProtocol
 
     private var currentTask: Task<Void, Never>?
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
-    nonisolated(unsafe) private var pushTokenObserver: NSObjectProtocol?
-
-    deinit {
-        removePushTokenObserver()
-    }
 
     // MARK: - State Observation
 
@@ -208,6 +201,13 @@ public actor InboxStateMachine {
         self.overrideJWTToken = overrideJWTToken
         self.environment = environment
 
+        // Initialize API client
+        Logger.info("Initializing API client (JWT override: \(overrideJWTToken != nil))...")
+        self.apiClient = ConvosAPIClientFactory.client(
+            environment: environment,
+            overrideJWTToken: overrideJWTToken
+        )
+
         // Set custom XMTP host if provided
         Logger.info("🔧 XMTP Configuration:")
         Logger.info("   XMTP_CUSTOM_HOST = \(environment.xmtpEndpoint ?? "nil")")
@@ -252,6 +252,9 @@ public actor InboxStateMachine {
 
     private func processNextAction() {
         guard !isProcessing, !actionQueue.isEmpty else { return }
+
+        // Cancel any existing task before starting a new one
+        currentTask?.cancel()
 
         isProcessing = true
         let action = actionQueue.removeFirst()
@@ -319,7 +322,11 @@ public actor InboxStateMachine {
     }
 
     private func handleAuthorize(inboxId: String, clientId: String) async throws {
+        try Task.checkCancellation()
+
         let identity = try await identityStore.identity(for: inboxId)
+
+        try Task.checkCancellation()
 
         // Verify clientId matches
         guard identity.clientId == clientId else {
@@ -333,12 +340,14 @@ public actor InboxStateMachine {
         let clientOptions = clientOptions(keys: keys)
         let client: any XMTPClientProvider
         do {
+            try Task.checkCancellation()
             client = try await buildXmtpClient(
                 inboxId: identity.inboxId,
                 identity: keys.signingKey.identity,
                 options: clientOptions
             )
         } catch {
+            try Task.checkCancellation()
             Logger.info("Error building client, trying create...")
             client = try await createXmtpClient(
                 signingKey: keys.signingKey,
@@ -348,6 +357,8 @@ public actor InboxStateMachine {
             emitStateChange(.authorizing(clientId: clientId, inboxId: client.inboxId))
             Logger.info("Updated state with new client inboxId: \(client.inboxId)")
         }
+
+        try Task.checkCancellation()
 
         if savesInboxToDatabase {
             // Ensure inbox is saved to database when authorizing
@@ -363,19 +374,28 @@ public actor InboxStateMachine {
     }
 
     private func handleRegister(clientId: String) async throws {
+        try Task.checkCancellation()
+
         emitStateChange(.registering(clientId: clientId))
         Logger.info("Started registration flow with clientId: \(clientId)")
 
         let keys = try await identityStore.generateKeys()
+
+        try Task.checkCancellation()
+
         let client = try await createXmtpClient(
             signingKey: keys.signingKey,
             options: clientOptions(keys: keys)
         )
 
+        try Task.checkCancellation()
+
         Logger.info("Generated clientId: \(clientId) for inboxId: \(client.inboxId)")
 
         // Save to keychain with clientId
         _ = try await identityStore.save(inboxId: client.inboxId, clientId: clientId, keys: keys)
+
+        try Task.checkCancellation()
 
         // Conditionally save to database based on configuration
         if savesInboxToDatabase {
@@ -397,43 +417,38 @@ public actor InboxStateMachine {
     }
 
     private func handleClientAuthorized(clientId: String, client: any XMTPClientProvider) async throws {
+        try Task.checkCancellation()
+
         emitStateChange(.authenticatingBackend(clientId: clientId, inboxId: client.inboxId))
 
-        Logger.info("Authenticating API client...")
-        let apiClient = try await authorizeConvosBackend(client: client)
+        Logger.info("Authenticating with backend...")
+        try await authenticateBackend()
+
+        try Task.checkCancellation()
 
         enqueueAction(.authorized(clientId: clientId, result: .init(client: client, apiClient: apiClient)))
     }
 
     private func handleClientRegistered(clientId: String, client: any XMTPClientProvider) async throws {
+        try Task.checkCancellation()
+
         emitStateChange(.authenticatingBackend(clientId: clientId, inboxId: client.inboxId))
-        Logger.info("Authenticating backend for registration...")
-        let apiClient = try await authorizeConvosBackend(client: client)
+        Logger.info("Authenticating with backend...")
+        try await authenticateBackend()
+
+        try Task.checkCancellation()
+
         enqueueAction(.authorized(clientId: clientId, result: .init(client: client, apiClient: apiClient)))
     }
 
     private func handleAuthorized(clientId: String, client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
-        emitStateChange(.ready(clientId: clientId, result: .init(client: client, apiClient: apiClient)))
-
-        Logger.info("Authorized, state machine is ready.")
-
         await syncingManager?.start(with: client, apiClient: apiClient)
-
-        if overrideJWTToken == nil {
-            // Register device on app launch (without push token - that's OK)
-            // This creates the device record in the backend
-            await deviceRegistrationManager.registerDeviceIfNeeded()
-
-            // Setup push token observer to re-register when token arrives
-            // Push permissions are requested when user creates/joins their first conversation
-            setupPushTokenObserver()
-            Logger.info("Device registered and push token observer set up. Will request permissions when user creates/joins a conversation.")
-        } else {
-            Logger.info("Using JWT override mode, skipping push notification registration")
-        }
+        emitStateChange(.ready(clientId: clientId, result: .init(client: client, apiClient: apiClient)))
     }
 
     private func handleDelete(clientId: String, client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
+        try Task.checkCancellation()
+
         Logger.info("Deleting inbox with clientId: \(clientId)...")
         let inboxId = client.inboxId
         emitStateChange(.deleting(clientId: clientId, inboxId: inboxId))
@@ -445,6 +460,8 @@ public actor InboxStateMachine {
     }
 
     private func handleDeleteFromError(clientId: String) async throws {
+        try Task.checkCancellation()
+
         Logger.info("Deleting inbox with clientId \(clientId) from error state...")
         defer { enqueueAction(.stop) }
 
@@ -454,8 +471,13 @@ public actor InboxStateMachine {
 
         await syncingManager?.stop()
 
+        try Task.checkCancellation()
+
         // Clean up database records and keychain if we have an inbox ID
         try await cleanupInboxData(clientId: clientId)
+
+        try Task.checkCancellation()
+
         try await identityStore.delete(clientId: clientId)
         Logger.info("Deleted inbox with clientId \(clientId)")
     }
@@ -464,7 +486,6 @@ public actor InboxStateMachine {
         Logger.info("Stopping inbox with clientId \(clientId)...")
         emitStateChange(.stopping(clientId: clientId))
         await syncingManager?.stop()
-        removePushTokenObserver()
         emitStateChange(.idle(clientId: clientId))
     }
 
@@ -474,8 +495,12 @@ public actor InboxStateMachine {
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol
     ) async throws {
+        try Task.checkCancellation()
+
         // Stop all services
         await syncingManager?.stop()
+
+        try Task.checkCancellation()
 
         // Unsubscribe from inbox-level welcome topic and unregister installation from backend
         // Note: Conversation topics are handled by ConversationStateMachine.cleanUp()
@@ -490,6 +515,8 @@ public actor InboxStateMachine {
             // Continue with cleanup even if unsubscribe fails
         }
 
+        try Task.checkCancellation()
+
         // Unregister installation
         do {
             try await apiClient.unregisterInstallation(clientId: clientId)
@@ -498,6 +525,8 @@ public actor InboxStateMachine {
             // Ignore errors during unregistration (common during account deletion when auth may be invalid)
             Logger.info("Could not unregister installation (likely during account deletion): \(error)")
         }
+
+        try Task.checkCancellation()
 
         // Revoke installation if identity is available
         if let identity = try? await identityStore.identity(for: client.inboxId) {
@@ -514,12 +543,18 @@ public actor InboxStateMachine {
             Logger.warning("Identity not found, skipping revoking installation...")
         }
 
+        try Task.checkCancellation()
+
         // Clean up all database records for this inbox
         try await cleanupInboxData(clientId: clientId)
+
+        try Task.checkCancellation()
 
         // Delete identity and local database
         try await identityStore.delete(clientId: clientId)
         try client.deleteLocalDatabase()
+
+        try Task.checkCancellation()
 
         // Delete database files
         deleteDatabaseFiles(for: client.inboxId)
@@ -569,6 +604,8 @@ public actor InboxStateMachine {
 
     /// Deletes all database records associated with a given inboxId
     private func cleanupInboxData(clientId: String) async throws {
+        try Task.checkCancellation()
+
         Logger.info("Cleaning up all data for inbox clientId: \(clientId)")
 
         try await databaseWriter.write { db in
@@ -683,65 +720,24 @@ public actor InboxStateMachine {
         return client
     }
 
-    private func initializeApiClient(client: any XMTPClientProvider) -> any ConvosAPIClientProtocol {
-        Logger.info("Initializing API client (JWT override: \(overrideJWTToken != nil))...")
-        return ConvosAPIClientFactory.client(
-            environment: environment,
-            overrideJWTToken: overrideJWTToken
-        )
-    }
+    private func authenticateBackend() async throws {
+        try Task.checkCancellation()
 
-    private func authorizeConvosBackend(client: any XMTPClientProvider) async throws -> any ConvosAPIClientProtocol {
-        let apiClient = initializeApiClient(client: client)
-
-        // When using JWT override, skip authentication check
+        // When using JWT override, skip authentication
         // We'll use the JWT token from the push notification payload
-        if let token = overrideJWTToken, !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            Logger.info("JWT override mode: skipping auth-check, will use JWT from push payload")
-            return apiClient
-        }
-
-        // In main app context, test authentication
-        Logger.info("Authorizing backend with lazy authentication...")
-        Logger.info("Testing authentication with /auth-check...")
-        _ = try await apiClient.checkAuth()
-
-        return apiClient
-    }
-
-    // MARK: - Push Token Observer
-
-    private func setupPushTokenObserver() {
-        guard pushTokenObserver == nil else { return }
-
-        Logger.info("Setting up push token observer...")
-        pushTokenObserver = NotificationCenter.default.addObserver(
-            forName: .convosPushTokenDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { [weak self] in
-                await self?.handlePushTokenChange()
-            }
-        }
-    }
-
-    nonisolated
-    private func removePushTokenObserver() {
-        if let observer = pushTokenObserver {
-            NotificationCenter.default.removeObserver(observer)
-            pushTokenObserver = nil
-            Logger.info("Removed push token observer")
-        }
-    }
-
-    private func handlePushTokenChange() async {
-        guard case .ready = _state else {
-            Logger.info("Push token changed but inbox not ready, skipping re-registration")
+        guard overrideJWTToken == nil, !environment.isTestingEnvironment else {
+            Logger.info("JWT override mode: skipping authentication, will use JWT from push payload")
             return
         }
 
-        Logger.info("Push token changed or became available, re-registering device...")
-        await deviceRegistrationManager.registerDeviceIfNeeded()
+        // Explicitly authenticate with backend using Firebase AppCheck
+        Logger.info("Getting Firebase AppCheck token...")
+        let appCheckToken = try await FirebaseHelperCore.getAppCheckToken()
+
+        try Task.checkCancellation()
+
+        Logger.info("Authenticating with backend and storing JWT...")
+        _ = try await apiClient.authenticate(appCheckToken: appCheckToken, retryCount: 0)
+        Logger.info("Successfully authenticated with backend")
     }
 }

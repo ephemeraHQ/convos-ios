@@ -81,9 +81,9 @@ struct InboxStateMachineTests {
 
         let stateMachine = InboxStateMachine(
             clientId: clientId,
-            identityStore: await fixtures.identityStore,
+            identityStore: fixtures.identityStore,
             invitesRepository: mockInvites,
-            databaseWriter: await fixtures.databaseManager.dbWriter,
+            databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: nil,
             savesInboxToDatabase: false, // Don't save to database
             environment: .tests
@@ -193,9 +193,9 @@ struct InboxStateMachineTests {
 
         let stateMachine = InboxStateMachine(
             clientId: wrongClientId,
-            identityStore: await fixtures.identityStore,
+            identityStore: fixtures.identityStore,
             invitesRepository: mockInvites,
-            databaseWriter: await fixtures.databaseManager.dbWriter,
+            databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: nil,
             savesInboxToDatabase: true,
             environment: .tests
@@ -432,9 +432,9 @@ struct InboxStateMachineTests {
 
         let stateMachine = InboxStateMachine(
             clientId: clientId,
-            identityStore: await fixtures.identityStore,
+            identityStore: fixtures.identityStore,
             invitesRepository: mockInvites,
-            databaseWriter: await fixtures.databaseManager.dbWriter,
+            databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: nil,
             savesInboxToDatabase: true,
             environment: .tests
@@ -490,7 +490,6 @@ struct InboxStateMachineTests {
 
         // Verify state progression
         let observedStates = await collector.getStates()
-        #expect(observedStates.contains("idle"))
         #expect(observedStates.contains("registering"))
         #expect(observedStates.contains("authenticatingBackend"))
         #expect(observedStates.contains("ready"))

@@ -22,7 +22,21 @@ protocol AuthorizeInboxOperationProtocol {
 final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     let stateMachine: InboxStateMachine
     private var cancellables: Set<AnyCancellable> = []
-    private var task: Task<Void, Never>?
+    private let taskLock: NSLock = NSLock()
+    private var _task: Task<Void, Never>?
+
+    private var task: Task<Void, Never>? {
+        get {
+            taskLock.lock()
+            defer { taskLock.unlock() }
+            return _task
+        }
+        set {
+            taskLock.lock()
+            defer { taskLock.unlock() }
+            _task = newValue
+        }
+    }
 
     // swiftlint:disable:next function_parameter_count
     static func authorize(
@@ -33,6 +47,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
+        deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)? = nil,
         overrideJWTToken: String? = nil
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
@@ -42,6 +57,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: startsStreamingServices,
+            deviceRegistrationManager: deviceRegistrationManager,
             overrideJWTToken: overrideJWTToken
         )
         operation.authorize(inboxId: inboxId, clientId: clientId)
@@ -53,6 +69,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
+        deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)? = nil,
         savesInboxToDatabase: Bool = true
     ) -> AuthorizeInboxOperation {
         // Generate clientId before creating state machine
@@ -64,6 +81,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: true,
+            deviceRegistrationManager: deviceRegistrationManager,
             savesInboxToDatabase: savesInboxToDatabase
         )
         operation.register(clientId: clientId)
@@ -77,13 +95,15 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
+        deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)? = nil,
         savesInboxToDatabase: Bool = true,
         overrideJWTToken: String? = nil
     ) {
         let syncingManager = startsStreamingServices ? SyncingManager(
             identityStore: identityStore,
             databaseWriter: databaseWriter,
-            databaseReader: databaseReader
+            databaseReader: databaseReader,
+            deviceRegistrationManager: deviceRegistrationManager
         ) : nil
         let invitesRepository = InvitesRepository(databaseReader: databaseReader)
         stateMachine = InboxStateMachine(
@@ -99,44 +119,51 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
     }
 
     deinit {
-        task?.cancel()
-        task = nil
+        cancelAndReplaceTask(with: nil)
+    }
+
+    /// Atomically cancels the current task and replaces it with a new one
+    private func cancelAndReplaceTask(with newTask: Task<Void, Never>?) {
+        taskLock.lock()
+        defer { taskLock.unlock() }
+        _task?.cancel()
+        _task = newTask
     }
 
     private func authorize(inboxId: String, clientId: String) {
-        task?.cancel()
-        task = Task(priority: .userInitiated) { [weak self] in
+        let newTask = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             await stateMachine.authorize(inboxId: inboxId, clientId: clientId)
         }
+        cancelAndReplaceTask(with: newTask)
     }
 
     private func register(clientId: String) {
-        task?.cancel()
-        task = Task(priority: .userInitiated) { [weak self] in
+        let newTask = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             await stateMachine.register(clientId: clientId)
         }
+        cancelAndReplaceTask(with: newTask)
     }
 
     func stopAndDelete() {
-        task?.cancel()
-        task = Task(priority: .userInitiated) { [weak self] in
+        let newTask = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             await stateMachine.stopAndDelete()
         }
+        cancelAndReplaceTask(with: newTask)
     }
 
     func stopAndDelete() async {
-        task?.cancel()
+        cancelAndReplaceTask(with: nil)
         await stateMachine.stopAndDelete()
     }
 
     func stop() {
-        task?.cancel()
-        task = Task(priority: .userInitiated) { [weak self] in
+        let newTask = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             await stateMachine.stop()
         }
+        cancelAndReplaceTask(with: newTask)
     }
 }

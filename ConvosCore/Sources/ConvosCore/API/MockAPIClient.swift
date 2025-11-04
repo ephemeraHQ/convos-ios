@@ -35,10 +35,6 @@ class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
         return "mock-jwt-token"
     }
 
-    func checkAuth() async throws {
-        // Mock implementation - always succeeds
-    }
-
     func uploadAttachment(
         data: Data,
         filename: String,
