@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 
+@MainActor
 protocol KeyboardListenerDelegate: AnyObject {
     func keyboardWillShow(info: KeyboardInfo)
     func keyboardDidShow(info: KeyboardInfo)
@@ -40,7 +41,7 @@ final class KeyboardListener {
         subscribeToKeyboardNotifications()
     }
 
-    @objc
+    @objc @MainActor
     private func keyboardWillShow(_ notification: Notification) {
         guard let info = KeyboardInfo(notification) else {
             return
@@ -52,7 +53,7 @@ final class KeyboardListener {
         }
     }
 
-    @objc
+    @objc @MainActor
     private func keyboardWillChangeFrame(_ notification: Notification) {
         guard let info = KeyboardInfo(notification) else {
             return
@@ -74,7 +75,7 @@ final class KeyboardListener {
         }
     }
 
-    @objc
+    @objc @MainActor
     private func keyboardDidChangeFrame(_ notification: Notification) {
         guard let info = KeyboardInfo(notification) else {
             return
@@ -91,7 +92,7 @@ final class KeyboardListener {
         }
     }
 
-    @objc
+    @objc @MainActor
     private func keyboardDidShow(_ notification: Notification) {
         guard let info = KeyboardInfo(notification) else {
             return
@@ -103,7 +104,7 @@ final class KeyboardListener {
         }
     }
 
-    @objc
+    @objc @MainActor
     private func keyboardWillHide(_ notification: Notification) {
         guard let info = KeyboardInfo(notification) else {
             return
@@ -115,7 +116,7 @@ final class KeyboardListener {
         }
     }
 
-    @objc
+    @objc @MainActor
     private func keyboardDidHide(_ notification: Notification) {
         guard let info = KeyboardInfo(notification) else {
             return
@@ -127,6 +128,7 @@ final class KeyboardListener {
         }
     }
 
+    @MainActor
     private func handleMissingDidChangeFrame() {
         guard let info = pendingDidChangeFrameInfo else { return }
 

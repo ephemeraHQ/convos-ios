@@ -3,6 +3,7 @@ import ConvosCore
 import SwiftUI
 
 // MARK: - QR Scanner Delegate
+@MainActor
 @Observable
 class QRScannerViewModel: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     var scannedCode: String?
@@ -19,13 +20,11 @@ class QRScannerViewModel: NSObject, AVCaptureMetadataOutputObjectsDelegate {
     private var lastScanTime: Date?
 
     func requestAccess() {
-        AVCaptureDevice.requestAccess(for: .video) { granted in
-            DispatchQueue.main.async {
-                self.cameraAuthorized = granted
-                if granted {
-                    // Trigger camera setup using the callback
-                    self.onSetupCamera?()
-                }
+        AVCaptureDevice.requestAccess(for: .video) { @MainActor [weak self] granted in
+            self?.cameraAuthorized = granted
+            if granted {
+                // Trigger camera setup using the callback
+                self?.onSetupCamera?()
             }
         }
     }
@@ -121,12 +120,10 @@ struct QRScannerView: UIViewRepresentable {
             self.setupCamera()
         }
 
-        checkCameraAuthorization { authorized in
-            DispatchQueue.main.async {
-                self.viewModel.cameraAuthorized = authorized
-                if authorized {
-                    self.setupCamera()
-                }
+        checkCameraAuthorization { @MainActor [weak viewModel] authorized in
+            viewModel?.cameraAuthorized = authorized
+            if authorized {
+                self.setupCamera()
             }
         }
 

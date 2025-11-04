@@ -2,6 +2,7 @@ import Combine
 import ConvosCore
 import SwiftUI
 
+@MainActor
 protocol NewConversationsViewModelDelegate: AnyObject {
     func newConversationsViewModel(
         _ viewModel: NewConversationViewModel,
@@ -24,6 +25,7 @@ struct GenericDisplayError: DisplayError {
     let description: String
 }
 
+@MainActor
 @Observable
 class NewConversationViewModel: Identifiable {
     // MARK: - Public
@@ -61,9 +63,13 @@ class NewConversationViewModel: Identifiable {
     // MARK: - Private
 
     private let conversationStateManager: any ConversationStateManagerProtocol
+    @ObservationIgnored
     private var newConversationTask: Task<Void, Error>?
+    @ObservationIgnored
     private var joinConversationTask: Task<Void, Error>?
+    @ObservationIgnored
     private var cancellables: Set<AnyCancellable> = []
+    @ObservationIgnored
     private var stateObserverHandle: ConversationStateObserverHandle?
 
     // MARK: - Init
@@ -115,9 +121,7 @@ class NewConversationViewModel: Identifiable {
             myProfileRepository: conversationStateManager.draftConversationRepository.myProfileRepository
         )
         setupObservations()
-        DispatchQueue.main.async {
-            self.setupStateObservation()
-        }
+        setupStateObservation()
         self.conversationViewModel.untitledConversationPlaceholder = "New convo"
         if showingFullScreenScanner {
             self.conversationViewModel.showsInfoView = false
@@ -163,11 +167,15 @@ class NewConversationViewModel: Identifiable {
                 try await conversationStateManager.joinConversation(inviteCode: inviteCode)
                 guard !Task.isCancelled else { return }
 
-                await handleJoinSuccess()
+                await MainActor.run { [weak self] in
+                    self?.handleJoinSuccess()
+                }
             } catch {
                 Logger.error("Error joining new conversation: \(error.localizedDescription)")
                 guard !Task.isCancelled else { return }
-                await handleJoinError(error)
+                await MainActor.run { [weak self] in
+                    self?.handleJoinError(error)
+                }
             }
         }
     }
@@ -262,6 +270,7 @@ class NewConversationViewModel: Identifiable {
 
         case .joining:
             // This is the waiting state - user is waiting for inviter to accept
+            conversationViewModel.checkNotificationPermissions()
             messagesTopBarTrailingItemEnabled = false
             messagesTopBarTrailingItem = .share
             messagesBottomBarEnabled = false
@@ -340,10 +349,12 @@ class NewConversationViewModel: Identifiable {
         )
         .eraseToAnyPublisher()
         .receive(on: DispatchQueue.main)
+        .first()
         .sink { [weak self] in
             guard let self else { return }
             messagesTopBarTrailingItem = .share
             shouldConfirmDeletingConversation = false
+            conversationViewModel.checkNotificationPermissions()
             conversationViewModel.untitledConversationPlaceholder = "Untitled"
         }
         .store(in: &cancellables)

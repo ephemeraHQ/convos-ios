@@ -317,11 +317,6 @@ public actor ConversationStateMachine {
     private func handleCreate() async throws {
         emitStateChange(.creating)
 
-        // Request push notification permissions when user creates a conversation
-        // Device is already registered (from app launch), and will be updated
-        // automatically when APNS token arrives via the observer
-        await PushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
-
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
         Logger.info("Inbox ready, creating conversation...")
 
@@ -492,11 +487,6 @@ public actor ConversationStateMachine {
         previousReadyResult: ConversationReadyResult?
     ) async throws {
         emitStateChange(.joining(invite: invite, placeholder: placeholder))
-
-        // Request push notification permissions when user joins a conversation
-        // Device is already registered (from app launch), and will be updated
-        // automatically when APNS token arrives via the observer
-        await PushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
 
         Logger.info("Requesting to join conversation...")
 

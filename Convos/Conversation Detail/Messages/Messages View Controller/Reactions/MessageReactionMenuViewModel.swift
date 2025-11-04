@@ -2,6 +2,7 @@ import Combine
 import Foundation
 import SwiftUI
 
+@MainActor
 @Observable
 class MessageReactionMenuViewModel {
     enum ViewState {

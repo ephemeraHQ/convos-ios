@@ -3,6 +3,7 @@ import ConvosCore
 import Observation
 import UIKit
 
+@MainActor
 @Observable
 class ConversationViewModel {
     // MARK: - Private
@@ -17,6 +18,7 @@ class ConversationViewModel {
     private let conversationRepository: any ConversationRepositoryProtocol
     private let messagesRepository: any MessagesRepositoryProtocol
 
+    @ObservationIgnored
     private var cancellables: Set<AnyCancellable> = []
 
     // MARK: - Public
@@ -107,6 +109,7 @@ class ConversationViewModel {
     var presentingConversationForked: Bool = false
 
     var useDisplayNameForNewConvos: Bool = false
+    var shouldAskToAllowNotifications: Bool = false
 
     // MARK: - Init
 
@@ -201,8 +204,6 @@ class ConversationViewModel {
     }
 
     deinit {
-        Logger.info("🗑️ deallocated for conversation: \(conversation.id)")
-        cancellables.removeAll()
         KeyboardListener.shared.remove(delegate: self)
     }
 
@@ -235,6 +236,27 @@ class ConversationViewModel {
     }
 
     // MARK: - Public
+
+    func checkNotificationPermissions() {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await updateNotificationPermissions()
+        }
+    }
+
+    @MainActor
+    func updateNotificationPermissions() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        self.shouldAskToAllowNotifications = settings.authorizationStatus == .notDetermined
+    }
+
+    func requestPushNotificationsPermission() {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await PushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
+            await updateNotificationPermissions()
+        }
+    }
 
     func onConversationInfoTap() {
         focus = .conversationName
