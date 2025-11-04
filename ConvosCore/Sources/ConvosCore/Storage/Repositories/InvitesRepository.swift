@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import GRDB
 
-protocol InvitesRepositoryProtocol {
+public protocol InvitesRepositoryProtocol {
     func fetchInvites(for creatorInboxId: String) async throws -> [Invite]
 }
 

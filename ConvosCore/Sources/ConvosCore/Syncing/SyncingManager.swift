@@ -5,7 +5,7 @@ import XMTPiOS
 
 // MARK: - Protocol
 
-protocol SyncingManagerProtocol: Actor {
+public protocol SyncingManagerProtocol: Actor {
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol)
     func stop()
 }

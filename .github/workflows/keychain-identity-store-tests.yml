@@ -1,0 +1,86 @@
+name: KeychainIdentityStore Tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'KeychainIdentityStoreExample/**'
+      - 'KeychainIdentityStoreTests/**'
+      - 'ConvosCore/Sources/KeychainIdentityStore/**'
+      - '.github/workflows/keychain-identity-store-tests.yml'
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - 'KeychainIdentityStoreExample/**'
+      - 'KeychainIdentityStoreTests/**'
+      - 'ConvosCore/Sources/KeychainIdentityStore/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Run KeychainIdentityStore Tests
+    runs-on: macos-26
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Select Xcode (use default on macOS 26)
+        run: xcodebuild -version
+
+      - name: Show environment
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Cache Swift Package dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Developer/Xcode/DerivedData
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-xcode-${{ hashFiles('Convos.xcodeproj/project.pbxproj', 'ConvosCore/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-
+
+      - name: Resolve dependencies
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project Convos.xcodeproj \
+            -scheme KeychainIdentityStoreTests
+
+      - name: Run tests on iOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project Convos.xcodeproj \
+            -scheme KeychainIdentityStoreTests \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.1' \
+            -enableCodeCoverage YES \
+            -skipPackagePluginValidation \
+            -resultBundlePath TestResults.xcresult \
+            | tee test-output.log
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: keychain-identity-store-test-results
+          path: |
+            TestResults.xcresult
+            test-output.log
+          retention-days: 7
+
+      - name: Check test status
+        if: failure()
+        run: |
+          echo "❌ KeychainIdentityStore tests failed! Check the uploaded artifacts for details."
+          exit 1
