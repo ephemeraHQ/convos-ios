@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "034A7181-1BB8-447E-8417-18BBE97CE9AC",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "ConvosCoreTests",
+        "name" : "ConvosCoreTests"
+      }
+    }
+  ],
+  "version" : 1
+}

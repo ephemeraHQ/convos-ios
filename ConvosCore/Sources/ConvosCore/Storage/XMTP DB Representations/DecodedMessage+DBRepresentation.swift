@@ -208,8 +208,19 @@ extension XMTPiOS.DecodedMessage {
                     let descriptionChanged = oldDescription != newDescription
 
                     // Extract expiresAt values (only if explicitly set)
-                    let oldExpiresAt = (oldCustomValue?.hasExpiresAt == true) ? oldCustomValue?.expiresAt : nil
-                    let newExpiresAt = (newCustomValue?.hasExpiresAt == true) ? newCustomValue?.expiresAt : nil
+                    let oldExpiresAt: Date?
+                    if let oldCustomValue, oldCustomValue.hasExpiresAtUnix {
+                        oldExpiresAt = Date(timeIntervalSince1970: TimeInterval(oldCustomValue.expiresAtUnix))
+                    } else {
+                        oldExpiresAt = nil
+                    }
+
+                    let newExpiresAt: Date?
+                    if let newCustomValue, newCustomValue.hasExpiresAtUnix {
+                        newExpiresAt = Date(timeIntervalSince1970: TimeInterval(newCustomValue.expiresAtUnix))
+                    } else {
+                        newExpiresAt = nil
+                    }
                     let expiresAtChanged = oldExpiresAt != newExpiresAt
 
                     // Determine what to report based on what actually changed
@@ -217,8 +228,8 @@ extension XMTPiOS.DecodedMessage {
                         // expiresAt changed, prioritize it
                         return .init(
                             field: ConversationUpdate.MetadataChange.Field.expiresAt.rawValue,
-                            oldValue: oldExpiresAt?.date.ISO8601Format(),
-                            newValue: newExpiresAt?.date.ISO8601Format()
+                            oldValue: oldExpiresAt?.ISO8601Format(),
+                            newValue: newExpiresAt?.ISO8601Format()
                         )
                     } else if descriptionChanged {
                         return .init(

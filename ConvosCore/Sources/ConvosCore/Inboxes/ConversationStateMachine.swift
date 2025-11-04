@@ -79,6 +79,7 @@ public actor ConversationStateMachine {
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
     private let environment: AppEnvironment
+    private let streamProcessor: any StreamProcessorProtocol
 
     private var currentTask: Task<Void, Never>?
     private var streamConversationsTask: Task<Void, Never>?
@@ -147,6 +148,11 @@ public actor ConversationStateMachine {
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
         self.environment = environment
+        self.streamProcessor = StreamProcessor(
+            identityStore: identityStore,
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader
+        )
     }
 
     deinit {
@@ -328,6 +334,14 @@ public actor ConversationStateMachine {
         // Publish the conversation
         try await optimisticConversation.publish()
 
+        // Process the conversation in case the syncing manager
+        // has not finished starting the streams, or the streams closed
+        try await streamProcessor.processConversation(
+            optimisticConversation,
+            client: client,
+            apiClient: inboxReady.apiClient
+        )
+
         // Transition directly to ready state
         emitStateChange(.ready(ConversationReadyResult(
             conversationId: externalConversationId,
@@ -489,7 +503,13 @@ public actor ConversationStateMachine {
         let apiClient = inboxReady.apiClient
         let client = inboxReady.client
 
-        let inviterInboxId = invite.payload.creatorInboxID
+        let inviterInboxId = invite.payload.creatorInboxIdString
+
+        // Validate that the hex conversion succeeded and produced a valid inbox ID
+        guard !inviterInboxId.isEmpty else {
+            throw ConversationStateMachineError.invalidInviteCodeFormat("Malformed creator inbox ID")
+        }
+
         let dm = try await client.newConversation(with: inviterInboxId)
         let text = try invite.toURLSafeSlug()
         _ = try await dm.prepare(text: text)
@@ -520,7 +540,7 @@ public actor ConversationStateMachine {
             guard let self else { return }
             do {
                 Logger.info("Started streaming, looking for convo...")
-                if let conversation = try await client.conversationsProvider
+                if case .group(let conversation) = try await client.conversationsProvider
                     .stream(type: .groups, onClose: nil)
                     .first(where: {
                         guard case .group(let group) = $0 else { return false }
@@ -529,9 +549,13 @@ public actor ConversationStateMachine {
                     }) {
                     guard !Task.isCancelled else { return }
 
-                    // This stream just waits for the conversation to show up
-                    // Writing the conversation to the database and invite creation
-                    // happens in `SyncingManager`
+                    // Process the conversation in case the syncing manager
+                    // has not finished starting the streams, or the streams closed
+                    try await self.streamProcessor.processConversation(
+                        conversation,
+                        client: client,
+                        apiClient: apiClient
+                    )
 
                     // Transition directly to ready state
                     await self.emitStateChange(.ready(ConversationReadyResult(

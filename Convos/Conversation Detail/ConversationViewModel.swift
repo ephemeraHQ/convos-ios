@@ -435,6 +435,29 @@ class ConversationViewModel {
             }
         }
     }
+
+    @MainActor
+    func exportDebugLogs() async throws -> URL {
+        // Get the XMTP client for this conversation
+        let messagingService = session.messagingService(
+            for: conversation.clientId,
+            inboxId: conversation.inboxId
+        )
+
+        // Wait for inbox to be ready and get the client
+        let inboxResult = try await messagingService.inboxStateManager.waitForInboxReadyResult()
+        let client = inboxResult.client
+
+        guard let xmtpConversation = try await client.conversation(with: conversation.id) else {
+            throw NSError(
+                domain: "ConversationViewModel",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Conversation not found"]
+            )
+        }
+
+        return try await xmtpConversation.exportDebugLogs()
+    }
 }
 
 extension ConversationViewModel: KeyboardListenerDelegate {

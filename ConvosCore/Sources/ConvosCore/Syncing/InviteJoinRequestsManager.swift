@@ -10,6 +10,7 @@ public enum InviteJoinRequestError: Error {
     case invalidInviteFormat
     case expired
     case expiredConversation
+    case malformedInboxId
 }
 
 public struct JoinRequestResult {
@@ -27,7 +28,7 @@ protocol InviteJoinRequestsManagerProtocol {
         client: AnyClientProvider
     ) async -> [JoinRequestResult]
     func hasOutgoingJoinRequest(
-        for conversation: XMTPiOS.Conversation,
+        for conversation: XMTPiOS.Group,
         client: AnyClientProvider
     ) async throws -> Bool
 }
@@ -94,6 +95,9 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         } catch InviteJoinRequestError.invalidSignature {
             Logger.error("Invalid signature in join request from \(message.senderInboxId)")
             return nil
+        } catch InviteJoinRequestError.malformedInboxId {
+            Logger.error("Malformed inbox ID in join request from \(message.senderInboxId)")
+            return nil
         } catch InviteJoinRequestError.conversationNotFound(let id) {
             Logger.error("Conversation \(id) not found for join request from \(message.senderInboxId)")
             return nil
@@ -148,7 +152,14 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             throw InviteJoinRequestError.expiredConversation
         }
 
-        let creatorInboxId = signedInvite.payload.creatorInboxID
+        let creatorInboxId = signedInvite.payload.creatorInboxIdString
+
+        // validate that the invite contains a non-empty creator inbox ID
+        guard !creatorInboxId.isEmpty else {
+            await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
+            throw InviteJoinRequestError.malformedInboxId
+        }
+
         guard creatorInboxId == client.inboxId else {
             Logger.error("Received join request for invite not created by this inbox - blocking DM")
             await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
@@ -179,9 +190,9 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         }
 
         let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
-        let conversationToken = signedInvite.payload.conversationToken
-        let conversationId = try InviteConversationToken.decodeConversationToken(
-            conversationToken,
+        let conversationTokenBytes = signedInvite.payload.conversationToken
+        let conversationId = try InviteConversationToken.decodeConversationTokenBytes(
+            conversationTokenBytes,
             creatorInboxId: client.inboxId,
             secp256k1PrivateKey: privateKey
         )
@@ -208,10 +219,8 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         }
     }
 
-    func hasOutgoingJoinRequest(for conversation: XMTPiOS.Conversation, client: AnyClientProvider) async throws -> Bool {
-        guard case .group(let group) = conversation else { return false }
-
-        let inviteTag = try group.inviteTag
+    func hasOutgoingJoinRequest(for conversation: XMTPiOS.Group, client: AnyClientProvider) async throws -> Bool {
+        let inviteTag = try conversation.inviteTag
 
         // List all DMs
         let dms = try client.conversationsProvider.listDms(

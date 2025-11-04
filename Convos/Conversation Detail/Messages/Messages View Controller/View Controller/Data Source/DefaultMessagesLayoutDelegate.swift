@@ -140,13 +140,21 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
     func interItemSpacing(_ messagesLayout: MessagesCollectionLayout,
                           of kind: ItemKind,
                           after indexPath: IndexPath) -> CGFloat? {
+        guard kind == .cell else { return nil }
         let item = sections[indexPath.section].cells[indexPath.item]
 
         switch item {
         case .messageGroup:
-            return 3.0
-        case .message:
-            return 2.0
+            return 0.0
+        case .message(let message, _):
+            if case .message(let nextMessage, _) = safeCell(at: indexPath.nextItem),
+               nextMessage.base.source == .outgoing,
+               message.base.source == .incoming {
+                // add spacing above outgoing messages when they are below incoming
+                return DesignConstants.Spacing.stepX
+            }
+
+            return 0.0
         case .date:
             return 0.0
         case .invite:
@@ -162,6 +170,17 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
 
     // MARK: - Private Helpers
 
+    private func safeCell(at indexPath: IndexPath) -> MessagesCollectionCell? {
+        guard !sections.isEmpty, sections.count > indexPath.section else {
+            return nil
+        }
+        let section = sections[indexPath.section]
+        guard !section.cells.isEmpty, section.cells.count > indexPath.item else {
+            return nil
+        }
+        return section.cells[indexPath.item]
+    }
+
     private func applyMessageAnimation(for message: AnyMessage, to attributes: MessagesLayoutAttributes) {
         attributes.transform = .init(scaleX: 0.9, y: 0.9)
         attributes.transform = attributes
@@ -176,5 +195,11 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
     private func applyTypingIndicatorAnimation(to attributes: MessagesLayoutAttributes) {
         attributes.transform = .init(scaleX: 0.1, y: 0.1)
         attributes.center.x -= attributes.bounds.width / 5
+    }
+}
+
+extension IndexPath {
+    var nextItem: IndexPath {
+        .init(item: item + 1, section: section)
     }
 }

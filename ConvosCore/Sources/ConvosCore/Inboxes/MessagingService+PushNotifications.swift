@@ -13,6 +13,7 @@ extension MessagingService {
     ) async throws -> DecodedNotificationContent? {
         Logger.info("processPushNotification called")
         let inboxReadyResult = try await inboxStateManager.waitForInboxReadyResult()
+
         return try await self.handlePushNotification(
             inboxReadyResult: inboxReadyResult,
             payload: payload
@@ -30,14 +31,7 @@ extension MessagingService {
         let client = inboxReadyResult.client
         let apiClient = inboxReadyResult.apiClient
 
-        // If the payload contains an apiJWT token, use it as override for this NSE process
-        if let apiJWT = payload.apiJWT {
-            Logger.info("Using apiJWT from notification payload")
-            apiClient.overrideJWTToken(apiJWT)
-        } else {
-            Logger.warning("No apiJWT in payload, might not be able to use the Convos API")
-        }
-
+        Logger.debug("Processing notification with JWT override: \(payload.apiJWT != nil)")
         Logger.debug("Payload notification data: \(payload.notificationData != nil ? "present" : "nil")")
 
         return try await handleProtocolMessage(
@@ -207,8 +201,8 @@ extension MessagingService {
 
             // Shouldn't reach here, but if we do, drop the notification
             return .droppedMessage
-        case .group:
-            let dbConversation = try await storeConversation(conversation)
+        case .group(let conversation):
+            let dbConversation = try await storeConversation(conversation, inboxId: currentInboxId)
             let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
             _ = try await messageWriter.store(message: decodedMessage, for: dbConversation)
 
@@ -229,12 +223,7 @@ extension MessagingService {
             let notificationTitle: String?
             let notificationBody = textContent // Just the decoded text
 
-            switch conversation {
-            case .group(let group):
-                notificationTitle = try group.name()
-            case .dm:
-                notificationTitle = nil
-            }
+            notificationTitle = try conversation.name()
 
             return .init(
                 title: notificationTitle,
@@ -250,14 +239,14 @@ extension MessagingService {
     /// - Parameter conversation: The XMTP conversation to store
     /// - Returns: The stored database conversation
     @discardableResult
-    private func storeConversation(_ conversation: XMTPiOS.Conversation) async throws -> DBConversation {
+    private func storeConversation(_ conversation: XMTPiOS.Group, inboxId: String) async throws -> DBConversation {
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         let conversationWriter = ConversationWriter(
             identityStore: identityStore,
             databaseWriter: databaseWriter,
             messageWriter: messageWriter
         )
-        return try await conversationWriter.storeWithLatestMessages(conversation: conversation)
+        return try await conversationWriter.storeWithLatestMessages(conversation: conversation, inboxId: inboxId)
     }
 
     // MARK: - Welcome Message Tracking

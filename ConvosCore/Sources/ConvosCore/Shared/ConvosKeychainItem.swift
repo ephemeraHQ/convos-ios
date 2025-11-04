@@ -7,10 +7,10 @@ extension KeychainItemProtocol {
 }
 
 struct ConvosJWTKeychainItem: KeychainItemProtocol {
-    let inboxId: String
+    let deviceId: String
 
     var account: String {
-        return inboxId
+        return deviceId
     }
 }
 

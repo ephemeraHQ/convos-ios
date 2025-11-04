@@ -5,13 +5,14 @@ import XMTPiOS
 enum ConversationWriterError: Error {
     case inboxNotFound(String)
     case expectedGroup
+    case invalidInvite(String)
 }
 
 public protocol ConversationWriterProtocol {
     @discardableResult
-    func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation
+    func store(conversation: XMTPiOS.Group, inboxId: String) async throws -> DBConversation
     @discardableResult
-    func storeWithLatestMessages(conversation: XMTPiOS.Conversation) async throws -> DBConversation
+    func storeWithLatestMessages(conversation: XMTPiOS.Group, inboxId: String) async throws -> DBConversation
     func createPlaceholderConversation(
         draftConversationId: String?,
         for signedInvite: SignedInvite,
@@ -43,12 +44,12 @@ class ConversationWriter: ConversationWriterProtocol {
         self.localStateWriter = ConversationLocalStateWriter(databaseWriter: databaseWriter)
     }
 
-    func store(conversation: XMTPiOS.Conversation) async throws -> DBConversation {
-        return try await _store(conversation: conversation)
+    func store(conversation: XMTPiOS.Group, inboxId: String) async throws -> DBConversation {
+        return try await _store(conversation: conversation, inboxId: inboxId)
     }
 
-    func storeWithLatestMessages(conversation: XMTPiOS.Conversation) async throws -> DBConversation {
-        return try await _store(conversation: conversation, withLatestMessages: true)
+    func storeWithLatestMessages(conversation: XMTPiOS.Group, inboxId: String) async throws -> DBConversation {
+        return try await _store(conversation: conversation, inboxId: inboxId, withLatestMessages: true)
     }
 
     func createPlaceholderConversation(
@@ -59,7 +60,13 @@ class ConversationWriter: ConversationWriterProtocol {
         let draftConversationId = draftConversationId ?? DBConversation.generateDraftConversationId()
 
         // Create the draft conversation and necessary records
-        let creatorInboxId = signedInvite.payload.creatorInboxID // @jarodl the creator of the invite is not necessarily the invite creator, but do we care?
+        let creatorInboxId = signedInvite.payload.creatorInboxIdString
+
+        // validate that the invite contains a non-empty creator inbox ID
+        guard !creatorInboxId.isEmpty else {
+            throw ConversationWriterError.invalidInvite("Empty creator inbox ID")
+        }
+
         let conversation = try await databaseWriter.write { db in
             // Look up clientId from inbox
             guard let inbox = try DBInbox.fetchOne(db, id: inboxId) else {
@@ -119,22 +126,21 @@ class ConversationWriter: ConversationWriterProtocol {
     }
 
     private func _store(
-        conversation: XMTPiOS.Conversation,
+        conversation: XMTPiOS.Group,
+        inboxId: String,
         withLatestMessages: Bool = false
     ) async throws -> DBConversation {
         // Extract conversation metadata
         let metadata = try await extractConversationMetadata(from: conversation)
-        let members = try await conversation.members()
+        let members = try await conversation.members
         let dbMembers = members.map { $0.dbRepresentation(conversationId: conversation.id) }
-        guard case .group(let group) = conversation else {
-            throw ConversationWriterError.expectedGroup
-        }
-        let memberProfiles = try group.memberProfiles
+        let memberProfiles = try conversation.memberProfiles
 
         // Create database representation
         let dbConversation = try await createDBConversation(
             from: conversation,
-            metadata: metadata
+            metadata: metadata,
+            inboxId: inboxId
         )
 
         // Save to database
@@ -180,36 +186,23 @@ class ConversationWriter: ConversationWriterProtocol {
         let debugInfo: DBConversation.DebugInfo
     }
 
-    private func extractConversationMetadata(from conversation: XMTPiOS.Conversation) async throws -> ConversationMetadata {
-        switch conversation {
-        case .dm(let dm):
-            return ConversationMetadata(
-                kind: .dm,
-                name: nil,
-                description: nil,
-                imageURLString: nil,
-                expiresAt: nil,
-                debugInfo: try await dm.getDebugInformation().toDBDebugInfo()
-            )
-        case .group(let group):
-            let debugInfo = try await group.getDebugInformation().toDBDebugInfo()
-            return ConversationMetadata(
-                kind: .group,
-                name: try group.name(),
-                description: try group.customDescription,
-                imageURLString: try group.imageUrl(),
-                expiresAt: try group.expiresAt,
-                debugInfo: debugInfo
-            )
-        }
+    private func extractConversationMetadata(from conversation: XMTPiOS.Group) async throws -> ConversationMetadata {
+        let debugInfo = try await conversation.getDebugInformation().toDBDebugInfo()
+        return ConversationMetadata(
+            kind: .group,
+            name: try conversation.name(),
+            description: try conversation.customDescription,
+            imageURLString: try conversation.imageUrl(),
+            expiresAt: try conversation.expiresAt,
+            debugInfo: debugInfo
+        )
     }
 
     private func createDBConversation(
-        from conversation: XMTPiOS.Conversation,
-        metadata: ConversationMetadata
+        from conversation: XMTPiOS.Group,
+        metadata: ConversationMetadata,
+        inboxId: String
     ) async throws -> DBConversation {
-        let inboxId = conversation.client.inboxID
-
         // Look up clientId from inbox
         let clientId = try await databaseWriter.read { db in
             guard let inbox = try DBInbox.fetchOne(db, id: inboxId) else {
@@ -224,7 +217,7 @@ class ConversationWriter: ConversationWriterProtocol {
             clientId: clientId,
             clientConversationId: conversation.id,
             inviteTag: try conversation.inviteTag,
-            creatorId: try await conversation.creatorInboxId,
+            creatorId: try await conversation.creatorInboxId(),
             kind: metadata.kind,
             consent: try conversation.consentState().consent,
             createdAt: conversation.createdAt,
@@ -243,7 +236,6 @@ class ConversationWriter: ConversationWriterProtocol {
     ) async throws {
         try await databaseWriter.write { [weak self] db in
             guard let self else { return }
-            // Save creator
             let creator = Member(inboxId: dbConversation.creatorId)
             try creator.save(db)
 
@@ -266,8 +258,12 @@ class ConversationWriter: ConversationWriterProtocol {
                 .deleteAll(db)
             // Save members
             try saveMembers(dbMembers, in: db)
-            // Update profiles
-            try memberProfiles.forEach { try $0.save(db) }
+            // Update profiles - ensure Member exists first
+            try memberProfiles.forEach { profile in
+                let member = Member(inboxId: profile.inboxId)
+                try member.save(db)
+                try profile.save(db)
+            }
         }
     }
 
@@ -315,7 +311,7 @@ class ConversationWriter: ConversationWriterProtocol {
     }
 
     private func fetchAndStoreLatestMessages(
-        for conversation: XMTPiOS.Conversation,
+        for conversation: XMTPiOS.Group,
         dbConversation: DBConversation
     ) async throws {
         Logger.info("Attempting to fetch latest messages...")

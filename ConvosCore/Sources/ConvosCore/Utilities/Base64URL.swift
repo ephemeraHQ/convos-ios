@@ -2,10 +2,16 @@ import Foundation
 
 // MARK: - Base64URL Extensions
 
-/// Extensions for URL-safe Base64 encoding/decoding
-/// These replace + with -, / with _, and remove padding =
+/// URL-safe Base64 encoding/decoding for compact invite codes and metadata
+///
+/// Replaces standard base64 characters with URL-safe alternatives:
+/// - `+` → `-`
+/// - `/` → `_`
+/// - Removes padding `=`
+///
+/// Used for encoding compressed protobuf payloads in invite URLs and metadata storage.
 public extension Data {
-    /// Encode data to URL-safe base64 string (no padding)
+    /// Encode data to URL-safe base64 string without padding
     func base64URLEncoded() -> String {
         base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")

@@ -95,7 +95,7 @@ extension MockMessagingService: InboxStateManagerProtocol {
     }
 
     public func waitForInboxReadyResult() async throws -> InboxReadyResult {
-        .init(client: self, apiClient: MockAPIClient(client: self))
+        .init(client: self, apiClient: MockAPIClient())
     }
 
     public func delete() async throws {}
@@ -107,7 +107,7 @@ extension MockMessagingService: InboxStateManagerProtocol {
     }
 
     public func reauthorize(inboxId: String, clientId: String) async throws -> InboxReadyResult {
-        .init(client: self, apiClient: MockAPIClient(client: self))
+        .init(client: self, apiClient: MockAPIClient())
     }
 
     public func observeState(_ handler: @escaping (InboxStateMachine.State) -> Void) -> StateObserverHandle {
@@ -221,7 +221,7 @@ extension MockMessagingService: ConversationSender {
     public func remove(members inboxIds: [String]) async throws {
     }
 
-    public func updateInviteTag() async throws {
+    public func ensureInviteTag() async throws {
     }
 }
 
@@ -294,7 +294,7 @@ class MockConversations: ConversationsProvider {
     }
 }
 
-extension MockMessagingService: XMTPClientProvider {
+extension MockMessagingService: XMTPClientProvider, GroupConversationSender {
     public var state: MessagingServiceState {
         .authorized(inboxId)
     }
@@ -327,7 +327,7 @@ extension MockMessagingService: XMTPClientProvider {
         return Dictionary(uniqueKeysWithValues: identities.map { ($0, true) })
     }
 
-    public func prepareConversation() throws -> ConversationSender {
+    public func prepareConversation() throws -> GroupConversationSender {
         self
     }
 
@@ -365,6 +365,22 @@ extension MockMessagingService: XMTPClientProvider {
     }
 
     public func revokeInstallations(signingKey: any SigningKey, installationIds: [String]) async throws {
+    }
+
+    public func permissionPolicySet() throws -> PermissionPolicySet {
+        .init(
+            addMemberPolicy: .unknown,
+            removeMemberPolicy: .unknown,
+            addAdminPolicy: .unknown,
+            removeAdminPolicy: .unknown,
+            updateGroupNamePolicy: .unknown,
+            updateGroupDescriptionPolicy: .unknown,
+            updateGroupImagePolicy: .unknown,
+            updateMessageDisappearingPolicy: .unknown
+        )
+    }
+
+    public func updateAddMemberPermission(newPermissionOption: PermissionOption) async throws {
     }
 }
 

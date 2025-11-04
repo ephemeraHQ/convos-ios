@@ -64,6 +64,7 @@ struct ConversationInfoView: View {
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showingExplodeConfirmation: Bool = false
     @State private var presentingEditView: Bool = false
+    @State private var exportedLogsURL: URL?
 
     private let maxMembersToShow: Int = 6
     private var displayedMembers: [ConversationMember] {
@@ -288,10 +289,26 @@ struct ConversationInfoView: View {
                         } label: {
                             Text("Remote commit log")
                         }
+                        if let url = exportedLogsURL {
+                            HStack {
+                                ShareLink(item: url) {
+                                    Text("Share logs")
+                                }
+                            }
+                        }
                     } header: {
                         Text("Debug info")
                             .font(.system(size: 14.0, weight: .semibold))
                             .foregroundStyle(.colorTextSecondary)
+                    }
+                    .task {
+                        do {
+                            let url = try await viewModel.exportDebugLogs()
+                            exportedLogsURL = url
+                        } catch {
+                            Logger.error("Failed to export logs for conversation: \(error.localizedDescription)")
+                            exportedLogsURL = nil
+                        }
                     }
                 }
 

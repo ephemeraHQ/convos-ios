@@ -127,7 +127,7 @@ public actor InboxStateMachine {
     private let environment: AppEnvironment
     private let syncingManager: AnySyncingManager?
     private let savesInboxToDatabase: Bool
-    private let autoRegistersForPushNotifications: Bool
+    private let overrideJWTToken: String?
     private let databaseWriter: any DatabaseWriter
     private lazy var deviceRegistrationManager: DeviceRegistrationManager = {
         DeviceRegistrationManager(environment: environment)
@@ -136,7 +136,7 @@ public actor InboxStateMachine {
     private var currentTask: Task<Void, Never>?
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
-    private var pushTokenObserver: NSObjectProtocol?
+    nonisolated(unsafe) private var pushTokenObserver: NSObjectProtocol?
 
     deinit {
         removePushTokenObserver()
@@ -216,7 +216,7 @@ public actor InboxStateMachine {
         databaseWriter: any DatabaseWriter,
         syncingManager: AnySyncingManager?,
         savesInboxToDatabase: Bool = true,
-        autoRegistersForPushNotifications: Bool = true,
+        overrideJWTToken: String? = nil,
         environment: AppEnvironment
     ) {
         self.initialClientId = clientId
@@ -226,7 +226,7 @@ public actor InboxStateMachine {
         self.databaseWriter = databaseWriter
         self.syncingManager = syncingManager
         self.savesInboxToDatabase = savesInboxToDatabase
-        self.autoRegistersForPushNotifications = autoRegistersForPushNotifications
+        self.overrideJWTToken = overrideJWTToken
         self.environment = environment
 
         // Set custom XMTP host if provided
@@ -270,35 +270,6 @@ public actor InboxStateMachine {
 
     func stopAndDelete() {
         enqueueAction(.delete)
-    }
-
-    /// Registers for push notifications once the inbox is in a ready state.
-    func registerForPushNotifications() async {
-        Logger.info("Manually triggering push notification registration")
-        setupPushTokenObserver()
-
-        // Check if we're already in ready state
-        if case .ready = _state {
-            await deviceRegistrationManager.registerDeviceIfNeeded()
-            return
-        }
-
-        Logger.info("Inbox not ready, waiting to register for push notifications...")
-        // Wait for ready state
-        for await state in stateSequence {
-            switch state {
-            case .ready:
-                await deviceRegistrationManager.registerDeviceIfNeeded()
-                return
-            case .error, .stopping, .deleting:
-                // Don't wait if we're in an error or terminal state
-                Logger.warning("Cannot register for push notifications in state: \(state)")
-                return
-            default:
-                // Continue waiting for ready state
-                continue
-            }
-        }
     }
 
     // MARK: - Private
@@ -372,7 +343,6 @@ public actor InboxStateMachine {
             Logger.error(
                 "Failed state transition \(_state) -> \(action): \(error.localizedDescription)"
             )
-            // We always have a clientId now
             emitStateChange(.error(clientId: _state.clientId, error: error))
         }
     }
@@ -496,7 +466,7 @@ public actor InboxStateMachine {
 
         await syncingManager?.start(with: client, apiClient: apiClient)
 
-        if autoRegistersForPushNotifications {
+        if overrideJWTToken == nil {
             // Register device on app launch (without push token - that's OK)
             // This creates the device record in the backend
             await deviceRegistrationManager.registerDeviceIfNeeded()
@@ -506,7 +476,7 @@ public actor InboxStateMachine {
             setupPushTokenObserver()
             Logger.info("Device registered and push token observer set up. Will request permissions when user creates/joins a conversation.")
         } else {
-            Logger.info("Auto push notification registration is disabled, skipping push notification setup")
+            Logger.info("Using JWT override mode, skipping push notification registration")
         }
     }
 
@@ -808,18 +778,25 @@ public actor InboxStateMachine {
     }
 
     private func initializeApiClient(client: any XMTPClientProvider) -> any ConvosAPIClientProtocol {
-        Logger.info("Initializing API client...")
-        return ConvosAPIClientFactory.authenticatedClient(
-            client: client,
-            environment: environment
+        Logger.info("Initializing API client (JWT override: \(overrideJWTToken != nil))...")
+        return ConvosAPIClientFactory.client(
+            environment: environment,
+            overrideJWTToken: overrideJWTToken
         )
     }
 
     private func authorizeConvosBackend(client: any XMTPClientProvider) async throws -> any ConvosAPIClientProtocol {
-        Logger.info("Authorizing backend with lazy authentication...")
         let apiClient = initializeApiClient(client: client)
 
-        // Make a test call to trigger (re)authentication if needed
+        // When using JWT override, skip authentication check
+        // We'll use the JWT token from the push notification payload
+        if let token = overrideJWTToken, !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Logger.info("JWT override mode: skipping auth-check, will use JWT from push payload")
+            return apiClient
+        }
+
+        // In main app context, test authentication
+        Logger.info("Authorizing backend with lazy authentication...")
         Logger.info("Testing authentication with /auth-check...")
         _ = try await apiClient.checkAuth()
 
@@ -843,6 +820,7 @@ public actor InboxStateMachine {
         }
     }
 
+    nonisolated
     private func removePushTokenObserver() {
         if let observer = pushTokenObserver {
             NotificationCenter.default.removeObserver(observer)
