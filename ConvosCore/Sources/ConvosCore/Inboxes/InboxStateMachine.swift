@@ -54,7 +54,7 @@ extension InboxStateMachine.State {
 }
 
 enum InboxStateError: Error {
-    case inboxNotReady
+    case inboxNotReady, clientIdInboxInconsistency
 }
 
 public struct InboxReadyResult: Sendable {
@@ -105,7 +105,6 @@ public actor InboxStateMachine {
     private let invitesRepository: any InvitesRepositoryProtocol
     private let environment: AppEnvironment
     private let syncingManager: AnySyncingManager?
-    private let savesInboxToDatabase: Bool
     private let overrideJWTToken: String?
     private let databaseWriter: any DatabaseWriter
     private let apiClient: any ConvosAPIClientProtocol
@@ -187,7 +186,6 @@ public actor InboxStateMachine {
         invitesRepository: any InvitesRepositoryProtocol,
         databaseWriter: any DatabaseWriter,
         syncingManager: AnySyncingManager?,
-        savesInboxToDatabase: Bool = true,
         overrideJWTToken: String? = nil,
         environment: AppEnvironment
     ) {
@@ -197,7 +195,6 @@ public actor InboxStateMachine {
         self.invitesRepository = invitesRepository
         self.databaseWriter = databaseWriter
         self.syncingManager = syncingManager
-        self.savesInboxToDatabase = savesInboxToDatabase
         self.overrideJWTToken = overrideJWTToken
         self.environment = environment
 
@@ -302,6 +299,15 @@ public actor InboxStateMachine {
                 try await handleDelete(clientId: clientId, client: result.client, apiClient: result.apiClient)
             case (let .error(clientId, _), .delete):
                 try await handleDeleteFromError(clientId: clientId)
+            case (let .idle(clientId), .delete),
+                 (let .authorizing(clientId, _), .delete),
+                 (let .registering(clientId), .delete),
+                 (let .authenticatingBackend(clientId, _), .delete),
+                 (let .stopping(clientId), .delete):
+                try await handleDeleteFromIdle(clientId: clientId)
+            case (.deleting, .delete):
+                // Already deleting - ignore duplicate delete request (idempotent)
+                Logger.info("Duplicate delete request while already deleting, ignoring")
             case let (.ready(clientId, _), .stop),
                 let (.error(clientId, _), .stop),
                 let (.deleting(clientId, _), .stop):
@@ -353,22 +359,19 @@ public actor InboxStateMachine {
                 signingKey: keys.signingKey,
                 options: clientOptions
             )
-            // Update state to match the newly created client's inboxId
-            emitStateChange(.authorizing(clientId: clientId, inboxId: client.inboxId))
-            Logger.info("Updated state with new client inboxId: \(client.inboxId)")
+            guard client.inboxId == identity.inboxId else {
+                Logger.error("Created client with mis-matched inboxId")
+                throw InboxStateError.clientIdInboxInconsistency
+            }
         }
 
         try Task.checkCancellation()
 
-        if savesInboxToDatabase {
-            // Ensure inbox is saved to database when authorizing
-            // (in case it was registered as unused but is now being used)
-            let inboxWriter = InboxWriter(dbWriter: databaseWriter)
-            try await inboxWriter.save(inboxId: client.inboxId, clientId: identity.clientId)
-            Logger.info("Ensured inbox is saved to database: \(client.inboxId)")
-        } else {
-            Logger.warning("Skipping save to database during authorization")
-        }
+        // Ensure inbox is saved to database when authorizing
+        // (in case it was registered as unused but is now being used)
+        let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+        try await inboxWriter.save(inboxId: client.inboxId, clientId: identity.clientId)
+        Logger.info("Saved inbox to database: \(client.inboxId)")
 
         enqueueAction(.clientAuthorized(clientId: clientId, client: client))
     }
@@ -397,20 +400,16 @@ public actor InboxStateMachine {
 
         try Task.checkCancellation()
 
-        // Conditionally save to database based on configuration
-        if savesInboxToDatabase {
-            do {
-                let inboxWriter = InboxWriter(dbWriter: databaseWriter)
-                try await inboxWriter.save(inboxId: client.inboxId, clientId: clientId)
-                Logger.info("Saved inbox to database with clientId: \(clientId)")
-            } catch {
-                // Rollback keychain entry on database failure to maintain consistency
-                Logger.error("Failed to save inbox to database, rolling back keychain: \(error)")
-                try? await identityStore.delete(clientId: clientId)
-                throw error
-            }
-        } else {
-            Logger.info("Skipping database save for inbox: \(client.inboxId) (unused inbox)")
+        // Save to database
+        do {
+            let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+            try await inboxWriter.save(inboxId: client.inboxId, clientId: clientId)
+            Logger.info("Saved inbox to database with clientId: \(clientId)")
+        } catch {
+            // Rollback keychain entry on database failure to maintain consistency
+            Logger.error("Failed to save inbox to database, rolling back keychain: \(error)")
+            try? await identityStore.delete(clientId: clientId)
+            throw error
         }
 
         enqueueAction(.clientRegistered(clientId: clientId, client: client))
@@ -478,7 +477,57 @@ public actor InboxStateMachine {
 
         try Task.checkCancellation()
 
-        try await identityStore.delete(clientId: clientId)
+        // Delete identity - idempotent operation, may already be deleted from previous attempt
+        do {
+            try await identityStore.delete(clientId: clientId)
+            Logger.info("Deleted identity from keychain for clientId: \(clientId)")
+        } catch KeychainIdentityStoreError.identityNotFound {
+            Logger.info("Identity already deleted for clientId: \(clientId), continuing cleanup")
+        }
+
+        Logger.info("Deleted inbox with clientId \(clientId)")
+    }
+
+    /// Handles deletion when we don't have an initialized client/apiClient
+    /// Used for .idle, .authorizing, .registering, .authenticatingBackend, and .stopping states
+    private func handleDeleteFromIdle(clientId: String) async throws {
+        Logger.info("Deleting inbox with clientId \(clientId) without initialized client...")
+        defer { enqueueAction(.stop) }
+
+        // Try to get inboxId from database if available
+        let inboxIdFromDb: String? = try? await databaseWriter.read { db in
+            try DBInbox
+                .filter(DBInbox.Columns.clientId == clientId)
+                .fetchOne(db)?
+                .inboxId
+        }
+
+        try Task.checkCancellation()
+
+        emitStateChange(.deleting(clientId: clientId, inboxId: inboxIdFromDb))
+
+        await syncingManager?.stop()
+
+        try Task.checkCancellation()
+
+        // Clean up database records
+        try await cleanupInboxData(clientId: clientId)
+
+        try Task.checkCancellation()
+
+        // Delete identity - idempotent operation, may already be deleted
+        do {
+            try await identityStore.delete(clientId: clientId)
+            Logger.info("Deleted identity from keychain for clientId: \(clientId)")
+        } catch KeychainIdentityStoreError.identityNotFound {
+            Logger.info("Identity already deleted for clientId: \(clientId), continuing cleanup")
+        }
+
+        // Delete XMTP database files if we have an inboxId
+        if let inboxId = inboxIdFromDb {
+            deleteDatabaseFiles(for: inboxId)
+        }
+
         Logger.info("Deleted inbox with clientId \(clientId)")
     }
 
@@ -551,13 +600,26 @@ public actor InboxStateMachine {
         try Task.checkCancellation()
 
         // Delete identity and local database
-        try await identityStore.delete(clientId: clientId)
-        try client.deleteLocalDatabase()
+        // These operations should be idempotent - if identity is already deleted,
+        // we're likely in a retry scenario from a previous failed deletion attempt
+        do {
+            try await identityStore.delete(clientId: clientId)
+            Logger.info("Deleted identity from keychain for clientId: \(clientId)")
+        } catch KeychainIdentityStoreError.identityNotFound {
+            Logger.info("Identity already deleted for clientId: \(clientId), continuing cleanup")
+        }
 
         try Task.checkCancellation()
 
-        // Delete database files
-        deleteDatabaseFiles(for: client.inboxId)
+        // Delete XMTP local database
+        // Try SDK method first, fall back to manual file deletion if it fails
+        do {
+            try client.deleteLocalDatabase()
+            Logger.info("Deleted XMTP local database via SDK for inbox: \(client.inboxId)")
+        } catch {
+            Logger.warning("SDK deleteLocalDatabase failed, attempting manual file deletion: \(error)")
+            deleteDatabaseFiles(for: client.inboxId)
+        }
 
         Logger.info("Deleted inbox \(client.inboxId) with clientId \(clientId)")
     }

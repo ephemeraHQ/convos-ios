@@ -1,7 +1,7 @@
 {
   "configurations" : [
     {
-      "id" : "217FE7F2-A58A-4C34-9821-3CD768352D65",
+      "id" : "5712C5B8-C706-4C2F-AD6A-6E754A6C0CA2",
       "name" : "Test Scheme Action",
       "options" : {
 
@@ -9,16 +9,30 @@
     }
   ],
   "defaultOptions" : {
+    "environmentVariableEntries" : [
+      {
+        "key" : "TEST_SERVER_ENABLED",
+        "value" : "true"
+      }
+    ],
     "performanceAntipatternCheckerEnabled" : true
   },
   "testTargets" : [
     {
+      "parallelizable" : true,
+      "skippedTests" : {
+        "suites" : [
+          {
+            "name" : "InboxStateMachineTests"
+          }
+        ]
+      },
       "target" : {
-        "containerPath" : "container:",
+        "containerPath" : "container:ConvosCore",
         "identifier" : "ConvosCoreTests",
         "name" : "ConvosCoreTests"
       }
     }
   ],
-  "version" : 1
+  "version" : 2
 }

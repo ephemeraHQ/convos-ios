@@ -47,7 +47,6 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
-        deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)? = nil,
         overrideJWTToken: String? = nil
     ) -> AuthorizeInboxOperation {
         let operation = AuthorizeInboxOperation(
@@ -57,7 +56,6 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: startsStreamingServices,
-            deviceRegistrationManager: deviceRegistrationManager,
             overrideJWTToken: overrideJWTToken
         )
         operation.authorize(inboxId: inboxId, clientId: clientId)
@@ -68,9 +66,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
-        environment: AppEnvironment,
-        deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)? = nil,
-        savesInboxToDatabase: Bool = true
+        environment: AppEnvironment
     ) -> AuthorizeInboxOperation {
         // Generate clientId before creating state machine
         let clientId = ClientId.generate().value
@@ -80,9 +76,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
             environment: environment,
-            startsStreamingServices: true,
-            deviceRegistrationManager: deviceRegistrationManager,
-            savesInboxToDatabase: savesInboxToDatabase
+            startsStreamingServices: true
         )
         operation.register(clientId: clientId)
         return operation
@@ -95,15 +89,13 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         databaseWriter: any DatabaseWriter,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
-        deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)? = nil,
-        savesInboxToDatabase: Bool = true,
         overrideJWTToken: String? = nil
     ) {
         let syncingManager = startsStreamingServices ? SyncingManager(
             identityStore: identityStore,
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
-            deviceRegistrationManager: deviceRegistrationManager
+            deviceRegistrationManager: DeviceRegistrationManager(environment: environment)
         ) : nil
         let invitesRepository = InvitesRepository(databaseReader: databaseReader)
         stateMachine = InboxStateMachine(
@@ -112,7 +104,6 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             invitesRepository: invitesRepository,
             databaseWriter: databaseWriter,
             syncingManager: syncingManager,
-            savesInboxToDatabase: savesInboxToDatabase,
             overrideJWTToken: overrideJWTToken,
             environment: environment
         )

@@ -130,8 +130,7 @@ public final class SessionManager: SessionManagerProtocol {
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment,
-            startsStreamingServices: true,
-            deviceRegistrationManager: deviceRegistrationManager
+            startsStreamingServices: true
         )
     }
 
@@ -292,6 +291,7 @@ public final class SessionManager: SessionManagerProtocol {
 
         // Delete all from database
         let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+        Logger.info("Deleting all inboxes from database")
         try await inboxWriter.deleteAll()
 
         await UnusedInboxCache.shared

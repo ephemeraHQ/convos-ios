@@ -151,7 +151,8 @@ public actor ConversationStateMachine {
         self.streamProcessor = StreamProcessor(
             identityStore: identityStore,
             databaseWriter: databaseWriter,
-            databaseReader: databaseReader
+            databaseReader: databaseReader,
+            deviceRegistrationManager: DeviceRegistrationManager(environment: environment)
         )
     }
 
@@ -682,14 +683,11 @@ public actor ConversationStateMachine {
             Logger.info("Cleaned up conversation data for conversationId: \(conversationId)")
         }
 
-        // Check if we need to clean up the inbox
         try await databaseWriter.write { db in
             let conversationsCount = try DBConversation
-                .filter(!DBConversation.Columns.id.like("draft-%"))
                 .fetchCount(db)
             if conversationsCount == 0 {
-                try DBInbox
-                    .deleteOne(db, id: client.inboxId)
+                Logger.warning("Leaving inbox \(client.inboxId) with zero conversations!")
             }
         }
     }

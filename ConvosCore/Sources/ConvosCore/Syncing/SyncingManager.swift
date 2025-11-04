@@ -6,7 +6,7 @@ import XMTPiOS
 
 public protocol SyncingManagerProtocol: Actor {
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol)
-    func stop()
+    func stop() async
 }
 
 /// Manages real-time synchronization of conversations and messages
@@ -173,16 +173,28 @@ actor SyncingManager: SyncingManagerProtocol {
         }
     }
 
-    func stop() {
+    func stop() async {
         Logger.info("Stopping...")
 
-        // Cancel sync tasks
-        messageStreamTask?.cancel()
-        messageStreamTask = nil
-        conversationStreamTask?.cancel()
-        conversationStreamTask = nil
-        syncTask?.cancel()
-        syncTask = nil
+        // Cancel and wait for sync tasks to complete
+        // This ensures no database operations are in-flight before cleanup
+        if let task = messageStreamTask {
+            task.cancel()
+            _ = await task.value
+            messageStreamTask = nil
+        }
+
+        if let task = conversationStreamTask {
+            task.cancel()
+            _ = await task.value
+            conversationStreamTask = nil
+        }
+
+        if let task = syncTask {
+            task.cancel()
+            _ = await task.value
+            syncTask = nil
+        }
 
         activeConversationId = nil
 

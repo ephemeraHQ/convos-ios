@@ -82,10 +82,11 @@ public actor UnusedInboxCache {
         if let unusedService = unusedMessagingService {
             Logger.info("Using pre-created unused messaging service")
 
-            // Clear the reference
-            unusedMessagingService = nil
+            // Clear the reference only after all operations complete
+            // This prevents race conditions where another caller could enter during await
+            defer { unusedMessagingService = nil }
 
-            // Save to database now that it's being consumed by the user
+            // Make sure the inbox is saved to the database
             do {
                 let result = try await unusedService.inboxStateManager.waitForInboxReadyResult()
                 let inboxId = result.client.inboxId
@@ -310,8 +311,7 @@ public actor UnusedInboxCache {
             identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
-            environment: environment,
-            savesInboxToDatabase: false
+            environment: environment
         )
 
         let tempMessagingService = MessagingService(
@@ -326,7 +326,7 @@ public actor UnusedInboxCache {
             let result = try await tempMessagingService.inboxStateManager.waitForInboxReadyResult()
             let inboxId = result.client.inboxId
 
-            // Save the inbox ID to keychain, save to database when consumed
+            // Save the inbox ID to keychain
             saveUnusedInboxToKeychain(inboxId)
 
             // Store the messaging service instance

@@ -26,7 +26,6 @@ final class MessagingService: MessagingServiceProtocol {
         databaseReader: any DatabaseReader,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
-        deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)? = nil,
         overrideJWTToken: String? = nil
     ) -> MessagingService {
         let identityStore = environment.defaultIdentityStore
@@ -38,7 +37,6 @@ final class MessagingService: MessagingServiceProtocol {
             databaseWriter: databaseWriter,
             environment: environment,
             startsStreamingServices: startsStreamingServices,
-            deviceRegistrationManager: deviceRegistrationManager,
             overrideJWTToken: overrideJWTToken
         )
         return MessagingService(

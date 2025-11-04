@@ -33,7 +33,6 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: mockSync,
-            savesInboxToDatabase: true,
             overrideJWTToken: "test-jwt-token",  // Skip backend auth for tests
             environment: .tests
         )
@@ -72,8 +71,8 @@ struct InboxStateMachineTests {
         try? await fixtures.cleanup()
     }
 
-    @Test("Register without saving to database still saves to keychain")
-    func testRegisterWithoutDatabaseSave() async throws {
+    @Test("Register saves to both keychain and database")
+    func testRegisterSavesToKeychainAndDatabase() async throws {
         let fixtures = TestFixtures()
 
         let clientId = ClientId.generate().value
@@ -85,7 +84,7 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: nil,
-            savesInboxToDatabase: false, // Don't save to database
+            overrideJWTToken: "test-jwt-token",
             environment: .tests
         )
 
@@ -116,11 +115,12 @@ struct InboxStateMachineTests {
         let savedIdentity = try await fixtures.identityStore.identity(for: result!.client.inboxId)
         #expect(savedIdentity.clientId == clientId)
 
-        // Verify NOT saved to database
+        // Verify saved to database
         let dbInboxes = try await fixtures.databaseManager.dbReader.read { db in
             try DBInbox.fetchAll(db)
         }
-        #expect(dbInboxes.isEmpty, "Should not save to database when savesInboxToDatabase is false")
+        #expect(dbInboxes.count == 1, "Should save to database")
+        #expect(dbInboxes.first?.clientId == clientId)
 
         // Clean up
         try? result?.client.deleteLocalDatabase()
@@ -145,7 +145,6 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: mockSync,
-            savesInboxToDatabase: true,
             overrideJWTToken: "test-jwt-token",  // Skip backend auth for tests
             environment: .tests
         )
@@ -197,7 +196,6 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: nil,
-            savesInboxToDatabase: true,
             environment: .tests
         )
 
@@ -246,7 +244,6 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: mockSync,
-            savesInboxToDatabase: true,
             overrideJWTToken: "test-jwt-token",  // Skip backend auth for tests
             environment: .tests
         )
@@ -312,7 +309,6 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: mockSync,
-            savesInboxToDatabase: true,
             overrideJWTToken: "test-jwt-token",  // Skip backend auth for tests
             environment: .tests
         )
@@ -383,7 +379,6 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: mockSync,
-            savesInboxToDatabase: true,
             overrideJWTToken: "test-jwt-token",  // Skip backend auth for tests
             environment: .tests
         )
@@ -436,7 +431,6 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: nil,
-            savesInboxToDatabase: true,
             environment: .tests
         )
 
@@ -518,7 +512,6 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: mockSync,
-            savesInboxToDatabase: true,
             overrideJWTToken: "test-jwt-token",  // Skip backend auth for tests
             environment: .tests
         )
