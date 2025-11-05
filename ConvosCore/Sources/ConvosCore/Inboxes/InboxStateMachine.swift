@@ -57,9 +57,18 @@ enum InboxStateError: Error {
     case inboxNotReady, clientIdInboxInconsistency
 }
 
-public struct InboxReadyResult: Sendable {
+public struct InboxReadyResult: @unchecked Sendable {
     public let client: any XMTPClientProvider
     public let apiClient: any ConvosAPIClientProtocol
+
+    /// InboxReadyResult is marked @unchecked Sendable because:
+    /// - XMTPClientProvider wraps XMTPiOS.Client which is not Sendable
+    /// - However, XMTP Client is designed for concurrent use (async/await API)
+    /// - All access is properly isolated through actors in the state machine
+    public init(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) {
+        self.client = client
+        self.apiClient = apiClient
+    }
 }
 
 typealias AnySyncingManager = (any SyncingManagerProtocol)
@@ -256,7 +265,7 @@ public actor InboxStateMachine {
         isProcessing = true
         let action = actionQueue.removeFirst()
 
-        currentTask = Task.detached { [weak self] in
+        currentTask = Task { [weak self] in
             guard let self else { return }
             await self.processAction(action)
             await self.setProcessingComplete()

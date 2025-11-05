@@ -1,6 +1,6 @@
 import Foundation
 
-public struct Invite: Codable, Hashable, Identifiable, Equatable {
+public struct Invite: Codable, Hashable, Identifiable, Equatable, Sendable {
     public var id: String {
         urlSlug
     }

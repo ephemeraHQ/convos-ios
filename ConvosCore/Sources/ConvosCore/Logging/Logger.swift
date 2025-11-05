@@ -478,6 +478,7 @@ public enum Logger {
                 return header + "=== LOGS ===\nFile does not exist\n"
             }
 
+            let maxLogLines = self.maxLogLines
             // Read last maxLogLines lines by tailing from end asynchronously
             let tailed: String = await withCheckedContinuation { continuation in
                 readQueue.async {
@@ -505,7 +506,7 @@ public enum Logger {
                             let chunk = try handle.read(upToCount: readSize) ?? Data()
                             chunks.append(chunk)
                             newlineCount += countNewlines(chunk)
-                            if newlineCount >= self.maxLogLines { break }
+                            if newlineCount >= maxLogLines { break }
                             if position == 0 { break }
                         }
 
@@ -514,8 +515,8 @@ public enum Logger {
                         for c in chunks.reversed() { combined.append(c) }
 
                         // If we have more than needed, find start index of last maxLogLines
-                        if newlineCount > self.maxLogLines {
-                            var needed = self.maxLogLines
+                        if newlineCount > maxLogLines {
+                            var needed = maxLogLines
                             var idx = combined.count - 1
                             let bytes = [UInt8](combined)
                             while idx >= 0 && needed > 0 {

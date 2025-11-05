@@ -1,8 +1,8 @@
 import Foundation
 
-public struct ConversationUpdate: Hashable, Codable {
-    public struct MetadataChange: Hashable, Codable {
-        public enum Field: String, Codable {
+public struct ConversationUpdate: Hashable, Codable, Sendable {
+    public struct MetadataChange: Hashable, Codable, Sendable {
+        public enum Field: String, Codable, Sendable {
             case name = "group_name",
                  description = "description",
                  image = "group_image_url_square",

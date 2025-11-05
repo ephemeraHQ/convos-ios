@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-public struct Profile: Codable, Identifiable, Hashable {
+public struct Profile: Codable, Identifiable, Hashable, Sendable {
     public var id: String { inboxId }
     public let inboxId: String
     public let name: String?

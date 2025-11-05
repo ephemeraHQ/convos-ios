@@ -19,7 +19,7 @@ public enum BuildEnvironment {
 /// environment-specific configuration including API URLs, database paths, XMTP endpoints,
 /// and keychain/app group settings. The environment determines build behavior, logging,
 /// and service configuration throughout the app.
-public enum AppEnvironment {
+public enum AppEnvironment: Sendable {
     case local(config: ConvosConfiguration)
     case tests
     case dev(config: ConvosConfiguration)

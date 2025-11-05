@@ -10,7 +10,13 @@ enum MockAPIError: Error {
     case invalidURL
 }
 
-class MockBaseAPIClient: ConvosAPIBaseProtocol {
+final class MockAPIClient: ConvosAPIClientProtocol, Sendable {
+    let overrideJWTToken: String?
+
+    init(overrideJWTToken: String? = nil) {
+        self.overrideJWTToken = overrideJWTToken
+    }
+
     func request(for path: String, method: String, queryParameters: [String: String]?) throws -> URLRequest {
         guard let url = URL(string: "http://example.com") else {
             throw MockAPIError.invalidURL
@@ -20,15 +26,6 @@ class MockBaseAPIClient: ConvosAPIBaseProtocol {
 
     func registerDevice(deviceId: String, pushToken: String?) async throws {
         // Mock implementation - no-op
-    }
-}
-
-class MockAPIClient: MockBaseAPIClient, ConvosAPIClientProtocol {
-    let overrideJWTToken: String?
-
-    init(overrideJWTToken: String? = nil) {
-        self.overrideJWTToken = overrideJWTToken
-        super.init()
     }
 
     func authenticate(appCheckToken: String, retryCount: Int = 0) async throws -> String {

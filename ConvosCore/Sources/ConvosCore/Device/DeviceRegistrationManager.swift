@@ -38,7 +38,7 @@ public actor DeviceRegistrationManager: DeviceRegistrationManagerProtocol {
     // MARK: - Properties
 
     private let environment: AppEnvironment
-    private let apiClient: any ConvosAPIBaseProtocol
+    private let apiClient: any ConvosAPIClientProtocol
     private var isRegistering: Bool = false
     nonisolated(unsafe) private var pushTokenObserver: NSObjectProtocol?
 

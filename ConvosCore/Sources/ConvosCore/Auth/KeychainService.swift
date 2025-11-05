@@ -17,7 +17,12 @@ protocol KeychainItemProtocol {
 /// Provides type-safe keychain operations for storing string and data values.
 /// Items are identified by service and account identifiers, with automatic
 /// updates for duplicate entries. Used internally by higher-level stores.
-final class KeychainService<T: KeychainItemProtocol> {
+///
+/// Thread-safe: Uses explicit synchronization via DispatchQueue to ensure
+/// safe concurrent access to Security framework APIs.
+final class KeychainService<T: KeychainItemProtocol>: Sendable {
+    private let queue: DispatchQueue = DispatchQueue(label: "com.convos.keychainService", qos: .userInitiated)
+
     func saveString(_ value: String, for item: T) throws {
         guard let valueData = value.data(using: .utf8) else {
             throw KeychainError.unknown(errSecParam)
@@ -26,34 +31,36 @@ final class KeychainService<T: KeychainItemProtocol> {
     }
 
     func saveData(_ data: Data, for item: T) throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: T.service,
-            kSecAttrAccount as String: item.account,
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        ]
-
-        let status = SecItemAdd(query as CFDictionary, nil)
-
-        if status == errSecDuplicateItem {
-            // Item already exists, update it
-            let updateQuery: [String: Any] = [
+        try queue.sync {
+            let query: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
                 kSecAttrService as String: T.service,
-                kSecAttrAccount as String: item.account
+                kSecAttrAccount as String: item.account,
+                kSecValueData as String: data,
+                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
             ]
 
-            let attributes: [String: Any] = [
-                kSecValueData as String: data
-            ]
+            let status = SecItemAdd(query as CFDictionary, nil)
 
-            let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributes as CFDictionary)
-            guard updateStatus == errSecSuccess else {
-                throw KeychainError.unknown(updateStatus)
+            if status == errSecDuplicateItem {
+                // Item already exists, update it
+                let updateQuery: [String: Any] = [
+                    kSecClass as String: kSecClassGenericPassword,
+                    kSecAttrService as String: T.service,
+                    kSecAttrAccount as String: item.account
+                ]
+
+                let attributes: [String: Any] = [
+                    kSecValueData as String: data
+                ]
+
+                let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributes as CFDictionary)
+                guard updateStatus == errSecSuccess else {
+                    throw KeychainError.unknown(updateStatus)
+                }
+            } else if status != errSecSuccess {
+                throw KeychainError.unknown(status)
             }
-        } else if status != errSecSuccess {
-            throw KeychainError.unknown(status)
         }
     }
 
@@ -72,37 +79,41 @@ final class KeychainService<T: KeychainItemProtocol> {
     }
 
     private func retrieve(service: String, account: String) throws -> Data? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecReturnData as String: true
-        ]
+        return try queue.sync {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account,
+                kSecReturnData as String: true
+            ]
 
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+            var result: AnyObject?
+            let status = SecItemCopyMatching(query as CFDictionary, &result)
 
-        guard status == errSecSuccess else {
-            if status == errSecItemNotFound {
-                return nil
+            guard status == errSecSuccess else {
+                if status == errSecItemNotFound {
+                    return nil
+                }
+                throw KeychainError.unknown(status)
             }
-            throw KeychainError.unknown(status)
-        }
 
-        return result as? Data
+            return result as? Data
+        }
     }
 
     private func delete(service: String, account: String) throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
-        ]
+        try queue.sync {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: account
+            ]
 
-        let status = SecItemDelete(query as CFDictionary)
+            let status = SecItemDelete(query as CFDictionary)
 
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw KeychainError.unknown(status)
+            guard status == errSecSuccess || status == errSecItemNotFound else {
+                throw KeychainError.unknown(status)
+            }
         }
     }
 

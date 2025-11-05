@@ -1,14 +1,5 @@
 import Foundation
 
-public protocol ConvosAPIBaseProtocol {
-    func request(for path: String,
-                 method: String,
-                 queryParameters: [String: String]?) throws -> URLRequest
-
-    /// Register device with AppCheck authentication (no JWT required - device-level operation)
-    func registerDevice(deviceId: String, pushToken: String?) async throws
-}
-
 protocol ConvosAPIClientFactoryType {
     static func client(environment: AppEnvironment, overrideJWTToken: String?) -> any ConvosAPIClientProtocol
 }
@@ -19,7 +10,14 @@ enum ConvosAPIClientFactory: ConvosAPIClientFactoryType {
     }
 }
 
-public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
+public protocol ConvosAPIClientProtocol: AnyObject, Sendable {
+    func request(for path: String,
+                 method: String,
+                 queryParameters: [String: String]?) throws -> URLRequest
+
+    /// Register device with AppCheck authentication (no JWT required - device-level operation)
+    func registerDevice(deviceId: String, pushToken: String?) async throws
+
     func authenticate(appCheckToken: String,
                       retryCount: Int) async throws -> String
 
@@ -41,23 +39,37 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     func unregisterInstallation(clientId: String) async throws
 }
 
-/// Base HTTP client for Convos backend API
+/// HTTP client for Convos backend API
 ///
-/// Provides unauthenticated API operations including device registration
-/// with Firebase AppCheck authentication.
-internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
-    internal let baseURL: URL
-    internal let session: URLSession
-    internal let environment: AppEnvironment
+/// ConvosAPIClient provides both authenticated and unauthenticated access to the Convos backend, handling:
+/// - JWT authentication with automatic token refresh
+/// - Device registration with Firebase AppCheck
+/// - Attachment uploads via S3 presigned URLs
+/// - Push notification topic subscriptions
+/// - Device and installation management
+/// - Exponential backoff retry logic
+///
+/// The client automatically re-authenticates on 401 responses up to a maximum
+/// retry count and stores JWT tokens in keychain for persistence.
+final class ConvosAPIClient: ConvosAPIClientProtocol, Sendable {
+    private let baseURL: URL
+    private let session: URLSession
+    private let environment: AppEnvironment
+    private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
+    private let overrideJWTToken: String?  // Immutable JWT override from APNS payload
+    private let maxRetryCount: Int = 3
 
-    fileprivate init(environment: AppEnvironment) {
+    fileprivate init(environment: AppEnvironment, overrideJWTToken: String? = nil) {
         guard let apiBaseURL = URL(string: environment.apiBaseURL) else {
             fatalError("Failed constructing API base URL")
         }
         self.baseURL = apiBaseURL
         self.session = URLSession(configuration: .default)
         self.environment = environment
+        self.overrideJWTToken = overrideJWTToken
     }
+
+    // MARK: - Base Request Building
 
     func request(for path: String,
                  method: String = "GET",
@@ -122,54 +134,7 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
         Logger.info("Device registered successfully (token: \(pushToken != nil ? "present" : "nil"))")
     }
 
-    private func performRequest<T: Decodable>(_ request: URLRequest, retryCount: Int = 0) async throws -> T {
-        let (data, response) = try await session.data(for: request)
-
-        Logger.info("\(request.url?.path(percentEncoded: false) ?? "nil") received response: \(data.prettyPrintedJSONString ?? "nil data")")
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        switch httpResponse.statusCode {
-        case 200...299:
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode(T.self, from: data)
-        case 401:
-            throw APIError.notAuthenticated
-        case 403:
-            throw APIError.forbidden
-        case 404:
-            throw APIError.notFound
-        default:
-            throw APIError.serverError(nil)
-        }
-    }
-}
-
-/// Authenticated HTTP client for Convos backend API
-///
-/// ConvosAPIClient provides authenticated access to the Convos backend, handling:
-/// - JWT authentication with automatic token refresh
-/// - Attachment uploads via S3 presigned URLs
-/// - Push notification topic subscriptions
-/// - Device and installation management
-/// - Exponential backoff retry logic
-///
-/// The client automatically re-authenticates on 401 responses up to a maximum
-/// retry count and stores JWT tokens in keychain for persistence.
-final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
-    private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
-
-    let overrideJWTToken: String?  // Immutable JWT override from APNS payload
-
-    private let maxRetryCount: Int = 3
-
-    fileprivate init(environment: AppEnvironment, overrideJWTToken: String? = nil) {
-        self.overrideJWTToken = overrideJWTToken
-        super.init(environment: environment)
-    }
+    // MARK: - Private Helpers
 
     private func reAuthenticate() async throws -> String {
         let firebaseAppCheckToken = try await FirebaseHelperCore.getAppCheckToken()
@@ -338,13 +303,13 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 // Try to re-authenticate and retry the request
                 do {
                     Logger.info("Attempting re-authentication (attempt \(retryCount + 1) of \(maxRetryCount))")
-                    _ = try await reAuthenticate()
+                    let freshJWT = try await reAuthenticate()
+                    guard !freshJWT.isEmpty else {
+                        throw APIError.notAuthenticated
+                    }
                     // Create a new request with the fresh token
                     var newRequest = request
-                    let deviceId = DeviceInfo.deviceIdentifier
-                    if let jwt = try keychainService.retrieveString(.init(deviceId: deviceId)) {
-                        newRequest.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
-                    }
+                    newRequest.setValue(freshJWT, forHTTPHeaderField: "X-Convos-AuthToken")
                     // Retry the request with incremented retry count
                     return try await performRequest(newRequest, retryCount: retryCount + 1)
                 } catch {
