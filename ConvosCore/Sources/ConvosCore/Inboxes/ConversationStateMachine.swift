@@ -343,15 +343,6 @@ public actor ConversationStateMachine {
             conversationId: externalConversationId,
             origin: .created
         )))
-
-        // Clear unused inbox from keychain now that conversation is successfully created
-        await UnusedInboxCache.shared
-            .clearUnusedInbox(
-                with: client.inboxId,
-                databaseWriter: databaseWriter,
-                databaseReader: databaseReader,
-                environment: environment
-            )
     }
 
     private func handleValidate(inviteCode: String, previousResult: ConversationReadyResult?) async throws {
@@ -409,14 +400,6 @@ public actor ConversationStateMachine {
         if let existingConversation, existingIdentity != nil {
             Logger.info("Found existing convo by invite tag...")
             let prevInboxReady = try await inboxStateManager.waitForInboxReadyResult()
-            // Clear unused inbox since we're deleting it
-            await UnusedInboxCache.shared
-                .clearUnusedInbox(
-                    with: prevInboxReady.client.inboxId,
-                    databaseWriter: databaseWriter,
-                    databaseReader: databaseReader,
-                    environment: environment
-                )
             try await inboxStateManager.delete()
             let inboxReady = try await inboxStateManager.reauthorize(
                 inboxId: existingConversation.inboxId,
@@ -506,15 +489,6 @@ public actor ConversationStateMachine {
         _ = try await dm.prepare(text: text)
         try await dm.publish()
 
-        // Clear unused inbox from keychain now that we sent the join request
-        await UnusedInboxCache.shared
-            .clearUnusedInbox(
-                with: client.inboxId,
-                databaseWriter: databaseWriter,
-                databaseReader: databaseReader,
-                environment: environment
-            )
-
         // Clean up previous conversation, do this without matching the `conversationId`.
         // We don't need the created conversation during the 'joining' state and
         // want to make sure it is deleted even if the conversation never shows in
@@ -589,15 +563,6 @@ public actor ConversationStateMachine {
                 client: inboxReady.client,
                 apiClient: inboxReady.apiClient,
             )
-
-            // Clear unused inbox from keychain now that we sent the join request
-            await UnusedInboxCache.shared
-                .clearUnusedInbox(
-                    with: inboxReady.client.inboxId,
-                    databaseWriter: databaseWriter,
-                    databaseReader: databaseReader,
-                    environment: environment
-                )
 
             try await inboxStateManager.delete()
         }

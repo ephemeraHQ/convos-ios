@@ -22,6 +22,7 @@ public actor UnusedInboxCache {
     private let keychainService: KeychainService<UnusedInboxKeychainItem>
     private var unusedMessagingService: MessagingService?
     private var isCreatingUnusedInbox: Bool = false
+    private var isConsumingUnusedInbox: Bool = false
 
     // MARK: - Initialization
 
@@ -78,13 +79,27 @@ public actor UnusedInboxCache {
         databaseReader: any DatabaseReader,
         environment: AppEnvironment
     ) async -> MessagingService {
+        // Prevent concurrent consumption of the same unused inbox
+        guard !isConsumingUnusedInbox else {
+            Logger.warning("Attempted to consume unused inbox while consumption already in progress, creating new one instead")
+            // Create a fresh messaging service to avoid any race conditions
+            return await createFreshMessagingService(
+                databaseWriter: databaseWriter,
+                databaseReader: databaseReader,
+                environment: environment
+            )
+        }
+
         // Check if we have a pre-created unused messaging service
         if let unusedService = unusedMessagingService {
             Logger.info("Using pre-created unused messaging service")
 
-            // Clear the reference only after all operations complete
-            // This prevents race conditions where another caller could enter during await
-            defer { unusedMessagingService = nil }
+            // Mark as consuming and clear ALL references IMMEDIATELY (both service and keychain)
+            // This must happen before any await points to prevent concurrent access
+            isConsumingUnusedInbox = true
+            unusedMessagingService = nil
+            clearUnusedInboxFromKeychain()  // Clear keychain too!
+            defer { isConsumingUnusedInbox = false }
 
             // Make sure the inbox is saved to the database
             do {
@@ -98,12 +113,27 @@ public actor UnusedInboxCache {
                 Logger.error("Failed to save consumed inbox to database: \(error)")
             }
 
+            // Schedule creation of a new unused inbox for next time (after consumption completes)
+            Task(priority: .background) { [weak self] in
+                guard let self else { return }
+                await createNewUnusedInbox(
+                    databaseWriter: databaseWriter,
+                    databaseReader: databaseReader,
+                    environment: environment
+                )
+            }
+
             return unusedService
         }
 
         // Check for an unused inbox ID in keychain (fallback)
         if let unusedInboxId = getUnusedInboxFromKeychain() {
             Logger.info("Using unused inbox ID from keychain: \(unusedInboxId)")
+
+            // Mark as consuming and clear keychain
+            isConsumingUnusedInbox = true
+            clearUnusedInboxFromKeychain()
+            defer { isConsumingUnusedInbox = false }
 
             // Use the existing inbox with authorize
             // Note: The authorize flow in InboxStateMachine.handleAuthorize() will
@@ -122,6 +152,17 @@ public actor UnusedInboxCache {
                     environment: environment,
                     startsStreamingServices: true
                 )
+
+                // Schedule creation of a new unused inbox for next time
+                Task(priority: .background) { [weak self] in
+                    guard let self else { return }
+                    await createNewUnusedInbox(
+                        databaseWriter: databaseWriter,
+                        databaseReader: databaseReader,
+                        environment: environment
+                    )
+                }
+
                 return MessagingService(
                     authorizationOperation: authorizationOperation,
                     databaseWriter: databaseWriter,
@@ -131,14 +172,41 @@ public actor UnusedInboxCache {
                 )
             } catch {
                 Logger.error("Failed to look up identity for unused inbox: \(error)")
-                clearUnusedInboxFromKeychain()
                 // Fall through to create new one
             }
         }
 
         // No unused inbox available, create a new one
         Logger.info("No unused inbox available, creating new one")
+        return await createFreshMessagingService(
+            databaseWriter: databaseWriter,
+            databaseReader: databaseReader,
+            environment: environment
+        )
+    }
 
+    public func clearUnusedInboxFromKeychain() {
+        do {
+            try keychainService.delete(UnusedInboxKeychainItem())
+            Logger.debug("Cleared unused inbox from keychain")
+        } catch {
+            Logger.debug("Failed to clear unused inbox from keychain: \(error)")
+        }
+    }
+
+    /// Checks if the given inbox ID is the unused inbox
+    func isUnusedInbox(_ inboxId: String) -> Bool {
+        return getUnusedInboxFromKeychain() == inboxId
+    }
+
+    // MARK: - Private Methods
+
+    /// Creates a fresh messaging service without using cached inboxes
+    private func createFreshMessagingService(
+        databaseWriter: any DatabaseWriter,
+        databaseReader: any DatabaseReader,
+        environment: AppEnvironment
+    ) async -> MessagingService {
         // Schedule creation of an unused inbox for next time
         Task(priority: .background) { [weak self] in
             guard let self else { return }
@@ -166,67 +234,6 @@ public actor UnusedInboxCache {
             environment: environment
         )
     }
-
-    /// Clears the unused inbox from keychain if it matches the provided inboxId
-    /// Should be called when successfully creating or joining a conversation
-    func clearUnusedInbox(
-        with inboxId: String,
-        databaseWriter: any DatabaseWriter,
-        databaseReader: any DatabaseReader,
-        environment: AppEnvironment
-    ) async {
-        guard let storedInboxId = getUnusedInboxFromKeychain(),
-              storedInboxId == inboxId else {
-            return
-        }
-
-        await clearUnusedInbox(
-            databaseWriter: databaseWriter,
-            databaseReader: databaseReader,
-            environment: environment
-        )
-    }
-
-    /// Clears the unused inbox from keychain
-    func clearUnusedInbox(
-        databaseWriter: any DatabaseWriter,
-        databaseReader: any DatabaseReader,
-        environment: AppEnvironment
-    ) async {
-        clearUnusedInboxFromKeychain()
-
-        // Clean up the messaging service
-        await unusedMessagingService?.stopAndDelete()
-        unusedMessagingService = nil
-
-        // Schedule creation of a new unused inbox for next time
-        Task(priority: .background) { [weak self] in
-            guard let self else { return }
-            await createNewUnusedInbox(
-                databaseWriter: databaseWriter,
-                databaseReader: databaseReader,
-                environment: environment
-            )
-        }
-
-        Logger.info("Cleared unused inbox from keychain")
-    }
-
-    public func clearUnusedInboxFromKeychain() {
-        do {
-            try keychainService.delete(UnusedInboxKeychainItem())
-            Logger.debug("Cleared unused inbox from keychain")
-        } catch {
-            Logger.debug("Failed to clear unused inbox from keychain: \(error)")
-        }
-    }
-
-    /// Checks if the given inbox ID is the unused inbox
-    func isUnusedInbox(_ inboxId: String) -> Bool {
-        return getUnusedInboxFromKeychain() == inboxId
-    }
-
-    // MARK: - Private Methods
 
     private func authorizeUnusedInbox(
         inboxId: String,

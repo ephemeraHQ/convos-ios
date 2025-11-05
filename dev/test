@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eou pipefail
 
-echo "🧪 Running InboxStateMachine tests with local XMTP node..."
+echo "🧪 Running InboxStateMachine and UnusedInboxCache tests with local XMTP node..."
 echo ""
 
 # Check if Docker is running
@@ -50,6 +50,7 @@ if TEST_SERVER_ENABLED=true xcodebuild test \
     -scheme ConvosCore \
     -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.0' \
     -only-testing:ConvosCoreTests/InboxStateMachineTests \
+    -only-testing:ConvosCoreTests/UnusedInboxCacheTests \
     2>&1 | tee test-output.log; then
     echo ""
     echo "✅ All tests passed!"
