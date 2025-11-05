@@ -40,13 +40,13 @@ fi
 # Run the tests
 echo ""
 echo "🧪 Running tests..."
-cd "$(dirname "$0")/.."
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/../ConvosCore"
 
-# Use xcodebuild to run tests on iOS Simulator
+# Use xcodebuild to run tests on iOS Simulator from within the ConvosCore package directory
 # Pass environment variable using -testProductsPath approach won't work
 # We need to set it before running xcodebuild
 if TEST_SERVER_ENABLED=true xcodebuild test \
-    -project Convos.xcodeproj \
     -scheme ConvosCore \
     -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.0' \
     -only-testing:ConvosCoreTests/InboxStateMachineTests \
@@ -63,7 +63,7 @@ fi
 # Stop the XMTP node
 echo ""
 echo "🛑 Stopping Docker containers..."
-cd "$(dirname "$0")"
+cd "$SCRIPT_DIR"
 ./compose down
 
 exit $test_exit_code

@@ -20,24 +20,37 @@ extension KeyboardListenerDelegate {
     func keyboardDidChangeFrame(info: KeyboardInfo) {}
 }
 
+@MainActor
 final class KeyboardListener {
-    static let shared: KeyboardListener = KeyboardListener()
+    nonisolated static let shared: KeyboardListener = KeyboardListener()
     private(set) var keyboardRect: CGRect?
-    private var delegates: NSHashTable<AnyObject> = NSHashTable<AnyObject>.weakObjects()
+
+    private let delegatesLock: NSLock = NSLock()
+    nonisolated(unsafe) private var delegates: NSHashTable<AnyObject> = NSHashTable<AnyObject>.weakObjects()
 
     // Fallback support
     private var pendingDidChangeFrameInfo: KeyboardInfo?
     private var didChangeFrameTimer: Timer?
 
-    func add(delegate: KeyboardListenerDelegate) {
+    nonisolated func add(delegate: KeyboardListenerDelegate) {
+        delegatesLock.lock()
+        defer { delegatesLock.unlock() }
         delegates.add(delegate)
     }
 
-    func remove(delegate: KeyboardListenerDelegate) {
+    nonisolated func remove(delegate: KeyboardListenerDelegate) {
+        delegatesLock.lock()
+        defer { delegatesLock.unlock() }
         delegates.remove(delegate)
     }
 
-    private init() {
+    private func allDelegates() -> [KeyboardListenerDelegate] {
+        delegatesLock.lock()
+        defer { delegatesLock.unlock() }
+        return delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }
+    }
+
+    nonisolated private init() {
         subscribeToKeyboardNotifications()
     }
 
@@ -48,7 +61,7 @@ final class KeyboardListener {
         }
 
         keyboardRect = info.frameEnd
-        delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
+        allDelegates().forEach {
             $0.keyboardWillShow(info: info)
         }
     }
@@ -67,10 +80,12 @@ final class KeyboardListener {
 
         // Start a fallback timer slightly longer than the expected duration
         didChangeFrameTimer = Timer.scheduledTimer(withTimeInterval: info.animationDuration + 0.1, repeats: false) { [weak self] _ in
-            self?.handleMissingDidChangeFrame()
+            Task { @MainActor in
+                self?.handleMissingDidChangeFrame()
+            }
         }
 
-        delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
+        allDelegates().forEach {
             $0.keyboardWillChangeFrame(info: info)
         }
     }
@@ -87,7 +102,7 @@ final class KeyboardListener {
         pendingDidChangeFrameInfo = nil
 
         keyboardRect = info.frameEnd
-        delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
+        allDelegates().forEach {
             $0.keyboardDidChangeFrame(info: info)
         }
     }
@@ -99,7 +114,7 @@ final class KeyboardListener {
         }
 
         keyboardRect = info.frameEnd
-        delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
+        allDelegates().forEach {
             $0.keyboardDidShow(info: info)
         }
     }
@@ -111,7 +126,7 @@ final class KeyboardListener {
         }
 
         keyboardRect = info.frameEnd
-        delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
+        allDelegates().forEach {
             $0.keyboardWillHide(info: info)
         }
     }
@@ -123,7 +138,7 @@ final class KeyboardListener {
         }
 
         keyboardRect = info.frameEnd
-        delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
+        allDelegates().forEach {
             $0.keyboardDidHide(info: info)
         }
     }
@@ -136,12 +151,12 @@ final class KeyboardListener {
         pendingDidChangeFrameInfo = nil
         didChangeFrameTimer = nil
 
-        delegates.allObjects.compactMap { $0 as? KeyboardListenerDelegate }.forEach {
+        allDelegates().forEach {
             $0.keyboardDidChangeFrame(info: info)
         }
     }
 
-    private func subscribeToKeyboardNotifications() {
+    nonisolated private func subscribeToKeyboardNotifications() {
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(keyboardWillShow(_:)),
                                                name: UIResponder.keyboardWillShowNotification,
