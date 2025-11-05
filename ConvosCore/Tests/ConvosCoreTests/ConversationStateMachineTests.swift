@@ -1,0 +1,838 @@
+@preconcurrency @testable import ConvosCore
+import Foundation
+import GRDB
+import Testing
+import XMTPiOS
+
+/// Comprehensive tests for ConversationStateMachine
+///
+/// Tests cover:
+/// - Conversation creation flow (uninitialized → creating → ready)
+/// - Message queuing during conversation creation
+/// - State transitions and error handling
+/// - Delete and stop flows
+/// - State sequence observation
+/// - Multiple conversation creation
+@Suite("ConversationStateMachine Tests")
+struct ConversationStateMachineTests {
+
+    // MARK: - Test Helpers
+
+    /// Waits for messages to be saved to the database by polling with a timeout
+    ///
+    /// This function polls the database to check if the expected number of messages
+    /// have been saved. This is more efficient and deterministic than fixed sleep durations.
+    ///
+    /// - Parameters:
+    ///   - conversationId: The conversation ID to check for messages
+    ///   - expectedCount: The expected number of messages
+    ///   - databaseReader: Database reader for checking messages
+    ///   - timeout: Maximum time to wait (default: 10 seconds)
+    /// - Throws: TestError if timeout is reached
+    private func waitForMessages(
+        conversationId: String,
+        expectedCount: Int,
+        databaseReader: any DatabaseReader,
+        timeout: Duration = .seconds(10)
+    ) async throws {
+        let deadline = ContinuousClock.now + timeout
+
+        while ContinuousClock.now < deadline {
+            // Check if messages have been saved
+            let messageCount = try await databaseReader.read { db in
+                try DBMessage
+                    .filter(DBMessage.Columns.conversationId == conversationId)
+                    .fetchCount(db)
+            }
+
+            if messageCount >= expectedCount {
+                return
+            }
+
+            // Poll every 100ms
+            try await Task.sleep(for: .milliseconds(100))
+        }
+
+        throw TestError.timeout("Timed out waiting for \(expectedCount) messages to be saved")
+    }
+
+    /// Test-specific error type
+    private enum TestError: Error {
+        case timeout(String)
+    }
+
+    // MARK: - Creation Flow Tests
+
+    @Test("Create flow reaches ready state")
+    func testCreateFlow() async throws {
+        let fixtures = TestFixtures()
+
+        // Get a real messaging service from the cache
+        let unusedInboxCache = UnusedInboxCache(
+            keychainService: fixtures.keychainService,
+            identityStore: fixtures.identityStore
+        )
+        let messagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let stateMachine = ConversationStateMachine(
+            inboxStateManager: messagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Start in uninitialized state
+        let initialState = await stateMachine.state
+        #expect(initialState == .uninitialized)
+
+        // Trigger create
+        await stateMachine.create()
+
+        // Wait for ready state
+        var result: ConversationReadyResult?
+        for await state in await stateMachine.stateSequence {
+            switch state {
+            case .ready(let readyResult):
+                result = readyResult
+                break
+            case .error(let error):
+                Issue.record("Creation failed: \(error)")
+                // Clean up and return early on error
+                await messagingService.stopAndDelete()
+                try? await fixtures.cleanup()
+                return
+            default:
+                continue
+            }
+
+            if result != nil {
+                break
+            }
+        }
+
+        #expect(result != nil, "Should reach ready state")
+        #expect(result?.origin == .created, "Origin should be created")
+        #expect(result?.conversationId.isEmpty == false, "Should have conversation ID")
+
+        // Clean up
+        await messagingService.stopAndDelete()
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Create transitions through expected states")
+    func testCreateStateTransitions() async throws {
+        let fixtures = TestFixtures()
+
+        // Get a real messaging service from the cache
+        let unusedInboxCache = UnusedInboxCache(
+            keychainService: fixtures.keychainService,
+            identityStore: fixtures.identityStore
+        )
+        let messagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let stateMachine = ConversationStateMachine(
+            inboxStateManager: messagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        actor StateCollector {
+            var states: [String] = []
+            func add(_ state: String) {
+                states.append(state)
+            }
+            func getStates() -> [String] {
+                states
+            }
+        }
+
+        let collector = StateCollector()
+
+        // Observe states in background
+        let observerTask = Task {
+            for await state in await stateMachine.stateSequence {
+                let stateName: String
+                switch state {
+                case .uninitialized:
+                    stateName = "uninitialized"
+                case .creating:
+                    stateName = "creating"
+                case .ready:
+                    stateName = "ready"
+                case .error:
+                    stateName = "error"
+                default:
+                    stateName = "other"
+                }
+                await collector.add(stateName)
+
+                if stateName == "ready" || stateName == "error" {
+                    break
+                }
+            }
+        }
+
+        // Trigger create
+        await stateMachine.create()
+
+        // Wait for observer to finish
+        await observerTask.value
+
+        // Verify state progression
+        let observedStates = await collector.getStates()
+        #expect(observedStates.contains("creating"), "Should transition to creating")
+        #expect(observedStates.contains("ready"), "Should reach ready")
+
+        // Clean up
+        await messagingService.stopAndDelete()
+        try? await fixtures.cleanup()
+    }
+
+    // MARK: - Message Queuing Tests
+
+    @Test("Messages queued during creation are sent when ready")
+    func testMessageQueueingDuringCreation() async throws {
+        let fixtures = TestFixtures()
+
+        // Get a real messaging service from the cache
+        let unusedInboxCache = UnusedInboxCache(
+            keychainService: fixtures.keychainService,
+            identityStore: fixtures.identityStore
+        )
+        let messagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let stateMachine = ConversationStateMachine(
+            inboxStateManager: messagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Trigger create
+        await stateMachine.create()
+
+        // Queue messages while creating (before ready)
+        await stateMachine.sendMessage(text: "Message 1")
+        await stateMachine.sendMessage(text: "Message 2")
+
+        // Wait for ready state
+        var conversationId: String?
+        for await state in await stateMachine.stateSequence {
+            if case .ready(let result) = state {
+                conversationId = result.conversationId
+                break
+            }
+        }
+
+        #expect(conversationId != nil, "Should have conversation ID")
+
+        // Wait for messages to be sent and saved
+        if let convId = conversationId {
+            try await waitForMessages(
+                conversationId: convId,
+                expectedCount: 2,
+                databaseReader: fixtures.databaseManager.dbReader
+            )
+        }
+
+        // Verify messages were saved
+        if let convId = conversationId {
+            let messages = try await fixtures.databaseManager.dbReader.read { db in
+                try DBMessage
+                    .filter(DBMessage.Columns.conversationId == convId)
+                    .fetchAll(db)
+            }
+            #expect(messages.count >= 2, "Queued messages should be sent")
+        }
+
+        // Clean up
+        await messagingService.stopAndDelete()
+        try? await fixtures.cleanup()
+    }
+
+    // MARK: - Delete Flow Tests
+
+    @Test("Delete flow cleans up conversation")
+    func testDeleteFlow() async throws {
+        let fixtures = TestFixtures()
+
+        // Get a real messaging service from the cache
+        let unusedInboxCache = UnusedInboxCache(
+            keychainService: fixtures.keychainService,
+            identityStore: fixtures.identityStore
+        )
+        let messagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let stateMachine = ConversationStateMachine(
+            inboxStateManager: messagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Create conversation first
+        await stateMachine.create()
+
+        var conversationId: String?
+        for await state in await stateMachine.stateSequence {
+            if case .ready(let result) = state {
+                conversationId = result.conversationId
+                break
+            }
+        }
+
+        guard let convId = conversationId else {
+            Issue.record("No conversation ID")
+            await messagingService.stopAndDelete()
+            try? await fixtures.cleanup()
+            return
+        }
+
+        // Verify conversation exists in database
+        let conversationBefore = try await fixtures.databaseManager.dbReader.read { db in
+            try DBConversation
+                .filter(DBConversation.Columns.id == convId)
+                .fetchOne(db)
+        }
+        #expect(conversationBefore != nil, "Conversation should exist before delete")
+
+        // Delete conversation
+        await stateMachine.delete()
+
+        // Wait for uninitialized state
+        var deletedSuccessfully = false
+        for await state in await stateMachine.stateSequence {
+            if case .uninitialized = state {
+                deletedSuccessfully = true
+                break
+            }
+        }
+
+        #expect(deletedSuccessfully, "Should return to uninitialized state")
+
+        // Verify conversation was removed from database
+        let conversationAfter = try await fixtures.databaseManager.dbReader.read { db in
+            try DBConversation
+                .filter(DBConversation.Columns.id == convId)
+                .fetchOne(db)
+        }
+        #expect(conversationAfter == nil, "Conversation should be deleted from database")
+
+        // Clean up (messaging service already deleted by state machine)
+        try? await fixtures.cleanup()
+    }
+
+    // MARK: - Stop Flow Tests
+
+    @Test("Stop transitions to uninitialized without deleting")
+    func testStopFlow() async throws {
+        let fixtures = TestFixtures()
+
+        // Get a real messaging service from the cache
+        let unusedInboxCache = UnusedInboxCache(
+            keychainService: fixtures.keychainService,
+            identityStore: fixtures.identityStore
+        )
+        let messagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let stateMachine = ConversationStateMachine(
+            inboxStateManager: messagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Create conversation first
+        await stateMachine.create()
+
+        var conversationId: String?
+        for await state in await stateMachine.stateSequence {
+            if case .ready(let result) = state {
+                conversationId = result.conversationId
+                break
+            }
+        }
+
+        guard let convId = conversationId else {
+            Issue.record("No conversation ID")
+            await messagingService.stopAndDelete()
+            try? await fixtures.cleanup()
+            return
+        }
+
+        // Stop (should not delete)
+        await stateMachine.stop()
+
+        // Wait for uninitialized state
+        var stoppedSuccessfully = false
+        for await state in await stateMachine.stateSequence {
+            if case .uninitialized = state {
+                stoppedSuccessfully = true
+                break
+            }
+        }
+
+        #expect(stoppedSuccessfully, "Should return to uninitialized state")
+
+        // Verify conversation still exists in database (stop doesn't delete)
+        let conversation = try await fixtures.databaseManager.dbReader.read { db in
+            try DBConversation
+                .filter(DBConversation.Columns.id == convId)
+                .fetchOne(db)
+        }
+        #expect(conversation != nil, "Stop should not delete conversation from database")
+
+        // Clean up
+        await messagingService.stopAndDelete()
+        try? await fixtures.cleanup()
+    }
+
+    // MARK: - Multiple Conversation Tests
+
+    @Test("Creating multiple conversations sequentially works")
+    func testMultipleSequentialConversations() async throws {
+        let fixtures = TestFixtures()
+
+        // Get a real messaging service from the cache
+        let unusedInboxCache = UnusedInboxCache(
+            keychainService: fixtures.keychainService,
+            identityStore: fixtures.identityStore
+        )
+        let messagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let stateMachine = ConversationStateMachine(
+            inboxStateManager: messagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Create first conversation
+        await stateMachine.create()
+
+        var conversationId1: String?
+        let timeout1 = ContinuousClock.now + .seconds(10)
+        for await state in await stateMachine.stateSequence {
+            if ContinuousClock.now > timeout1 {
+                Issue.record("Timed out waiting for first conversation to be ready")
+                break
+            }
+            if case .ready(let result) = state {
+                conversationId1 = result.conversationId
+                break
+            }
+        }
+
+        #expect(conversationId1 != nil, "Should have first conversation ID")
+
+        // Stop and create another
+        await stateMachine.stop()
+
+        // Wait for uninitialized
+        let timeout2 = ContinuousClock.now + .seconds(5)
+        for await state in await stateMachine.stateSequence {
+            if ContinuousClock.now > timeout2 {
+                Issue.record("Timed out waiting for uninitialized state")
+                break
+            }
+            if case .uninitialized = state {
+                break
+            }
+        }
+
+        // Create second conversation
+        await stateMachine.create()
+
+        var conversationId2: String?
+        let timeout3 = ContinuousClock.now + .seconds(10)
+        for await state in await stateMachine.stateSequence {
+            if ContinuousClock.now > timeout3 {
+                Issue.record("Timed out waiting for second conversation to be ready")
+                break
+            }
+            if case .ready(let result) = state {
+                conversationId2 = result.conversationId
+                break
+            }
+        }
+
+        #expect(conversationId2 != nil, "Should have second conversation ID")
+        #expect(conversationId1 != conversationId2, "Conversations should be different")
+
+        // Clean up
+        await messagingService.stopAndDelete()
+        try? await fixtures.cleanup()
+    }
+
+    // MARK: - State Sequence Tests
+
+    @Test("State sequence emits all state changes")
+    func testStateSequenceEmission() async throws {
+        let fixtures = TestFixtures()
+
+        // Get a real messaging service from the cache
+        let unusedInboxCache = UnusedInboxCache(
+            keychainService: fixtures.keychainService,
+            identityStore: fixtures.identityStore
+        )
+        let messagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let stateMachine = ConversationStateMachine(
+            inboxStateManager: messagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        actor StateCollector {
+            var states: [String] = []
+            func add(_ state: String) {
+                states.append(state)
+            }
+            func getStates() -> [String] {
+                states
+            }
+        }
+
+        let collector = StateCollector()
+
+        // Observe all states
+        let observerTask = Task {
+            for await state in await stateMachine.stateSequence {
+                let stateName: String
+                switch state {
+                case .uninitialized:
+                    stateName = "uninitialized"
+                case .creating:
+                    stateName = "creating"
+                case .ready:
+                    stateName = "ready"
+                case .deleting:
+                    stateName = "deleting"
+                case .error:
+                    stateName = "error"
+                default:
+                    stateName = "other"
+                }
+                await collector.add(stateName)
+
+                if stateName == "ready" {
+                    break
+                }
+            }
+        }
+
+        // Create conversation
+        await stateMachine.create()
+
+        await observerTask.value
+
+        // Verify state progression
+        let observedStates = await collector.getStates()
+        #expect(observedStates.contains("creating"), "Should emit creating state")
+        #expect(observedStates.contains("ready"), "Should emit ready state")
+
+        // Clean up
+        await messagingService.stopAndDelete()
+        try? await fixtures.cleanup()
+    }
+
+    // MARK: - Join Flow Tests
+
+    @Test("Join conversation while inviter is online")
+    func testJoinConversationOnline() async throws {
+        let fixtures = TestFixtures()
+
+        // Setup inviter messaging service and state machine
+        let unusedInboxCache = UnusedInboxCache(
+            keychainService: fixtures.keychainService,
+            identityStore: fixtures.identityStore
+        )
+        let inviterMessagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let inviterStateMachine = ConversationStateMachine(
+            inboxStateManager: inviterMessagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Create conversation as inviter
+        await inviterStateMachine.create()
+
+        // Wait for ready state and get conversation ID
+        var inviterConversationId: String?
+        do {
+            inviterConversationId = try await withTimeout(seconds: 10) {
+                for await state in await inviterStateMachine.stateSequence {
+                    if case .ready(let result) = state {
+                        return result.conversationId
+                    }
+                }
+                throw TestError.timeout("Never reached ready state")
+            }
+        } catch {
+            Issue.record("Timed out waiting for inviter to be ready: \(error)")
+        }
+
+        guard let convId = inviterConversationId else {
+            Issue.record("No conversation ID from inviter")
+            await inviterMessagingService.stopAndDelete()
+            try? await fixtures.cleanup()
+            return
+        }
+
+        // Fetch the invite that was automatically created
+        let invite = try await fixtures.databaseManager.dbReader.read { db in
+            try DBInvite
+                .filter(DBInvite.Columns.conversationId == convId)
+                .fetchOne(db)?
+                .hydrateInvite()
+        }
+
+        guard let invite else {
+            Issue.record("Could not fetch invite from database")
+            await inviterMessagingService.stopAndDelete()
+            try? await fixtures.cleanup()
+            return
+        }
+
+        Logger.info("Fetched invite URL: \(invite.urlSlug)")
+
+        // Setup joiner messaging service and state machine
+        let joinerMessagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let joinerStateMachine = ConversationStateMachine(
+            inboxStateManager: joinerMessagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Join conversation as joiner
+        await joinerStateMachine.join(inviteCode: invite.urlSlug)
+
+        // Wait for ready state
+        var joinerConversationId: String?
+        do {
+            joinerConversationId = try await withTimeout(seconds: 30) {
+                for await state in await joinerStateMachine.stateSequence {
+                    switch state {
+                    case .ready(let result):
+                        return result.conversationId
+                    case .error(let error):
+                        Issue.record("Join failed: \(error)")
+                        throw error
+                    default:
+                        continue
+                    }
+                }
+                throw TestError.timeout("Never reached ready state")
+            }
+        } catch {
+            Issue.record("Timed out waiting for joiner to reach ready state: \(error)")
+        }
+
+        #expect(joinerConversationId != nil, "Should have joined conversation")
+
+        // Clean up
+        await inviterMessagingService.stopAndDelete()
+        await joinerMessagingService.stopAndDelete()
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Join conversation while inviter is offline")
+    func testJoinConversationOffline() async throws {
+        let fixtures = TestFixtures()
+
+        // Setup inviter messaging service and state machine
+        let unusedInboxCache = UnusedInboxCache(
+            keychainService: fixtures.keychainService,
+            identityStore: fixtures.identityStore
+        )
+        let inviterMessagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let inviterStateMachine = ConversationStateMachine(
+            inboxStateManager: inviterMessagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Create conversation as inviter
+        await inviterStateMachine.create()
+
+        // Wait for ready state and get conversation ID
+        var inviterConversationId: String?
+        var inviterInboxId: String?
+        do {
+            inviterConversationId = try await withTimeout(seconds: 10) {
+                for await state in await inviterStateMachine.stateSequence {
+                    if case .ready(let result) = state {
+                        return result.conversationId
+                    }
+                }
+                throw TestError.timeout("Never reached ready state")
+            }
+        } catch {
+            Issue.record("Timed out waiting for inviter to be ready: \(error)")
+        }
+
+        guard let convId = inviterConversationId else {
+            Issue.record("No conversation ID from inviter")
+            await inviterMessagingService.stopAndDelete()
+            try? await fixtures.cleanup()
+            return
+        }
+
+        // Get the inbox ID and fetch the automatically created invite
+        let (invite, inboxId) = try await fixtures.databaseManager.dbReader.read { db in
+            let conversation = try DBConversation.fetchOne(db, key: convId)
+            let invite = try DBInvite
+                .filter(DBInvite.Columns.conversationId == convId)
+                .fetchOne(db)?
+                .hydrateInvite()
+            return (invite, conversation?.inboxId)
+        }
+
+        guard let invite, let inboxId else {
+            Issue.record("Could not fetch invite or conversation from database")
+            await inviterMessagingService.stopAndDelete()
+            try? await fixtures.cleanup()
+            return
+        }
+
+        inviterInboxId = inboxId
+
+        Logger.info("Fetched invite URL: \(invite.urlSlug)")
+
+        // Stop inviter's messaging service (simulating offline)
+        inviterMessagingService.stop()
+        Logger.info("Inviter went offline")
+
+        // Setup joiner messaging service and state machine
+        let joinerMessagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let joinerStateMachine = ConversationStateMachine(
+            inboxStateManager: joinerMessagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Join conversation as joiner (should wait for inviter to come back online)
+        await joinerStateMachine.join(inviteCode: invite.urlSlug)
+
+        // Wait a moment for join request to be sent
+        try await Task.sleep(for: .seconds(2))
+
+        // Restart inviter's messaging service with the same inbox ID
+        guard let inviterInbox = inviterInboxId else {
+            Issue.record("No inviter inbox ID")
+            await joinerMessagingService.stopAndDelete()
+            try? await fixtures.cleanup()
+            return
+        }
+
+        let identity = try await fixtures.identityStore.identity(for: inviterInbox)
+        let restartedInviterService = MessagingService.authorizedMessagingService(
+            for: inviterInbox,
+            clientId: identity.clientId,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests,
+            identityStore: fixtures.identityStore,
+            startsStreamingServices: true
+        )
+
+        Logger.info("Inviter came back online")
+
+        // Wait for joiner to reach ready state (join should be processed automatically)
+        var joinerConversationId: String?
+        var joinerReachedReady = false
+
+        do {
+            joinerConversationId = try await withTimeout(seconds: 30) {
+                for await state in await joinerStateMachine.stateSequence {
+                    switch state {
+                    case .ready(let result):
+                        return result.conversationId
+                    case .error(let error):
+                        Issue.record("Join failed: \(error)")
+                        throw error
+                    default:
+                        continue
+                    }
+                }
+                throw TestError.timeout("Never reached ready state")
+            }
+            joinerReachedReady = true
+        } catch {
+            Issue.record("Timed out waiting for join to complete: \(error)")
+        }
+
+        #expect(joinerConversationId != nil, "Should have joined conversation")
+        #expect(joinerReachedReady, "Joiner should reach ready state after inviter comes online")
+
+        // Clean up
+        await restartedInviterService.stopAndDelete()
+        await joinerMessagingService.stopAndDelete()
+        try? await fixtures.cleanup()
+    }
+}

@@ -12,23 +12,24 @@ import XMTPiOS
 /// The service handles authorization, streaming, and push notification registration.
 final class MessagingService: MessagingServiceProtocol {
     private let authorizationOperation: any AuthorizeInboxOperationProtocol
-    internal let inboxStateManager: any InboxStateManagerProtocol
+    let inboxStateManager: any InboxStateManagerProtocol
     internal let identityStore: any KeychainIdentityStoreProtocol
     internal let databaseReader: any DatabaseReader
     internal let databaseWriter: any DatabaseWriter
     private let environment: AppEnvironment
     private var cancellables: Set<AnyCancellable> = []
 
+    // swiftlint:disable:next function_parameter_count
     static func authorizedMessagingService(
         for inboxId: String,
         clientId: String,
         databaseWriter: any DatabaseWriter,
         databaseReader: any DatabaseReader,
         environment: AppEnvironment,
+        identityStore: any KeychainIdentityStoreProtocol,
         startsStreamingServices: Bool,
         overrideJWTToken: String? = nil
     ) -> MessagingService {
-        let identityStore = environment.defaultIdentityStore
         let authorizationOperation = AuthorizeInboxOperation.authorize(
             inboxId: inboxId,
             clientId: clientId,
@@ -44,18 +45,6 @@ final class MessagingService: MessagingServiceProtocol {
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             identityStore: identityStore,
-            environment: environment
-        )
-    }
-
-    static func registeredMessagingService(
-        databaseWriter: any DatabaseWriter,
-        databaseReader: any DatabaseReader,
-        environment: AppEnvironment
-    ) async -> MessagingService {
-        return await UnusedInboxCache.shared.consumeOrCreateMessagingService(
-            databaseWriter: databaseWriter,
-            databaseReader: databaseReader,
             environment: environment
         )
     }

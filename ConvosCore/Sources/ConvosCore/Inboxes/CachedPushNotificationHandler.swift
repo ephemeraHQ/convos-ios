@@ -25,23 +25,27 @@ public actor CachedPushNotificationHandler {
     ///   - databaseReader: Database reader instance
     ///   - databaseWriter: Database writer instance
     ///   - environment: App environment
+    ///   - identityStore: Identity store instance
     public static func initialize(
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        identityStore: any KeychainIdentityStoreProtocol
     ) {
         _shared = CachedPushNotificationHandler(
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
-            environment: environment
+            environment: environment,
+            identityStore: identityStore
         )
     }
 
     private let databaseReader: any DatabaseReader
     private let databaseWriter: any DatabaseWriter
     private let environment: AppEnvironment
+    private let identityStore: any KeychainIdentityStoreProtocol
 
-    private var messagingServices: [String: MessagingService] = [:] // Keyed by inboxId or inboxId:jwt
+    private var messagingServices: [String: MessagingService] = [:] // Keyed by inboxId
 
     // Track last access time for cleanup (keyed by inboxId)
     private var lastAccessTime: [String: Date] = [:]
@@ -52,11 +56,13 @@ public actor CachedPushNotificationHandler {
     private init(
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
-        environment: AppEnvironment
+        environment: AppEnvironment,
+        identityStore: any KeychainIdentityStoreProtocol
     ) {
         self.databaseReader = databaseReader
         self.databaseWriter = databaseWriter
         self.environment = environment
+        self.identityStore = identityStore
     }
 
     /// Handles a push notification using the structured payload with timeout protection
@@ -146,6 +152,7 @@ public actor CachedPushNotificationHandler {
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment,
+            identityStore: identityStore,
             startsStreamingServices: false,
             overrideJWTToken: overrideJWTToken
         )

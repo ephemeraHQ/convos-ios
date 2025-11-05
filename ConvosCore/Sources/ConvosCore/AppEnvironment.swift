@@ -25,6 +25,16 @@ public enum AppEnvironment: Sendable {
     case dev(config: ConvosConfiguration)
     case production(config: ConvosConfiguration)
 
+    // Only used for testing
+    public var defaultOverrideJWTToken: String? {
+        switch self {
+        case .tests:
+            return "test-override-jwt-token"
+        default:
+            return nil
+        }
+    }
+
     public var name: String {
         switch self {
         case .local:

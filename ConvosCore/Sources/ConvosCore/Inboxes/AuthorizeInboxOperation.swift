@@ -2,17 +2,6 @@ import Combine
 import Foundation
 import GRDB
 
-extension AppEnvironment {
-    var defaultIdentityStore: any KeychainIdentityStoreProtocol {
-        switch self {
-        case .local, .dev, .production:
-            KeychainIdentityStore(accessGroup: keychainAccessGroup)
-        case .tests:
-            MockKeychainIdentityStore()
-        }
-    }
-}
-
 protocol AuthorizeInboxOperationProtocol {
     func stopAndDelete() async
     func stopAndDelete()

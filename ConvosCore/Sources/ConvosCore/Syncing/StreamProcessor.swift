@@ -247,7 +247,7 @@ actor StreamProcessor: StreamProcessorProtocol {
             )
             Logger.info("Subscribed to push topics \(context): \(conversationTopic), \(welcomeTopic)")
         } catch {
-            Logger.error("Failed subscribing to topics \(context): \(error)")
+            Logger.warning("Failed subscribing to topics \(context): \(error)")
         }
     }
 }

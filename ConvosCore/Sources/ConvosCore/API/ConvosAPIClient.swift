@@ -55,7 +55,7 @@ final class ConvosAPIClient: ConvosAPIClientProtocol, Sendable {
     private let baseURL: URL
     private let session: URLSession
     private let environment: AppEnvironment
-    private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
+    private let keychainService: any KeychainServiceProtocol = KeychainService()
     private let overrideJWTToken: String?  // Immutable JWT override from APNS payload
     private let maxRetryCount: Int = 3
 
@@ -205,7 +205,10 @@ final class ConvosAPIClient: ConvosAPIClientProtocol, Sendable {
         }
 
         let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
-        try keychainService.saveString(authResponse.token, for: .init(deviceId: deviceId))
+        try keychainService.saveString(
+            authResponse.token,
+            account: KeychainAccount.jwt(deviceId: deviceId)
+        )
         Logger.info("Successfully authenticated and stored JWT token")
         return authResponse.token
     }
@@ -228,7 +231,9 @@ final class ConvosAPIClient: ConvosAPIClientProtocol, Sendable {
         } else {
             // No override JWT - try keychain
             do {
-                if let keychainJWT = try keychainService.retrieveString(.init(deviceId: deviceId)) {
+                if let keychainJWT = try keychainService.retrieveString(
+                    account: KeychainAccount.jwt(deviceId: deviceId)
+                ) {
                     Logger.debug("Using JWT token from keychain")
                     request.setValue(keychainJWT, forHTTPHeaderField: "X-Convos-AuthToken")
                 } else {

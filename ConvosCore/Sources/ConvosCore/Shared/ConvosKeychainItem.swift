@@ -1,23 +1,12 @@
 import Foundation
 
-extension KeychainItemProtocol {
-    static var service: String {
-        return "org.convos.ios.KeychainItemProtocol.v2"
-    }
-}
-
-struct ConvosJWTKeychainItem: KeychainItemProtocol {
-    let deviceId: String
-
-    var account: String {
+/// Account identifiers for specific keychain items
+enum KeychainAccount {
+    /// Account for storing JWT tokens, keyed by device ID
+    static func jwt(deviceId: String) -> String {
         return deviceId
     }
-}
 
-struct UnusedInboxKeychainItem: KeychainItemProtocol {
-    static let account: String = "unused-inbox"
-
-    var account: String {
-        return Self.account
-    }
+    /// Account for storing the unused inbox ID
+    static let unusedInbox: String = "unused-inbox"
 }

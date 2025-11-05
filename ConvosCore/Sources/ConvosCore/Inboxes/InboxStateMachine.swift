@@ -204,14 +204,14 @@ public actor InboxStateMachine {
         self.invitesRepository = invitesRepository
         self.databaseWriter = databaseWriter
         self.syncingManager = syncingManager
-        self.overrideJWTToken = overrideJWTToken
+        self.overrideJWTToken = overrideJWTToken ?? environment.defaultOverrideJWTToken
         self.environment = environment
 
         // Initialize API client
         Logger.info("Initializing API client (JWT override: \(overrideJWTToken != nil))...")
         self.apiClient = ConvosAPIClientFactory.client(
             environment: environment,
-            overrideJWTToken: overrideJWTToken
+            overrideJWTToken: self.overrideJWTToken
         )
 
         // Set custom XMTP host if provided

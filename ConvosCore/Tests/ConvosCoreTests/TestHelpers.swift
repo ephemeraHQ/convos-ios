@@ -24,6 +24,7 @@ func waitForState(
 class TestFixtures {
     let environment: AppEnvironment
     let identityStore: MockKeychainIdentityStore
+    let keychainService: MockKeychainService
     let databaseManager: MockDatabaseManager
 
     var clientA: (any XMTPClientProvider)?
@@ -37,6 +38,7 @@ class TestFixtures {
     init() {
         self.environment = .tests
         self.identityStore = MockKeychainIdentityStore()
+        self.keychainService = MockKeychainService()
         self.databaseManager = MockDatabaseManager.makeTestDatabase()
     }
 

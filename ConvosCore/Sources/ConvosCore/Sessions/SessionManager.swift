@@ -34,20 +34,27 @@ public final class SessionManager: SessionManagerProtocol {
     private let databaseWriter: any DatabaseWriter
     private let databaseReader: any DatabaseReader
     private let environment: AppEnvironment
+    private let identityStore: any KeychainIdentityStoreProtocol
     private var initializationTask: Task<Void, Never>?
     private var unusedInboxPrepTask: Task<Void, Never>?
     private let deviceRegistrationManager: any DeviceRegistrationManagerProtocol
+    private let unusedInboxCache: UnusedInboxCache
 
     init(databaseWriter: any DatabaseWriter,
          databaseReader: any DatabaseReader,
-         environment: AppEnvironment) {
+         environment: AppEnvironment,
+         identityStore: any KeychainIdentityStoreProtocol,
+         unusedInboxCache: UnusedInboxCache? = nil) {
         self.databaseWriter = databaseWriter
         self.databaseReader = databaseReader
         self.environment = environment
+        self.identityStore = identityStore
         self.deviceRegistrationManager = DeviceRegistrationManager(environment: environment)
+        self.unusedInboxCache = unusedInboxCache ?? UnusedInboxCache(
+            identityStore: identityStore
+        )
         observe()
 
-        let identityStore = environment.defaultIdentityStore
         initializationTask = Task { [weak self] in
             guard let self else { return }
             guard !Task.isCancelled else { return }
@@ -70,7 +77,7 @@ public final class SessionManager: SessionManagerProtocol {
             guard !Task.isCancelled else { return }
             self.unusedInboxPrepTask = Task(priority: .background) { [weak self] in
                 guard let self, !Task.isCancelled else { return }
-                await UnusedInboxCache.shared.prepareUnusedInboxIfNeeded(
+                await self.unusedInboxCache.prepareUnusedInboxIfNeeded(
                     databaseWriter: self.databaseWriter,
                     databaseReader: self.databaseReader,
                     environment: self.environment
@@ -101,8 +108,9 @@ public final class SessionManager: SessionManagerProtocol {
 
         await withTaskGroup(of: KeychainIdentity?.self) { group in
             for identity in identities {
-                group.addTask {
-                    let isUnused = await UnusedInboxCache.shared.isUnusedInbox(identity.inboxId)
+                group.addTask { [weak self] in
+                    guard let self else { return nil }
+                    let isUnused = await self.unusedInboxCache.isUnusedInbox(identity.inboxId)
                     return isUnused ? nil : identity
                 }
             }
@@ -130,6 +138,7 @@ public final class SessionManager: SessionManagerProtocol {
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment,
+            identityStore: identityStore,
             startsStreamingServices: true
         )
     }
@@ -241,7 +250,7 @@ public final class SessionManager: SessionManagerProtocol {
     // MARK: - Inbox Management
 
     public func addInbox() async -> AnyMessagingService {
-        let messagingService = await MessagingService.registeredMessagingService(
+        let messagingService = await unusedInboxCache.consumeOrCreateMessagingService(
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
             environment: environment

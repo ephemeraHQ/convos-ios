@@ -6,10 +6,12 @@ extension ConvosClient {
         let databaseManager = DatabaseManager(environment: environment)
         let databaseWriter = databaseManager.dbWriter
         let databaseReader = databaseManager.dbReader
+        let identityStore = KeychainIdentityStore(accessGroup: environment.keychainAccessGroup)
         let sessionManager = SessionManager(
             databaseWriter: databaseWriter,
             databaseReader: databaseReader,
-            environment: environment
+            environment: environment,
+            identityStore: identityStore
         )
         return .init(sessionManager: sessionManager,
                      databaseManager: databaseManager,

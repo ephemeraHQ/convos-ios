@@ -89,21 +89,14 @@ class MockAuthService: LocalAuthServiceProtocol {
         nil
     }
 
-    enum MockKeychainItem: String, KeychainItemProtocol {
-        case mockUser
-
-        var account: String {
-            return rawValue
-        }
-    }
-
     var accountsService: (any AuthAccountsServiceProtocol)? {
         nil
     }
 
     private let persist: Bool
-    private let keychain: KeychainService<MockKeychainItem> = .init()
+    private let keychain: any KeychainServiceProtocol = KeychainService()
     private var _currentUser: MockAuthResult?
+    private static let mockUserAccount: String = "mock-user"
 
     var currentUser: MockAuthResult? {
         _currentUser
@@ -140,7 +133,7 @@ class MockAuthService: LocalAuthServiceProtocol {
         if persist {
             let encoder = JSONEncoder()
             let data = try encoder.encode(mockAuthResult)
-            try keychain.saveData(data, for: .mockUser)
+            try keychain.saveData(data, account: Self.mockUserAccount)
         }
         _currentUser = mockAuthResult
         authStateSubject.send(.registered(mockAuthResult))
@@ -151,7 +144,7 @@ class MockAuthService: LocalAuthServiceProtocol {
         if persist {
             let encoder = JSONEncoder()
             let data = try encoder.encode(mockAuthResult)
-            try keychain.saveData(data, for: .mockUser)
+            try keychain.saveData(data, account: Self.mockUserAccount)
         }
         _currentUser = mockAuthResult
         authStateSubject.send(.registered(mockAuthResult))
@@ -159,18 +152,18 @@ class MockAuthService: LocalAuthServiceProtocol {
     }
 
     func deleteAll() throws {
-        try keychain.delete(.mockUser)
+        try keychain.delete(account: Self.mockUserAccount)
         _currentUser = nil
     }
 
     func deleteAccount(with providerId: String) throws {
-        try keychain.delete(.mockUser)
+        try keychain.delete(account: Self.mockUserAccount)
         _currentUser = nil
     }
 
     func signOut() async throws {
         if persist {
-            try keychain.delete(.mockUser)
+            try keychain.delete(account: Self.mockUserAccount)
         }
         _currentUser = nil
         authStateSubject.send(.unauthorized)
@@ -188,7 +181,7 @@ class MockAuthService: LocalAuthServiceProtocol {
 
     private func getCurrentUser() throws -> MockAuthResult? {
         guard persist else { return nil }
-        guard let mockUserData = try keychain.retrieveData(.mockUser) else {
+        guard let mockUserData = try keychain.retrieveData(account: Self.mockUserAccount) else {
             authStateSubject.send(.unauthorized)
             return nil
         }
