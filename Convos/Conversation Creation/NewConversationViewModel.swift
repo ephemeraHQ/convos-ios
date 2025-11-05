@@ -200,7 +200,6 @@ class NewConversationViewModel: Identifiable {
     private func handleJoinSuccess() {
         presentingJoinConversationSheet = false
         displayError = nil
-        conversationViewModel.showsInfoView = true
     }
 
     @MainActor
@@ -210,7 +209,6 @@ class NewConversationViewModel: Identifiable {
 
             if startedWithFullscreenScanner {
                 showingFullScreenScanner = true
-                conversationViewModel.showsInfoView = false
             }
 
             // Set the display error
@@ -249,6 +247,11 @@ class NewConversationViewModel: Identifiable {
             isCreatingConversation = false
             messagesTopBarTrailingItemEnabled = false
             messagesBottomBarEnabled = false
+            if startedWithFullscreenScanner {
+                conversationViewModel.showsInfoView = false
+            } else {
+                conversationViewModel.showsInfoView = true
+            }
             currentError = nil
             qrScannerViewModel.resetScanning()
 
@@ -271,6 +274,7 @@ class NewConversationViewModel: Identifiable {
         case .joining:
             // This is the waiting state - user is waiting for inviter to accept
             conversationViewModel.checkNotificationPermissions()
+            conversationViewModel.showsInfoView = true
             messagesTopBarTrailingItemEnabled = false
             messagesTopBarTrailingItem = .share
             messagesBottomBarEnabled = false
@@ -282,6 +286,7 @@ class NewConversationViewModel: Identifiable {
             Logger.info("Waiting for invite acceptance...")
 
         case .ready:
+            conversationViewModel.showsInfoView = true
             messagesTopBarTrailingItemEnabled = true
             messagesBottomBarEnabled = true
             isWaitingForInviteAcceptance = false
@@ -300,6 +305,9 @@ class NewConversationViewModel: Identifiable {
             isWaitingForInviteAcceptance = false
             isCreatingConversation = false
             currentError = error
+            if startedWithFullscreenScanner {
+                conversationViewModel.showsInfoView = false
+            }
             Logger.error("Conversation state error: \(error.localizedDescription)")
             // Handle specific error types
             handleError(error)
@@ -321,7 +329,6 @@ class NewConversationViewModel: Identifiable {
 
         if startedWithFullscreenScanner {
             showingFullScreenScanner = true
-            conversationViewModel.showsInfoView = false
         }
     }
 

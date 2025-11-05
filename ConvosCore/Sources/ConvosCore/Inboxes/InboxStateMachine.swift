@@ -208,7 +208,7 @@ public actor InboxStateMachine {
         self.environment = environment
 
         // Initialize API client
-        Logger.info("Initializing API client (JWT override: \(overrideJWTToken != nil))...")
+        Logger.info("Initializing API client (JWT override: \(self.overrideJWTToken != nil))...")
         self.apiClient = ConvosAPIClientFactory.client(
             environment: environment,
             overrideJWTToken: self.overrideJWTToken
