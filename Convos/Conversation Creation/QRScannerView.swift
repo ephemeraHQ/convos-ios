@@ -54,8 +54,6 @@ struct QRScannerView: UIViewRepresentable {
             viewModel?.cameraAuthorized = authorized
             if authorized {
                 self.setupCamera(on: view, coordinator: context.coordinator)
-            } else {
-                viewModel?.requestAccess()
             }
         }
 
