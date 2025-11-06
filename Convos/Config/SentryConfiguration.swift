@@ -15,7 +15,8 @@ enum SentryConfiguration {
             return
         }
 
-        Log.info("Initializing Sentry for Convos (Dev) distribution build")
+        let envName = ConfigManager.shared.currentEnvironment.name
+        Log.info("Initializing Sentry for environment: \(envName)")
 
         SentrySDK.start { options in
             options.dsn = dsn
@@ -26,7 +27,7 @@ enum SentryConfiguration {
             options.attachViewHierarchy = true
             options.sendDefaultPii = true
 
-            options.environment = "dev-distribution"
+            options.environment = "\(envName)-debug"
         }
 
         Log.info("Sentry initialized successfully")
@@ -35,14 +36,15 @@ enum SentryConfiguration {
     private static func shouldEnableSentry() -> Bool {
         let environment = ConfigManager.shared.currentEnvironment
 
-        guard case .dev = environment else {
+        switch environment {
+        case .local, .dev:
+            #if DEBUG
+            return false
+            #else
+            return true
+            #endif
+        case .production, .tests:
             return false
         }
-
-        #if DEBUG
-        return false
-        #else
-        return true
-        #endif
     }
 }
