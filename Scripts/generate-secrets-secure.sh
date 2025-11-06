@@ -23,14 +23,31 @@ ESCAPED_API_URL=$(swift_escape "${CONVOS_API_BASE_URL:-}")
 ESCAPED_XMTP_HOST=$(swift_escape "${XMTP_CUSTOM_HOST:-}")
 ESCAPED_GATEWAY_URL=$(swift_escape "${GATEWAY_URL:-}")
 
-# Handle Sentry DSN - use SENTRY_DSN_DEV for dev builds, empty for prod
-if [[ -n "${SENTRY_DSN_DEV}" ]]; then
-    ESCAPED_SENTRY_DSN=$(swift_escape "${SENTRY_DSN_DEV}")
-elif [[ -n "${SENTRY_DSN_PROD}" ]]; then
+# Handle Sentry DSN based on build configuration
+# BITRISE_BUILD_CONFIG is set by Bitrise CI (Dev, Release)
+# BUILD_CONFIGURATION is a fallback for other CI systems
+BUILD_CONFIG="${BITRISE_BUILD_CONFIG:-${BUILD_CONFIGURATION:-Release}}"
+
+echo "Build configuration: $BUILD_CONFIG"
+
+# Only use dev DSN for Dev CI builds, empty for Release/Prod
+if [[ "$BUILD_CONFIG" == "Dev" ]]; then
+    # Dev CI build - use dev DSN if available
+    if [[ -n "${SENTRY_DSN_DEV}" ]]; then
+        ESCAPED_SENTRY_DSN=$(swift_escape "${SENTRY_DSN_DEV}")
+        echo "Dev CI build - using SENTRY_DSN_DEV"
+    else
+        ESCAPED_SENTRY_DSN=$(swift_escape "${SENTRY_DSN:-}")
+        echo "Dev CI build - using SENTRY_DSN (fallback)"
+    fi
+elif [[ "$BUILD_CONFIG" == "Release" ]]; then
+    # Production build - explicitly disable Sentry
     ESCAPED_SENTRY_DSN=""
-    echo "Production build - Sentry disabled"
+    echo "Production build - Sentry DSN set to empty"
 else
-    ESCAPED_SENTRY_DSN=$(swift_escape "${SENTRY_DSN:-}")
+    # Unknown configuration - default to empty for safety
+    ESCAPED_SENTRY_DSN=""
+    echo "Unknown build configuration '$BUILD_CONFIG' - Sentry disabled for safety"
 fi
 
 # Generate Secrets.swift WITHOUT exposing values in logs
