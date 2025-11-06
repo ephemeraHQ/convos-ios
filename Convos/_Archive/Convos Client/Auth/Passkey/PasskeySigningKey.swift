@@ -67,7 +67,7 @@ final class PasskeySigningKey: SigningKey {
         let sec1Key = try P256.Signing.PublicKey(x963Representation: publicKey)
         let signature = try P256.Signing.ECDSASignature(derRepresentation: assertion.signature)
         let isValid = sec1Key.isValidSignature(signature, for: verificationData)
-        Logger.info("Internal signing validation check returned `isValid`: \(isValid)")
+        Log.info("Internal signing validation check returned `isValid`: \(isValid)")
 
         return SignedData(
             rawData: assertion.signature,

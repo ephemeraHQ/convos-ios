@@ -20,7 +20,7 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
         self.dbReader = dbReader
         self.conversationId = conversationId
         self.conversationIdPublisher = conversationIdPublisher
-        Logger.info("Initializing DraftConversationRepository with conversationId: \(conversationId)")
+        Log.info("Initializing DraftConversationRepository with conversationId: \(conversationId)")
         messagesRepository = MessagesRepository(
             dbReader: dbReader,
             conversationId: conversationId,
@@ -35,36 +35,36 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
     }
 
     lazy var conversationPublisher: AnyPublisher<Conversation?, Never> = {
-        Logger.info("Creating conversationPublisher for conversationId: \(conversationId)")
+        Log.info("Creating conversationPublisher for conversationId: \(conversationId)")
         return conversationIdPublisher
             .removeDuplicates()
             .flatMap { [weak self] conversationId -> AnyPublisher<Conversation?, Never> in
                 guard let self else {
-                    Logger.warning("DraftConversationRepository deallocated during conversationPublisher mapping")
+                    Log.warning("DraftConversationRepository deallocated during conversationPublisher mapping")
                     return Just(nil).eraseToAnyPublisher()
                 }
 
-                Logger.info("Conversation ID changed to: \(conversationId)")
+                Log.info("Conversation ID changed to: \(conversationId)")
                 return ValueObservation
                     .tracking { [weak self] db in
                         guard let self else {
-                            Logger.warning("DraftConversationRepository deallocated during conversation tracking")
+                            Log.warning("DraftConversationRepository deallocated during conversation tracking")
                             return nil
                         }
                         do {
-                            Logger.debug("Tracking conversation \(conversationId)")
+                            Log.debug("Tracking conversation \(conversationId)")
 
                             let conversation = try db.composeConversation(for: conversationId)
                             if conversation != nil {
-                                Logger.info(
+                                Log.info(
                                     "Composed conversation: \(conversationId) with kind: \(conversation?.kind ?? .dm)"
                                 )
                             } else {
-                                Logger.debug("No conversation found for ID: \(conversationId)")
+                                Log.debug("No conversation found for ID: \(conversationId)")
                             }
                             return conversation
                         } catch {
-                            Logger.error("Error composing conversation for ID \(conversationId): \(error)")
+                            Log.error("Error composing conversation for ID \(conversationId): \(error)")
                             return nil
                         }
                     }
@@ -76,23 +76,23 @@ class DraftConversationRepository: DraftConversationRepositoryProtocol {
     }()
 
     func fetchConversation() throws -> Conversation? {
-        Logger.info("Fetching conversation for ID: \(conversationId)")
+        Log.info("Fetching conversation for ID: \(conversationId)")
         do {
             let conversation: Conversation? = try dbReader.read { [weak self] db in
                 guard let self else {
-                    Logger.warning("DraftConversationRepository deallocated during fetchConversation")
+                    Log.warning("DraftConversationRepository deallocated during fetchConversation")
                     return nil
                 }
                 return try db.composeConversation(for: self.conversationId)
             }
             if conversation != nil {
-                Logger.info("Successfully fetched conversation: \(conversationId)")
+                Log.info("Successfully fetched conversation: \(conversationId)")
             } else {
-                Logger.debug("No conversation found for ID: \(conversationId)")
+                Log.debug("No conversation found for ID: \(conversationId)")
             }
             return conversation
         } catch {
-            Logger.error("Error fetching conversation for ID \(conversationId): \(error)")
+            Log.error("Error fetching conversation for ID \(conversationId): \(error)")
             throw error
         }
     }
@@ -113,10 +113,10 @@ fileprivate extension Database {
             }
 
             let conversation = dbConversation.hydrateConversation()
-            Logger.debug("Successfully hydrated conversation: \(conversationId)")
+            Log.debug("Successfully hydrated conversation: \(conversationId)")
             return conversation
         } catch {
-            Logger.error("Error composing conversation for ID \(conversationId): \(error)")
+            Log.error("Error composing conversation for ID \(conversationId): \(error)")
             throw error
         }
     }

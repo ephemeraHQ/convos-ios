@@ -21,7 +21,7 @@ final class ConversationsRepository: ConversationsRepositoryProtocol {
                 do {
                     return try db.composeAllConversations(consent: consent)
                 } catch {
-                    Logger.error("Error composing all conversations: \(error)")
+                    Log.error("Error composing all conversations: \(error)")
                     throw error
                 }
             }

@@ -20,7 +20,8 @@ let package = Package(
         .package(url: "https://github.com/tesseract-one/CSecp256k1.swift.git", from: "0.2.0"),
         .package(url: "https://github.com/SimplyDanny/SwiftLintPlugins", from: "0.61.0"),
         .package(url: "https://github.com/firebase/firebase-ios-sdk", from: "12.1.0"),
-        .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.31.1")
+        .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.31.1"),
+        .package(path: "../ConvosLogging")
     ],
     targets: [
         .target(
@@ -32,13 +33,14 @@ let package = Package(
                 .product(name: "FirebaseAppCheck", package: "firebase-ios-sdk"),
                 .product(name: "SwiftProtobuf", package: "swift-protobuf"),
                 .product(name: "CSecp256k1", package: "CSecp256k1.swift"),
+                .product(name: "ConvosLogging", package: "ConvosLogging"),
             ],
             swiftSettings: [
                 .swiftLanguageMode(.v5),
+                // Define DEBUG - will be active based on Xcode's SWIFT_ACTIVE_COMPILATION_CONDITIONS
                 .define("DEBUG", .when(configuration: .debug)),
-                // Define XCODE_BUILD for non-release configurations (Local, Dev)
-                // This helps distinguish Xcode builds from CI/Archive builds
-                .define("XCODE_BUILD", .when(configuration: .debug))
+                // Disable optimization for debug builds to enable proper debugging
+                .unsafeFlags(["-Onone"], .when(configuration: .debug)),
             ],
             plugins: [
                 .plugin(name: "SwiftLintBuildToolPlugin", package: "SwiftLintPlugins")

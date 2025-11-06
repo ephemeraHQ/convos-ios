@@ -121,7 +121,7 @@ public actor ConversationStateMachine {
     }
 
     private func emitStateChange(_ newState: State) {
-        Logger.info("State changed from \(_state) to \(newState)")
+        Log.info("State changed from \(_state) to \(newState)")
         _state = newState
 
         // Emit to all continuations
@@ -206,7 +206,7 @@ public actor ConversationStateMachine {
             )
             try await messageWriter.send(text: text)
         } catch {
-            Logger.error("Error sending queued message: \(error.localizedDescription)")
+            Log.error("Error sending queued message: \(error.localizedDescription)")
         }
     }
 
@@ -305,10 +305,10 @@ public actor ConversationStateMachine {
                 handleStop()
 
             default:
-                Logger.warning("Invalid state transition: \(_state) -> \(action)")
+                Log.warning("Invalid state transition: \(_state) -> \(action)")
             }
         } catch {
-            Logger.error("Failed state transition \(_state) -> \(action): \(error.localizedDescription)")
+            Log.error("Failed state transition \(_state) -> \(action): \(error.localizedDescription)")
             emitStateChange(.error(error))
         }
     }
@@ -319,7 +319,7 @@ public actor ConversationStateMachine {
         emitStateChange(.creating)
 
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
-        Logger.info("Inbox ready, creating conversation...")
+        Log.info("Inbox ready, creating conversation...")
 
         let client = inboxReady.client
 
@@ -347,7 +347,7 @@ public actor ConversationStateMachine {
 
     private func handleValidate(inviteCode: String, previousResult: ConversationReadyResult?) async throws {
         emitStateChange(.validating(inviteCode: inviteCode))
-        Logger.info("Validating invite code '\(inviteCode)'")
+        Log.info("Validating invite code '\(inviteCode)'")
         let signedInvite: SignedInvite
         do {
             signedInvite = try SignedInvite.fromInviteCode(inviteCode)
@@ -370,7 +370,7 @@ public actor ConversationStateMachine {
         } catch {
             throw ConversationStateMachineError.failedVerifyingSignature
         }
-        Logger.info("Recovered signer's public key: \(signerPublicKey.hexEncodedString())")
+        Log.info("Recovered signer's public key: \(signerPublicKey.hexEncodedString())")
         let existingConversation: Conversation? = try await databaseReader.read { db in
             try DBConversation
                 .filter(DBConversation.Columns.inviteTag == signedInvite.payload.tag)
@@ -389,7 +389,7 @@ public actor ConversationStateMachine {
         // In case cleanup failed while deleting an inbox/conversation
         if existingConversation != nil,
            existingIdentity == nil {
-            Logger.warning("Found existing conversation for identity that does not exist, deleting...")
+            Log.warning("Found existing conversation for identity that does not exist, deleting...")
             _ = try await databaseWriter.write { db in
                 try DBConversation
                     .filter(DBConversation.Columns.inviteTag == signedInvite.payload.tag)
@@ -398,7 +398,7 @@ public actor ConversationStateMachine {
         }
 
         if let existingConversation, existingIdentity != nil {
-            Logger.info("Found existing convo by invite tag...")
+            Log.info("Found existing convo by invite tag...")
             let prevInboxReady = try await inboxStateManager.waitForInboxReadyResult()
             try await inboxStateManager.delete()
             let inboxReady = try await inboxStateManager.reauthorize(
@@ -406,7 +406,7 @@ public actor ConversationStateMachine {
                 clientId: existingConversation.clientId
             )
             if existingConversation.hasJoined {
-                Logger.info("Already joined conversation... moving to ready state.")
+                Log.info("Already joined conversation... moving to ready state.")
                 emitStateChange(.ready(.init(conversationId: existingConversation.id, origin: .existing)))
                 await cleanUpPreviousConversationIfNeeded(
                     previousResult: previousResult,
@@ -415,7 +415,7 @@ public actor ConversationStateMachine {
                     apiClient: prevInboxReady.apiClient
                 )
             } else {
-                Logger.info("Waiting for invite approval...")
+                Log.info("Waiting for invite approval...")
                 if existingConversation.isDraft {
                     // update the placeholder with the signed invite
                     let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
@@ -439,8 +439,8 @@ public actor ConversationStateMachine {
                 enqueueAction(.join)
             }
         } else {
-            Logger.info("Existing conversation not found. Creating placeholder...")
-            Logger.info("Waiting for inbox ready result...")
+            Log.info("Existing conversation not found. Creating placeholder...")
+            Log.info("Waiting for inbox ready result...")
             let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
             let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
             let conversationWriter = ConversationWriter(
@@ -472,7 +472,7 @@ public actor ConversationStateMachine {
     ) async throws {
         emitStateChange(.joining(invite: invite, placeholder: placeholder))
 
-        Logger.info("Requesting to join conversation...")
+        Log.info("Requesting to join conversation...")
 
         let apiClient = inboxReady.apiClient
         let client = inboxReady.client
@@ -504,7 +504,7 @@ public actor ConversationStateMachine {
         streamConversationsTask = Task { [weak self] in
             guard let self else { return }
             do {
-                Logger.info("Started streaming, looking for convo...")
+                Log.info("Started streaming, looking for convo...")
                 if case .group(let conversation) = try await client.conversationsProvider
                     .stream(type: .groups, onClose: nil)
                     .first(where: {
@@ -528,11 +528,11 @@ public actor ConversationStateMachine {
                         origin: .joined
                     )))
                 } else {
-                    Logger.error("Error waiting for conversation to join")
+                    Log.error("Error waiting for conversation to join")
                     await self.emitStateChange(.error(ConversationStateMachineError.timedOut))
                 }
             } catch {
-                Logger.error("Error streaming conversations: \(error)")
+                Log.error("Error streaming conversations: \(error)")
                 await self.emitStateChange(.error(error))
             }
         }
@@ -581,7 +581,7 @@ public actor ConversationStateMachine {
             return
         }
 
-        Logger.info("Cleaning up previous conversation: \(previousResult.conversationId)")
+        Log.info("Cleaning up previous conversation: \(previousResult.conversationId)")
         do {
             try await cleanUp(
                 conversationId: previousResult.conversationId,
@@ -589,7 +589,7 @@ public actor ConversationStateMachine {
                 apiClient: apiClient,
             )
         } catch {
-            Logger.error("Failed to clean up previous conversation: \(error)")
+            Log.error("Failed to clean up previous conversation: \(error)")
             // Continue with transition even if cleanup fails
         }
     }
@@ -612,13 +612,13 @@ public actor ConversationStateMachine {
             let topic = conversationId.xmtpGroupTopicFormat
             do {
                 try await apiClient.unsubscribeFromTopics(clientId: identity.clientId, topics: [topic])
-                Logger.info("Unsubscribed from push topic: \(topic)")
+                Log.info("Unsubscribed from push topic: \(topic)")
             } catch {
-                Logger.error("Failed unsubscribing from topic \(topic): \(error)")
+                Log.error("Failed unsubscribing from topic \(topic): \(error)")
                 // Continue with cleanup even if unsubscribe fails
             }
         } else {
-            Logger.warning("Identity not found, skipping push notification cleanup for: \(client.inboxId)")
+            Log.warning("Identity not found, skipping push notification cleanup for: \(client.inboxId)")
         }
 
         // Always clean up database records, even if identity/clientId is missing
@@ -645,14 +645,14 @@ public actor ConversationStateMachine {
                 .filter(DBConversation.Columns.id == conversationId)
                 .deleteAll(db)
 
-            Logger.info("Cleaned up conversation data for conversationId: \(conversationId)")
+            Log.info("Cleaned up conversation data for conversationId: \(conversationId)")
         }
 
         try await databaseWriter.write { db in
             let conversationsCount = try DBConversation
                 .fetchCount(db)
             if conversationsCount == 0 {
-                Logger.warning("Leaving inbox \(client.inboxId) with zero conversations!")
+                Log.warning("Leaving inbox \(client.inboxId) with zero conversations!")
             }
         }
     }
@@ -673,7 +673,7 @@ public actor ConversationStateMachine {
         let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
 
         guard let identity = try? await identityStore.identity(for: client.inboxId) else {
-            Logger.warning("Identity not found, skipping push notification subscription")
+            Log.warning("Identity not found, skipping push notification subscription")
             return
         }
 
@@ -684,9 +684,9 @@ public actor ConversationStateMachine {
                 clientId: identity.clientId,
                 topics: [conversationTopic, welcomeTopic]
             )
-            Logger.info("Subscribed to push topics \(context): \(conversationTopic), \(welcomeTopic)")
+            Log.info("Subscribed to push topics \(context): \(conversationTopic), \(welcomeTopic)")
         } catch {
-            Logger.error("Failed subscribing to topics \(context): \(error)")
+            Log.error("Failed subscribing to topics \(context): \(error)")
         }
     }
 }

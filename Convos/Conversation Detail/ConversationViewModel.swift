@@ -143,7 +143,7 @@ class ConversationViewModel {
             self.conversation = try conversationRepository.fetchConversation() ?? conversation
             self.profile = try myProfileRepository.fetch()
         } catch {
-            Logger.error("Error fetching messages or conversation: \(error.localizedDescription)")
+            Log.error("Error fetching messages or conversation: \(error.localizedDescription)")
             self.messages = []
         }
 
@@ -155,7 +155,7 @@ class ConversationViewModel {
 
         presentingConversationForked = conversation.isForked
 
-        Logger.info("Created for conversation: \(conversation.id)")
+        Log.info("Created for conversation: \(conversation.id)")
 
         observe()
 
@@ -187,11 +187,11 @@ class ConversationViewModel {
             self.conversation = try conversationRepository.fetchConversation() ?? conversation
             self.profile = try myProfileRepository.fetch()
         } catch {
-            Logger.error("Error fetching messages or conversation: \(error.localizedDescription)")
+            Log.error("Error fetching messages or conversation: \(error.localizedDescription)")
             self.messages = []
         }
 
-        Logger.info("🔄 created for draft conversation: \(conversation.id)")
+        Log.info("🔄 created for draft conversation: \(conversation.id)")
 
         observe()
         setupMyProfileRepository()
@@ -281,7 +281,7 @@ class ConversationViewModel {
                         for: conversation.id
                     )
                 } catch {
-                    Logger.error("Failed updating group name: \(error)")
+                    Log.error("Failed updating group name: \(error)")
                 }
             }
         }
@@ -297,7 +297,7 @@ class ConversationViewModel {
                         for: conversation
                     )
                 } catch {
-                    Logger.error("Failed updating group image: \(error)")
+                    Log.error("Failed updating group image: \(error)")
                 }
             }
         }
@@ -314,7 +314,7 @@ class ConversationViewModel {
                         for: conversation.id
                     )
                 } catch {
-                    Logger.error("Failed updating group description: \(error)")
+                    Log.error("Failed updating group description: \(error)")
                 }
             }
         }
@@ -354,7 +354,7 @@ class ConversationViewModel {
             do {
                 try await outgoingMessageWriter.send(text: prevMessageText)
             } catch {
-                Logger.error("Error sending message: \(error)")
+                Log.error("Error sending message: \(error)")
             }
         }
     }
@@ -382,7 +382,7 @@ class ConversationViewModel {
                 do {
                     try await myProfileWriter.update(displayName: trimmedDisplayName, conversationId: conversation.id)
                 } catch {
-                    Logger.error("Error updating profile display name: \(error.localizedDescription)")
+                    Log.error("Error updating profile display name: \(error.localizedDescription)")
                 }
             }
         }
@@ -396,7 +396,7 @@ class ConversationViewModel {
                 do {
                     try await myProfileWriter.update(avatar: profileImage, conversationId: conversation.id)
                 } catch {
-                    Logger.error("Error updating profile image: \(error.localizedDescription)")
+                    Log.error("Error updating profile image: \(error.localizedDescription)")
                 }
             }
         }
@@ -413,7 +413,7 @@ class ConversationViewModel {
             do {
                 try await metadataWriter.removeMembers([member.profile.inboxId], from: conversation.id)
             } catch {
-                Logger.error("Error removing member: \(error.localizedDescription)")
+                Log.error("Error removing member: \(error.localizedDescription)")
             }
         }
     }
@@ -428,7 +428,7 @@ class ConversationViewModel {
                     self.conversation.postLeftConversationNotification()
                 }
             } catch {
-                Logger.error("Error leaving convo: \(error.localizedDescription)")
+                Log.error("Error leaving convo: \(error.localizedDescription)")
             }
         }
     }
@@ -453,7 +453,7 @@ class ConversationViewModel {
                 conversation.postLeftConversationNotification()
                 presentingConversationSettings = false
             } catch {
-                Logger.error("Error exploding convo: \(error.localizedDescription)")
+                Log.error("Error exploding convo: \(error.localizedDescription)")
             }
         }
     }

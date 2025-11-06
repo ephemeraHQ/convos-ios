@@ -61,7 +61,7 @@ class MyProfileRepository: MyProfileRepositoryProtocol {
 
         conversationIdCancellable = conversationIdPublisher.sink { [weak self] conversationId in
             guard let self else { return }
-            Logger.info("Updating conversation id to \(conversationId)")
+            Log.info("Updating conversation id to \(conversationId)")
             self.conversationIdSubject.send(conversationId)
             // Re-observe profile for the new conversation
             if case .ready(_, let result) = self.inboxStateManager.currentState {

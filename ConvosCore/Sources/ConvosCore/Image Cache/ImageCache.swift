@@ -95,13 +95,13 @@ public final class ImageCache {
         let resizedImage = ImageCompression.resizeForCache(image)
 
         guard resizedImage.size.width > 0 && resizedImage.size.height > 0 else {
-            Logger.error("Failed to resize image for \(logContext): \(key) - invalid dimensions")
+            Log.error("Failed to resize image for \(logContext): \(key) - invalid dimensions")
             return
         }
 
         let cost = Int(resizedImage.size.width * resizedImage.size.height * 4)
         cache.setObject(resizedImage, forKey: key as NSString, cost: cost)
-        Logger.info("Successfully cached resized image for \(logContext): \(key)")
+        Log.info("Successfully cached resized image for \(logContext): \(key)")
     }
 }
 

@@ -324,7 +324,7 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
                 let identity = try JSONDecoder().decode(KeychainIdentity.self, from: data)
                 identities.append(identity)
             } catch {
-                Logger.error("Failed decoding identity: \(error)")
+                Log.error("Failed decoding identity: \(error)")
             }
         }
 

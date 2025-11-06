@@ -133,7 +133,7 @@ class NewConversationViewModel: Identifiable {
                 do {
                     try await conversationStateManager.createConversation()
                 } catch {
-                    Logger.error("Error auto-creating conversation: \(error.localizedDescription)")
+                    Log.error("Error auto-creating conversation: \(error.localizedDescription)")
                     guard !Task.isCancelled else { return }
                     await MainActor.run { [weak self] in
                         self?.handleCreationError(error)
@@ -144,7 +144,7 @@ class NewConversationViewModel: Identifiable {
     }
 
     deinit {
-        Logger.info("deinit")
+        Log.info("deinit")
         cancellables.removeAll()
         newConversationTask?.cancel()
         joinConversationTask?.cancel()
@@ -171,7 +171,7 @@ class NewConversationViewModel: Identifiable {
                     self?.handleJoinSuccess()
                 }
             } catch {
-                Logger.error("Error joining new conversation: \(error.localizedDescription)")
+                Log.error("Error joining new conversation: \(error.localizedDescription)")
                 guard !Task.isCancelled else { return }
                 await MainActor.run { [weak self] in
                     self?.handleJoinError(error)
@@ -181,7 +181,7 @@ class NewConversationViewModel: Identifiable {
     }
 
     func deleteConversation() {
-        Logger.info("Deleting conversation")
+        Log.info("Deleting conversation")
         newConversationTask?.cancel()
         joinConversationTask?.cancel()
         Task { [weak self] in
@@ -189,7 +189,7 @@ class NewConversationViewModel: Identifiable {
             do {
                 try await conversationStateManager.delete()
             } catch {
-                Logger.error("Failed deleting conversation: \(error.localizedDescription)")
+                Log.error("Failed deleting conversation: \(error.localizedDescription)")
             }
         }
     }
@@ -283,7 +283,7 @@ class NewConversationViewModel: Identifiable {
             conversationViewModel.untitledConversationPlaceholder = "Untitled"
             isCreatingConversation = false
             currentError = nil
-            Logger.info("Waiting for invite acceptance...")
+            Log.info("Waiting for invite acceptance...")
 
         case .ready:
             conversationViewModel.showsInfoView = true
@@ -293,7 +293,7 @@ class NewConversationViewModel: Identifiable {
             isCreatingConversation = false
             showingFullScreenScanner = false
             currentError = nil
-            Logger.info("Conversation ready!")
+            Log.info("Conversation ready!")
 
         case .deleting:
             isWaitingForInviteAcceptance = false
@@ -308,7 +308,7 @@ class NewConversationViewModel: Identifiable {
             if startedWithFullscreenScanner {
                 conversationViewModel.showsInfoView = false
             }
-            Logger.error("Conversation state error: \(error.localizedDescription)")
+            Log.error("Conversation state error: \(error.localizedDescription)")
             // Handle specific error types
             handleError(error)
         }
@@ -338,7 +338,7 @@ class NewConversationViewModel: Identifiable {
         conversationStateManager.conversationIdPublisher
             .receive(on: DispatchQueue.main)
             .sink { conversationId in
-                Logger.info("Active conversation changed: \(conversationId)")
+                Log.info("Active conversation changed: \(conversationId)")
                 NotificationCenter.default.post(
                     name: .activeConversationChanged,
                     object: nil,

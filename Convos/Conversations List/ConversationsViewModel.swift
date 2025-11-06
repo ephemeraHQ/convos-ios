@@ -128,7 +128,7 @@ final class ConversationsViewModel {
                 hasEarlyAccess = true
             }
         } catch {
-            Logger.error("Error fetching conversations: \(error)")
+            Log.error("Error fetching conversations: \(error)")
             self.conversations = []
             self.conversationsCount = 0
         }
@@ -233,7 +233,7 @@ final class ConversationsViewModel {
                 // Clear all cached writers
                 await MainActor.run { self.localStateWriters.removeAll() }
             } catch {
-                Logger.error("Error deleting all accounts: \(error)")
+                Log.error("Error deleting all accounts: \(error)")
             }
         }
     }
@@ -255,7 +255,7 @@ final class ConversationsViewModel {
                 // Remove cached writer for deleted inbox
                 _ = await MainActor.run { self.localStateWriters.removeValue(forKey: conversation.inboxId) }
             } catch {
-                Logger.error("Error leaving convo: \(error.localizedDescription)")
+                Log.error("Error leaving convo: \(error.localizedDescription)")
             }
         }
     }
@@ -268,7 +268,7 @@ final class ConversationsViewModel {
                     guard let conversationId: String = notification.userInfo?["conversationId"] as? String else {
                         return
                     }
-                    Logger.info("Left conversation notification received for conversation: \(conversationId)")
+                    Log.info("Left conversation notification received for conversation: \(conversationId)")
                     if selectedConversation?.id == conversationId {
                         selectedConversation = nil
                     }
@@ -314,17 +314,20 @@ final class ConversationsViewModel {
         guard let userInfo = notification.userInfo,
               let inboxId = userInfo["inboxId"] as? String,
               let conversationId = userInfo["conversationId"] as? String else {
-            Logger.warning("Conversation notification tapped but missing required userInfo")
+            Log.warning("Conversation notification tapped but missing required userInfo")
             return
         }
 
-        Logger.info("Handling conversation notification tap for inboxId: \(inboxId), conversationId: \(conversationId)")
+        Log
+            .info(
+                "Handling conversation notification tap for inboxId: \(inboxId), conversationId: \(conversationId)"
+            )
 
         if let conversation = conversations.first(where: { $0.id == conversationId }) {
-            Logger.info("Found conversation, selecting it")
+            Log.info("Found conversation, selecting it")
             selectedConversation = conversation
         } else {
-            Logger.warning("Conversation \(conversationId) not found in current conversation list")
+            Log.warning("Conversation \(conversationId) not found in current conversation list")
         }
     }
 
@@ -365,7 +368,7 @@ final class ConversationsViewModel {
 
                 try await writer.setUnread(false, for: conversation.id)
             } catch {
-                Logger.warning("Failed marking conversation as read: \(error.localizedDescription)")
+                Log.warning("Failed marking conversation as read: \(error.localizedDescription)")
             }
         }
     }

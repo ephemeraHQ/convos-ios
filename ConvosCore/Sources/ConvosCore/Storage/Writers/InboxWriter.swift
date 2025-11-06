@@ -36,7 +36,7 @@ struct InboxWriter {
                 // INVARIANT: For a given inboxId, the clientId must never change
                 // If they don't match, this is a data corruption bug that must be caught
                 if existingInbox.clientId != clientId {
-                    Logger.error("""
+                    Log.error("""
                         ClientId mismatch detected!
                         InboxId: \(inboxId)
                         Existing clientId: \(existingInbox.clientId)

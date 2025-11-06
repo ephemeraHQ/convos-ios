@@ -87,15 +87,15 @@ public enum AppEnvironment: Sendable {
     var apiBaseURL: String {
         switch self {
         case .local(let config):
-            Logger.info("🌐 Using API URL from local config: \(config.apiBaseURL)")
+            Log.info("🌐 Using API URL from local config: \(config.apiBaseURL)")
             return config.apiBaseURL
         case .tests:
             return "http://localhost:4000/api/"
         case .dev(let config):
-            Logger.info("🌐 Using API URL from dev config: \(config.apiBaseURL)")
+            Log.info("🌐 Using API URL from dev config: \(config.apiBaseURL)")
             return config.apiBaseURL
         case .production(let config):
-            Logger.info("🌐 Using API URL from production config: \(config.apiBaseURL)")
+            Log.info("🌐 Using API URL from production config: \(config.apiBaseURL)")
             return config.apiBaseURL
         }
     }
@@ -138,13 +138,13 @@ public enum AppEnvironment: Sendable {
     public var apnsEnvironment: ApnsEnvironment {
         switch buildEnvironment {
         case .simulator:
-            Logger.info("Simulator build detected - using sandbox APNS")
+            Log.info("Simulator build detected - using sandbox APNS")
             return .sandbox
         case .development:
-            Logger.info("Development build detected (has embedded.mobileprovision) - using sandbox APNS")
+            Log.info("Development build detected (has embedded.mobileprovision) - using sandbox APNS")
             return .sandbox
         case .distribution:
-            Logger.info("Distribution build detected (TestFlight/App Store) - using production APNS")
+            Log.info("Distribution build detected (TestFlight/App Store) - using production APNS")
             return .production
         }
     }

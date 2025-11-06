@@ -39,7 +39,7 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
                     consent: .allowed
                 )
                 try updatedConversation.save(db)
-                Logger.info("Updated conversation consent state to allowed")
+                Log.info("Updated conversation consent state to allowed")
             }
         }
     }
@@ -55,7 +55,7 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
                     consent: .denied
                 )
                 try updatedConversation.save(db)
-                Logger.info("Updated conversation consent state to denied")
+                Log.info("Updated conversation consent state to denied")
             }
         }
     }
@@ -79,7 +79,7 @@ class ConversationConsentWriter: ConversationConsentWriterProtocol {
                         try await self.databaseWriter.write { db in
                             let updatedConversation = dbConversation.with(consent: .denied)
                             try updatedConversation.save(db)
-                            Logger.info("Updated conversation \(dbConversation.id) consent state to denied")
+                            Log.info("Updated conversation \(dbConversation.id) consent state to denied")
                         }
                     } catch {
                         await errorCollector.append(error)

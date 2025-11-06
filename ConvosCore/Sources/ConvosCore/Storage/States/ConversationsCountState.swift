@@ -20,7 +20,7 @@ final class ConversationsCountState {
         do {
             self.count = try conversationsCountRepository.fetchCount()
         } catch {
-            Logger.error("Error fetching conversations count: \(error)")
+            Log.error("Error fetching conversations count: \(error)")
             self.count = 0
         }
         observe()

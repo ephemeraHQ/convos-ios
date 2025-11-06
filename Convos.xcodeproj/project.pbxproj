@@ -276,6 +276,7 @@
 				"Utilities & Extensions/DeviceInfo.swift",
 				"Utilities & Extensions/UIViewController+Extensions.swift",
 				"Utilities & Extensions/View+SelfSizingSheet.swift",
+				Utilities/Log.swift,
 			);
 			target = 7ADC0C6D2E2977800053978A /* ConvosAppClip */;
 		};

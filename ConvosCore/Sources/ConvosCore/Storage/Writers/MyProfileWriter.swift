@@ -65,7 +65,7 @@ class MyProfileWriter: MyProfileWriterProtocol {
             let member = Member(inboxId: inboxId)
             try member.save(db)
             if let foundProfile = try MemberProfile.fetchOne(db, conversationId: conversationId, inboxId: inboxId) {
-                Logger.info("Found profile: \(foundProfile)")
+                Log.info("Found profile: \(foundProfile)")
                 return foundProfile
             } else {
                 let profile = MemberProfile(
@@ -107,7 +107,7 @@ class MyProfileWriter: MyProfileWriterProtocol {
         ImageCache.shared.setImage(resizedImage, for: uploadedURL)
 
         try await databaseWriter.write { db in
-            Logger.info("Updated avatar for profile: \(updatedProfile)")
+            Log.info("Updated avatar for profile: \(updatedProfile)")
             try updatedProfile.save(db)
         }
     }

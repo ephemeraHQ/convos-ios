@@ -74,31 +74,31 @@ public actor CachedPushNotificationHandler {
         payload: PushNotificationPayload,
         timeout: TimeInterval = 25
     ) async throws -> DecodedNotificationContent? {
-        Logger.info("Processing push notification")
+        Log.info("Processing push notification")
 
         // Clean up old services before processing
         cleanupStaleServices()
 
         guard payload.isValid else {
-            Logger.info("Dropping notification without clientId (v1/legacy)")
+            Log.info("Dropping notification without clientId (v1/legacy)")
             return nil
         }
 
         guard let clientId = payload.clientId else {
-            Logger.info("Dropping notification without clientId")
+            Log.info("Dropping notification without clientId")
             return nil
         }
 
-        Logger.info("Processing v2 notification for clientId: \(clientId)")
+        Log.info("Processing v2 notification for clientId: \(clientId)")
         let inboxesRepository = InboxesRepository(databaseReader: databaseReader)
         guard let inbox = try? inboxesRepository.inbox(byClientId: clientId) else {
-            Logger.warning("No inbox found in database for clientId: \(clientId) - dropping notification")
+            Log.warning("No inbox found in database for clientId: \(clientId) - dropping notification")
             return nil
         }
         let inboxId = inbox.inboxId
-        Logger.info("Matched clientId \(clientId) to inboxId: \(inboxId)")
+        Log.info("Matched clientId \(clientId) to inboxId: \(inboxId)")
 
-        Logger.info("Processing for inbox: \(inboxId)")
+        Log.info("Processing for inbox: \(inboxId)")
 
         // Process with timeout
         return try await withTimeout(seconds: timeout, timeoutError: NotificationProcessingError.timeout) {
@@ -109,7 +109,7 @@ public actor CachedPushNotificationHandler {
 
     /// Cleans up all resources
     public func cleanup() {
-        Logger.info("Cleaning up \(messagingServices.count) messaging services")
+        Log.info("Cleaning up \(messagingServices.count) messaging services")
         messagingServices.values.forEach { $0.stop() }
         messagingServices.removeAll()
         lastAccessTime.removeAll()
@@ -125,7 +125,7 @@ public actor CachedPushNotificationHandler {
         }
 
         if !staleInboxIds.isEmpty {
-            Logger.info("Cleaning up \(staleInboxIds.count) stale messaging services")
+            Log.info("Cleaning up \(staleInboxIds.count) stale messaging services")
             for inboxId in staleInboxIds {
                 let removedService = messagingServices.removeValue(forKey: inboxId)
                 removedService?.stop()
@@ -141,11 +141,14 @@ public actor CachedPushNotificationHandler {
         lastAccessTime[inboxId] = Date()
 
         if let existing = messagingServices[inboxId] {
-            Logger.info("Reusing existing messaging service for inbox: \(inboxId)")
+            Log.info("Reusing existing messaging service for inbox: \(inboxId)")
             return existing
         }
 
-        Logger.info("Creating new messaging service for inbox: \(inboxId), clientId: \(clientId), with JWT: \(overrideJWTToken != nil)")
+        Log
+            .info(
+                "Creating new messaging service for inbox: \(inboxId), clientId: \(clientId), with JWT: \(overrideJWTToken != nil)"
+            )
         let messagingService = MessagingService.authorizedMessagingService(
             for: inboxId,
             clientId: clientId,

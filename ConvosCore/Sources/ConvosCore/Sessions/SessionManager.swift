@@ -72,7 +72,7 @@ public final class SessionManager: SessionManagerProtocol {
                 guard !Task.isCancelled else { return }
                 await self.startMessagingServices(for: identities)
             } catch {
-                Logger.error("Error starting messaging services: \(error.localizedDescription)")
+                Log.error("Error starting messaging services: \(error.localizedDescription)")
             }
             guard !Task.isCancelled else { return }
             self.unusedInboxPrepTask = Task(priority: .background) { [weak self] in
@@ -102,7 +102,7 @@ public final class SessionManager: SessionManagerProtocol {
 
     private func startMessagingServices(for identities: [KeychainIdentity]) async {
         let inboxIds = identities.map { $0.inboxId }
-        Logger.info("Starting messaging services for inboxes: \(inboxIds)")
+        Log.info("Starting messaging services for inboxes: \(inboxIds)")
 
         var servicesToCreate: [KeychainIdentity] = []
 
@@ -131,7 +131,10 @@ public final class SessionManager: SessionManagerProtocol {
     }
 
     private func startMessagingService(for inboxId: String, clientId: String) -> AnyMessagingService {
-        Logger.info("Starting messaging service for inboxId: \(inboxId) clientId: \(clientId)")
+        Log
+            .info(
+                "Starting messaging service for inboxId: \(inboxId) clientId: \(clientId)"
+            )
         return MessagingService.authorizedMessagingService(
             for: inboxId,
             clientId: clientId,
@@ -165,7 +168,7 @@ public final class SessionManager: SessionManagerProtocol {
                     do {
                         try await self.deleteInbox(clientId: clientId)
                     } catch {
-                        Logger.error("Error deleting inbox from left conversation notification: \(error.localizedDescription)")
+                        Log.error("Error deleting inbox from left conversation notification: \(error.localizedDescription)")
                     }
                 }
             }
@@ -175,7 +178,7 @@ public final class SessionManager: SessionManagerProtocol {
                 guard let self else { return }
                 let conversationId = notification.userInfo?["conversationId"] as? String
                 self.setActiveConversationId(conversationId)
-                Logger.info("Active conversation changed to: \(conversationId ?? "none")")
+                Log.info("Active conversation changed to: \(conversationId ?? "none")")
             }
     }
 
@@ -221,9 +224,9 @@ public final class SessionManager: SessionManagerProtocol {
                     )
                     content.attachments = [attachment]
 
-                    Logger.info("Successfully added conversation image to explosion notification")
+                    Log.info("Successfully added conversation image to explosion notification")
                 } catch {
-                    Logger.warning("Failed to download or create notification attachment: \(error)")
+                    Log.warning("Failed to download or create notification attachment: \(error)")
                 }
             }
 
@@ -233,9 +236,9 @@ public final class SessionManager: SessionManagerProtocol {
                 trigger: nil // Immediate trigger
             )
             try await UNUserNotificationCenter.current().add(request)
-            Logger.info("Scheduled explosion notification for conversation: \(conversationId)")
+            Log.info("Scheduled explosion notification for conversation: \(conversationId)")
         } catch {
-            Logger.error("Failed to schedule explosion notification: \(error)")
+            Log.error("Failed to schedule explosion notification: \(error)")
         }
     }
 
@@ -268,11 +271,11 @@ public final class SessionManager: SessionManagerProtocol {
         }
 
         guard let service = service else {
-            Logger.error("Messaging service not found for clientId \(clientId)")
+            Log.error("Messaging service not found for clientId \(clientId)")
             throw SessionManagerError.inboxNotFound
         }
 
-        Logger.info("Stopping messaging service for clientId: \(clientId)")
+        Log.info("Stopping messaging service for clientId: \(clientId)")
         await service.stopAndDelete()
 
         // Delete from database
@@ -300,7 +303,7 @@ public final class SessionManager: SessionManagerProtocol {
 
         // Delete all from database
         let inboxWriter = InboxWriter(dbWriter: databaseWriter)
-        Logger.info("Deleting all inboxes from database")
+        Log.info("Deleting all inboxes from database")
         try await inboxWriter.deleteAll()
     }
 
@@ -358,13 +361,13 @@ public final class SessionManager: SessionManagerProtocol {
 
         // Don't display notification if we're in the conversations list
         guard let currentActiveConversationId else {
-            Logger.info("Suppressing notification from conversations list: \(conversationId)")
+            Log.info("Suppressing notification from conversations list: \(conversationId)")
             return false
         }
 
         // Don't display notification if it's for the currently active conversation
         if currentActiveConversationId == conversationId {
-            Logger.info("Suppressing notification for active conversation: \(conversationId)")
+            Log.info("Suppressing notification for active conversation: \(conversationId)")
             return false
         }
         return true
@@ -379,7 +382,7 @@ public final class SessionManager: SessionManagerProtocol {
                     .inboxId
             }
         } catch {
-            Logger.error("Failed to look up inboxId for conversationId \(conversationId): \(error)")
+            Log.error("Failed to look up inboxId for conversationId \(conversationId): \(error)")
             return nil
         }
     }

@@ -41,7 +41,7 @@ class PasskeyAuthService: AuthServiceProtocol {
         do {
             try refreshAuthState()
         } catch {
-            Logger.error("Error refreshing auth state: \(error)")
+            Log.error("Error refreshing auth state: \(error)")
         }
     }
 

@@ -118,7 +118,7 @@ class ConversationWriter: ConversationWriterProtocol {
             )
             try conversationMember.save(db)
 
-            Logger.info("Created placeholder conversation for invite")
+            Log.info("Created placeholder conversation for invite")
             return conversation
         }
 
@@ -169,7 +169,7 @@ class ConversationWriter: ConversationWriterProtocol {
                 message: lastMessage,
                 for: dbConversation
             )
-            Logger.info("Saved last message: \(result)")
+            Log.info("Saved last message: \(result)")
         }
 
         return dbConversation
@@ -274,24 +274,24 @@ class ConversationWriter: ConversationWriterProtocol {
             .filter(DBConversation.Columns.clientConversationId != dbConversation.clientConversationId)
             .fetchOne(db) {
             // Keep using the same local id
-            Logger.info("Found local conversation \(localConversation.clientConversationId) for incoming \(dbConversation.id)")
+            Log.info("Found local conversation \(localConversation.clientConversationId) for incoming \(dbConversation.id)")
             let updatedConversation = dbConversation
                 .with(clientConversationId: localConversation.clientConversationId)
             try updatedConversation.save(db, onConflict: .replace)
             firstTimeSeeingConversationExpired = updatedConversation.isExpired && updatedConversation.expiresAt != localConversation.expiresAt
-            Logger.info("Updated incoming conversation with local \(localConversation.clientConversationId)")
+            Log.info("Updated incoming conversation with local \(localConversation.clientConversationId)")
         } else {
             do {
                 try dbConversation.save(db)
                 firstTimeSeeingConversationExpired = dbConversation.isExpired
             } catch {
-                Logger.error("Failed saving incoming conversation \(dbConversation.id): \(error)")
+                Log.error("Failed saving incoming conversation \(dbConversation.id): \(error)")
                 throw error
             }
         }
 
         if firstTimeSeeingConversationExpired {
-            Logger.info("Encountered expired conversation for the first time.")
+            Log.info("Encountered expired conversation for the first time.")
         }
     }
 
@@ -314,7 +314,7 @@ class ConversationWriter: ConversationWriterProtocol {
         for conversation: XMTPiOS.Group,
         dbConversation: DBConversation
     ) async throws {
-        Logger.info("Attempting to fetch latest messages...")
+        Log.info("Attempting to fetch latest messages...")
 
         // Get the timestamp of the last stored message
         let lastMessageNs = try await getLastMessageTimestamp(for: conversation.id)
@@ -323,17 +323,17 @@ class ConversationWriter: ConversationWriterProtocol {
         let messages = try await conversation.messages(afterNs: lastMessageNs)
         guard !messages.isEmpty else { return }
 
-        Logger.info("Found \(messages.count) new messages, catching up...")
+        Log.info("Found \(messages.count) new messages, catching up...")
 
         // Store messages and track if conversation should be marked unread
         var marksConversationAsUnread = false
         for message in messages {
-            Logger.info("Catching up with message sent at: \(message.sentAt.nanosecondsSince1970)")
+            Log.info("Catching up with message sent at: \(message.sentAt.nanosecondsSince1970)")
             let result = try await messageWriter.store(message: message, for: dbConversation)
             if result.contentType.marksConversationAsUnread {
                 marksConversationAsUnread = true
             }
-            Logger.info("Saved caught up message sent at: \(message.sentAt.nanosecondsSince1970)")
+            Log.info("Saved caught up message sent at: \(message.sentAt.nanosecondsSince1970)")
         }
 
         // Update unread status if needed

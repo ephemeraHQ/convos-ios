@@ -102,14 +102,14 @@ class TurnkeyAccountsService: AuthAccountsServiceProtocol {
 //            disableOtpEmailAuth: nil
 //        )
 //
-//        Logger.info("Create sub org response: \(subOrgResponse)")
+//        Log.info("Create sub org response: \(subOrgResponse)")
 //        guard
 //            case let .json(body) = subOrgResponse.body,
 //            let subOrgResult = body.activity.result.createSubOrganizationResult else {
 //            throw TurnkeyAccountsServiceError.failedCreatingSubOrg
 //        }
 //
-//        Logger.info("Created sub org: \(subOrgResult.subOrganizationId) users: \(subOrgResult.rootUserIds ?? [])")
+//        Log.info("Created sub org: \(subOrgResult.subOrganizationId) users: \(subOrgResult.rootUserIds ?? [])")
 
         let otrWalletId: String
         let otrWalletAddress: String
@@ -128,7 +128,7 @@ class TurnkeyAccountsService: AuthAccountsServiceProtocol {
                 mnemonicLength: nil
             )
 
-            Logger.info("Added wallet: \(response)")
+            Log.info("Added wallet: \(response)")
             guard
                 case let .json(body) = response.body,
                 let walletResult = body.activity.result.createWalletResult,

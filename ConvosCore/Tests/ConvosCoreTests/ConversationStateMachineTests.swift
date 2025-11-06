@@ -638,7 +638,7 @@ struct ConversationStateMachineTests {
             return
         }
 
-        Logger.info("Fetched invite URL: \(invite.urlSlug)")
+        Log.info("Fetched invite URL: \(invite.urlSlug)")
 
         // Setup joiner messaging service and state machine
         let joinerMessagingService = await unusedInboxCache.consumeOrCreateMessagingService(
@@ -755,11 +755,11 @@ struct ConversationStateMachineTests {
 
         inviterInboxId = inboxId
 
-        Logger.info("Fetched invite URL: \(invite.urlSlug)")
+        Log.info("Fetched invite URL: \(invite.urlSlug)")
 
         // Stop inviter's messaging service (simulating offline)
         inviterMessagingService.stop()
-        Logger.info("Inviter went offline")
+        Log.info("Inviter went offline")
 
         // Setup joiner messaging service and state machine
         let joinerMessagingService = await unusedInboxCache.consumeOrCreateMessagingService(
@@ -801,7 +801,7 @@ struct ConversationStateMachineTests {
             startsStreamingServices: true
         )
 
-        Logger.info("Inviter came back online")
+        Log.info("Inviter came back online")
 
         // Wait for joiner to reach ready state (join should be processed automatically)
         var joinerConversationId: String?

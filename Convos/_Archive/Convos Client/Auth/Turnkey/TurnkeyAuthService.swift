@@ -27,7 +27,7 @@ fileprivate extension SignRawPayloadResult {
 
     var signedData: SignedData {
         guard let rawSignature else {
-            Logger.error("Failed getting raw signature from SignRawPayloadResult")
+            Log.error("Failed getting raw signature from SignRawPayloadResult")
             return SignedData(rawData: Data())
         }
         return SignedData(rawData: rawSignature)
@@ -61,7 +61,7 @@ extension SessionUser.UserWallet.WalletAccount: @retroactive SigningKey {
             )
             return result.signedData
         } catch {
-            Logger.error("Error signing message: \(error)")
+            Log.error("Error signing message: \(error)")
             throw error
         }
     }
@@ -248,7 +248,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
         do {
             return try processAuthFlow(for: wallet)
         } catch {
-            Logger.error("Error processing auth state: \(error)")
+            Log.error("Error processing auth state: \(error)")
             return .unauthorized
         }
     }
@@ -260,12 +260,12 @@ final class TurnkeyAuthService: AuthServiceProtocol {
 
     private func validateWallet(for user: SessionUser) -> SessionUser.UserWallet? {
         guard let wallet = user.defaultWallet else {
-            Logger.error("Default Wallet not found for Turnkey user, unauthorized")
+            Log.error("Default Wallet not found for Turnkey user, unauthorized")
             return nil
         }
 
         if user.wallets.count > 1 {
-            Logger.warning("Multiple wallets found for Turnkey user, using default")
+            Log.warning("Multiple wallets found for Turnkey user, using default")
         }
 
         return wallet
@@ -281,7 +281,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
             do {
                 try migration.performMigration(for: userIdentifier)
             } catch {
-                Logger.error("Failed performing migration for user \(userIdentifier): \(error)")
+                Log.error("Failed performing migration for user \(userIdentifier): \(error)")
                 return .migrating(migration)
             }
         }
@@ -321,7 +321,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
         }
 
         if wallet.accounts.count > 1 {
-            Logger.warning("Multiple wallet accounts found for Turnkey user, using the first one")
+            Log.warning("Multiple wallet accounts found for Turnkey user, using the first one")
         }
 
         let databaseKey = try account.databaseKey
@@ -368,7 +368,7 @@ final class TurnkeyAuthService: AuthServiceProtocol {
 
             try await turnkey.createSession(jwt: jwt)
         } catch let error as TurnkeyRequestError {
-            Logger.error("Failed to stamp login code \(error.statusCode ?? 0): \(error.fullMessage)")
+            Log.error("Failed to stamp login code \(error.statusCode ?? 0): \(error.fullMessage)")
             throw error
         }
     }

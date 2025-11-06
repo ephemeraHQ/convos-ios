@@ -78,12 +78,12 @@ public actor DeviceRegistrationManager: DeviceRegistrationManagerProtocol {
     /// Protected by isRegistering flag to prevent concurrent registration attempts.
     public func registerDeviceIfNeeded() async {
         if case .tests = environment {
-            Logger.info("Skipping device registration for tests environment...")
+            Log.info("Skipping device registration for tests environment...")
             return
         }
 
         guard !isRegistering else {
-            Logger.info("Registration already in progress, skipping")
+            Log.info("Registration already in progress, skipping")
             return
         }
 
@@ -106,14 +106,14 @@ public actor DeviceRegistrationManager: DeviceRegistrationManagerProtocol {
         let shouldRegister = !hasEverRegistered || lastToken != pushToken
 
         guard shouldRegister else {
-            Logger.info("Device already registered with this token")
+            Log.info("Device already registered with this token")
             return
         }
 
         let reason = !hasEverRegistered ? "first time" : "token changed"
 
         do {
-            Logger.info("Registering device (\(reason), token: \(pushToken != nil ? "present" : "nil"))")
+            Log.info("Registering device (\(reason), token: \(pushToken != nil ? "present" : "nil"))")
 
             try await apiClient.registerDevice(deviceId: deviceId, pushToken: pushToken)
 
@@ -123,15 +123,15 @@ public actor DeviceRegistrationManager: DeviceRegistrationManagerProtocol {
 
             if let pushToken = pushToken {
                 UserDefaults.standard.set(pushToken, forKey: lastTokenKey)
-                Logger.info("Successfully registered device with push token")
+                Log.info("Successfully registered device with push token")
             } else {
                 // Clear lastToken when successfully registering with nil token
                 // This ensures we don't keep retrying with nil on every launch
                 UserDefaults.standard.removeObject(forKey: lastTokenKey)
-                Logger.info("Successfully registered device without push token")
+                Log.info("Successfully registered device without push token")
             }
         } catch {
-            Logger.error("Failed to register device: \(error). Will retry on next attempt.")
+            Log.error("Failed to register device: \(error). Will retry on next attempt.")
         }
     }
 
@@ -141,7 +141,7 @@ public actor DeviceRegistrationManager: DeviceRegistrationManagerProtocol {
         let deviceId = DeviceInfo.deviceIdentifier
         UserDefaults.standard.removeObject(forKey: "lastRegisteredDevicePushToken_\(deviceId)")
         UserDefaults.standard.removeObject(forKey: "hasRegisteredDevice_\(deviceId)")
-        Logger.info("Cleared device registration state")
+        Log.info("Cleared device registration state")
     }
 
     /// Returns true if this device has been registered at least once.
@@ -155,7 +155,7 @@ public actor DeviceRegistrationManager: DeviceRegistrationManagerProtocol {
     private func setupPushTokenObserver() {
         guard pushTokenObserver == nil else { return }
 
-        Logger.info("DeviceRegistrationManager: Setting up push token observer...")
+        Log.info("DeviceRegistrationManager: Setting up push token observer...")
         pushTokenObserver = NotificationCenter.default.addObserver(
             forName: .convosPushTokenDidChange,
             object: nil,
@@ -171,12 +171,12 @@ public actor DeviceRegistrationManager: DeviceRegistrationManagerProtocol {
         if let observer = pushTokenObserver {
             NotificationCenter.default.removeObserver(observer)
             pushTokenObserver = nil
-            Logger.info("DeviceRegistrationManager: Removed push token observer")
+            Log.info("DeviceRegistrationManager: Removed push token observer")
         }
     }
 
     private func handlePushTokenChange() async {
-        Logger.info("DeviceRegistrationManager: Push token changed, re-registering device...")
+        Log.info("DeviceRegistrationManager: Push token changed, re-registering device...")
         await registerDeviceIfNeeded()
     }
 }

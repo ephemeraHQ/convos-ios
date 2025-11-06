@@ -1,82 +1,24 @@
 import ConvosCore
 import SwiftUI
 import UIKit
+import XMTPiOS
 
-struct DebugLogsView: View {
-    @State private var logs: String = ""
-    @State private var isRefreshing: Bool = false
-    @State private var timer: Timer?
-
-    var body: some View {
-        VStack {
-            ScrollView {
-                ScrollViewReader { proxy in
-                    LazyVStack(alignment: .leading, spacing: 0) {
-                        Text(logs)
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundColor(.primary)
-                            .padding()
-                            .id("logs")
-                    }
-                    .onChange(of: logs) {
-                        withAnimation(.easeOut(duration: 0.3)) {
-                            proxy.scrollTo("logs", anchor: .bottom)
-                        }
-                    }
-                }
-            }
-        }
-        .navigationTitle("Logs")
-        .toolbarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(role: .destructive) {
-                    let logsFile = FileManager.default.temporaryDirectory.appendingPathComponent("convos-debug-info.txt")
-                    try? FileManager.default.removeItem(at: logsFile)
-                    Logger.clearLogs {
-                        refreshLogs()
-                    }
-                } label: {
-                    Image(systemName: "trash")
-                }
-            }
-        }
-        .onAppear {
-            refreshLogs()
-            startTimer()
-        }
-        .onDisappear {
-            stopTimer()
-        }
-    }
-
-    private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            refreshLogs()
-        }
-    }
-
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
-    }
-
-    private func refreshLogs() {
-        isRefreshing = true
-        Logger.getLogsAsync { logs in
-            DispatchQueue.main.async {
-                self.logs = logs
-                self.isRefreshing = false
-            }
-        }
+extension Client {
+    static var logFileURLs: [URL]? {
+        let filePaths = getXMTPLogFilePaths(customLogDirectory: nil)
+        guard !filePaths.isEmpty else { return nil }
+        return filePaths
+            .map { URL(fileURLWithPath: $0) }
+            .filter { FileManager.default.fileExists(atPath: $0.path) }
     }
 }
 
 struct DebugViewSection: View {
+    let environment: AppEnvironment
     @State private var notificationAuthStatus: UNAuthorizationStatus = .notDetermined
     @State private var notificationAuthGranted: Bool = false
     @State private var lastDeviceToken: String = ""
-    @State private var debugFileURL: URL?
+    @State private var debugFileURLs: [URL]?
     @State private var preparingLogs: Bool = false
 
     private var bundleIdentifier: String {
@@ -91,7 +33,7 @@ struct DebugViewSection: View {
     private func prepareDebugInfoFile() async {
         guard !preparingLogs else { return }
         preparingLogs = true
-        let logs = await Logger.getAllLogs()
+        let logs = await ConvosLog.getLogs(appGroupIdentifier: environment.appGroupIdentifier)
 
         let debugInfo = """
         Convos Debug Information
@@ -105,8 +47,12 @@ struct DebugViewSection: View {
 
         let tempURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("convos-debug-info.txt")
-        try? debugInfo.write(to: tempURL, atomically: true, encoding: .utf8)
-        self.debugFileURL = tempURL
+        try? debugInfo.write(to: tempURL, atomically: true, encoding: String.Encoding.utf8)
+        var debugFileURLs = [tempURL]
+        if let xmtpFileURLs = Client.logFileURLs {
+            debugFileURLs.append(contentsOf: xmtpFileURLs)
+        }
+        self.debugFileURLs = debugFileURLs
         self.preparingLogs = false
     }
 
@@ -161,14 +107,16 @@ struct DebugViewSection: View {
             }
 
             Section("Debug") {
-                if let debugFileURL {
-                    ShareLink(item: debugFileURL) {
+                if let debugFileURLs {
+                    ShareLink(items: debugFileURLs) {
                         HStack {
-                            Text("Share logs")
-                            Spacer()
-                            Image(systemName: "square.and.arrow.up")
+                            HStack {
+                                Text("Share logs")
+                                Spacer()
+                                Image(systemName: "square.and.arrow.up")
+                            }
+                            .foregroundStyle(.colorTextPrimary)
                         }
-                        .foregroundStyle(.colorTextPrimary)
                     }
                 } else {
                     HStack {
@@ -177,14 +125,6 @@ struct DebugViewSection: View {
                         if preparingLogs { ProgressView() }
                     }
                     .foregroundStyle(.colorTextSecondary)
-                }
-
-                HStack {
-                    NavigationLink {
-                        DebugLogsView()
-                    } label: {
-                        Text("View logs")
-                    }
                 }
 
                 HStack {
@@ -233,7 +173,7 @@ struct DebugViewSection: View {
 
 #Preview {
     List {
-        DebugViewSection()
+        DebugViewSection(environment: .tests)
     }
 }
 
@@ -266,13 +206,13 @@ extension DebugViewSection {
             }
             await refreshNotificationStatus()
         } catch {
-            Logger.error("Debug push request failed: \(error)")
+            Log.error("Debug push request failed: \(error)")
         }
     }
 
     private func registerDeviceAgain() async {
         let apnsEnv = ConfigManager.shared.currentEnvironment.apnsEnvironment.rawValue
-        Logger.info("Debug: Force re-registering device (APNS env: \(apnsEnv))")
+        Log.info("Debug: Force re-registering device (APNS env: \(apnsEnv))")
 
         DeviceRegistrationManager.clearRegistrationState()
 

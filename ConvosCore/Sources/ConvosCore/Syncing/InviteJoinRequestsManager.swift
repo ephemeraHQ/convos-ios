@@ -82,7 +82,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                 message: message,
                 client: client
             ) {
-                Logger.info("Successfully added \(message.senderInboxId) to conversation \(result.conversationId)")
+                Log.info("Successfully added \(message.senderInboxId) to conversation \(result.conversationId)")
                 return result
             }
             return nil
@@ -93,19 +93,19 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             // Silently skip - not a join request
             return nil
         } catch InviteJoinRequestError.invalidSignature {
-            Logger.error("Invalid signature in join request from \(message.senderInboxId)")
+            Log.error("Invalid signature in join request from \(message.senderInboxId)")
             return nil
         } catch InviteJoinRequestError.malformedInboxId {
-            Logger.error("Malformed inbox ID in join request from \(message.senderInboxId)")
+            Log.error("Malformed inbox ID in join request from \(message.senderInboxId)")
             return nil
         } catch InviteJoinRequestError.conversationNotFound(let id) {
-            Logger.error("Conversation \(id) not found for join request from \(message.senderInboxId)")
+            Log.error("Conversation \(id) not found for join request from \(message.senderInboxId)")
             return nil
         } catch InviteJoinRequestError.invalidConversationType {
-            Logger.error("Join request targets a DM instead of a group")
+            Log.error("Join request targets a DM instead of a group")
             return nil
         } catch {
-            Logger.error("Error processing join request: \(error)")
+            Log.error("Error processing join request: \(error)")
             return nil
         }
     }
@@ -122,14 +122,14 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         let senderInboxId = message.senderInboxId
 
         guard senderInboxId != client.inboxId else {
-            Logger.info("Ignoring outgoing join request...")
+            Log.info("Ignoring outgoing join request...")
             return nil
         }
 
         let dbMessage = try message.dbRepresentation()
         guard let text = dbMessage.text else {
-            Logger.info("Message has no text content, not a join request")
-            // @jarodl we should probably block the DM here too
+            Log.info("Message has no text content, not a join request")
+            await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
             throw InviteJoinRequestError.missingTextContent
         }
 
@@ -138,17 +138,17 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         do {
             signedInvite = try SignedInvite.fromURLSafeSlug(text)
         } catch {
-            Logger.info("Message text is not a valid signed invite format")
+            Log.info("Message text is not a valid signed invite format")
             throw InviteJoinRequestError.invalidInviteFormat
         }
 
         guard !signedInvite.hasExpired else {
-            Logger.info("Invite expired, cancelling join request...")
+            Log.info("Invite expired, cancelling join request...")
             throw InviteJoinRequestError.expired
         }
 
         guard !signedInvite.conversationHasExpired else {
-            Logger.info("Conversation expired, cancelling join request...")
+            Log.info("Conversation expired, cancelling join request...")
             throw InviteJoinRequestError.expiredConversation
         }
 
@@ -161,7 +161,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         }
 
         guard creatorInboxId == client.inboxId else {
-            Logger.error("Received join request for invite not created by this inbox - blocking DM")
+            Log.error("Received join request for invite not created by this inbox - blocking DM")
             await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
             throw InviteJoinRequestError.invalidSignature
         }
@@ -176,7 +176,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         } catch {
             // Verification threw an exception (e.g., malformed signature, invalid key format)
             // This is different from a signature that doesn't match
-            Logger.error("Exception during signature verification for invite from \(senderInboxId): \(error) - blocking DM")
+            Log.error("Exception during signature verification for invite from \(senderInboxId): \(error) - blocking DM")
             await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
             throw InviteJoinRequestError.invalidSignature
         }
@@ -184,7 +184,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         // Explicitly check that verification succeeded
         guard verifiedSignature == true else {
             // Signature verification returned false - signature doesn't match
-            Logger.error("Signature verification failed for invite from \(senderInboxId) - blocking DM")
+            Log.error("Signature verification failed for invite from \(senderInboxId) - blocking DM")
             await blockDMConversation(client: client, conversationId: message.conversationId, senderInboxId: senderInboxId)
             throw InviteJoinRequestError.invalidSignature
         }
@@ -200,13 +200,13 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         guard let conversation = try await client.conversationsProvider.findConversation(
             conversationId: conversationId
         ), try conversation.consentState() == .allowed else {
-            Logger.warning("Conversation \(conversationId) not found for join request from \(senderInboxId)")
+            Log.warning("Conversation \(conversationId) not found for join request from \(senderInboxId)")
             throw InviteJoinRequestError.conversationNotFound(conversationId)
         }
 
         switch conversation {
         case .group(let group):
-            Logger.info("Adding \(senderInboxId) to group \(group.id)...")
+            Log.info("Adding \(senderInboxId) to group \(group.id)...")
             try await group.add(members: [senderInboxId])
             let conversationName = try? group.name()
             return JoinRequestResult(
@@ -214,7 +214,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                 conversationName: conversationName
             )
         case .dm:
-            Logger.warning("Expected Group but found DM from \(senderInboxId), ignoring invite join request")
+            Log.warning("Expected Group but found DM from \(senderInboxId), ignoring invite join request")
             throw InviteJoinRequestError.invalidConversationType
         }
     }
@@ -233,7 +233,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             orderBy: .lastActivity
         )
 
-        Logger.info("Found \(dms.count) possible DMs containing outgoing join requests")
+        Log.info("Found \(dms.count) possible DMs containing outgoing join requests")
 
         for dm in dms {
             guard let invite = await dm.lastMessageAsSignedInvite(sentBy: client.inboxId) else {
@@ -256,7 +256,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         var results: [JoinRequestResult] = []
 
         do {
-            Logger.info("Listing all DMs for join requests...")
+            Log.info("Listing all DMs for join requests...")
 
             // List all DMs with consent states .unknown
             let dms = try client.conversationsProvider.listDms(
@@ -269,7 +269,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                 orderBy: .lastActivity
             )
 
-            Logger.info("Found \(dms.count) DMs to check for join requests")
+            Log.info("Found \(dms.count) DMs to check for join requests")
 
             // Process each DM in parallel
             await withTaskGroup(of: JoinRequestResult?.self) { group in
@@ -279,7 +279,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                             guard let self else { return nil }
                             return try await processMessages(for: dm, client: client)
                         } catch {
-                            Logger.error("Error processing messages as join requests: \(error.localizedDescription)")
+                            Log.error("Error processing messages as join requests: \(error.localizedDescription)")
                             return nil
                         }
                     }
@@ -292,9 +292,9 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                 }
             }
 
-            Logger.info("Completed DM sync for join requests")
+            Log.info("Completed DM sync for join requests")
         } catch {
-            Logger.error("Error syncing DMs: \(error)")
+            Log.error("Error syncing DMs: \(error)")
         }
 
         return results
@@ -316,7 +316,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
                     return false
                 }
             }
-        Logger.info("Found \(messages.count) messages as possible join requests")
+        Log.info("Found \(messages.count) messages as possible join requests")
 
         // Process each message and return first successful result for this DM
         for message in messages {
@@ -347,9 +347,9 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
 
         do {
             try await dmConversation.updateConsentState(state: .denied)
-            Logger.info("Set consent state to .denied for DM with \(senderInboxId)")
+            Log.info("Set consent state to .denied for DM with \(senderInboxId)")
         } catch {
-            Logger.error("Failed to set consent state to .denied for DM with \(senderInboxId): \(error)")
+            Log.error("Failed to set consent state to .denied for DM with \(senderInboxId): \(error)")
         }
     }
 }
@@ -366,7 +366,7 @@ extension XMTPiOS.Dm {
         }
 
         let content: String? = try? lastMessage.content()
-        Logger.info("Received last message: \(content ?? "nil") sender: \(lastMessage.senderInboxId)")
+        Log.info("Received last message: \(content ?? "nil") sender: \(lastMessage.senderInboxId)")
 
         // Only check messages sent by us
         guard lastMessage.senderInboxId == clientInboxId else {

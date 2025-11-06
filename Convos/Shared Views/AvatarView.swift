@@ -66,7 +66,7 @@ struct AvatarView: View {
             }
         } catch {
             // Keep showing monogram on error
-            Logger.error("Error loading image cacheable object: \(cacheableObject) from url: \(imageURL)")
+            Log.error("Error loading image cacheable object: \(cacheableObject) from url: \(imageURL)")
             cachedImage = nil
         }
 
