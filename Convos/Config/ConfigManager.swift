@@ -41,6 +41,10 @@ final class ConfigManager {
         _currentEnvironment = environment
         environmentLock.unlock()
 
+        // Store the environment configuration securely for the notification extension
+        // Only the thread that won the race should perform this side effect
+        environment.storeSecureConfigurationForNotificationExtension()
+
         return environment
     }
 
@@ -121,9 +125,6 @@ final class ConfigManager {
         default:
             fatalError("Invalid environment '\(envString)' in config.json")
         }
-
-        // Store the environment configuration securely for the notification extension
-        environment.storeSecureConfigurationForNotificationExtension()
 
         return environment
     }
