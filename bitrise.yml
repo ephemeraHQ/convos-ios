@@ -20,7 +20,7 @@ app:
   - SENTRY_ORG: ephemerahq
     opts:
       is_expand: false
-  - SENTRY_PROJECT: apple-ios
+  - SENTRY_PROJECT: convos-ios
     opts:
       is_expand: false
   - GITHUB_REPOSITORY: ephemeraHQ/convos-ios
@@ -226,59 +226,6 @@ step_bundles:
   Setup:
     steps:
     - script@1:
-        title: Setup Development Environment (Secure)
-        inputs:
-        - content: "#!/usr/bin/env bash
-
-            set -e
-
-            set -o pipefail
-
-            # NO set -x to avoid exposing commands in logs
-
-
-            echo \"🔧 Setting up development environment for testing\"
-
-
-            # Public environment variables (available in PRs)
-
-            export POSTHOG_HOST=\"${POSTHOG_HOST:-https://app.posthog.com}\"
-
-            export SENTRY_ORG=\"${SENTRY_ORG:-convos-dev}\"
-
-            export SENTRY_PROJECT=\"${SENTRY_PROJECT:-convos-ios-dev}\"
-
-
-            # Mocked secrets for testing (not real ones!)
-
-            export POSTHOG_API_KEY=\"ph_test_mock_key_for_ci\"
-
-            export
-            SENTRY_UPLOAD_SYMBOLS_AUTH_TOKEN=\"mock_sentry_token_for_testing\"
-
-            export
-            SLACK_URL_WITH_KEY=\"https://hooks.slack.com/services/mock/webhook/\
-            url\"
-
-            export SENTRY_DSN=\"https://mock@sentry.io/mock\"
-
-            export
-            TURNKEY_PUBLIC_ORGANIZATION_ID=\"mock_turnkey_org_for_testing\"
-
-            export
-            TURNKEY_API_PUBLIC_KEY=\"mock_turnkey_public_key_for_testing\"
-
-            export
-            TURNKEY_API_PRIVATE_KEY=\"mock_turnkey_private_key_for_testing\"
-
-
-            # Generate secrets using our secure script
-
-            ./Scripts/generate-secrets-secure.sh
-
-
-            echo \"✅ Development environment configured securely\""
-    - script@1:
         inputs:
         - content: |-
             #!/usr/bin/env bash
@@ -325,15 +272,10 @@ step_bundles:
             # make pipelines' return status equal the last command to exit with a non-zero status, or zero if all commands exit successfully
             set -o pipefail
             # debug log
-            set -x
+            # set -x
 
             make setup
-            # make secrets
-
-            # or run a script from your repository, like:
-            # bash ./path/to/script.sh
-            # not just bash, e.g.:
-            # ruby ./path/to/script.rb
+            make secrets
   ReleaseNotes:
     steps:
     - script@1:
