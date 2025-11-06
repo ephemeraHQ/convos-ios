@@ -135,6 +135,24 @@ public enum AppEnvironment: Sendable {
         }
     }
 
+    var xmtpNetwork: String? {
+        switch self {
+        case .local(config: let config), .dev(config: let config), .production(config: let config):
+            return config.xmtpNetwork
+        case .tests:
+            return nil
+        }
+    }
+
+    var gatewayUrl: String? {
+        switch self {
+        case .local(config: let config), .dev(config: let config), .production(config: let config):
+            return config.gatewayUrl
+        case .tests:
+            return nil
+        }
+    }
+
     public var apnsEnvironment: ApnsEnvironment {
         switch buildEnvironment {
         case .simulator:

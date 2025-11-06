@@ -10,6 +10,7 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     var session: (any SessionManagerProtocol)?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        SentryConfiguration.configure()
         UNUserNotificationCenter.current().delegate = self
         return true
     }

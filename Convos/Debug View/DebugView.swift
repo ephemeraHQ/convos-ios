@@ -1,4 +1,5 @@
 import ConvosCore
+import Sentry
 import SwiftUI
 import UIKit
 import XMTPiOS
@@ -149,6 +150,33 @@ struct DebugViewSection: View {
                 }
             }
 
+            Section("Sentry Testing") {
+                Button {
+                    testSentryMessage()
+                } label: {
+                    Text("Send Test Message")
+                        .foregroundStyle(.colorTextPrimary)
+                }
+                Button {
+                    testSentryError()
+                } label: {
+                    Text("Send Test Error")
+                        .foregroundStyle(.colorTextPrimary)
+                }
+                Button {
+                    testSentryException()
+                } label: {
+                    Text("Send Test Exception")
+                        .foregroundStyle(.colorTextPrimary)
+                }
+                Button {
+                    testSentryWithBreadcrumbs()
+                } label: {
+                    Text("Send Event with Breadcrumbs")
+                        .foregroundStyle(.colorTextPrimary)
+                }
+            }
+
             Section {
                 Button {
                     Task { await registerDeviceAgain() }
@@ -224,5 +252,53 @@ extension DebugViewSection {
         if let appDomain = Bundle.main.bundleIdentifier {
             UserDefaults.standard.removePersistentDomain(forName: appDomain)
         }
+    }
+
+    private func testSentryMessage() {
+        let message = "Test message from local development - \(Date())"
+        SentrySDK.capture(message: message)
+        Log.info("Sent Sentry test message: \(message)")
+    }
+
+    private func testSentryError() {
+        let error = NSError(
+            domain: "com.convos.debug",
+            code: 999,
+            userInfo: [
+                NSLocalizedDescriptionKey: "Test error for Sentry debugging",
+                "timestamp": Date().ISO8601Format(),
+                "environment": ConfigManager.shared.currentEnvironment.name
+            ]
+        )
+        SentrySDK.capture(error: error)
+        Log.info("Sent Sentry test error")
+    }
+
+    private func testSentryException() {
+        let exception = NSException(
+            name: .init("TestException"),
+            reason: "Test exception from local debug view",
+            userInfo: [
+                "user_action": "debug_test",
+                "timestamp": Date().ISO8601Format()
+            ]
+        )
+        SentrySDK.capture(exception: exception)
+        Log.info("Sent Sentry test exception")
+    }
+
+    private func testSentryWithBreadcrumbs() {
+        let crumb1 = Breadcrumb(level: .info, category: "navigation")
+        crumb1.message = "User navigated to Debug view"
+        crumb1.data = ["screen": "DebugView"]
+        SentrySDK.addBreadcrumb(crumb1)
+
+        let crumb2 = Breadcrumb(level: .info, category: "user_action")
+        crumb2.message = "User tapped Sentry test button"
+        crumb2.data = ["action": "test_breadcrumbs"]
+        SentrySDK.addBreadcrumb(crumb2)
+
+        SentrySDK.capture(message: "Event with breadcrumbs - \(Date())")
+        Log.info("Sent Sentry event with breadcrumbs")
     }
 }
