@@ -33,12 +33,6 @@ actor SyncingManager: SyncingManagerProtocol {
     private var messageStreamTask: Task<Void, Never>?
     private var conversationStreamTask: Task<Void, Never>?
 
-    // UserDefaults key prefix for last sync timestamp
-    private static let lastSyncedAtKeyPrefix: String = "convos.syncing.lastSyncedAt"
-
-    // Single parent task that manages everything
-    private var syncTask: Task<Void, Never>?
-
     private var activeConversationId: String?
 
     // Notification handling
@@ -83,11 +77,6 @@ actor SyncingManager: SyncingManagerProtocol {
             setupNotificationObservers()
         }
 
-        guard syncTask == nil else {
-            Log.info("Sync already in progress, ignoring redundant start() call")
-            return
-        }
-
         // Start the streams first
         messageStreamTask?.cancel()
         messageStreamTask = Task { [weak self] in
@@ -98,78 +87,6 @@ actor SyncingManager: SyncingManagerProtocol {
         conversationStreamTask = Task { [weak self] in
             guard let self else { return }
             await self.runConversationStream(client: client, apiClient: apiClient)
-        }
-
-        // Create sync task
-        syncTask = Task { [weak self] in
-            guard let self else { return }
-
-            // Capture sync start time first
-            let syncStartTime = Date()
-
-            // Get the last sync time for logging and join requests
-            let lastSyncedAt = await self.getLastSyncedAt(for: client.inboxId)
-            if let lastSyncedAt {
-                Log.info("Starting, last synced \(lastSyncedAt.relativeShort()) ago...")
-            } else {
-                Log.info("Syncing for the first time...")
-            }
-
-            // Perform the initial sync
-            do {
-                let count = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
-                Log.info("syncAllConversations returned count: \(count)")
-
-                // we need to list all the conversations that have been updated since `lastSyncedAt` and then list
-                // messages since `lastSyncedAt`, then process the conversation + messages
-                // this is a band aid fix until the issue with streams is resolved
-                do {
-                    let updatedConversations = try await client.conversationsProvider
-                        .listGroups(
-                            createdAfterNs: nil,
-                            createdBeforeNs: nil,
-                            lastActivityAfterNs: lastSyncedAt?.nanosecondsSince1970,
-                            lastActivityBeforeNs: nil,
-                            limit: nil,
-                            consentStates: consentStates,
-                            orderBy: .lastActivity
-                        )
-                    Log.info("Found \(updatedConversations.count) conversations since last sync, processing...")
-                    try await withThrowingTaskGroup { [weak self] group in
-                        for conversation in updatedConversations {
-                            group.addTask {
-                                guard let self else { return }
-                                try await self.streamProcessor.processConversation(
-                                    conversation,
-                                    client: client,
-                                    apiClient: apiClient
-                                )
-                            }
-                        }
-                        for try await _ in group {
-                            // log completion
-                        }
-                    }
-                } catch {
-                    Log.error("Error catching up on missed conversation updates: \(error.localizedDescription)")
-                    throw error
-                }
-
-                // @jarodl we won't need this once the issue with messages in the streams not re-playing
-                // is fixed
-                _ = await joinRequestsManager.processJoinRequests(since: lastSyncedAt, client: client)
-
-                // Only update timestamp after successful sync
-                await self.setLastSyncedAt(syncStartTime, for: client.inboxId)
-            } catch {
-                Log.error("Error syncing all conversations: \(error.localizedDescription)")
-                // attempt to process join requests anyway
-                _ = await joinRequestsManager.processJoinRequests(since: lastSyncedAt, client: client)
-                // Don't update timestamp on failure - keep the old one
-            }
-
-            // Clean up sync task reference
-            await self.cleanupSyncTask()
         }
     }
 
@@ -188,12 +105,6 @@ actor SyncingManager: SyncingManagerProtocol {
             task.cancel()
             _ = await task.value
             conversationStreamTask = nil
-        }
-
-        if let task = syncTask {
-            task.cancel()
-            _ = await task.value
-            syncTask = nil
         }
 
         activeConversationId = nil
@@ -319,22 +230,6 @@ actor SyncingManager: SyncingManagerProtocol {
     func setActiveConversationId(_ conversationId: String?) {
         // Update the active conversation
         activeConversationId = conversationId
-    }
-
-    private func cleanupSyncTask() {
-        syncTask = nil
-    }
-
-    // MARK: - Last Synced At
-
-    private func getLastSyncedAt(for inboxId: String) -> Date? {
-        let key = "\(Self.lastSyncedAtKeyPrefix).\(inboxId)"
-        return UserDefaults.standard.object(forKey: key) as? Date
-    }
-
-    private func setLastSyncedAt(_ date: Date?, for inboxId: String) {
-        let key = "\(Self.lastSyncedAtKeyPrefix).\(inboxId)"
-        UserDefaults.standard.set(date, forKey: key)
     }
 
     // MARK: - Notification Observers
