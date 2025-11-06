@@ -11,7 +11,7 @@ extension MessagingService {
     func processPushNotification(
         payload: PushNotificationPayload
     ) async throws -> DecodedNotificationContent? {
-        Logger.info("processPushNotification called")
+        Log.info("processPushNotification called")
         let inboxReadyResult = try await inboxStateManager.waitForInboxReadyResult()
 
         return try await self.handlePushNotification(
@@ -31,8 +31,8 @@ extension MessagingService {
         let client = inboxReadyResult.client
         let apiClient = inboxReadyResult.apiClient
 
-        Logger.debug("Processing notification with JWT override: \(payload.apiJWT != nil)")
-        Logger.debug("Payload notification data: \(payload.notificationData != nil ? "present" : "nil")")
+        Log.debug("Processing notification with JWT override: \(payload.apiJWT != nil)")
+        Log.debug("Payload notification data: \(payload.notificationData != nil ? "present" : "nil")")
 
         return try await handleProtocolMessage(
             payload: payload,
@@ -48,12 +48,12 @@ extension MessagingService {
         apiClient: any ConvosAPIClientProtocol
     ) async throws -> DecodedNotificationContent? {
         guard let protocolData = payload.notificationData?.protocolData else {
-            Logger.error("Missing protocol data in notification payload")
+            Log.error("Missing protocol data in notification payload")
             return nil
         }
 
         guard let contentTopic = protocolData.contentTopic else {
-            Logger.error("Missing contentTopic in notification payload")
+            Log.error("Missing contentTopic in notification payload")
             return nil
         }
 
@@ -63,11 +63,11 @@ extension MessagingService {
         if protocolData.encryptedMessage == nil {
             // No encrypted content - must be a welcome message
             guard isWelcomeTopic else {
-                Logger.error("Missing encryptedMessage for non-welcome topic: \(contentTopic)")
+                Log.error("Missing encryptedMessage for non-welcome topic: \(contentTopic)")
                 return nil
             }
 
-            Logger.info("Handling welcome message notification (no encrypted content)")
+            Log.info("Handling welcome message notification (no encrypted content)")
             return try await handleWelcomeMessage(
                 contentTopic: contentTopic,
                 client: client,
@@ -77,7 +77,7 @@ extension MessagingService {
 
         // Regular message - decrypt the encrypted content
         guard let encryptedMessage = protocolData.encryptedMessage else {
-            Logger.error("Missing encryptedMessage after nil check")
+            Log.error("Missing encryptedMessage after nil check")
             return nil
         }
 
@@ -101,7 +101,7 @@ extension MessagingService {
         client: any XMTPClientProvider,
         userInfo: [AnyHashable: Any]
     ) async throws -> DecodedNotificationContent? {
-        Logger.info("Syncing conversations after receiving welcome message")
+        Log.info("Syncing conversations after receiving welcome message")
 
         // Capture timestamp first to avoid missing messages
         let processTime = Date()
@@ -109,7 +109,7 @@ extension MessagingService {
         // Get last processed time
         let lastProcessed = getLastWelcomeProcessed(for: client.inboxId)
         if let lastProcessed {
-            Logger.info("Last processed welcome message \(lastProcessed.relativeShort()) ago...")
+            Log.info("Last processed welcome message \(lastProcessed.relativeShort()) ago...")
         }
 
         let joinRequestsManager = InviteJoinRequestsManager(
@@ -144,31 +144,31 @@ extension MessagingService {
     ) async throws -> DecodedNotificationContent? {
         // Extract conversation ID from topic path
         guard let conversationId = contentTopic.conversationIdFromXMTPGroupTopic else {
-            Logger.warning("Unable to extract conversation id from contentTopic: \(contentTopic)")
+            Log.warning("Unable to extract conversation id from contentTopic: \(contentTopic)")
             return nil
         }
 
         // Find the conversation
         guard let conversation = try await client.conversationsProvider.findConversation(conversationId: conversationId) else {
-            Logger.warning("Conversation not found for topic: \(contentTopic), extracted ID: \(conversationId)")
+            Log.warning("Conversation not found for topic: \(contentTopic), extracted ID: \(conversationId)")
             return nil
         }
 
         // Decode the encrypted message
         guard let messageBytes = Data(base64Encoded: Data(encryptedMessage.utf8)) else {
-            Logger.warning("Failed to decode base64 encrypted message")
+            Log.warning("Failed to decode base64 encrypted message")
             return nil
         }
 
         // Process the message
         guard let decodedMessage = try await conversation.processMessage(messageBytes: messageBytes) else {
-            Logger.warning("Failed to process message bytes")
+            Log.warning("Failed to process message bytes")
             return nil
         }
 
         // Check if message is from self - if so, drop it
         if decodedMessage.senderInboxId == currentInboxId {
-            Logger.info("Dropping notification - message from self")
+            Log.info("Dropping notification - message from self")
             return .droppedMessage
         }
 
@@ -194,7 +194,7 @@ extension MessagingService {
                 }
             } catch {
                 // Not a valid join request - block the DM to prevent spam
-                Logger.warning("DM is not a valid join request, blocking conversation")
+                Log.warning("DM is not a valid join request, blocking conversation")
                 try? await conversation.updateConsentState(state: .denied)
                 return .droppedMessage
             }
@@ -209,14 +209,14 @@ extension MessagingService {
             // Only handle text content type
             let encodedContentType = try decodedMessage.encodedContent.type
             guard encodedContentType == ContentTypeText else {
-                Logger.info("Skipping non-text content type: \(encodedContentType.description)")
+                Log.info("Skipping non-text content type: \(encodedContentType.description)")
                 return .droppedMessage
             }
 
             // Extract text content
             let content = try decodedMessage.content() as Any
             guard let textContent = content as? String else {
-                Logger.warning("Could not extract text content from message")
+                Log.warning("Could not extract text content from message")
                 return nil
             }
 

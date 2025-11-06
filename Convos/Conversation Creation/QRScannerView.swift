@@ -2,81 +2,8 @@ import AVFoundation
 import ConvosCore
 import SwiftUI
 
-// MARK: - QR Scanner Delegate
-@Observable
-class QRScannerViewModel: NSObject, AVCaptureMetadataOutputObjectsDelegate {
-    var scannedCode: String?
-    fileprivate(set) var cameraAuthorized: Bool = false
-    fileprivate(set) var cameraSetupCompleted: Bool = false
-    fileprivate(set) var onSetupCamera: (() -> Void)?
-    var isScanningEnabled: Bool = true
-    var showInvalidInviteCodeFormat: Bool = false
-    var invalidInviteCode: String?
-    var presentingInvalidInviteSheet: Bool = false
-
-    // Minimum time to wait before allowing another scan (in seconds)
-    private let minimumScanInterval: TimeInterval = 3.0
-    private var lastScanTime: Date?
-
-    func requestAccess() {
-        AVCaptureDevice.requestAccess(for: .video) { granted in
-            DispatchQueue.main.async {
-                self.cameraAuthorized = granted
-                if granted {
-                    // Trigger camera setup using the callback
-                    self.onSetupCamera?()
-                }
-            }
-        }
-    }
-
-    func metadataOutput(
-        _ output: AVCaptureMetadataOutput,
-        didOutput metadataObjects: [AVMetadataObject],
-        from connection: AVCaptureConnection
-    ) {
-        // Only process if scanning is enabled and we're not showing an error
-        guard isScanningEnabled else { return }
-
-        guard !presentingInvalidInviteSheet else { return }
-
-        // Check if enough time has passed since the last scan
-        let now = Date()
-        if let lastScan = lastScanTime {
-            let timeSinceLastScan = now.timeIntervalSince(lastScan)
-            guard timeSinceLastScan >= minimumScanInterval else { return }
-        }
-
-        lastScanTime = now
-
-        if let metadataObject = metadataObjects.first {
-            guard let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject else { return }
-            guard let stringValue = readableObject.stringValue else { return }
-
-            AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
-            scannedCode = stringValue
-
-            // Disable further scanning after detecting a code
-            isScanningEnabled = false
-        }
-    }
-
-    func resetScanning() {
-        isScanningEnabled = true
-        scannedCode = nil
-        // Note: we intentionally do NOT reset lastScanTime here
-        // to maintain the minimum interval even across resets
-    }
-
-    func resetScanTimer() {
-        lastScanTime = nil
-    }
-}
-
-// MARK: - Camera Preview
 struct QRScannerView: UIViewRepresentable {
     let viewModel: QRScannerViewModel
-    @Binding var coordinator: Coordinator?
 
     class Coordinator {
         var orientationObserver: Any?
@@ -87,6 +14,8 @@ struct QRScannerView: UIViewRepresentable {
 
         deinit {
             // Failsafe cleanup in case dismantleUIView wasn't called
+            // Note: UI operations (like removeFromSuperlayer) must NOT be here
+            // as deinit can run on any thread. All UI cleanup is in dismantleUIView.
             if let captureSession = captureSession, captureSession.isRunning {
                 captureSession.stopRunning()
 
@@ -101,8 +30,6 @@ struct QRScannerView: UIViewRepresentable {
             if let observer = orientationObserver {
                 NotificationCenter.default.removeObserver(observer)
             }
-
-            previewLayer?.removeFromSuperlayer()
         }
     }
 
@@ -115,28 +42,22 @@ struct QRScannerView: UIViewRepresentable {
         view.backgroundColor = .black
         view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         context.coordinator.parentView = view
-        coordinator = context.coordinator
 
-        viewModel.onSetupCamera = {
-            self.setupCamera()
+        // Set up the internal callback for camera setup
+        viewModel.setupCameraCallback = { [weak view, weak coordinator = context.coordinator] in
+            guard let view = view, let coordinator = coordinator else { return }
+            self.setupCamera(on: view, coordinator: coordinator)
         }
 
-        checkCameraAuthorization { authorized in
-            DispatchQueue.main.async {
-                self.viewModel.cameraAuthorized = authorized
-                if authorized {
-                    self.setupCamera()
-                }
+        // Check initial camera authorization
+        checkCameraAuthorization { @MainActor [weak viewModel] authorized in
+            viewModel?.cameraAuthorized = authorized
+            if authorized {
+                self.setupCamera(on: view, coordinator: context.coordinator)
             }
         }
 
         return view
-    }
-
-    func setupCamera() {
-        guard let coordinator = coordinator else { return }
-        guard let view = coordinator.parentView else { return }
-        setupCamera(on: view, coordinator: coordinator)
     }
 
     private func checkCameraAuthorization(completion: @escaping (Bool) -> Void) {
@@ -155,7 +76,7 @@ struct QRScannerView: UIViewRepresentable {
         guard coordinator.captureSession == nil else {
             // If session already exists, just ensure it's running
             if let existingSession = coordinator.captureSession, !existingSession.isRunning {
-                DispatchQueue.global(qos: .background).async {
+                DispatchQueue.global(qos: .userInitiated).async {
                     existingSession.startRunning()
                 }
             }
@@ -166,7 +87,7 @@ struct QRScannerView: UIViewRepresentable {
         captureSession.sessionPreset = .high
 
         guard let videoCaptureDevice = AVCaptureDevice.default(for: .video) else {
-            Logger.info("Failed to get video capture device")
+            Log.info("Failed to get video capture device")
             return
         }
 
@@ -175,14 +96,14 @@ struct QRScannerView: UIViewRepresentable {
         do {
             videoInput = try AVCaptureDeviceInput(device: videoCaptureDevice)
         } catch {
-            Logger.info("Failed to create video input: \(error)")
+            Log.info("Failed to create video input: \(error)")
             return
         }
 
         if captureSession.canAddInput(videoInput) {
             captureSession.addInput(videoInput)
         } else {
-            Logger.info("Cannot add video input")
+            Log.info("Cannot add video input")
             return
         }
 
@@ -193,7 +114,7 @@ struct QRScannerView: UIViewRepresentable {
             metadataOutput.setMetadataObjectsDelegate(viewModel, queue: DispatchQueue.main)
             metadataOutput.metadataObjectTypes = [.qr]
         } else {
-            Logger.info("Cannot add metadata output")
+            Log.info("Cannot add metadata output")
             return
         }
 
@@ -236,7 +157,7 @@ struct QRScannerView: UIViewRepresentable {
             }
         }
 
-        DispatchQueue.global(qos: .background).async {
+        DispatchQueue.global(qos: .userInitiated).async {
             captureSession.startRunning()
         }
 

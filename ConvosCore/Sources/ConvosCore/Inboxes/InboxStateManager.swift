@@ -130,11 +130,14 @@ public final class InboxStateManager: InboxStateManagerProtocol {
         // Check if we're already authorized with this inbox
         if case .ready(let currentClientId, let result) = currentState,
            result.client.inboxId == inboxId && currentClientId == clientId {
-            Logger.info("Already authorized with inbox \(inboxId) and clientId \(clientId), skipping reauthorization")
+            Log
+                .info(
+                    "Already authorized with inbox \(inboxId) and clientId \(clientId), skipping reauthorization"
+                )
             return result
         }
 
-        Logger.info("Reauthorizing with inbox \(inboxId)...")
+        Log.info("Reauthorizing with inbox \(inboxId)...")
 
         // Stop current inbox if running
         if case .ready = currentState {
@@ -156,11 +159,14 @@ public final class InboxStateManager: InboxStateManagerProtocol {
             case .ready(_, let result):
                 // Verify this is the inbox we requested
                 if result.client.inboxId == inboxId {
-                    Logger.info("Successfully reauthorized to inbox \(inboxId)")
+                    Log.info("Successfully reauthorized to inbox \(inboxId)")
                     return result
                 } else {
                     // This is the old inbox's ready state, keep waiting
-                    Logger.info("Waiting for correct inbox... current: \(result.client.inboxId), expected: \(inboxId)")
+                    Log
+                        .info(
+                            "Waiting for correct inbox... current: \(result.client.inboxId), expected: \(inboxId)"
+                        )
                     continue
                 }
             case .error(_, let error):

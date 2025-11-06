@@ -3,14 +3,14 @@ import GRDB
 
 // MARK: - DBConversation
 
-public enum CommitLogForkStatus: String, Codable, Hashable {
+public enum CommitLogForkStatus: String, Codable, Hashable, Sendable {
     case forked, notForked = "not_forked", unknown
 }
 
 public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Identifiable, Hashable {
     public static var databaseTableName: String = "conversation"
 
-    public struct DebugInfo: Codable, Hashable {
+    public struct DebugInfo: Codable, Hashable, Sendable {
         public let epoch: UInt64
         public let maybeForked: Bool
         public let forkDetails: String

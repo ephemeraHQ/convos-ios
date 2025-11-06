@@ -8,16 +8,15 @@ import Testing
 
     private let keychainStore: KeychainIdentityStore
     private let testAccessGroup: String = "FY4NZR34Z3.org.convos.KeychainIdentityStoreExample"
-    private let testService: String = "org.convos.KeychainIdentityStoreExample.service"
 
     init() throws {
-        keychainStore = KeychainIdentityStore(accessGroup: testAccessGroup, service: testService)
+        keychainStore = KeychainIdentityStore(accessGroup: testAccessGroup)
     }
 
     // MARK: - Helper Methods
 
     private func createKeychainStore() -> KeychainIdentityStoreProtocol {
-        return KeychainIdentityStore(accessGroup: testAccessGroup, service: testService)
+        return KeychainIdentityStore(accessGroup: testAccessGroup)
     }
 
     // MARK: - Identity Management Tests

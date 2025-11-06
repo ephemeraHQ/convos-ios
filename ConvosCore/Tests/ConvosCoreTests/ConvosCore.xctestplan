@@ -12,13 +12,7 @@
     "performanceAntipatternCheckerEnabled" : true
   },
   "testTargets" : [
-    {
-      "target" : {
-        "containerPath" : "container:",
-        "identifier" : "ConvosCoreTests",
-        "name" : "ConvosCoreTests"
-      }
-    }
+
   ],
   "version" : 1
 }

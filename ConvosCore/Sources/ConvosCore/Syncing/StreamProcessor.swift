@@ -46,6 +46,7 @@ actor StreamProcessor: StreamProcessorProtocol {
     private let messageWriter: any IncomingMessageWriterProtocol
     private let localStateWriter: any ConversationLocalStateWriterProtocol
     private let joinRequestsManager: any InviteJoinRequestsManagerProtocol
+    private let deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)?
     private let consentStates: [ConsentState] = [.allowed, .unknown]
 
     // MARK: - Initialization
@@ -53,9 +54,11 @@ actor StreamProcessor: StreamProcessorProtocol {
     init(
         identityStore: any KeychainIdentityStoreProtocol,
         databaseWriter: any DatabaseWriter,
-        databaseReader: any DatabaseReader
+        databaseReader: any DatabaseReader,
+        deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)? = nil
     ) {
         self.identityStore = identityStore
+        self.deviceRegistrationManager = deviceRegistrationManager
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(
             identityStore: identityStore,
@@ -78,7 +81,7 @@ actor StreamProcessor: StreamProcessorProtocol {
         apiClient: any ConvosAPIClientProtocol
     ) async throws {
         guard let group = conversation as? XMTPiOS.Group else {
-            Logger.warning("Passed type other than Group")
+            Log.warning("Passed type other than Group")
             return
         }
         try await processConversation(group, client: client, apiClient: apiClient)
@@ -102,7 +105,7 @@ actor StreamProcessor: StreamProcessorProtocol {
             }
         }
 
-        Logger.info("Syncing conversation: \(conversation.id)")
+        Log.info("Syncing conversation: \(conversation.id)")
         try await conversationWriter.storeWithLatestMessages(
             conversation: conversation,
             inboxId: client.inboxId
@@ -127,7 +130,7 @@ actor StreamProcessor: StreamProcessorProtocol {
             guard let conversation = try await client.conversationsProvider.findConversation(
                 conversationId: message.conversationId
             ) else {
-                Logger.error("Conversation not found for message")
+                Log.error("Conversation not found for message")
                 return
             }
 
@@ -138,14 +141,14 @@ actor StreamProcessor: StreamProcessorProtocol {
                         message: message,
                         client: client
                     )
-                    Logger.info("Processed potential join request: \(message.id)")
+                    Log.info("Processed potential join request: \(message.id)")
                 } catch {
-                    Logger.error("Failed processing join request: \(error)")
+                    Log.error("Failed processing join request: \(error)")
                 }
             case .group(let conversation):
                 do {
                     guard try await shouldProcessConversation(conversation, client: client) else {
-                        Logger.warning("Received invalid group message, skipping...")
+                        Log.warning("Received invalid group message, skipping...")
                         return
                     }
 
@@ -163,13 +166,13 @@ actor StreamProcessor: StreamProcessorProtocol {
                         try await localStateWriter.setUnread(true, for: conversation.id)
                     }
 
-                    Logger.info("Processed message: \(message.id)")
+                    Log.info("Processed message: \(message.id)")
                 } catch {
-                    Logger.error("Failed processing group message: \(error.localizedDescription)")
+                    Log.error("Failed processing group message: \(error.localizedDescription)")
                 }
             }
         } catch {
-            Logger.warning("Stopped processing message from error: \(error.localizedDescription)")
+            Log.warning("Stopped processing message from error: \(error.localizedDescription)")
         }
     }
 
@@ -217,13 +220,23 @@ actor StreamProcessor: StreamProcessorProtocol {
         apiClient: any ConvosAPIClientProtocol,
         context: String
     ) async {
+        // Ensure device is registered before subscribing to topics
+        // This is a defensive check - the device should already be registered on app launch,
+        // but we want to ensure it's registered before we attempt topic subscription
+        guard let deviceManager = deviceRegistrationManager else {
+            Log.warning("DeviceRegistrationManager not available, skipping topic subscription")
+            return
+        }
+
         let conversationTopic = conversationId.xmtpGroupTopicFormat
         let welcomeTopic = client.installationId.xmtpWelcomeTopicFormat
 
         guard let identity = try? await identityStore.identity(for: client.inboxId) else {
-            Logger.warning("Identity not found, skipping push notification subscription")
+            Log.warning("Identity not found, skipping push notification subscription")
             return
         }
+
+        await deviceManager.registerDeviceIfNeeded()
 
         do {
             let deviceId = DeviceInfo.deviceIdentifier
@@ -232,9 +245,9 @@ actor StreamProcessor: StreamProcessorProtocol {
                 clientId: identity.clientId,
                 topics: [conversationTopic, welcomeTopic]
             )
-            Logger.info("Subscribed to push topics \(context): \(conversationTopic), \(welcomeTopic)")
+            Log.info("Subscribed to push topics \(context): \(conversationTopic), \(welcomeTopic)")
         } catch {
-            Logger.error("Failed subscribing to topics \(context): \(error)")
+            Log.warning("Failed subscribing to topics \(context): \(error)")
         }
     }
 }

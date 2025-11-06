@@ -28,10 +28,12 @@ public final class ConvosClient {
 
     public static func testClient() -> ConvosClient {
         let databaseManager = MockDatabaseManager.shared
+        let identityStore = MockKeychainIdentityStore()
         let sessionManager = SessionManager(
             databaseWriter: databaseManager.dbWriter,
             databaseReader: databaseManager.dbReader,
-            environment: .tests
+            environment: .tests,
+            identityStore: identityStore
         )
         return .init(sessionManager: sessionManager,
                      databaseManager: databaseManager,

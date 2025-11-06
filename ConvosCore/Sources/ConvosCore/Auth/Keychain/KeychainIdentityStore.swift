@@ -11,7 +11,7 @@ protocol XMTPClientKeys {
     var databaseKey: Data { get }
 }
 
-public struct KeychainIdentityKeys: Codable, XMTPClientKeys {
+public struct KeychainIdentityKeys: Codable, XMTPClientKeys, Sendable {
     public let privateKey: PrivateKey
     public let databaseKey: Data
 
@@ -79,7 +79,7 @@ protocol KeychainIdentityType {
     var clientKeys: any XMTPClientKeys { get }
 }
 
-public struct KeychainIdentity: Codable, KeychainIdentityType {
+public struct KeychainIdentity: Codable, KeychainIdentityType, Sendable {
     public let inboxId: String
     public let clientId: String
     public let keys: KeychainIdentityKeys
@@ -324,7 +324,7 @@ public final actor KeychainIdentityStore: KeychainIdentityStoreProtocol {
                 let identity = try JSONDecoder().decode(KeychainIdentity.self, from: data)
                 identities.append(identity)
             } catch {
-                Logger.error("Failed decoding identity: \(error)")
+                Log.error("Failed decoding identity: \(error)")
             }
         }
 

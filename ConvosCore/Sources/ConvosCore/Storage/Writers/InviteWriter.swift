@@ -33,7 +33,7 @@ class InviteWriter: InviteWriterProtocol {
                 .fetchOne(db)
         }
         if let existingInvite {
-            Logger.info("Existing invite found for conversation: \(conversation.id), \(existingInvite)")
+            Log.info("Existing invite found for conversation: \(conversation.id), \(existingInvite)")
             return existingInvite.hydrateInvite()
         }
 
@@ -45,7 +45,7 @@ class InviteWriter: InviteWriterProtocol {
             expiresAfterUse: expiresAfterUse,
             privateKey: privateKey
         )
-        Logger.info("Generated URL slug: \(urlSlug)")
+        Log.info("Generated URL slug: \(urlSlug)")
 
         let dbInvite = DBInvite(
             creatorInboxId: conversation.inboxId,

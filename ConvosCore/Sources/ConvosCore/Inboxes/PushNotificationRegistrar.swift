@@ -42,12 +42,12 @@ public final class PushNotificationRegistrar {
                 await MainActor.run {
                     UIApplication.shared.registerForRemoteNotifications()
                 }
-                Logger.info("Notification authorization granted, registering for remote notifications")
+                Log.info("Notification authorization granted, registering for remote notifications")
             } else {
-                Logger.info("Notification authorization denied by user")
+                Log.info("Notification authorization denied by user")
             }
         } catch {
-            Logger.warning("Notification authorization failed: \(error)")
+            Log.warning("Notification authorization failed: \(error)")
         }
     }
 }

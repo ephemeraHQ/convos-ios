@@ -25,7 +25,7 @@ extension String {
 extension Data {
     func coseToSec1PublicKey() -> Data? {
         guard let decoded = try? CBORDecoder(input: bytes).decodeItem() else {
-            Logger.info("Failed to decode CBOR")
+            Log.info("Failed to decode CBOR")
             return nil
         }
 
@@ -54,7 +54,7 @@ extension Data {
         }
 
         guard let map = coseMap else {
-            Logger.info("COSE structure is not a valid map")
+            Log.info("COSE structure is not a valid map")
             return nil
         }
 
@@ -65,7 +65,7 @@ extension Data {
               case let CBOR.byteString(xBytes) = xVal,
               case let CBOR.byteString(yBytes) = yVal,
               xBytes.count == 32, yBytes.count == 32 else {
-            Logger.info("Missing or invalid x/y values")
+            Log.info("Missing or invalid x/y values")
             return nil
         }
 

@@ -19,11 +19,21 @@ public enum BuildEnvironment {
 /// environment-specific configuration including API URLs, database paths, XMTP endpoints,
 /// and keychain/app group settings. The environment determines build behavior, logging,
 /// and service configuration throughout the app.
-public enum AppEnvironment {
+public enum AppEnvironment: Sendable {
     case local(config: ConvosConfiguration)
     case tests
     case dev(config: ConvosConfiguration)
     case production(config: ConvosConfiguration)
+
+    // Only used for testing
+    public var defaultOverrideJWTToken: String? {
+        switch self {
+        case .tests:
+            return "test-override-jwt-token"
+        default:
+            return nil
+        }
+    }
 
     public var name: String {
         switch self {
@@ -77,15 +87,15 @@ public enum AppEnvironment {
     var apiBaseURL: String {
         switch self {
         case .local(let config):
-            Logger.info("🌐 Using API URL from local config: \(config.apiBaseURL)")
+            Log.info("🌐 Using API URL from local config: \(config.apiBaseURL)")
             return config.apiBaseURL
         case .tests:
             return "http://localhost:4000/api/"
         case .dev(let config):
-            Logger.info("🌐 Using API URL from dev config: \(config.apiBaseURL)")
+            Log.info("🌐 Using API URL from dev config: \(config.apiBaseURL)")
             return config.apiBaseURL
         case .production(let config):
-            Logger.info("🌐 Using API URL from production config: \(config.apiBaseURL)")
+            Log.info("🌐 Using API URL from production config: \(config.apiBaseURL)")
             return config.apiBaseURL
         }
     }
@@ -120,7 +130,8 @@ public enum AppEnvironment {
         case .local(config: let config), .dev(config: let config), .production(config: let config):
             return config.xmtpEndpoint
         case .tests:
-            return nil
+            // Point to local Docker XMTP node for tests
+            return "localhost"
         }
     }
 
@@ -145,13 +156,13 @@ public enum AppEnvironment {
     public var apnsEnvironment: ApnsEnvironment {
         switch buildEnvironment {
         case .simulator:
-            Logger.info("Simulator build detected - using sandbox APNS")
+            Log.info("Simulator build detected - using sandbox APNS")
             return .sandbox
         case .development:
-            Logger.info("Development build detected (has embedded.mobileprovision) - using sandbox APNS")
+            Log.info("Development build detected (has embedded.mobileprovision) - using sandbox APNS")
             return .sandbox
         case .distribution:
-            Logger.info("Distribution build detected (TestFlight/App Store) - using production APNS")
+            Log.info("Distribution build detected (TestFlight/App Store) - using production APNS")
             return .production
         }
     }
@@ -180,7 +191,7 @@ public enum AppEnvironment {
 }
 
 public extension AppEnvironment {
-    private var isTestingEnvironment: Bool {
+    var isTestingEnvironment: Bool {
         switch self {
         case .tests:
             true

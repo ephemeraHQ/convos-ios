@@ -40,7 +40,7 @@ class MessagesRepository: MessagesRepositoryProtocol {
         self.conversationIdSubject = .init(conversationId)
         conversationIdCancellable = conversationIdPublisher.sink { [weak self] conversationId in
             guard let self else { return }
-            Logger.info("Sending updated conversation id: \(conversationId)")
+            Log.info("Sending updated conversation id: \(conversationId)")
             conversationIdSubject.send(conversationId)
         }
     }
@@ -71,7 +71,7 @@ class MessagesRepository: MessagesRepositoryProtocol {
                             let messages = try db.composeMessages(for: conversationId)
                             return messages
                         } catch {
-                            Logger.error("Error in messages publisher: \(error)")
+                            Log.error("Error in messages publisher: \(error)")
                         }
                         return []
                     }
@@ -128,7 +128,7 @@ extension Array where Element == MessageWithDetails {
                             conversationId: conversation.id,
                             inboxId: update.initiatedByInboxId
                           ) else {
-                        Logger.error("Update message type is missing update object")
+                        Log.error("Update message type is missing update object")
                         return nil
                     }
                     let addedMembers = try ConversationMemberProfileWithRole.fetchAll(

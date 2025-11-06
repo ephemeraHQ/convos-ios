@@ -14,7 +14,7 @@ final class ConversationsState {
         do {
             self.conversations = try conversationsRepository.fetchAll()
         } catch {
-            Logger.error("Error fetching conversations: \(error)")
+            Log.error("Error fetching conversations: \(error)")
             self.conversations = []
         }
         observe()

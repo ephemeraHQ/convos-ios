@@ -60,7 +60,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             }
             let updatedConversation = localConversation.with(name: truncatedName)
             try updatedConversation.save(db)
-            Logger.info("Updated local conversation name for \(conversationId): \(truncatedName)")
+            Log.info("Updated local conversation name for \(conversationId): \(truncatedName)")
             return updatedConversation
         }
 
@@ -71,7 +71,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             imageURL: updatedConversation.imageURLString
         )
 
-        Logger.info("Updated conversation name for \(conversationId): \(truncatedName)")
+        Log.info("Updated conversation name for \(conversationId): \(truncatedName)")
     }
 
     func updateExpiresAt(_ expiresAt: Date, for conversationId: String) async throws {
@@ -96,7 +96,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             // We continue anyway since not sending explode as a custom content type just means
             // the push notification will fail to display. The next time the app is active
             // expiresAt for the conversation will be updated.
-            Logger.error("Failed sending explode as custom content type: \(error.localizedDescription)")
+            Log.error("Failed sending explode as custom content type: \(error.localizedDescription)")
         }
 
         let updatedConversation = try await databaseWriter.write { db in
@@ -106,7 +106,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             }
             let updatedConversation = localConversation.with(expiresAt: expiresAt)
             try updatedConversation.save(db)
-            Logger.info("Updated local conversation expiresAt for \(conversationId): \(expiresAt)")
+            Log.info("Updated local conversation expiresAt for \(conversationId): \(expiresAt)")
             return updatedConversation
         }
 
@@ -117,7 +117,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             imageURL: updatedConversation.imageURLString
         )
 
-        Logger.info("Updated conversation expiresAt for \(conversationId): \(expiresAt)")
+        Log.info("Updated conversation expiresAt for \(conversationId): \(expiresAt)")
     }
 
     func updateDescription(_ description: String, for conversationId: String) async throws {
@@ -137,7 +137,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             }
             let updatedConversation = localConversation.with(description: description)
             try updatedConversation.save(db)
-            Logger.info("Updated local conversation description for \(conversationId): \(description)")
+            Log.info("Updated local conversation description for \(conversationId): \(description)")
             return updatedConversation
         }
 
@@ -148,7 +148,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             imageURL: updatedConversation.imageURLString
         )
 
-        Logger.info("Updated conversation description for \(conversationId): \(description)")
+        Log.info("Updated conversation description for \(conversationId): \(description)")
     }
 
     func updateImage(_ image: UIImage, for conversation: Conversation) async throws {
@@ -170,7 +170,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
                 try await self.updateImageUrl(uploadedURL, for: conversation.id)
                 ImageCache.shared.setImage(resizedImage, for: conversation)
             } catch {
-                Logger.error("Failed updating conversation image URL: \(error.localizedDescription)")
+                Log.error("Failed updating conversation image URL: \(error.localizedDescription)")
             }
         }
     }
@@ -192,7 +192,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             }
             let updatedConversation = localConversation.with(imageURLString: imageURL)
             try updatedConversation.save(db)
-            Logger.info("Updated local conversation image for \(conversationId): \(imageURL)")
+            Log.info("Updated local conversation image for \(conversationId): \(imageURL)")
             return updatedConversation
         }
 
@@ -203,7 +203,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             imageURL: updatedConversation.imageURLString
         )
 
-        Logger.info("Updated conversation image for \(conversationId): \(imageURL)")
+        Log.info("Updated conversation image for \(conversationId): \(imageURL)")
     }
 
     // MARK: - Member Management
@@ -228,11 +228,11 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
                     createdAt: Date()
                 )
                 try conversationMember.save(db)
-                Logger.info("Added local conversation member \(memberInboxId) to \(conversationId)")
+                Log.info("Added local conversation member \(memberInboxId) to \(conversationId)")
             }
         }
 
-        Logger.info("Added members to conversation \(conversationId): \(memberInboxIds)")
+        Log.info("Added members to conversation \(conversationId): \(memberInboxIds)")
     }
 
     func removeMembers(_ memberInboxIds: [String], from conversationId: String) async throws {
@@ -251,11 +251,11 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
                     .filter(DBConversationMember.Columns.conversationId == conversationId)
                     .filter(DBConversationMember.Columns.inboxId == memberInboxId)
                     .deleteAll(db)
-                Logger.info("Removed local conversation member \(memberInboxId) from \(conversationId)")
+                Log.info("Removed local conversation member \(memberInboxId) from \(conversationId)")
             }
         }
 
-        Logger.info("Removed members from conversation \(conversationId): \(memberInboxIds)")
+        Log.info("Removed members from conversation \(conversationId): \(memberInboxIds)")
     }
 
     // MARK: - Admin Management
@@ -277,11 +277,11 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
                 .fetchOne(db) {
                 let updatedMember = member.with(role: .admin)
                 try updatedMember.save(db)
-                Logger.info("Updated local member \(memberInboxId) role to admin in \(conversationId)")
+                Log.info("Updated local member \(memberInboxId) role to admin in \(conversationId)")
             }
         }
 
-        Logger.info("Promoted \(memberInboxId) to admin in conversation \(conversationId)")
+        Log.info("Promoted \(memberInboxId) to admin in conversation \(conversationId)")
     }
 
     func demoteFromAdmin(_ memberInboxId: String, in conversationId: String) async throws {
@@ -300,11 +300,11 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
                 .fetchOne(db) {
                 let updatedMember = member.with(role: .member)
                 try updatedMember.save(db)
-                Logger.info("Updated local member \(memberInboxId) role to member in \(conversationId)")
+                Log.info("Updated local member \(memberInboxId) role to member in \(conversationId)")
             }
         }
 
-        Logger.info("Demoted \(memberInboxId) from admin in conversation \(conversationId)")
+        Log.info("Demoted \(memberInboxId) from admin in conversation \(conversationId)")
     }
 
     func promoteToSuperAdmin(_ memberInboxId: String, in conversationId: String) async throws {
@@ -323,11 +323,11 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
                 .fetchOne(db) {
                 let updatedMember = member.with(role: .superAdmin)
                 try updatedMember.save(db)
-                Logger.info("Updated local member \(memberInboxId) role to superAdmin in \(conversationId)")
+                Log.info("Updated local member \(memberInboxId) role to superAdmin in \(conversationId)")
             }
         }
 
-        Logger.info("Promoted \(memberInboxId) to super admin in conversation \(conversationId)")
+        Log.info("Promoted \(memberInboxId) to super admin in conversation \(conversationId)")
     }
 
     func demoteFromSuperAdmin(_ memberInboxId: String, in conversationId: String) async throws {
@@ -346,11 +346,11 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
                 .fetchOne(db) {
                 let updatedMember = member.with(role: .admin)
                 try updatedMember.save(db)
-                Logger.info("Updated local member \(memberInboxId) role to admin in \(conversationId)")
+                Log.info("Updated local member \(memberInboxId) role to admin in \(conversationId)")
             }
         }
 
-        Logger.info("Demoted \(memberInboxId) from super admin in conversation \(conversationId)")
+        Log.info("Demoted \(memberInboxId) from super admin in conversation \(conversationId)")
     }
 }
 

@@ -8,7 +8,7 @@ import Foundation
 ///
 /// ConvosCore does not have any hardcoded configuration values to ensure
 /// that all environments are properly configured through the host app.
-public struct ConvosConfiguration {
+public struct ConvosConfiguration: Sendable {
     public let apiBaseURL: String
     public let appGroupIdentifier: String
     public let relyingPartyIdentifier: String

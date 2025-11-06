@@ -109,7 +109,7 @@ extension XMTPiOS.DecodedMessage {
                 update: nil
             )
         default:
-            Logger.error("Unhandled contentType \(contentReply.contentType)")
+            Log.error("Unhandled contentType \(contentReply.contentType)")
             return DBMessageComponents(
                 messageType: .reply,
                 contentType: .text,
@@ -183,7 +183,7 @@ extension XMTPiOS.DecodedMessage {
                         do {
                             oldCustomValue = try ConversationCustomMetadata.fromCompactString($0.oldValue)
                         } catch {
-                            Logger.error("Failed to decode old custom metadata: \(error)")
+                            Log.error("Failed to decode old custom metadata: \(error)")
                             oldCustomValue = nil
                         }
                     } else {
@@ -195,7 +195,7 @@ extension XMTPiOS.DecodedMessage {
                         do {
                             newCustomValue = try ConversationCustomMetadata.fromCompactString($0.newValue)
                         } catch {
-                            Logger.error("Failed to decode new custom metadata: \(error)")
+                            Log.error("Failed to decode new custom metadata: \(error)")
                             newCustomValue = nil
                         }
                     } else {
@@ -277,7 +277,7 @@ extension XMTPiOS.DecodedMessage {
             throw DecodedMessageDBRepresentationError.mismatchedContentType
         }
 
-        Logger.info("Received explode settings: \(explodeSettings)")
+        Log.info("Received explode settings: \(explodeSettings)")
         let update = DBMessage.Update(
             initiatedByInboxId: senderInboxId,
             addedInboxIds: [],

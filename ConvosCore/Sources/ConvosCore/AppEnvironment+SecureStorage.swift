@@ -8,7 +8,7 @@ public extension AppEnvironment {
         let sharedConfig = SharedAppConfiguration(environment: self)
 
         guard let data = try? JSONEncoder().encode(sharedConfig) else {
-            Logger.error("Failed to encode environment configuration")
+            Log.error("Failed to encode environment configuration")
             return
         }
 
@@ -29,9 +29,9 @@ public extension AppEnvironment {
         let status = SecItemAdd(keychainQuery as CFDictionary, nil)
 
         if status == errSecSuccess {
-            Logger.info("Environment configuration stored securely in Keychain")
+            Log.info("Environment configuration stored securely in Keychain")
         } else {
-            Logger.error("Failed to store environment configuration in Keychain: \(status)")
+            Log.error("Failed to store environment configuration in Keychain: \(status)")
         }
     }
 
@@ -59,10 +59,10 @@ public extension AppEnvironment {
         if status == errSecSuccess,
            let data = result as? Data,
            let sharedConfig = try? JSONDecoder().decode(SharedAppConfiguration.self, from: data) {
-            Logger.info("Environment configuration retrieved from Keychain")
+            Log.info("Environment configuration retrieved from Keychain")
             return sharedConfig.toAppEnvironment()
         } else if status != errSecItemNotFound {
-            Logger.error("Failed to retrieve environment configuration from Keychain: \(status)")
+            Log.error("Failed to retrieve environment configuration from Keychain: \(status)")
         }
 
         return nil

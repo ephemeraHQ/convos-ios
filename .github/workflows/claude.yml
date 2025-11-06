@@ -43,6 +43,8 @@ jobs:
           # Optional: Specify model (defaults to Claude Sonnet)
           model: ${{ vars.CLAUDE_MODEL || 'claude-sonnet-4-5-20250929' }}
 
+          allowed_bots: '*'
+
           # Optional: Customize the trigger phrase (default: @claude)
           # trigger_phrase: "/claude"
 

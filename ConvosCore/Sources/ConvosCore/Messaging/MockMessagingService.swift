@@ -3,7 +3,7 @@ import Foundation
 import UIKit
 import XMTPiOS
 
-public class MockMessagingService: MessagingServiceProtocol {
+public final class MockMessagingService: MessagingServiceProtocol, @unchecked Sendable {
     public let currentUser: ConversationMember = .mock()
     public let allUsers: [ConversationMember]
     public let _conversations: [Conversation]

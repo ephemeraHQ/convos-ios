@@ -72,7 +72,7 @@ public final class DatabaseManager: DatabaseManagerProtocol {
                 }
             }
 #if DEBUG
-            db.trace { Logger.info("\($0)") }
+            db.trace { Log.info("\($0)") }
 #endif
         }
 

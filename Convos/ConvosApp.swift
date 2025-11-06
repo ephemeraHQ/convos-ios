@@ -1,6 +1,7 @@
 import ConvosCore
 import SwiftUI
 import UserNotifications
+import XMTPiOS
 
 @main
 struct ConvosApp: App {
@@ -11,30 +12,36 @@ struct ConvosApp: App {
 
     init() {
         let environment = ConfigManager.shared.currentEnvironment
-        Logger.configure(environment: environment)
+        // Configure logging (automatically disabled in production)
+        ConvosLog.configure(environment: environment)
 
-        switch environment {
-        case .production:
-            Logger.Default.configureForProduction(true)
-        default:
-            Logger.Default.configureForProduction(false)
+        // only enable LibXMTP logging in non-production environments
+        if !environment.isProduction {
+            Log.info("Activating LibXMTP Log Writer...")
+            Client.activatePersistentLibXMTPLogWriter(logLevel: .debug, rotationSchedule: .hourly, maxFiles: 10)
         }
-
-        Logger.info("App starting with environment: \(environment)")
+        Log.info("App starting with environment: \(environment)")
 
         // Run migration to wipe app data (must be done synchronously before app starts)
         Self.runDataWipeMigrationSync(environment: environment)
+
+        // Configure Firebase BEFORE creating ConvosClient
+        // This prevents a race condition where SessionManager tries to use AppCheck before it's configured
+        switch environment {
+        case .tests:
+            Log.info("Running in test environment, skipping Firebase config...")
+        default:
+            if let url = ConfigManager.shared.currentEnvironment.firebaseConfigURL {
+                FirebaseHelperCore.configure(with: url)
+            } else {
+                Log.error("Missing Firebase plist URL for current environment")
+            }
+        }
 
         let convos: ConvosClient = .client(environment: environment)
         self.session = convos.session
         self.conversationsViewModel = .init(session: session)
         appDelegate.session = session
-
-        if let url = ConfigManager.shared.currentEnvironment.firebaseConfigURL {
-            FirebaseHelperCore.configure(with: url)
-        } else {
-            Logger.error("Missing Firebase plist URL for current environment")
-        }
     }
 
     var body: some Scene {
@@ -52,11 +59,11 @@ struct ConvosApp: App {
 
         // Check if migration has already been run
         guard !defaults.bool(forKey: migrationKey) else {
-            Logger.info("Data wipe migration already completed, skipping")
+            Log.info("Data wipe migration already completed, skipping")
             return
         }
 
-        Logger.info("Running data wipe migration...")
+        Log.info("Running data wipe migration...")
 
         // 1. Wipe documents directory
         let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
@@ -68,11 +75,11 @@ struct ConvosApp: App {
                 )
                 for fileURL in fileURLs {
                     try FileManager.default.removeItem(at: fileURL)
-                    Logger.info("Deleted: \(fileURL.lastPathComponent)")
+                    Log.info("Deleted: \(fileURL.lastPathComponent)")
                 }
-                Logger.info("Successfully wiped documents directory")
+                Log.info("Successfully wiped documents directory")
             } catch {
-                Logger.error("Error wiping documents directory: \(error)")
+                Log.error("Error wiping documents directory: \(error)")
             }
         }
 
@@ -89,9 +96,9 @@ struct ConvosApp: App {
             if FileManager.default.fileExists(atPath: fileURL.path) {
                 do {
                     try FileManager.default.removeItem(at: fileURL)
-                    Logger.info("Deleted database file: \(fileName)")
+                    Log.info("Deleted database file: \(fileName)")
                 } catch {
-                    Logger.error("Error deleting \(fileName): \(error)")
+                    Log.error("Error deleting \(fileName): \(error)")
                 }
             }
         }
@@ -99,6 +106,6 @@ struct ConvosApp: App {
         // 3. Mark migration as completed
         defaults.set(true, forKey: migrationKey)
         defaults.synchronize()
-        Logger.info("Data wipe migration completed and marked as done")
+        Log.info("Data wipe migration completed and marked as done")
     }
 }

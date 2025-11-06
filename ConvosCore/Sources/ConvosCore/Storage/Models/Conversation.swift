@@ -3,7 +3,7 @@ import GRDB
 
 // MARK: - Conversation
 
-public struct Conversation: Codable, Hashable, Identifiable {
+public struct Conversation: Codable, Hashable, Identifiable, Sendable {
     public let id: String
     public let inboxId: String
     public let clientId: String

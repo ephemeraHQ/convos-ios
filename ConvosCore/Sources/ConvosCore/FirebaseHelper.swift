@@ -11,7 +11,7 @@ public enum FirebaseHelperCore {
             AppCheck.setAppCheckProviderFactory(AppAttestFactory())
         #endif
         FirebaseApp.configure(options: options)
-        Logger.info("Firebase configured for current environment: \(FirebaseApp.app()?.options.googleAppID ?? "undefined")")
+        Log.info("Firebase configured for current environment: \(FirebaseApp.app()?.options.googleAppID ?? "undefined")")
     }
 
     public static func getAppCheckToken(forceRefresh: Bool = false) async throws -> String {

@@ -2,6 +2,15 @@
 CONFIG_FILE = config.local.json
 DEVELOPMENT_TEAM = FY4NZR34Z3
 
+// Swift compiler flags - define DEBUG for conditional compilation
+// Note: SWIFT_ACTIVE_COMPILATION_CONDITIONS propagates to Swift Package dependencies
+// This overrides Package.swift settings when building from Xcode
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG
+
+// Override Swift Package optimization for debugging
+// This ensures ConvosCore and other Swift Packages are not optimized
+OTHER_SWIFT_FLAGS = $(inherited) -Onone
+
 // Bundle IDs for all targets
 MAIN_BUNDLE_ID = org.convos.ios-local
 PRODUCT_BUNDLE_IDENTIFIER = $(MAIN_BUNDLE_ID)

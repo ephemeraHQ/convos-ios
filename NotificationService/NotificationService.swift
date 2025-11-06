@@ -7,23 +7,17 @@ import UserNotifications
 // The actor ensures thread-safe access from multiple notification deliveries
 private let globalPushHandler: CachedPushNotificationHandler? = {
     do {
-        // Configure logging first
+        // Configure logging first (automatically disabled in production)
         let environment = try NotificationExtensionEnvironment.getEnvironment()
-        let isProd: Bool
-        switch environment {
-        case .production: isProd = true
-        default: isProd = false
-        }
-        Logger.configure(environment: environment, isProduction: isProd)
-        Logger.info("[NotificationService] Initializing global push handler for environment: \(environment.name)")
+        ConvosLog.configure(environment: environment)
+        Log.info("Initializing global push handler for environment: \(environment.name)")
 
         // Create the handler
         return try NotificationExtensionEnvironment.createPushNotificationHandler()
     } catch {
         // Log to both console and Logger in case Logger isn't configured
-        let errorMsg = "[NotificationService] Failed to initialize global push handler: \(error.localizedDescription)"
-        print(errorMsg)
-        Logger.error(errorMsg)
+        let errorMsg = "Failed to initialize global push handler: \(error.localizedDescription)"
+        Log.error(errorMsg)
         return nil
     }
 }()
@@ -31,6 +25,9 @@ private let globalPushHandler: CachedPushNotificationHandler? = {
 class NotificationService: UNNotificationServiceExtension {
     // Keep track of the current processing task for cancellation
     private var currentProcessingTask: Task<Void, Never>?
+
+    // Serial queue to ensure thread-safe access to contentHandler
+    private let handlerQueue: DispatchQueue = DispatchQueue(label: "com.convos.nse.handler")
 
     // Store content handler for timeout scenario
     private var contentHandler: ((UNNotificationContent) -> Void)?
@@ -48,15 +45,12 @@ class NotificationService: UNNotificationServiceExtension {
         // Store content handler for timeout scenario
         self.contentHandler = contentHandler
 
-        Logger.info("[PID: \(processId)] [Instance: \(instanceId)] [Request: \(requestId)] Starting notification processing")
+        Log.info("[PID: \(processId)] [Instance: \(instanceId)] [Request: \(requestId)] Starting notification processing")
 
         guard let pushHandler = globalPushHandler else {
-            Logger.error("No global push handler available - suppressing notification")
+            Log.error("No global push handler available - suppressing notification")
             // Deliver empty notification to suppress display
-            if let handler = self.contentHandler {
-                handler(UNMutableNotificationContent())
-                self.contentHandler = nil
-            }
+            deliverNotification(UNMutableNotificationContent())
             return
         }
 
@@ -72,7 +66,7 @@ class NotificationService: UNNotificationServiceExtension {
                 try Task.checkCancellation()
 
                 let payload = PushNotificationPayload(userInfo: request.content.userInfo)
-                Logger.info("Processing notification")
+                Log.info("Processing notification")
 
                 // Process the notification with the global handler
                 let decodedContent = try await pushHandler.handlePushNotification(payload: payload)
@@ -83,57 +77,57 @@ class NotificationService: UNNotificationServiceExtension {
                 // Determine what content to deliver
                 let shouldDropMessage = decodedContent?.isDroppedMessage ?? false
                 if shouldDropMessage {
-                    Logger.info("Dropping notification as requested")
-                    // Use self.contentHandler to avoid race condition with serviceExtensionTimeWillExpire
-                    if let handler = self.contentHandler {
-                        handler(UNMutableNotificationContent())
-                        self.contentHandler = nil
-                    }
+                    Log.info("Dropping notification as requested")
+                    deliverNotification(UNMutableNotificationContent())
                 } else {
                     let notificationContent = decodedContent?.notificationContent ?? payload.undecodedNotificationContent
-                    Logger.info("Delivering processed notification")
-                    // Use self.contentHandler to avoid race condition with serviceExtensionTimeWillExpire
-                    if let handler = self.contentHandler {
-                        handler(notificationContent)
-                        self.contentHandler = nil
-                    }
+                    Log.info("Delivering processed notification")
+                    deliverNotification(notificationContent)
                 }
             } catch is CancellationError {
-                Logger.info("Notification processing was cancelled")
+                Log.info("Notification processing was cancelled")
                 // Don't call contentHandler here - serviceExtensionTimeWillExpire will handle it
 
             } catch {
-                Logger.error("Error processing notification: \(error)")
+                Log.error("Error processing notification: \(error)")
                 // On error, suppress the notification by delivering empty content
-                // Use self.contentHandler to avoid race condition with serviceExtensionTimeWillExpire
-                if let handler = self.contentHandler {
-                    handler(UNMutableNotificationContent())
-                    self.contentHandler = nil
-                }
+                deliverNotification(UNMutableNotificationContent())
             }
         }
     }
 
     override func serviceExtensionTimeWillExpire() {
         // Called just before the extension will be terminated by the system
-        Logger.warning("[Instance: \(instanceId)] Service extension time expiring")
+        Log.warning("[Instance: \(instanceId)] Service extension time expiring")
 
         // Cancel any ongoing processing
         currentProcessingTask?.cancel()
         currentProcessingTask = nil
 
         // Always deliver empty notification on timeout to suppress display
-        if let contentHandler = contentHandler {
-            Logger.info("Timeout - suppressing notification with empty content")
-            contentHandler(UNMutableNotificationContent())
-            self.contentHandler = nil
+        if deliverNotification(UNMutableNotificationContent()) {
+            Log.info("Timeout - suppressing notification with empty content")
         }
     }
 
     // MARK: - Helper Methods
 
+    /// Safely delivers notification content by atomically swapping and clearing the handler
+    /// Returns true if the handler was called, false if it was already consumed
+    @discardableResult
+    private func deliverNotification(_ content: UNNotificationContent) -> Bool {
+        handlerQueue.sync {
+            guard let handler = self.contentHandler else {
+                return false
+            }
+            self.contentHandler = nil
+            handler(content)
+            return true
+        }
+    }
+
     deinit {
-        Logger.info("[Instance: \(instanceId)] NotificationService instance deallocated")
+        Log.info("[Instance: \(instanceId)] NotificationService instance deallocated")
     }
 }
 

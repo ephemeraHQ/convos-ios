@@ -38,27 +38,27 @@ class IncomingMessageWriter: IncomingMessageWriterProtocol {
             // @jarodl temporary, this should happen somewhere else more explicitly
             let wasRemovedFromConversation = message.update?.removedInboxIds.contains(conversation.inboxId) ?? false
 
-            Logger.info("Storing incoming message \(message.id) localId \(message.clientMessageId)")
+            Log.info("Storing incoming message \(message.id) localId \(message.clientMessageId)")
             // see if this message has a local version
             if let localMessage = try DBMessage
                 .filter(DBMessage.Columns.id == message.id)
                 .filter(DBMessage.Columns.clientMessageId != message.id)
                 .fetchOne(db) {
                 // keep using the same local id
-                Logger.info("Found local message \(localMessage.clientMessageId) for incoming message \(message.id)")
+                Log.info("Found local message \(localMessage.clientMessageId) for incoming message \(message.id)")
                 let updatedMessage = message.with(
                     clientMessageId: localMessage.clientMessageId
                 )
                 try updatedMessage.save(db)
-                Logger.info(
+                Log.info(
                     "Updated incoming message with local message \(localMessage.clientMessageId)"
                 )
             } else {
                 do {
                     try message.save(db)
-                    Logger.info("Saved incoming message: \(message.id)")
+                    Log.info("Saved incoming message: \(message.id)")
                 } catch {
-                    Logger.error("Failed saving incoming message \(message.id): \(error)")
+                    Log.error("Failed saving incoming message \(message.id): \(error)")
                     throw error
                 }
             }

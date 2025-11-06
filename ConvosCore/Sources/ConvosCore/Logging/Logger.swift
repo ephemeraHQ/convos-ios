@@ -1,593 +1,98 @@
+import ConvosLogging
 import Foundation
-import os
+import Logging
 
-/// Structured logging system with file persistence and production filtering
+/// Unified logger that accepts a namespace parameter
 ///
-/// Logger provides leveled logging (debug, info, warning, error) with file-based
-/// persistence in the shared App Group container. Supports both main app and
-/// notification extension logging to a unified log file. Includes:
-/// - Automatic log rotation when file size exceeds limit
-/// - Production mode filtering to exclude sensitive data
-/// - Buffered writes for performance
-/// - Async log retrieval with tail support
-public enum Logger {
-    public enum LogLevel: Int, Comparable {
-        case debug = 0
-        case info = 1
-        case warning = 2
-        case error = 3
+/// This is the public API that both ConvosCore and Convos app use.
+/// Each module provides a convenience wrapper with its own namespace.
+public enum ConvosLog {
+    private static var _logger: Logging.Logger?
+    private static let queue: DispatchQueue = DispatchQueue(label: "com.convos.log")
 
-        public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
-            return lhs.rawValue < rhs.rawValue
-        }
-
-        var emoji: String {
-            switch self {
-            case .debug: return "🔍"
-            case .info: return "ℹ️"
-            case .warning: return "⚠️"
-            case .error: return "❌"
-            }
+    private static var logger: Logging.Logger? {
+        queue.sync {
+            _logger
         }
     }
 
-    public protocol LoggerProtocol {
-        func log(_ message: String, level: LogLevel, file: String, function: String, line: Int)
-        var minimumLogLevel: LogLevel { get set }
-        func getLogs() -> String
-        func getLogsAsync(completion: @escaping (String) -> Void)
-        func clearLogs(completion: (() -> Void)?)
-        func flushPendingWrites()
-        func getAllLogs() async -> String
+    public static func debug(_ message: String, namespace: String, file: String = #file, function: String = #function, line: Int = #line) {
+        logger?.debug("[\(namespace)] \(message)", source: makeSource(file: file, function: function, line: line))
     }
 
-    public class Default: LoggerProtocol {
-        public static var shared: LoggerProtocol = Default()
+    public static func info(_ message: String, namespace: String, file: String = #file, function: String = #function, line: Int = #line) {
+        logger?.info("[\(namespace)] \(message)", source: makeSource(file: file, function: function, line: line))
+    }
 
-        public var minimumLogLevel: LogLevel = .info
-        private var isProduction: Bool = false
-        private var logFileURL: URL?
-        private var environment: AppEnvironment?
+    public static func warning(_ message: String, namespace: String, file: String = #file, function: String = #function, line: Int = #line) {
+        logger?.warning("[\(namespace)] \(message)", source: makeSource(file: file, function: function, line: line))
+    }
 
-        /// os.Logger for Console.app visibility (only used in local/dev)
-        private lazy var systemLogger: os.Logger = {
-            let bundleId = Bundle.main.bundleIdentifier ?? "org.convos.ios"
-            let isNSE = bundleId.contains(".NotificationService")
-            let subsystem = isNSE ? "org.convos.ios.NSE" : "org.convos.ios"
-            let category = isNSE ? "NotificationService" : "General"
+    public static func error(_ message: String, namespace: String, file: String = #file, function: String = #function, line: Int = #line) {
+        logger?.error("[\(namespace)] \(message)", source: makeSource(file: file, function: function, line: line))
+    }
 
-            #if DEBUG
-            print("Logger: Creating system logger with subsystem=\(subsystem), category=\(category)")
-            #endif
+    private static func makeSource(file: String, function: String, line: Int) -> String {
+        let fileName = (file as NSString).lastPathComponent
+        return "\(fileName):\(line) \(function)"
+    }
 
-            return os.Logger(subsystem: subsystem, category: category)
-        }()
-        private var shouldUseSystemLogger: Bool {
-            guard let environment = environment else {
-                #if DEBUG
-                print("Logger: shouldUseSystemLogger = false (no environment)")
-                #endif
-                return false
-            }
-            let result: Bool
-            switch environment {
-            case .local, .dev:
-                result = true
-            case .production, .tests:
-                result = false
-            }
-            #if DEBUG
-            print("Logger: shouldUseSystemLogger = \(result) (environment: \(environment.name))")
-            #endif
-            return result
-        }
+    // MARK: - Configuration
 
-        /// Configure the logger for production mode
-        public static func configureForProduction(_ isProduction: Bool) {
-            if let defaultLogger = shared as? Default {
-                defaultLogger.isProduction = isProduction
-                defaultLogger.prepare()
-            }
-        }
+    /// Configure the logging system with file-based handler
+    /// Call this once at app startup before using any loggers
+    /// Logging is automatically disabled in production environments
+    public static func configure(environment: AppEnvironment) {
+        queue.sync {
+            guard _logger == nil else { return }
 
-        /// Configure the logger with environment (for proper app group access)
-        public static func configure(environment: AppEnvironment) {
-            if let defaultLogger = shared as? Default {
-                defaultLogger.environment = environment
-                defaultLogger.prepare()
-            }
-        }
-
-        /// Configure both environment and production in a single prepare pass
-        public static func configure(environment: AppEnvironment, isProduction: Bool) {
-            if let defaultLogger = shared as? Default {
-                defaultLogger.environment = environment
-                defaultLogger.isProduction = isProduction
-                defaultLogger.prepare()
-            }
-        }
-        private let fileQueue: DispatchQueue = DispatchQueue(label: "com.convos.logger.file", qos: .utility)
-        private let readQueue: DispatchQueue = DispatchQueue(label: "com.convos.logger.read", qos: .utility)
-        private let maxLogFileSize: Int64 = 10 * 1024 * 1024 // 10MB
-        private let maxLogLines: Int = 1000 // Maximum lines to return for performance
-        private var logBuffer: [String] = []
-        private let bufferQueue: DispatchQueue = DispatchQueue(label: "com.convos.logger.buffer", qos: .utility)
-        private let bufferMaxSize: Int = 100 // Keep last 100 log entries in memory
-
-        // File handle optimization
-        private var fileHandle: FileHandle?
-        private var pendingWrites: [Data] = []
-        private let writeBatchSize: Int = 10 // Write in batches of 10
-        private var lastFileSizeCheck: Date = Date()
-        private let fileSizeCheckInterval: TimeInterval = 30 // Check file size every 30 seconds
-
-        public init() {}
-
-        deinit {
-            closeFileHandle()
-        }
-
-        private func prepare() {
-            // Idempotency: close any previously opened handle and reset state up-front
-            fileQueue.sync {
-                if let handle = self.fileHandle {
-                    try? handle.close()
-                }
-                self.fileHandle = nil
-                self.logFileURL = nil
-            }
-
-            // Get app group identifier from environment configuration
-            let appGroupIdentifier = getAppGroupIdentifier()
-            let isNSE = Bundle.main.bundlePath.hasSuffix(".appex")
-
-            #if DEBUG
-            print("Logger: Using app group identifier: \(appGroupIdentifier) (isNSE: \(isNSE))")
-            #endif
-
-            // Use shared container - no fallback since we always need app group sharing
-            guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
-                #if DEBUG
-                print("Logger: Failed to get shared container for app group: \(appGroupIdentifier)")
-                #endif
-                self.logFileURL = nil
-                self.fileHandle = nil
+            // never enable logging in production
+            guard !environment.isProduction else {
                 return
             }
 
-            // Create logs directory in shared container
-            let logsDirectory = containerURL.appendingPathComponent("Logs")
-
-            do {
-                try FileManager.default.createDirectory(at: logsDirectory, withIntermediateDirectories: true)
-
-                // Use single log file for both main app and NSE
-                let resolvedLogFileURL = logsDirectory.appendingPathComponent("convos.log")
-
-                #if DEBUG
-                print("Logger: Log file path: \(resolvedLogFileURL.path)")
-                #endif
-
-                // Only set after directory creation succeeds
-                self.logFileURL = resolvedLogFileURL
-
-                // Initialize file handle after URL is ready
-                self.initializeFileHandle()
-            } catch {
-                #if DEBUG
-                print("Logger: Failed to create logs directory: \(error)")
-                #endif
-                // Ensure consistent nil state on failure
-                self.logFileURL = nil
-                self.fileHandle = nil
+            // First, bootstrap the logging system factory
+            LoggingSystem.bootstrap { label in
+                // Use MultiplexLogHandler to send logs to both file and console
+                MultiplexLogHandler([
+                    FileLogHandler.makeHandler(label: label, appGroupIdentifier: environment.appGroupIdentifier),
+                    StreamLogHandler.standardOutput(label: label)
+                ])
             }
+
+            // Then create the logger (it will now use the FileLogHandler)
+            _logger = Logging.Logger(label: "convos")
         }
+    }
 
-        private func getAppGroupIdentifier() -> String {
-            // Use configured environment if available
-            if let environment = environment {
-                return environment.appGroupIdentifier
-            }
+    /// Get all logs from the shared log file
+    public static func getLogs(appGroupIdentifier: String = "group.org.convos.app") async -> String {
+        await FileLogHandler.getLogs(appGroupIdentifier: appGroupIdentifier)
+    }
 
-            // For NSE, try to get from stored configuration
-            if Bundle.main.bundlePath.hasSuffix(".appex") {
-                if let storedEnvironment = AppEnvironment.retrieveSecureConfigurationForNotificationExtension() {
-                    return storedEnvironment.appGroupIdentifier
-                }
-            }
-
-            // Fallback to default app group identifier
-            return "group.org.convos.app"
-        }
-
-        private func initializeFileHandle() {
-            guard let logFileURL = logFileURL else { return }
-
-            fileQueue.async {
-                do {
-                    // Create file if it doesn't exist
-                    if !FileManager.default.fileExists(atPath: logFileURL.path) {
-                        try "".write(to: logFileURL, atomically: true, encoding: .utf8)
-                    }
-
-                    // Open file handle for writing
-                    self.fileHandle = try FileHandle(forWritingTo: logFileURL)
-                    self.fileHandle?.seekToEndOfFile()
-                } catch {
-                    print("Failed to initialize file handle: \(error)")
-                }
-            }
-        }
-
-        private func closeFileHandle() {
-            fileQueue.async {
-                do {
-                    try self.fileHandle?.close()
-                    self.fileHandle = nil
-                } catch {
-                    print("Failed to close file handle: \(error)")
-                }
-            }
-        }
-
-        private func checkAndTruncateFileIfNeeded() {
-            guard let logFileURL = logFileURL else { return }
-
-            let now = Date()
-            guard now.timeIntervalSince(lastFileSizeCheck) > fileSizeCheckInterval else { return }
-
-            lastFileSizeCheck = now
-
-            do {
-                let fileAttributes = try FileManager.default.attributesOfItem(atPath: logFileURL.path)
-                let fileSize = fileAttributes[.size] as? Int64 ?? 0
-
-                if fileSize > maxLogFileSize {
-                    // Close current handle
-                    try fileHandle?.close()
-                    fileHandle = nil
-
-                    // Truncate file
-                    try "".write(to: logFileURL, atomically: true, encoding: .utf8)
-
-                    // Reopen handle
-                    fileHandle = try FileHandle(forWritingTo: logFileURL)
-                    fileHandle?.seekToEndOfFile()
-
-                    // Clear buffer since file was truncated
-                    self.bufferQueue.async {
-                        self.logBuffer.removeAll()
-                    }
-                }
-            } catch {
-                print("Failed to check/truncate file: \(error)")
-            }
-        }
-
-        public func log(_ message: String,
-                        level: LogLevel = .info,
-                        file: String = #file,
-                        function: String = #function,
-                        line: Int = #line) {
-            guard level >= minimumLogLevel else { return }
-            if isProduction {
-                if message.contains("token") ||
-                   message.contains("certificate") ||
-                   message.contains("key") ||
-                   message.contains("password") {
-                    return
-                }
-            }
-            let fileName = (file as NSString).lastPathComponent
-            let timestamp = ISO8601DateFormatter().string(from: Date())
-            let logMessage = "\(level.emoji) [\(timestamp)] [\(level)] [\(fileName):\(line)] \(function): \(message)"
-
-            // Bridge to os.Logger for Console.app visibility (local/dev only)
-            if shouldUseSystemLogger {
-                let osMessage = "\(level.emoji) [\(fileName):\(line)] \(function): \(message)"
-                switch level {
-                case .debug:
-                    systemLogger.debug("\(osMessage, privacy: .public)")
-                case .info:
-                    systemLogger.info("\(osMessage, privacy: .public)")
-                case .warning:
-                    systemLogger.warning("\(osMessage, privacy: .public)")
-                case .error:
-                    systemLogger.error("\(osMessage, privacy: .public)")
-                }
-            }
-
-            // Use both compilation condition and runtime check for maximum compatibility
-            #if DEBUG
-            print(logMessage)
-            #else
-            // Runtime check for debug mode when compilation condition isn't available
-            if !isProduction {
-                print(logMessage)
-            }
-            #endif
-
-            // Add to buffer for quick access
-            bufferQueue.async {
-                self.logBuffer.append(logMessage)
-                if self.logBuffer.count > self.bufferMaxSize {
-                    self.logBuffer.removeFirst()
-                }
-            }
-
-            // Write to file if not in production
-            if !isProduction, let logFileURL = logFileURL {
-                fileQueue.async {
-                    self.writeToFile(logMessage, to: logFileURL)
-                }
-            }
-        }
-
-        private func writeToFile(_ message: String, to url: URL) {
-            let logEntry = message + "\n"
-
-            guard let data = logEntry.data(using: .utf8) else { return }
-
-            // Check file size periodically (not on every write)
-            checkAndTruncateFileIfNeeded()
-
-            // Add to pending writes
-            pendingWrites.append(data)
-
-            // Write immediately if we have a batch or if it's been a while
-            if pendingWrites.count >= writeBatchSize {
-                flushPendingWritesInternal()
-            }
-        }
-
-        private func flushPendingWritesInternal() {
-            guard !pendingWrites.isEmpty else { return }
-
-            do {
-                // Combine all pending writes into one operation
-                let combinedData = pendingWrites.reduce(Data(), +)
-                pendingWrites.removeAll()
-
-                if let fileHandle = fileHandle {
-                    fileHandle.write(combinedData)
-                } else {
-                    // Fallback: write directly to file
-                    if let logFileURL = logFileURL {
-                        if FileManager.default.fileExists(atPath: logFileURL.path) {
-                            let handle = try FileHandle(forWritingTo: logFileURL)
-                            handle.seekToEndOfFile()
-                            handle.write(combinedData)
-                            handle.closeFile()
-                        } else {
-                            try combinedData.write(to: logFileURL)
-                        }
-                    }
-                }
-            } catch {
-                print("Failed to write to log file: \(error)")
-                // Reset file handle on error
-                fileHandle = nil
-            }
-        }
-
-        public func getLogs() -> String {
-            // First try to return from buffer for immediate response
-            let bufferLogs = bufferQueue.sync {
-                logBuffer.joined(separator: "\n")
-            }
-
-            // If buffer has content, return it immediately
-            if !bufferLogs.isEmpty {
-                return bufferLogs
-            }
-
-            // Fallback to file reading (synchronous but should be rare)
-            guard let logFileURL = logFileURL else { return "No log file available" }
-
-            do {
-                let logContent = try String(contentsOf: logFileURL, encoding: .utf8)
-                return logContent.isEmpty ? "No logs available" : logContent
-            } catch {
-                return "Failed to read logs: \(error.localizedDescription)"
-            }
-        }
-
-        public func getLogsAsync(completion: @escaping (String) -> Void) {
-            readQueue.async {
-                // First try buffer for immediate response
-                let bufferLogs = self.bufferQueue.sync {
-                    self.logBuffer.joined(separator: "\n")
-                }
-
-                // If buffer has recent logs, return them immediately
-                if !bufferLogs.isEmpty {
-                    completion(bufferLogs)
-                    return
-                }
-
-                // Otherwise read from file
-                guard let logFileURL = self.logFileURL else {
-                    completion("No log file available")
-                    return
-                }
-
-                do {
-                    let logContent = try String(contentsOf: logFileURL, encoding: .utf8)
-                    let result = logContent.isEmpty ? "No logs available" : logContent
-                    completion(result)
-                } catch {
-                    completion("Failed to read logs: \(error.localizedDescription)")
-                }
-            }
-        }
-
-        public func clearLogs(completion: (() -> Void)? = nil) {
-            guard let logFileURL = logFileURL else { return }
-
-            // Clear buffer immediately
-            bufferQueue.async {
-                self.logBuffer.removeAll()
-            }
-
-            fileQueue.async {
-                // Flush any pending writes first
-                self.flushPendingWritesInternal()
-
-                // Close and reopen file handle
-                do {
-                    try self.fileHandle?.close()
-                    self.fileHandle = nil
-
-                    // Clear file
-                    try "".write(to: logFileURL, atomically: true, encoding: .utf8)
-
-                    // Reopen handle
-                    self.fileHandle = try FileHandle(forWritingTo: logFileURL)
-                    self.fileHandle?.seekToEndOfFile()
-                } catch {
-                    print("Failed to clear logs: \(error)")
-                }
-                completion?()
-            }
-        }
-
-        /// Flushes any pending writes to disk. Call this when app goes to background.
-        public func flushPendingWrites() {
-            fileQueue.async {
-                self.flushPendingWritesInternal()
-            }
-        }
-
-        /// Get logs from shared log file (contains both main app and NSE logs)
-        public func getAllLogs() async -> String {
-            let appGroupIdentifier = getAppGroupIdentifier()
-            guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
-                return "Failed to get shared container for app group: \(appGroupIdentifier)"
-            }
-
-            let logsDirectory = containerURL.appendingPathComponent("Logs")
-            let logURL = logsDirectory.appendingPathComponent("convos.log")
-
-            var header = "Debug Info:\n"
-            header += "App Group: \(appGroupIdentifier)\n"
-            header += "Container URL: \(containerURL.path)\n"
-            header += "Log Path: \(logURL.path)\n"
-            header += "Log Exists: \(FileManager.default.fileExists(atPath: logURL.path))\n\n"
-
-            guard FileManager.default.fileExists(atPath: logURL.path) else {
-                return header + "=== LOGS ===\nFile does not exist\n"
-            }
-
-            // Read last maxLogLines lines by tailing from end asynchronously
-            let tailed: String = await withCheckedContinuation { continuation in
-                readQueue.async {
-                    do {
-                        let handle = try FileHandle(forReadingFrom: logURL)
-                        defer { try? handle.close() }
-
-                        let chunkSize = 64 * 1024
-                        var chunks: [Data] = []
-                        var newlineCount: Int = 0
-                        let endOffset = try handle.seekToEnd()
-                        var position = endOffset
-
-                        func countNewlines(_ data: Data) -> Int {
-                            var c = 0
-                            for b in data where b == 0x0A { c += 1 }
-                            return c
-                        }
-
-                        while position > 0 {
-                            let readSize = position >= UInt64(chunkSize) ? chunkSize : Int(position)
-                            let target = position - UInt64(readSize)
-                            try handle.seek(toOffset: target)
-                            position = target
-                            let chunk = try handle.read(upToCount: readSize) ?? Data()
-                            chunks.append(chunk)
-                            newlineCount += countNewlines(chunk)
-                            if newlineCount >= self.maxLogLines { break }
-                            if position == 0 { break }
-                        }
-
-                        // Concatenate once in forward order
-                        var combined = Data()
-                        for c in chunks.reversed() { combined.append(c) }
-
-                        // If we have more than needed, find start index of last maxLogLines
-                        if newlineCount > self.maxLogLines {
-                            var needed = self.maxLogLines
-                            var idx = combined.count - 1
-                            let bytes = [UInt8](combined)
-                            while idx >= 0 && needed > 0 {
-                                if bytes[idx] == 0x0A { needed -= 1 }
-                                idx -= 1
-                            }
-                            let start = max(idx + 2, 0) // move to byte after the found newline
-                            combined = combined.subdata(in: start..<combined.count)
-                        }
-
-                        let result = String(data: combined, encoding: .utf8) ?? ""
-                        continuation.resume(returning: result.isEmpty ? "(Empty file)" : result)
-                    } catch {
-                        continuation.resume(returning: "Failed to read: \(error.localizedDescription)")
-                    }
-                }
-            }
-
-            return header + "=== LOGS ===\n" + tailed + "\n"
-        }
-
-        // getAllLogsAsync removed; use async getAllLogs() instead
+    /// Clear all logs
+    public static func clearLogs(appGroupIdentifier: String = "group.org.convos.app") {
+        FileLogHandler.clearLogs(appGroupIdentifier: appGroupIdentifier)
     }
 }
 
-public extension Logger {
+// MARK: - ConvosCore convenience wrapper
+
+/// ConvosCore logging wrapper - uses "ConvosCore" namespace
+enum Log {
     static func debug(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
-        Self.Default.shared.log(message, level: .debug, file: file, function: function, line: line)
+        ConvosLog.debug(message, namespace: "ConvosCore", file: file, function: function, line: line)
     }
 
     static func info(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
-        Self.Default.shared.log(message, level: .info, file: file, function: function, line: line)
+        ConvosLog.info(message, namespace: "ConvosCore", file: file, function: function, line: line)
     }
 
     static func warning(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
-        Self.Default.shared.log(message, level: .warning, file: file, function: function, line: line)
+        ConvosLog.warning(message, namespace: "ConvosCore", file: file, function: function, line: line)
     }
 
     static func error(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
-        Self.Default.shared.log(message, level: .error, file: file, function: function, line: line)
+        ConvosLog.error(message, namespace: "ConvosCore", file: file, function: function, line: line)
     }
-
-    static func getLogs() -> String {
-        return Self.Default.shared.getLogs()
-    }
-
-    static func getLogsAsync(completion: @escaping (String) -> Void) {
-        Self.Default.shared.getLogsAsync(completion: completion)
-    }
-
-    static func clearLogs(completion: (() -> Void)? = nil) {
-        Self.Default.shared.clearLogs(completion: completion)
-    }
-
-    static func flushPendingWrites() {
-        Self.Default.shared.flushPendingWrites()
-    }
-
-    /// Configure the logger with environment (for proper app group access)
-    static func configure(environment: AppEnvironment) {
-        Self.Default.configure(environment: environment)
-    }
-
-    /// Configure both environment and production in a single prepare pass
-    static func configure(environment: AppEnvironment, isProduction: Bool) {
-        Self.Default.configure(environment: environment, isProduction: isProduction)
-    }
-
-    /// Get logs from both main app and NSE
-    static func getAllLogs() async -> String {
-        return await (Self.Default.shared as? Default)?.getAllLogs() ?? "No logger"
-    }
-
-    // Removed legacy callback API; use async getAllLogs() instead
 }

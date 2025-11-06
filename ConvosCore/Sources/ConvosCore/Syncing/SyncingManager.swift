@@ -1,13 +1,12 @@
 import Foundation
 import GRDB
-import UIKit
 import XMTPiOS
 
 // MARK: - Protocol
 
-protocol SyncingManagerProtocol: Actor {
+public protocol SyncingManagerProtocol: Actor {
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol)
-    func stop()
+    func stop() async
 }
 
 /// Manages real-time synchronization of conversations and messages
@@ -50,12 +49,14 @@ actor SyncingManager: SyncingManagerProtocol {
 
     init(identityStore: any KeychainIdentityStoreProtocol,
          databaseWriter: any DatabaseWriter,
-         databaseReader: any DatabaseReader) {
+         databaseReader: any DatabaseReader,
+         deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)? = nil) {
         self.identityStore = identityStore
         self.streamProcessor = StreamProcessor(
             identityStore: identityStore,
             databaseWriter: databaseWriter,
-            databaseReader: databaseReader
+            databaseReader: databaseReader,
+            deviceRegistrationManager: deviceRegistrationManager
         )
         self.profileWriter = MemberProfileWriter(databaseWriter: databaseWriter)
         self.joinRequestsManager = InviteJoinRequestsManager(
@@ -83,7 +84,7 @@ actor SyncingManager: SyncingManagerProtocol {
         }
 
         guard syncTask == nil else {
-            Logger.info("Sync already in progress, ignoring redundant start() call")
+            Log.info("Sync already in progress, ignoring redundant start() call")
             return
         }
 
@@ -109,15 +110,15 @@ actor SyncingManager: SyncingManagerProtocol {
             // Get the last sync time for logging and join requests
             let lastSyncedAt = await self.getLastSyncedAt(for: client.inboxId)
             if let lastSyncedAt {
-                Logger.info("Starting, last synced \(lastSyncedAt.relativeShort()) ago...")
+                Log.info("Starting, last synced \(lastSyncedAt.relativeShort()) ago...")
             } else {
-                Logger.info("Syncing for the first time...")
+                Log.info("Syncing for the first time...")
             }
 
             // Perform the initial sync
             do {
                 let count = try await client.conversationsProvider.syncAllConversations(consentStates: consentStates)
-                Logger.info("syncAllConversations returned count: \(count)")
+                Log.info("syncAllConversations returned count: \(count)")
 
                 // we need to list all the conversations that have been updated since `lastSyncedAt` and then list
                 // messages since `lastSyncedAt`, then process the conversation + messages
@@ -133,7 +134,7 @@ actor SyncingManager: SyncingManagerProtocol {
                             consentStates: consentStates,
                             orderBy: .lastActivity
                         )
-                    Logger.info("Found \(updatedConversations.count) conversations since last sync, processing...")
+                    Log.info("Found \(updatedConversations.count) conversations since last sync, processing...")
                     try await withThrowingTaskGroup { [weak self] group in
                         for conversation in updatedConversations {
                             group.addTask {
@@ -150,7 +151,7 @@ actor SyncingManager: SyncingManagerProtocol {
                         }
                     }
                 } catch {
-                    Logger.error("Error catching up on missed conversation updates: \(error.localizedDescription)")
+                    Log.error("Error catching up on missed conversation updates: \(error.localizedDescription)")
                     throw error
                 }
 
@@ -161,7 +162,7 @@ actor SyncingManager: SyncingManagerProtocol {
                 // Only update timestamp after successful sync
                 await self.setLastSyncedAt(syncStartTime, for: client.inboxId)
             } catch {
-                Logger.error("Error syncing all conversations: \(error.localizedDescription)")
+                Log.error("Error syncing all conversations: \(error.localizedDescription)")
                 // attempt to process join requests anyway
                 _ = await joinRequestsManager.processJoinRequests(since: lastSyncedAt, client: client)
                 // Don't update timestamp on failure - keep the old one
@@ -172,16 +173,28 @@ actor SyncingManager: SyncingManagerProtocol {
         }
     }
 
-    func stop() {
-        Logger.info("Stopping...")
+    func stop() async {
+        Log.info("Stopping...")
 
-        // Cancel sync tasks
-        messageStreamTask?.cancel()
-        messageStreamTask = nil
-        conversationStreamTask?.cancel()
-        conversationStreamTask = nil
-        syncTask?.cancel()
-        syncTask = nil
+        // Cancel and wait for sync tasks to complete
+        // This ensures no database operations are in-flight before cleanup
+        if let task = messageStreamTask {
+            task.cancel()
+            _ = await task.value
+            messageStreamTask = nil
+        }
+
+        if let task = conversationStreamTask {
+            task.cancel()
+            _ = await task.value
+            conversationStreamTask = nil
+        }
+
+        if let task = syncTask {
+            task.cancel()
+            _ = await task.value
+            syncTask = nil
+        }
 
         activeConversationId = nil
 
@@ -205,7 +218,7 @@ actor SyncingManager: SyncingManagerProtocol {
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 }
 
-                Logger.info("Starting message stream (attempt \(retryCount + 1))")
+                Log.info("Starting message stream (attempt \(retryCount + 1))")
 
                 // Stream messages - the loop will exit when onClose is called and continuation.finish() happens
                 var isFirstMessage = true
@@ -213,7 +226,7 @@ actor SyncingManager: SyncingManagerProtocol {
                     type: .all,
                     consentStates: consentStates,
                     onClose: {
-                        Logger.info("Message stream closed via onClose callback")
+                        Log.info("Message stream closed via onClose callback")
                     }
                 ) {
                     // Check cancellation
@@ -236,13 +249,13 @@ actor SyncingManager: SyncingManagerProtocol {
 
                 // Stream ended (onClose was called and continuation finished)
                 retryCount += 1
-                Logger.info("Message stream ended...")
+                Log.info("Message stream ended...")
             } catch is CancellationError {
-                Logger.info("Message stream cancelled")
+                Log.info("Message stream cancelled")
                 break
             } catch {
                 retryCount += 1
-                Logger.error("Message stream error: \(error)")
+                Log.error("Message stream error: \(error)")
             }
         }
     }
@@ -257,14 +270,14 @@ actor SyncingManager: SyncingManagerProtocol {
                     try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 }
 
-                Logger.info("Starting conversation stream (attempt \(retryCount + 1))")
+                Log.info("Starting conversation stream (attempt \(retryCount + 1))")
 
                 // Stream conversations - the loop will exit when onClose is called
                 var isFirstConversation = true
                 for try await conversation in client.conversationsProvider.stream(
                     type: .groups,
                     onClose: {
-                        Logger.info("Conversation stream closed via onClose callback")
+                        Log.info("Conversation stream closed via onClose callback")
                     }
                 ) {
                     guard case .group(let conversation) = conversation else {
@@ -290,13 +303,13 @@ actor SyncingManager: SyncingManagerProtocol {
 
                 // Stream ended (onClose was called and continuation finished)
                 retryCount += 1
-                Logger.info("Conversation stream ended, will retry...")
+                Log.info("Conversation stream ended, will retry...")
             } catch is CancellationError {
-                Logger.info("Conversation stream cancelled")
+                Log.info("Conversation stream cancelled")
                 break
             } catch {
                 retryCount += 1
-                Logger.error("Conversation stream error: \(error)")
+                Log.error("Conversation stream error: \(error)")
             }
         }
     }

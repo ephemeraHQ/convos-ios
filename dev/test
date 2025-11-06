@@ -1,0 +1,71 @@
+#!/bin/bash
+set -eou pipefail
+
+echo "🧪 Running ConvosCore integration tests with local XMTP node..."
+echo ""
+
+# Check if Docker is running
+if ! docker info > /dev/null 2>&1; then
+    echo "❌ Docker is not running. Please start Docker and try again."
+    exit 1
+fi
+
+# Start the XMTP node
+echo "🐳 Starting local XMTP node..."
+"$(dirname "$0")/up"
+
+# Wait for the node to be ready
+echo "⏳ Waiting for XMTP node to be ready..."
+max_attempts=30
+attempt=0
+
+while [ $attempt -lt $max_attempts ]; do
+    if nc -z localhost 5556 2>/dev/null; then
+        echo "✅ XMTP node is ready!"
+        sleep 3  # Give it a few more seconds to fully initialize
+        break
+    fi
+
+    attempt=$((attempt + 1))
+    echo "Attempt $attempt/$max_attempts - waiting for XMTP node..."
+    sleep 2
+done
+
+if [ $attempt -ge $max_attempts ]; then
+    echo "❌ XMTP node failed to start within the timeout"
+    "$(dirname "$0")/compose" logs
+    exit 1
+fi
+
+# Run the tests
+echo ""
+echo "🧪 Running tests..."
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/../ConvosCore"
+
+# Use xcodebuild to run tests on iOS Simulator from within the ConvosCore package directory
+# Pass environment variable using -testProductsPath approach won't work
+# We need to set it before running xcodebuild
+if TEST_SERVER_ENABLED=true xcodebuild test \
+    -scheme ConvosCore \
+    -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.0' \
+    -only-testing:ConvosCoreTests/InboxStateMachineTests \
+    -only-testing:ConvosCoreTests/UnusedInboxCacheTests \
+    -only-testing:ConvosCoreTests/ConversationStateMachineTests \
+    2>&1 | tee test-output.log; then
+    echo ""
+    echo "✅ All tests passed!"
+    test_exit_code=0
+else
+    echo ""
+    echo "❌ Tests failed!"
+    test_exit_code=1
+fi
+
+# Stop the XMTP node
+echo ""
+echo "🛑 Stopping Docker containers..."
+cd "$SCRIPT_DIR"
+./compose down
+
+exit $test_exit_code

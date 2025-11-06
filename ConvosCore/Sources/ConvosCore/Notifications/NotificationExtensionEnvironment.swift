@@ -20,14 +20,14 @@ public struct NotificationExtensionEnvironment {
 
         // Retrieve the configuration stored by the main app
         guard let storedEnvironment = AppEnvironment.retrieveSecureConfigurationForNotificationExtension() else {
-            Logger.warning("No stored environment configuration found - main app should store config before NSE runs")
+            Log.warning("No stored environment configuration found - main app should store config before NSE runs")
             throw NotificationExtensionEnvironmentError.failedRetrievingSecureConfiguration
         }
 
         // Cache for future use
         cachedEnvironment = storedEnvironment
 
-        Logger.info("Environment configuration loaded and cached: \(storedEnvironment.name)")
+        Log.info("Environment configuration loaded and cached: \(storedEnvironment.name)")
         return storedEnvironment
     }
 
@@ -36,13 +36,15 @@ public struct NotificationExtensionEnvironment {
     public static func createPushNotificationHandler() throws -> CachedPushNotificationHandler {
         let environment = try getEnvironment()
         let databaseManager = DatabaseManager(environment: environment)
+        let identityStore = KeychainIdentityStore(accessGroup: environment.keychainAccessGroup)
 
-        Logger.info("Creating CachedPushNotificationHandler with environment: \(environment.name)")
+        Log.info("Creating CachedPushNotificationHandler with environment: \(environment.name)")
 
         CachedPushNotificationHandler.initialize(
             databaseReader: databaseManager.dbReader,
             databaseWriter: databaseManager.dbWriter,
-            environment: environment
+            environment: environment,
+            identityStore: identityStore
         )
         return CachedPushNotificationHandler.shared
     }

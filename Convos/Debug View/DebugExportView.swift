@@ -1,9 +1,12 @@
+import ConvosCore
 import SwiftUI
 
 struct DebugExportView: View {
+    let environment: AppEnvironment
+
     var body: some View {
         List {
-            DebugViewSection()
+            DebugViewSection(environment: environment)
         }
         .navigationTitle("Debug")
         .toolbarTitleDisplayMode(.inline)
@@ -11,5 +14,5 @@ struct DebugExportView: View {
 }
 
 #Preview {
-    NavigationStack { DebugExportView() }
+    NavigationStack { DebugExportView(environment: .tests) }
 }

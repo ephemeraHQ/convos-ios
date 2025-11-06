@@ -8,7 +8,6 @@ struct JoinConversationView: View {
     let allowsDismissal: Bool
     let onScannedCode: (String) -> Void
 
-    @State private var qrScannerCoordinator: QRScannerView.Coordinator?
     @State private var showingExplanation: Bool = false
 
     @Environment(\.dismiss) private var dismiss: DismissAction
@@ -17,7 +16,7 @@ struct JoinConversationView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                QRScannerView(viewModel: viewModel, coordinator: $qrScannerCoordinator)
+                QRScannerView(viewModel: viewModel)
                     .ignoresSafeArea()
 
                 let cutoutSize = 240.0
@@ -63,35 +62,22 @@ struct JoinConversationView: View {
                         }
                         .padding(.bottom, DesignConstants.Spacing.step3x)
 
-                        Button {
-                            withAnimation {
-                                showingExplanation.toggle()
-                            }
-                        } label: {
-                            if showingExplanation {
-                                Text("Scan a convo code to access the app")
+                        VStack(spacing: DesignConstants.Spacing.step3x) {
+                            HStack(spacing: DesignConstants.Spacing.step2x) {
+                                Image(systemName: "qrcode")
+                                    .foregroundStyle(.white)
+                                Text("Join a convo by invitation only")
                                     .font(.system(size: 16.0))
                                     .multilineTextAlignment(.center)
                                     .foregroundStyle(.white)
-                            } else {
-                                VStack(spacing: DesignConstants.Spacing.step3x) {
-                                    HStack(spacing: DesignConstants.Spacing.step2x) {
-                                        Image(systemName: "qrcode")
-                                            .foregroundStyle(.white)
-                                        Text("Join a convo by invitation only")
-                                            .font(.system(size: 16.0))
-                                            .multilineTextAlignment(.center)
-                                            .foregroundStyle(.white)
-                                    }
-                                    Text("Ask a friend to invite you to a convo, then scan its code or tap its link to enter the app.")
-                                        .font(.system(size: 16.0))
-                                        .multilineTextAlignment(.center)
-                                        .foregroundStyle(.white)
-                                        .opacity(0.6)
-                                }
-                                .padding(.horizontal, DesignConstants.Spacing.step10x)
                             }
+                            Text("Ask a friend to invite you to a convo, then scan its code or tap its link to enter the app.")
+                                .font(.system(size: 16.0))
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(.white)
+                                .opacity(0.6)
                         }
+                        .padding(.horizontal, DesignConstants.Spacing.step10x)
 
                         Spacer()
 
@@ -177,7 +163,10 @@ struct JoinConversationView: View {
             // Request access for the first time
             viewModel.requestAccess()
         case .authorized:
-            viewModel.onSetupCamera?()
+            // Already authorized (e.g., user came back from Settings)
+            // Update the view model state and trigger camera setup
+            viewModel.cameraAuthorized = true
+            viewModel.triggerCameraSetup()
         @unknown default:
             break
         }

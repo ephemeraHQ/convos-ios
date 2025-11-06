@@ -306,7 +306,7 @@ struct ConversationInfoView: View {
                             let url = try await viewModel.exportDebugLogs()
                             exportedLogsURL = url
                         } catch {
-                            Logger.error("Failed to export logs for conversation: \(error.localizedDescription)")
+                            Log.error("Failed to export logs for conversation: \(error.localizedDescription)")
                             exportedLogsURL = nil
                         }
                     }

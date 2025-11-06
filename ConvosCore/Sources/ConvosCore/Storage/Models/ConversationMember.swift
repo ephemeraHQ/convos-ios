@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - ConversationMember
 
-public struct ConversationMember: Codable, Hashable, Identifiable {
+public struct ConversationMember: Codable, Hashable, Identifiable, Sendable {
     public var id: String { profile.id }
     public let profile: Profile
     public let role: MemberRole

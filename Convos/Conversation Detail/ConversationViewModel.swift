@@ -3,6 +3,7 @@ import ConvosCore
 import Observation
 import UIKit
 
+@MainActor
 @Observable
 class ConversationViewModel {
     // MARK: - Private
@@ -17,6 +18,7 @@ class ConversationViewModel {
     private let conversationRepository: any ConversationRepositoryProtocol
     private let messagesRepository: any MessagesRepositoryProtocol
 
+    @ObservationIgnored
     private var cancellables: Set<AnyCancellable> = []
 
     // MARK: - Public
@@ -107,6 +109,7 @@ class ConversationViewModel {
     var presentingConversationForked: Bool = false
 
     var useDisplayNameForNewConvos: Bool = false
+    var shouldAskToAllowNotifications: Bool = false
 
     // MARK: - Init
 
@@ -140,7 +143,7 @@ class ConversationViewModel {
             self.conversation = try conversationRepository.fetchConversation() ?? conversation
             self.profile = try myProfileRepository.fetch()
         } catch {
-            Logger.error("Error fetching messages or conversation: \(error.localizedDescription)")
+            Log.error("Error fetching messages or conversation: \(error.localizedDescription)")
             self.messages = []
         }
 
@@ -152,7 +155,7 @@ class ConversationViewModel {
 
         presentingConversationForked = conversation.isForked
 
-        Logger.info("Created for conversation: \(conversation.id)")
+        Log.info("Created for conversation: \(conversation.id)")
 
         observe()
 
@@ -184,11 +187,11 @@ class ConversationViewModel {
             self.conversation = try conversationRepository.fetchConversation() ?? conversation
             self.profile = try myProfileRepository.fetch()
         } catch {
-            Logger.error("Error fetching messages or conversation: \(error.localizedDescription)")
+            Log.error("Error fetching messages or conversation: \(error.localizedDescription)")
             self.messages = []
         }
 
-        Logger.info("🔄 created for draft conversation: \(conversation.id)")
+        Log.info("🔄 created for draft conversation: \(conversation.id)")
 
         observe()
         setupMyProfileRepository()
@@ -201,8 +204,6 @@ class ConversationViewModel {
     }
 
     deinit {
-        Logger.info("🗑️ deallocated for conversation: \(conversation.id)")
-        cancellables.removeAll()
         KeyboardListener.shared.remove(delegate: self)
     }
 
@@ -236,6 +237,27 @@ class ConversationViewModel {
 
     // MARK: - Public
 
+    func checkNotificationPermissions() {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await updateNotificationPermissions()
+        }
+    }
+
+    @MainActor
+    func updateNotificationPermissions() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        self.shouldAskToAllowNotifications = settings.authorizationStatus == .notDetermined
+    }
+
+    func requestPushNotificationsPermission() {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await PushNotificationRegistrar.requestNotificationAuthorizationIfNeeded()
+            await updateNotificationPermissions()
+        }
+    }
+
     func onConversationInfoTap() {
         focus = .conversationName
     }
@@ -259,7 +281,7 @@ class ConversationViewModel {
                         for: conversation.id
                     )
                 } catch {
-                    Logger.error("Failed updating group name: \(error)")
+                    Log.error("Failed updating group name: \(error)")
                 }
             }
         }
@@ -275,7 +297,7 @@ class ConversationViewModel {
                         for: conversation
                     )
                 } catch {
-                    Logger.error("Failed updating group image: \(error)")
+                    Log.error("Failed updating group image: \(error)")
                 }
             }
         }
@@ -292,7 +314,7 @@ class ConversationViewModel {
                         for: conversation.id
                     )
                 } catch {
-                    Logger.error("Failed updating group description: \(error)")
+                    Log.error("Failed updating group description: \(error)")
                 }
             }
         }
@@ -332,7 +354,7 @@ class ConversationViewModel {
             do {
                 try await outgoingMessageWriter.send(text: prevMessageText)
             } catch {
-                Logger.error("Error sending message: \(error)")
+                Log.error("Error sending message: \(error)")
             }
         }
     }
@@ -360,7 +382,7 @@ class ConversationViewModel {
                 do {
                     try await myProfileWriter.update(displayName: trimmedDisplayName, conversationId: conversation.id)
                 } catch {
-                    Logger.error("Error updating profile display name: \(error.localizedDescription)")
+                    Log.error("Error updating profile display name: \(error.localizedDescription)")
                 }
             }
         }
@@ -374,7 +396,7 @@ class ConversationViewModel {
                 do {
                     try await myProfileWriter.update(avatar: profileImage, conversationId: conversation.id)
                 } catch {
-                    Logger.error("Error updating profile image: \(error.localizedDescription)")
+                    Log.error("Error updating profile image: \(error.localizedDescription)")
                 }
             }
         }
@@ -391,7 +413,7 @@ class ConversationViewModel {
             do {
                 try await metadataWriter.removeMembers([member.profile.inboxId], from: conversation.id)
             } catch {
-                Logger.error("Error removing member: \(error.localizedDescription)")
+                Log.error("Error removing member: \(error.localizedDescription)")
             }
         }
     }
@@ -406,7 +428,7 @@ class ConversationViewModel {
                     self.conversation.postLeftConversationNotification()
                 }
             } catch {
-                Logger.error("Error leaving convo: \(error.localizedDescription)")
+                Log.error("Error leaving convo: \(error.localizedDescription)")
             }
         }
     }
@@ -431,7 +453,7 @@ class ConversationViewModel {
                 conversation.postLeftConversationNotification()
                 presentingConversationSettings = false
             } catch {
-                Logger.error("Error exploding convo: \(error.localizedDescription)")
+                Log.error("Error exploding convo: \(error.localizedDescription)")
             }
         }
     }

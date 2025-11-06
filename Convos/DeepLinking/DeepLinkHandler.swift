@@ -13,12 +13,12 @@ final class DeepLinkHandler {
             url.scheme == ConfigManager.shared.appUrlScheme
 
         guard isValidScheme else {
-            Logger.warning("Dismissing deep link with invalid scheme")
+            Log.warning("Dismissing deep link with invalid scheme")
             return nil
         }
 
         guard let inviteCode = url.convosInviteCode else {
-            Logger.warning("Deep link is missing invite code")
+            Log.warning("Deep link is missing invite code")
             return nil
         }
 
@@ -27,7 +27,7 @@ final class DeepLinkHandler {
 
     private static func isValidHost(_ host: String?) -> Bool {
         guard let host = host else {
-            Logger.warning("Deep link is missing host")
+            Log.warning("Deep link is missing host")
             return false
         }
 

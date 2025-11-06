@@ -53,11 +53,11 @@ struct BackspaceTextField: UIViewRepresentable {
         }
 
         func textFieldDidBeginEditing(_ textField: UITextField) {
-            Logger.info("Started editing textfield")
+            Log.info("Started editing textfield")
         }
 
         func textFieldDidEndEditing(_ textField: UITextField) {
-            Logger.info("Ended editing textfield")
+            Log.info("Ended editing textfield")
             onEndedEditing?()
         }
 

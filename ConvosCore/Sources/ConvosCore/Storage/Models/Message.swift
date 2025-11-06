@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol MessageType {
+public protocol MessageType: Sendable {
     var id: String { get }
     var conversation: Conversation { get }
     var sender: ConversationMember { get }
@@ -10,7 +10,7 @@ public protocol MessageType {
     var date: Date { get }
 }
 
-public enum AnyMessage: Hashable, Codable {
+public enum AnyMessage: Hashable, Codable, Sendable {
     case message(Message),
          reply(MessageReply)
 
@@ -24,7 +24,7 @@ public enum AnyMessage: Hashable, Codable {
     }
 }
 
-public enum MessageContent: Hashable, Codable {
+public enum MessageContent: Hashable, Codable, Sendable {
     case text(String),
          emoji(String), // all emoji, not a reaction
          attachment(URL),
@@ -50,7 +50,7 @@ public enum MessageContent: Hashable, Codable {
     }
 }
 
-public struct Message: MessageType, Hashable, Codable {
+public struct Message: MessageType, Hashable, Codable, Sendable {
     public let id: String
     public let conversation: Conversation
     public let sender: ConversationMember
@@ -62,7 +62,7 @@ public struct Message: MessageType, Hashable, Codable {
     public let reactions: [MessageReaction]
 }
 
-public struct MessageReply: MessageType, Hashable, Codable {
+public struct MessageReply: MessageType, Hashable, Codable, Sendable {
     public let id: String
     public let conversation: Conversation
     public let sender: ConversationMember
@@ -75,7 +75,7 @@ public struct MessageReply: MessageType, Hashable, Codable {
     public let reactions: [MessageReaction]
 }
 
-public struct MessageReaction: MessageType, Hashable, Codable {
+public struct MessageReaction: MessageType, Hashable, Codable, Sendable {
     public let id: String
     public let conversation: Conversation
     public let sender: ConversationMember

@@ -1,5 +1,27 @@
 import Foundation
 
+/// Protocol for device registration management
+///
+/// Allows for mocking in tests while providing the core device registration functionality.
+public protocol DeviceRegistrationManagerProtocol: Actor {
+    /// Starts observing push token changes. Should be called once on app launch.
+    func startObservingPushTokenChanges()
+
+    /// Stops observing push token changes. Called automatically on deinit.
+    func stopObservingPushTokenChanges()
+
+    /// Registers the device with the backend if needed (first time or token changed).
+    /// Can be called multiple times safely - will skip if already registered with same token.
+    func registerDeviceIfNeeded() async
+
+    /// Clears the device registration state from UserDefaults.
+    /// Call this on logout, "Delete all data", or when you want to force re-registration.
+    static func clearRegistrationState()
+
+    /// Returns true if this device has been registered at least once.
+    static func hasRegisteredDevice() -> Bool
+}
+
 /// App-level manager for device registration with the backend.
 ///
 /// Device registration is a device-level concern (not inbox-specific).
@@ -10,22 +32,39 @@ import Foundation
 ///
 /// The manager persists registration state in UserDefaults to avoid unnecessary re-registrations
 /// across app launches and to detect when push tokens change.
-public actor DeviceRegistrationManager {
+///
+/// The manager observes push token changes and automatically re-registers when the token arrives or changes.
+public actor DeviceRegistrationManager: DeviceRegistrationManagerProtocol {
     // MARK: - Properties
 
-    private let apiClient: any ConvosAPIBaseProtocol
+    private let environment: AppEnvironment
+    private let apiClient: any ConvosAPIClientProtocol
     private var isRegistering: Bool = false
+    nonisolated(unsafe) private var pushTokenObserver: NSObjectProtocol?
 
     public init(environment: AppEnvironment) {
+        self.environment = environment
         self.apiClient = ConvosAPIClientFactory.client(environment: environment)
     }
 
-    // For testing
-    internal init(apiClient: any ConvosAPIBaseProtocol) {
-        self.apiClient = apiClient
+    deinit {
+        if let observer = pushTokenObserver {
+            NotificationCenter.default.removeObserver(observer)
+            pushTokenObserver = nil
+        }
     }
 
     // MARK: - Public API
+
+    /// Starts observing push token changes. Should be called once on app launch.
+    public func startObservingPushTokenChanges() {
+        setupPushTokenObserver()
+    }
+
+    /// Stops observing push token changes. Called automatically on deinit.
+    public func stopObservingPushTokenChanges() {
+        removePushTokenObserver()
+    }
 
     /// Registers the device with the backend if needed (first time or token changed).
     /// Can be called multiple times safely - will skip if already registered with same token.
@@ -38,8 +77,13 @@ public actor DeviceRegistrationManager {
     ///
     /// Protected by isRegistering flag to prevent concurrent registration attempts.
     public func registerDeviceIfNeeded() async {
+        if case .tests = environment {
+            Log.info("Skipping device registration for tests environment...")
+            return
+        }
+
         guard !isRegistering else {
-            Logger.info("Registration already in progress, skipping")
+            Log.info("Registration already in progress, skipping")
             return
         }
 
@@ -62,14 +106,14 @@ public actor DeviceRegistrationManager {
         let shouldRegister = !hasEverRegistered || lastToken != pushToken
 
         guard shouldRegister else {
-            Logger.info("Device already registered with this token")
+            Log.info("Device already registered with this token")
             return
         }
 
         let reason = !hasEverRegistered ? "first time" : "token changed"
 
         do {
-            Logger.info("Registering device (\(reason), token: \(pushToken != nil ? "present" : "nil"))")
+            Log.info("Registering device (\(reason), token: \(pushToken != nil ? "present" : "nil"))")
 
             try await apiClient.registerDevice(deviceId: deviceId, pushToken: pushToken)
 
@@ -79,15 +123,15 @@ public actor DeviceRegistrationManager {
 
             if let pushToken = pushToken {
                 UserDefaults.standard.set(pushToken, forKey: lastTokenKey)
-                Logger.info("Successfully registered device with push token")
+                Log.info("Successfully registered device with push token")
             } else {
                 // Clear lastToken when successfully registering with nil token
                 // This ensures we don't keep retrying with nil on every launch
                 UserDefaults.standard.removeObject(forKey: lastTokenKey)
-                Logger.info("Successfully registered device without push token")
+                Log.info("Successfully registered device without push token")
             }
         } catch {
-            Logger.error("Failed to register device: \(error). Will retry on next attempt.")
+            Log.error("Failed to register device: \(error). Will retry on next attempt.")
         }
     }
 
@@ -97,12 +141,42 @@ public actor DeviceRegistrationManager {
         let deviceId = DeviceInfo.deviceIdentifier
         UserDefaults.standard.removeObject(forKey: "lastRegisteredDevicePushToken_\(deviceId)")
         UserDefaults.standard.removeObject(forKey: "hasRegisteredDevice_\(deviceId)")
-        Logger.info("Cleared device registration state")
+        Log.info("Cleared device registration state")
     }
 
     /// Returns true if this device has been registered at least once.
     public static func hasRegisteredDevice() -> Bool {
         let deviceId = DeviceInfo.deviceIdentifier
         return UserDefaults.standard.bool(forKey: "hasRegisteredDevice_\(deviceId)")
+    }
+
+    // MARK: - Push Token Observer
+
+    private func setupPushTokenObserver() {
+        guard pushTokenObserver == nil else { return }
+
+        Log.info("DeviceRegistrationManager: Setting up push token observer...")
+        pushTokenObserver = NotificationCenter.default.addObserver(
+            forName: .convosPushTokenDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { [weak self] in
+                await self?.handlePushTokenChange()
+            }
+        }
+    }
+
+    private func removePushTokenObserver() {
+        if let observer = pushTokenObserver {
+            NotificationCenter.default.removeObserver(observer)
+            pushTokenObserver = nil
+            Log.info("DeviceRegistrationManager: Removed push token observer")
+        }
+    }
+
+    private func handlePushTokenChange() async {
+        Log.info("DeviceRegistrationManager: Push token changed, re-registering device...")
+        await registerDeviceIfNeeded()
     }
 }

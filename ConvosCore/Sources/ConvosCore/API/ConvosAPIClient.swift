@@ -1,13 +1,5 @@
+import ConvosLogging
 import Foundation
-
-public protocol ConvosAPIBaseProtocol {
-    func request(for path: String,
-                 method: String,
-                 queryParameters: [String: String]?) throws -> URLRequest
-
-    /// Register device with AppCheck authentication (no JWT required - device-level operation)
-    func registerDevice(deviceId: String, pushToken: String?) async throws
-}
 
 protocol ConvosAPIClientFactoryType {
     static func client(environment: AppEnvironment, overrideJWTToken: String?) -> any ConvosAPIClientProtocol
@@ -19,11 +11,16 @@ enum ConvosAPIClientFactory: ConvosAPIClientFactoryType {
     }
 }
 
-public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
+public protocol ConvosAPIClientProtocol: AnyObject, Sendable {
+    func request(for path: String,
+                 method: String,
+                 queryParameters: [String: String]?) throws -> URLRequest
+
+    /// Register device with AppCheck authentication (no JWT required - device-level operation)
+    func registerDevice(deviceId: String, pushToken: String?) async throws
+
     func authenticate(appCheckToken: String,
                       retryCount: Int) async throws -> String
-
-    func checkAuth() async throws
 
     func uploadAttachment(
         data: Data,
@@ -38,29 +35,42 @@ public protocol ConvosAPIClientProtocol: ConvosAPIBaseProtocol, AnyObject {
     ) async throws -> String
 
     // Push notifications
-    func registerDevice(deviceId: String, pushToken: String?) async throws
     func subscribeToTopics(deviceId: String, clientId: String, topics: [String]) async throws
     func unsubscribeFromTopics(clientId: String, topics: [String]) async throws
     func unregisterInstallation(clientId: String) async throws
 }
 
-/// Base HTTP client for Convos backend API
+/// HTTP client for Convos backend API
 ///
-/// Provides unauthenticated API operations including device registration
-/// with Firebase AppCheck authentication.
-internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
-    internal let baseURL: URL
-    internal let session: URLSession
-    internal let environment: AppEnvironment
+/// ConvosAPIClient provides both authenticated and unauthenticated access to the Convos backend, handling:
+/// - JWT authentication with automatic token refresh
+/// - Device registration with Firebase AppCheck
+/// - Attachment uploads via S3 presigned URLs
+/// - Push notification topic subscriptions
+/// - Device and installation management
+/// - Exponential backoff retry logic
+///
+/// The client automatically re-authenticates on 401 responses up to a maximum
+/// retry count and stores JWT tokens in keychain for persistence.
+final class ConvosAPIClient: ConvosAPIClientProtocol, Sendable {
+    private let baseURL: URL
+    private let session: URLSession
+    private let environment: AppEnvironment
+    private let keychainService: any KeychainServiceProtocol = KeychainService()
+    private let overrideJWTToken: String?  // Immutable JWT override from APNS payload
+    private let maxRetryCount: Int = 3
 
-    fileprivate init(environment: AppEnvironment) {
+    fileprivate init(environment: AppEnvironment, overrideJWTToken: String? = nil) {
         guard let apiBaseURL = URL(string: environment.apiBaseURL) else {
             fatalError("Failed constructing API base URL")
         }
         self.baseURL = apiBaseURL
         self.session = URLSession(configuration: .default)
         self.environment = environment
+        self.overrideJWTToken = overrideJWTToken
     }
+
+    // MARK: - Base Request Building
 
     func request(for path: String,
                  method: String = "GET",
@@ -118,65 +128,17 @@ internal class BaseConvosAPIClient: ConvosAPIBaseProtocol {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-            Logger.error("Device registration failed with status \(httpResponse.statusCode): \(errorMessage)")
+            Log.error("Device registration failed with status \(httpResponse.statusCode): \(errorMessage)")
             throw APIError.serverError(errorMessage)
         }
 
-        Logger.info("Device registered successfully (token: \(pushToken != nil ? "present" : "nil"))")
+        Log.info("Device registered successfully (token: \(pushToken != nil ? "present" : "nil"))")
     }
 
-    private func performRequest<T: Decodable>(_ request: URLRequest, retryCount: Int = 0) async throws -> T {
-        let (data, response) = try await session.data(for: request)
-
-        Logger.info("\(request.url?.path(percentEncoded: false) ?? "nil") received response: \(data.prettyPrintedJSONString ?? "nil data")")
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.invalidResponse
-        }
-
-        switch httpResponse.statusCode {
-        case 200...299:
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            return try decoder.decode(T.self, from: data)
-        case 401:
-            throw APIError.notAuthenticated
-        case 403:
-            throw APIError.forbidden
-        case 404:
-            throw APIError.notFound
-        default:
-            throw APIError.serverError(nil)
-        }
-    }
-}
-
-/// Authenticated HTTP client for Convos backend API
-///
-/// ConvosAPIClient provides authenticated access to the Convos backend, handling:
-/// - JWT authentication with automatic token refresh
-/// - Attachment uploads via S3 presigned URLs
-/// - Push notification topic subscriptions
-/// - Device and installation management
-/// - Exponential backoff retry logic
-///
-/// The client automatically re-authenticates on 401 responses up to a maximum
-/// retry count and stores JWT tokens in keychain for persistence.
-final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
-    private let keychainService: KeychainService<ConvosJWTKeychainItem> = .init()
-
-    let overrideJWTToken: String?  // Immutable JWT override from APNS payload
-
-    private let maxRetryCount: Int = 3
-
-    fileprivate init(environment: AppEnvironment, overrideJWTToken: String? = nil) {
-        self.overrideJWTToken = overrideJWTToken
-        super.init(environment: environment)
-    }
+    // MARK: - Private Helpers
 
     private func reAuthenticate() async throws -> String {
         let firebaseAppCheckToken = try await FirebaseHelperCore.getAppCheckToken()
-
         return try await authenticate(
             appCheckToken: firebaseAppCheckToken,
             retryCount: 0
@@ -225,7 +187,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             }
             // Use exponential backoff for rate limit retries
             let delay = TimeInterval.calculateExponentialBackoff(for: retryCount)
-            Logger.info("Auth rate limited - retrying in \(delay)s (attempt \(retryCount + 1) of \(maxRetryCount))")
+            Log.info("Auth rate limited - retrying in \(delay)s (attempt \(retryCount + 1) of \(maxRetryCount))")
 
             // Sleep and then retry
             try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
@@ -235,7 +197,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
         guard httpResponse.statusCode == 200 else {
             let errorMessage = parseErrorMessage(from: data)
-            Logger.error("Authentication failed with status \(httpResponse.statusCode): \(errorMessage ?? "unknown error")")
+            Log.error("Authentication failed with status \(httpResponse.statusCode): \(errorMessage ?? "unknown error")")
             throw APIError.authenticationFailed
         }
 
@@ -244,14 +206,12 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         }
 
         let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
-        try keychainService.saveString(authResponse.token, for: .init(deviceId: deviceId))
-        Logger.info("Successfully authenticated and stored JWT token")
+        try keychainService.saveString(
+            authResponse.token,
+            account: KeychainAccount.jwt(deviceId: deviceId)
+        )
+        Log.info("Successfully authenticated and stored JWT token")
         return authResponse.token
-    }
-
-    func checkAuth() async throws {
-        let request = try authenticatedRequest(for: "v2/auth-check")
-        let _: ConvosAPI.AuthCheckResponse = try await performRequest(request)
     }
 
     // MARK: - Private Helpers
@@ -267,19 +227,21 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
 
         // Prioritize override JWT token (from notification payload) over keychain JWT
         if let overrideJWT = overrideJWTToken {
-            Logger.debug("Using override JWT token from notification payload")
+            Log.debug("Using override JWT token from notification payload")
             request.setValue(overrideJWT, forHTTPHeaderField: "X-Convos-AuthToken")
         } else {
             // No override JWT - try keychain
             do {
-                if let keychainJWT = try keychainService.retrieveString(.init(deviceId: deviceId)) {
-                    Logger.debug("Using JWT token from keychain")
+                if let keychainJWT = try keychainService.retrieveString(
+                    account: KeychainAccount.jwt(deviceId: deviceId)
+                ) {
+                    Log.debug("Using JWT token from keychain")
                     request.setValue(keychainJWT, forHTTPHeaderField: "X-Convos-AuthToken")
                 } else {
-                    Logger.debug("No JWT token found - request will trigger re-authentication")
+                    Log.debug("No JWT token found - request will trigger re-authentication")
                 }
             } catch {
-                Logger.warning("Failed to retrieve JWT from keychain: \(error.localizedDescription)")
+                Log.warning("Failed to retrieve JWT from keychain: \(error.localizedDescription)")
                 // In main app context, continue without JWT - will trigger re-authentication
             }
         }
@@ -291,7 +253,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         do {
             let (data, response) = try await session.data(for: request)
 
-            Logger.info("\(request.url?.path(percentEncoded: false) ?? "nil") received response: \(data.prettyPrintedJSONString ?? "nil data")")
+            Log.info("\(request.url?.path(percentEncoded: false) ?? "nil") received response: \(data.prettyPrintedJSONString ?? "nil data")")
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw APIError.invalidResponse
@@ -334,30 +296,30 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
                 // When using JWT override, never attempt re-authentication
                 // (AppCheck not available when using JWT from APNS payload)
                 guard overrideJWTToken == nil else {
-                    Logger.error("Authentication failed in JWT override mode - cannot re-authenticate without AppCheck")
+                    Log.error("Authentication failed in JWT override mode - cannot re-authenticate without AppCheck")
                     throw APIError.notAuthenticated
                 }
 
                 // Check if we've exceeded max retries
                 guard retryCount < maxRetryCount else {
-                    Logger.error("Max retry count (\(maxRetryCount)) exceeded for request")
+                    Log.error("Max retry count (\(maxRetryCount)) exceeded for request")
                     throw APIError.notAuthenticated
                 }
 
                 // Try to re-authenticate and retry the request
                 do {
-                    Logger.info("Attempting re-authentication (attempt \(retryCount + 1) of \(maxRetryCount))")
-                    _ = try await reAuthenticate()
+                    Log.info("Attempting re-authentication (attempt \(retryCount + 1) of \(maxRetryCount))")
+                    let freshJWT = try await reAuthenticate()
+                    guard !freshJWT.isEmpty else {
+                        throw APIError.notAuthenticated
+                    }
                     // Create a new request with the fresh token
                     var newRequest = request
-                    let deviceId = DeviceInfo.deviceIdentifier
-                    if let jwt = try keychainService.retrieveString(.init(deviceId: deviceId)) {
-                        newRequest.setValue(jwt, forHTTPHeaderField: "X-Convos-AuthToken")
-                    }
+                    newRequest.setValue(freshJWT, forHTTPHeaderField: "X-Convos-AuthToken")
                     // Retry the request with incremented retry count
                     return try await performRequest(newRequest, retryCount: retryCount + 1)
                 } catch {
-                    Logger.error("Re-authentication failed: \(error.localizedDescription)")
+                    Log.error("Re-authentication failed: \(error.localizedDescription)")
                     throw APIError.notAuthenticated
                 }
             case 403:
@@ -379,8 +341,8 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         contentType: String = "image/jpeg",
         acl: String = "public-read"
     ) async throws -> String {
-        Logger.info("Starting attachment upload process for file: \(filename)")
-        Logger.info("File data size: \(data.count) bytes")
+        Log.info("Starting attachment upload process for file: \(filename)")
+        Log.info("File data size: \(data.count) bytes")
 
         // Step 1: Get presigned URL from Convos API
         let presignedRequest = try authenticatedRequest(
@@ -389,31 +351,31 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             queryParameters: ["contentType": contentType, "filename": filename]
         )
 
-        Logger.info("Getting presigned URL from: \(presignedRequest.url?.absoluteString ?? "nil")")
+        Log.info("Getting presigned URL from: \(presignedRequest.url?.absoluteString ?? "nil")")
 
         struct PresignedResponse: Codable {
             let url: String
         }
 
         let presignedResponse: PresignedResponse = try await performRequest(presignedRequest)
-        Logger.info("Received presigned URL: \(presignedResponse.url)")
+        Log.info("Received presigned URL: \(presignedResponse.url)")
 
         // Step 2: Extract public URL BEFORE uploading (we already know what it will be!)
         guard let urlComponents = URLComponents(string: presignedResponse.url) else {
-            Logger.error("Failed to parse presigned URL components")
+            Log.error("Failed to parse presigned URL components")
             throw APIError.invalidURL
         }
 
         guard let scheme = urlComponents.scheme, let host = urlComponents.host else {
-            Logger.error("Failed to extract scheme or host from presigned URL")
+            Log.error("Failed to extract scheme or host from presigned URL")
             throw APIError.invalidURL
         }
         let publicURL = "\(scheme)://\(host)\(urlComponents.path)"
-        Logger.info("Final public URL will be: \(publicURL)")
+        Log.info("Final public URL will be: \(publicURL)")
 
         // Step 3: Upload directly to S3 using presigned URL
         guard let s3URL = URL(string: presignedResponse.url) else {
-            Logger.error("Invalid presigned URL: \(presignedResponse.url)")
+            Log.error("Invalid presigned URL: \(presignedResponse.url)")
             throw APIError.invalidURL
         }
 
@@ -422,27 +384,27 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         s3Request.setValue(contentType, forHTTPHeaderField: "Content-Type")
         s3Request.httpBody = data
 
-        Logger.info("Uploading to S3: \(s3URL.absoluteString)")
-        Logger.info("S3 upload data size: \(data.count) bytes")
-        Logger.info("S3 request headers: \(s3Request.allHTTPHeaderFields ?? [:])")
+        Log.info("Uploading to S3: \(s3URL.absoluteString)")
+        Log.info("S3 upload data size: \(data.count) bytes")
+        Log.info("S3 request headers: \(s3Request.allHTTPHeaderFields ?? [:])")
 
         let (s3Data, s3Response) = try await URLSession.shared.data(for: s3Request)
 
         guard let s3HttpResponse = s3Response as? HTTPURLResponse else {
-            Logger.error("Invalid S3 response type")
+            Log.error("Invalid S3 response type")
             throw APIError.invalidResponse
         }
 
-        Logger.info("S3 response status: \(s3HttpResponse.statusCode)")
-        Logger.info("S3 response headers: \(s3HttpResponse.allHeaderFields)")
+        Log.info("S3 response status: \(s3HttpResponse.statusCode)")
+        Log.info("S3 response headers: \(s3HttpResponse.allHeaderFields)")
 
         guard s3HttpResponse.statusCode == 200 else {
-            Logger.error("S3 upload failed with status: \(s3HttpResponse.statusCode)")
-            Logger.error("S3 error response: \(String(data: s3Data, encoding: .utf8) ?? "nil")")
+            Log.error("S3 upload failed with status: \(s3HttpResponse.statusCode)")
+            Log.error("S3 error response: \(String(data: s3Data, encoding: .utf8) ?? "nil")")
             throw APIError.serverError(nil)
         }
 
-        Logger.info("Successfully uploaded to S3, public URL: \(publicURL)")
+        Log.info("Successfully uploaded to S3, public URL: \(publicURL)")
         return publicURL
     }
 
@@ -451,7 +413,7 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
         filename: String,
         afterUpload: @escaping (String) async throws -> Void
     ) async throws -> String {
-        Logger.info("Starting chained upload and execute process for file: \(filename)")
+        Log.info("Starting chained upload and execute process for file: \(filename)")
 
         // Step 1: Upload the attachment and get the URL
         let uploadedURL = try await uploadAttachment(
@@ -460,12 +422,12 @@ final class ConvosAPIClient: BaseConvosAPIClient, ConvosAPIClientProtocol {
             contentType: "image/jpeg",
             acl: "public-read"
         )
-        Logger.info("Upload completed successfully, URL: \(uploadedURL)")
+        Log.info("Upload completed successfully, URL: \(uploadedURL)")
 
         // Step 2: Execute the provided closure with the uploaded URL
-        Logger.info("Executing post-upload action with URL: \(uploadedURL)")
+        Log.info("Executing post-upload action with URL: \(uploadedURL)")
         try await afterUpload(uploadedURL)
-        Logger.info("Post-upload action completed successfully")
+        Log.info("Post-upload action completed successfully")
 
         return uploadedURL
     }

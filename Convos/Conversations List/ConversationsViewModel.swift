@@ -3,6 +3,7 @@ import ConvosCore
 import Foundation
 import Observation
 
+@MainActor
 @Observable
 final class ConversationsViewModel {
     // MARK: - Public
@@ -101,8 +102,11 @@ final class ConversationsViewModel {
     private let conversationsRepository: any ConversationsRepositoryProtocol
     private let conversationsCountRepository: any ConversationsCountRepositoryProtocol
     private var localStateWriters: [String: any ConversationLocalStateWriterProtocol] = [:]
+    @ObservationIgnored
     private var cancellables: Set<AnyCancellable> = .init()
+    @ObservationIgnored
     private var leftConversationObserver: Any?
+    @ObservationIgnored
     private var newConversationViewModelTask: Task<Void, Never>?
 
     init(session: any SessionManagerProtocol) {
@@ -124,7 +128,7 @@ final class ConversationsViewModel {
                 hasEarlyAccess = true
             }
         } catch {
-            Logger.error("Error fetching conversations: \(error)")
+            Log.error("Error fetching conversations: \(error)")
             self.conversations = []
             self.conversationsCount = 0
         }
@@ -149,7 +153,6 @@ final class ConversationsViewModel {
         if let leftConversationObserver {
             NotificationCenter.default.removeObserver(leftConversationObserver)
         }
-        cancellables.removeAll()
     }
 
     func handleURL(_ url: URL) {
@@ -230,7 +233,7 @@ final class ConversationsViewModel {
                 // Clear all cached writers
                 await MainActor.run { self.localStateWriters.removeAll() }
             } catch {
-                Logger.error("Error deleting all accounts: \(error)")
+                Log.error("Error deleting all accounts: \(error)")
             }
         }
     }
@@ -252,7 +255,7 @@ final class ConversationsViewModel {
                 // Remove cached writer for deleted inbox
                 _ = await MainActor.run { self.localStateWriters.removeValue(forKey: conversation.inboxId) }
             } catch {
-                Logger.error("Error leaving convo: \(error.localizedDescription)")
+                Log.error("Error leaving convo: \(error.localizedDescription)")
             }
         }
     }
@@ -260,16 +263,18 @@ final class ConversationsViewModel {
     private func observe() {
         leftConversationObserver = NotificationCenter.default
             .addObserver(forName: .leftConversationNotification, object: nil, queue: .main) { [weak self] notification in
-                guard let self else { return }
-                guard let conversationId: String = notification.userInfo?["conversationId"] as? String else {
-                    return
-                }
-                Logger.info("Left conversation notification received for conversation: \(conversationId)")
-                if selectedConversation?.id == conversationId {
-                    selectedConversation = nil
-                }
-                if newConversationViewModel?.conversationViewModel.conversation.id == conversationId {
-                    newConversationViewModel = nil
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    guard let conversationId: String = notification.userInfo?["conversationId"] as? String else {
+                        return
+                    }
+                    Log.info("Left conversation notification received for conversation: \(conversationId)")
+                    if selectedConversation?.id == conversationId {
+                        selectedConversation = nil
+                    }
+                    if newConversationViewModel?.conversationViewModel.conversation.id == conversationId {
+                        newConversationViewModel = nil
+                    }
                 }
             }
 
@@ -309,17 +314,20 @@ final class ConversationsViewModel {
         guard let userInfo = notification.userInfo,
               let inboxId = userInfo["inboxId"] as? String,
               let conversationId = userInfo["conversationId"] as? String else {
-            Logger.warning("Conversation notification tapped but missing required userInfo")
+            Log.warning("Conversation notification tapped but missing required userInfo")
             return
         }
 
-        Logger.info("Handling conversation notification tap for inboxId: \(inboxId), conversationId: \(conversationId)")
+        Log
+            .info(
+                "Handling conversation notification tap for inboxId: \(inboxId), conversationId: \(conversationId)"
+            )
 
         if let conversation = conversations.first(where: { $0.id == conversationId }) {
-            Logger.info("Found conversation, selecting it")
+            Log.info("Found conversation, selecting it")
             selectedConversation = conversation
         } else {
-            Logger.warning("Conversation \(conversationId) not found in current conversation list")
+            Log.warning("Conversation \(conversationId) not found in current conversation list")
         }
     }
 
@@ -360,7 +368,7 @@ final class ConversationsViewModel {
 
                 try await writer.setUnread(false, for: conversation.id)
             } catch {
-                Logger.warning("Failed marking conversation as read: \(error.localizedDescription)")
+                Log.warning("Failed marking conversation as read: \(error.localizedDescription)")
             }
         }
     }
@@ -378,9 +386,8 @@ extension ConversationsViewModel: NewConversationsViewModelDelegate {
             return
         }
 
-        DispatchQueue.main.async { [weak self] in
-            self?.selectedConversation = conversation
-        }
+        // Already on MainActor due to @MainActor protocol conformance
+        selectedConversation = conversation
     }
 }
 

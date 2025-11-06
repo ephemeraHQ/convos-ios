@@ -317,7 +317,7 @@ extension MessagesViewController {
                                 animated: Bool = true,
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
-        Logger.info("Processing updates with \(messages.count) messages")
+        Log.info("Processing updates with \(messages.count) messages")
         let visibleMessages = messages.filter { message in
             message.base.content.showsInMessagesList
         }
@@ -382,7 +382,7 @@ extension MessagesViewController {
         }
 
         guard currentInterfaceActions.options.isEmpty else {
-            Logger.info("Interface actions exist, scheduling delayed update...")
+            Log.info("Interface actions exist, scheduling delayed update...")
             scheduleDelayedUpdate(for: conversation,
                                   with: messages,
                                   invite: invite,
@@ -541,7 +541,7 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
 
     private func updateBottomInsetForBottomBarHeight() {
         guard isViewLoaded else {
-            Logger.info("View not loading, skipping bottom inset update...")
+            Log.info("View not loading, skipping bottom inset update...")
             return
         }
 

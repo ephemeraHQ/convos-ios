@@ -10,7 +10,7 @@ private extension AppEnvironment {
             case "dev": return .dev
             case "production", "prod": return .production
             default:
-                Logger.warning("Unknown xmtpNetwork '\(network)', falling back to environment default")
+                Log.warning("Unknown xmtpNetwork '\(network)', falling back to environment default")
             }
         }
 
@@ -36,7 +36,7 @@ private extension AppEnvironment {
             case "dev", "production", "prod":
                 return true
             default:
-                Logger.warning("Unknown xmtpNetwork '\(network)', falling back to environment default")
+                Log.warning("Unknown xmtpNetwork '\(network)', falling back to environment default")
             }
         }
 
@@ -75,12 +75,21 @@ extension InboxStateMachine.State {
 }
 
 enum InboxStateError: Error {
-    case inboxNotReady
+    case inboxNotReady, clientIdInboxInconsistency
 }
 
-public struct InboxReadyResult {
+public struct InboxReadyResult: @unchecked Sendable {
     public let client: any XMTPClientProvider
     public let apiClient: any ConvosAPIClientProtocol
+
+    /// InboxReadyResult is marked @unchecked Sendable because:
+    /// - XMTPClientProvider wraps XMTPiOS.Client which is not Sendable
+    /// - However, XMTP Client is designed for concurrent use (async/await API)
+    /// - All access is properly isolated through actors in the state machine
+    public init(client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) {
+        self.client = client
+        self.apiClient = apiClient
+    }
 }
 
 typealias AnySyncingManager = (any SyncingManagerProtocol)
@@ -109,7 +118,7 @@ public actor InboxStateMachine {
              stop
     }
 
-    public enum State {
+    public enum State: Sendable {
         case idle(clientId: String)
         case authorizing(clientId: String, inboxId: String)
         case registering(clientId: String)
@@ -117,7 +126,7 @@ public actor InboxStateMachine {
         case ready(clientId: String, result: InboxReadyResult)
         case deleting(clientId: String, inboxId: String?)
         case stopping(clientId: String)
-        case error(clientId: String, error: Error)
+        case error(clientId: String, error: any Error)
     }
 
     // MARK: -
@@ -126,21 +135,13 @@ public actor InboxStateMachine {
     private let invitesRepository: any InvitesRepositoryProtocol
     private let environment: AppEnvironment
     private let syncingManager: AnySyncingManager?
-    private let savesInboxToDatabase: Bool
     private let overrideJWTToken: String?
     private let databaseWriter: any DatabaseWriter
-    private lazy var deviceRegistrationManager: DeviceRegistrationManager = {
-        DeviceRegistrationManager(environment: environment)
-    }()
+    private let apiClient: any ConvosAPIClientProtocol
 
     private var currentTask: Task<Void, Never>?
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
-    nonisolated(unsafe) private var pushTokenObserver: NSObjectProtocol?
-
-    deinit {
-        removePushTokenObserver()
-    }
 
     // MARK: - State Observation
 
@@ -215,7 +216,6 @@ public actor InboxStateMachine {
         invitesRepository: any InvitesRepositoryProtocol,
         databaseWriter: any DatabaseWriter,
         syncingManager: AnySyncingManager?,
-        savesInboxToDatabase: Bool = true,
         overrideJWTToken: String? = nil,
         environment: AppEnvironment
     ) {
@@ -225,31 +225,37 @@ public actor InboxStateMachine {
         self.invitesRepository = invitesRepository
         self.databaseWriter = databaseWriter
         self.syncingManager = syncingManager
-        self.savesInboxToDatabase = savesInboxToDatabase
-        self.overrideJWTToken = overrideJWTToken
+        self.overrideJWTToken = overrideJWTToken ?? environment.defaultOverrideJWTToken
         self.environment = environment
 
+        // Initialize API client
+        Log.info("Initializing API client (JWT override: \(self.overrideJWTToken != nil))...")
+        self.apiClient = ConvosAPIClientFactory.client(
+            environment: environment,
+            overrideJWTToken: self.overrideJWTToken
+        )
+
         // Set custom XMTP host if provided
-        Logger.info("🔧 XMTP Configuration:")
+        Log.info("🔧 XMTP Configuration:")
 
         // @lourou: Enable XMTP v4 d14n when ready
         // if let gatewayUrl = environment.gatewayUrl {
         //     // XMTP d14n - using gateway
-        //     Logger.info("   Mode = XMTP d14n")
-        //     Logger.info("   GATEWAY_URL = \(gatewayUrl)")
+        //     Log.info("   Mode = XMTP d14n")
+        //     Log.info("   GATEWAY_URL = \(gatewayUrl)")
         //     // Clear any previous custom address when using gateway
         //     if XMTPEnvironment.customLocalAddress != nil {
-        //         Logger.info("   Clearing previous customLocalAddress for gateway mode")
+        //         Log.info("   Clearing previous customLocalAddress for gateway mode")
         //         XMTPEnvironment.customLocalAddress = nil
         //     }
         // } else {
 
         // XMTP v3
-        Logger.info("   Mode = XMTP v3")
-        Logger.info("   XMTP_CUSTOM_HOST = \(environment.xmtpEndpoint ?? "nil")")
-        Logger.info("   customLocalAddress = \(environment.customLocalAddress ?? "nil")")
-        Logger.info("   xmtpEnv = \(environment.xmtpEnv)")
-        Logger.info("   isSecure = \(environment.isSecure)")
+        Log.info("   Mode = XMTP v3")
+        Log.info("   XMTP_CUSTOM_HOST = \(environment.xmtpEndpoint ?? "nil")")
+        Log.info("   customLocalAddress = \(environment.customLocalAddress ?? "nil")")
+        Log.info("   xmtpEnv = \(environment.xmtpEnv)")
+        Log.info("   isSecure = \(environment.isSecure)")
 
         // }
     }
@@ -282,10 +288,13 @@ public actor InboxStateMachine {
     private func processNextAction() {
         guard !isProcessing, !actionQueue.isEmpty else { return }
 
+        // Cancel any existing task before starting a new one
+        currentTask?.cancel()
+
         isProcessing = true
         let action = actionQueue.removeFirst()
 
-        currentTask = Task.detached { [weak self] in
+        currentTask = Task { [weak self] in
             guard let self else { return }
             await self.processAction(action)
             await self.setProcessingComplete()
@@ -328,6 +337,15 @@ public actor InboxStateMachine {
                 try await handleDelete(clientId: clientId, client: result.client, apiClient: result.apiClient)
             case (let .error(clientId, _), .delete):
                 try await handleDeleteFromError(clientId: clientId)
+            case (let .idle(clientId), .delete),
+                 (let .authorizing(clientId, _), .delete),
+                 (let .registering(clientId), .delete),
+                 (let .authenticatingBackend(clientId, _), .delete),
+                 (let .stopping(clientId), .delete):
+                try await handleDeleteFromIdle(clientId: clientId)
+            case (.deleting, .delete):
+                // Already deleting - ignore duplicate delete request (idempotent)
+                Log.info("Duplicate delete request while already deleting, ignoring")
             case let (.ready(clientId, _), .stop),
                 let (.error(clientId, _), .stop),
                 let (.deleting(clientId, _), .stop):
@@ -337,10 +355,10 @@ public actor InboxStateMachine {
                 break
 
             default:
-                Logger.warning("Invalid state transition: \(_state) -> \(action)")
+                Log.warning("Invalid state transition: \(_state) -> \(action)")
             }
         } catch {
-            Logger.error(
+            Log.error(
                 "Failed state transition \(_state) -> \(action): \(error.localizedDescription)"
             )
             emitStateChange(.error(clientId: _state.clientId, error: error))
@@ -348,7 +366,11 @@ public actor InboxStateMachine {
     }
 
     private func handleAuthorize(inboxId: String, clientId: String) async throws {
+        try Task.checkCancellation()
+
         let identity = try await identityStore.identity(for: inboxId)
+
+        try Task.checkCancellation()
 
         // Verify clientId matches
         guard identity.clientId == clientId else {
@@ -356,7 +378,10 @@ public actor InboxStateMachine {
         }
 
         emitStateChange(.authorizing(clientId: clientId, inboxId: inboxId))
-        Logger.info("Started authorization flow for inbox: \(inboxId), clientId: \(clientId)")
+        Log
+            .info(
+                "Started authorization flow for inbox: \(inboxId), clientId: \(clientId)"
+            )
 
         // Set custom local address before building/creating client
         // Only updates if different, avoiding unnecessary mutations
@@ -366,122 +391,113 @@ public actor InboxStateMachine {
         let clientOptions = clientOptions(keys: keys)
         let client: any XMTPClientProvider
         do {
+            try Task.checkCancellation()
             client = try await buildXmtpClient(
                 inboxId: identity.inboxId,
                 identity: keys.signingKey.identity,
                 options: clientOptions
             )
         } catch {
-            Logger.info("Error building client, trying create...")
+            try Task.checkCancellation()
+            Log.info("Error building client, trying create...")
             client = try await createXmtpClient(
                 signingKey: keys.signingKey,
                 options: clientOptions
             )
-            // Update state to match the newly created client's inboxId
-            emitStateChange(.authorizing(clientId: clientId, inboxId: client.inboxId))
-            Logger.info("Updated state with new client inboxId: \(client.inboxId)")
+            guard client.inboxId == identity.inboxId else {
+                Log.error("Created client with mis-matched inboxId")
+                throw InboxStateError.clientIdInboxInconsistency
+            }
         }
 
-        if savesInboxToDatabase {
-            // Ensure inbox is saved to database when authorizing
-            // (in case it was registered as unused but is now being used)
-            let inboxWriter = InboxWriter(dbWriter: databaseWriter)
-            do {
-                try await inboxWriter.save(inboxId: client.inboxId, clientId: identity.clientId)
-                Logger.info("Ensured inbox is saved to database: \(client.inboxId)")
-            } catch {
-                Logger.error("Failed to save inbox to database during authorization: \(error)")
-                // Clean up newly created/built client local state to avoid orphaned files
-                try? client.deleteLocalDatabase()
-                deleteDatabaseFiles(for: client.inboxId)
-                throw error
-            }
-        } else {
-            Logger.warning("Skipping save to database during authorization")
-        }
+        try Task.checkCancellation()
+
+        // Ensure inbox is saved to database when authorizing
+        // (in case it was registered as unused but is now being used)
+        let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+        try await inboxWriter.save(inboxId: client.inboxId, clientId: identity.clientId)
+        Log.info("Saved inbox to database: \(client.inboxId)")
 
         enqueueAction(.clientAuthorized(clientId: clientId, client: client))
     }
 
     private func handleRegister(clientId: String) async throws {
+        try Task.checkCancellation()
+
         emitStateChange(.registering(clientId: clientId))
-        Logger.info("Started registration flow with clientId: \(clientId)")
+        Log.info("Started registration flow with clientId: \(clientId)")
 
         // Set custom local address before creating client
         // Only updates if different, avoiding unnecessary mutations
         setCustomLocalAddress()
 
         let keys = try await identityStore.generateKeys()
+
+        try Task.checkCancellation()
+
         let client = try await createXmtpClient(
             signingKey: keys.signingKey,
             options: clientOptions(keys: keys)
         )
 
-        Logger.info("Generated clientId: \(clientId) for inboxId: \(client.inboxId)")
+        try Task.checkCancellation()
+
+        Log.info("Generated clientId: \(clientId) for inboxId: \(client.inboxId)")
 
         // Save to keychain with clientId
         _ = try await identityStore.save(inboxId: client.inboxId, clientId: clientId, keys: keys)
 
-        // Conditionally save to database based on configuration
-        if savesInboxToDatabase {
-            do {
-                let inboxWriter = InboxWriter(dbWriter: databaseWriter)
-                try await inboxWriter.save(inboxId: client.inboxId, clientId: clientId)
-                Logger.info("Saved inbox to database with clientId: \(clientId)")
-            } catch {
-                // Rollback keychain entry and clean up XMTP files on database failure
-                Logger.error("Failed to save inbox to database, rolling back keychain and cleaning up files: \(error)")
-                try? await identityStore.delete(clientId: clientId)
-                try? client.deleteLocalDatabase()
-                deleteDatabaseFiles(for: client.inboxId)
-                throw error
-            }
-        } else {
-            Logger.info("Skipping database save for inbox: \(client.inboxId) (unused inbox)")
+        try Task.checkCancellation()
+
+        // Save to database
+        do {
+            let inboxWriter = InboxWriter(dbWriter: databaseWriter)
+            try await inboxWriter.save(inboxId: client.inboxId, clientId: clientId)
+            Log.info("Saved inbox to database with clientId: \(clientId)")
+        } catch {
+            // Rollback keychain entry on database failure to maintain consistency
+            Log.error("Failed to save inbox to database, rolling back keychain: \(error)")
+            try? await identityStore.delete(clientId: clientId)
+            throw error
         }
 
         enqueueAction(.clientRegistered(clientId: clientId, client: client))
     }
 
     private func handleClientAuthorized(clientId: String, client: any XMTPClientProvider) async throws {
+        try Task.checkCancellation()
+
         emitStateChange(.authenticatingBackend(clientId: clientId, inboxId: client.inboxId))
 
-        Logger.info("Authenticating API client...")
-        let apiClient = try await authorizeConvosBackend(client: client)
+        Log.info("Authenticating with backend...")
+        try await authenticateBackend()
+
+        try Task.checkCancellation()
 
         enqueueAction(.authorized(clientId: clientId, result: .init(client: client, apiClient: apiClient)))
     }
 
     private func handleClientRegistered(clientId: String, client: any XMTPClientProvider) async throws {
+        try Task.checkCancellation()
+
         emitStateChange(.authenticatingBackend(clientId: clientId, inboxId: client.inboxId))
-        Logger.info("Authenticating backend for registration...")
-        let apiClient = try await authorizeConvosBackend(client: client)
+        Log.info("Authenticating with backend...")
+        try await authenticateBackend()
+
+        try Task.checkCancellation()
+
         enqueueAction(.authorized(clientId: clientId, result: .init(client: client, apiClient: apiClient)))
     }
 
     private func handleAuthorized(clientId: String, client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
-        emitStateChange(.ready(clientId: clientId, result: .init(client: client, apiClient: apiClient)))
-
-        Logger.info("Authorized, state machine is ready.")
-
         await syncingManager?.start(with: client, apiClient: apiClient)
-
-        if overrideJWTToken == nil {
-            // Register device on app launch (without push token - that's OK)
-            // This creates the device record in the backend
-            await deviceRegistrationManager.registerDeviceIfNeeded()
-
-            // Setup push token observer to re-register when token arrives
-            // Push permissions are requested when user creates/joins their first conversation
-            setupPushTokenObserver()
-            Logger.info("Device registered and push token observer set up. Will request permissions when user creates/joins a conversation.")
-        } else {
-            Logger.info("Using JWT override mode, skipping push notification registration")
-        }
+        emitStateChange(.ready(clientId: clientId, result: .init(client: client, apiClient: apiClient)))
     }
 
     private func handleDelete(clientId: String, client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
-        Logger.info("Deleting inbox with clientId: \(clientId)...")
+        try Task.checkCancellation()
+
+        Log.info("Deleting inbox with clientId: \(clientId)...")
         let inboxId = client.inboxId
         emitStateChange(.deleting(clientId: clientId, inboxId: inboxId))
 
@@ -492,7 +508,9 @@ public actor InboxStateMachine {
     }
 
     private func handleDeleteFromError(clientId: String) async throws {
-        Logger.info("Deleting inbox with clientId \(clientId) from error state...")
+        try Task.checkCancellation()
+
+        Log.info("Deleting inbox with clientId \(clientId) from error state...")
         defer { enqueueAction(.stop) }
 
         // Resolve inboxId from database since it might be nil in error state
@@ -505,31 +523,78 @@ public actor InboxStateMachine {
         }
 
         if resolvedInboxId == nil {
-            Logger.warning("Could not resolve inboxId for clientId \(clientId) - database files will not be cleaned up")
+            Log.warning("Could not resolve inboxId for clientId \(clientId) - database files will not be cleaned up")
         }
 
         emitStateChange(.deleting(clientId: clientId, inboxId: resolvedInboxId))
 
         await syncingManager?.stop()
 
+        try Task.checkCancellation()
+
         // Clean up database records and keychain if we have an inbox ID
         try await cleanupInboxData(clientId: clientId)
-        try await identityStore.delete(clientId: clientId)
 
-        // Delete database files to match behavior of handleDelete
-        if let inboxId = resolvedInboxId {
+        try Task.checkCancellation()
+
+        // Delete identity - idempotent operation, may already be deleted from previous attempt
+        do {
+            try await identityStore.delete(clientId: clientId)
+            Log.info("Deleted identity from keychain for clientId: \(clientId)")
+        } catch KeychainIdentityStoreError.identityNotFound {
+            Log.info("Identity already deleted for clientId: \(clientId), continuing cleanup")
+        }
+
+        Log.info("Deleted inbox with clientId \(clientId)")
+    }
+
+    /// Handles deletion when we don't have an initialized client/apiClient
+    /// Used for .idle, .authorizing, .registering, .authenticatingBackend, and .stopping states
+    private func handleDeleteFromIdle(clientId: String) async throws {
+        Log.info("Deleting inbox with clientId \(clientId) without initialized client...")
+        defer { enqueueAction(.stop) }
+
+        // Try to get inboxId from database if available
+        let inboxIdFromDb: String? = try? await databaseWriter.read { db in
+            try DBInbox
+                .filter(DBInbox.Columns.clientId == clientId)
+                .fetchOne(db)?
+                .inboxId
+        }
+
+        try Task.checkCancellation()
+
+        emitStateChange(.deleting(clientId: clientId, inboxId: inboxIdFromDb))
+
+        await syncingManager?.stop()
+
+        try Task.checkCancellation()
+
+        // Clean up database records
+        try await cleanupInboxData(clientId: clientId)
+
+        try Task.checkCancellation()
+
+        // Delete identity - idempotent operation, may already be deleted
+        do {
+            try await identityStore.delete(clientId: clientId)
+            Log.info("Deleted identity from keychain for clientId: \(clientId)")
+        } catch KeychainIdentityStoreError.identityNotFound {
+            Log.info("Identity already deleted for clientId: \(clientId), continuing cleanup")
+        }
+
+        // Delete XMTP database files if we have an inboxId
+        if let inboxId = inboxIdFromDb {
             deleteDatabaseFiles(for: inboxId)
         }
 
-        Logger.info("Deleted inbox with clientId \(clientId)")
+        Log.info("Deleted inbox with clientId \(clientId)")
     }
 
     private func handleStop(clientId: String) async throws {
-        Logger.info("Stopping inbox with clientId \(clientId)...")
+        Log.info("Stopping inbox with clientId \(clientId)...")
         emitStateChange(.stopping(clientId: clientId))
         await syncingManager?.stop()
-        removePushTokenObserver()
-
         emitStateChange(.idle(clientId: clientId))
     }
 
@@ -539,8 +604,12 @@ public actor InboxStateMachine {
         client: any XMTPClientProvider,
         apiClient: any ConvosAPIClientProtocol
     ) async throws {
+        try Task.checkCancellation()
+
         // Stop all services
         await syncingManager?.stop()
+
+        try Task.checkCancellation()
 
         // Unsubscribe from inbox-level welcome topic and unregister installation from backend
         // Note: Conversation topics are handled by ConversationStateMachine.cleanUp()
@@ -549,20 +618,24 @@ public actor InboxStateMachine {
         // Unsubscribe from welcome topic (inbox-level topic only)
         do {
             try await apiClient.unsubscribeFromTopics(clientId: clientId, topics: [welcomeTopic])
-            Logger.info("Unsubscribed from welcome topic: \(welcomeTopic)")
+            Log.info("Unsubscribed from welcome topic: \(welcomeTopic)")
         } catch {
-            Logger.error("Failed to unsubscribe from welcome topic: \(error)")
+            Log.error("Failed to unsubscribe from welcome topic: \(error)")
             // Continue with cleanup even if unsubscribe fails
         }
+
+        try Task.checkCancellation()
 
         // Unregister installation
         do {
             try await apiClient.unregisterInstallation(clientId: clientId)
-            Logger.info("Unregistered installation from backend: \(clientId)")
+            Log.info("Unregistered installation from backend: \(clientId)")
         } catch {
             // Ignore errors during unregistration (common during account deletion when auth may be invalid)
-            Logger.info("Could not unregister installation (likely during account deletion): \(error)")
+            Log.info("Could not unregister installation (likely during account deletion): \(error)")
         }
+
+        try Task.checkCancellation()
 
         // Revoke installation if identity is available
         if let identity = try? await identityStore.identity(for: client.inboxId) {
@@ -573,23 +646,42 @@ public actor InboxStateMachine {
                     installationIds: [client.installationId]
                 )
             } catch {
-                Logger.error("Failed revoking installation: \(error.localizedDescription)")
+                Log.error("Failed revoking installation: \(error.localizedDescription)")
             }
         } else {
-            Logger.warning("Identity not found, skipping revoking installation...")
+            Log.warning("Identity not found, skipping revoking installation...")
         }
+
+        try Task.checkCancellation()
 
         // Clean up all database records for this inbox
         try await cleanupInboxData(clientId: clientId)
 
+        try Task.checkCancellation()
+
         // Delete identity and local database
-        try await identityStore.delete(clientId: clientId)
-        try client.deleteLocalDatabase()
+        // These operations should be idempotent - if identity is already deleted,
+        // we're likely in a retry scenario from a previous failed deletion attempt
+        do {
+            try await identityStore.delete(clientId: clientId)
+            Log.info("Deleted identity from keychain for clientId: \(clientId)")
+        } catch KeychainIdentityStoreError.identityNotFound {
+            Log.info("Identity already deleted for clientId: \(clientId), continuing cleanup")
+        }
 
-        // Delete database files
-        deleteDatabaseFiles(for: client.inboxId)
+        try Task.checkCancellation()
 
-        Logger.info("Deleted inbox \(client.inboxId) with clientId \(clientId)")
+        // Delete XMTP local database
+        // Try SDK method first, fall back to manual file deletion if it fails
+        do {
+            try client.deleteLocalDatabase()
+            Log.info("Deleted XMTP local database via SDK for inbox: \(client.inboxId)")
+        } catch {
+            Log.warning("SDK deleteLocalDatabase failed, attempting manual file deletion: \(error)")
+            deleteDatabaseFiles(for: client.inboxId)
+        }
+
+        Log.info("Deleted inbox \(client.inboxId) with clientId \(clientId)")
     }
 
     private func deleteDatabaseFiles(for inboxId: String) {
@@ -624,9 +716,9 @@ public actor InboxStateMachine {
             if fileManager.fileExists(atPath: fileURL.path) {
                 do {
                     try fileManager.removeItem(at: fileURL)
-                    Logger.info("Deleted XMTP database file: \(filename)")
+                    Log.info("Deleted XMTP database file: \(filename)")
                 } catch {
-                    Logger.error("Failed to delete XMTP database file \(filename): \(error)")
+                    Log.error("Failed to delete XMTP database file \(filename): \(error)")
                 }
             }
         }
@@ -634,7 +726,9 @@ public actor InboxStateMachine {
 
     /// Deletes all database records associated with a given inboxId
     private func cleanupInboxData(clientId: String) async throws {
-        Logger.info("Cleaning up all data for inbox clientId: \(clientId)")
+        try Task.checkCancellation()
+
+        Log.info("Cleaning up all data for inbox clientId: \(clientId)")
 
         try await databaseWriter.write { db in
             // First, fetch all conversation IDs for this inbox
@@ -643,7 +737,7 @@ public actor InboxStateMachine {
                 .fetchAll(db)
                 .map { $0.id }
 
-            Logger.info("Found \(conversationIds.count) conversations to clean up for inbox clientId: \(clientId)")
+            Log.info("Found \(conversationIds.count) conversations to clean up for inbox clientId: \(clientId)")
 
             // Delete messages for all conversations belonging to this inbox
             for conversationId in conversationIds {
@@ -700,7 +794,7 @@ public actor InboxStateMachine {
                 .filter(DBInbox.Columns.clientId == clientId)
                 .deleteAll(db)
 
-            Logger.info("Successfully cleaned up all data for inbox clientId: \(clientId)")
+            Log.info("Successfully cleaned up all data for inbox clientId: \(clientId)")
         }
     }
 
@@ -712,7 +806,7 @@ public actor InboxStateMachine {
         // The gateway handles env/isSecure automatically, so we don't set them
         // if let gatewayUrl = environment.gatewayUrl, !gatewayUrl.isEmpty {
         //     // d14n mode: gateway handles network selection
-        //     Logger.info("Using XMTP d14n - Gateway: \(gatewayUrl)")
+        //     Log.info("Using XMTP d14n - Gateway: \(gatewayUrl)")
         //     apiOptions = .init(
         //         appVersion: "convos/\(Bundle.appVersion)",
         //         gatewayUrl: gatewayUrl
@@ -720,7 +814,7 @@ public actor InboxStateMachine {
         // } else {
 
         // Direct XMTP v3 connection: we specify env and isSecure
-        Logger.info("🔗 Using direct XMTP connection with env: \(environment.xmtpEnv)")
+        Log.info("🔗 Using direct XMTP connection with env: \(environment.xmtpEnv)")
         let apiOptions: ClientOptions.Api = .init(
             env: environment.xmtpEnv,
             isSecure: environment.isSecure,
@@ -748,94 +842,53 @@ public actor InboxStateMachine {
     /// Must be called before building/creating XMTP client
     private func setCustomLocalAddress() {
         if let customHost = environment.customLocalAddress {
-            Logger.info("Setting XMTPEnvironment.customLocalAddress = \(customHost)")
+            Log.info("Setting XMTPEnvironment.customLocalAddress = \(customHost)")
             XMTPEnvironment.customLocalAddress = customHost
         } else {
-            Logger.debug("Clearing XMTPEnvironment.customLocalAddress")
+            Log.debug("Clearing XMTPEnvironment.customLocalAddress")
             XMTPEnvironment.customLocalAddress = nil
         }
     }
 
     private func createXmtpClient(signingKey: SigningKey,
                                   options: ClientOptions) async throws -> any XMTPClientProvider {
-        Logger.info("Creating XMTP client...")
+        Log.info("Creating XMTP client...")
         let client = try await Client.create(account: signingKey, options: options)
-        Logger.info("XMTP Client created with app version: convos/\(Bundle.appVersion)")
+        Log.info("XMTP Client created with app version: convos/\(Bundle.appVersion)")
         return client
     }
 
     private func buildXmtpClient(inboxId: String,
                                  identity: PublicIdentity,
                                  options: ClientOptions) async throws -> any XMTPClientProvider {
-        Logger.info("Building XMTP client for \(inboxId)...")
+        Log.info("Building XMTP client for \(inboxId)...")
         let client = try await Client.build(
             publicIdentity: identity,
             options: options,
             inboxId: inboxId
         )
-        Logger.info("XMTP Client built.")
+        Log.info("XMTP Client built.")
         return client
     }
 
-    private func initializeApiClient(client: any XMTPClientProvider) -> any ConvosAPIClientProtocol {
-        Logger.info("Initializing API client (JWT override: \(overrideJWTToken != nil))...")
-        return ConvosAPIClientFactory.client(
-            environment: environment,
-            overrideJWTToken: overrideJWTToken
-        )
-    }
+    private func authenticateBackend() async throws {
+        try Task.checkCancellation()
 
-    private func authorizeConvosBackend(client: any XMTPClientProvider) async throws -> any ConvosAPIClientProtocol {
-        let apiClient = initializeApiClient(client: client)
-
-        // When using JWT override, skip authentication check
+        // When using JWT override, skip authentication
         // We'll use the JWT token from the push notification payload
-        if let token = overrideJWTToken, !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            Logger.info("JWT override mode: skipping auth-check, will use JWT from push payload")
-            return apiClient
-        }
-
-        // In main app context, test authentication
-        Logger.info("Authorizing backend with lazy authentication...")
-        Logger.info("Testing authentication with /auth-check...")
-        _ = try await apiClient.checkAuth()
-
-        return apiClient
-    }
-
-    // MARK: - Push Token Observer
-
-    private func setupPushTokenObserver() {
-        guard pushTokenObserver == nil else { return }
-
-        Logger.info("Setting up push token observer...")
-        pushTokenObserver = NotificationCenter.default.addObserver(
-            forName: .convosPushTokenDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { [weak self] in
-                await self?.handlePushTokenChange()
-            }
-        }
-    }
-
-    nonisolated
-    private func removePushTokenObserver() {
-        if let observer = pushTokenObserver {
-            NotificationCenter.default.removeObserver(observer)
-            pushTokenObserver = nil
-            Logger.info("Removed push token observer")
-        }
-    }
-
-    private func handlePushTokenChange() async {
-        guard case .ready = _state else {
-            Logger.info("Push token changed but inbox not ready, skipping re-registration")
+        guard overrideJWTToken == nil, !environment.isTestingEnvironment else {
+            Log.info("JWT override mode: skipping authentication, will use JWT from push payload")
             return
         }
 
-        Logger.info("Push token changed or became available, re-registering device...")
-        await deviceRegistrationManager.registerDeviceIfNeeded()
+        // Explicitly authenticate with backend using Firebase AppCheck
+        Log.info("Getting Firebase AppCheck token...")
+        let appCheckToken = try await FirebaseHelperCore.getAppCheckToken()
+
+        try Task.checkCancellation()
+
+        Log.info("Authenticating with backend and storing JWT...")
+        _ = try await apiClient.authenticate(appCheckToken: appCheckToken, retryCount: 0)
+        Log.info("Successfully authenticated with backend")
     }
 }
