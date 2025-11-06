@@ -41,12 +41,13 @@ enum SentryConfiguration {
         let environment = ConfigManager.shared.currentEnvironment
 
         switch environment {
-        case .local, .dev:
-            #if DEBUG
+        case .local:
+            // Local builds never use Sentry
             return false
-            #else
+        case .dev:
+            // Dev builds (TestFlight) use Sentry even with DEBUG flag
+            // This is intentional: Dev.xcconfig defines DEBUG for debugging Swift packages
             return true
-            #endif
         case .production, .tests:
             return false
         }
