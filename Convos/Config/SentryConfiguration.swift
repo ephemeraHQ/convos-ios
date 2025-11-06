@@ -25,6 +25,10 @@ enum SentryConfiguration {
             options.enableSigtermReporting = true
             options.attachStacktrace = true
             options.attachViewHierarchy = true
+
+            // Enable PII for internal team debugging in dev builds
+            // This captures IP addresses, user IDs, and request data
+            // Safe because .dev builds are only distributed to internal team via TestFlight
             options.sendDefaultPii = true
 
             options.environment = "\(envName)-debug"
