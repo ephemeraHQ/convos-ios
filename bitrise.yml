@@ -90,6 +90,7 @@ workflows:
         inputs:
         - bundle_id: org.convos.ios-preview
         - app_id: '6748622252'
+        - upload_symbols: 'yes'
     - save-spm-cache@1: {}
     meta:
       bitrise.io:
@@ -172,6 +173,7 @@ workflows:
         inputs:
         - app_id: '6744776535'
         - bundle_id: org.convos.ios
+        - upload_symbols: 'yes'
     - save-spm-cache@1: {}
     meta:
       bitrise.io:
