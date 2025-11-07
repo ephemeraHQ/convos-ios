@@ -5,18 +5,41 @@ struct ConversationForkedInfoView: View {
     @Environment(\.dismiss) var dismiss: DismissAction
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignConstants.Spacing.step4x) {
-            Text("Problem")
-                .font(.system(.largeTitle))
-                .fontWeight(.bold)
+        VStack(alignment: .leading, spacing: DesignConstants.Spacing.step6x) {
+            VStack(alignment: .leading, spacing: DesignConstants.Spacing.step2x) {
+                Text("Get a new room")
+                    .font(.system(.largeTitle))
+                    .fontWeight(.bold)
+                    .padding(.bottom, DesignConstants.Spacing.step4x)
 
-            Text("This convo is buggy on your device.\nPlease delete it and ask the person who invited you for a new invitation.")
-                .font(.body)
-                .foregroundStyle(.colorTextPrimary)
+                Text("A key is out of date, so this convo can’t continue correctly. Please delete it and start a new one.")
+                    .font(.body)
+                    .foregroundStyle(.colorTextPrimary)
 
-            Text("For privacy, Convos tracks zero app activity, including errors. Please screenshot this and tag @convosmessenger on social to let us know.")
-                .font(.body)
-                .foregroundStyle(.colorTextSecondary)
+                Text("All data remains securely encrypted.")
+                    .font(.body)
+                    .foregroundStyle(.colorTextSecondary)
+            }
+
+            VStack(alignment: .leading, spacing: DesignConstants.Spacing.step2x) {
+                Text("Current keys guarantee security")
+                    .font(.body)
+                    .foregroundStyle(.colorTextPrimary)
+
+                // swiftlint:disable:next line_length
+                Text("Convos constantly confirms that all participants hold up-to-date cryptographic keys. If a member’s keys aren’t current, they cannot decrypt new messages nor updates, so their experience is degraded.")
+                    .font(.body)
+                    .foregroundStyle(.colorTextSecondary)
+            }
+
+            VStack {
+                Text("For privacy, Convos tracks zero app activity, including errors. Please let us know by screenshotting this and tag @convosmessenger on social.")
+                    .font(.subheadline)
+                    .foregroundStyle(.colorTextSecondary)
+                    .padding(DesignConstants.Spacing.step4x)
+            }
+            .background(.colorFillMinimal)
+            .mask(RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.mediumLarge))
 
             VStack(spacing: DesignConstants.Spacing.step2x) {
                 Button {
@@ -24,7 +47,7 @@ struct ConversationForkedInfoView: View {
                 } label: {
                     Text("Delete convo")
                 }
-                .convosButtonStyle(.rounded(fullWidth: true, backgroundColor: .colorCaution))
+                .convosButtonStyle(.rounded(fullWidth: true, backgroundColor: .colorBackgroundInverted))
             }
             .padding(.top, DesignConstants.Spacing.step4x)
 
@@ -37,9 +60,9 @@ struct ConversationForkedInfoView: View {
                 .convosButtonStyle(.text)
                 .frame(maxWidth: .infinity)
             }
-            .padding(.top, DesignConstants.Spacing.step4x)
         }
         .padding(DesignConstants.Spacing.step10x)
+        .background(.colorBackgroundPrimary)
     }
 }
 
