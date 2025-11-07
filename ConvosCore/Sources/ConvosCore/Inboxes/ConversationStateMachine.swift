@@ -58,11 +58,11 @@ public actor ConversationStateMachine {
                  (.deleting, .deleting):
                 return true
             case let (.joining(lhsInvite, _), .joining(rhsInvite, _)):
-                return lhsInvite.payload.conversationToken == rhsInvite.payload.conversationToken
+                return lhsInvite.invitePayload.conversationToken == rhsInvite.invitePayload.conversationToken
             case let (.validating(lhsCode), .validating(rhsCode)):
                 return lhsCode == rhsCode
             case let (.validated(lhsInvite, _, lhsInbox, _), .validated(rhsInvite, _, rhsInbox, _)):
-                return (lhsInvite.payload.conversationToken == rhsInvite.payload.conversationToken &&
+                return (lhsInvite.invitePayload.conversationToken == rhsInvite.invitePayload.conversationToken &&
                         lhsInbox.client.inboxId == rhsInbox.client.inboxId)
             case let (.ready(lhsResult), .ready(rhsResult)):
                 return lhsResult.conversationId == rhsResult.conversationId
@@ -373,7 +373,7 @@ public actor ConversationStateMachine {
         Log.info("Recovered signer's public key: \(signerPublicKey.hexEncodedString())")
         let existingConversation: Conversation? = try await databaseReader.read { db in
             try DBConversation
-                .filter(DBConversation.Columns.inviteTag == signedInvite.payload.tag)
+                .filter(DBConversation.Columns.inviteTag == signedInvite.invitePayload.tag)
                 .detailedConversationQuery()
                 .fetchOne(db)?
                 .hydrateConversation()
@@ -392,7 +392,7 @@ public actor ConversationStateMachine {
             Log.warning("Found existing conversation for identity that does not exist, deleting...")
             _ = try await databaseWriter.write { db in
                 try DBConversation
-                    .filter(DBConversation.Columns.inviteTag == signedInvite.payload.tag)
+                    .filter(DBConversation.Columns.inviteTag == signedInvite.invitePayload.tag)
                     .deleteAll(db)
             }
         }
@@ -477,7 +477,7 @@ public actor ConversationStateMachine {
         let apiClient = inboxReady.apiClient
         let client = inboxReady.client
 
-        let inviterInboxId = invite.payload.creatorInboxIdString
+        let inviterInboxId = invite.invitePayload.creatorInboxIdString
 
         // Validate that the hex conversion succeeded and produced a valid inbox ID
         guard !inviterInboxId.isEmpty else {
@@ -510,7 +510,7 @@ public actor ConversationStateMachine {
                     .first(where: {
                         guard case .group(let group) = $0 else { return false }
                         let tag = try group.inviteTag
-                        return tag == invite.payload.tag
+                        return tag == invite.invitePayload.tag
                     }) {
                     guard !Task.isCancelled else { return }
 

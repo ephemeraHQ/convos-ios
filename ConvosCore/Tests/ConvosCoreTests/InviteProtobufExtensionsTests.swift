@@ -45,14 +45,14 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         let encoded = try signedInvite.toURLSafeSlug()
         let decoded = try SignedInvite.fromURLSafeSlug(encoded)
 
-        #expect(decoded.payload.tag == "test123")
-        #expect(decoded.payload.conversationToken == conversationTokenBytes)
+        #expect(decoded.invitePayload.tag == "test123")
+        #expect(decoded.invitePayload.conversationToken == conversationTokenBytes)
         #expect(decoded.signature == signature)
     }
 
@@ -81,18 +81,18 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         let encoded = try signedInvite.toURLSafeSlug()
         let decoded = try SignedInvite.fromURLSafeSlug(encoded)
 
-        #expect(decoded.payload.name == "My Group Chat")
-        #expect(decoded.payload.description_p == "A group chat for testing")
-        #expect(decoded.payload.imageURL == "https://example.com/group.jpg")
-        #expect(decoded.payload.expiresAtUnix == 1735689600)
-        #expect(decoded.payload.conversationExpiresAtUnix == 1767225600)
-        #expect(decoded.payload.expiresAfterUse == true)
+        #expect(decoded.invitePayload.name == "My Group Chat")
+        #expect(decoded.invitePayload.description_p == "A group chat for testing")
+        #expect(decoded.invitePayload.imageURL == "https://example.com/group.jpg")
+        #expect(decoded.invitePayload.expiresAtUnix == 1735689600)
+        #expect(decoded.invitePayload.conversationExpiresAtUnix == 1767225600)
+        #expect(decoded.invitePayload.expiresAfterUse == true)
     }
 
     // MARK: - Compression Tests
@@ -118,7 +118,7 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         let protobufData = try signedInvite.serializedData()
@@ -132,8 +132,8 @@ struct InviteProtobufExtensionsTests {
 
         // Should decode correctly
         let decoded = try SignedInvite.fromURLSafeSlug(encoded)
-        #expect(decoded.payload.name == payload.name)
-        #expect(decoded.payload.description_p == payload.description_p)
+        #expect(decoded.invitePayload.name == payload.name)
+        #expect(decoded.invitePayload.description_p == payload.description_p)
     }
 
     @Test("Uncompressed invite decoding (backward compatibility)")
@@ -155,7 +155,7 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         // Create truly uncompressed slug by encoding protobuf directly
@@ -170,7 +170,7 @@ struct InviteProtobufExtensionsTests {
 
         let uncompressedSlug = protobufData.base64URLEncoded()
         let decoded = try SignedInvite.fromURLSafeSlug(uncompressedSlug)
-        #expect(decoded.payload.tag == "test")
+        #expect(decoded.invitePayload.tag == "test")
     }
 
     // MARK: - Signature Tests
@@ -194,7 +194,7 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         // Signature should be 65 bytes (64 + recovery ID)
@@ -243,7 +243,9 @@ struct InviteProtobufExtensionsTests {
     @Test("Invalid signature length throws error")
     func invalidSignatureLengthThrowsError() throws {
         var signedInvite = SignedInvite()
-        signedInvite.payload.tag = "test"
+        var payload = InvitePayload()
+        payload.tag = "test"
+        try signedInvite.setPayload(payload)
         signedInvite.signature = Data([1, 2, 3]) // Invalid length
 
         #expect {
@@ -267,7 +269,7 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         let originalPublicKey = try signedInvite.recoverSignerPublicKey()
@@ -302,7 +304,7 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         let recoveredPublicKey = try signedInvite.recoverSignerPublicKey()
@@ -325,13 +327,13 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         let encoded = try signedInvite.toURLSafeSlug()
         let decoded = try SignedInvite.fromURLSafeSlug(encoded)
 
-        #expect(decoded.payload.creatorInboxIdString == inboxIdHex)
+        #expect(decoded.invitePayload.creatorInboxIdString == inboxIdHex)
     }
 
     // MARK: - Expiration Tests
@@ -351,7 +353,7 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         #expect(signedInvite.hasExpired == true)
@@ -372,7 +374,7 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         #expect(signedInvite.hasExpired == false)
@@ -393,7 +395,7 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         #expect(signedInvite.conversationHasExpired == true)
@@ -415,7 +417,7 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         #expect(signedInvite.name == "Test Name")
@@ -434,7 +436,7 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         #expect(signedInvite.name == nil)
@@ -457,14 +459,14 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         let code = try signedInvite.toURLSafeSlug()
 
         // Parse as raw code
         let decoded = try SignedInvite.fromInviteCode(code)
-        #expect(decoded.payload.tag == "test")
+        #expect(decoded.invitePayload.tag == "test")
     }
 
     @Test("Parse invite code with whitespace")
@@ -478,7 +480,7 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         let code = try signedInvite.toURLSafeSlug()
@@ -487,7 +489,7 @@ struct InviteProtobufExtensionsTests {
         let codeWithWhitespace = "  \n\(code)\n  "
 
         let decoded = try SignedInvite.fromInviteCode(codeWithWhitespace)
-        #expect(decoded.payload.tag == "test")
+        #expect(decoded.invitePayload.tag == "test")
     }
 
     // MARK: - Error Handling Tests
@@ -560,13 +562,13 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         let encoded = try signedInvite.toURLSafeSlug()
         let decoded = try SignedInvite.fromURLSafeSlug(encoded)
 
-        #expect(decoded.payload.tag.count == 1000)
+        #expect(decoded.invitePayload.tag.count == 1000)
     }
 
     @Test("Special characters in name and description")
@@ -582,14 +584,14 @@ struct InviteProtobufExtensionsTests {
         let signature = try payload.sign(with: privateKey)
 
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        try signedInvite.setPayload(payload)
         signedInvite.signature = signature
 
         let encoded = try signedInvite.toURLSafeSlug()
         let decoded = try SignedInvite.fromURLSafeSlug(encoded)
 
-        #expect(decoded.payload.name == "Group 🎉 with emoji")
-        #expect(decoded.payload.description_p == "Description\nwith\nnewlines\tand\ttabs")
+        #expect(decoded.invitePayload.name == "Group 🎉 with emoji")
+        #expect(decoded.invitePayload.description_p == "Description\nwith\nnewlines\tand\ttabs")
     }
 
     // MARK: - Decompression Bomb Protection

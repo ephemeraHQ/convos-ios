@@ -32,8 +32,22 @@ import SwiftProtobuf
 /// - Unix timestamps (sfixed64) instead of protobuf Timestamp messages
 /// - Overall ~35-50% size reduction compared to unoptimized encoding
 extension SignedInvite {
+    /// Deserialized payload for accessing invite data
+    /// The stored `payload` property is `Data` to preserve the exact bytes that were signed.
+    /// This ensures signatures remain valid even if the protobuf schema changes.
+    /// Use this property when you need to access fields like `.tag`, `.conversationToken`, etc.
+    public var invitePayload: InvitePayload {
+        do {
+            return try InvitePayload(serializedBytes: self.payload)
+        } catch {
+            // If deserialization fails, return empty payload
+            // This should not happen in normal operation
+            return InvitePayload()
+        }
+    }
+
     public var expiresAt: Date? {
-        payload.expiresAtUnixIfPresent
+        invitePayload.expiresAtUnixIfPresent
     }
 
     public var hasExpired: Bool {
@@ -47,23 +61,29 @@ extension SignedInvite {
     }
 
     public var name: String? {
-        payload.nameIfPresent
+        invitePayload.nameIfPresent
     }
 
     public var description_p: String? {
-        payload.descriptionIfPresent
+        invitePayload.descriptionIfPresent
     }
 
     public var imageURL: String? {
-        payload.imageURLIfPresent
+        invitePayload.imageURLIfPresent
     }
 
     public var conversationExpiresAt: Date? {
-        payload.conversationExpiresAtUnixIfPresent
+        invitePayload.conversationExpiresAtUnixIfPresent
     }
 
     public var expiresAfterUse: Bool {
-        payload.expiresAfterUse
+        invitePayload.expiresAfterUse
+    }
+
+    /// Set the payload from an InvitePayload
+    /// This serializes the InvitePayload to bytes and stores them to preserve the exact bytes that were signed.
+    public mutating func setPayload(_ payload: InvitePayload) throws {
+        self.payload = try payload.serializedData()
     }
 
     public static func slug(
@@ -105,7 +125,8 @@ extension SignedInvite {
         }
         let signature = try payload.sign(with: privateKey)
         var signedInvite = SignedInvite()
-        signedInvite.payload = payload
+        // Store the serialized payload bytes to preserve the exact bytes that were signed
+        signedInvite.payload = try payload.serializedData()
         signedInvite.signature = signature
         return try signedInvite.toURLSafeSlug()
     }
@@ -313,8 +334,11 @@ extension SignedInvite {
             secp256k1_context_destroy(ctx)
         }
 
-        // Hash the message
-        let messageHash = try payload.serializedData().sha256Hash()
+        // Hash the message using the stored payload bytes directly
+        // This ensures we use the exact bytes that were signed, not a re-serialization
+        // Access the stored Data property directly (not the computed property)
+        let payloadBytes = self.payload  // This accesses the stored Data property
+        let messageHash = payloadBytes.sha256Hash()
 
         // Extract signature and recovery ID from the signature parameter
         let signatureData = signature.prefix(64)

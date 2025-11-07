@@ -152,7 +152,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             throw InviteJoinRequestError.expiredConversation
         }
 
-        let creatorInboxId = signedInvite.payload.creatorInboxIdString
+        let creatorInboxId = signedInvite.invitePayload.creatorInboxIdString
 
         // validate that the invite contains a non-empty creator inbox ID
         guard !creatorInboxId.isEmpty else {
@@ -190,7 +190,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
         }
 
         let privateKey: Data = identity.keys.privateKey.secp256K1.bytes
-        let conversationTokenBytes = signedInvite.payload.conversationToken
+        let conversationTokenBytes = signedInvite.invitePayload.conversationToken
         let conversationId = try InviteConversationToken.decodeConversationTokenBytes(
             conversationTokenBytes,
             creatorInboxId: client.inboxId,
@@ -241,7 +241,7 @@ class InviteJoinRequestsManager: InviteJoinRequestsManagerProtocol {
             }
 
             // Check if this invite matches our target conversation
-            if invite.payload.tag == inviteTag {
+            if invite.invitePayload.tag == inviteTag {
                 return true
             }
         }

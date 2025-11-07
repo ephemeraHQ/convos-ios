@@ -30,8 +30,11 @@ message InvitePayload {
 
 // SignedInvite represents an invite with its cryptographic signature
 message SignedInvite {
-    // The invite payload containing the actual invite data
-    InvitePayload payload = 1;
+    // The invite payload containing the actual invite data, stored as bytes
+    // to preserve the exact serialization that was signed. This ensures signatures
+    // remain valid even if the protobuf schema changes (since protobuf serialization
+    // is not canonical).
+    bytes payload = 1;
 
     // The cryptographic signature (typically 65 bytes for ECDSA with recovery)
     bytes signature = 2;

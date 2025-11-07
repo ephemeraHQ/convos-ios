@@ -106,15 +106,11 @@ public struct SignedInvite: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// The invite payload containing the actual invite data
-  public var payload: InvitePayload {
-    get {return _payload ?? InvitePayload()}
-    set {_payload = newValue}
-  }
-  /// Returns true if `payload` has been explicitly set.
-  public var hasPayload: Bool {return self._payload != nil}
-  /// Clears the value of `payload`. Subsequent reads from it will return its default value.
-  public mutating func clearPayload() {self._payload = nil}
+  /// The invite payload containing the actual invite data, stored as bytes
+  /// to preserve the exact serialization that was signed. This ensures signatures
+  /// remain valid even if the protobuf schema changes (since protobuf serialization
+  /// is not canonical).
+  public var payload: Data = Data()
 
   /// The cryptographic signature (typically 65 bytes for ECDSA with recovery)
   public var signature: Data = Data()
@@ -122,8 +118,6 @@ public struct SignedInvite: Sendable {
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-
-  fileprivate var _payload: InvitePayload? = nil
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -212,7 +206,7 @@ extension SignedInvite: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementat
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._payload) }()
+      case 1: try { try decoder.decodeSingularBytesField(value: &self.payload) }()
       case 2: try { try decoder.decodeSingularBytesField(value: &self.signature) }()
       default: break
       }
@@ -220,13 +214,9 @@ extension SignedInvite: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementat
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._payload {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
+    if !self.payload.isEmpty {
+      try visitor.visitSingularBytesField(value: self.payload, fieldNumber: 1)
+    }
     if !self.signature.isEmpty {
       try visitor.visitSingularBytesField(value: self.signature, fieldNumber: 2)
     }
@@ -234,7 +224,7 @@ extension SignedInvite: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementat
   }
 
   public static func ==(lhs: SignedInvite, rhs: SignedInvite) -> Bool {
-    if lhs._payload != rhs._payload {return false}
+    if lhs.payload != rhs.payload {return false}
     if lhs.signature != rhs.signature {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

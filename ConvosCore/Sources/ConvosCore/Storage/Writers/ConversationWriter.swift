@@ -60,7 +60,7 @@ class ConversationWriter: ConversationWriterProtocol {
         let draftConversationId = draftConversationId ?? DBConversation.generateDraftConversationId()
 
         // Create the draft conversation and necessary records
-        let creatorInboxId = signedInvite.payload.creatorInboxIdString
+        let creatorInboxId = signedInvite.invitePayload.creatorInboxIdString
 
         // validate that the invite contains a non-empty creator inbox ID
         guard !creatorInboxId.isEmpty else {
@@ -78,7 +78,7 @@ class ConversationWriter: ConversationWriterProtocol {
                 inboxId: inboxId,
                 clientId: inbox.clientId,
                 clientConversationId: draftConversationId,
-                inviteTag: signedInvite.payload.tag,
+                inviteTag: signedInvite.invitePayload.tag,
                 creatorId: creatorInboxId,
                 kind: .group,
                 consent: .allowed,

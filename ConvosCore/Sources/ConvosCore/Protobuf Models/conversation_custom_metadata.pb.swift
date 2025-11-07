@@ -22,6 +22,13 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
 }
 
 /// ConversationCustomMetadata stores custom metadata for XMTP conversations
+///
+/// Encoding optimizations for compact storage:
+/// - inboxId: Hex-decoded bytes (32 bytes) instead of hex string (64 chars) - saves ~32 bytes per member
+/// - expiresAt: Unix sfixed64 (8 bytes) instead of protobuf Timestamp (10-16 bytes)
+/// - DEFLATE compression applied if size >100 bytes (typically 20-40% reduction)
+///
+/// Expected size for 5-member group: ~200-300 bytes (40-60% smaller than unoptimized)
 public struct ConversationCustomMetadata: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -33,7 +40,6 @@ public struct ConversationCustomMetadata: Sendable {
 
   public var profiles: [ConversationProfile] = []
 
-  /// Unix timestamp in seconds (compact encoding)
   public var expiresAtUnix: Int64 {
     get {return _expiresAtUnix ?? 0}
     set {_expiresAtUnix = newValue}
@@ -56,7 +62,7 @@ public struct ConversationProfile: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// Hex-decoded for compactness (~32 bytes instead of ~64 chars)
+  /// XMTP inbox ID as hex-decoded bytes
   public var inboxID: Data = Data()
 
   public var name: String {
