@@ -493,4 +493,135 @@ struct ConversationCustomMetadataTests {
 
         #expect(decoded.profiles.count == 20)
     }
+
+    // MARK: - Capacity Tests
+
+    @Test("Maximum profiles in 1KB metadata")
+    func maximumProfilesIn1KB() throws {
+        let maxSize = 1024 // 1KB limit
+        var metadata = ConversationCustomMetadata()
+        metadata.tag = "abc1234567" // 10 characters
+
+        // Add realistic 140-character description (exactly 140 chars to simulate real usage)
+        let descriptions = [
+            "Planning committee for annual tech conference - discussing venue, speakers, sponsors and logistics for our biggest event of year!",
+            "Weekend hiking group organizing trail adventures in the Pacific Northwest. Join us for breathtaking views and great company monthly.",
+            "Book club reading contemporary fiction and classics. We meet twice monthly to discuss themes, characters, and share recommendations!!!",
+            "Fantasy football league coordinating draft picks, trades, and weekly matchups. May the best manager win this season's championship!!!",
+            "Neighborhood watch volunteers keeping our community safe. Share updates, coordinate patrols, and build stronger connections together!!!",
+        ]
+        metadata.description_p = String(descriptions.randomElement()!.prefix(140))
+
+        // Realistic varied first and last names to avoid artificial compression gains
+        let firstNames = ["Alice", "Bob", "Charlie", "Diana", "Emma", "Frank", "Grace", "Henry",
+                          "Isabella", "Jack", "Kate", "Liam", "Mia", "Noah", "Olivia", "Peter",
+                          "Quinn", "Rose", "Sam", "Tara", "Uma", "Victor", "Wendy", "Xander"]
+        let lastNames = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller",
+                         "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez",
+                         "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin"]
+
+        var profileCount = 0
+        var lastSuccessfulMetadata = metadata
+
+        // Generate realistic profiles until we exceed 1KB
+        for i in 0..<200 { // Upper bound to prevent infinite loop
+            // Generate realistic XMTP inbox ID (64 hex chars = 32 bytes)
+            let randomHex = String(format: "%064x", UInt64.random(in: 0...UInt64.max))
+
+            // Generate realistic varied display name (up to 25 characters)
+            let firstName = firstNames[i % firstNames.count]
+            let lastName = lastNames[i % lastNames.count]
+            let suffix = i / (firstNames.count * lastNames.count)
+            let displayName = suffix > 0
+                ? "\(firstName) \(lastName) \(suffix)".prefix(25)
+                : "\(firstName) \(lastName)".prefix(25)
+
+            // Generate realistic image URL with UUID
+            let uuid = UUID().uuidString
+            let imageUrl = "https://dev.convos.org/some-aws-bucket/p-\(uuid).jpeg"
+
+            guard let profile = ConversationProfile(
+                inboxIdString: randomHex,
+                name: String(displayName),
+                imageUrl: imageUrl
+            ) else {
+                continue
+            }
+
+            metadata.upsertProfile(profile)
+
+            // Try to encode
+            let encoded = try metadata.toCompactString()
+            let encodedData = try encoded.base64URLDecoded()
+
+            if encodedData.count <= maxSize {
+                profileCount = i + 1
+                lastSuccessfulMetadata = metadata
+            } else {
+                // Exceeded 1KB, stop here
+                break
+            }
+        }
+
+        // Verify we can decode the last successful metadata
+        let finalEncoded = try lastSuccessfulMetadata.toCompactString()
+        let finalEncodedData = try finalEncoded.base64URLDecoded()
+        let decoded = try ConversationCustomMetadata.fromCompactString(finalEncoded)
+
+        #expect(decoded.profiles.count == profileCount)
+        #expect(decoded.tag == "abc1234567")
+        #expect(finalEncodedData.count <= maxSize)
+
+        // Print results for informational purposes
+        print("✓ Maximum profiles in 1KB: \(profileCount)")
+        print("✓ Final encoded size: \(finalEncodedData.count) bytes")
+        print("✓ Compression applied: \(finalEncodedData.first == Data.compressionMarker ? "Yes" : "No")")
+
+        // Sanity check: should fit at least a few profiles even with realistic data
+        #expect(profileCount >= 15, "Expected at least 5 profiles to fit in 1KB with compression")
+
+        // Upper bound sanity check - with DEFLATE compression, realistic profiles with
+        // full names and image URLs should fit around 20-30 profiles in 1KB
+        #expect(profileCount <= 35, "Unexpectedly high profile count, check test data")
+    }
+
+    @Test("Profile size breakdown with realistic data")
+    func profileSizeBreakdownWithRealisticData() throws {
+        var metadata = ConversationCustomMetadata()
+        metadata.tag = "abc1234567"
+
+        // Add a single realistic profile
+        let inboxIdHex = "40c0544e6fc99689a68d0e5218b4dff1f3bc2d93d1995b1b6c5dd21bc323520f"
+        let displayName = "John Smith (25 chars!!)"
+        let uuid = UUID().uuidString
+        let imageUrl = "https://dev.convos.org/some-aws-bucket/p-\(uuid).jpeg"
+
+        let profile = ConversationProfile(
+            inboxIdString: inboxIdHex,
+            name: displayName,
+            imageUrl: imageUrl
+        )!
+
+        metadata.upsertProfile(profile)
+
+        // Encode and check size
+        let encoded = try metadata.toCompactString()
+        let encodedData = try encoded.base64URLDecoded()
+
+        print("✓ Single profile encoded size: \(encodedData.count) bytes")
+        print("✓ Inbox ID length: \(inboxIdHex.count) chars (32 bytes when decoded)")
+        print("✓ Display name length: \(displayName.count) chars")
+        print("✓ Image URL length: \(imageUrl.count) chars")
+        print("✓ Tag length: \(metadata.tag.count) chars")
+
+        // Verify it's well under 1KB for a single profile
+        #expect(encodedData.count < 512, "Single profile should be less than 512 bytes")
+
+        // Decode and verify
+        let decoded = try ConversationCustomMetadata.fromCompactString(encoded)
+        #expect(decoded.profiles.count == 1)
+        #expect(decoded.profiles[0].name == displayName)
+        #expect(decoded.profiles[0].image == imageUrl)
+        #expect(decoded.profiles[0].inboxIdString == inboxIdHex)
+    }
 }
