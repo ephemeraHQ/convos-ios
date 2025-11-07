@@ -346,7 +346,7 @@ final class ConvosAPIClient: ConvosAPIClientProtocol, Sendable {
 
         // Step 1: Get presigned URL from Convos API
         let presignedRequest = try authenticatedRequest(
-            for: "v1/attachments/presigned",
+            for: "v2/attachments/presigned",
             method: "GET",
             queryParameters: ["contentType": contentType, "filename": filename]
         )

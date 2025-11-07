@@ -91,13 +91,13 @@ class MyProfileWriter: MyProfileWriterProtocol {
 
         let resizedImage = ImageCompression.resizeForCache(avatarImage)
 
-        guard let compressedImageData = avatarImage.jpegData(compressionQuality: 0.8) else {
+        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
             throw MyProfileWriterError.imageCompressionFailed
         }
 
         let uploadedURL = try await inboxReady.apiClient.uploadAttachment(
             data: compressedImageData,
-            filename: "profile-\(UUID().uuidString).jpg",
+            filename: "p-\(UUID().uuidString).jpg",
             contentType: "image/jpeg",
             acl: "public-read"
         )
