@@ -2118,7 +2118,7 @@
 			repositoryURL = "https://github.com/SimplyDanny/SwiftLintPlugins";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 0.61.0;
+				minimumVersion = 0.62.2;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
