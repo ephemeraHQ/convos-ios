@@ -65,7 +65,7 @@ public protocol ConversationsProvider {
     -> XMTPiOS.Conversation?
 
     func sync() async throws
-    func syncAllConversations(consentStates: [XMTPiOS.ConsentState]?) async throws -> UInt32
+    func syncAllConversations(consentStates: [ConsentState]?) async throws -> GroupSyncSummary
     func streamAllMessages(
         type: XMTPiOS.ConversationFilterType,
         consentStates: [XMTPiOS.ConsentState]?,

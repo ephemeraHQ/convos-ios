@@ -40,6 +40,9 @@ class TestFixtures {
         self.identityStore = MockKeychainIdentityStore()
         self.keychainService = MockKeychainService()
         self.databaseManager = MockDatabaseManager.makeTestDatabase()
+
+        // configure logging for tests
+        ConvosLog.configure(environment: .tests)
     }
 
     /// Create a new XMTP client for testing
@@ -128,16 +131,106 @@ class MockInvitesRepository: InvitesRepositoryProtocol {
 /// Mock implementation of SyncingManagerProtocol for testing
 actor MockSyncingManager: SyncingManagerProtocol {
     var isStarted = false
+    var isPaused = false
     var startCallCount = 0
     var stopCallCount = 0
+    var pauseCallCount = 0
+    var resumeCallCount = 0
 
     func start(with client: AnyClientProvider, apiClient: any ConvosAPIClientProtocol) {
         isStarted = true
+        isPaused = false
         startCallCount += 1
     }
 
     func stop() {
         isStarted = false
+        isPaused = false
         stopCallCount += 1
+    }
+
+    func pause() {
+        isPaused = true
+        pauseCallCount += 1
+    }
+
+    func resume() {
+        isPaused = false
+        resumeCallCount += 1
+    }
+}
+
+/// Mock implementation of NetworkMonitor for testing
+public actor MockNetworkMonitor: NetworkMonitorProtocol {
+    private var _status: NetworkMonitor.Status = .connected(.wifi)
+    private var statusContinuations: [AsyncStream<NetworkMonitor.Status>.Continuation] = []
+
+    public init(initialStatus: NetworkMonitor.Status = .connected(.wifi)) {
+        self._status = initialStatus
+    }
+
+    public var status: NetworkMonitor.Status {
+        _status
+    }
+
+    public var isConnected: Bool {
+        _status.isConnected
+    }
+
+    public func start() async {
+        // Mock doesn't need to do anything on start
+    }
+
+    public func stop() async {
+        // Clean up continuations
+        for continuation in statusContinuations {
+            continuation.finish()
+        }
+        statusContinuations.removeAll()
+    }
+
+    public var statusSequence: AsyncStream<NetworkMonitor.Status> {
+        AsyncStream { continuation in
+            Task { [weak self] in
+                guard let self else { return }
+                await self.addStatusContinuation(continuation)
+            }
+        }
+    }
+
+    private func addStatusContinuation(_ continuation: AsyncStream<NetworkMonitor.Status>.Continuation) {
+        statusContinuations.append(continuation)
+        continuation.onTermination = { [weak self] _ in
+            Task {
+                await self?.removeStatusContinuation(continuation)
+            }
+        }
+        continuation.yield(_status)
+    }
+
+    private func removeStatusContinuation(_ continuation: AsyncStream<NetworkMonitor.Status>.Continuation) {
+        statusContinuations.removeAll { $0 == continuation }
+    }
+
+    // Test helper methods to simulate network changes
+    public func simulateDisconnection() {
+        _status = .disconnected
+        for continuation in statusContinuations {
+            continuation.yield(_status)
+        }
+    }
+
+    public func simulateConnection(type: NetworkMonitor.ConnectionType = .wifi) {
+        _status = .connected(type)
+        for continuation in statusContinuations {
+            continuation.yield(_status)
+        }
+    }
+
+    public func simulateConnecting() {
+        _status = .connecting
+        for continuation in statusContinuations {
+            continuation.yield(_status)
+        }
     }
 }

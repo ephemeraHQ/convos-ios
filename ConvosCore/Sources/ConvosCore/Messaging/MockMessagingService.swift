@@ -273,8 +273,8 @@ class MockConversations: ConversationsProvider {
         }
     }
 
-    func syncAllConversations(consentStates: [XMTPiOS.ConsentState]?) async throws -> UInt32 {
-        0
+    func syncAllConversations(consentStates: [XMTPiOS.ConsentState]?) async throws -> GroupSyncSummary {
+        .init(numEligible: 0, numSynced: 0)
     }
 
     func sync() async throws {

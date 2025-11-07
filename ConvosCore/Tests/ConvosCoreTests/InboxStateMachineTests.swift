@@ -26,6 +26,7 @@ struct InboxStateMachineTests {
         let clientId = ClientId.generate().value
         let mockSync = MockSyncingManager()
         let mockInvites = MockInvitesRepository()
+        let networkMonitor = NetworkMonitor()
 
         let stateMachine = InboxStateMachine(
             clientId: clientId,
@@ -33,6 +34,7 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: mockSync,
+            networkMonitor: networkMonitor,
             overrideJWTToken: "test-jwt-token",  // Skip backend auth for tests
             environment: .tests
         )
@@ -77,6 +79,7 @@ struct InboxStateMachineTests {
 
         let clientId = ClientId.generate().value
         let mockInvites = MockInvitesRepository()
+        let networkMonitor = NetworkMonitor()
 
         let stateMachine = InboxStateMachine(
             clientId: clientId,
@@ -84,6 +87,7 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: nil,
+            networkMonitor: networkMonitor,
             overrideJWTToken: "test-jwt-token",
             environment: .tests
         )
@@ -138,6 +142,7 @@ struct InboxStateMachineTests {
 
         let mockSync = MockSyncingManager()
         let mockInvites = MockInvitesRepository()
+        let networkMonitor = NetworkMonitor()
 
         let stateMachine = InboxStateMachine(
             clientId: clientId,
@@ -145,6 +150,7 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: mockSync,
+            networkMonitor: networkMonitor,
             overrideJWTToken: "test-jwt-token",  // Skip backend auth for tests
             environment: .tests
         )
@@ -189,6 +195,7 @@ struct InboxStateMachineTests {
 
         let wrongClientId = ClientId.generate().value
         let mockInvites = MockInvitesRepository()
+        let networkMonitor = NetworkMonitor()
 
         let stateMachine = InboxStateMachine(
             clientId: wrongClientId,
@@ -196,6 +203,7 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: nil,
+            networkMonitor: networkMonitor,
             environment: .tests
         )
 
@@ -237,6 +245,7 @@ struct InboxStateMachineTests {
         let clientId = ClientId.generate().value
         let mockSync = MockSyncingManager()
         let mockInvites = MockInvitesRepository()
+        let networkMonitor = NetworkMonitor()
 
         let stateMachine = InboxStateMachine(
             clientId: clientId,
@@ -244,6 +253,7 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: mockSync,
+            networkMonitor: networkMonitor,
             overrideJWTToken: "test-jwt-token",  // Skip backend auth for tests
             environment: .tests
         )
@@ -302,6 +312,7 @@ struct InboxStateMachineTests {
         let clientId = ClientId.generate().value
         let mockSync = MockSyncingManager()
         let mockInvites = MockInvitesRepository()
+        let networkMonitor = NetworkMonitor()
 
         let stateMachine = InboxStateMachine(
             clientId: clientId,
@@ -309,6 +320,7 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: mockSync,
+            networkMonitor: networkMonitor,
             overrideJWTToken: "test-jwt-token",  // Skip backend auth for tests
             environment: .tests
         )
@@ -372,6 +384,7 @@ struct InboxStateMachineTests {
         let clientId = ClientId.generate().value
         let mockSync = MockSyncingManager()
         let mockInvites = MockInvitesRepository()
+        let networkMonitor = NetworkMonitor()
 
         let stateMachine = InboxStateMachine(
             clientId: clientId,
@@ -379,6 +392,7 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: mockSync,
+            networkMonitor: networkMonitor,
             overrideJWTToken: "test-jwt-token",  // Skip backend auth for tests
             environment: .tests
         )
@@ -424,6 +438,7 @@ struct InboxStateMachineTests {
 
         let clientId = ClientId.generate().value
         let mockInvites = MockInvitesRepository()
+        let networkMonitor = NetworkMonitor()
 
         let stateMachine = InboxStateMachine(
             clientId: clientId,
@@ -431,6 +446,7 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: nil,
+            networkMonitor: networkMonitor,
             environment: .tests
         )
 
@@ -505,6 +521,7 @@ struct InboxStateMachineTests {
         let clientId = ClientId.generate().value
         let mockSync = MockSyncingManager()
         let mockInvites = MockInvitesRepository()
+        let networkMonitor = NetworkMonitor()
 
         let stateMachine = InboxStateMachine(
             clientId: clientId,
@@ -512,6 +529,7 @@ struct InboxStateMachineTests {
             invitesRepository: mockInvites,
             databaseWriter: fixtures.databaseManager.dbWriter,
             syncingManager: mockSync,
+            networkMonitor: networkMonitor,
             overrideJWTToken: "test-jwt-token",  // Skip backend auth for tests
             environment: .tests
         )
@@ -542,6 +560,86 @@ struct InboxStateMachineTests {
 
         // Clean up
         try? client?.deleteLocalDatabase()
+        try? await fixtures.cleanup()
+    }
+
+    // MARK: - Network Disconnection Tests
+
+    @Test("Messages sync after network disconnection and reconnection")
+    func testNetworkDisconnectionAndReconnection() async throws {
+        let fixtures = TestFixtures()
+
+        // Create mock network monitor starting connected
+        let mockNetworkMonitor = MockNetworkMonitor(initialStatus: .connected(.wifi))
+
+        // Setup sender with real messaging service and mock network
+        let clientId = ClientId.generate().value
+        let mockSync = MockSyncingManager()
+        let mockInvites = MockInvitesRepository()
+
+        let stateMachine = InboxStateMachine(
+            clientId: clientId,
+            identityStore: fixtures.identityStore,
+            invitesRepository: mockInvites,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            syncingManager: mockSync,
+            networkMonitor: mockNetworkMonitor,
+            overrideJWTToken: "test-jwt-token",
+            environment: .tests
+        )
+
+        // Register and wait for ready
+        await stateMachine.register(clientId: clientId)
+
+        // Wait for ready state with timeout
+        let state = try await waitForState(stateMachine, timeout: 30) { state in
+            if case .ready = state { return true }
+            if case .error = state { return true }
+            return false
+        }
+
+        guard case .ready(_, let result) = state else {
+            if case .error(_, let error) = state {
+                Issue.record("Registration failed: \(error)")
+            }
+            Issue.record("Did not reach ready state")
+            try? await fixtures.cleanup()
+            return
+        }
+
+        #expect(await mockSync.isStarted, "Sync should be started")
+
+        Log.info("Inbox ready, simulating network disconnection...")
+
+        // Simulate network disconnection
+        await mockNetworkMonitor.simulateDisconnection()
+
+        // Wait for pause to take effect
+        try await Task.sleep(for: .seconds(1))
+
+        // Verify sync was paused
+        let pauseCount = await mockSync.pauseCallCount
+        #expect(pauseCount > 0, "SyncingManager should have been paused after disconnection")
+        #expect(await mockSync.isPaused, "SyncingManager should be in paused state")
+
+        Log.info("Network disconnected, sync paused. Simulating reconnection...")
+
+        // Simulate network reconnection
+        await mockNetworkMonitor.simulateConnection(type: .wifi)
+
+        // Wait for resume to take effect
+        try await Task.sleep(for: .seconds(1))
+
+        // Verify sync was resumed
+        let resumeCount = await mockSync.resumeCallCount
+        #expect(resumeCount > 0, "SyncingManager should have been resumed after reconnection")
+        #expect(!(await mockSync.isPaused), "SyncingManager should not be paused after reconnection")
+
+        Log.info("Network reconnected, sync resumed successfully")
+
+        // Clean up
+        await stateMachine.stopAndDelete()
+        try? result.client.deleteLocalDatabase()
         try? await fixtures.cleanup()
     }
 }

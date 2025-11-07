@@ -20,13 +20,6 @@
   "testTargets" : [
     {
       "parallelizable" : true,
-      "skippedTests" : {
-        "suites" : [
-          {
-            "name" : "InboxStateMachineTests"
-          }
-        ]
-      },
       "target" : {
         "containerPath" : "container:ConvosCore",
         "identifier" : "ConvosCoreTests",

@@ -43,23 +43,36 @@ echo "🧪 Running tests..."
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR/../ConvosCore"
 
+# Check if xcbeautify is available
+if command -v xcbeautify > /dev/null 2>&1; then
+    # Use --is-ci for detailed test output showing each test name and result
+    # Remove --quiet to see test progress
+    formatter="xcbeautify --is-ci"
+else
+    # Fallback to grep-based filtering if xcbeautify is not installed
+    echo "💡 Install xcbeautify for better output: brew install xcbeautify"
+    echo ""
+    formatter="grep -E '(Test Case.*started|Test Case.*passed|Test Case.*failed|error:|warning:|Testing failed|All tests)'"
+fi
+
 # Use xcodebuild to run tests on iOS Simulator from within the ConvosCore package directory
 # Pass environment variable using -testProductsPath approach won't work
 # We need to set it before running xcodebuild
-if TEST_SERVER_ENABLED=true xcodebuild test \
+set +e  # temporarily disable exit on error to capture the exit code
+TEST_SERVER_ENABLED=true xcodebuild test \
     -scheme ConvosCore \
     -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.0' \
-    -only-testing:ConvosCoreTests/InboxStateMachineTests \
-    -only-testing:ConvosCoreTests/UnusedInboxCacheTests \
-    -only-testing:ConvosCoreTests/ConversationStateMachineTests \
-    2>&1 | tee test-output.log; then
+    2>&1 | tee test-output.log | eval "$formatter"
+
+test_exit_code=${PIPESTATUS[0]}
+set -e  # re-enable exit on error
+
+if [ $test_exit_code -eq 0 ]; then
     echo ""
     echo "✅ All tests passed!"
-    test_exit_code=0
 else
     echo ""
     echo "❌ Tests failed!"
-    test_exit_code=1
 fi
 
 # Stop the XMTP node

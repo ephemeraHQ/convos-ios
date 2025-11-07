@@ -138,10 +138,12 @@ public actor InboxStateMachine {
     private let overrideJWTToken: String?
     private let databaseWriter: any DatabaseWriter
     private let apiClient: any ConvosAPIClientProtocol
+    private let networkMonitor: any NetworkMonitorProtocol
 
     private var currentTask: Task<Void, Never>?
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
+    private var networkMonitorTask: Task<Void, Never>?
 
     // MARK: - State Observation
 
@@ -216,6 +218,7 @@ public actor InboxStateMachine {
         invitesRepository: any InvitesRepositoryProtocol,
         databaseWriter: any DatabaseWriter,
         syncingManager: AnySyncingManager?,
+        networkMonitor: any NetworkMonitorProtocol,
         overrideJWTToken: String? = nil,
         environment: AppEnvironment
     ) {
@@ -225,6 +228,7 @@ public actor InboxStateMachine {
         self.invitesRepository = invitesRepository
         self.databaseWriter = databaseWriter
         self.syncingManager = syncingManager
+        self.networkMonitor = networkMonitor
         self.overrideJWTToken = overrideJWTToken ?? environment.defaultOverrideJWTToken
         self.environment = environment
 
@@ -257,7 +261,14 @@ public actor InboxStateMachine {
         Log.info("   xmtpEnv = \(environment.xmtpEnv)")
         Log.info("   isSecure = \(environment.isSecure)")
 
-        // }
+        // Log the actual XMTPEnvironment.customLocalAddress after setting
+        if let customHost = environment.customLocalAddress {
+            Log.info("🌐 Setting XMTPEnvironment.customLocalAddress = \(customHost)")
+            XMTPEnvironment.customLocalAddress = customHost
+            Log.info("🌐 Actual XMTPEnvironment.customLocalAddress = \(XMTPEnvironment.customLocalAddress ?? "nil")")
+        } else {
+            Log.info("🌐 Using default XMTP endpoints")
+        }
     }
 
     // MARK: - Public
@@ -358,6 +369,15 @@ public actor InboxStateMachine {
                 Log.warning("Invalid state transition: \(_state) -> \(action)")
             }
         } catch {
+            // Task cancellation is normal during shutdown, not an error
+            if error is CancellationError {
+                Log.debug("Action cancelled: \(action)")
+                return
+            }
+
+            // Cancel network monitoring on error
+            stopNetworkMonitoring()
+
             Log.error(
                 "Failed state transition \(_state) -> \(action): \(error.localizedDescription)"
             )
@@ -431,6 +451,8 @@ public actor InboxStateMachine {
         // Only updates if different, avoiding unnecessary mutations
         setCustomLocalAddress()
 
+        try Task.checkCancellation()
+
         let keys = try await identityStore.generateKeys()
 
         try Task.checkCancellation()
@@ -490,6 +512,9 @@ public actor InboxStateMachine {
     }
 
     private func handleAuthorized(clientId: String, client: any XMTPClientProvider, apiClient: any ConvosAPIClientProtocol) async throws {
+        // Start network monitoring before starting sync
+        await startNetworkMonitoring()
+
         await syncingManager?.start(with: client, apiClient: apiClient)
         emitStateChange(.ready(clientId: clientId, result: .init(client: client, apiClient: apiClient)))
     }
@@ -503,6 +528,9 @@ public actor InboxStateMachine {
 
         defer { enqueueAction(.stop) }
 
+        // Stop network monitoring
+        stopNetworkMonitoring()
+
         // Perform common cleanup operations
         try await performInboxCleanup(clientId: clientId, client: client, apiClient: apiClient)
     }
@@ -514,9 +542,8 @@ public actor InboxStateMachine {
         defer { enqueueAction(.stop) }
 
         // Resolve inboxId from database since it might be nil in error state
-        var resolvedInboxId: String?
-        try await databaseWriter.write { db in
-            resolvedInboxId = try? DBInbox
+        let resolvedInboxId: String? = try await databaseWriter.write { db in
+            try? DBInbox
                 .filter(DBInbox.Columns.clientId == clientId)
                 .fetchOne(db)?
                 .inboxId
@@ -527,6 +554,9 @@ public actor InboxStateMachine {
         }
 
         emitStateChange(.deleting(clientId: clientId, inboxId: resolvedInboxId))
+
+        // Stop network monitoring
+        stopNetworkMonitoring()
 
         await syncingManager?.stop()
 
@@ -566,6 +596,9 @@ public actor InboxStateMachine {
 
         emitStateChange(.deleting(clientId: clientId, inboxId: inboxIdFromDb))
 
+        // Stop network monitoring
+        stopNetworkMonitoring()
+
         await syncingManager?.stop()
 
         try Task.checkCancellation()
@@ -593,6 +626,10 @@ public actor InboxStateMachine {
 
     private func handleStop(clientId: String) async throws {
         Log.info("Stopping inbox with clientId \(clientId)...")
+
+        // Cancel network monitoring
+        stopNetworkMonitoring()
+
         emitStateChange(.stopping(clientId: clientId))
         await syncingManager?.stop()
         emitStateChange(.idle(clientId: clientId))
@@ -890,5 +927,51 @@ public actor InboxStateMachine {
         Log.info("Authenticating with backend and storing JWT...")
         _ = try await apiClient.authenticate(appCheckToken: appCheckToken, retryCount: 0)
         Log.info("Successfully authenticated with backend")
+    }
+
+    // MARK: - Network Monitoring
+
+    private func stopNetworkMonitoring() {
+        networkMonitorTask?.cancel()
+        networkMonitorTask = nil
+    }
+
+    private func startNetworkMonitoring() async {
+        stopNetworkMonitoring()
+
+        await networkMonitor.start()
+
+        networkMonitorTask = Task { [weak self] in
+            guard let self else { return }
+
+            for await status in await networkMonitor.statusSequence {
+                await self.handleNetworkStatusChange(status)
+            }
+        }
+    }
+
+    private func handleNetworkStatusChange(_ status: NetworkMonitor.Status) async {
+        switch status {
+        case .connected(let type):
+            Log.info("Network connected (\(type)) - resuming sync")
+            await handleNetworkConnected()
+
+        case .disconnected:
+            Log.info("Network disconnected - pausing sync")
+            await handleNetworkDisconnected()
+
+        case .connecting:
+            Log.info("Network connecting...")
+        }
+    }
+
+    private func handleNetworkConnected() async {
+        // Network monitoring starts in ready state, so we can always resume
+        await syncingManager?.resume()
+    }
+
+    private func handleNetworkDisconnected() async {
+        // Network monitoring starts in ready state, so we can always pause
+        await syncingManager?.pause()
     }
 }

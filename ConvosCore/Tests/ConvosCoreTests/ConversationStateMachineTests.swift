@@ -577,24 +577,26 @@ struct ConversationStateMachineTests {
 
     @Test("Join conversation while inviter is online")
     func testJoinConversationOnline() async throws {
-        let fixtures = TestFixtures()
+        // Create separate fixtures for inviter and joiner so they have different databases
+        let inviterFixtures = TestFixtures()
+        let joinerFixtures = TestFixtures()
 
         // Setup inviter messaging service and state machine
-        let unusedInboxCache = UnusedInboxCache(
-            keychainService: fixtures.keychainService,
-            identityStore: fixtures.identityStore
+        let inviterUnusedInboxCache = UnusedInboxCache(
+            keychainService: inviterFixtures.keychainService,
+            identityStore: inviterFixtures.identityStore
         )
-        let inviterMessagingService = await unusedInboxCache.consumeOrCreateMessagingService(
-            databaseWriter: fixtures.databaseManager.dbWriter,
-            databaseReader: fixtures.databaseManager.dbReader,
+        let inviterMessagingService = await inviterUnusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: inviterFixtures.databaseManager.dbWriter,
+            databaseReader: inviterFixtures.databaseManager.dbReader,
             environment: .tests
         )
 
         let inviterStateMachine = ConversationStateMachine(
             inboxStateManager: inviterMessagingService.inboxStateManager,
-            identityStore: fixtures.identityStore,
-            databaseReader: fixtures.databaseManager.dbReader,
-            databaseWriter: fixtures.databaseManager.dbWriter,
+            identityStore: inviterFixtures.identityStore,
+            databaseReader: inviterFixtures.databaseManager.dbReader,
+            databaseWriter: inviterFixtures.databaseManager.dbWriter,
             environment: .tests
         )
 
@@ -619,12 +621,12 @@ struct ConversationStateMachineTests {
         guard let convId = inviterConversationId else {
             Issue.record("No conversation ID from inviter")
             await inviterMessagingService.stopAndDelete()
-            try? await fixtures.cleanup()
+            try? await inviterFixtures.cleanup()
             return
         }
 
         // Fetch the invite that was automatically created
-        let invite = try await fixtures.databaseManager.dbReader.read { db in
+        let invite = try await inviterFixtures.databaseManager.dbReader.read { db in
             try DBInvite
                 .filter(DBInvite.Columns.conversationId == convId)
                 .fetchOne(db)?
@@ -634,24 +636,28 @@ struct ConversationStateMachineTests {
         guard let invite else {
             Issue.record("Could not fetch invite from database")
             await inviterMessagingService.stopAndDelete()
-            try? await fixtures.cleanup()
+            try? await inviterFixtures.cleanup()
             return
         }
 
         Log.info("Fetched invite URL: \(invite.urlSlug)")
 
         // Setup joiner messaging service and state machine
-        let joinerMessagingService = await unusedInboxCache.consumeOrCreateMessagingService(
-            databaseWriter: fixtures.databaseManager.dbWriter,
-            databaseReader: fixtures.databaseManager.dbReader,
+        let joinerUnusedInboxCache = UnusedInboxCache(
+            keychainService: joinerFixtures.keychainService,
+            identityStore: joinerFixtures.identityStore
+        )
+        let joinerMessagingService = await joinerUnusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: joinerFixtures.databaseManager.dbWriter,
+            databaseReader: joinerFixtures.databaseManager.dbReader,
             environment: .tests
         )
 
         let joinerStateMachine = ConversationStateMachine(
             inboxStateManager: joinerMessagingService.inboxStateManager,
-            identityStore: fixtures.identityStore,
-            databaseReader: fixtures.databaseManager.dbReader,
-            databaseWriter: fixtures.databaseManager.dbWriter,
+            identityStore: joinerFixtures.identityStore,
+            databaseReader: joinerFixtures.databaseManager.dbReader,
+            databaseWriter: joinerFixtures.databaseManager.dbWriter,
             environment: .tests
         )
 
@@ -684,29 +690,32 @@ struct ConversationStateMachineTests {
         // Clean up
         await inviterMessagingService.stopAndDelete()
         await joinerMessagingService.stopAndDelete()
-        try? await fixtures.cleanup()
+        try? await inviterFixtures.cleanup()
+        try? await joinerFixtures.cleanup()
     }
 
     @Test("Join conversation while inviter is offline")
     func testJoinConversationOffline() async throws {
-        let fixtures = TestFixtures()
+        // Create separate fixtures for inviter and joiner so they have different databases
+        let inviterFixtures = TestFixtures()
+        let joinerFixtures = TestFixtures()
 
         // Setup inviter messaging service and state machine
-        let unusedInboxCache = UnusedInboxCache(
-            keychainService: fixtures.keychainService,
-            identityStore: fixtures.identityStore
+        let inviterUnusedInboxCache = UnusedInboxCache(
+            keychainService: inviterFixtures.keychainService,
+            identityStore: inviterFixtures.identityStore
         )
-        let inviterMessagingService = await unusedInboxCache.consumeOrCreateMessagingService(
-            databaseWriter: fixtures.databaseManager.dbWriter,
-            databaseReader: fixtures.databaseManager.dbReader,
+        let inviterMessagingService = await inviterUnusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: inviterFixtures.databaseManager.dbWriter,
+            databaseReader: inviterFixtures.databaseManager.dbReader,
             environment: .tests
         )
 
         let inviterStateMachine = ConversationStateMachine(
             inboxStateManager: inviterMessagingService.inboxStateManager,
-            identityStore: fixtures.identityStore,
-            databaseReader: fixtures.databaseManager.dbReader,
-            databaseWriter: fixtures.databaseManager.dbWriter,
+            identityStore: inviterFixtures.identityStore,
+            databaseReader: inviterFixtures.databaseManager.dbReader,
+            databaseWriter: inviterFixtures.databaseManager.dbWriter,
             environment: .tests
         )
 
@@ -727,17 +736,19 @@ struct ConversationStateMachineTests {
             }
         } catch {
             Issue.record("Timed out waiting for inviter to be ready: \(error)")
+            await inviterMessagingService.stopAndDelete()
+            try? await inviterFixtures.cleanup()
         }
 
         guard let convId = inviterConversationId else {
             Issue.record("No conversation ID from inviter")
             await inviterMessagingService.stopAndDelete()
-            try? await fixtures.cleanup()
+            try? await inviterFixtures.cleanup()
             return
         }
 
         // Get the inbox ID and fetch the automatically created invite
-        let (invite, inboxId) = try await fixtures.databaseManager.dbReader.read { db in
+        let (invite, inboxId) = try await inviterFixtures.databaseManager.dbReader.read { db in
             let conversation = try DBConversation.fetchOne(db, key: convId)
             let invite = try DBInvite
                 .filter(DBInvite.Columns.conversationId == convId)
@@ -749,7 +760,7 @@ struct ConversationStateMachineTests {
         guard let invite, let inboxId else {
             Issue.record("Could not fetch invite or conversation from database")
             await inviterMessagingService.stopAndDelete()
-            try? await fixtures.cleanup()
+            try? await inviterFixtures.cleanup()
             return
         }
 
@@ -762,17 +773,21 @@ struct ConversationStateMachineTests {
         Log.info("Inviter went offline")
 
         // Setup joiner messaging service and state machine
-        let joinerMessagingService = await unusedInboxCache.consumeOrCreateMessagingService(
-            databaseWriter: fixtures.databaseManager.dbWriter,
-            databaseReader: fixtures.databaseManager.dbReader,
+        let joinerUnusedInboxCache = UnusedInboxCache(
+            keychainService: joinerFixtures.keychainService,
+            identityStore: joinerFixtures.identityStore
+        )
+        let joinerMessagingService = await joinerUnusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: joinerFixtures.databaseManager.dbWriter,
+            databaseReader: joinerFixtures.databaseManager.dbReader,
             environment: .tests
         )
 
         let joinerStateMachine = ConversationStateMachine(
             inboxStateManager: joinerMessagingService.inboxStateManager,
-            identityStore: fixtures.identityStore,
-            databaseReader: fixtures.databaseManager.dbReader,
-            databaseWriter: fixtures.databaseManager.dbWriter,
+            identityStore: joinerFixtures.identityStore,
+            databaseReader: joinerFixtures.databaseManager.dbReader,
+            databaseWriter: joinerFixtures.databaseManager.dbWriter,
             environment: .tests
         )
 
@@ -786,18 +801,19 @@ struct ConversationStateMachineTests {
         guard let inviterInbox = inviterInboxId else {
             Issue.record("No inviter inbox ID")
             await joinerMessagingService.stopAndDelete()
-            try? await fixtures.cleanup()
+            try? await inviterFixtures.cleanup()
+            try? await joinerFixtures.cleanup()
             return
         }
 
-        let identity = try await fixtures.identityStore.identity(for: inviterInbox)
+        let identity = try await inviterFixtures.identityStore.identity(for: inviterInbox)
         let restartedInviterService = MessagingService.authorizedMessagingService(
             for: inviterInbox,
             clientId: identity.clientId,
-            databaseWriter: fixtures.databaseManager.dbWriter,
-            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: inviterFixtures.databaseManager.dbWriter,
+            databaseReader: inviterFixtures.databaseManager.dbReader,
             environment: .tests,
-            identityStore: fixtures.identityStore,
+            identityStore: inviterFixtures.identityStore,
             startsStreamingServices: true
         )
 
@@ -808,7 +824,7 @@ struct ConversationStateMachineTests {
         var joinerReachedReady = false
 
         do {
-            joinerConversationId = try await withTimeout(seconds: 30) {
+            joinerConversationId = try await withTimeout(seconds: 10) {
                 for await state in await joinerStateMachine.stateSequence {
                     switch state {
                     case .ready(let result):
@@ -825,6 +841,10 @@ struct ConversationStateMachineTests {
             joinerReachedReady = true
         } catch {
             Issue.record("Timed out waiting for join to complete: \(error)")
+            await restartedInviterService.stopAndDelete()
+            await joinerMessagingService.stopAndDelete()
+            try? await inviterFixtures.cleanup()
+            try? await joinerFixtures.cleanup()
         }
 
         #expect(joinerConversationId != nil, "Should have joined conversation")
@@ -833,6 +853,238 @@ struct ConversationStateMachineTests {
         // Clean up
         await restartedInviterService.stopAndDelete()
         await joinerMessagingService.stopAndDelete()
-        try? await fixtures.cleanup()
+        try? await inviterFixtures.cleanup()
+        try? await joinerFixtures.cleanup()
+    }
+
+    // MARK: - Network Disconnection Tests
+
+    @Test("Messages sync after network reconnection")
+    func testMessageSyncAfterNetworkReconnection() async throws {
+        // Create separate fixtures for inviter and joiner so they have different databases
+        let inviterFixtures = TestFixtures()
+        let joinerFixtures = TestFixtures()
+
+        // Create two mock network monitors - both starting connected
+        let inviterNetworkMonitor = MockNetworkMonitor(initialStatus: .connected(.wifi))
+        let joinerNetworkMonitor = MockNetworkMonitor(initialStatus: .connected(.wifi))
+
+        // Setup inviter messaging service with mock network monitor
+        let inviterOperation = AuthorizeInboxOperation.register(
+            identityStore: inviterFixtures.identityStore,
+            databaseReader: inviterFixtures.databaseManager.dbReader,
+            databaseWriter: inviterFixtures.databaseManager.dbWriter,
+            networkMonitor: inviterNetworkMonitor,
+            environment: .tests
+        )
+
+        let inviterMessagingService = MessagingService(
+            authorizationOperation: inviterOperation,
+            databaseWriter: inviterFixtures.databaseManager.dbWriter,
+            databaseReader: inviterFixtures.databaseManager.dbReader,
+            identityStore: inviterFixtures.identityStore,
+            environment: .tests
+        )
+
+        let inviterStateMachine = ConversationStateMachine(
+            inboxStateManager: inviterMessagingService.inboxStateManager,
+            identityStore: inviterFixtures.identityStore,
+            databaseReader: inviterFixtures.databaseManager.dbReader,
+            databaseWriter: inviterFixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Create conversation as inviter
+        await inviterStateMachine.create()
+
+        // Wait for inviter conversation to be ready
+        var inviterConversationId: String?
+        do {
+            inviterConversationId = try await withTimeout(seconds: 10) {
+                for await state in await inviterStateMachine.stateSequence {
+                    if case .ready(let result) = state {
+                        return result.conversationId
+                    }
+                }
+                throw TestError.timeout("Inviter conversation never reached ready state")
+            }
+        } catch {
+            Issue.record("Inviter failed to create conversation: \(error)")
+        }
+
+        guard let inviterConvId = inviterConversationId else {
+            Issue.record("No inviter conversation ID")
+            await inviterMessagingService.stopAndDelete()
+            try? await inviterFixtures.cleanup()
+            return
+        }
+
+        // Fetch the invite
+        let invite = try await inviterFixtures.databaseManager.dbReader.read { db in
+            try DBInvite
+                .filter(DBInvite.Columns.conversationId == inviterConvId)
+                .fetchOne(db)?
+                .hydrateInvite()
+        }
+
+        guard let invite else {
+            Issue.record("Could not fetch invite")
+            await inviterMessagingService.stopAndDelete()
+            try? await inviterFixtures.cleanup()
+            return
+        }
+
+        Log.info("Inviter created conversation with invite: \(invite.urlSlug)")
+
+        // Setup joiner messaging service with different network monitor
+        let joinerOperation = AuthorizeInboxOperation.register(
+            identityStore: joinerFixtures.identityStore,
+            databaseReader: joinerFixtures.databaseManager.dbReader,
+            databaseWriter: joinerFixtures.databaseManager.dbWriter,
+            networkMonitor: joinerNetworkMonitor,
+            environment: .tests
+        )
+
+        let joinerMessagingService = MessagingService(
+            authorizationOperation: joinerOperation,
+            databaseWriter: joinerFixtures.databaseManager.dbWriter,
+            databaseReader: joinerFixtures.databaseManager.dbReader,
+            identityStore: joinerFixtures.identityStore,
+            environment: .tests
+        )
+
+        let joinerStateMachine = ConversationStateMachine(
+            inboxStateManager: joinerMessagingService.inboxStateManager,
+            identityStore: joinerFixtures.identityStore,
+            databaseReader: joinerFixtures.databaseManager.dbReader,
+            databaseWriter: joinerFixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Join conversation as joiner
+        await joinerStateMachine.join(inviteCode: invite.urlSlug)
+
+        // Wait for joiner to be ready
+        var joinerConversationId: String?
+        do {
+            joinerConversationId = try await withTimeout(seconds: 30) {
+                for await state in await joinerStateMachine.stateSequence {
+                    switch state {
+                    case .ready(let result):
+                        return result.conversationId
+                    case .error(let error):
+                        Issue.record("Joiner join failed: \(error)")
+                        throw error
+                    default:
+                        continue
+                    }
+                }
+                throw TestError.timeout("Joiner never reached ready state")
+            }
+        } catch {
+            Issue.record("Joiner failed to join: \(error)")
+        }
+
+        guard let joinerConvId = joinerConversationId else {
+            Issue.record("Joiner did not join conversation")
+            await inviterMessagingService.stopAndDelete()
+            await joinerMessagingService.stopAndDelete()
+            try? await inviterFixtures.cleanup()
+            try? await joinerFixtures.cleanup()
+            return
+        }
+
+        Log.info("Joiner joined conversation: \(joinerConvId)")
+
+        // Simulate network disconnection for inviter
+        Log.info("Simulating network disconnection for inviter...")
+        await inviterNetworkMonitor.simulateDisconnection()
+
+        // Wait for pause to take effect
+        try await Task.sleep(for: .seconds(2))
+
+        Log.info("Inviter network disconnected, sending messages from joiner...")
+
+        // Send 10 messages from joiner while inviter is offline
+        let messageTexts = [
+            "Message 1", "Message 2", "Message 3", "Message 4", "Message 5",
+            "Message 6", "Message 7", "Message 8", "Message 9", "Message 10"
+        ]
+
+        for text in messageTexts {
+            await joinerStateMachine.sendMessage(text: text)
+        }
+
+        Log.info("Sent \(messageTexts.count) messages from joiner")
+
+        // Wait for messages to be processed and saved by joiner
+        try await Task.sleep(for: .seconds(3))
+
+        // Verify messages were saved in joiner's database and collect message IDs
+        let joinerMessages = try await joinerFixtures.databaseManager.dbReader.read { db in
+            try DBMessage
+                .filter(DBMessage.Columns.conversationId == joinerConvId)
+                .order(DBMessage.Columns.dateNs.asc)
+                .fetchAll(db)
+        }
+            .filter { message in
+                guard let text = message.text else {
+                    return false
+                }
+                return messageTexts.contains(text)
+            }
+
+        Log.info("Joiner has \(joinerMessages.count) messages in database")
+        #expect(joinerMessages.count == messageTexts.count, "Joiner should have sent all messages")
+
+        // Collect message IDs from joiner to verify they sync to inviter
+        let joinerMessageIds = Set(joinerMessages.map { $0.id })
+
+        // Reconnect inviter's network
+        Log.info("Simulating network reconnection for inviter...")
+        await inviterNetworkMonitor.simulateConnection(type: .wifi)
+
+        // Wait for reconnection and sync to complete
+        try await Task.sleep(for: .seconds(2))
+
+        Log.info("Inviter network reconnected, waiting for messages to sync...")
+
+        // Poll for messages in inviter's database
+        var inviterMessageIds = Set<String>()
+        let timeout = ContinuousClock.now + .seconds(30)
+
+        while ContinuousClock.now < timeout {
+            let inviterMessages = try await inviterFixtures.databaseManager.dbReader.read { db in
+                try DBMessage
+                    .filter(DBMessage.Columns.conversationId == inviterConvId)
+                    .fetchAll(db)
+            }
+
+            inviterMessageIds = Set(inviterMessages.map { $0.id })
+
+            // Check if all joiner message IDs exist in inviter's database
+            if joinerMessageIds.isSubset(of: inviterMessageIds) {
+                break
+            }
+
+            try await Task.sleep(for: .milliseconds(500))
+        }
+
+        Log.info("Inviter has \(inviterMessageIds.count) messages in database")
+
+        // Verify all joiner message IDs exist in inviter's database
+        #expect(joinerMessageIds.isSubset(of: inviterMessageIds), "All joiner message IDs should exist in inviter's database after sync")
+
+        // Log which message IDs were found
+        let foundCount = joinerMessageIds.intersection(inviterMessageIds).count
+        Log.info("Found \(foundCount) of \(joinerMessageIds.count) joiner message IDs in inviter's database")
+
+        Log.info("Test completed successfully - all messages synced after reconnection")
+
+        // Clean up
+        await inviterMessagingService.stopAndDelete()
+        await joinerMessagingService.stopAndDelete()
+        try? await inviterFixtures.cleanup()
+        try? await joinerFixtures.cleanup()
     }
 }

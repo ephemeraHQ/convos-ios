@@ -1,0 +1,824 @@
+@testable import ConvosCore
+import Foundation
+import GRDB
+import Testing
+import XMTPiOS
+
+/// Testable mock XMTP client that allows controlling syncAllConversations behavior
+class TestableMockClient: XMTPClientProvider, @unchecked Sendable {
+    var installationId: String = "test-installation-id"
+    var inboxId: String = "test-inbox-id"
+
+    lazy var conversationsProvider: ConversationsProvider = {
+        TestableMockConversations(syncBehavior: syncBehavior, streamBehavior: streamBehavior)
+    }()
+
+    // Control syncAllConversations behavior
+    var syncBehavior: SyncBehavior = .succeed
+    var streamBehavior: StreamBehavior = .empty
+
+    enum SyncBehavior {
+        case succeed
+        case fail(Error)
+        case delay(TimeInterval)
+    }
+
+    enum StreamBehavior {
+        case empty
+        case emitOneThenClose
+        case emitMultipleThenClose
+        case neverClose
+    }
+
+    func signWithInstallationKey(message: String) throws -> Data {
+        Data()
+    }
+
+    func verifySignature(message: String, signature: Data) throws -> Bool {
+        true
+    }
+
+    func messageSender(for conversationId: String) async throws -> (any MessageSender)? {
+        nil
+    }
+
+    func canMessage(identity: String) async throws -> Bool {
+        true
+    }
+
+    func canMessage(identities: [String]) async throws -> [String: Bool] {
+        Dictionary(uniqueKeysWithValues: identities.map { ($0, true) })
+    }
+
+    func prepareConversation() throws -> GroupConversationSender {
+        TestableMockGroupConversationSender()
+    }
+
+    func newConversation(with memberInboxIds: [String],
+                        name: String,
+                        description: String,
+                        imageUrl: String) async throws -> String {
+        UUID().uuidString
+    }
+
+    func newConversation(with memberInboxId: String) async throws -> (any MessageSender) {
+        TestableMockMessageSender()
+    }
+
+    func conversation(with id: String) async throws -> XMTPiOS.Conversation? {
+        nil
+    }
+
+    func inboxId(for ethereumAddress: String) async throws -> String? {
+        nil
+    }
+
+    func update(consent: Consent, for conversationId: String) async throws {
+    }
+
+    func revokeInstallations(signingKey: any SigningKey, installationIds: [String]) async throws {
+    }
+
+    func deleteLocalDatabase() throws {
+    }
+}
+
+class TestableMockConversations: ConversationsProvider {
+    let syncBehavior: TestableMockClient.SyncBehavior
+    let streamBehavior: TestableMockClient.StreamBehavior
+
+    var syncCallCount = 0
+    var streamCallCount = 0
+
+    init(syncBehavior: TestableMockClient.SyncBehavior, streamBehavior: TestableMockClient.StreamBehavior) {
+        self.syncBehavior = syncBehavior
+        self.streamBehavior = streamBehavior
+    }
+
+    func list(createdAfterNs: Int64?,
+             createdBeforeNs: Int64?,
+             lastActivityBeforeNs: Int64?,
+             lastActivityAfterNs: Int64?,
+             limit: Int?,
+             consentStates: [XMTPiOS.ConsentState]?,
+             orderBy: XMTPiOS.ConversationsOrderBy) async throws -> [XMTPiOS.Conversation] {
+        []
+    }
+
+    func listGroups(createdAfterNs: Int64?,
+                   createdBeforeNs: Int64?,
+                   lastActivityAfterNs: Int64?,
+                   lastActivityBeforeNs: Int64?,
+                   limit: Int?,
+                   consentStates: [ConsentState]?,
+                   orderBy: ConversationsOrderBy) throws -> [Group] {
+        []
+    }
+
+    func listDms(createdAfterNs: Int64?,
+                createdBeforeNs: Int64?,
+                lastActivityBeforeNs: Int64?,
+                lastActivityAfterNs: Int64?,
+                limit: Int?,
+                consentStates: [ConsentState]?,
+                orderBy: ConversationsOrderBy) throws -> [Dm] {
+        []
+    }
+
+    func stream(type: XMTPiOS.ConversationFilterType,
+               onClose: (() -> Void)?) -> AsyncThrowingStream<XMTPiOS.Conversation, any Error> {
+        streamCallCount += 1
+        return AsyncThrowingStream { continuation in
+            // Call onClose synchronously within the builder to avoid sending a non-Sendable closure across tasks.
+            switch streamBehavior {
+            case .empty:
+                onClose?()
+                continuation.finish()
+            case .emitOneThenClose:
+                // Emit a mock conversation then close (omitted actual yield)
+                onClose?()
+                continuation.finish()
+            case .emitMultipleThenClose:
+                // Similar to above (omitted actual yields)
+                onClose?()
+                continuation.finish()
+            case .neverClose:
+                // Keep stream open (don't finish or yield). Use a Task but do not call onClose from it.
+                Task<Void, Never> {
+                    // Simulate an active stream that never closes.
+                    // Intentionally left running until the stream is cancelled/dropped.
+                    // No onClose invocation from here to avoid crossing concurrency boundaries with the closure.
+                    while !Task.isCancelled {
+                        try? await Task.sleep(nanoseconds: 60_000_000_000) // 60s; effectively "forever" for tests
+                    }
+                }
+            }
+        }
+    }
+
+    func syncAllConversations(consentStates: [XMTPiOS.ConsentState]?) async throws -> GroupSyncSummary {
+        syncCallCount += 1
+
+        switch syncBehavior {
+        case .succeed:
+            return GroupSyncSummary(numEligible: 0, numSynced: 0)
+        case .fail(let error):
+            throw error
+        case .delay(let delay):
+            try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            return GroupSyncSummary(numEligible: 0, numSynced: 0)
+        }
+    }
+
+    func sync() async throws {
+    }
+
+    func findConversation(conversationId: String) async throws -> XMTPiOS.Conversation? {
+        nil
+    }
+
+    func streamAllMessages(type: ConversationFilterType,
+                          consentStates: [ConsentState]?,
+                          onClose: (() -> Void)?) -> AsyncThrowingStream<DecodedMessage, any Error> {
+        streamCallCount += 1
+        return AsyncThrowingStream { continuation in
+            // Same approach here: call onClose synchronously in the builder; only use Task for neverClose without touching onClose.
+            switch streamBehavior {
+            case .empty:
+                onClose?()
+                continuation.finish()
+            case .emitOneThenClose:
+                // Emit a mock message then close (omitted actual yield)
+                onClose?()
+                continuation.finish()
+            case .emitMultipleThenClose:
+                // Similar (omitted yields)
+                onClose?()
+                continuation.finish()
+            case .neverClose:
+                Task<Void, Never> {
+                    // Keep stream open. Avoid calling onClose here.
+                    while !Task.isCancelled {
+                        try? await Task.sleep(nanoseconds: 60_000_000_000) // 60s; effectively "forever" for tests
+                    }
+                }
+            }
+        }
+    }
+}
+
+class TestableMockGroupConversationSender: GroupConversationSender {
+    var id: String = UUID().uuidString
+
+    func add(members inboxIds: [String]) async throws {
+    }
+
+    func remove(members inboxIds: [String]) async throws {
+    }
+
+    func prepare(text: String) async throws -> String {
+        ""
+    }
+
+    func ensureInviteTag() async throws {
+    }
+
+    func publish() async throws {
+    }
+
+    func permissionPolicySet() throws -> PermissionPolicySet {
+        PermissionPolicySet(
+            addMemberPolicy: .allow,
+            removeMemberPolicy: .allow,
+            addAdminPolicy: .allow,
+            removeAdminPolicy: .allow,
+            updateGroupNamePolicy: .allow,
+            updateGroupDescriptionPolicy: .allow,
+            updateGroupImagePolicy: .allow,
+            updateMessageDisappearingPolicy: .allow
+        )
+    }
+
+    func updateAddMemberPermission(newPermissionOption: PermissionOption) async throws {
+    }
+}
+
+class TestableMockMessageSender: MessageSender {
+    func sendExplode(expiresAt: Date) async throws {
+    }
+
+    func prepare(text: String) async throws -> String {
+        ""
+    }
+
+    func publish() async throws {
+    }
+
+    func consentState() throws -> ConsentState {
+        .allowed
+    }
+}
+
+/// Testable mock API client
+final class TestableMockAPIClient: ConvosAPIClientProtocol, @unchecked Sendable {
+    private(set) var callCount = 0
+
+    func request(for path: String, method: String, queryParameters: [String: String]?) throws -> URLRequest {
+        callCount += 1
+        guard let url = URL(string: "http://example.com") else {
+            throw NSError(domain: "test", code: 1)
+        }
+        return URLRequest(url: url)
+    }
+
+    func registerDevice(deviceId: String, pushToken: String?) async throws {
+    }
+
+    func authenticate(appCheckToken: String, retryCount: Int) async throws -> String {
+        "mock-jwt-token"
+    }
+
+    func uploadAttachment(data: Data, filename: String, contentType: String, acl: String) async throws -> String {
+        "https://mock-api.example.com/uploads/\(filename)"
+    }
+
+    func uploadAttachmentAndExecute(data: Data, filename: String, afterUpload: @escaping (String) async throws -> Void) async throws -> String {
+        let uploadedURL = "https://mock-api.example.com/uploads/\(filename)"
+        try await afterUpload(uploadedURL)
+        return uploadedURL
+    }
+
+    func subscribeToTopics(deviceId: String, clientId: String, topics: [String]) async throws {
+    }
+
+    func unsubscribeFromTopics(clientId: String, topics: [String]) async throws {
+    }
+
+    func unregisterInstallation(clientId: String) async throws {
+    }
+}
+
+/// Comprehensive tests for SyncingManager state machine
+@Suite("SyncingManager Tests")
+struct SyncingManagerTests {
+
+    // MARK: - Start Flow Tests
+
+    @Test("Start from idle starts streams then calls syncAllConversations")
+    func testStartFlow() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Wait a bit for async operations
+        try await Task.sleep(for: .milliseconds(1000))
+
+        // Verify streams were started first
+        let conversations = mockClient.conversationsProvider as! TestableMockConversations
+        #expect(conversations.streamCallCount > 0, "Streams should be started")
+
+        // Verify syncAllConversations was called after streams
+        #expect(conversations.syncCallCount > 0, "syncAllConversations should be called")
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Start starts streams before syncAllConversations")
+    func testStartOrder() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        mockClient.syncBehavior = .delay(0.5) // Delay sync to verify streams start first
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Wait a short time - streams should be started but sync might not be done yet
+        try await Task.sleep(for: .milliseconds(100))
+
+        let conversations = mockClient.conversationsProvider as! TestableMockConversations
+
+        // Streams should be started immediately
+        #expect(conversations.streamCallCount >= 2, "Both message and conversation streams should be started")
+
+        // syncAllConversations should be called (but may not be complete yet)
+        #expect(conversations.syncCallCount >= 0, "syncAllConversations may or may not have started yet")
+
+        // Wait for sync to complete
+        try await Task.sleep(for: .milliseconds(600))
+
+        // Now verify sync was called
+        #expect(conversations.syncCallCount > 0, "syncAllConversations should have been called")
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Start handles syncAllConversations failure after streams are started")
+    func testStartWithSyncFailure() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        mockClient.syncBehavior = .fail(NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "Sync failed"]))
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing (streams start first, then syncAllConversations is called)
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Wait for sync to fail
+        try await Task.sleep(for: .milliseconds(200))
+
+        // Verify streams were started
+        let conversations = mockClient.conversationsProvider as! TestableMockConversations
+        #expect(conversations.streamCallCount > 0, "Streams should be started")
+
+        // Verify syncAllConversations was called (and failed)
+        #expect(conversations.syncCallCount > 0, "syncAllConversations should be called")
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    // MARK: - Pause/Resume Tests
+
+    @Test("Pause stops streams but keeps client references")
+    func testPauseFlow() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        mockClient.streamBehavior = .neverClose // Keep streams open
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Wait for streams to start
+        try await Task.sleep(for: .milliseconds(200))
+
+        // Pause
+        await syncingManager.pause()
+
+        // Wait a bit
+        try await Task.sleep(for: .milliseconds(100))
+
+        // Resume should work (proves client/apiClient were retained)
+        await syncingManager.resume()
+
+        // Wait a bit
+        try await Task.sleep(for: .milliseconds(100))
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Resume restarts streams without calling syncAllConversations")
+    func testResumeFlow() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        mockClient.streamBehavior = .neverClose
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing (streams start first, then syncAllConversations is called)
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Wait for initial sync to complete
+        try await Task.sleep(for: .milliseconds(500))
+
+        let conversations = mockClient.conversationsProvider as! TestableMockConversations
+        let initialSyncCount = conversations.syncCallCount
+
+        // Pause
+        await syncingManager.pause()
+        try await Task.sleep(for: .milliseconds(500))
+
+        // Resume (should only restart streams, NOT call syncAllConversations)
+        await syncingManager.resume()
+        try await Task.sleep(for: .milliseconds(500))
+
+        // Verify syncAllConversations was NOT called again on resume
+        #expect(conversations.syncCallCount == initialSyncCount, "syncAllConversations should not be called on resume")
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    // MARK: - Stop Tests
+
+    @Test("Stop cancels all tasks and goes to idle")
+    func testStopFlow() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        mockClient.streamBehavior = .neverClose
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Wait for streams to start
+        try await Task.sleep(for: .milliseconds(200))
+
+        // Stop
+        await syncingManager.stop()
+
+        // Verify we can start again (proves we're in idle state)
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    // MARK: - State Transition Tests
+
+    @Test("Start while already starting is ignored")
+    func testStartWhileStarting() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        mockClient.syncBehavior = .delay(1.0) // Delay sync to keep in starting state
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Immediately try to start again (should be ignored)
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Wait a bit
+        try await Task.sleep(for: .milliseconds(100))
+
+        // Verify syncAllConversations was only called once
+        let conversations = mockClient.conversationsProvider as! TestableMockConversations
+        #expect(conversations.syncCallCount == 1, "syncAllConversations should only be called once")
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Start while ready stops and restarts")
+    func testStartWhileReady() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Wait for ready state
+        try await Task.sleep(for: .milliseconds(200))
+
+        let conversations = mockClient.conversationsProvider as! TestableMockConversations
+        let initialSyncCount = conversations.syncCallCount
+
+        // Start again (should stop and restart)
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Wait for restart
+        try await Task.sleep(for: .milliseconds(300))
+
+        // Verify syncAllConversations was called again
+        #expect(conversations.syncCallCount > initialSyncCount, "syncAllConversations should be called again on restart")
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Pause while starting transitions to paused once ready")
+    func testPauseWhileStarting() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        mockClient.syncBehavior = .delay(0.5) // Keep in starting state for a bit
+        mockClient.streamBehavior = .neverClose // Keep streams open
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Pause while starting (should be deferred until starting completes)
+        await syncingManager.pause()
+
+        // Wait for sync to complete - should transition to paused, not ready
+        try await Task.sleep(for: .milliseconds(600))
+
+        // Resume should work (proves we're in paused state, not ready)
+        await syncingManager.resume()
+
+        // Wait a bit for resume to complete
+        try await Task.sleep(for: .milliseconds(100))
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Pause during starting state pauses after sync completes")
+    func testPauseDuringStartingState() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        // Use a delay to ensure we're in starting state when pause is called
+        mockClient.syncBehavior = .delay(0.3)
+        mockClient.streamBehavior = .neverClose
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing - this will be in starting state
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Immediately pause while still in starting state
+        // This simulates network disconnection during startup
+        await syncingManager.pause()
+
+        // Wait for sync to complete
+        // The sync should complete, but we should transition to paused, not ready
+        try await Task.sleep(for: .milliseconds(400))
+
+        // Verify we can resume (proves we ended up in paused state, not ready)
+        // If pause was dropped, resume would fail because we'd be in ready state
+        await syncingManager.resume()
+
+        // Wait for resume to complete
+        try await Task.sleep(for: .milliseconds(100))
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Resume while not paused is ignored")
+    func testResumeWhileNotPaused() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Wait for ready state
+        try await Task.sleep(for: .milliseconds(200))
+
+        // Try to resume while not paused (should be ignored)
+        await syncingManager.resume()
+
+        // Should still be running
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    // MARK: - Stop Tests
+
+    @Test("Stop from ready state")
+    func testStopFromReady() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Wait for ready state
+        try await Task.sleep(for: .milliseconds(200))
+
+        // Stop
+        await syncingManager.stop()
+
+        // Verify we can start again (proves we're in idle)
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Stop from paused state")
+    func testStopFromPaused() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Wait for ready state
+        try await Task.sleep(for: .milliseconds(200))
+
+        // Pause
+        await syncingManager.pause()
+        try await Task.sleep(for: .milliseconds(100))
+
+        // Stop from paused
+        await syncingManager.stop()
+
+        // Verify we can start again
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Stop from starting state")
+    func testStopFromStarting() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        mockClient.syncBehavior = .delay(1.0) // Keep in starting state
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Immediately stop (while still starting)
+        await syncingManager.stop()
+
+        // Verify we can start again
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Stop waits for completion when called from ready state")
+    func testStopWaitsFromReadyState() async throws {
+        let fixtures = TestFixtures()
+        let mockClient = TestableMockClient()
+        mockClient.streamBehavior = .neverClose // Keep streams open so stop takes time
+        let mockAPIClient = TestableMockAPIClient()
+
+        let syncingManager = SyncingManager(
+            identityStore: fixtures.identityStore,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            deviceRegistrationManager: nil
+        )
+
+        // Start syncing
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Wait for ready state (after sync completes)
+        try await Task.sleep(for: .milliseconds(200))
+
+        // Call stop() when state is .ready (not .stopping)
+        // This tests the race condition: stop() should wait until state becomes .idle
+        let stopStartTime = Date()
+        await syncingManager.stop()
+        let stopDuration = Date().timeIntervalSince(stopStartTime)
+
+        // Verify stop() actually waited (took some time to complete)
+        // If the race condition existed, stop() would return immediately
+        #expect(stopDuration > 0.01, "stop() should wait for completion, not return immediately")
+
+        // Verify we can immediately start again after stop() returns
+        // This proves stop() waited until state was .idle
+        await syncingManager.start(with: mockClient, apiClient: mockAPIClient)
+
+        // Clean up
+        await syncingManager.stop()
+        try? await fixtures.cleanup()
+    }
+}

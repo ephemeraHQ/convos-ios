@@ -34,6 +34,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
+        networkMonitor: any NetworkMonitorProtocol = NetworkMonitor(),
         environment: AppEnvironment,
         startsStreamingServices: Bool,
         overrideJWTToken: String? = nil
@@ -43,6 +44,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
+            networkMonitor: networkMonitor,
             environment: environment,
             startsStreamingServices: startsStreamingServices,
             overrideJWTToken: overrideJWTToken
@@ -55,6 +57,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
+        networkMonitor: any NetworkMonitorProtocol = NetworkMonitor(),
         environment: AppEnvironment
     ) -> AuthorizeInboxOperation {
         // Generate clientId before creating state machine
@@ -64,6 +67,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             identityStore: identityStore,
             databaseReader: databaseReader,
             databaseWriter: databaseWriter,
+            networkMonitor: networkMonitor,
             environment: environment,
             startsStreamingServices: true
         )
@@ -76,6 +80,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
         identityStore: any KeychainIdentityStoreProtocol,
         databaseReader: any DatabaseReader,
         databaseWriter: any DatabaseWriter,
+        networkMonitor: any NetworkMonitorProtocol,
         environment: AppEnvironment,
         startsStreamingServices: Bool,
         overrideJWTToken: String? = nil
@@ -93,6 +98,7 @@ final class AuthorizeInboxOperation: AuthorizeInboxOperationProtocol {
             invitesRepository: invitesRepository,
             databaseWriter: databaseWriter,
             syncingManager: syncingManager,
+            networkMonitor: networkMonitor,
             overrideJWTToken: overrideJWTToken,
             environment: environment
         )
