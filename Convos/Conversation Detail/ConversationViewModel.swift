@@ -109,8 +109,8 @@ class ConversationViewModel {
         conversation.members.count > 1 && conversation.creator.isCurrentUser
     }
     var sendButtonEnabled: Bool = false
-    /// we manage focus in the view model along with @FocusState in the view
-    /// since programatically changing @FocusState doesn't always propagate to child views
+
+    /// Focus state synchronized with SwiftUI's @FocusState in the parent view
     var focus: MessagesViewInputFocus? {
         didSet {
             switch focus {
