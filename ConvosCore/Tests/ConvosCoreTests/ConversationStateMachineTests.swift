@@ -667,7 +667,7 @@ struct ConversationStateMachineTests {
         // Wait for ready state
         var joinerConversationId: String?
         do {
-            joinerConversationId = try await withTimeout(seconds: 30) {
+            joinerConversationId = try await withTimeout(seconds: 10) {
                 for await state in await joinerStateMachine.stateSequence {
                     switch state {
                     case .ready(let result):
@@ -855,6 +855,200 @@ struct ConversationStateMachineTests {
         await joinerMessagingService.stopAndDelete()
         try? await inviterFixtures.cleanup()
         try? await joinerFixtures.cleanup()
+    }
+
+    // MARK: - Cancellation Tests
+
+    @Test("Stop during pending operations doesn't hang")
+    func testStopDuringOperationsDoesntHang() async throws {
+        let fixtures = TestFixtures()
+
+        let unusedInboxCache = UnusedInboxCache(
+            keychainService: fixtures.keychainService,
+            identityStore: fixtures.identityStore
+        )
+        let messagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let stateMachine = ConversationStateMachine(
+            inboxStateManager: messagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Queue multiple actions rapidly
+        await stateMachine.create()
+        await stateMachine.sendMessage(text: "Message 1")
+        await stateMachine.sendMessage(text: "Message 2")
+
+        // Stop immediately - this tests that stop can cancel pending operations
+        await stateMachine.stop()
+
+        // Verify stop completes within a reasonable time (not hung)
+        var stoppedSuccessfully = false
+        do {
+            stoppedSuccessfully = try await withTimeout(seconds: 5) {
+                for await state in await stateMachine.stateSequence {
+                    if case .uninitialized = state {
+                        return true
+                    }
+                }
+                return false
+            }
+        } catch {
+            Issue.record("Stop operation hung or timed out: \(error)")
+        }
+
+        #expect(stoppedSuccessfully, "Stop should complete without hanging")
+
+        // Verify state machine can be reused after stop
+        await stateMachine.create()
+
+        var canCreateAfterStop = false
+        do {
+            canCreateAfterStop = try await withTimeout(seconds: 10) {
+                for await state in await stateMachine.stateSequence {
+                    if case .ready = state {
+                        return true
+                    }
+                }
+                return false
+            }
+        } catch {
+            Issue.record("Failed to create conversation after stop: \(error)")
+        }
+
+        #expect(canCreateAfterStop, "State machine should work after stop")
+
+        // Clean up
+        await messagingService.stopAndDelete()
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Delete during message processing cancels gracefully")
+    func testDeleteDuringMessageProcessing() async throws {
+        let fixtures = TestFixtures()
+
+        // Get a real messaging service from the cache
+        let unusedInboxCache = UnusedInboxCache(
+            keychainService: fixtures.keychainService,
+            identityStore: fixtures.identityStore
+        )
+        let messagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let stateMachine = ConversationStateMachine(
+            inboxStateManager: messagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Create conversation
+        await stateMachine.create()
+
+        // Queue multiple messages
+        await stateMachine.sendMessage(text: "Message 1")
+        await stateMachine.sendMessage(text: "Message 2")
+        await stateMachine.sendMessage(text: "Message 3")
+
+        // Wait for ready state
+        var conversationId: String?
+        for await state in await stateMachine.stateSequence {
+            if case .ready(let result) = state {
+                conversationId = result.conversationId
+                break
+            }
+        }
+
+        #expect(conversationId != nil, "Should have conversation ID")
+
+        // Immediately delete (while messages might still be processing)
+        await stateMachine.delete()
+
+        // Verify it transitions to uninitialized (not stuck)
+        var deletedSuccessfully = false
+        do {
+            deletedSuccessfully = try await withTimeout(seconds: 5) {
+                for await state in await stateMachine.stateSequence {
+                    if case .uninitialized = state {
+                        return true
+                    }
+                }
+                return false
+            }
+        } catch {
+            Issue.record("Timed out waiting for delete to complete: \(error)")
+        }
+
+        #expect(deletedSuccessfully, "Should successfully delete even during message processing")
+
+        // Clean up (messaging service already deleted by state machine)
+        try? await fixtures.cleanup()
+    }
+
+    @Test("Stop cancels queued message processing")
+    func testStopCancelsQueuedMessages() async throws {
+        let fixtures = TestFixtures()
+
+        // Get a real messaging service from the cache
+        let unusedInboxCache = UnusedInboxCache(
+            keychainService: fixtures.keychainService,
+            identityStore: fixtures.identityStore
+        )
+        let messagingService = await unusedInboxCache.consumeOrCreateMessagingService(
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            databaseReader: fixtures.databaseManager.dbReader,
+            environment: .tests
+        )
+
+        let stateMachine = ConversationStateMachine(
+            inboxStateManager: messagingService.inboxStateManager,
+            identityStore: fixtures.identityStore,
+            databaseReader: fixtures.databaseManager.dbReader,
+            databaseWriter: fixtures.databaseManager.dbWriter,
+            environment: .tests
+        )
+
+        // Queue messages before creating (will be queued)
+        await stateMachine.sendMessage(text: "Queued message 1")
+        await stateMachine.sendMessage(text: "Queued message 2")
+
+        // Start create
+        await stateMachine.create()
+
+        // Immediately stop (before messages can be sent)
+        await stateMachine.stop()
+
+        // Verify it transitions to uninitialized
+        var stoppedSuccessfully = false
+        do {
+            stoppedSuccessfully = try await withTimeout(seconds: 5) {
+                for await state in await stateMachine.stateSequence {
+                    if case .uninitialized = state {
+                        return true
+                    }
+                }
+                return false
+            }
+        } catch {
+            Issue.record("Timed out waiting for stop: \(error)")
+        }
+
+        #expect(stoppedSuccessfully, "Should successfully stop and cancel message queue")
+
+        // Clean up
+        await messagingService.stopAndDelete()
+        try? await fixtures.cleanup()
     }
 
     // MARK: - Network Disconnection Tests

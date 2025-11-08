@@ -82,7 +82,6 @@ public actor ConversationStateMachine {
     private let streamProcessor: any StreamProcessorProtocol
 
     private var currentTask: Task<Void, Never>?
-    private var streamConversationsTask: Task<Void, Never>?
     private var actionQueue: [Action] = []
     private var isProcessing: Bool = false
 
@@ -90,6 +89,9 @@ public actor ConversationStateMachine {
     private var messageStreamContinuation: AsyncStream<String>.Continuation?
     private var messageProcessingTask: Task<Void, Never>?
     private var isMessageStreamSetup: Bool = false
+
+    // Database observation task for tracking conversation join
+    private var observationTask: Task<String, Error>?
 
     // MARK: - State Observation
 
@@ -157,10 +159,10 @@ public actor ConversationStateMachine {
     }
 
     deinit {
-        streamConversationsTask?.cancel()
         currentTask?.cancel()
         messageStreamContinuation?.finish()
         messageProcessingTask?.cancel()
+        observationTask?.cancel()
     }
 
     private func setupMessageStream() {
@@ -177,7 +179,7 @@ public actor ConversationStateMachine {
         }
 
         // Start a single task that processes messages in order
-        messageProcessingTask = Task.detached { [weak self] in
+        messageProcessingTask = Task { [weak self] in
             for await message in stream {
                 guard let self else { break }
                 await self.processMessage(message)
@@ -226,15 +228,23 @@ public actor ConversationStateMachine {
     }
 
     func delete() {
+        // Cancel current task immediately to unblock the action queue
+        currentTask?.cancel()
         enqueueAction(.delete)
     }
 
     func stop() {
+        // Cancel current task immediately to unblock the action queue
+        currentTask?.cancel()
         enqueueAction(.stop)
     }
 
     private func waitForConversationReadyResult() async throws -> ConversationReadyResult {
+        try Task.checkCancellation()
+
         for await state in stateSequence {
+            try Task.checkCancellation()
+
             switch state {
             case .ready(let result):
                 return result
@@ -261,7 +271,7 @@ public actor ConversationStateMachine {
         isProcessing = true
         let action = actionQueue.removeFirst()
 
-        currentTask = Task.detached { [weak self] in
+        currentTask = Task { [weak self] in
             guard let self else { return }
             await self.processAction(action)
             await self.setProcessingComplete()
@@ -307,6 +317,10 @@ public actor ConversationStateMachine {
             default:
                 Log.warning("Invalid state transition: \(_state) -> \(action)")
             }
+        } catch is CancellationError {
+            // Task was cancelled - this is expected behavior from stop/delete
+            Log.info("Action \(action) cancelled")
+            // Don't emit error state - the cancelling method already handled state transition
         } catch {
             Log.error("Failed state transition \(_state) -> \(action): \(error.localizedDescription)")
             emitStateChange(.error(error))
@@ -479,7 +493,6 @@ public actor ConversationStateMachine {
 
         let inviterInboxId = invite.invitePayload.creatorInboxIdString
 
-        // Validate that the hex conversion succeeded and produced a valid inbox ID
         guard !inviterInboxId.isEmpty else {
             throw ConversationStateMachineError.invalidInviteCodeFormat("Malformed creator inbox ID")
         }
@@ -491,8 +504,7 @@ public actor ConversationStateMachine {
 
         // Clean up previous conversation, do this without matching the `conversationId`.
         // We don't need the created conversation during the 'joining' state and
-        // want to make sure it is deleted even if the conversation never shows in
-        // `streamConversationsTask`
+        // want to make sure it is deleted even if the conversation never shows
         await self.cleanUpPreviousConversationIfNeeded(
             previousResult: previousReadyResult,
             newConversationId: nil,
@@ -500,41 +512,64 @@ public actor ConversationStateMachine {
             apiClient: apiClient
         )
 
-        // Stream conversations to wait for the joined conversation
-        streamConversationsTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                Log.info("Started streaming, looking for convo...")
-                if case .group(let conversation) = try await client.conversationsProvider
-                    .stream(type: .groups, onClose: nil)
-                    .first(where: {
-                        guard case .group(let group) = $0 else { return false }
-                        let tag = try group.inviteTag
-                        return tag == invite.invitePayload.tag
-                    }) {
-                    guard !Task.isCancelled else { return }
+        // Wait for the conversation to appear in the database via ValueObservation
+        // The SyncingManager's conversation stream will process it and write to DB
+        Log.info("Waiting for conversation to be joined...")
+        observationTask = waitForJoinedConversation(
+            inviteTag: invite.invitePayload.tag
+        )
 
-                    // Process the conversation in case the syncing manager
-                    // has not finished starting the streams, or the streams closed
-                    try await self.streamProcessor.processConversation(
-                        conversation,
-                        client: client,
-                        apiClient: apiClient
-                    )
-
-                    // Transition directly to ready state
-                    await self.emitStateChange(.ready(ConversationReadyResult(
-                        conversationId: conversation.id,
-                        origin: .joined
-                    )))
-                } else {
-                    Log.error("Error waiting for conversation to join")
-                    await self.emitStateChange(.error(ConversationStateMachineError.timedOut))
-                }
-            } catch {
-                Log.error("Error streaming conversations: \(error)")
-                await self.emitStateChange(.error(error))
+        do {
+            guard let task = observationTask else {
+                throw ConversationStateMachineError.timedOut
             }
+            let conversationId = try await task.value
+            observationTask = nil
+
+            Log.info("Conversation joined successfully: \(conversationId)")
+            // Transition to ready state
+            emitStateChange(.ready(ConversationReadyResult(
+                conversationId: conversationId,
+                origin: .joined
+            )))
+        } catch is CancellationError {
+            // Task was cancelled (e.g., from handleStop/handleDelete/deinit)
+            observationTask = nil
+            Log.info("Conversation join observation cancelled")
+            throw CancellationError()  // Propagate instead of swallowing
+        } catch {
+            observationTask = nil
+            Log.error("Error waiting for conversation to join: \(error)")
+            throw ConversationStateMachineError.timedOut
+        }
+    }
+
+    private func waitForJoinedConversation(inviteTag: String) -> Task<String, Error> {
+        let observation = ValueObservation
+            .tracking { [inviteTag] db -> String? in
+                try DBConversation
+                    .filter(!DBConversation.Columns.id.like("draft-%"))
+                    .filter(DBConversation.Columns.inviteTag == inviteTag)
+                    .select(DBConversation.Columns.id)
+                    .fetchOne(db)
+            }
+
+        // Convert observation to AsyncStream
+        let stream = observation.values(in: databaseReader)
+
+        // Return a task that can be cancelled by the caller
+        return Task {
+            try Task.checkCancellation()
+
+            // Wait for non-nil value - cancellable by caller (e.g., stop/delete/deinit)
+            for try await conversationId in stream {
+                try Task.checkCancellation()
+
+                if let conversationId {
+                    return conversationId
+                }
+            }
+            throw ConversationStateMachineError.timedOut
         }
     }
 
@@ -550,9 +585,12 @@ public actor ConversationStateMachine {
 
         emitStateChange(.deleting)
 
-        // Cancel any ongoing tasks and stop accepting new messages
-        streamConversationsTask?.cancel()
+        // Cancel observation tasks and stop accepting new messages
+        // Note: currentTask is already cancelled by delete() - don't cancel ourselves!
         messageStreamContinuation?.finish()
+        messageProcessingTask?.cancel()
+        observationTask?.cancel()
+        observationTask = nil
 
         if let conversationId {
             // Get the inbox state to access the API client for unsubscribing
@@ -658,8 +696,11 @@ public actor ConversationStateMachine {
     }
 
     private func handleStop() {
-        streamConversationsTask?.cancel()
         messageStreamContinuation?.finish()
+        messageProcessingTask?.cancel()
+        observationTask?.cancel()
+        observationTask = nil
+        isProcessing = false
         emitStateChange(.uninitialized)
     }
 
