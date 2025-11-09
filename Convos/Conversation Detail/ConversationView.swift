@@ -110,6 +110,11 @@ struct ConversationView<MessagesBottomBar: View>: View {
                 }
             }
         }
+        .sheet(item: $viewModel.presentingNewConversationForInvite) { viewModel in
+            NewConversationView(viewModel: viewModel, presentingFullScreen: false)
+                .background(.colorBackgroundPrimary)
+                .interactiveDismissDisabled()
+        }
         .sheet(item: $viewModel.presentingProfileForMember) { member in
             NavigationStack {
                 ConversationMemberView(viewModel: viewModel, member: member)

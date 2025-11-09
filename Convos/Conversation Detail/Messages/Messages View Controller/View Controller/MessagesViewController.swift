@@ -213,7 +213,10 @@ final class MessagesViewController: UIViewController {
                 self.onTapAvatar?(message)
             }
         }
-        dataSource.onTapInvite = onTapInvite
+        dataSource.onTapInvite = { [weak self] invite in
+            guard let self = self else { return }
+            self.onTapInvite?(invite)
+        }
     }
 
     private func handleViewTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
