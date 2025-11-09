@@ -8,6 +8,6 @@ extension Profile: ImageCacheable {
 
 extension Conversation: ImageCacheable {
     public var imageCacheIdentifier: String {
-        id
+        clientConversationId
     }
 }

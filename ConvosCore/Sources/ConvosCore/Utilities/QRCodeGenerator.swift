@@ -1,4 +1,5 @@
 import CoreImage.CIFilterBuiltins
+import CryptoKit
 import Foundation
 import UIKit
 
@@ -74,39 +75,85 @@ public enum QRCodeGenerator {
         let roundedData: Bool
         let centerSpaceSize: Float
         let correctionLevel: String
-        let foregroundRed: CGFloat
-        let foregroundGreen: CGFloat
-        let foregroundBlue: CGFloat
-        let foregroundAlpha: CGFloat
-        let backgroundRed: CGFloat
-        let backgroundGreen: CGFloat
-        let backgroundBlue: CGFloat
-        let backgroundAlpha: CGFloat
+        let foregroundColorHex: String
+        let backgroundColorHex: String
+
+        /// Converts a color component (0-1) to a 2-digit hex string (00-FF)
+        private static func colorComponentToHex(_ value: CGFloat) -> String {
+            let clamped = max(0, min(1, value))
+            let intValue = Int(round(clamped * 255))
+            return String(format: "%02X", intValue)
+        }
+
+        /// Converts RGBA color components to a hex string (RRGGBBAA format)
+        private static func colorToHex(red: CGFloat, green: CGFloat, blue: CGFloat, alpha: CGFloat) -> String {
+            return colorComponentToHex(red) +
+                   colorComponentToHex(green) +
+                   colorComponentToHex(blue) +
+                   colorComponentToHex(alpha)
+        }
 
         init(options: Options) {
-            self.scale = options.scale
-            self.displaySize = options.displaySize
+            // Normalize scale to 3.0 for consistent caching
+            self.scale = 3.0
+            // Round displaySize to handle any floating point variations
+            self.displaySize = round(options.displaySize * 100) / 100
             self.roundedMarkers = options.roundedMarkers
             self.roundedData = options.roundedData
-            self.centerSpaceSize = options.centerSpaceSize
+            // Round centerSpaceSize to handle floating point variations
+            self.centerSpaceSize = Float(round(options.centerSpaceSize * 100) / 100)
             self.correctionLevel = options.correctionLevel
-            self.foregroundRed = options.foregroundColor.red
-            self.foregroundGreen = options.foregroundColor.green
-            self.foregroundBlue = options.foregroundColor.blue
-            self.foregroundAlpha = options.foregroundColor.alpha
-            self.backgroundRed = options.backgroundColor.red
-            self.backgroundGreen = options.backgroundColor.green
-            self.backgroundBlue = options.backgroundColor.blue
-            self.backgroundAlpha = options.backgroundColor.alpha
+            // Convert colors to hex strings for consistent, stable hashing
+            self.foregroundColorHex = Self.colorToHex(
+                red: options.foregroundColor.red,
+                green: options.foregroundColor.green,
+                blue: options.foregroundColor.blue,
+                alpha: options.foregroundColor.alpha
+            )
+            self.backgroundColorHex = Self.colorToHex(
+                red: options.backgroundColor.red,
+                green: options.backgroundColor.green,
+                blue: options.backgroundColor.blue,
+                alpha: options.backgroundColor.alpha
+            )
         }
     }
 
     /// Creates a cache key based on the string and options
+    /// Normalizes scale to 3.0 for consistent caching across different display scales
+    /// Uses SHA256 for deterministic hashing (unlike Swift's Hasher which is seeded randomly)
     private static func cacheKey(for string: String, options: Options) -> String {
-        var hasher = Hasher()
-        hasher.combine(string)
-        hasher.combine(OptionsHashKey(options: options))
-        return "qr_\(hasher.finalize())"
+        // Normalize scale to 3.0 for cache key to ensure consistent caching
+        // while still rendering at the requested scale
+        let normalizedOptions = options.withNormalizedScale()
+        let hashKey = OptionsHashKey(options: normalizedOptions)
+
+        // Create a deterministic string representation of all cache key components
+        let cacheKeyString = """
+        string:\(string)
+        scale:\(hashKey.scale)
+        displaySize:\(hashKey.displaySize)
+        roundedMarkers:\(hashKey.roundedMarkers)
+        roundedData:\(hashKey.roundedData)
+        centerSpaceSize:\(hashKey.centerSpaceSize)
+        correctionLevel:\(hashKey.correctionLevel)
+        foregroundColor:\(hashKey.foregroundColorHex)
+        backgroundColor:\(hashKey.backgroundColorHex)
+        """
+
+        // Use SHA256 for deterministic hashing (consistent across app launches)
+        guard let inputData = cacheKeyString.data(using: .utf8) else {
+            // Fallback: use a hash of just the string if UTF-8 conversion fails (should never happen)
+            let fallbackData = string.data(using: .utf8) ?? Data()
+            let hash = SHA256.hash(data: fallbackData)
+            let hashString = hash.compactMap { String(format: "%02x", $0) }.joined()
+            return "qr_\(hashString)"
+        }
+        let hash = SHA256.hash(data: inputData)
+        let hashString = hash.compactMap { String(format: "%02x", $0) }.joined()
+        let key = "qr_\(hashString)"
+
+        return key
     }
 
     /// Generates a QR code image from the given string
@@ -117,8 +164,8 @@ public enum QRCodeGenerator {
     public static func generate(from string: String, options: Options = .init()) -> UIImage? {
         let cacheKey = cacheKey(for: string, options: options)
 
-        // Check cache first
-        if let cachedImage = ImageCache.shared.image(for: cacheKey) {
+        // Check memory cache first
+        if let cachedImage = ImageCache.shared.image(for: cacheKey, imageFormat: .png) {
             return cachedImage
         }
 
@@ -138,18 +185,20 @@ public enum QRCodeGenerator {
         let outputExtent = outputImage.extent
         let baseSize = max(outputExtent.width, outputExtent.height)
 
-        // Scale to match the display size * scale factor
-        let targetPixelSize = options.displaySize * options.scale
+        // Normalize scale to 3.0 for consistent caching (matches cache key normalization)
+        // This ensures all QR codes are cached at the same resolution regardless of display scale
+        let normalizedScale: CGFloat = 3.0
+        let targetPixelSize = options.displaySize * normalizedScale
         let scaleFactor = targetPixelSize / baseSize
 
         let transform = CGAffineTransform(scaleX: scaleFactor, y: scaleFactor)
         let scaledImage = outputImage.transformed(by: transform)
 
         guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
-        let image = UIImage(cgImage: cgImage, scale: options.scale, orientation: .up)
+        let image = UIImage(cgImage: cgImage, scale: normalizedScale, orientation: .up)
 
-        // Cache the generated image
-        ImageCache.shared.cacheImage(image, for: cacheKey)
+        // Cache the generated image (use PNG for QR codes to preserve transparency)
+        ImageCache.shared.cacheImage(image, for: cacheKey, imageFormat: .png)
 
         return image
     }
@@ -162,13 +211,14 @@ public enum QRCodeGenerator {
     public static func generate(from string: String, options: Options = .init()) async -> UIImage? {
         let cacheKey = cacheKey(for: string, options: options)
 
-        // Check cache first
-        if let cachedImage = ImageCache.shared.image(for: cacheKey) {
+        // Check cache first (use PNG for QR codes)
+        if let cachedImage = await ImageCache.shared.imageAsync(for: cacheKey, imageFormat: .png) {
+            Log.info("Returning cached QR for key: \(cacheKey)")
             return cachedImage
         }
 
         // Generate in background
-        return await Task.detached(priority: .userInitiated) {
+        return await Task {
             generate(from: string, options: options)
         }.value
     }
@@ -213,5 +263,35 @@ public enum QRCodeGenerator {
     public static func clearFromCacheAllModes(string: String) {
         clearFromCache(string: string, options: Options.qrCodeLight)
         clearFromCache(string: string, options: Options.qrCodeDark)
+    }
+}
+
+/// Extension to provide normalized scale for consistent caching
+public extension QRCodeGenerator.Options {
+    /// Returns a new Options instance with the scale normalized to 3.0
+    /// This ensures consistent cache keys regardless of the original display scale
+    func withNormalizedScale() -> QRCodeGenerator.Options {
+        let foregroundUIColor = UIColor(
+            red: foregroundColor.red,
+            green: foregroundColor.green,
+            blue: foregroundColor.blue,
+            alpha: foregroundColor.alpha
+        )
+        let backgroundUIColor = UIColor(
+            red: backgroundColor.red,
+            green: backgroundColor.green,
+            blue: backgroundColor.blue,
+            alpha: backgroundColor.alpha
+        )
+        return QRCodeGenerator.Options(
+            scale: 3.0,
+            displaySize: displaySize,
+            roundedMarkers: roundedMarkers,
+            roundedData: roundedData,
+            centerSpaceSize: centerSpaceSize,
+            correctionLevel: correctionLevel,
+            foregroundColor: foregroundUIColor,
+            backgroundColor: backgroundUIColor
+        )
     }
 }

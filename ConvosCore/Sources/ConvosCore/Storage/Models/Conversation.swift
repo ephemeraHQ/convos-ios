@@ -5,6 +5,7 @@ import GRDB
 
 public struct Conversation: Codable, Hashable, Identifiable, Sendable {
     public let id: String
+    let clientConversationId: String
     public let inboxId: String
     public let clientId: String
     public let creator: ConversationMember

@@ -208,7 +208,7 @@ public final class SessionManager: SessionManagerProtocol {
                 "notificationType": "explosion"
             ]
 
-            if let cachedImage = ImageCache.shared.image(for: conversation),
+            if let cachedImage = await ImageCache.shared.imageAsync(for: conversation),
                let cachedImageData = cachedImage.jpegData(compressionQuality: 1.0) {
                 do {
                     let tempDirectory = FileManager.default.temporaryDirectory

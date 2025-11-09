@@ -87,11 +87,11 @@ class MyProfileWriter: MyProfileWriterProtocol {
             return
         }
 
-        ImageCache.shared.setImage(avatarImage, for: profile.hydrateProfile())
-
-        let resizedImage = ImageCompression.resizeForCache(avatarImage)
-
-        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
+        let hydratedProfile = profile.hydrateProfile()
+        guard let compressedImageData = ImageCache.shared.resizeCacheAndGetData(
+            avatarImage,
+            for: hydratedProfile
+        ) else {
             throw MyProfileWriterError.imageCompressionFailed
         }
 
@@ -104,7 +104,10 @@ class MyProfileWriter: MyProfileWriterProtocol {
         let updatedProfile = profile.with(avatar: uploadedURL)
         try await group.updateProfile(updatedProfile)
 
-        ImageCache.shared.setImage(resizedImage, for: uploadedURL)
+        // Cache the resized image with the uploaded URL as well
+        if let image = UIImage(data: compressedImageData) {
+            ImageCache.shared.setImage(image, for: uploadedURL)
+        }
 
         try await databaseWriter.write { db in
             Log.info("Updated avatar for profile: \(updatedProfile)")

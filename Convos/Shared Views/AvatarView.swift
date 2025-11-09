@@ -36,9 +36,9 @@ struct AvatarView: View {
     @MainActor
     private func loadImage() async {
         // First check object cache for instant updates
-        if let cachedObjectImage = ImageCache.shared.image(for: cacheableObject) {
+        if let cachedObjectImage = await ImageCache.shared.imageAsync(for: cacheableObject) {
             cachedImage = cachedObjectImage
-            return
+            return // Early return to avoid redundant URL cache check
         }
 
         guard let imageURL else {
@@ -46,9 +46,10 @@ struct AvatarView: View {
             return
         }
 
-        // Check URL-based cache
-        if let existingImage = ImageCache.shared.image(for: imageURL) {
+        // Check URL-based cache (only if object cache was empty)
+        if let existingImage = await ImageCache.shared.imageAsync(for: imageURL) {
             cachedImage = existingImage
+            return // Early return to avoid network request if URL cache has the image
         }
 
         isLoading = true
@@ -97,7 +98,7 @@ struct ConversationAvatarView: View {
             // Fall back to URL-based loading with conversation object for cache awareness
             AvatarView(
                 imageURL: conversation.imageURL,
-                fallbackName: conversation.displayName,
+                fallbackName: "",
                 cacheableObject: conversation,
                 placeholderImage: conversationImage
             )

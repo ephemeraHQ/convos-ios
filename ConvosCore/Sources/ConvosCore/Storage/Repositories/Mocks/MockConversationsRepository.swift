@@ -4,6 +4,7 @@ import Foundation
 extension Conversation {
     public static func mock(
         id: String = UUID().uuidString,
+        clientConversationId: String = UUID().uuidString,
         creator: ConversationMember = .mock(),
         date: Date = Date(),
         consent: Consent = .allowed,
@@ -17,6 +18,7 @@ extension Conversation {
     ) -> Self {
         .init(
             id: id,
+            clientConversationId: clientConversationId,
             inboxId: UUID().uuidString,
             clientId: UUID().uuidString,
             creator: creator,
@@ -42,6 +44,7 @@ extension Conversation {
     public static func empty(id: String = "") -> Self {
         .init(
             id: id,
+            clientConversationId: id,
             inboxId: "",
             clientId: "",
             creator: .empty(isCurrentUser: true),

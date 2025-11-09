@@ -154,9 +154,11 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
     func updateImage(_ image: UIImage, for conversation: Conversation) async throws {
         let inboxReady = try await inboxStateManager.waitForInboxReadyResult()
 
-        let resizedImage = ImageCompression.resizeForCache(image)
-
-        guard let compressedImageData = resizedImage.jpegData(compressionQuality: 0.8) else {
+        // Resize, cache, and get JPEG data in one pass
+        guard let compressedImageData = ImageCache.shared.resizeCacheAndGetData(
+            image,
+            for: conversation
+        ) else {
             throw ConversationMetadataWriterError.failedImageCompression
         }
 
@@ -168,7 +170,6 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
         ) { uploadedURL in
             do {
                 try await self.updateImageUrl(uploadedURL, for: conversation.id)
-                ImageCache.shared.setImage(resizedImage, for: conversation)
             } catch {
                 Log.error("Failed updating conversation image URL: \(error.localizedDescription)")
             }

@@ -254,13 +254,13 @@ extension DebugViewSection {
         }
     }
 
-    private func testSentryMessage() {
+    func testSentryMessage() {
         let message = "Test message from local development - \(Date())"
         SentrySDK.capture(message: message)
         Log.info("Sent Sentry test message: \(message)")
     }
 
-    private func testSentryError() {
+    func testSentryError() {
         let error = NSError(
             domain: "com.convos.debug",
             code: 999,
@@ -274,7 +274,7 @@ extension DebugViewSection {
         Log.info("Sent Sentry test error")
     }
 
-    private func testSentryException() {
+    func testSentryException() {
         let exception = NSException(
             name: .init("TestException"),
             reason: "Test exception from local debug view",
@@ -287,7 +287,7 @@ extension DebugViewSection {
         Log.info("Sent Sentry test exception")
     }
 
-    private func testSentryWithBreadcrumbs() {
+    func testSentryWithBreadcrumbs() {
         let crumb1 = Breadcrumb(level: .info, category: "navigation")
         crumb1.message = "User navigated to Debug view"
         crumb1.data = ["screen": "DebugView"]
