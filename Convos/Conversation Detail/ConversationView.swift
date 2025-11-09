@@ -43,6 +43,7 @@ struct ConversationView<MessagesBottomBar: View>: View {
             },
             onTapMessage: viewModel.onTapMessage(_:),
             onTapAvatar: viewModel.onTapAvatar(_:),
+            onTapInvite: viewModel.onTapInvite(_:),
             onDisplayNameEndedEditing: {
                 viewModel.onDisplayNameEndedEditing(focusCoordinator: focusCoordinator, context: .quickEditor)
             },

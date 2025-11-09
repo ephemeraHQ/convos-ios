@@ -112,6 +112,7 @@ final class MessagesViewController: UIViewController {
         super.init(nibName: nil, bundle: nil)
     }
 
+    var onTapInvite: ((MessageInvite) -> Void)?
     var onTapMessage: ((AnyMessage) -> Void)?
     var onTapAvatar: ((AnyMessage) -> Void)?
 
@@ -212,6 +213,7 @@ final class MessagesViewController: UIViewController {
                 self.onTapAvatar?(message)
             }
         }
+        dataSource.onTapInvite = onTapInvite
     }
 
     private func handleViewTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {

@@ -7,10 +7,18 @@ final class CellFactory {
     static func createCell(in collectionView: UICollectionView,
                            for indexPath: IndexPath,
                            with item: MessagesCollectionCell,
+                           onTapInvite: @escaping (MessageInvite) -> Void,
                            onTapAvatar: @escaping () -> Void) -> UICollectionViewCell {
         switch item {
         case let .message(message, bubbleType: bubbleType):
-            return createMessageCell(in: collectionView, for: indexPath, message: message, bubbleType: bubbleType, onTapAvatar: onTapAvatar)
+            return createMessageCell(
+                in: collectionView,
+                for: indexPath,
+                message: message,
+                bubbleType: bubbleType,
+                onTapInvite: onTapInvite,
+                onTapAvatar: onTapAvatar
+            )
         case let .messageGroup(group):
             return createGroupTitle(in: collectionView, for: indexPath, title: group.title, source: group.source)
         case let .date(group):
@@ -45,6 +53,7 @@ final class CellFactory {
                                           for indexPath: IndexPath,
                                           message: AnyMessage,
                                           bubbleType: MessagesCollectionCell.BubbleType,
+                                          onTapInvite: @escaping (MessageInvite) -> Void,
                                           onTapAvatar: @escaping () -> Void) -> UICollectionViewCell {
         switch message {
         case .message(let message):
@@ -59,6 +68,17 @@ final class CellFactory {
                     bubbleType: bubbleType,
                     messageType: message.source,
                     profile: message.sender.profile,
+                    onTapAvatar: onTapAvatar
+                )
+            case .invite(let invite):
+                return createMessageInviteCell(
+                    in: collectionView,
+                    for: indexPath,
+                    invite: invite,
+                    bubbleType: bubbleType,
+                    messageType: message.source,
+                    profile: message.sender.profile,
+                    onTapInvite: onTapInvite,
                     onTapAvatar: onTapAvatar
                 )
             case .attachment(let attachmentURL):
@@ -83,6 +103,17 @@ final class CellFactory {
                     bubbleType: bubbleType,
                     messageType: reply.source,
                     profile: reply.sender.profile,
+                    onTapAvatar: onTapAvatar
+                )
+            case .invite(let invite):
+                return createMessageInviteCell(
+                    in: collectionView,
+                    for: indexPath,
+                    invite: invite,
+                    bubbleType: bubbleType,
+                    messageType: reply.source,
+                    profile: reply.sender.profile,
+                    onTapInvite: onTapInvite,
                     onTapAvatar: onTapAvatar
                 )
             case .attachment(let attachmentURL):
@@ -113,6 +144,30 @@ final class CellFactory {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: TextMessageCollectionCell.reuseIdentifier,
                                                       for: indexPath) as! TextMessageCollectionCell
         cell.setup(message: text, messageType: messageType, style: bubbleType, profile: profile, onTapAvatar: onTapAvatar)
+        return cell
+    }
+
+    // swiftlint:disable:next function_parameter_count
+    private static func createMessageInviteCell(
+        in collectionView: UICollectionView,
+        for indexPath: IndexPath,
+        invite: MessageInvite,
+        bubbleType: MessagesCollectionCell.BubbleType,
+        messageType: MessageSource,
+        profile: Profile,
+        onTapInvite: @escaping (MessageInvite) -> Void,
+        onTapAvatar: @escaping () -> Void,
+    ) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MessageInviteCell.reuseIdentifier,
+                                                      for: indexPath) as! MessageInviteCell
+        cell.setup(
+            invite: invite,
+            messageType: messageType,
+            style: bubbleType,
+            profile: profile,
+            onTapInvite: onTapInvite,
+            onTapAvatar: onTapAvatar
+        )
         return cell
     }
 

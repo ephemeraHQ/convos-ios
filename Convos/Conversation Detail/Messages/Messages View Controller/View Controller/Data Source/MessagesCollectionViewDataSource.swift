@@ -1,3 +1,4 @@
+import ConvosCore
 import Foundation
 import SwiftUI
 import UIKit
@@ -13,6 +14,7 @@ final class MessagesCollectionViewDataSource: NSObject {
     }
 
     var onTapAvatar: ((IndexPath) -> Void)?
+    var onTapInvite: ((MessageInvite) -> Void)?
 
     private lazy var layoutDelegate: DefaultMessagesLayoutDelegate = DefaultMessagesLayoutDelegate(sections: sections,
                                                                                                    oldSections: [])
@@ -22,6 +24,7 @@ final class MessagesCollectionViewDataSource: NSObject {
                                 forCellWithReuseIdentifier: ConversationInfoCell.reuseIdentifier)
         collectionView.register(TextMessageCollectionCell.self,
                                 forCellWithReuseIdentifier: TextMessageCollectionCell.reuseIdentifier)
+        collectionView.register(MessageInviteCell.self, forCellWithReuseIdentifier: MessageInviteCell.reuseIdentifier)
         collectionView.register(ImageCollectionCell.self,
                                 forCellWithReuseIdentifier: ImageCollectionCell.reuseIdentifier)
         collectionView.register(InviteCell.self, forCellWithReuseIdentifier: InviteCell.reuseIdentifier)
@@ -60,9 +63,12 @@ extension MessagesCollectionViewDataSource: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView,
                         cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let item = sections[indexPath.section].cells[indexPath.item]
-        return CellFactory.createCell(in: collectionView, for: indexPath, with: item) { [weak self] in
+        return CellFactory.createCell(in: collectionView, for: indexPath, with: item, onTapInvite: { [weak self] invite in
+            Log.info("Tapped invite: \(invite)")
+            self?.onTapInvite?(invite)
+        }, onTapAvatar: { [weak self] in
             self?.onTapAvatar?(indexPath)
-        }
+        })
     }
 
     func collectionView(_ collectionView: UICollectionView,

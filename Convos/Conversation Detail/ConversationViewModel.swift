@@ -367,6 +367,10 @@ class ConversationViewModel {
         presentingProfileForMember = message.base.sender
     }
 
+    func onTapInvite(_ invite: MessageInvite) {
+        // open the invite
+    }
+
     func onDisplayNameEndedEditing(focusCoordinator: FocusCoordinator, context: FocusTransitionContext) {
         myProfileViewModel.onEndedEditing(for: conversation.id)
 

@@ -29,6 +29,8 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
                 switch message.base.content {
                 case .text, .emoji:
                     return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 36))
+                case .invite:
+                    return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 120.0))
                 case .attachment, .attachments:
                     return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 120.0))
                 case .update:
