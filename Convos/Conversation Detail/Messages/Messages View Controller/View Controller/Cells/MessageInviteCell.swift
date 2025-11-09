@@ -137,7 +137,6 @@ struct MessageInviteContainerView: View {
                 onTapInvite: { _ in
                 },
                 onTapAvatar: {})
-
         }
         .padding(.horizontal, DesignConstants.Spacing.step2x)
     }
