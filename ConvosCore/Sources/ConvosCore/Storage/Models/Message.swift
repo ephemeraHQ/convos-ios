@@ -10,6 +10,16 @@ public struct MessageInvite: Sendable, Hashable, Codable {
 }
 
 public extension MessageInvite {
+    static var empty: MessageInvite {
+        .init(
+            inviteSlug: "message-invite-slug",
+            conversationName: nil,
+            conversationDescription: nil,
+            imageURL: nil,
+            expiresAt: nil,
+            conversationExpiresAt: nil
+        )
+    }
     static var mock: MessageInvite {
         .init(
             inviteSlug: "message-invite-slug",

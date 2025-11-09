@@ -101,27 +101,46 @@ struct MessageInviteContainerView: View {
 }
 
 #Preview {
-    VStack {
-        MessageInviteContainerView(
-            invite: .mock,
-            style: .normal,
-            isOutgoing: false,
-            profile: .mock(),
-            onTapInvite: { _ in
-            },
-            onTapAvatar: {
-            })
+    ScrollView {
+        VStack {
+            MessageInviteContainerView(
+                invite: .mock,
+                style: .normal,
+                isOutgoing: false,
+                profile: .mock(),
+                onTapInvite: { _ in
+                },
+                onTapAvatar: {
+                })
+            MessageInviteContainerView(
+                invite: .mock,
+                style: .tailed,
+                isOutgoing: true,
+                profile: .mock(),
+                onTapInvite: { _ in
+                },
+                onTapAvatar: {})
+            MessageInviteContainerView(
+                invite: .empty,
+                style: .normal,
+                isOutgoing: false,
+                profile: .mock(),
+                onTapInvite: { _ in
+                },
+                onTapAvatar: {
+                })
+            MessageInviteContainerView(
+                invite: .empty,
+                style: .tailed,
+                isOutgoing: true,
+                profile: .mock(),
+                onTapInvite: { _ in
+                },
+                onTapAvatar: {})
 
-        MessageInviteContainerView(
-            invite: .mock,
-            style: .tailed,
-            isOutgoing: true,
-            profile: .mock(),
-            onTapInvite: { _ in
-            },
-            onTapAvatar: {})
+        }
+        .padding(.horizontal, DesignConstants.Spacing.step2x)
     }
-    .padding(.horizontal, DesignConstants.Spacing.step2x)
 }
 
 struct MessageInviteView: View {
@@ -130,15 +149,27 @@ struct MessageInviteView: View {
 
     var title: String {
         if let name = invite.conversationName, !name.isEmpty {
-            return "Join a convo: \"\(name)\""
+            return "Pop into my convo \"\(name)\""
         }
-        return "Join a convo"
+        return "Pop into my convo before it explodes"
+    }
+
+    var description: String {
+        if let description = invite.conversationDescription, !description.isEmpty {
+            return description
+        }
+        return "convos.org"
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0.0) {
             ZStack {
-                Image("convosIcon")
+                Image("convosIconLarge")
+                    .resizable()
+                    .tint(.colorTextPrimaryInverted)
+                    .foregroundStyle(.colorTextPrimaryInverted)
+                    .frame(width: 96.0, height: 96.0)
+                    .padding(.vertical, DesignConstants.Spacing.step12x)
 
                 if let image = cachedImage {
                     Image(uiImage: image)
@@ -148,19 +179,25 @@ struct MessageInviteView: View {
                 }
             }
             .frame(maxWidth: .infinity, minHeight: 120.0)
+            .background(.colorBackgroundInverted)
 
             VStack(alignment: .leading, spacing: 2.0) {
                 Text(title)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .truncationMode(.tail)
+                    .foregroundStyle(.black)
+                    .multilineTextAlignment(.leading)
                     .font(.body)
                     .fontWeight(.bold)
-                if let description = invite.conversationDescription, !description.isEmpty {
-                    Text(description)
-                        .font(.caption)
-                }
+                Text(description)
+                    .font(.subheadline)
+                    .foregroundStyle(.colorTextSecondary)
             }
+            .padding(.vertical, DesignConstants.Spacing.step3x)
             .padding(.horizontal, DesignConstants.Spacing.step4x)
-            .padding(.vertical, DesignConstants.Spacing.step4x)
         }
+        .background(.colorLinkBackground)
         .frame(maxWidth: 250.0)
         .cachedImage(for: invite) { image in
             cachedImage = image
