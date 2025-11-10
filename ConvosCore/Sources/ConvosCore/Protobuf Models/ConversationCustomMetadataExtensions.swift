@@ -56,7 +56,7 @@ extension MemberProfile {
 // MARK: - XMTP Extensions
 
 extension XMTPiOS.Group {
-    private static let appDataByteLimit = 8 * 1024
+    private static let appDataByteLimit: Int = 8 * 1024
 
     private func metadataFromAppData() throws -> ConversationCustomMetadata? {
         let storedAppData = try appData()

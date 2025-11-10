@@ -323,7 +323,13 @@ public actor ConversationStateMachine {
             // Don't emit error state - the cancelling method already handled state transition
         } catch {
             Log.error("Failed state transition \(_state) -> \(action): \(error.localizedDescription)")
-            emitStateChange(.error(error))
+            // Wrap non-DisplayError errors to ensure they can be properly displayed to the user
+            let displayableError: Error = if error is DisplayError {
+                error
+            } else {
+                ConversationStateMachineError.stateMachineError(error)
+            }
+            emitStateChange(.error(displayableError))
         }
     }
 

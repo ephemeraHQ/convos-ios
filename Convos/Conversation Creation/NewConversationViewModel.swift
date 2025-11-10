@@ -316,11 +316,24 @@ class NewConversationViewModel: Identifiable {
 
     @MainActor
     private func handleError(_ error: Error) {
+        // Log the error details for debugging
+        Log.error("handleError called with error: \(error)")
+        Log.error("Error type: \(type(of: error))")
+        Log.error("Error localizedDescription: \(error.localizedDescription)")
+
+        // If it's an NSError, log more details
+        if let nsError = error as NSError? {
+            Log.error("NSError domain: \(nsError.domain)")
+            Log.error("NSError code: \(nsError.code)")
+            Log.error("NSError userInfo: \(nsError.userInfo)")
+        }
+
         // Set the display error
         if let displayError = error as? DisplayError {
             self.displayError = IdentifiableError(error: displayError)
         } else {
             // Fallback for non-DisplayError errors
+            Log.error("Error does NOT conform to DisplayError protocol - using generic fallback")
             self.displayError = IdentifiableError(error: GenericDisplayError(
                 title: "Failed creating",
                 description: "Please try again."
