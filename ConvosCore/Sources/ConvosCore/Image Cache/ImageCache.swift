@@ -35,17 +35,11 @@ private struct CacheConfiguration {
     /// Maximum size of disk cache in bytes (500MB)
     static let maxDiskCacheSize: Int = 500 * 1024 * 1024
 
-    /// Maximum number of images in the main memory cache
-    static let memoryCacheCountLimit: Int = 400
+    /// Maximum number of images in memory cache
+    static let memoryCacheCountLimit: Int = 600
 
-    /// Maximum total cost (in bytes) for the main memory cache (200MB)
-    static let memoryCacheTotalCostLimit: Int = 200 * 1024 * 1024
-
-    /// Maximum number of images in the URL memory cache
-    static let urlCacheCountLimit: Int = 200
-
-    /// Maximum total cost (in bytes) for the URL memory cache (100MB)
-    static let urlCacheTotalCostLimit: Int = 100 * 1024 * 1024
+    /// Maximum total cost (in bytes) for memory cache (300MB)
+    static let memoryCacheTotalCostLimit: Int = 300 * 1024 * 1024
 }
 
 // MARK: - Generic Image Cache
@@ -58,7 +52,6 @@ public final class ImageCache: @unchecked Sendable {
     public static let shared: ImageCache = ImageCache()
 
     private let cache: NSCache<NSString, UIImage>
-    private let urlCache: NSCache<NSString, UIImage>
 
     // Disk cache properties
     private let diskCacheURL: URL
@@ -81,10 +74,6 @@ public final class ImageCache: @unchecked Sendable {
         cache = NSCache<NSString, UIImage>()
         cache.countLimit = CacheConfiguration.memoryCacheCountLimit
         cache.totalCostLimit = CacheConfiguration.memoryCacheTotalCostLimit
-
-        urlCache = NSCache<NSString, UIImage>()
-        urlCache.countLimit = CacheConfiguration.urlCacheCountLimit
-        urlCache.totalCostLimit = CacheConfiguration.urlCacheTotalCostLimit
 
         // Setup disk cache
         fileManager = FileManager.default
@@ -282,7 +271,7 @@ public final class ImageCache: @unchecked Sendable {
     // MARK: - URL-based Methods (kept for compatibility)
 
     public func image(for url: URL) -> UIImage? {
-        return urlCache.object(forKey: url.absoluteString as NSString)
+        return cache.object(forKey: url.absoluteString as NSString)
     }
 
     /// Get cached image by URL (async, checks memory → disk)
@@ -290,14 +279,14 @@ public final class ImageCache: @unchecked Sendable {
         let urlString = url.absoluteString
 
         // Check memory first
-        if let memoryImage = urlCache.object(forKey: urlString as NSString) {
+        if let memoryImage = cache.object(forKey: urlString as NSString) {
             return memoryImage
         }
 
         // Check disk (using URL string as identifier, default to JPEG)
         if let diskImage = await loadImageFromDisk(identifier: urlString, imageFormat: .jpg) {
             // Populate memory cache (image is already compressed/resized from disk)
-            cacheImageInMemory(diskImage, key: urlString, cache: urlCache, logContext: "URL cache (from disk)")
+            cacheImageInMemory(diskImage, key: urlString, cache: cache, logContext: "URL cache (from disk)")
             return diskImage
         }
 
@@ -305,7 +294,7 @@ public final class ImageCache: @unchecked Sendable {
     }
 
     public func setImage(_ image: UIImage, for url: String) {
-        cacheImage(image, key: url, cache: urlCache, logContext: "URL cache", imageFormat: .jpg)
+        cacheImage(image, key: url, cache: cache, logContext: "URL cache", imageFormat: .jpg)
 
         // Save to disk asynchronously (default to JPEG for URL-based cache)
         Task {

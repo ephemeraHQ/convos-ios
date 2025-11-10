@@ -38,7 +38,7 @@ struct AvatarView: View {
         // First check object cache for instant updates
         if let cachedObjectImage = await ImageCache.shared.imageAsync(for: cacheableObject) {
             cachedImage = cachedObjectImage
-            return // Early return to avoid redundant URL cache check
+            // fall through so we attempt to fetch the latest
         }
 
         guard let imageURL else {
