@@ -191,7 +191,7 @@ class ConversationWriter: ConversationWriterProtocol {
         return ConversationMetadata(
             kind: .group,
             name: try conversation.name(),
-            description: try conversation.customDescription,
+            description: try conversation.description(),
             imageURLString: try conversation.imageUrl(),
             expiresAt: try conversation.expiresAt,
             debugInfo: debugInfo

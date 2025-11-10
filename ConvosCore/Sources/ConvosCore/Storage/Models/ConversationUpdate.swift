@@ -7,12 +7,12 @@ public struct ConversationUpdate: Hashable, Codable, Sendable {
                  description = "description",
                  image = "group_image_url_square",
                  expiresAt = "expiresAt",
-                 custom = "custom",
+                 metadata = "app_data",
                  unknown
 
             var showsInMessagesList: Bool {
                 switch self {
-                case .custom, .expiresAt, .unknown:
+                case .expiresAt, .unknown, .metadata:
                     false
                 default:
                     true

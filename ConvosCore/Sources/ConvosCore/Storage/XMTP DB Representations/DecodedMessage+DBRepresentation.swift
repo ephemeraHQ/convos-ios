@@ -178,6 +178,21 @@ extension XMTPiOS.DecodedMessage {
         let metadataFieldChanges: [DBMessage.Update.MetadataChange] = groupUpdated.metadataFieldChanges
             .compactMap {
                 if $0.fieldName == ConversationUpdate.MetadataChange.Field.description.rawValue {
+                    let descriptionChanged = $0.oldValue != $0.newValue
+                    if descriptionChanged {
+                        return .init(
+                            field: ConversationUpdate.MetadataChange.Field.description.rawValue,
+                            oldValue: $0.oldValue,
+                            newValue: $0.newValue
+                        )
+                    } else {
+                        return .init(
+                            field: ConversationUpdate.MetadataChange.Field.unknown.rawValue,
+                            oldValue: nil,
+                            newValue: nil
+                        )
+                    }
+                } else if $0.fieldName == ConversationUpdate.MetadataChange.Field.metadata.rawValue {
                     let oldCustomValue: ConversationCustomMetadata?
                     if $0.hasOldValue {
                         do {
@@ -202,11 +217,6 @@ extension XMTPiOS.DecodedMessage {
                         newCustomValue = nil
                     }
 
-                    // Extract values, using empty string as default for description
-                    let oldDescription = oldCustomValue?.description_p ?? ""
-                    let newDescription = newCustomValue?.description_p ?? ""
-                    let descriptionChanged = oldDescription != newDescription
-
                     // Extract expiresAt values (only if explicitly set)
                     let oldExpiresAt: Date?
                     if let oldCustomValue, oldCustomValue.hasExpiresAtUnix {
@@ -221,8 +231,8 @@ extension XMTPiOS.DecodedMessage {
                     } else {
                         newExpiresAt = nil
                     }
-                    let expiresAtChanged = oldExpiresAt != newExpiresAt
 
+                    let expiresAtChanged = oldExpiresAt != newExpiresAt
                     // Determine what to report based on what actually changed
                     if expiresAtChanged {
                         // expiresAt changed, prioritize it
@@ -231,16 +241,10 @@ extension XMTPiOS.DecodedMessage {
                             oldValue: oldExpiresAt?.ISO8601Format(),
                             newValue: newExpiresAt?.ISO8601Format()
                         )
-                    } else if descriptionChanged {
-                        return .init(
-                            field: ConversationUpdate.MetadataChange.Field.description.rawValue,
-                            oldValue: oldDescription.isEmpty ? nil : oldDescription,
-                            newValue: newDescription.isEmpty ? nil : newDescription
-                        )
                     } else {
-                        // Neither description nor expiresAt changed - some other custom field changed (tag, profiles, etc.)
+                        // some other custom field changed (tag, profiles, etc.)
                         return .init(
-                            field: ConversationUpdate.MetadataChange.Field.custom.rawValue,
+                            field: ConversationUpdate.MetadataChange.Field.metadata.rawValue,
                             oldValue: nil,
                             newValue: nil
                         )

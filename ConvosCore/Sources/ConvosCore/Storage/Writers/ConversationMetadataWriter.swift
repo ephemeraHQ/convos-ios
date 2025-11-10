@@ -128,7 +128,7 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             throw ConversationMetadataError.conversationNotFound(conversationId: conversationId)
         }
 
-        try await group.updateCustomDescription(description: description)
+        try await group.updateDescription(description: description)
 
         let updatedConversation = try await databaseWriter.write { db in
             guard let localConversation = try DBConversation

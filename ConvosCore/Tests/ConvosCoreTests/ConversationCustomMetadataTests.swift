@@ -23,7 +23,6 @@ struct ConversationCustomMetadataTests {
         let encoded = try metadata.toCompactString()
         let decoded = try ConversationCustomMetadata.fromCompactString(encoded)
 
-        #expect(decoded.description_p.isEmpty)
         #expect(decoded.tag.isEmpty)
         #expect(decoded.profiles.isEmpty)
         #expect(!decoded.hasExpiresAtUnix)
@@ -31,12 +30,11 @@ struct ConversationCustomMetadataTests {
 
     @Test("Description-only metadata round-trip")
     func descriptionOnlyRoundTrip() throws {
-        let metadata = ConversationCustomMetadata(description: "Test Description")
+        let metadata = ConversationCustomMetadata()
 
         let encoded = try metadata.toCompactString()
         let decoded = try ConversationCustomMetadata.fromCompactString(encoded)
 
-        #expect(decoded.description_p == "Test Description")
         #expect(decoded.tag.isEmpty)
         #expect(decoded.profiles.isEmpty)
     }
@@ -44,7 +42,6 @@ struct ConversationCustomMetadataTests {
     @Test("Full metadata round-trip")
     func fullMetadataRoundTrip() throws {
         var metadata = ConversationCustomMetadata()
-        metadata.description_p = "My Conversation"
         metadata.tag = "abc123xyz"
         metadata.expiresAtUnix = 1735689600 // 2025-01-01
 
@@ -66,7 +63,6 @@ struct ConversationCustomMetadataTests {
         let encoded = try metadata.toCompactString()
         let decoded = try ConversationCustomMetadata.fromCompactString(encoded)
 
-        #expect(decoded.description_p == "My Conversation")
         #expect(decoded.tag == "abc123xyz")
         #expect(decoded.expiresAtUnix == 1735689600)
         #expect(decoded.profiles.count == 2)
@@ -80,21 +76,22 @@ struct ConversationCustomMetadataTests {
 
     @Test("Small metadata may not compress")
     func smallMetadataMayNotCompress() throws {
-        let metadata = ConversationCustomMetadata(description: "Hi")
+        var metadata = ConversationCustomMetadata()
+        metadata.tag = "1"
         let encoded = try metadata.toCompactString()
 
         // Small data might not compress, but should still encode/decode
         let decoded = try ConversationCustomMetadata.fromCompactString(encoded)
-        #expect(decoded.description_p == "Hi")
+        #expect(decoded.tag == "1")
     }
 
     @Test("Large metadata compresses")
     func largeMetadataCompresses() throws {
         var metadata = ConversationCustomMetadata()
-        metadata.description_p = String(repeating: "This is a long description. ", count: 20)
 
         // Add many profiles
-        for i in 0..<10 {
+        let profilesCount = 100
+        for i in 0..<profilesCount {
             let inboxIdHex = String(format: "%064d", i)
             if let profile = ConversationProfile(
                 inboxIdString: inboxIdHex,
@@ -118,7 +115,7 @@ struct ConversationCustomMetadataTests {
 
         // Should decode correctly
         let decoded = try ConversationCustomMetadata.fromCompactString(encoded)
-        #expect(decoded.profiles.count == 10)
+        #expect(decoded.profiles.count == profilesCount)
     }
 
     @Test("Compression threshold behavior")
@@ -127,13 +124,14 @@ struct ConversationCustomMetadataTests {
         let testSizes = [50, 100, 150, 200]
 
         for size in testSizes {
-            let description = String(repeating: "x", count: size)
-            let metadata = ConversationCustomMetadata(description: description)
+            var metadata = ConversationCustomMetadata()
+            let tag = String(repeating: "x", count: size)
+            metadata.tag = tag
 
             let encoded = try metadata.toCompactString()
             let decoded = try ConversationCustomMetadata.fromCompactString(encoded)
 
-            #expect(decoded.description_p == description)
+            #expect(decoded.tag == tag)
         }
     }
 
@@ -316,51 +314,9 @@ struct ConversationCustomMetadataTests {
 
     // MARK: - Migration Support Tests
 
-    @Test("parseDescriptionField detects encoded metadata")
-    func parseDescriptionFieldDetectsEncoded() throws {
-        var metadata = ConversationCustomMetadata()
-        metadata.description_p = "Test Description"
-        metadata.tag = "test123"
-
-        let encoded = try metadata.toCompactString()
-
-        let parsed = ConversationCustomMetadata.parseDescriptionField(encoded)
-
-        #expect(parsed.description_p == "Test Description")
-        #expect(parsed.tag == "test123")
-    }
-
-    @Test("parseDescriptionField handles plain text")
-    func parseDescriptionFieldHandlesPlainText() throws {
-        let plainText = "This is a plain text description"
-
-        let parsed = ConversationCustomMetadata.parseDescriptionField(plainText)
-
-        #expect(parsed.description_p == plainText)
-        #expect(parsed.tag.isEmpty)
-        #expect(parsed.profiles.isEmpty)
-    }
-
-    @Test("parseDescriptionField handles nil")
-    func parseDescriptionFieldHandlesNil() throws {
-        let parsed = ConversationCustomMetadata.parseDescriptionField(nil)
-
-        #expect(parsed.description_p.isEmpty)
-        #expect(parsed.tag.isEmpty)
-    }
-
-    @Test("parseDescriptionField handles empty string")
-    func parseDescriptionFieldHandlesEmptyString() throws {
-        let parsed = ConversationCustomMetadata.parseDescriptionField("")
-
-        #expect(parsed.description_p.isEmpty)
-        #expect(parsed.tag.isEmpty)
-    }
-
     @Test("isEncodedMetadata detects encoded data")
     func isEncodedMetadataDetectsEncoded() throws {
         var metadata = ConversationCustomMetadata()
-        metadata.description_p = "Test"
         metadata.tag = "abc123"
 
         let encoded = try metadata.toCompactString()
@@ -468,21 +424,6 @@ struct ConversationCustomMetadataTests {
 
     // MARK: - Edge Cases
 
-    @Test("Very long description")
-    func veryLongDescription() throws {
-        // Use varied content that won't compress to extreme ratios
-        var longDescription = ""
-        for i in 0..<200 {
-            longDescription += "Conversation description part \(i) with varied content. "
-        }
-        let metadata = ConversationCustomMetadata(description: longDescription)
-
-        let encoded = try metadata.toCompactString()
-        let decoded = try ConversationCustomMetadata.fromCompactString(encoded)
-
-        #expect(decoded.description_p == longDescription)
-    }
-
     @Test("Many profiles")
     func manyProfiles() throws {
         var metadata = ConversationCustomMetadata()
@@ -500,27 +441,6 @@ struct ConversationCustomMetadataTests {
         #expect(decoded.profiles.count == 100)
         #expect(decoded.profiles[0].name == "User 0")
         #expect(decoded.profiles[99].name == "User 99")
-    }
-
-    @Test("Special characters in description")
-    func specialCharactersInDescription() throws {
-        let descriptions = [
-            "Description with emoji 🎉🎊",
-            "Description\nwith\nnewlines",
-            "Description\twith\ttabs",
-            "Description with 日本語",
-            "Description with العربية",
-            "Description with \"quotes\" and 'apostrophes'"
-        ]
-
-        for description in descriptions {
-            let metadata = ConversationCustomMetadata(description: description)
-
-            let encoded = try metadata.toCompactString()
-            let decoded = try ConversationCustomMetadata.fromCompactString(encoded)
-
-            #expect(decoded.description_p == description)
-        }
     }
 
     @Test("Special characters in profile name")
@@ -556,13 +476,6 @@ struct ConversationCustomMetadataTests {
     func largeCompressedMetadataDecompressesSafely() throws {
         var metadata = ConversationCustomMetadata()
 
-        // Use varied content to avoid extreme compression ratios
-        var description = ""
-        for i in 0..<100 {
-            description += "Group chat description with member \(i) and their unique details. "
-        }
-        metadata.description_p = description
-
         // Add multiple profiles with varied data
         for i in 0..<20 {
             let inboxIdHex = String(format: "%064x", i * 123456789)
@@ -578,7 +491,6 @@ struct ConversationCustomMetadataTests {
         let encoded = try metadata.toCompactString()
         let decoded = try ConversationCustomMetadata.fromCompactString(encoded)
 
-        #expect(decoded.description_p == metadata.description_p)
         #expect(decoded.profiles.count == 20)
     }
 }

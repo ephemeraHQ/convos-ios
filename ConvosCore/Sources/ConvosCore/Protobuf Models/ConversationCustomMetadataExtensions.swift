@@ -3,7 +3,7 @@ import SwiftProtobuf
 import XMTPiOS
 
 // swiftlint:disable:next orphaned_doc_comment
-/// XMTP groups have a limited description field that Convos uses to store structured
+/// XMTP groups expose an 8 KB `appData` field that Convos uses to store structured
 /// metadata as a compressed, base64-encoded protobuf. This metadata includes:
 /// - Invite tag: Unique identifier linking invites to conversations
 /// - Description: User-visible conversation description
@@ -16,11 +16,6 @@ import XMTPiOS
 /// - DEFLATE compression for payloads >100 bytes (typically 20-40% reduction)
 /// - Overall 40-60% size reduction for multi-member groups
 ///
-/// **Migration Support:**
-/// - Gracefully handles plain text descriptions from older versions
-/// - Automatic compression detection via magic byte prefix
-/// - `parseDescriptionField()` auto-detects format and migrates seamlessly
-///
 /// This allows Convos to store rich conversation metadata without requiring a backend.
 
 // MARK: - Errors
@@ -29,6 +24,7 @@ enum ConversationCustomMetadataError: Error, LocalizedError {
     case randomGenerationFailed
     case invalidLength(Int)
     case invalidInboxIdHex(String)
+    case appDataLimitExceeded(limit: Int, actualSize: Int)
 
     var errorDescription: String? {
         switch self {
@@ -38,6 +34,32 @@ enum ConversationCustomMetadataError: Error, LocalizedError {
             return "Invalid length for random string generation: \(length). Length must be positive."
         case .invalidInboxIdHex(let inboxId):
             return "Failed to convert MemberProfile to ConversationProfile - invalid inbox ID hex: \(inboxId)"
+        case let .appDataLimitExceeded(limit, actualSize):
+            return "Conversation metadata exceeds \(limit) byte limit: \(actualSize) bytes"
+        }
+    }
+}
+
+extension ConversationCustomMetadataError: DisplayError {
+    var title: String {
+        switch self {
+        case .appDataLimitExceeded: return "Too much data"
+        case .randomGenerationFailed: return "Security error"
+        case .invalidLength: return "Invalid data"
+        case .invalidInboxIdHex: return "Invalid profile"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case let .appDataLimitExceeded(limit, actualSize):
+            return "Conversation metadata is too large, \(actualSize / 1024)kb for \(limit / 1024)kb limit."
+        case .randomGenerationFailed:
+            return "Failed to generate secure identifier. Please try again."
+        case .invalidLength(let length):
+            return "Invalid data length: \(length)"
+        case .invalidInboxIdHex:
+            return "Invalid member profile identifier"
         }
     }
 }
@@ -53,10 +75,16 @@ extension MemberProfile {
 // MARK: - XMTP Extensions
 
 extension XMTPiOS.Group {
+    private static let appDataByteLimit: Int = 8 * 1024
+
     private var currentCustomMetadata: ConversationCustomMetadata {
         get throws {
-            let currentDescription = try self.description()
-            return ConversationCustomMetadata.parseDescriptionField(currentDescription)
+            do {
+                let currentAppData = try self.appData()
+                return ConversationCustomMetadata.parseAppData(currentAppData)
+            } catch XMTPiOS.GenericError.GroupError(message: _) {
+                return .init()
+            }
         }
     }
 
@@ -77,7 +105,7 @@ extension XMTPiOS.Group {
     public func updateExpiresAt(date: Date) async throws {
         var customMetadata = try currentCustomMetadata
         customMetadata.expiresAtUnix = Int64(date.timeIntervalSince1970)
-        try await updateDescription(description: customMetadata.toCompactString())
+        try await updateMetadata(customMetadata)
     }
 
     // This should only be done by the conversation creator
@@ -88,7 +116,7 @@ extension XMTPiOS.Group {
         var customMetadata = try currentCustomMetadata
         guard customMetadata.tag.isEmpty else { return }
         customMetadata.tag = try generateSecureRandomString(length: 10)
-        try await updateDescription(description: customMetadata.toCompactString())
+        try await updateMetadata(customMetadata)
     }
 
     /// Generates a cryptographically secure random string of specified length
@@ -120,18 +148,6 @@ extension XMTPiOS.Group {
         return String(randomString)
     }
 
-    public var customDescription: String {
-        get throws {
-            try currentCustomMetadata.description_p
-        }
-    }
-
-    public func updateCustomDescription(description: String) async throws {
-        var customMetadata = try currentCustomMetadata
-        customMetadata.description_p = description
-        try await updateDescription(description: customMetadata.toCompactString())
-    }
-
     public var memberProfiles: [MemberProfile] {
         get throws {
             let customMetadata = try currentCustomMetadata
@@ -152,7 +168,16 @@ extension XMTPiOS.Group {
         }
         var customMetadata = try currentCustomMetadata
         customMetadata.upsertProfile(conversationProfile)
-        try await updateDescription(description: customMetadata.toCompactString())
+        try await updateMetadata(customMetadata)
+    }
+
+    private func updateMetadata(_ metadata: ConversationCustomMetadata) async throws {
+        let encodedMetadata = try metadata.toCompactString()
+        let byteCount = encodedMetadata.lengthOfBytes(using: .utf8)
+        guard byteCount <= Self.appDataByteLimit else {
+            throw ConversationCustomMetadataError.appDataLimitExceeded(limit: Self.appDataByteLimit, actualSize: byteCount)
+        }
+        try await updateAppData(appData: encodedMetadata)
     }
 }
 
@@ -233,16 +258,9 @@ extension ConversationCustomMetadata {
 // MARK: - Convenience Initializers
 
 extension ConversationCustomMetadata {
-    /// Create metadata with just a description
-    public init(description: String) {
-        self.init()
-        self.description_p = description
-    }
-
     /// Create metadata with description and profiles
-    public init(description: String, profiles: [ConversationProfile]) {
+    public init(profiles: [ConversationProfile]) {
         self.init()
-        self.description_p = description
         self.profiles = profiles
     }
 }
@@ -325,17 +343,16 @@ extension ConversationCustomMetadata {
     /// Parse a description field that might be either plain text or encoded metadata
     /// - Parameter descriptionField: The raw description field from XMTP
     /// - Returns: ConversationCustomMetadata with either decoded data or plain text description
-    public static func parseDescriptionField(_ descriptionField: String?) -> ConversationCustomMetadata {
-        guard let descriptionField = descriptionField, !descriptionField.isEmpty else {
+    public static func parseAppData(_ appDataString: String?) -> ConversationCustomMetadata {
+        guard let appDataString = appDataString, !appDataString.isEmpty else {
             return ConversationCustomMetadata()
         }
 
         // Try to decode as metadata first
-        if let metadata = try? ConversationCustomMetadata.fromCompactString(descriptionField) {
+        if let metadata = try? ConversationCustomMetadata.fromCompactString(appDataString) {
             return metadata
         }
 
-        // Fall back to treating it as plain text description
-        return ConversationCustomMetadata(description: descriptionField)
+        return ConversationCustomMetadata()
     }
 }

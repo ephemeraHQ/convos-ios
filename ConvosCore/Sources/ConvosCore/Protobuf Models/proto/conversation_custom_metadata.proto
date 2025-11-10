@@ -9,10 +9,9 @@ syntax = "proto3";
 //
 // Expected size for 5-member group: ~200-300 bytes (40-60% smaller than unoptimized)
 message ConversationCustomMetadata {
-    string description = 1;
-    string tag = 2;
-    repeated ConversationProfile profiles = 3;
-    optional sfixed64 expiresAtUnix = 4;
+    string tag = 1;
+    repeated ConversationProfile profiles = 2;
+    optional sfixed64 expiresAtUnix = 3;
 }
 
 // ConversationProfile represents a participant in the conversation
