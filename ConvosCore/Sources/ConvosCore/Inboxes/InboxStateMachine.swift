@@ -925,7 +925,7 @@ public actor InboxStateMachine {
         try Task.checkCancellation()
 
         Log.info("Authenticating with backend and storing JWT...")
-        _ = try await apiClient.authenticate(appCheckToken: appCheckToken, retryCount: 0)
+//        _ = try await apiClient.authenticate(appCheckToken: appCheckToken, retryCount: 0)
         Log.info("Successfully authenticated with backend")
     }
 

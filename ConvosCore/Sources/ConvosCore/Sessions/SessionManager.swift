@@ -60,7 +60,7 @@ public final class SessionManager: SessionManagerProtocol {
             guard !Task.isCancelled else { return }
 
             // Register device on app launch
-            await self.deviceRegistrationManager.registerDeviceIfNeeded()
+//            await self.deviceRegistrationManager.registerDeviceIfNeeded()
             guard !Task.isCancelled else { return }
 
             // Start observing push token changes for automatic re-registration
@@ -77,11 +77,11 @@ public final class SessionManager: SessionManagerProtocol {
             guard !Task.isCancelled else { return }
             self.unusedInboxPrepTask = Task(priority: .background) { [weak self] in
                 guard let self, !Task.isCancelled else { return }
-                await self.unusedInboxCache.prepareUnusedInboxIfNeeded(
-                    databaseWriter: self.databaseWriter,
-                    databaseReader: self.databaseReader,
-                    environment: self.environment
-                )
+//                await self.unusedInboxCache.prepareUnusedInboxIfNeeded(
+//                    databaseWriter: self.databaseWriter,
+//                    databaseReader: self.databaseReader,
+//                    environment: self.environment
+//                )
             }
         }
     }

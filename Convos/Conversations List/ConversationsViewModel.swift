@@ -50,7 +50,7 @@ final class ConversationsViewModel {
         }
     }
     var presentingExplodeInfo: Bool = false
-    let maxNumberOfConvos: Int = 50
+    let maxNumberOfConvos: Int = 1
     var presentingMaxNumberOfConvosReachedInfo: Bool = false
     private var maxNumberOfConvosReached: Bool {
         conversationsCount >= maxNumberOfConvos
@@ -85,7 +85,8 @@ final class ConversationsViewModel {
 
     private(set) var hasEarlyAccess: Bool {
         get {
-            UserDefaults.standard.bool(forKey: "hasEarlyAccess")
+            return true
+//            UserDefaults.standard.bool(forKey: "hasEarlyAccess")
         }
         set {
             // once a user has early access, don't reset it

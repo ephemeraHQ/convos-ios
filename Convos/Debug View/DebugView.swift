@@ -245,7 +245,7 @@ extension DebugViewSection {
         DeviceRegistrationManager.clearRegistrationState()
 
         let manager = DeviceRegistrationManager(environment: ConfigManager.shared.currentEnvironment)
-        await manager.registerDeviceIfNeeded()
+//        await manager.registerDeviceIfNeeded()
     }
 
     private func resetUserDefaults() {

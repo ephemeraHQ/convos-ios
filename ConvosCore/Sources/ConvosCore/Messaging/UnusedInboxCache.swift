@@ -295,42 +295,42 @@ public actor UnusedInboxCache {
             return
         }
 
-        isCreatingUnusedInbox = true
-        defer { isCreatingUnusedInbox = false }
-
-        Log.info("Creating new unused inbox in background")
-
-        let authorizationOperation = AuthorizeInboxOperation.register(
-            identityStore: identityStore,
-            databaseReader: databaseReader,
-            databaseWriter: databaseWriter,
-            environment: environment
-        )
-
-        let tempMessagingService = MessagingService(
-            authorizationOperation: authorizationOperation,
-            databaseWriter: databaseWriter,
-            databaseReader: databaseReader,
-            identityStore: identityStore,
-            environment: environment
-        )
-
-        do {
-            let result = try await tempMessagingService.inboxStateManager.waitForInboxReadyResult()
-            let inboxId = result.client.inboxId
-
-            // Save the inbox ID to keychain
-            saveUnusedInboxToKeychain(inboxId)
-
-            // Store the messaging service instance
-            unusedMessagingService = tempMessagingService
-
-            Log.info("Successfully created unused inbox: \(inboxId)")
-        } catch {
-            Log.error("Failed to create unused inbox: \(error)")
-            // Clean up on error
-            await tempMessagingService.stopAndDelete()
-        }
+//        isCreatingUnusedInbox = true
+//        defer { isCreatingUnusedInbox = false }
+//
+//        Log.info("Creating new unused inbox in background")
+//
+//        let authorizationOperation = AuthorizeInboxOperation.register(
+//            identityStore: identityStore,
+//            databaseReader: databaseReader,
+//            databaseWriter: databaseWriter,
+//            environment: environment
+//        )
+//
+//        let tempMessagingService = MessagingService(
+//            authorizationOperation: authorizationOperation,
+//            databaseWriter: databaseWriter,
+//            databaseReader: databaseReader,
+//            identityStore: identityStore,
+//            environment: environment
+//        )
+//
+//        do {
+//            let result = try await tempMessagingService.inboxStateManager.waitForInboxReadyResult()
+//            let inboxId = result.client.inboxId
+//
+//            // Save the inbox ID to keychain
+//            saveUnusedInboxToKeychain(inboxId)
+//
+//            // Store the messaging service instance
+//            unusedMessagingService = tempMessagingService
+//
+//            Log.info("Successfully created unused inbox: \(inboxId)")
+//        } catch {
+//            Log.error("Failed to create unused inbox: \(error)")
+//            // Clean up on error
+//            await tempMessagingService.stopAndDelete()
+//        }
     }
 
     // MARK: - Keychain Helpers

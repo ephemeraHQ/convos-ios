@@ -4,19 +4,20 @@ import Foundation
 
 public enum FirebaseHelperCore {
     public static func configure(with optionsURL: URL) {
-        guard let options = FirebaseOptions(contentsOfFile: optionsURL.path) else { return }
-        #if targetEnvironment(simulator)
-            AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
-        #else
-            AppCheck.setAppCheckProviderFactory(AppAttestFactory())
-        #endif
-        FirebaseApp.configure(options: options)
+//        guard let options = FirebaseOptions(contentsOfFile: optionsURL.path) else { return }
+//        #if targetEnvironment(simulator)
+//            AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
+//        #else
+//            AppCheck.setAppCheckProviderFactory(AppAttestFactory())
+//        #endif
+//        FirebaseApp.configure(options: options)
         Log.info("Firebase configured for current environment: \(FirebaseApp.app()?.options.googleAppID ?? "undefined")")
     }
 
     public static func getAppCheckToken(forceRefresh: Bool = false) async throws -> String {
-        let result = try await AppCheck.appCheck().token(forcingRefresh: forceRefresh)
-        return result.token
+        return ""
+//        let result = try await AppCheck.appCheck().token(forcingRefresh: forceRefresh)
+//        return result.token
     }
 }
 

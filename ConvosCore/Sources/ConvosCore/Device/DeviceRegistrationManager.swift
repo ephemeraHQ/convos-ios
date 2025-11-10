@@ -177,6 +177,6 @@ public actor DeviceRegistrationManager: DeviceRegistrationManagerProtocol {
 
     private func handlePushTokenChange() async {
         Log.info("DeviceRegistrationManager: Push token changed, re-registering device...")
-        await registerDeviceIfNeeded()
+//        await registerDeviceIfNeeded()
     }
 }

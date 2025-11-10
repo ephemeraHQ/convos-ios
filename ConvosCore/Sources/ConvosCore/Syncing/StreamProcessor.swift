@@ -236,7 +236,7 @@ actor StreamProcessor: StreamProcessorProtocol {
             return
         }
 
-        await deviceManager.registerDeviceIfNeeded()
+//        await deviceManager.registerDeviceIfNeeded()
 
         do {
             let deviceId = DeviceInfo.deviceIdentifier
