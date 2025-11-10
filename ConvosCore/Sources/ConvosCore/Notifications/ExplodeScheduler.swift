@@ -15,14 +15,19 @@ public actor ExplodeScheduler {
         clientId: String,
         expiresAt: Date
     ) async throws {
-        let alreadyScheduled = try await databaseWriter.read { db in
-            try DBConversation
-                .filter(key: conversationId)
-                .fetchOne(db)?
-                .scheduledExplode ?? false
+        let conversationState = try await databaseWriter.read { db in
+            guard let conversation = try DBConversation.filter(key: conversationId).fetchOne(db) else {
+                return (exists: false, scheduled: false)
+            }
+            return (exists: true, scheduled: conversation.scheduledExplode)
         }
 
-        guard !alreadyScheduled else {
+        guard conversationState.exists else {
+            Log.info("Conversation \(conversationId) no longer exists, skipping explosion scheduling")
+            return
+        }
+
+        guard !conversationState.scheduled else {
             Log.info("Explosion already scheduled for \(conversationId), skipping duplicate")
             return
         }

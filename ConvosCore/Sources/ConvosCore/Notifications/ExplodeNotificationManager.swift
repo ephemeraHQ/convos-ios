@@ -58,6 +58,7 @@ public final class ExplodeNotificationManager {
         content.title = "💥 \(conversationName ?? "Untitled") 💥"
         content.body = "A convo exploded"
         content.categoryIdentifier = notificationCategoryIdentifier
+        content.threadIdentifier = conversationId
         content.userInfo = [
             conversationIdKey: conversationId,
             inboxIdKey: inboxId,
