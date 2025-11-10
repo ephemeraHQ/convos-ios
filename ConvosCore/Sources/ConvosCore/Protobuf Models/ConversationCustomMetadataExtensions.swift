@@ -29,6 +29,7 @@ enum ConversationCustomMetadataError: Error, LocalizedError {
     case randomGenerationFailed
     case invalidLength(Int)
     case invalidInboxIdHex(String)
+    case appDataLimitExceeded(actualSize: Int)
 
     var errorDescription: String? {
         switch self {
@@ -38,6 +39,8 @@ enum ConversationCustomMetadataError: Error, LocalizedError {
             return "Invalid length for random string generation: \(length). Length must be positive."
         case .invalidInboxIdHex(let inboxId):
             return "Failed to convert MemberProfile to ConversationProfile - invalid inbox ID hex: \(inboxId)"
+        case .appDataLimitExceeded(let actualSize):
+            return "Conversation metadata exceeds 8 KB limit: \(actualSize) bytes"
         }
     }
 }
@@ -53,8 +56,29 @@ extension MemberProfile {
 // MARK: - XMTP Extensions
 
 extension XMTPiOS.Group {
+    private static let appDataByteLimit = 8 * 1024
+
+    private func metadataFromAppData() throws -> ConversationCustomMetadata? {
+        let storedAppData = try appData()
+        guard !storedAppData.isEmpty else { return nil }
+        return try? ConversationCustomMetadata.fromCompactString(storedAppData)
+    }
+
+    private func persistMetadata(_ metadata: ConversationCustomMetadata) async throws {
+        let encodedMetadata = try metadata.toCompactString()
+        let byteCount = encodedMetadata.lengthOfBytes(using: .utf8)
+        guard byteCount <= Self.appDataByteLimit else {
+            throw ConversationCustomMetadataError.appDataLimitExceeded(actualSize: byteCount)
+        }
+        try await updateAppData(appData: encodedMetadata)
+    }
+
     private var currentCustomMetadata: ConversationCustomMetadata {
         get throws {
+            if let appDataMetadata = try metadataFromAppData() {
+                return appDataMetadata
+            }
+
             let currentDescription = try self.description()
             return ConversationCustomMetadata.parseDescriptionField(currentDescription)
         }
@@ -77,7 +101,7 @@ extension XMTPiOS.Group {
     public func updateExpiresAt(date: Date) async throws {
         var customMetadata = try currentCustomMetadata
         customMetadata.expiresAtUnix = Int64(date.timeIntervalSince1970)
-        try await updateDescription(description: customMetadata.toCompactString())
+        try await persistMetadata(customMetadata)
     }
 
     // This should only be done by the conversation creator
@@ -88,7 +112,7 @@ extension XMTPiOS.Group {
         var customMetadata = try currentCustomMetadata
         guard customMetadata.tag.isEmpty else { return }
         customMetadata.tag = try generateSecureRandomString(length: 10)
-        try await updateDescription(description: customMetadata.toCompactString())
+        try await persistMetadata(customMetadata)
     }
 
     /// Generates a cryptographically secure random string of specified length
@@ -129,7 +153,7 @@ extension XMTPiOS.Group {
     public func updateCustomDescription(description: String) async throws {
         var customMetadata = try currentCustomMetadata
         customMetadata.description_p = description
-        try await updateDescription(description: customMetadata.toCompactString())
+        try await persistMetadata(customMetadata)
     }
 
     public var memberProfiles: [MemberProfile] {
@@ -152,7 +176,7 @@ extension XMTPiOS.Group {
         }
         var customMetadata = try currentCustomMetadata
         customMetadata.upsertProfile(conversationProfile)
-        try await updateDescription(description: customMetadata.toCompactString())
+        try await persistMetadata(customMetadata)
     }
 }
 
