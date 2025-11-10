@@ -59,22 +59,16 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         let userInfo = response.notification.request.content.userInfo
         Log.debug("Notification tapped")
 
-        // Check if this is an explosion notification
-        if let notificationType = userInfo["notificationType"] as? String,
-           notificationType == "explosion",
-           let inboxId = userInfo["inboxId"] as? String,
-           let conversationId = userInfo["conversationId"] as? String {
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(
-                    name: .explosionNotificationTapped,
-                    object: nil,
-                    userInfo: [
-                        "inboxId": inboxId,
-                        "conversationId": conversationId,
-                        "notificationType": notificationType
-                    ]
-                )
-            }
+        // Check if this is an explode notification scheduled by ExplodeNotificationManager
+        if let explodeInfo = ExplodeNotificationManager.extractConversationInfo(from: response) {
+            Log.info("Handling explode notification for conversation: \(explodeInfo.conversationId)")
+
+            // Perform the explosion
+            await handleConversationExplosion(
+                conversationId: explodeInfo.conversationId,
+                inboxId: explodeInfo.inboxId,
+                clientId: explodeInfo.clientId
+            )
             return
         }
 
@@ -109,6 +103,43 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                     "conversationId": conversationId
                 ]
             )
+        }
+    }
+
+    // MARK: - Private Methods
+
+    private func handleConversationExplosion(conversationId: String, inboxId: String, clientId: String) async {
+        Log.info("Exploding conversation \(conversationId) for inbox \(inboxId)")
+
+        do {
+            // Get or create session for the inbox
+            guard let session = session else {
+                Log.error("No session available for explosion")
+                return
+            }
+
+            // Delete the inbox (which includes the conversation)
+            try await session.deleteInbox(clientId: clientId)
+
+            // Cancel any other scheduled explode notifications for this conversation
+            ExplodeNotificationManager.cancelExplodeNotification(for: conversationId)
+
+            // Post notification for UI updates
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .explosionNotificationTapped,
+                    object: nil,
+                    userInfo: [
+                        "inboxId": inboxId,
+                        "conversationId": conversationId,
+                        "notificationType": "explosion"
+                    ]
+                )
+            }
+
+            Log.info("Successfully exploded conversation \(conversationId)")
+        } catch {
+            Log.error("Failed to explode conversation: \(error.localizedDescription)")
         }
     }
 }

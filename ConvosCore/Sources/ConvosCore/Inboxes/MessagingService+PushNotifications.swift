@@ -206,8 +206,39 @@ extension MessagingService {
             let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
             _ = try await messageWriter.store(message: decodedMessage, for: dbConversation)
 
-            // Only handle text content type
+            // Check content type
             let encodedContentType = try decodedMessage.encodedContent.type
+
+            // Handle ExplodeSettings content type
+            if encodedContentType == ContentTypeExplodeSettings {
+                Log.info("Processing ExplodeSettings message")
+
+                // Extract explode settings
+                let content = try decodedMessage.content() as Any
+                guard let explodeSettings = content as? ExplodeSettings else {
+                    Log.warning("Could not extract ExplodeSettings from message")
+                    return .droppedMessage
+                }
+
+                // Get client ID from database
+                let clientId = try await databaseReader.read { db in
+                    try DBInbox.fetchOne(db, id: currentInboxId)?.clientId ?? ""
+                }
+
+                // Schedule the explode notification directly here
+                Log.info("Scheduling explode notification for conversation \(conversationId)")
+                try await ExplodeNotificationManager.scheduleExplodeNotification(
+                    conversationId: conversationId,
+                    inboxId: currentInboxId,
+                    clientId: clientId,
+                    expiresAt: explodeSettings.expiresAt
+                )
+
+                // Return dropped message (no need for explodeInfo anymore)
+                return .droppedMessage
+            }
+
+            // Only handle text content type for notifications
             guard encodedContentType == ContentTypeText else {
                 Log.info("Skipping non-text content type: \(encodedContentType.description)")
                 return .droppedMessage
