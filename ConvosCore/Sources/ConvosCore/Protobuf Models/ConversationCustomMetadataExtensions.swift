@@ -3,7 +3,7 @@ import SwiftProtobuf
 import XMTPiOS
 
 // swiftlint:disable:next orphaned_doc_comment
-/// XMTP groups have a limited description field that Convos uses to store structured
+/// XMTP groups expose an 8 KB `appData` field that Convos uses to store structured
 /// metadata as a compressed, base64-encoded protobuf. This metadata includes:
 /// - Invite tag: Unique identifier linking invites to conversations
 /// - Description: User-visible conversation description
@@ -17,7 +17,7 @@ import XMTPiOS
 /// - Overall 40-60% size reduction for multi-member groups
 ///
 /// **Migration Support:**
-/// - Gracefully handles plain text descriptions from older versions
+/// - Legacy clients wrote to the description field; we fall back to parsing it when appData is empty
 /// - Automatic compression detection via magic byte prefix
 /// - `parseDescriptionField()` auto-detects format and migrates seamlessly
 ///
