@@ -19,17 +19,14 @@ public struct ExplodeNotificationInfo {
 
 /// Manages local notifications for scheduled conversation explosions
 public final class ExplodeNotificationManager {
-
     // MARK: - Constants
 
-    private enum Constants {
-        static let notificationCategoryIdentifier = "EXPLODE_CONVERSATION"
-        static let notificationActionIdentifier = "EXPLODE_ACTION"
-        static let conversationIdKey = "conversationId"
-        static let inboxIdKey = "inboxId"
-        static let clientIdKey = "clientId"
-        static let expiresAtKey = "expiresAt"
-    }
+    private static let notificationCategoryIdentifier: String = "EXPLODE_CONVERSATION"
+    private static let notificationActionIdentifier: String = "EXPLODE_ACTION"
+    private static let conversationIdKey: String = "conversationId"
+    private static let inboxIdKey: String = "inboxId"
+    private static let clientIdKey: String = "clientId"
+    private static let expiresAtKey: String = "expiresAt"
 
     // MARK: - Public Methods
 
@@ -58,14 +55,14 @@ public final class ExplodeNotificationManager {
 
         // Create notification content
         let content = UNMutableNotificationContent()
-        content.title = "💥 \(conversationName) 💥"
+        content.title = "💥 \(conversationName ?? "Untitled") 💥"
         content.body = "A convo exploded"
-        content.categoryIdentifier = Constants.notificationCategoryIdentifier
+        content.categoryIdentifier = notificationCategoryIdentifier
         content.userInfo = [
-            Constants.conversationIdKey: conversationId,
-            Constants.inboxIdKey: inboxId,
-            Constants.clientIdKey: clientId,
-            Constants.expiresAtKey: expiresAt.timeIntervalSince1970
+            conversationIdKey: conversationId,
+            inboxIdKey: inboxId,
+            clientIdKey: clientId,
+            expiresAtKey: expiresAt.timeIntervalSince1970
         ]
 
         // Show alert and play sound for explode notifications
@@ -125,7 +122,7 @@ public final class ExplodeNotificationManager {
             let pendingRequests = await notificationCenter.pendingNotificationRequests()
 
             let explodeRequestIds = pendingRequests
-                .filter { $0.content.categoryIdentifier == Constants.notificationCategoryIdentifier }
+                .filter { $0.content.categoryIdentifier == notificationCategoryIdentifier }
                 .map { $0.identifier }
 
             if !explodeRequestIds.isEmpty {
@@ -150,15 +147,15 @@ public final class ExplodeNotificationManager {
     /// - Parameter request: The notification request
     /// - Returns: ExplodeNotificationInfo if this is an explode notification
     public static func extractConversationInfo(from request: UNNotificationRequest) -> ExplodeNotificationInfo? {
-        guard request.content.categoryIdentifier == Constants.notificationCategoryIdentifier else {
+        guard request.content.categoryIdentifier == notificationCategoryIdentifier else {
             return nil
         }
 
         let userInfo = request.content.userInfo
-        guard let conversationId = userInfo[Constants.conversationIdKey] as? String,
-              let inboxId = userInfo[Constants.inboxIdKey] as? String,
-              let clientId = userInfo[Constants.clientIdKey] as? String,
-              let expiresAtTimestamp = userInfo[Constants.expiresAtKey] as? TimeInterval else {
+        guard let conversationId = userInfo[conversationIdKey] as? String,
+              let inboxId = userInfo[inboxIdKey] as? String,
+              let clientId = userInfo[clientIdKey] as? String,
+              let expiresAtTimestamp = userInfo[expiresAtKey] as? TimeInterval else {
             return nil
         }
 

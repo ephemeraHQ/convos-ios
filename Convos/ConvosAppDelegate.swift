@@ -76,7 +76,6 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     // Handle notification taps
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse) async {
-        let userInfo = response.notification.request.content.userInfo
         Log.debug("Notification tapped")
 
         // Check if this is an explode notification scheduled by ExplodeNotificationManager
