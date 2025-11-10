@@ -92,11 +92,31 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             }
 
             try await sender.sendExplode(expiresAt: expiresAt)
+
+            let clientId = inboxReady.client.inboxId
+            let conversationName = try? group.name()
+
+            let dbClientId = try await databaseWriter.read { db in
+                try DBInbox.fetchOne(db, id: clientId)?.clientId ?? ""
+            }
+
+            let displayName: String? = {
+                guard let name = conversationName, !name.isEmpty else {
+                    return nil
+                }
+                return name
+            }()
+
+            let scheduler = ExplodeScheduler(databaseWriter: databaseWriter)
+            try await scheduler.scheduleIfNeeded(
+                conversationId: conversationId,
+                conversationName: displayName,
+                inboxId: clientId,
+                clientId: dbClientId,
+                expiresAt: expiresAt
+            )
         } catch {
-            // We continue anyway since not sending explode as a custom content type just means
-            // the push notification will fail to display. The next time the app is active
-            // expiresAt for the conversation will be updated.
-            Log.error("Failed sending explode as custom content type: \(error.localizedDescription)")
+            Log.error("Failed sending/scheduling explode: \(error.localizedDescription)")
         }
 
         let updatedConversation = try await databaseWriter.write { db in

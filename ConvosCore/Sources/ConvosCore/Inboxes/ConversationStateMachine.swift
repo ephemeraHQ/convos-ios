@@ -352,12 +352,6 @@ public actor ConversationStateMachine {
             apiClient: inboxReady.apiClient
         )
 
-        // Send ExplodeSettings message with 1 minute timer for testing
-        // @lourou
-        Log.info("Sending ExplodeSettings for testing - 1 minute timer")
-        let expiresAt = Date().addingTimeInterval(60) // 1 minute from now
-        try await optimisticConversation.sendExplode(expiresAt: expiresAt)
-
         // Transition directly to ready state
         emitStateChange(.ready(ConversationReadyResult(
             conversationId: externalConversationId,

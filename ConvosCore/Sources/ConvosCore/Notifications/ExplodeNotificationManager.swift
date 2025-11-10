@@ -1,5 +1,21 @@
+import ConvosLogging
 import Foundation
 import UserNotifications
+
+/// Information about a scheduled explosion
+public struct ExplodeNotificationInfo {
+    public let conversationId: String
+    public let inboxId: String
+    public let clientId: String
+    public let expiresAt: Date
+
+    public init(conversationId: String, inboxId: String, clientId: String, expiresAt: Date) {
+        self.conversationId = conversationId
+        self.inboxId = inboxId
+        self.clientId = clientId
+        self.expiresAt = expiresAt
+    }
+}
 
 /// Manages local notifications for scheduled conversation explosions
 public final class ExplodeNotificationManager {
@@ -12,6 +28,7 @@ public final class ExplodeNotificationManager {
         static let conversationIdKey = "conversationId"
         static let inboxIdKey = "inboxId"
         static let clientIdKey = "clientId"
+        static let expiresAtKey = "expiresAt"
     }
 
     // MARK: - Public Methods
@@ -19,11 +36,13 @@ public final class ExplodeNotificationManager {
     /// Schedules a local notification to explode a conversation at the specified date
     /// - Parameters:
     ///   - conversationId: The ID of the conversation to explode
+    ///   - conversationName: The name of the conversation (optional)
     ///   - inboxId: The inbox ID associated with the conversation
     ///   - clientId: The client ID associated with the conversation
     ///   - expiresAt: The date when the conversation should explode
     public static func scheduleExplodeNotification(
         conversationId: String,
+        conversationName: String?,
         inboxId: String,
         clientId: String,
         expiresAt: Date
@@ -39,27 +58,38 @@ public final class ExplodeNotificationManager {
 
         // Create notification content
         let content = UNMutableNotificationContent()
-        content.title = "Conversation Expired"
-        content.body = "A conversation has reached its expiration time and will be deleted."
+        content.title = "💥 \(conversationName) 💥"
+        content.body = "A convo exploded"
         content.categoryIdentifier = Constants.notificationCategoryIdentifier
         content.userInfo = [
             Constants.conversationIdKey: conversationId,
             Constants.inboxIdKey: inboxId,
-            Constants.clientIdKey: clientId
+            Constants.clientIdKey: clientId,
+            Constants.expiresAtKey: expiresAt.timeIntervalSince1970
         ]
 
-        // Don't show alert or play sound - this is a background operation
-        content.interruptionLevel = .passive
+        // Show alert and play sound for explode notifications
+        content.sound = .default
+        content.interruptionLevel = .timeSensitive
 
         // Create trigger based on expiration date
-        let timeInterval = expiresAt.timeIntervalSinceNow
-        guard timeInterval > 0 else {
-            Log.warning("Cannot schedule explode notification for past date")
-            return
+        let now = Date()
+        let timeInterval = expiresAt.timeIntervalSince(now)
+
+        Log.info("ExplodeNotificationManager - expiresAt: \(expiresAt), now: \(now), timeInterval: \(timeInterval) seconds")
+
+        // If the expiration time has already passed or is very close (< 1 second),
+        // schedule for 1 second from now to ensure the notification fires
+        let adjustedTimeInterval = max(timeInterval, 1.0)
+
+        if timeInterval <= 0 {
+            Log.warning("Expiration date is in the past (timeInterval: \(timeInterval)), scheduling for 1 second from now")
+        } else if timeInterval < 1.0 {
+            Log.info("Expiration date is very close (timeInterval: \(timeInterval)), adjusting to 1 second from now")
         }
 
         let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: timeInterval,
+            timeInterval: adjustedTimeInterval,
             repeats: false
         )
 
@@ -118,8 +148,8 @@ public final class ExplodeNotificationManager {
 
     /// Extracts conversation metadata from a notification request
     /// - Parameter request: The notification request
-    /// - Returns: A tuple containing conversationId, inboxId, and clientId if found
-    public static func extractConversationInfo(from request: UNNotificationRequest) -> (conversationId: String, inboxId: String, clientId: String)? {
+    /// - Returns: ExplodeNotificationInfo if this is an explode notification
+    public static func extractConversationInfo(from request: UNNotificationRequest) -> ExplodeNotificationInfo? {
         guard request.content.categoryIdentifier == Constants.notificationCategoryIdentifier else {
             return nil
         }
@@ -127,17 +157,25 @@ public final class ExplodeNotificationManager {
         let userInfo = request.content.userInfo
         guard let conversationId = userInfo[Constants.conversationIdKey] as? String,
               let inboxId = userInfo[Constants.inboxIdKey] as? String,
-              let clientId = userInfo[Constants.clientIdKey] as? String else {
+              let clientId = userInfo[Constants.clientIdKey] as? String,
+              let expiresAtTimestamp = userInfo[Constants.expiresAtKey] as? TimeInterval else {
             return nil
         }
 
-        return (conversationId, inboxId, clientId)
+        let expiresAt = Date(timeIntervalSince1970: expiresAtTimestamp)
+
+        return ExplodeNotificationInfo(
+            conversationId: conversationId,
+            inboxId: inboxId,
+            clientId: clientId,
+            expiresAt: expiresAt
+        )
     }
 
     /// Checks if a notification response is for an explode notification
     /// - Parameter response: The notification response
-    /// - Returns: Conversation info if this is an explode notification
-    public static func extractConversationInfo(from response: UNNotificationResponse) -> (conversationId: String, inboxId: String, clientId: String)? {
+    /// - Returns: ExplodeNotificationInfo if this is an explode notification
+    public static func extractConversationInfo(from response: UNNotificationResponse) -> ExplodeNotificationInfo? {
         extractConversationInfo(from: response.notification.request)
     }
 

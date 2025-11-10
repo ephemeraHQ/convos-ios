@@ -33,6 +33,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
         static let description: Column = Column(CodingKeys.description)
         static let imageURLString: Column = Column(CodingKeys.imageURLString)
         static let expiresAt: Column = Column(CodingKeys.expiresAt)
+        static let scheduledExplode: Column = Column(CodingKeys.scheduledExplode)
         static let debugInfo: Column = Column(CodingKeys.debugInfo)
     }
 
@@ -49,6 +50,7 @@ public struct DBConversation: Codable, FetchableRecord, PersistableRecord, Ident
     public let description: String?
     public let imageURLString: String?
     public let expiresAt: Date?
+    public var scheduledExplode: Bool
     public let debugInfo: DebugInfo
 
     static let creatorForeignKey: ForeignKey = ForeignKey(
@@ -190,6 +192,7 @@ extension DBConversation {
             description: description,
             imageURLString: imageURLString,
             expiresAt: expiresAt,
+            scheduledExplode: scheduledExplode,
             debugInfo: debugInfo
         )
     }
@@ -209,6 +212,7 @@ extension DBConversation {
             description: description,
             imageURLString: imageURLString,
             expiresAt: expiresAt,
+            scheduledExplode: scheduledExplode,
             debugInfo: debugInfo
         )
     }
@@ -228,6 +232,7 @@ extension DBConversation {
             description: description,
             imageURLString: imageURLString,
             expiresAt: expiresAt,
+            scheduledExplode: scheduledExplode,
             debugInfo: debugInfo
         )
     }
@@ -247,6 +252,7 @@ extension DBConversation {
             description: description,
             imageURLString: imageURLString,
             expiresAt: expiresAt,
+            scheduledExplode: scheduledExplode,
             debugInfo: debugInfo
         )
     }
@@ -266,6 +272,7 @@ extension DBConversation {
             description: description,
             imageURLString: imageURLString,
             expiresAt: expiresAt,
+            scheduledExplode: scheduledExplode,
             debugInfo: debugInfo
         )
     }
@@ -287,6 +294,7 @@ extension DBConversation {
             description: description,
             imageURLString: imageURLString,
             expiresAt: expiresAt,
+            scheduledExplode: scheduledExplode,
             debugInfo: debugInfo
         )
     }
@@ -306,6 +314,7 @@ extension DBConversation {
             description: description,
             imageURLString: imageURLString,
             expiresAt: expiresAt,
+            scheduledExplode: scheduledExplode,
             debugInfo: debugInfo
         )
     }
@@ -325,6 +334,7 @@ extension DBConversation {
             description: description,
             imageURLString: imageURLString,
             expiresAt: expiresAt,
+            scheduledExplode: scheduledExplode,
             debugInfo: debugInfo
         )
     }
@@ -344,6 +354,7 @@ extension DBConversation {
             description: description,
             imageURLString: imageURLString,
             expiresAt: expiresAt,
+            scheduledExplode: scheduledExplode,
             debugInfo: debugInfo
         )
     }

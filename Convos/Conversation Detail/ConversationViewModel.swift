@@ -439,21 +439,17 @@ class ConversationViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                let memberIdsToRemove = conversation.members
-                    .filter { !$0.isCurrentUser } // @jarodl fix when we have self removal
-                    .map { $0.profile.inboxId }
-                // set the expiration to now
-                try await metadataWriter.updateExpiresAt(Date(), for: conversation.id)
-                // remove everyone anyway
-                try await metadataWriter.removeMembers(
-                    memberIdsToRemove,
-                    from: conversation.id
-                )
-                try await session.deleteInbox(clientId: conversation.clientId)
-                conversation.postLeftConversationNotification()
+                // @lourou TESTING: Set explode timer to 10 seconds from now
+                let expiresAt = Date().addingTimeInterval(10)
+                Log.info("⏰ EXPLODE IN 10 SEC: Setting explode timer to \(expiresAt)")
+
+                // This will send the ExplodeSettings message which triggers push notifications
+                // and schedules the local notification for 10 seconds from now
+                try await metadataWriter.updateExpiresAt(expiresAt, for: conversation.id)
+
                 presentingConversationSettings = false
             } catch {
-                Log.error("Error exploding convo: \(error.localizedDescription)")
+                Log.error("Error setting explode timer: \(error.localizedDescription)")
             }
         }
     }

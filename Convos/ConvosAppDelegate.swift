@@ -36,6 +36,26 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     // Handle notifications when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        // Check if this is an explode notification
+        if let explodeInfo = ExplodeNotificationManager.extractConversationInfo(from: notification.request) {
+            Log.info("Explode notification fired while app in foreground for conversation: \(explodeInfo.conversationId)")
+
+            // Perform the explosion after a short delay to let the banner show
+            Task {
+                // Wait for the banner to be shown
+                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+
+                await handleConversationExplosion(
+                    conversationId: explodeInfo.conversationId,
+                    inboxId: explodeInfo.inboxId,
+                    clientId: explodeInfo.clientId
+                )
+            }
+
+            // Show the notification banner for explode notifications
+            return [.banner, .sound]
+        }
+
         // Check if we should display this notification based on the active conversation
         let conversationId = notification.request.content.threadIdentifier
 
@@ -61,14 +81,28 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
         // Check if this is an explode notification scheduled by ExplodeNotificationManager
         if let explodeInfo = ExplodeNotificationManager.extractConversationInfo(from: response) {
-            Log.info("Handling explode notification for conversation: \(explodeInfo.conversationId)")
+            Log.info("Explode notification tapped for conversation: \(explodeInfo.conversationId)")
 
-            // Perform the explosion
+            // Perform the explosion (if not already done)
             await handleConversationExplosion(
                 conversationId: explodeInfo.conversationId,
                 inboxId: explodeInfo.inboxId,
                 clientId: explodeInfo.clientId
             )
+
+            // Post explosion notification which will navigate to conversation list
+            // The ConversationsViewModel should handle this by dismissing any presented conversation
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .explosionNotificationTapped,
+                    object: nil,
+                    userInfo: [
+                        "inboxId": explodeInfo.inboxId,
+                        "conversationId": explodeInfo.conversationId,
+                        "notificationType": "explosion"
+                    ]
+                )
+            }
             return
         }
 
@@ -109,37 +143,29 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     // MARK: - Private Methods
 
     private func handleConversationExplosion(conversationId: String, inboxId: String, clientId: String) async {
-        Log.info("Exploding conversation \(conversationId) for inbox \(inboxId)")
+        guard let session = session else {
+            Log.error("No session available for explosion")
+            return
+        }
 
-        do {
-            // Get or create session for the inbox
-            guard let session = session else {
-                Log.error("No session available for explosion")
-                return
-            }
+        // Delegate to SessionManager
+        await session.explodeConversation(
+            conversationId: conversationId,
+            inboxId: inboxId,
+            clientId: clientId
+        )
 
-            // Delete the inbox (which includes the conversation)
-            try await session.deleteInbox(clientId: clientId)
-
-            // Cancel any other scheduled explode notifications for this conversation
-            ExplodeNotificationManager.cancelExplodeNotification(for: conversationId)
-
-            // Post notification for UI updates
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(
-                    name: .explosionNotificationTapped,
-                    object: nil,
-                    userInfo: [
-                        "inboxId": inboxId,
-                        "conversationId": conversationId,
-                        "notificationType": "explosion"
-                    ]
-                )
-            }
-
-            Log.info("Successfully exploded conversation \(conversationId)")
-        } catch {
-            Log.error("Failed to explode conversation: \(error.localizedDescription)")
+        // Post notification for UI updates
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: .explosionNotificationTapped,
+                object: nil,
+                userInfo: [
+                    "inboxId": inboxId,
+                    "conversationId": conversationId,
+                    "notificationType": "explosion"
+                ]
+            )
         }
     }
 }

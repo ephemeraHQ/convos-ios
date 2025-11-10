@@ -87,6 +87,7 @@ class ConversationWriter: ConversationWriterProtocol {
                 description: signedInvite.description_p,
                 imageURLString: signedInvite.imageURL,
                 expiresAt: signedInvite.conversationExpiresAt,
+                scheduledExplode: false,
                 debugInfo: .empty
             )
             try conversation.save(db)
@@ -225,6 +226,7 @@ class ConversationWriter: ConversationWriterProtocol {
             description: metadata.description,
             imageURLString: metadata.imageURLString,
             expiresAt: metadata.expiresAt,
+            scheduledExplode: false,
             debugInfo: metadata.debugInfo
         )
     }
