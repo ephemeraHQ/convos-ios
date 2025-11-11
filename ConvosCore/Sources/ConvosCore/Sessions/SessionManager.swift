@@ -259,7 +259,7 @@ public final class SessionManager: SessionManagerProtocol {
             environment: environment
         )
         serviceQueue.sync {
-            let clientId = messagingService.inboxStateManager.currentState.clientId
+            let clientId = messagingService.clientId
             messagingServices[clientId] = messagingService
         }
         return messagingService

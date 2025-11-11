@@ -36,7 +36,7 @@ class NewConversationViewModel: Identifiable {
     private weak var delegate: NewConversationsViewModelDelegate?
     private(set) var messagesTopBarTrailingItem: MessagesViewTopBarTrailingItem = .scan
     private(set) var messagesTopBarTrailingItemEnabled: Bool = false
-    private(set) var messagesBottomBarEnabled: Bool = false
+    private(set) var messagesTextFieldEnabled: Bool = false
     private(set) var shouldConfirmDeletingConversation: Bool = true
     private let startedWithFullscreenScanner: Bool
     let allowsDismissingScanner: Bool
@@ -55,7 +55,6 @@ class NewConversationViewModel: Identifiable {
     }
 
     // State tracking
-    private(set) var isWaitingForInviteAcceptance: Bool = false
     private(set) var isCreatingConversation: Bool = false
     private(set) var currentError: Error?
     private(set) var conversationState: ConversationStateMachine.State = .uninitialized
@@ -112,7 +111,8 @@ class NewConversationViewModel: Identifiable {
         let conversationStateManager = messagingService.conversationStateManager()
         self.conversationStateManager = conversationStateManager
         let draftConversation: Conversation = .empty(
-            id: conversationStateManager.draftConversationRepository.conversationId
+            id: conversationStateManager.draftConversationRepository.conversationId,
+            clientId: messagingService.clientId
         )
         self.conversationViewModel = .init(
             conversation: draftConversation,
@@ -243,10 +243,10 @@ class NewConversationViewModel: Identifiable {
 
         switch state {
         case .uninitialized:
-            isWaitingForInviteAcceptance = false
+            conversationViewModel.isWaitingForInviteAcceptance = false
             isCreatingConversation = false
             messagesTopBarTrailingItemEnabled = false
-            messagesBottomBarEnabled = false
+            messagesTextFieldEnabled = false
             if startedWithFullscreenScanner {
                 conversationViewModel.showsInfoView = false
             } else {
@@ -257,52 +257,56 @@ class NewConversationViewModel: Identifiable {
 
         case .creating:
             isCreatingConversation = true
-            isWaitingForInviteAcceptance = false
+            conversationViewModel.isWaitingForInviteAcceptance = false
             currentError = nil
 
         case .validating:
+            conversationViewModel.isWaitingForInviteAcceptance = true
             isCreatingConversation = false
-            isWaitingForInviteAcceptance = false
             currentError = nil
 
         case .validated:
+            conversationViewModel.isWaitingForInviteAcceptance = true
             isCreatingConversation = false
-            isWaitingForInviteAcceptance = false
             currentError = nil
             showingFullScreenScanner = false
 
         case .joining:
             // This is the waiting state - user is waiting for inviter to accept
-            conversationViewModel.checkNotificationPermissions()
+            conversationViewModel.isWaitingForInviteAcceptance = true
             conversationViewModel.showsInfoView = true
             messagesTopBarTrailingItemEnabled = false
             messagesTopBarTrailingItem = .share
-            messagesBottomBarEnabled = false
-            isWaitingForInviteAcceptance = true
+            messagesTextFieldEnabled = false
             shouldConfirmDeletingConversation = false
             conversationViewModel.untitledConversationPlaceholder = "Untitled"
             isCreatingConversation = false
             currentError = nil
+
+            conversationViewModel.startOnboarding()
             Log.info("Waiting for invite acceptance...")
 
-        case .ready:
+        case .ready(let result):
+            conversationViewModel.myProfileViewModel.updateProfileWithLatest(for: result.conversationId)
             conversationViewModel.showsInfoView = true
             messagesTopBarTrailingItemEnabled = true
-            messagesBottomBarEnabled = true
-            isWaitingForInviteAcceptance = false
+            messagesTextFieldEnabled = true
+            conversationViewModel.isWaitingForInviteAcceptance = false
             isCreatingConversation = false
             showingFullScreenScanner = false
             currentError = nil
+
+            conversationViewModel.startOnboarding()
             Log.info("Conversation ready!")
 
         case .deleting:
-            isWaitingForInviteAcceptance = false
+            conversationViewModel.isWaitingForInviteAcceptance = false
             isCreatingConversation = false
             currentError = nil
 
         case .error(let error):
             qrScannerViewModel.resetScanning()
-            isWaitingForInviteAcceptance = false
+            conversationViewModel.isWaitingForInviteAcceptance = false
             isCreatingConversation = false
             currentError = error
             if startedWithFullscreenScanner {
@@ -361,8 +365,8 @@ class NewConversationViewModel: Identifiable {
             guard let self else { return }
             messagesTopBarTrailingItem = .share
             shouldConfirmDeletingConversation = false
-            conversationViewModel.checkNotificationPermissions()
             conversationViewModel.untitledConversationPlaceholder = "Untitled"
+            conversationViewModel.inviteWasAccepted()
         }
         .store(in: &cancellables)
     }

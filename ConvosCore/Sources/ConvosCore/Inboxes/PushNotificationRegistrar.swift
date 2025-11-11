@@ -24,7 +24,7 @@ public final class PushNotificationRegistrar {
 
     /// Requests notification authorization if not already granted, then registers for remote notifications.
     /// Can be called from anywhere in the app when user takes an action that would benefit from notifications.
-    public static func requestNotificationAuthorizationIfNeeded() async {
+    public static func requestNotificationAuthorizationIfNeeded() async -> Bool {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
 
         if settings.authorizationStatus == .authorized {
@@ -32,7 +32,7 @@ public final class PushNotificationRegistrar {
             await MainActor.run {
                 UIApplication.shared.registerForRemoteNotifications()
             }
-            return
+            return true
         }
 
         do {
@@ -46,8 +46,10 @@ public final class PushNotificationRegistrar {
             } else {
                 Log.info("Notification authorization denied by user")
             }
+            return granted
         } catch {
             Log.warning("Notification authorization failed: \(error)")
+            return false
         }
     }
 }

@@ -1,8 +1,19 @@
+import ConvosCore
 import PhotosUI
 import SwiftUI
 
-struct ProfileView: View {
-    @Bindable var viewModel: ConversationViewModel
+struct ProfileEditView: View {
+    @Binding var profile: Profile
+    @Binding var profileImage: UIImage?
+    @Binding var editingDisplayName: String
+    @Binding var saveDisplayNameAsQuickname: Bool
+
+    @Bindable var quicknameSettings: QuicknameSettingsViewModel
+
+    let showsQuicknameToggle: Bool
+    let showsCancelButton: Bool
+
+    let onConfirm: () -> Void
 
     @Environment(\.dismiss) private var dismiss: DismissAction
 
@@ -14,13 +25,13 @@ struct ProfileView: View {
                         Spacer()
                         VStack(spacing: DesignConstants.Spacing.step6x) {
                             ProfileAvatarView(
-                                profile: viewModel.profile,
-                                profileImage: viewModel.profileImage
+                                profile: profile,
+                                profileImage: profileImage
                             )
                             .frame(width: 160.0, height: 160.0)
 
                             ImagePickerButton(
-                                currentImage: $viewModel.profileImage,
+                                currentImage: $profileImage,
                                 showsCurrentImage: false,
                                 symbolSize: 20.0
                             )
@@ -37,42 +48,30 @@ struct ProfileView: View {
                 .listSectionSeparator(.hidden)
 
                 Section {
-                    HStack {
-                        TextField("Somebody", text: $viewModel.editingDisplayName)
+                    TextField("Somebody", text: $editingDisplayName)
+                        .scrollDismissesKeyboard(.interactively)
+                }
 
-//                        Button {
-//                        } label: {
-//                            Image(systemName: "shuffle")
-//                        }
-//                        .buttonStyle(.plain)
+                if showsQuicknameToggle {
+                    Section {
+                        Toggle(isOn: $saveDisplayNameAsQuickname) {
+                            Text("Use as quickname")
+                                .foregroundStyle(.colorTextPrimary)
+                        }
+                    } footer: {
+                        Text("Quickly add this Name and Pic to new convos. You’ll still start anonymous.")
+                            .foregroundStyle(.colorTextSecondary)
                     }
                 }
 
-                Section {
-                    Toggle(isOn: $viewModel.useDisplayNameForNewConvos) {
-                        Text("Quickname")
-                            .foregroundStyle(.colorTextPrimary)
-                    }
-                } footer: {
-                    Text("Use this name quickly in new convos")
-                        .foregroundStyle(.colorTextSecondary)
-                }
-
 //                Section {
-//                    Toggle("Use for new convos", isOn: $useForNewConvos)
-//                }
-//
-//                Section {
-//                    HStack {
+//                    NavigationLink {
+//                        QuicknameRandomizerSettingsView(quicknameSettings: quicknameSettings)
+//                    } label: {
 //                        VStack(alignment: .leading) {
 //                            Text("Randomizer")
-//                            Text("american • gender neutral")
-//                        }
-//                        Spacer()
-//                        VStack {
-//                            Spacer()
-//                            Image(systemName: "chevron.right")
-//                            Spacer()
+//                            Text(quicknameSettings.quicknameSettings.randomizerSummary)
+//                                .foregroundStyle(.colorTextSecondary)
 //                        }
 //                    }
 //                }
@@ -82,15 +81,17 @@ struct ProfileView: View {
             .listRowInsets(.all, 0.0)
             .listSectionSpacing(DesignConstants.Spacing.step6x)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(role: .cancel) {
-                        dismiss()
+                if showsCancelButton {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(role: .cancel) {
+                            dismiss()
+                        }
                     }
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(role: .confirm) {
-                        viewModel.onProfileSettingsDismissed()
+                        onConfirm()
                     }
                     .tint(.colorBackgroundInverted)
                 }
@@ -100,5 +101,17 @@ struct ProfileView: View {
 }
 
 #Preview {
-    ProfileView(viewModel: .mock)
+    @Previewable @State var viewModel: MyProfileViewModel = .mock
+
+    return ProfileEditView(
+        profile: .constant(viewModel.profile),
+        profileImage: $viewModel.profileImage,
+        editingDisplayName: $viewModel.editingDisplayName,
+        saveDisplayNameAsQuickname: $viewModel.saveDisplayNameAsQuickname,
+        quicknameSettings: viewModel.quicknameSettings,
+        showsQuicknameToggle: false,
+        showsCancelButton: false
+    ) {
+        // confirm
+    }
 }

@@ -8,13 +8,14 @@ struct ConversationView<MessagesBottomBar: View>: View {
     let confirmDeletionBeforeDismissal: Bool
     let messagesTopBarTrailingItem: MessagesViewTopBarTrailingItem
     let messagesTopBarTrailingItemEnabled: Bool
-    let messagesBottomBarEnabled: Bool
+    let messagesTextFieldEnabled: Bool
     @ViewBuilder let bottomBarContent: () -> MessagesBottomBar
 
     @State private var presentingShareView: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
 
     var body: some View {
+        @Bindable var onboardingCoordinator = viewModel.onboardingCoordinator
         MessagesView(
             conversation: viewModel.conversation,
             messages: viewModel.messages,
@@ -28,8 +29,9 @@ struct ConversationView<MessagesBottomBar: View>: View {
             messageText: $viewModel.messageText,
             sendButtonEnabled: $viewModel.sendButtonEnabled,
             profileImage: $viewModel.profileImage,
+            onboardingCoordinator: onboardingCoordinator,
             focusState: $focusState,
-            messagesBottomBarEnabled: messagesBottomBarEnabled,
+            messagesTextFieldEnabled: messagesTextFieldEnabled,
             viewModelFocus: viewModel.focus,
             onConversationInfoTap: viewModel.onConversationInfoTap,
             onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
@@ -40,7 +42,19 @@ struct ConversationView<MessagesBottomBar: View>: View {
             onTapAvatar: viewModel.onTapAvatar(_:),
             onDisplayNameEndedEditing: viewModel.onDisplayNameEndedEditing,
             onProfileSettings: viewModel.onProfileSettings,
-            bottomBarContent: bottomBarContent
+            bottomBarContent: {
+                VStack(spacing: DesignConstants.Spacing.step3x) {
+                    bottomBarContent()
+
+                    ConversationOnboardingView(
+                        coordinator: onboardingCoordinator,
+                        onTapSetupQuickname: viewModel.onProfilePhotoTap,
+                        onUseQuickname: viewModel.onUseQuickname(_:_:),
+                        onSaveAsQuickname: viewModel.onSaveAsQuickname(_:)
+                    )
+                }
+                .padding(.horizontal, DesignConstants.Spacing.step4x)
+            }
         )
         .selfSizingSheet(isPresented: $viewModel.presentingConversationForked) {
             ConversationForkedInfoView {
@@ -48,7 +62,17 @@ struct ConversationView<MessagesBottomBar: View>: View {
             }
         }
         .sheet(isPresented: $viewModel.presentingProfileSettings) {
-            ProfileView(viewModel: viewModel)
+            ProfileEditView(
+                profile: .constant(viewModel.myProfileViewModel.profile),
+                profileImage: $viewModel.myProfileViewModel.profileImage,
+                editingDisplayName: $viewModel.myProfileViewModel.editingDisplayName,
+                saveDisplayNameAsQuickname: $viewModel.myProfileViewModel.saveDisplayNameAsQuickname,
+                quicknameSettings: viewModel.myProfileViewModel.quicknameSettings,
+                showsQuicknameToggle: true,
+                showsCancelButton: true
+            ) {
+                viewModel.onProfileSettingsDismissed()
+            }
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -112,7 +136,7 @@ struct ConversationView<MessagesBottomBar: View>: View {
             confirmDeletionBeforeDismissal: true,
             messagesTopBarTrailingItem: .share,
             messagesTopBarTrailingItemEnabled: true,
-            messagesBottomBarEnabled: true,
+            messagesTextFieldEnabled: true,
             bottomBarContent: { EmptyView() }
         )
     }

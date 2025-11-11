@@ -17,6 +17,7 @@ enum DesignConstants {
         static let stepX: CGFloat = 4.0
         static let step2x: CGFloat = 8.0
         static let step3x: CGFloat = 12.0
+        static let step3HalfX: CGFloat = 14.0
         static let step4x: CGFloat = 16.0
         static let step5x: CGFloat = 20.0
         static let step6x: CGFloat = 24.0

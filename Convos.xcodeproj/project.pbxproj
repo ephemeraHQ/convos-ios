@@ -13,8 +13,9 @@
 		7AD20B572E5A21AE00F68E6E /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD20B562E5A21AE00F68E6E /* ConvosCore */; };
 		7AD20CA42E5A8F0B00F68E6E /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AC5995B2E5593C300D65D07 /* ConvosCore */; };
 		7AD545902E4EA8BE00500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD5458F2E4EA8BE00500ADF /* ConvosCore */; };
-		7AD545922E4EA8D200500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545912E4EA8D200500ADF /* ConvosCore */; };
 		7AD545942E4EA8F300500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545932E4EA8F300500ADF /* ConvosCore */; };
+		7AD974582EC2715000566BD5 /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD974572EC2715000566BD5 /* ConvosCore */; };
+		7AD978712EC2741100566BD5 /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD5458F2E4EA8BE00500ADF /* ConvosCore */; };
 		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
 		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -108,6 +109,7 @@
 		7AC5993D2E5592FA00D65D07 /* KeychainIdentityStoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KeychainIdentityStoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7ACA8BA32DE16DE200848799 /* ConvosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConvosTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7AD5458D2E4EA89400500ADF /* ConvosCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = ConvosCore; sourceTree = "<group>"; };
+		7AD974562EC26F9500566BD5 /* Convos (Dev).xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Convos (Dev).xctestplan"; sourceTree = "<group>"; };
 		7ADC0C6E2E2977800053978A /* ConvosAppClip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ConvosAppClip.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7ADC0C7C2E2977810053978A /* ConvosAppClipTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConvosAppClipTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7ADC0C862E2977810053978A /* ConvosAppClipUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConvosAppClipUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -118,10 +120,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		7ACA8BD52DE180B800848799 /* Exceptions for "Convos" folder in "ConvosTests" target */ = {
+		7A9C77CE2EC2819D00E19ECF /* Exceptions for "Convos" folder in "ConvosTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"_Archive/Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
+				"Conversation Detail/ConversationOnboardingCoordinator.swift",
+				Profile/QuicknameSettings.swift,
 			);
 			target = 7ACA8BA22DE16DE200848799 /* ConvosTests */;
 		};
@@ -142,16 +145,12 @@
 		D8A2B6A32DA4BA4C00EF8577 /* Exceptions for "Convos" folder in "Convos" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"_Archive/Convos Client/Auth/Passkey/AsyncAuthorizationController.swift",
-				"_Archive/Convos Client/Auth/Passkey/PasskeyAuthError.swift",
-				"_Archive/Convos Client/Auth/Passkey/PasskeyAuthService.swift",
-				"_Archive/Convos Client/Auth/Passkey/PasskeyIdentityStore.swift",
-				"_Archive/Convos Client/Auth/Passkey/PasskeyPresentationProvider.swift",
-				"_Archive/Convos Client/Auth/Passkey/PasskeySigningKey.swift",
-				"_Archive/Convos Client/Auth/Turnkey/TurnkeyAccountsService.swift",
-				"_Archive/Convos Client/Auth/Turnkey/TurnkeyAuthService.swift",
-				"_Archive/Convos Client/Auth/Turnkey/TurnkeyDatabaseKeyStore.swift",
-				"_Archive/Convos Client/Auth/Turnkey/TurnkeyPresentationAnchorProvider.swift",
+				Config/Dev.xcconfig,
+				Config/Info.Dev.plist,
+				Config/Info.Local.plist,
+				Config/Info.Prod.plist,
+				Config/Local.xcconfig,
+				Config/Prod.xcconfig,
 				"Design System/Animation/DraggableSpringyView.swift",
 				"Design System/Components/LabeledTextField.swift",
 				"Shared Views/BackspaceTextField.swift",
@@ -251,7 +250,10 @@
 				"Design System/ViewExtensions.swift",
 				Explode/ExplodeInfoView.swift,
 				"Invite Helpers/Invite+InviteURL.swift",
+				Profile/MyProfileViewModel.swift,
 				Profile/ProfileEditView.swift,
+				Profile/QuicknameRandomizerSettingsView/QuicknameRandomizerSettingsView.swift,
+				Profile/QuicknameSettings.swift,
 				"Shared Views/AutoShareSheetView.swift",
 				"Shared Views/AvatarView.swift",
 				"Shared Views/ConversationInfoPresenter.swift",
@@ -327,7 +329,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				D8A2B6A32DA4BA4C00EF8577 /* Exceptions for "Convos" folder in "Convos" target */,
-				7ACA8BD52DE180B800848799 /* Exceptions for "Convos" folder in "ConvosTests" target */,
+				7A9C77CE2EC2819D00E19ECF /* Exceptions for "Convos" folder in "ConvosTests" target */,
 				DAE6B1002E70955E0062483A /* Exceptions for "Convos" folder in "ConvosAppClip" target */,
 			);
 			path = Convos;
@@ -387,7 +389,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7AD545922E4EA8D200500ADF /* ConvosCore in Frameworks */,
+				7AD978712EC2741100566BD5 /* ConvosCore in Frameworks */,
+				7AD974582EC2715000566BD5 /* ConvosCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -428,6 +431,7 @@
 		D8A2B6882DA4BA4B00EF8577 = {
 			isa = PBXGroup;
 			children = (
+				7AD974562EC26F9500566BD5 /* Convos (Dev).xctestplan */,
 				7AD5458D2E4EA89400500ADF /* ConvosCore */,
 				D8477AD42DCBA52F00E31E54 /* .env */,
 				D8477AD52DCBA52F00E31E54 /* .env.example */,
@@ -624,6 +628,9 @@
 				D80850352DC94F4C00E708B0 /* NotificationService */,
 			);
 			name = NotificationService;
+			packageProductDependencies = (
+				7AD5458F2E4EA8BE00500ADF /* ConvosCore */,
+			);
 			productName = NotificationService;
 			productReference = D80850342DC94F4C00E708B0 /* NotificationService.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -677,6 +684,7 @@
 					};
 					7ACA8BA22DE16DE200848799 = {
 						CreatedOnToolsVersion = 16.3;
+						TestTargetID = D8A2B6902DA4BA4B00EF8577;
 					};
 					7ADC0C6D2E2977800053978A = {
 						CreatedOnToolsVersion = 26.0;
@@ -1256,6 +1264,7 @@
 			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
 			baseConfigurationReferenceRelativePath = Config/Dev.xcconfig;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
@@ -1264,9 +1273,13 @@
 				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_TESTS_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Convos.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Convos";
 			};
 			name = Dev;
 		};
@@ -1275,6 +1288,7 @@
 			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
 			baseConfigurationReferenceRelativePath = Config/Prod.xcconfig;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
@@ -1283,9 +1297,13 @@
 				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_TESTS_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Convos.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Convos";
 			};
 			name = Release;
 		};
@@ -1539,7 +1557,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1560,8 +1577,6 @@
 				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRIP_INSTALLED_PRODUCT = NO;
-				STRIP_SWIFT_SYMBOLS = NO;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
@@ -1821,7 +1836,6 @@
 				CODE_SIGN_ENTITLEMENTS = Convos/Convos.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = NO;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Convos/Config/Info.Local.plist;
@@ -1841,8 +1855,6 @@
 				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRIP_INSTALLED_PRODUCT = NO;
-				STRIP_SWIFT_SYMBOLS = NO;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
@@ -1889,6 +1901,7 @@
 			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
 			baseConfigurationReferenceRelativePath = Config/Local.xcconfig;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = FY4NZR34Z3;
@@ -1897,9 +1910,13 @@
 				MARKETING_VERSION = 1.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(CONVOS_TESTS_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Convos.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Convos";
 			};
 			name = Local;
 		};
@@ -2151,12 +2168,13 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = ConvosCore;
 		};
-		7AD545912E4EA8D200500ADF /* ConvosCore */ = {
+		7AD545932E4EA8F300500ADF /* ConvosCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ConvosCore;
 		};
-		7AD545932E4EA8F300500ADF /* ConvosCore */ = {
+		7AD974572EC2715000566BD5 /* ConvosCore */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = 7AD20B552E5A21AE00F68E6E /* XCLocalSwiftPackageReference "ConvosCore" */;
 			productName = ConvosCore;
 		};
 		D8084BA82DC9193A00E708B0 /* DifferenceKit */ = {

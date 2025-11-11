@@ -7,6 +7,12 @@ public struct Profile: Codable, Identifiable, Hashable, Sendable {
     public let name: String?
     public let avatar: String?
 
+    public init(inboxId: String, name: String?, avatar: String?) {
+        self.inboxId = inboxId
+        self.name = name
+        self.avatar = avatar
+    }
+
     public var avatarURL: URL? {
         guard let avatar, let url = URL(string: avatar) else {
             return nil
@@ -16,6 +22,10 @@ public struct Profile: Codable, Identifiable, Hashable, Sendable {
 
     public var displayName: String {
         name ?? "Someone"
+    }
+
+    public func with(inboxId: String) -> Profile {
+        .init(inboxId: inboxId, name: name, avatar: avatar)
     }
 
     public static func empty(inboxId: String = "") -> Profile {

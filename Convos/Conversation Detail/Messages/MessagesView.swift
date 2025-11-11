@@ -18,8 +18,9 @@ struct MessagesView<BottomBarContent: View>: View {
     @Binding var messageText: String
     @Binding var sendButtonEnabled: Bool
     @Binding var profileImage: UIImage?
+    let onboardingCoordinator: ConversationOnboardingCoordinator
     @FocusState.Binding var focusState: MessagesViewInputFocus?
-    let messagesBottomBarEnabled: Bool
+    let messagesTextFieldEnabled: Bool
     let viewModelFocus: MessagesViewInputFocus?
     let onConversationInfoTap: () -> Void
     let onConversationNameEndedEditing: () -> Void
@@ -56,12 +57,13 @@ struct MessagesView<BottomBarContent: View>: View {
                     profileImage: $profileImage,
                     focusState: $focusState,
                     viewModelFocus: viewModelFocus,
+                    animateAvatarForQuickname: onboardingCoordinator.shouldAnimateAvatarForQuicknameSetup,
+                    messagesTextFieldEnabled: messagesTextFieldEnabled,
                     onProfilePhotoTap: onProfilePhotoTap,
                     onSendMessage: onSendMessage,
                     onDisplayNameEndedEditing: onDisplayNameEndedEditing,
                     onProfileSettings: onProfileSettings
                 )
-                .disabled(!messagesBottomBarEnabled)
             }
             .background(HeightReader())
             .onPreferenceChange(HeightPreferenceKey.self) { height in

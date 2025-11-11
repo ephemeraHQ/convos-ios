@@ -139,7 +139,7 @@ struct ConversationsView: View {
                         confirmDeletionBeforeDismissal: false,
                         messagesTopBarTrailingItem: .share,
                         messagesTopBarTrailingItemEnabled: true,
-                        messagesBottomBarEnabled: true,
+                        messagesTextFieldEnabled: true,
                         bottomBarContent: { EmptyView() }
                     )
                 } else if horizontalSizeClass != .compact {

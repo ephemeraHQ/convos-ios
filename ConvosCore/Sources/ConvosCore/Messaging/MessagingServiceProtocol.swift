@@ -17,6 +17,7 @@ extension MessagingServiceProtocol {
 }
 
 public protocol MessagingServiceProtocol: AnyObject {
+    var clientId: String { get }
     var state: MessagingServiceState { get }
     var inboxStateManager: any InboxStateManagerProtocol { get }
 
@@ -42,4 +43,10 @@ public protocol MessagingServiceProtocol: AnyObject {
         filename: String,
         afterUpload: @escaping (String) async throws -> Void
     ) async throws -> String
+}
+
+public extension MessagingServiceProtocol {
+    var clientId: String {
+        inboxStateManager.currentState.clientId
+    }
 }

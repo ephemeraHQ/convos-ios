@@ -27,6 +27,7 @@ struct ConvosToolbarButton: View {
 struct AppSettingsView: View {
     let onDeleteAllData: () -> Void
     @State private var showingDeleteAllDataConfirmation: Bool = false
+    @State private var quicknameSettings: QuicknameSettingsViewModel = .init()
     @Environment(\.openURL) private var openURL: OpenURLAction
     @Environment(\.dismiss) private var dismiss: DismissAction
 
@@ -35,26 +36,40 @@ struct AppSettingsView: View {
             List {
                 Section {
                     NavigationLink {
-                        EmptyView()
+                        ProfileEditView(
+                            profile: .constant(quicknameSettings.profile),
+                            profileImage: $quicknameSettings.profileImage,
+                            editingDisplayName: $quicknameSettings.editingDisplayName,
+                            saveDisplayNameAsQuickname: .constant(false),
+                            quicknameSettings: quicknameSettings,
+                            showsQuicknameToggle: false,
+                            showsCancelButton: false
+                        ) {
+                            quicknameSettings.save()
+                            dismiss()
+                        }
                     } label: {
                         HStack {
                             Text("Quickname")
                                 .foregroundStyle(.colorTextPrimary)
 
                             Spacer()
-                            ProfileAvatarView(profile: .empty(), profileImage: nil)
+                            ProfileAvatarView(
+                                profile: quicknameSettings.profile,
+                                profileImage: quicknameSettings.profileImage
+                            )
                                 .frame(width: 16.0, height: 16.0)
-                            Text("Somebody")
-                                .foregroundStyle(.colorTextPrimary)
+                            Text(
+                                quicknameSettings.editingDisplayName.isEmpty ? "Someone" : quicknameSettings.editingDisplayName
+                            )
+                            .foregroundStyle(.colorTextPrimary)
                         }
                     }
-                    .disabled(true)
                 } header: {
                     HStack {
                         Text("Names")
                             .foregroundStyle(.colorTextSecondary)
                         Spacer()
-                        SoonLabel()
                     }
                 } footer: {
                     Text("Each time you join a convo, you'll choose a name")

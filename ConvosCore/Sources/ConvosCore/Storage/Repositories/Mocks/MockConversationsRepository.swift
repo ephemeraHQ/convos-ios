@@ -41,12 +41,12 @@ extension Conversation {
         )
     }
 
-    public static func empty(id: String = "") -> Self {
+    public static func empty(id: String = "", clientId: String = "") -> Self {
         .init(
             id: id,
             clientConversationId: id,
             inboxId: "",
-            clientId: "",
+            clientId: clientId,
             creator: .empty(isCurrentUser: true),
             createdAt: .distantFuture,
             consent: .allowed,

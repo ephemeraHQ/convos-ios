@@ -1,123 +1,6 @@
 import ConvosCore
 import SwiftUI
 
-struct InviteShareLink: View {
-    let invite: Invite?
-    var body: some View {
-        let inviteString = invite?.inviteURLString ?? ""
-        ShareLink(
-            item: inviteString,
-            preview: SharePreview(
-                "Join a private convo",
-                image: Image("AppIcon")
-            )
-        ) {
-            Image(systemName: "square.and.arrow.up")
-                .foregroundStyle(.colorTextPrimary)
-        }
-        .disabled(inviteString.isEmpty)
-    }
-}
-
-struct InviteAcceptedView: View {
-    @State private var showingDescription: Bool = false
-
-    var body: some View {
-        VStack(spacing: DesignConstants.Spacing.step2x) {
-            HStack {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 14.0))
-                    .foregroundStyle(.colorGreen)
-                Text("Invite accepted")
-                    .foregroundStyle(.colorTextPrimary)
-            }
-            .font(.body)
-
-            if showingDescription {
-                Text("See and send messages after someone approves you.")
-                    .font(.caption)
-                    .foregroundStyle(.colorTextSecondary)
-            }
-        }
-        .padding(.horizontal, DesignConstants.Spacing.step10x)
-        .padding(.bottom, DesignConstants.Spacing.step4x)
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                withAnimation {
-                    self.showingDescription = true
-                }
-            }
-        }
-    }
-}
-
-struct AllowPushNotificationsView: View {
-    let isWaitingForInviteAcceptance: Bool
-    let enableNotifications: () -> Void
-
-    @State private var showingButton: Bool = false
-    @State private var showingDescription: Bool = false
-
-    var buttonDelay: CGFloat {
-        isWaitingForInviteAcceptance ? 2.2 : 0.2
-    }
-
-    var descriptionDelay: CGFloat {
-        isWaitingForInviteAcceptance ? 3.8 : 1.0
-    }
-
-    var body: some View {
-        VStack(spacing: DesignConstants.Spacing.step2x) {
-            if showingButton {
-                Button {
-                    enableNotifications()
-                } label: {
-                    if isWaitingForInviteAcceptance {
-                        Text("Notify me")
-                    } else {
-                        Text("Enable notifications")
-                    }
-                }
-                .convosButtonStyle(.rounded(fullWidth: false, backgroundColor: .colorBackgroundInverted))
-            }
-
-            if !isWaitingForInviteAcceptance && showingDescription {
-                Text("Never miss a message. Mute any Convo, any time.")
-                    .font(.caption)
-                    .foregroundStyle(.colorTextSecondary)
-            }
-        }
-        .padding(.bottom, DesignConstants.Spacing.step4x)
-        .task {
-            do {
-                try await Task.sleep(for: .seconds(buttonDelay))
-                withAnimation {
-                    self.showingButton = true
-                }
-                try await Task.sleep(for: .seconds(descriptionDelay - buttonDelay))
-                withAnimation {
-                    self.showingDescription = true
-                }
-            } catch is CancellationError {
-                // Task was cancelled, exit cleanly
-                return
-            } catch {
-                // Other errors (shouldn't occur with Task.sleep, but handle defensively)
-            }
-        }
-    }
-}
-
-#Preview {
-    InviteAcceptedView()
-}
-
-#Preview {
-    AllowPushNotificationsView(isWaitingForInviteAcceptance: false) {
-        //
-    }
-}
-
 struct NewConversationView: View {
     let viewModel: NewConversationViewModel
     @State private var hasShownScannerOnAppear: Bool = false
@@ -156,26 +39,15 @@ struct NewConversationView: View {
                             confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
                             messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem,
                             messagesTopBarTrailingItemEnabled: viewModel.messagesTopBarTrailingItemEnabled,
-                            messagesBottomBarEnabled: viewModel.messagesBottomBarEnabled
+                            messagesTextFieldEnabled: viewModel.messagesTextFieldEnabled,
                         ) {
-                            VStack(spacing: 0.0) {
-                                if viewModel.isWaitingForInviteAcceptance {
-                                    InviteAcceptedView()
-                                }
-                                if viewModel.conversationViewModel.shouldAskToAllowNotifications {
-                                    AllowPushNotificationsView(
-                                        isWaitingForInviteAcceptance: viewModel.isWaitingForInviteAcceptance) {
-                                            viewModel.conversationViewModel.requestPushNotificationsPermission()
-                                        }
-                                }
-                            }
                         }
                         .toolbar {
                             ToolbarItem(placement: .topBarLeading) {
                                 Button(role: .close) {
                                     if viewModel.shouldConfirmDeletingConversation {
                                         presentingDeleteConfirmation = true
-                                    } else if viewModel.isWaitingForInviteAcceptance {
+                                    } else if viewModel.conversationViewModel.onboardingCoordinator.isWaitingForInviteAcceptance {
                                         presentingJoiningStateInfo = true
                                     } else {
                                         dismiss()

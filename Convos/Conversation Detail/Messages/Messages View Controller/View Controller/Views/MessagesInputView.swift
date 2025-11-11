@@ -11,6 +11,8 @@ struct MessagesInputView: View {
     @Binding var messageText: String
     @Binding var sendButtonEnabled: Bool
     @FocusState.Binding var focusState: MessagesViewInputFocus?
+    let animateAvatarForQuickname: Bool
+    let messagesTextFieldEnabled: Bool
     private let focused: MessagesViewInputFocus = .message
     let onProfilePhotoTap: () -> Void
     let onSendMessage: () -> Void
@@ -23,6 +25,20 @@ struct MessagesInputView: View {
         Self.defaultHeight
     }
 
+    @State private var avatarScale: CGFloat = 1.0
+
+    private func updateAnimation() {
+        if animateAvatarForQuickname {
+            withAnimation(Animation.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
+                avatarScale = 1.2
+            }
+        } else {
+            withAnimation {
+                avatarScale = 1.0
+            }
+        }
+    }
+
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
             Button {
@@ -32,10 +48,14 @@ struct MessagesInputView: View {
             }
             .frame(width: sendButtonSize, height: sendButtonSize)
             .frame(alignment: .bottomLeading)
+            .scaleEffect(avatarScale)
+            .task(id: animateAvatarForQuickname) {
+                updateAnimation()
+            }
 
             Group {
                 TextField(
-                    "Chat as \(displayName.isEmpty ? emptyDisplayNamePlaceholder : displayName)",
+                    "Chat as \(profile.displayName)",
                     text: $messageText,
                     axis: .vertical
                 )
@@ -45,6 +65,7 @@ struct MessagesInputView: View {
                 .tint(.colorTextPrimary)
                 .frame(minHeight: Self.defaultHeight, alignment: .center)
                 .padding(.horizontal, DesignConstants.Spacing.step3x)
+                .disabled(!messagesTextFieldEnabled)
             }
             .frame(maxHeight: .infinity, alignment: .center)
 
@@ -72,9 +93,18 @@ struct MessagesInputView: View {
     @Previewable @State var messageText: String = ""
     @Previewable @State var sendButtonEnabled: Bool = false
     @Previewable @State var profileImage: UIImage?
+    @Previewable @State var animateAvatarForQuickname: Bool = false
     @Previewable @FocusState var focusState: MessagesViewInputFocus?
 
     VStack {
+        Spacer()
+        Button {
+            withAnimation {
+                animateAvatarForQuickname.toggle()
+            }
+        } label: {
+            Text("Toggle Quickname Setup")
+        }
         Spacer()
     }
     .safeAreaBar(edge: .bottom) {
@@ -85,9 +115,12 @@ struct MessagesInputView: View {
             emptyDisplayNamePlaceholder: "Somebody",
             messageText: $messageText,
             sendButtonEnabled: $sendButtonEnabled,
-            focusState: $focusState) {
-            } onSendMessage: {
-            }
-            .padding(DesignConstants.Spacing.step2x)
+            focusState: $focusState,
+            animateAvatarForQuickname: animateAvatarForQuickname,
+            messagesTextFieldEnabled: true,
+            onProfilePhotoTap: {},
+            onSendMessage: {}
+        )
+        .padding(DesignConstants.Spacing.step2x)
     }
 }

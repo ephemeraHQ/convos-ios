@@ -14,6 +14,8 @@ struct MessagesBottomBar: View {
     @Binding var profileImage: UIImage?
     @FocusState.Binding var focusState: MessagesViewInputFocus?
     let viewModelFocus: MessagesViewInputFocus?
+    let animateAvatarForQuickname: Bool
+    let messagesTextFieldEnabled: Bool
     let onProfilePhotoTap: () -> Void
     let onSendMessage: () -> Void
     let onDisplayNameEndedEditing: () -> Void
@@ -45,6 +47,8 @@ struct MessagesBottomBar: View {
                 messageText: $messageText,
                 sendButtonEnabled: $sendButtonEnabled,
                 focusState: $focusState,
+                animateAvatarForQuickname: animateAvatarForQuickname,
+                messagesTextFieldEnabled: messagesTextFieldEnabled,
                 onProfilePhotoTap: onProfilePhotoTap,
                 onSendMessage: onSendMessage
             )
@@ -117,6 +121,7 @@ struct MessagesBottomBar: View {
     @Previewable @State var messageText: String = ""
     @Previewable @State var sendButtonEnabled: Bool = false
     @Previewable @State var profileImage: UIImage?
+    @Previewable var animateAvatarForQuickname: Bool = false
     @Previewable @FocusState var focusState: MessagesViewInputFocus?
     @Previewable @State var viewModelFocus: MessagesViewInputFocus?
     MessagesBottomBar(
@@ -127,6 +132,8 @@ struct MessagesBottomBar: View {
         profileImage: $profileImage,
         focusState: $focusState,
         viewModelFocus: viewModelFocus,
+        animateAvatarForQuickname: animateAvatarForQuickname,
+        messagesTextFieldEnabled: true,
         onProfilePhotoTap: {
             viewModelFocus = .displayName
         },
