@@ -150,13 +150,14 @@ struct ConversationsView: View {
             }
         }
         .sheet(isPresented: $presentingAppSettings) {
-            AppSettingsView(onDeleteAllData: viewModel.deleteAllData)
+            AppSettingsView(viewModel: viewModel.appSettingsViewModel, onDeleteAllData: viewModel.deleteAllData)
                 .navigationTransition(
                     .zoom(
                         sourceID: "app-settings-transition-source",
                         in: namespace
                     )
                 )
+                .interactiveDismissDisabled(viewModel.appSettingsViewModel.isDeleting)
         }
         .fullScreenCover(item: $viewModel.newConversationViewModel) { viewModel in
             NewConversationView(viewModel: viewModel)
