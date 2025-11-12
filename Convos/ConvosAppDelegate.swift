@@ -40,11 +40,8 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         if let explodeInfo = ExplodeNotificationManager.extractConversationInfo(from: notification.request) {
             Log.info("Explode notification fired while app in foreground for conversation: \(explodeInfo.conversationId)")
 
-            // Perform the explosion after a short delay to let the banner show
+            // Perform the explosion immediately
             Task {
-                // Wait for the banner to be shown
-                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-
                 await handleConversationExplosion(
                     conversationId: explodeInfo.conversationId,
                     inboxId: explodeInfo.inboxId,
@@ -82,15 +79,7 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         if let explodeInfo = ExplodeNotificationManager.extractConversationInfo(from: response) {
             Log.info("Explode notification tapped for conversation: \(explodeInfo.conversationId)")
 
-            // Perform the explosion (if not already done)
-            await handleConversationExplosion(
-                conversationId: explodeInfo.conversationId,
-                inboxId: explodeInfo.inboxId,
-                clientId: explodeInfo.clientId
-            )
-
-            // Post explosion notification which will navigate to conversation list
-            // The ConversationsViewModel should handle this by dismissing any presented conversation
+            // Navigate to conversation list
             DispatchQueue.main.async {
                 NotificationCenter.default.post(
                     name: .explosionNotificationTapped,
@@ -154,17 +143,8 @@ class ConvosAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             clientId: clientId
         )
 
-        // Post notification for UI updates
-        DispatchQueue.main.async {
-            NotificationCenter.default.post(
-                name: .explosionNotificationTapped,
-                object: nil,
-                userInfo: [
-                    "inboxId": inboxId,
-                    "conversationId": conversationId,
-                    "notificationType": "explosion"
-                ]
-            )
-        }
+        // Note: We don't post explosionNotificationTapped here because this is called
+        // when the notification fires (not when tapped). The UI will update via
+        // the leftConversationNotification posted by SessionManager.explodeConversation
     }
 }

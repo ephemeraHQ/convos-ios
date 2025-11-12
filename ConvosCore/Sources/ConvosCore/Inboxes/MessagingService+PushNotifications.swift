@@ -231,8 +231,11 @@ extension MessagingService {
                 }
 
                 // Get client ID from database
-                let clientId = try await databaseReader.read { db in
-                    try DBInbox.fetchOne(db, id: currentInboxId)?.clientId ?? ""
+                guard let clientId = try await databaseReader.read({ db in
+                    try DBInbox.fetchOne(db, id: currentInboxId)?.clientId
+                }) else {
+                    Log.error("ClientId not found for inbox \(currentInboxId), cannot schedule explosion")
+                    return .droppedMessage
                 }
 
                 // Get conversation name

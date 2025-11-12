@@ -156,6 +156,14 @@ public final class SessionManager: SessionManagerProtocol {
                         return
                     }
 
+                    // Check if this is from an explosion (already handled in explodeConversation)
+                    let conversationId = notification.userInfo?["conversationId"] as? String
+                    if conversationId != nil {
+                        // This is from explodeConversation, inbox already deleted
+                        Log.info("Left conversation notification from explosion, inbox already handled")
+                        return
+                    }
+
                     do {
                         try await self.deleteInbox(clientId: clientId)
                     } catch {
@@ -184,21 +192,9 @@ public final class SessionManager: SessionManagerProtocol {
     public func explodeConversation(conversationId: String, inboxId: String, clientId: String) async {
         Log.info("Exploding conversation \(conversationId) for inbox \(inboxId)")
 
-        // Post notification immediately to dismiss UI and navigate away
-        NotificationCenter.default.post(
-            name: .leftConversationNotification,
-            object: nil,
-            userInfo: [
-                "clientId": clientId,
-                "inboxId": inboxId,
-                "conversationId": conversationId
-            ]
-        )
-
         do {
-            // Get the messaging service and metadata writer
+            // First, get the messaging service and metadata writer
             let messagingService = messagingService(for: clientId, inboxId: inboxId)
-
             let metadataWriter = messagingService.conversationMetadataWriter()
 
             // Fetch the conversation to get member IDs
@@ -206,40 +202,62 @@ public final class SessionManager: SessionManagerProtocol {
                 try DBConversation.fetchOne(db, id: conversationId)
             }
 
-            guard let conversation else {
-                Log.warning("Conversation \(conversationId) not found, just deleting inbox")
-                try await deleteInbox(clientId: clientId)
-                return
+            if let conversation {
+                // Get all member IDs (we'll try to remove everyone)
+                let allMemberIds = try await databaseReader.read { db in
+                    try DBConversationMember
+                        .filter(DBConversationMember.Columns.conversationId == conversationId)
+                        .filter(DBConversationMember.Columns.inboxId != inboxId) // Exclude current user
+                        .fetchAll(db)
+                        .map { $0.inboxId }
+                }
+
+                // Set the expiration to now
+                Log.info("Setting expiration to now for conversation \(conversationId)")
+                try await metadataWriter.updateExpiresAt(Date(), for: conversationId)
+
+                // Remove all other members
+                if !allMemberIds.isEmpty {
+                    Log.info("Removing \(allMemberIds.count) members from conversation \(conversationId)")
+                    try await metadataWriter.removeMembers(allMemberIds, from: conversationId)
+                }
+            } else {
+                Log.warning("Conversation \(conversationId) not found, will just delete inbox")
             }
 
-            // Get all member IDs (we'll try to remove everyone)
-            let allMemberIds = try await databaseReader.read { db in
-                try DBConversationMember
-                    .filter(DBConversationMember.Columns.conversationId == conversationId)
-                    .filter(DBConversationMember.Columns.inboxId != inboxId) // Exclude current user
-                    .fetchAll(db)
-                    .map { $0.inboxId }
-            }
-
-            // Set the expiration to now
-            Log.info("Setting expiration to now for conversation \(conversationId)")
-            try await metadataWriter.updateExpiresAt(Date(), for: conversationId)
-
-            // Remove all other members
-            if !allMemberIds.isEmpty {
-                Log.info("Removing \(allMemberIds.count) members from conversation \(conversationId)")
-                try await metadataWriter.removeMembers(allMemberIds, from: conversationId)
-            }
+            // Cancel any scheduled explode notifications for this conversation
+            // (do this before deleting inbox in case of failure)
+            ExplodeNotificationManager.cancelExplodeNotification(for: conversationId)
 
             // Delete the inbox (which includes the conversation)
             try await deleteInbox(clientId: clientId)
 
-            // Cancel any scheduled explode notifications for this conversation
-            ExplodeNotificationManager.cancelExplodeNotification(for: conversationId)
+            // Then, post notification for UI update after all operations complete
+            NotificationCenter.default.post(
+                name: .leftConversationNotification,
+                object: nil,
+                userInfo: [
+                    "clientId": clientId,
+                    "inboxId": inboxId,
+                    "conversationId": conversationId
+                ]
+            )
 
             Log.info("Successfully exploded conversation \(conversationId)")
         } catch {
             Log.error("Failed to explode conversation: \(error.localizedDescription)")
+
+            // Still post notification on error to update UI
+            NotificationCenter.default.post(
+                name: .leftConversationNotification,
+                object: nil,
+                userInfo: [
+                    "clientId": clientId,
+                    "inboxId": inboxId,
+                    "conversationId": conversationId,
+                    "error": error.localizedDescription
+                ]
+            )
         }
     }
 

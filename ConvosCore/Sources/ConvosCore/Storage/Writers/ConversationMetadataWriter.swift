@@ -96,8 +96,11 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
             let clientId = inboxReady.client.inboxId
             let conversationName = try? group.name()
 
-            let dbClientId = try await databaseWriter.read { db in
-                try DBInbox.fetchOne(db, id: clientId)?.clientId ?? ""
+            guard let dbClientId = try await databaseWriter.read({ db in
+                try DBInbox.fetchOne(db, id: clientId)?.clientId
+            }) else {
+                Log.error("ClientId not found for inbox \(clientId), cannot schedule explosion")
+                return
             }
 
             let displayName: String? = {
