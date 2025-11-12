@@ -35,4 +35,8 @@ public protocol SessionManagerProtocol: AnyObject {
     func shouldDisplayNotification(for conversationId: String) async -> Bool
 
     func inboxId(for conversationId: String) async -> String?
+
+    // MARK: Explosion
+
+    func explodeConversation(conversationId: String, inboxId: String, clientId: String) async
 }

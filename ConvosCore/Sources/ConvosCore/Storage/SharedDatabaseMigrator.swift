@@ -157,6 +157,12 @@ extension SharedDatabaseMigrator {
             }
         }
 
+        migrator.registerMigration("addScheduledExplodeColumn") { db in
+            try db.alter(table: "conversation") { t in
+                t.add(column: "scheduledExplode", .boolean).notNull().defaults(to: false)
+            }
+        }
+
         return migrator
     }
 }

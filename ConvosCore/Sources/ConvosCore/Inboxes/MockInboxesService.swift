@@ -57,6 +57,10 @@ public final class MockInboxesService: SessionManagerProtocol {
     public func messagesRepository(for conversationId: String) -> any MessagesRepositoryProtocol {
         MockMessagesRepository(conversation: .mock(id: conversationId))
     }
+
+    // MARK: - Explosion
+    public func explodeConversation(conversationId: String, inboxId: String, clientId: String) async {
+    }
 }
 
 // Separate mock for ConversationsCountRepository

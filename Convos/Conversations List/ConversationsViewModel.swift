@@ -284,6 +284,7 @@ final class ConversationsViewModel {
             .publisher(for: .explosionNotificationTapped)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
+                self?.selectedConversation = nil
                 self?.presentingExplodeInfo = true
             }
             .store(in: &cancellables)

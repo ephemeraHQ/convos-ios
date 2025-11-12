@@ -156,13 +156,12 @@ public final class SessionManager: SessionManagerProtocol {
                         return
                     }
 
-                    // Schedule explosion notification if conversationId is provided
-                    if let conversationId: String = notification.userInfo?["conversationId"] as? String {
-                        await self.scheduleExplosionNotification(
-                            inboxId: inboxId,
-                            clientId: clientId,
-                            conversationId: conversationId
-                        )
+                    // Check if this is from an explosion (already handled in explodeConversation)
+                    let conversationId = notification.userInfo?["conversationId"] as? String
+                    if conversationId != nil {
+                        // This is from explodeConversation, inbox already deleted
+                        Log.info("Left conversation notification from explosion, inbox already handled")
+                        return
                     }
 
                     do {
@@ -188,66 +187,78 @@ public final class SessionManager: SessionManagerProtocol {
         }
     }
 
-    // MARK: - Local Notification
+    // MARK: - Explosion Handling
 
-    private func scheduleExplosionNotification(inboxId: String, clientId: String, conversationId: String) async {
+    public func explodeConversation(conversationId: String, inboxId: String, clientId: String) async {
+        Log.info("Exploding conversation \(conversationId) for inbox \(inboxId)")
+
         do {
-            let conversation = try fetchConversationDetails(
-                conversationId: conversationId,
-                inboxId: inboxId,
-                clientId: clientId
-            )
+            // First, get the messaging service and metadata writer
+            let messagingService = messagingService(for: clientId, inboxId: inboxId)
+            let metadataWriter = messagingService.conversationMetadataWriter()
 
-            let content = UNMutableNotificationContent()
-            content.title = "💥 \(conversation.displayName) 💥"
-            content.body = "A convo exploded"
-            content.sound = .default
-            content.userInfo = [
-                "inboxId": inboxId,
-                "conversationId": conversationId,
-                "notificationType": "explosion"
-            ]
-
-            if let cachedImage = await ImageCache.shared.imageAsync(for: conversation),
-               let cachedImageData = cachedImage.jpegData(compressionQuality: 1.0) {
-                do {
-                    let tempDirectory = FileManager.default.temporaryDirectory
-                    let tempFileName = "explosion-\(conversationId)-\(UUID().uuidString).jpg"
-                    let tempFileURL = tempDirectory.appendingPathComponent(tempFileName)
-                    try cachedImageData.write(to: tempFileURL)
-
-                    // Create notification attachment
-                    let attachment = try UNNotificationAttachment(
-                        identifier: UUID().uuidString,
-                        url: tempFileURL,
-                        options: nil
-                    )
-                    content.attachments = [attachment]
-
-                    Log.info("Successfully added conversation image to explosion notification")
-                } catch {
-                    Log.warning("Failed to download or create notification attachment: \(error)")
-                }
+            // Fetch the conversation to get member IDs
+            let conversation = try await databaseReader.read { db in
+                try DBConversation.fetchOne(db, id: conversationId)
             }
 
-            let request = UNNotificationRequest(
-                identifier: "explosion-\(conversationId)",
-                content: content,
-                trigger: nil // Immediate trigger
-            )
-            try await UNUserNotificationCenter.current().add(request)
-            Log.info("Scheduled explosion notification for conversation: \(conversationId)")
-        } catch {
-            Log.error("Failed to schedule explosion notification: \(error)")
-        }
-    }
+            if let conversation {
+                // Get all member IDs (we'll try to remove everyone)
+                let allMemberIds = try await databaseReader.read { db in
+                    try DBConversationMember
+                        .filter(DBConversationMember.Columns.conversationId == conversationId)
+                        .filter(DBConversationMember.Columns.inboxId != inboxId) // Exclude current user
+                        .fetchAll(db)
+                        .map { $0.inboxId }
+                }
 
-    private func fetchConversationDetails(conversationId: String, inboxId: String, clientId: String) throws -> Conversation {
-        let conversationRepository = conversationRepository(for: conversationId, inboxId: inboxId, clientId: clientId)
-        guard let conversation = try conversationRepository.fetchConversation() else {
-            throw ConversationRepositoryError.failedFetchingConversation
+                // Set the expiration to now
+                Log.info("Setting expiration to now for conversation \(conversationId)")
+                try await metadataWriter.updateExpiresAt(Date(), for: conversationId)
+
+                // Remove all other members
+                if !allMemberIds.isEmpty {
+                    Log.info("Removing \(allMemberIds.count) members from conversation \(conversationId)")
+                    try await metadataWriter.removeMembers(allMemberIds, from: conversationId)
+                }
+            } else {
+                Log.warning("Conversation \(conversationId) not found, will just delete inbox")
+            }
+
+            // Cancel any scheduled explode notifications for this conversation
+            // (do this before deleting inbox in case of failure)
+            ExplodeNotificationManager.cancelExplodeNotification(for: conversationId)
+
+            // Delete the inbox (which includes the conversation)
+            try await deleteInbox(clientId: clientId)
+
+            // Then, post notification for UI update after all operations complete
+            NotificationCenter.default.post(
+                name: .leftConversationNotification,
+                object: nil,
+                userInfo: [
+                    "clientId": clientId,
+                    "inboxId": inboxId,
+                    "conversationId": conversationId
+                ]
+            )
+
+            Log.info("Successfully exploded conversation \(conversationId)")
+        } catch {
+            Log.error("Failed to explode conversation: \(error.localizedDescription)")
+
+            // Still post notification on error to update UI
+            NotificationCenter.default.post(
+                name: .leftConversationNotification,
+                object: nil,
+                userInfo: [
+                    "clientId": clientId,
+                    "inboxId": inboxId,
+                    "conversationId": conversationId,
+                    "error": error.localizedDescription
+                ]
+            )
         }
-        return conversation
     }
 
     // MARK: - Inbox Management

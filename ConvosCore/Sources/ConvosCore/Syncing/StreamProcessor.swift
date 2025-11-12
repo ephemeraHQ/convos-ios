@@ -47,6 +47,7 @@ actor StreamProcessor: StreamProcessorProtocol {
     private let localStateWriter: any ConversationLocalStateWriterProtocol
     private let joinRequestsManager: any InviteJoinRequestsManagerProtocol
     private let deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)?
+    private let databaseWriter: any DatabaseWriter
     private let consentStates: [ConsentState] = [.allowed, .unknown]
 
     // MARK: - Initialization
@@ -58,6 +59,7 @@ actor StreamProcessor: StreamProcessorProtocol {
         deviceRegistrationManager: (any DeviceRegistrationManagerProtocol)? = nil
     ) {
         self.identityStore = identityStore
+        self.databaseWriter = databaseWriter
         self.deviceRegistrationManager = deviceRegistrationManager
         let messageWriter = IncomingMessageWriter(databaseWriter: databaseWriter)
         self.conversationWriter = ConversationWriter(
@@ -158,6 +160,37 @@ actor StreamProcessor: StreamProcessorProtocol {
                         inboxId: client.inboxId
                     )
                     let result = try await messageWriter.store(message: message, for: dbConversation)
+
+                    // Check if this is an ExplodeSettings message and schedule local notification
+                    let encodedContentType = try message.encodedContent.type
+                    if encodedContentType == ContentTypeExplodeSettings {
+                        Log.info("APP: Processing ExplodeSettings message in StreamProcessor")
+
+                        // Extract explode settings
+                        let content = try message.content() as Any
+                        if let explodeSettings = content as? ExplodeSettings {
+                            // Get client ID from conversation
+                            let clientId = dbConversation.clientId
+
+                            // Get conversation name
+                            let conversationName: String? = {
+                                guard let name = try? conversation.name(), !name.isEmpty else {
+                                    return nil
+                                }
+                                return name
+                            }()
+
+                            // Use centralized scheduler
+                            let scheduler = ExplodeScheduler(databaseWriter: databaseWriter)
+                            try await scheduler.scheduleIfNeeded(
+                                conversationId: conversation.id,
+                                conversationName: conversationName,
+                                inboxId: client.inboxId,
+                                clientId: clientId,
+                                expiresAt: explodeSettings.expiresAt
+                            )
+                        }
+                    }
 
                     // Mark unread if needed
                     if result.contentType.marksConversationAsUnread,
