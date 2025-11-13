@@ -125,14 +125,14 @@ struct AppSettingsView: View {
                     }
                     .foregroundStyle(.colorTextPrimary)
 
-                    if !ConfigManager.shared.currentEnvironment.isProduction {
+//                    if !ConfigManager.shared.currentEnvironment.isProduction {
                         NavigationLink {
                             DebugExportView(environment: ConfigManager.shared.currentEnvironment)
                         } label: {
                             Text("Debug")
                         }
                         .foregroundStyle(.colorTextPrimary)
-                    }
+//                    }
 
                     Button {
                         openURL(URL(string: "https://convos.org/terms-and-privacy")!)

@@ -260,7 +260,7 @@ struct ConversationInfoView: View {
                         .foregroundStyle(.colorTextSecondary)
                 }
 
-                if !ConfigManager.shared.currentEnvironment.isProduction {
+//                if !ConfigManager.shared.currentEnvironment.isProduction {
                     Section {
                         HStack {
                             Text("Fork status")
@@ -310,7 +310,7 @@ struct ConversationInfoView: View {
                             exportedLogsURL = nil
                         }
                     }
-                }
+//                }
 
                 if viewModel.canRemoveMembers {
                     Section {

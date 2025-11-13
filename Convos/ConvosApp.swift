@@ -16,10 +16,10 @@ struct ConvosApp: App {
         ConvosLog.configure(environment: environment)
 
         // only enable LibXMTP logging in non-production environments
-        if !environment.isProduction {
+//        if !environment.isProduction {
             Log.info("Activating LibXMTP Log Writer...")
             Client.activatePersistentLibXMTPLogWriter(logLevel: .debug, rotationSchedule: .hourly, maxFiles: 10)
-        }
+//        }
         Log.info("App starting with environment: \(environment)")
 
         // Run migration to wipe app data (must be done synchronously before app starts)

@@ -47,9 +47,9 @@ public enum ConvosLog {
             guard _logger == nil else { return }
 
             // never enable logging in production
-            guard !environment.isProduction else {
-                return
-            }
+//            guard !environment.isProduction else {
+//                return
+//            }
 
             // First, bootstrap the logging system factory
             LoggingSystem.bootstrap { label in
