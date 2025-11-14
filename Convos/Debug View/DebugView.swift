@@ -185,9 +185,9 @@ struct DebugViewSection: View {
                         .foregroundStyle(.colorTextPrimary)
                 }
                 Button {
-                    resetUserDefaults()
+                    resetOnboarding()
                 } label: {
-                    Text("Reset User Defaults")
+                    Text("Reset Onboarding")
                         .foregroundStyle(.colorTextPrimary)
                 }
             }
@@ -248,10 +248,9 @@ extension DebugViewSection {
         await manager.registerDeviceIfNeeded()
     }
 
-    private func resetUserDefaults() {
-        if let appDomain = Bundle.main.bundleIdentifier {
-            UserDefaults.standard.removePersistentDomain(forName: appDomain)
-        }
+    private func resetOnboarding() {
+        QuicknameSettings.delete()
+        ConversationOnboardingCoordinator().reset()
     }
 
     func testSentryMessage() {

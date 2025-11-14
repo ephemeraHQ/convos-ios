@@ -178,6 +178,13 @@ final class ConversationOnboardingCoordinator {
         set { UserDefaults.standard.set(newValue, forKey: hasSeenAddAsQuicknameKey)}
     }
 
+    // Only used in Debug builds
+    func reset() {
+        hasSeenAddAsQuickname = false
+        hasCompletedOnboarding = false
+        hasShownQuicknameEditor = false
+    }
+
     // MARK: - Dependencies
 
     private let notificationCenter: NotificationCenterProtocol
