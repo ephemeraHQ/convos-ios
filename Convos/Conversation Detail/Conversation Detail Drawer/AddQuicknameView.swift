@@ -25,7 +25,7 @@ struct AddQuicknameView: View {
                     .frame(width: 24.0, height: 24.0)
 
                     Text("Tap to chat as \(profile.displayName)")
-                        .font(.system(size: 16.0))
+                        .font(.callout)
                         .foregroundStyle(.colorTextPrimaryInverted)
                 }
                 .padding(.vertical, DesignConstants.Spacing.step3HalfX)

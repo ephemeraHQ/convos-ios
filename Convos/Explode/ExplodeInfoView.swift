@@ -3,7 +3,7 @@ import SwiftUI
 struct SoonLabel: View {
     var body: some View {
         Text("Soon")
-            .font(.system(size: 14.0))
+            .font(.footnote)
             .foregroundStyle(.colorTextSecondary)
             .padding(.vertical, DesignConstants.Spacing.stepX)
             .padding(.horizontal, DesignConstants.Spacing.step2x)

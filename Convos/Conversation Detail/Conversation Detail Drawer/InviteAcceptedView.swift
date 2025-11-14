@@ -8,7 +8,7 @@ struct InviteAcceptedView: View {
             VStack(spacing: DesignConstants.Spacing.step2x) {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 14.0))
+                        .font(.footnote)
                         .foregroundStyle(.colorGreen)
                     Text("Invite accepted")
                         .foregroundStyle(.colorTextPrimary)

@@ -20,7 +20,7 @@ struct FeatureRowItem<AccessoryView: View>: View {
         HStack(spacing: DesignConstants.Spacing.step2x) {
             Group {
                 image
-                    .font(.system(size: 17.0).weight(.semibold))
+                    .font(.headline)
                     .padding(.horizontal, DesignConstants.Spacing.step2x)
                     .padding(.vertical, 10.0)
                     .foregroundStyle(.white)
@@ -34,12 +34,12 @@ struct FeatureRowItem<AccessoryView: View>: View {
 
             VStack(alignment: .leading, spacing: DesignConstants.Spacing.stepHalf) {
                 Text(title)
-                    .font(.system(size: 17.0))
+                    .font(.body)
                     .foregroundStyle(.colorTextPrimary)
 
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 14.0))
+                        .font(.footnote)
                         .foregroundStyle(.colorTextSecondary)
                 }
             }
@@ -102,7 +102,7 @@ struct ConversationInfoView: View {
                                     presentingEditView = true
                                 } label: {
                                     Text("Edit info")
-                                        .font(.system(size: 12.0))
+                                        .font(.caption)
                                         .foregroundStyle(.colorTextSecondary)
                                 }
                                 .buttonStyle(.bordered)
@@ -167,7 +167,7 @@ struct ConversationInfoView: View {
                     .disabled(true)
                 } header: {
                     Text("Invitations")
-                        .font(.system(size: 14.0, weight: .semibold))
+                        .font(.footnote.weight(.semibold))
                         .foregroundStyle(.colorTextSecondary)
                 } footer: {
                     Text("No one new can join the convo when it's locked")
@@ -213,7 +213,7 @@ struct ConversationInfoView: View {
                     }
                 } header: {
                     Text("Personal preferences")
-                        .font(.system(size: 14.0, weight: .semibold))
+                        .font(.footnote.weight(.semibold))
                         .foregroundStyle(.colorTextSecondary)
                 }
 
@@ -228,7 +228,7 @@ struct ConversationInfoView: View {
                     }
                 } header: {
                     Text("Convo rules")
-                        .font(.system(size: 14.0, weight: .semibold))
+                        .font(.footnote.weight(.semibold))
                         .foregroundStyle(.colorTextSecondary)
                 }
 
@@ -300,7 +300,7 @@ struct ConversationInfoView: View {
                         }
                     } header: {
                         Text("Debug info")
-                            .font(.system(size: 14.0, weight: .semibold))
+                            .font(.footnote.weight(.semibold))
                             .foregroundStyle(.colorTextSecondary)
                     }
                     .task {

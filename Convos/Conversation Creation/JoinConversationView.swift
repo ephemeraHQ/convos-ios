@@ -44,10 +44,10 @@ struct JoinConversationView: View {
                                 } label: {
                                     HStack(spacing: DesignConstants.Spacing.step2x) {
                                         Image(systemName: "camera.fill")
-                                            .font(.system(size: 16.0))
+                                            .font(.callout)
                                             .foregroundStyle(.black)
                                         Text("Allow")
-                                            .font(.system(size: 16.0, weight: .medium))
+                                            .font(.callout.weight(.medium))
                                             .foregroundStyle(.black)
                                     }
                                     .padding(.vertical, DesignConstants.Spacing.step3x)
@@ -67,12 +67,12 @@ struct JoinConversationView: View {
                                 Image(systemName: "qrcode")
                                     .foregroundStyle(.white)
                                 Text("Join a convo by invitation only")
-                                    .font(.system(size: 16.0))
+                                    .font(.callout)
                                     .multilineTextAlignment(.center)
                                     .foregroundStyle(.white)
                             }
                             Text("Ask a friend to invite you to a convo, then scan its code or tap its link to enter the app.")
-                                .font(.system(size: 16.0))
+                                .font(.callout)
                                 .multilineTextAlignment(.center)
                                 .foregroundStyle(.white)
                                 .opacity(0.6)
@@ -104,7 +104,7 @@ struct JoinConversationView: View {
                                     }
                                 } label: {
                                     Image(systemName: "clipboard")
-                                        .font(.system(size: 20.0))
+                                        .font(.title3)
                                         .foregroundStyle(.colorTextSecondary)
                                         .padding(.horizontal, DesignConstants.Spacing.step4x)
                                         .padding(.vertical, DesignConstants.Spacing.step3x)
@@ -118,6 +118,7 @@ struct JoinConversationView: View {
                 }
                 .compositingGroup()
             }
+            .dynamicTypeSize(...DynamicTypeSize.accessibility2)
             .ignoresSafeArea()
             .toolbar {
                 if allowsDismissal {

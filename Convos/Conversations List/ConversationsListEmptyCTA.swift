@@ -59,7 +59,7 @@ struct ConversationsListEmptyCTA: View {
                             .foregroundStyle(.colorTextTertiary)
                             .padding(.leading, DesignConstants.Spacing.stepX)
                     }
-                    .font(.system(size: 12.0))
+                    .font(.caption)
                     .foregroundStyle(.colorTextSecondary)
                 }
 
@@ -71,13 +71,15 @@ struct ConversationsListEmptyCTA: View {
                         Image(systemName: "chevron.right")
                             .foregroundStyle(.colorTextTertiary)
                     }
-                    .font(.system(size: 12.0))
+                    .font(.caption)
                     .foregroundStyle(.colorTextSecondary)
                 }
             }
             .padding(.vertical, DesignConstants.Spacing.step4x)
             .padding(.horizontal, DesignConstants.Spacing.step6x)
+            .dynamicTypeSize(...DynamicTypeSize.xLarge)
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .padding(DesignConstants.Spacing.step6x)
         .background(.colorBackgroundPrimary)
     }

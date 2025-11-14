@@ -61,7 +61,7 @@ struct MessagesInputView: View {
                     axis: .vertical
                 )
                 .focused($focusState, equals: focused)
-                .font(.system(size: 16.0))
+                .font(.callout)
                 .foregroundStyle(.colorTextPrimary)
                 .tint(.colorTextPrimary)
                 .frame(minHeight: Self.defaultHeight, maxHeight: 170.0, alignment: .center)
@@ -80,7 +80,7 @@ struct MessagesInputView: View {
                 Image(systemName: "arrow.up")
                     .frame(width: sendButtonSize, height: sendButtonSize, alignment: .center)
                     .tint(.colorTextPrimary)
-                    .font(.system(size: 16.0, weight: .medium))
+                    .font(.callout.weight(.medium))
             }
             .background(.colorFillMinimal)
             .mask(Circle())

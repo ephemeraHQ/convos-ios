@@ -14,7 +14,7 @@ struct ConvosToolbarButton: View {
                     .frame(width: 24.0, height: 24.0)
 
                 Text("Convos")
-                    .font(.system(size: 16.0, weight: .medium))
+                    .font(.callout.weight(.medium))
                     .foregroundStyle(.colorTextPrimary)
             }
             .padding(padding ? DesignConstants.Spacing.step2x : 0)
@@ -181,6 +181,7 @@ struct AppSettingsView: View {
                     }
                 }
             }
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

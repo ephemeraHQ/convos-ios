@@ -27,14 +27,14 @@ struct ListItemView<LeadingContent: View, SubtitleContent: View, AccessoryConten
 
             VStack(alignment: .leading, spacing: DesignConstants.Spacing.stepX) {
                 Text(title)
-                    .font(.system(size: 17.0, weight: isUnread ? .semibold : .regular))
+                    .font(isUnread ? .body.weight(.semibold) : .body)
                     .foregroundColor(.primary)
                     .truncationMode(.tail)
                     .lineLimit(1)
 
                 HStack {
                     subtitle()
-                        .font(.system(size: 15))
+                        .font(.subheadline)
                         .foregroundColor(isUnread ? .primary : .secondary)
                         .lineLimit(1)
 
@@ -43,7 +43,7 @@ struct ListItemView<LeadingContent: View, SubtitleContent: View, AccessoryConten
                     HStack(spacing: DesignConstants.Spacing.stepX) {
                         if isMuted {
                             Image(systemName: "bell.slash.fill")
-                                .font(.system(size: 13))
+                                .font(.footnote)
                                 .foregroundColor(.secondary)
                         }
 

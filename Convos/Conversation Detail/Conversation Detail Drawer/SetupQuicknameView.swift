@@ -19,7 +19,7 @@ struct SetupQuicknameView: View {
                     Image(systemName: "arrow.down.left")
                         .foregroundStyle(.colorTextPrimaryInverted)
                     Text("Tap to change your ID")
-                        .font(.system(size: 16.0))
+                        .font(.callout)
                         .foregroundStyle(.colorTextPrimaryInverted)
                 }
                 .padding(.vertical, DesignConstants.Spacing.step3HalfX)

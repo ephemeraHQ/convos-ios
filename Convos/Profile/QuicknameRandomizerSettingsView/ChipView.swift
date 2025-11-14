@@ -56,7 +56,7 @@ struct ChipView: View {
         HStack {
             HStack(spacing: DesignConstants.Spacing.stepX) {
                 Text(tag)
-                    .font(.system(size: 16.0))
+                    .font(.callout)
                     .foregroundStyle(.colorTextPrimary)
                     .padding(.vertical, DesignConstants.Spacing.step3x)
             }

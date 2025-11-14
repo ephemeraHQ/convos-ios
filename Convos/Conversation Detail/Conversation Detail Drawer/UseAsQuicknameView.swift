@@ -22,10 +22,10 @@ struct UseAsQuicknameView: View {
                     HStack(spacing: DesignConstants.Spacing.step2x) {
                         Image(systemName: "gear")
                             .foregroundStyle(.colorTextPrimaryInverted)
-                            .font(.system(size: 14.0))
+                            .font(.footnote)
 
                         Text("Use as Quickname in new convos?")
-                            .font(.system(size: 16.0))
+                            .font(.callout)
                             .foregroundStyle(.colorTextPrimaryInverted)
                     }
                     .padding(.vertical, DesignConstants.Spacing.step3HalfX)

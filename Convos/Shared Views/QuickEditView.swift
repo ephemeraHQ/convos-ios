@@ -37,7 +37,7 @@ struct QuickEditView: View {
                 textField.delegate = textFieldDelegate
             }
             .padding(.horizontal, 16.0)
-            .font(.system(size: 17.0))
+            .font(.body)
             .tint(.colorTextPrimary)
             .foregroundStyle(.colorTextPrimary)
             .multilineTextAlignment(.center)

@@ -76,6 +76,7 @@ struct ProfileEditView: View {
 //                    }
 //                }
             }
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             .contentMargins(.top, 0.0)
             .listSectionMargins(.all, 0.0)
             .listRowInsets(.all, 0.0)

@@ -37,6 +37,7 @@ struct ConversationInfoPresenter<Content: View>: View {
             .allowsHitTesting(true)
             .zIndex(1000)
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .onAppear {
             // Update coordinator's horizontal size class on appear
             focusCoordinator.horizontalSizeClass = horizontalSizeClass
