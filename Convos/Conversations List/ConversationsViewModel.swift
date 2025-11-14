@@ -87,9 +87,6 @@ final class ConversationsViewModel {
             if conversationsCount > 1 {
                 hasCreatedMoreThanOneConvo = true
             }
-            if conversationsCount > 0 {
-                hasEarlyAccess = true
-            }
         }
     }
 
@@ -106,20 +103,6 @@ final class ConversationsViewModel {
         }
         set {
             UserDefaults.standard.set(newValue, forKey: "hasCreatedMoreThanOneConvo")
-        }
-    }
-
-    private(set) var hasEarlyAccess: Bool {
-        get {
-            return true
-            UserDefaults.standard.bool(forKey: "hasEarlyAccess")
-        }
-        set {
-            // once a user has early access, don't reset it
-            guard newValue else {
-                return
-            }
-            UserDefaults.standard.set(newValue, forKey: "hasEarlyAccess")
         }
     }
 
@@ -160,26 +143,10 @@ final class ConversationsViewModel {
             if conversationsCount > 1 {
                 hasCreatedMoreThanOneConvo = true
             }
-            if conversationsCount > 0 {
-                hasEarlyAccess = true
-            }
         } catch {
             Log.error("Error fetching conversations: \(error)")
             self.conversations = []
             self.conversationsCount = 0
-        }
-        if !hasEarlyAccess {
-            newConversationViewModelTask = Task { [weak self] in
-                guard let self else { return }
-                let viewModel = await NewConversationViewModel.create(
-                    session: session,
-                    showingFullScreenScanner: true,
-                    allowsDismissingScanner: false
-                )
-                await MainActor.run {
-                    self.newConversationViewModel = viewModel
-                }
-            }
         }
         observe()
     }
