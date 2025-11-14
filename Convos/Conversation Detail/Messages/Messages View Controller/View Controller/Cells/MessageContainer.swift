@@ -51,6 +51,7 @@ struct MessageContainer<Content: View, AvatarView: View>: View {
             .onTapGesture {
                 onTapAvatar?()
             }
+            .hoverEffect(.lift)
     }
 
     var body: some View {

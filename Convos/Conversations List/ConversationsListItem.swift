@@ -67,22 +67,29 @@ struct ListItemView<LeadingContent: View, SubtitleContent: View, AccessoryConten
 struct ConversationsListItem: View {
     let conversation: Conversation
 
+    // Extract computed values to prevent unnecessary recalculations
+    private var title: String { conversation.title }
+    private var isMuted: Bool { conversation.isMuted }
+    private var isUnread: Bool { conversation.isUnread }
+    private var lastMessage: MessagePreview? { conversation.lastMessage }
+    private var createdAt: Date { conversation.createdAt }
+
     var body: some View {
         ListItemView(
-            title: conversation.title,
-            isMuted: conversation.isMuted,
-            isUnread: conversation.isUnread,
+            title: title,
+            isMuted: isMuted,
+            isUnread: isUnread,
             leadingContent: {
                 ConversationAvatarView(conversation: conversation, conversationImage: nil)
             },
             subtitle: {
                 HStack(spacing: DesignConstants.Spacing.stepX) {
-                    if let message = conversation.lastMessage {
+                    if let message = lastMessage {
                         RelativeDateLabel(date: message.createdAt)
                         Text("•")
                         Text(message.text)
                     } else {
-                        RelativeDateLabel(date: conversation.createdAt)
+                        RelativeDateLabel(date: createdAt)
                     }
                 }
             },

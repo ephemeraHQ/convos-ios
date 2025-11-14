@@ -7,6 +7,7 @@ struct KeyboardInfo: Equatable {
     let frameBegin: CGRect
     let frameEnd: CGRect
     let isLocal: Bool
+    let screen: UIScreen?
 
     init?(_ notification: Notification) {
         guard let userInfo: NSDictionary = notification.userInfo as NSDictionary?,
@@ -35,5 +36,7 @@ struct KeyboardInfo: Equatable {
         isLocal = keyboardIsLocal
         frameBegin = keyboardFrameBegin
         frameEnd = keyboardFrameEnd
+        // Extract screen from notification object (can be UIScreen or nil)
+        screen = notification.object as? UIScreen
     }
 }

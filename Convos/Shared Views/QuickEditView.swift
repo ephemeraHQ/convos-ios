@@ -43,7 +43,7 @@ struct QuickEditView: View {
             .multilineTextAlignment(.center)
             .truncationMode(.tail)
             .submitLabel(.done)
-            .frame(width: 166.0)
+            .frame(minWidth: 166.0)
             .frame(height: 52.0)
             .onChange(of: text) { _, newValue in
                 if newValue.count > NameLimits.maxDisplayNameLength {

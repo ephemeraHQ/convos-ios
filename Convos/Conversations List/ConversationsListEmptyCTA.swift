@@ -26,12 +26,14 @@ struct ConversationsListEmptyCTA: View {
                             .font(.body)
                     }
                     .convosButtonStyle(.rounded(fullWidth: false))
+                    .hoverEffect(.lift)
                     Button {
                         onJoinConvo()
                     } label: {
                         Text("or join one")
                     }
                     .convosButtonStyle(.text)
+                    .hoverEffect(.lift)
                 }
             }
             .padding(40)

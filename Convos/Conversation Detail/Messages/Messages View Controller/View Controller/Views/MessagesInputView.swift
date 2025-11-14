@@ -52,6 +52,7 @@ struct MessagesInputView: View {
             .task(id: animateAvatarForQuickname) {
                 updateAnimation()
             }
+            .hoverEffect(.lift)
 
             Group {
                 TextField(
@@ -63,9 +64,13 @@ struct MessagesInputView: View {
                 .font(.system(size: 16.0))
                 .foregroundStyle(.colorTextPrimary)
                 .tint(.colorTextPrimary)
-                .frame(minHeight: Self.defaultHeight, alignment: .center)
+                .frame(minHeight: Self.defaultHeight, maxHeight: 170.0, alignment: .center)
                 .padding(.horizontal, DesignConstants.Spacing.step3x)
                 .disabled(!messagesTextFieldEnabled)
+            }
+            .onSubmit {
+                onSendMessage()
+                focusState = .message
             }
             .frame(maxHeight: .infinity, alignment: .center)
 
@@ -80,9 +85,11 @@ struct MessagesInputView: View {
             .background(.colorFillMinimal)
             .mask(Circle())
             .frame(width: sendButtonSize, height: sendButtonSize, alignment: .bottomLeading)
+            .hoverEffect(.lift)
+            .hoverEffectDisabled(!sendButtonEnabled)
             .disabled(!sendButtonEnabled)
         }
-//        .padding(DesignConstants.Spacing.step2x)
+        .padding(DesignConstants.Spacing.step2x)
         .frame(alignment: .bottom)
     }
 }

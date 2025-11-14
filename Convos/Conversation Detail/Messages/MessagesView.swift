@@ -20,11 +20,8 @@ struct MessagesView<BottomBarContent: View>: View {
     @Binding var profileImage: UIImage?
     let onboardingCoordinator: ConversationOnboardingCoordinator
     @FocusState.Binding var focusState: MessagesViewInputFocus?
+    let focusCoordinator: FocusCoordinator
     let messagesTextFieldEnabled: Bool
-    let viewModelFocus: MessagesViewInputFocus?
-    let onConversationInfoTap: () -> Void
-    let onConversationNameEndedEditing: () -> Void
-    let onConversationSettings: () -> Void
     let onProfilePhotoTap: () -> Void
     let onSendMessage: () -> Void
     let onTapMessage: (AnyMessage) -> Void
@@ -56,7 +53,7 @@ struct MessagesView<BottomBarContent: View>: View {
                     sendButtonEnabled: $sendButtonEnabled,
                     profileImage: $profileImage,
                     focusState: $focusState,
-                    viewModelFocus: viewModelFocus,
+                    focusCoordinator: focusCoordinator,
                     animateAvatarForQuickname: onboardingCoordinator.shouldAnimateAvatarForQuicknameSetup,
                     messagesTextFieldEnabled: messagesTextFieldEnabled,
                     onProfilePhotoTap: onProfilePhotoTap,

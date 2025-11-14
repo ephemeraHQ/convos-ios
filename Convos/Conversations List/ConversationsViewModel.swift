@@ -2,11 +2,14 @@ import Combine
 import ConvosCore
 import Foundation
 import Observation
+import SwiftUI
 
 @MainActor
 @Observable
 final class ConversationsViewModel {
     // MARK: - Public
+
+    private(set) var focusCoordinator: FocusCoordinator
 
     var selectedConversation: Conversation? {
         get {
@@ -19,8 +22,11 @@ final class ConversationsViewModel {
                     session: session
                 )
                 markConversationAsRead(selectedConversation)
+                // Sync the ID for List selection binding (using private setter to avoid circular dependency)
+                _selectedConversationId = selectedConversation.id
             } else {
                 selectedConversationViewModel = nil
+                _selectedConversationId = nil
             }
 
             // Notify that active conversation has changed
@@ -37,6 +43,26 @@ final class ConversationsViewModel {
             )
         }
     }
+
+    var selectedConversationId: Conversation.ID? {
+        get {
+            _selectedConversationId
+        }
+        set {
+            // Find the conversation by ID and update selectedConversation
+            if let id = newValue,
+               let conversation = conversations.first(where: { $0.id == id }) {
+                _selectedConversationId = id
+                selectedConversation = conversation
+            } else {
+                _selectedConversationId = nil
+                selectedConversation = nil
+            }
+        }
+    }
+
+    // Private backing store for selectedConversationId to break circular dependency
+    private var _selectedConversationId: String?
     private(set) var selectedConversationViewModel: ConversationViewModel?
     var newConversationViewModel: NewConversationViewModel? {
         didSet {
@@ -109,8 +135,17 @@ final class ConversationsViewModel {
     @ObservationIgnored
     private var newConversationViewModelTask: Task<Void, Never>?
 
-    init(session: any SessionManagerProtocol) {
+    private var horizontalSizeClass: UserInterfaceSizeClass?
+
+    init(
+        session: any SessionManagerProtocol,
+        horizontalSizeClass: UserInterfaceSizeClass? = nil
+    ) {
         self.session = session
+        self.horizontalSizeClass = horizontalSizeClass
+        let coordinator = FocusCoordinator(horizontalSizeClass: horizontalSizeClass)
+        self.focusCoordinator = coordinator
+
         self.conversationsRepository = session.conversationsRepository(
             for: .allowed
         )
@@ -146,6 +181,15 @@ final class ConversationsViewModel {
             }
         }
         observe()
+    }
+
+    /// Update the horizontal size class when it changes (call from view)
+    func updateHorizontalSizeClass(_ sizeClass: UserInterfaceSizeClass?) {
+        guard horizontalSizeClass != sizeClass else { return }
+        horizontalSizeClass = sizeClass
+
+        // Update the focus coordinator's size class - it will react to the change
+        focusCoordinator.horizontalSizeClass = sizeClass
     }
 
     deinit {

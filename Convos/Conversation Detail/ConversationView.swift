@@ -3,6 +3,7 @@ import SwiftUI
 struct ConversationView<MessagesBottomBar: View>: View {
     @Bindable var viewModel: ConversationViewModel
     @FocusState.Binding var focusState: MessagesViewInputFocus?
+    let focusCoordinator: FocusCoordinator
     let onScanInviteCode: () -> Void
     let onDeleteConversation: () -> Void
     let confirmDeletionBeforeDismissal: Bool
@@ -31,16 +32,15 @@ struct ConversationView<MessagesBottomBar: View>: View {
             profileImage: $viewModel.profileImage,
             onboardingCoordinator: onboardingCoordinator,
             focusState: $focusState,
+            focusCoordinator: focusCoordinator,
             messagesTextFieldEnabled: messagesTextFieldEnabled,
-            viewModelFocus: viewModel.focus,
-            onConversationInfoTap: viewModel.onConversationInfoTap,
-            onConversationNameEndedEditing: viewModel.onConversationNameEndedEditing,
-            onConversationSettings: viewModel.onConversationSettings,
-            onProfilePhotoTap: viewModel.onProfilePhotoTap,
-            onSendMessage: viewModel.onSendMessage,
+            onProfilePhotoTap: { viewModel.onProfilePhotoTap(focusCoordinator: focusCoordinator) },
+            onSendMessage: {
+                viewModel.onSendMessage(focusCoordinator: focusCoordinator)
+            },
             onTapMessage: viewModel.onTapMessage(_:),
             onTapAvatar: viewModel.onTapAvatar(_:),
-            onDisplayNameEndedEditing: viewModel.onDisplayNameEndedEditing,
+            onDisplayNameEndedEditing: { viewModel.onDisplayNameEndedEditing(focusCoordinator: focusCoordinator) },
             onProfileSettings: viewModel.onProfileSettings,
             bottomBarContent: {
                 VStack(spacing: DesignConstants.Spacing.step3x) {
@@ -48,7 +48,7 @@ struct ConversationView<MessagesBottomBar: View>: View {
 
                     ConversationOnboardingView(
                         coordinator: onboardingCoordinator,
-                        onTapSetupQuickname: viewModel.onProfilePhotoTap,
+                        onTapSetupQuickname: { viewModel.onProfilePhotoTap(focusCoordinator: focusCoordinator) },
                         onUseQuickname: viewModel.onUseQuickname(_:_:),
                         onSaveAsQuickname: viewModel.onSaveAsQuickname(_:)
                     )
@@ -71,7 +71,7 @@ struct ConversationView<MessagesBottomBar: View>: View {
                 showsQuicknameToggle: true,
                 showsCancelButton: true
             ) {
-                viewModel.onProfileSettingsDismissed()
+                viewModel.onProfileSettingsDismissed(focusCoordinator: focusCoordinator)
             }
         }
         .toolbar {
@@ -115,22 +115,18 @@ struct ConversationView<MessagesBottomBar: View>: View {
                     }
             }
         }
-        .onChange(of: viewModel.focus) {
-            focusState = viewModel.focus
-        }
-        .onChange(of: focusState) {
-            viewModel.focus = focusState
-        }
     }
 }
 
 #Preview {
     @Previewable @State var viewModel: ConversationViewModel = .mock
     @Previewable @FocusState var focusState: MessagesViewInputFocus?
+    @Previewable @State var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
     NavigationStack {
         ConversationView(
             viewModel: viewModel,
             focusState: $focusState,
+            focusCoordinator: focusCoordinator,
             onScanInviteCode: {},
             onDeleteConversation: {},
             confirmDeletionBeforeDismissal: true,

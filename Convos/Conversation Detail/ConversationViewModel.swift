@@ -109,23 +109,7 @@ class ConversationViewModel {
         conversation.members.count > 1 && conversation.creator.isCurrentUser
     }
     var sendButtonEnabled: Bool = false
-    /// we manage focus in the view model along with @FocusState in the view
-    /// since programatically changing @FocusState doesn't always propagate to child views
-    var focus: MessagesViewInputFocus? {
-        didSet {
-            switch focus {
-            case .displayName:
-                isEditingDisplayName = true
-                isEditingConversationName = false
-            case .conversationName:
-                isEditingConversationName = true
-                isEditingDisplayName = false
-            default:
-                isEditingConversationName = false
-                isEditingDisplayName = false
-            }
-        }
-    }
+
     var presentingConversationSettings: Bool = false
     var presentingProfileSettings: Bool = false
     var presentingProfileForMember: ConversationMember?
@@ -193,8 +177,6 @@ class ConversationViewModel {
         observe()
 
         startOnboarding()
-
-        KeyboardListener.shared.add(delegate: self)
     }
 
     // Alternative initializer for draft conversations with pre-loaded dependencies
@@ -237,12 +219,6 @@ class ConversationViewModel {
 
         self.editingConversationName = conversation.name ?? ""
         self.editingDescription = conversation.description ?? ""
-
-        KeyboardListener.shared.add(delegate: self)
-    }
-
-    deinit {
-        KeyboardListener.shared.remove(delegate: self)
     }
 
     // MARK: - Private
@@ -282,17 +258,11 @@ class ConversationViewModel {
         }
     }
 
-    func onConversationInfoTap() {
-        focus = .conversationName
+    func onConversationInfoTap(focusCoordinator: FocusCoordinator?) {
+        focusCoordinator?.moveFocus(to: .conversationName)
     }
 
-    func onConversationNameEndedEditing() {
-        onConversationNameEndedEditing(nextFocus: .message)
-    }
-
-    func onConversationNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
-        focus = nextFocus
-
+    func onConversationNameEndedEditing(focusCoordinator: FocusCoordinator?, context: FocusTransitionContext) {
         let trimmedConversationName = editingConversationName.trimmingCharacters(in: .whitespacesAndNewlines)
         editingConversationName = trimmedConversationName
 
@@ -342,15 +312,18 @@ class ConversationViewModel {
                 }
             }
         }
+
+        // Delegate focus transition to coordinator
+        focusCoordinator?.endEditing(for: .conversationName, context: context)
     }
 
-    func onConversationSettings() {
+    func onConversationSettings(focusCoordinator: FocusCoordinator?) {
         presentingConversationSettings = true
-        focus = nil
+        focusCoordinator?.moveFocus(to: nil)
     }
 
-    func onConversationSettingsDismissed() {
-        onConversationNameEndedEditing(nextFocus: nil)
+    func onConversationSettingsDismissed(focusCoordinator: FocusCoordinator?) {
+        onConversationNameEndedEditing(focusCoordinator: focusCoordinator, context: .conversationSettings)
         presentingConversationSettings = false
     }
 
@@ -361,18 +334,20 @@ class ConversationViewModel {
         editingDescription = conversation.description ?? ""
     }
 
-    func onProfilePhotoTap() {
-        focus = .displayName
+    func onProfilePhotoTap(focusCoordinator: FocusCoordinator?) {
+        focusCoordinator?.moveFocus(to: .displayName)
     }
 
-    func onProfileSettingsDismissed() {
-        onDisplayNameEndedEditing(nextFocus: nil)
+    func onProfileSettingsDismissed(focusCoordinator: FocusCoordinator?) {
+        onDisplayNameEndedEditing(focusCoordinator: focusCoordinator)
         presentingProfileSettings = false
     }
 
-    func onSendMessage() {
+    func onSendMessage(focusCoordinator: FocusCoordinator?) {
+        guard !messageText.isEmpty else { return }
         let prevMessageText = messageText
         messageText = ""
+        focusCoordinator?.endEditing(for: .message, context: .conversation)
         Task { [weak self] in
             guard let self else { return }
             do {
@@ -398,26 +373,22 @@ class ConversationViewModel {
         presentingProfileForMember = message.base.sender
     }
 
-    func onDisplayNameEndedEditing() {
-        let nextFocus: MessagesViewInputFocus?
-        switch onboardingCoordinator.state {
-        case .setupQuickname:
-            // when we're in the onboarding state, dismiss the keyboard
-            nextFocus = nil
-        default:
-            nextFocus = .message
-        }
-        onDisplayNameEndedEditing(nextFocus: nextFocus)
+    func onDisplayNameEndedEditing(focusCoordinator: FocusCoordinator?) {
+        // Determine context based on onboarding state
+        let context: FocusTransitionContext = onboardingCoordinator.isSettingUpQuickname
+            ? .onboardingQuickname
+        : .quickEditor
+
+        // Handle business logic
+        myProfileViewModel.onEndedEditing(for: conversation.id)
+
         let didChangeProfile = !profile.displayName.isEmpty || profileImage != nil
         if didChangeProfile {
             onboardingCoordinator.didChangeProfile(profile: profile)
         }
-    }
 
-    private func onDisplayNameEndedEditing(nextFocus: MessagesViewInputFocus?) {
-        focus = nextFocus
-
-        myProfileViewModel.onEndedEditing(for: conversation.id)
+        // Delegate focus transition to coordinator
+        focusCoordinator?.endEditing(for: .displayName, context: context)
     }
 
     func onProfileSettings() {
@@ -497,12 +468,6 @@ class ConversationViewModel {
         }
 
         return try await xmtpConversation.exportDebugLogs()
-    }
-}
-
-extension ConversationViewModel: KeyboardListenerDelegate {
-    func keyboardDidHide(info: KeyboardInfo) {
-        focus = nil
     }
 }
 

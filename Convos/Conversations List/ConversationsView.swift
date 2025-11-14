@@ -7,10 +7,12 @@ struct ConversationsView: View {
     @Namespace private var namespace: Namespace.ID
     @State private var presentingAppSettings: Bool = false
     @Environment(\.dismiss) private var dismiss: DismissAction
-
-    @FocusState private var focusState: MessagesViewInputFocus?
     @State private var sidebarWidth: CGFloat = 0.0
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
+
+    var focusCoordinator: FocusCoordinator {
+        viewModel.focusCoordinator
+    }
 
     var emptyConversationsViewScrollable: some View {
         ScrollView {
@@ -30,15 +32,15 @@ struct ConversationsView: View {
     var body: some View {
         ConversationInfoPresenter(
             viewModel: viewModel.selectedConversationViewModel,
-            focusState: $focusState,
-            sidebarColumnWidth: $sidebarWidth,
-        ) {
+            focusCoordinator: focusCoordinator,
+            sidebarColumnWidth: $sidebarWidth
+        ) { focusState, coordinator in
             NavigationSplitView {
                 Group {
                     if viewModel.unpinnedConversations.isEmpty && horizontalSizeClass == .compact {
                         emptyConversationsViewScrollable
                     } else {
-                        List(viewModel.unpinnedConversations, id: \.self, selection: $viewModel.selectedConversation) { conversation in
+                        List(viewModel.unpinnedConversations, id: \.id, selection: $viewModel.selectedConversationId) { conversation in
                             if viewModel.unpinnedConversations.first == conversation,
                                viewModel.unpinnedConversations.count == 1 && !viewModel.hasCreatedMoreThanOneConvo &&
                                 horizontalSizeClass == .compact {
@@ -59,7 +61,7 @@ struct ConversationsView: View {
                                 .listRowBackground(
                                     RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.mediumLarge)
                                         .fill(
-                                            conversation == viewModel.selectedConversation ? .colorFillMinimal : .clear
+                                            conversation.id == viewModel.selectedConversationId ? .colorFillMinimal : .clear
                                         )
                                         .padding(.horizontal, DesignConstants.Spacing.step3x)
                                 )
@@ -133,7 +135,8 @@ struct ConversationsView: View {
                 if let conversationViewModel = viewModel.selectedConversationViewModel {
                     ConversationView(
                         viewModel: conversationViewModel,
-                        focusState: $focusState,
+                        focusState: focusState,
+                        focusCoordinator: coordinator,
                         onScanInviteCode: {},
                         onDeleteConversation: {},
                         confirmDeletionBeforeDismissal: false,
@@ -149,6 +152,8 @@ struct ConversationsView: View {
                 }
             }
         }
+        .focusable(false)
+        .focusEffectDisabled()
         .sheet(isPresented: $presentingAppSettings) {
             AppSettingsView(onDeleteAllData: viewModel.deleteAllData)
                 .navigationTransition(
@@ -158,16 +163,18 @@ struct ConversationsView: View {
                     )
                 )
         }
-        .fullScreenCover(item: $viewModel.newConversationViewModel) { viewModel in
-            NewConversationView(viewModel: viewModel)
-                .background(.colorBackgroundPrimary)
-                .interactiveDismissDisabled()
-                .navigationTransition(
-                    .zoom(
-                        sourceID: "composer-transition-source",
-                        in: namespace
-                    )
+        .fullScreenCover(item: $viewModel.newConversationViewModel) { newConvoViewModel in
+            NewConversationView(
+                viewModel: newConvoViewModel
+            )
+            .background(.colorBackgroundPrimary)
+            .interactiveDismissDisabled()
+            .navigationTransition(
+                .zoom(
+                    sourceID: "composer-transition-source",
+                    in: namespace
                 )
+            )
         }
         .selfSizingSheet(isPresented: $viewModel.presentingExplodeInfo) {
             ExplodeInfoView()

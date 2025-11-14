@@ -545,6 +545,9 @@ extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate
             return
         }
 
+        // allows the drag gesture to start above the bottom bar
+        self.view.keyboardLayoutGuide.keyboardDismissPadding = bottomBarHeight
+
         if let lastKeyboardFrameChange {
             let newBottomInset = calculateNewBottomInset(for: lastKeyboardFrameChange)
             updateBottomInset(inset: newBottomInset, info: lastKeyboardFrameChange)

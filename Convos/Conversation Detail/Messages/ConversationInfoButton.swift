@@ -10,7 +10,7 @@ struct ConversationInfoButton<InfoView: View>: View {
     @Binding var conversationImage: UIImage?
     @Binding var presentingConversationSettings: Bool
     @FocusState.Binding var focusState: MessagesViewInputFocus?
-    let viewModelFocus: MessagesViewInputFocus?
+    let focusCoordinator: FocusCoordinator?
     let showsExplodeNowButton: Bool
     let onConversationInfoTapped: () -> Void
     let onConversationNameEndedEditing: () -> Void
@@ -90,7 +90,7 @@ struct ConversationInfoButton<InfoView: View>: View {
                     )
             }
         }
-        .onChange(of: viewModelFocus) { _, newValue in
+        .onChange(of: focusCoordinator?.currentFocus) { _, newValue in
             withAnimation(.bouncy(duration: 0.5, extraBounce: 0.2)) {
                 progress = newValue == .conversationName ? 1.0 : 0.0
             }
@@ -101,7 +101,7 @@ struct ConversationInfoButton<InfoView: View>: View {
 #Preview {
     @Previewable @State var conversationName: String = ""
     @Previewable @State var conversationImage: UIImage?
-    @Previewable @State var viewModelFocus: MessagesViewInputFocus?
+    @Previewable @State var focusCoordinator: FocusCoordinator? = FocusCoordinator(horizontalSizeClass: nil)
     @Previewable @State var presentingConversationSettings: Bool = false
     @Previewable @FocusState var focusState: MessagesViewInputFocus?
 
@@ -117,13 +117,13 @@ struct ConversationInfoButton<InfoView: View>: View {
         conversationImage: $conversationImage,
         presentingConversationSettings: $presentingConversationSettings,
         focusState: $focusState,
-        viewModelFocus: viewModelFocus,
+        focusCoordinator: focusCoordinator,
         showsExplodeNowButton: true,
         onConversationInfoTapped: {
-            focusState = .conversationName
+            focusCoordinator?.moveFocus(to: .conversationName)
         },
         onConversationNameEndedEditing: {
-            focusState = nil
+            focusCoordinator?.moveFocus(to: nil)
         },
         onConversationSettings: {},
         onExplodeNow: {},

@@ -76,6 +76,15 @@ final class ConversationOnboardingCoordinator {
 
     var state: ConversationOnboardingState = .idle
 
+    var isSettingUpQuickname: Bool {
+        switch state {
+        case .setupQuickname:
+            return true
+        default:
+            return false
+        }
+    }
+
     var inProgress: Bool {
         switch state {
         case .idle:

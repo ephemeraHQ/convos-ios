@@ -4,6 +4,7 @@ import SwiftUI
 
 struct ConversationInfoEditView: View {
     @Bindable var viewModel: ConversationViewModel
+    let focusCoordinator: FocusCoordinator?
 
     @Environment(\.dismiss) private var dismiss: DismissAction
 
@@ -73,7 +74,7 @@ struct ConversationInfoEditView: View {
                     Button(role: .confirm) {
                         viewModel.isEditingConversationName = false
                         viewModel.isEditingDescription = false
-                        viewModel.onConversationSettingsDismissed()
+                        viewModel.onConversationSettingsDismissed(focusCoordinator: focusCoordinator)
                     }
                     .tint(.colorBackgroundInverted)
                 }
@@ -83,5 +84,6 @@ struct ConversationInfoEditView: View {
 }
 
 #Preview {
-    ConversationInfoEditView(viewModel: .mock)
+    @Previewable @State var focusCoordinator: FocusCoordinator? = FocusCoordinator(horizontalSizeClass: nil)
+    ConversationInfoEditView(viewModel: .mock, focusCoordinator: focusCoordinator)
 }

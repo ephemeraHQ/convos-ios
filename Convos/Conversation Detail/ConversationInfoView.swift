@@ -60,6 +60,7 @@ struct FeatureRowItem<AccessoryView: View>: View {
 
 struct ConversationInfoView: View {
     @Bindable var viewModel: ConversationViewModel
+    let focusCoordinator: FocusCoordinator?
 
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showingExplodeConfirmation: Bool = false
@@ -105,9 +106,10 @@ struct ConversationInfoView: View {
                                         .foregroundStyle(.colorTextSecondary)
                                 }
                                 .buttonStyle(.bordered)
+                                .hoverEffect(.lift)
                                 .padding(.top, DesignConstants.Spacing.step2x)
                                 .sheet(isPresented: $presentingEditView) {
-                                    ConversationInfoEditView(viewModel: viewModel)
+                                    ConversationInfoEditView(viewModel: viewModel, focusCoordinator: focusCoordinator)
                                 }
                             }
                         }
@@ -373,5 +375,6 @@ struct DebugLogsTextView: View {
 
 #Preview {
     @Previewable @State var viewModel: ConversationViewModel = .mock
-    ConversationInfoView(viewModel: viewModel)
+    @Previewable @State var focusCoordinator: FocusCoordinator? = FocusCoordinator(horizontalSizeClass: nil)
+    ConversationInfoView(viewModel: viewModel, focusCoordinator: focusCoordinator)
 }

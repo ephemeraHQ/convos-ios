@@ -3,21 +3,22 @@ import SwiftUI
 
 struct NewConversationView: View {
     let viewModel: NewConversationViewModel
+
     @State private var hasShownScannerOnAppear: Bool = false
     @State private var presentingDeleteConfirmation: Bool = false
     @State private var presentingJoiningStateInfo: Bool = false
     @State private var sidebarWidth: CGFloat = 0.0
-
-    @FocusState private var focusState: MessagesViewInputFocus?
+    @State private var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
 
     @Environment(\.dismiss) private var dismiss: DismissAction
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
 
     var body: some View {
         ConversationInfoPresenter(
             viewModel: viewModel.conversationViewModel,
-            focusState: $focusState,
-            sidebarColumnWidth: $sidebarWidth,
-        ) {
+            focusCoordinator: focusCoordinator,
+            sidebarColumnWidth: $sidebarWidth
+        ) { focusState, coordinator in
             NavigationStack {
                 @Bindable var viewModel = viewModel
                 Group {
@@ -33,13 +34,14 @@ struct NewConversationView: View {
                         let conversationViewModel = viewModel.conversationViewModel
                         ConversationView(
                             viewModel: conversationViewModel,
-                            focusState: $focusState,
+                            focusState: focusState,
+                            focusCoordinator: coordinator,
                             onScanInviteCode: viewModel.onScanInviteCode,
                             onDeleteConversation: viewModel.deleteConversation,
                             confirmDeletionBeforeDismissal: viewModel.shouldConfirmDeletingConversation,
                             messagesTopBarTrailingItem: viewModel.messagesTopBarTrailingItem,
                             messagesTopBarTrailingItemEnabled: viewModel.messagesTopBarTrailingItemEnabled,
-                            messagesTextFieldEnabled: viewModel.messagesTextFieldEnabled,
+                            messagesTextFieldEnabled: viewModel.messagesTextFieldEnabled
                         ) {
                         }
                         .toolbar {
@@ -85,6 +87,14 @@ struct NewConversationView: View {
                 }
             }
         }
+        .onAppear {
+            // Update coordinator's horizontal size class on appear
+            focusCoordinator.horizontalSizeClass = horizontalSizeClass
+        }
+        .onChange(of: horizontalSizeClass) { _, newSizeClass in
+            // Update coordinator's horizontal size class when it changes
+            focusCoordinator.horizontalSizeClass = newSizeClass
+        }
     }
 }
 
@@ -98,6 +108,8 @@ struct NewConversationView: View {
     VStack {
     }
     .fullScreenCover(isPresented: $presented) {
-        NewConversationView(viewModel: viewModel)
+        NewConversationView(
+            viewModel: viewModel
+        )
     }
 }
