@@ -39,6 +39,7 @@ class ConversationViewModel {
     var invite: Invite {
         conversation.invite ?? .empty
     }
+
     private(set) var profile: Profile = .empty(inboxId: "")
     var untitledConversationPlaceholder: String = "Untitled"
     var conversationInfoSubtitle: String {
@@ -439,17 +440,26 @@ class ConversationViewModel {
         Task { [weak self] in
             guard let self else { return }
             do {
-                // @lourou TESTING: Set explode timer to 10 seconds from now
-                let expiresAt = Date().addingTimeInterval(10)
-                Log.info("⏰ EXPLODE IN 10 SEC: Setting explode timer to \(expiresAt)")
+                let memberIdsToRemove = conversation.members
+                    .filter { !$0.isCurrentUser } // @jarodl fix when we have self removal
+                    .map { $0.profile.inboxId }
 
-                // This will send the ExplodeSettings message which triggers push notifications
-                // and schedules the local notification for 10 seconds from now
-                try await metadataWriter.updateExpiresAt(expiresAt, for: conversation.id)
+                // Set the expiration to now
+                try await metadataWriter.updateExpiresAt(Date(), for: conversation.id)
 
-                presentingConversationSettings = false
+                // Remove everyone
+                try await metadataWriter.removeMembers(
+                    memberIdsToRemove,
+                    from: conversation.id
+                )
+
+                try await session.deleteInbox(clientId: conversation.clientId)
+                await MainActor.run {
+                    conversation.postLeftConversationNotification()
+                    presentingConversationSettings = false
+                }
             } catch {
-                Log.error("Error setting explode timer: \(error.localizedDescription)")
+                Log.error("Error exploding convo: \(error.localizedDescription)")
             }
         }
     }

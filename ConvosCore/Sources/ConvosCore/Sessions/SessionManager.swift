@@ -193,46 +193,10 @@ public final class SessionManager: SessionManagerProtocol {
         Log.info("Exploding conversation \(conversationId) for inbox \(inboxId)")
 
         do {
-            // First, get the messaging service and metadata writer
-            let messagingService = messagingService(for: clientId, inboxId: inboxId)
-            let metadataWriter = messagingService.conversationMetadataWriter()
-
-            // Fetch the conversation to get member IDs
-            let conversation = try await databaseReader.read { db in
-                try DBConversation.fetchOne(db, id: conversationId)
-            }
-
-            if let conversation {
-                // Get all member IDs (we'll try to remove everyone)
-                let allMemberIds = try await databaseReader.read { db in
-                    try DBConversationMember
-                        .filter(DBConversationMember.Columns.conversationId == conversationId)
-                        .filter(DBConversationMember.Columns.inboxId != inboxId) // Exclude current user
-                        .fetchAll(db)
-                        .map { $0.inboxId }
-                }
-
-                // Set the expiration to now
-                Log.info("Setting expiration to now for conversation \(conversationId)")
-                try await metadataWriter.updateExpiresAt(Date(), for: conversationId)
-
-                // Remove all other members
-                if !allMemberIds.isEmpty {
-                    Log.info("Removing \(allMemberIds.count) members from conversation \(conversationId)")
-                    try await metadataWriter.removeMembers(allMemberIds, from: conversationId)
-                }
-            } else {
-                Log.warning("Conversation \(conversationId) not found, will just delete inbox")
-            }
-
-            // Cancel any scheduled explode notifications for this conversation
-            // (do this before deleting inbox in case of failure)
-            ExplodeNotificationManager.cancelExplodeNotification(for: conversationId)
-
-            // Delete the inbox (which includes the conversation)
+            // Delete the inbox (which includes the conversation and keys)
             try await deleteInbox(clientId: clientId)
 
-            // Then, post notification for UI update after all operations complete
+            // Post notification for UI update
             NotificationCenter.default.post(
                 name: .leftConversationNotification,
                 object: nil,

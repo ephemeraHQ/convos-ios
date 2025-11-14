@@ -211,7 +211,7 @@ extension MessagingService {
 
             // Handle ExplodeSettings content type
             if encodedContentType == ContentTypeExplodeSettings {
-                Log.info("NSE: Processing ExplodeSettings message in MessagingService+PushNotifications")
+                Log.info("NSE: Detected ExplodeSettings message")
 
                 // Extract explode settings
                 let content = try decodedMessage.content() as Any
@@ -220,43 +220,35 @@ extension MessagingService {
                     return .droppedMessage
                 }
 
-                // Check if conversation still exists in database
-                let conversationExists = try await databaseReader.read { db in
-                    try DBConversation.exists(db, key: conversationId)
-                }
-
-                guard conversationExists else {
-                    Log.info("NSE: Conversation \(conversationId) no longer exists, skipping ExplodeSettings")
-                    return .droppedMessage
-                }
-
-                // Get client ID from database
-                guard let clientId = try await databaseReader.read({ db in
-                    try DBInbox.fetchOne(db, id: currentInboxId)?.clientId
-                }) else {
-                    Log.error("ClientId not found for inbox \(currentInboxId), cannot schedule explosion")
-                    return .droppedMessage
-                }
-
-                // Get conversation name
-                let conversationName: String? = {
-                    guard let name = try? conversation.name(), !name.isEmpty else {
-                        return nil
+                // Update the conversation's expiresAt in the database
+                try await databaseWriter.write { db in
+                    guard var dbConversation = try DBConversation.fetchOne(db, id: conversationId) else {
+                        Log.warning("NSE: Conversation \(conversationId) not found for expiresAt update")
+                        return
                     }
-                    return name
-                }()
+                    dbConversation = dbConversation.with(expiresAt: explodeSettings.expiresAt)
+                    try dbConversation.update(db)
+                    Log.info("NSE: Updated conversation expiresAt to \(explodeSettings.expiresAt)")
+                }
 
-                // Use centralized scheduler
-                let scheduler = ExplodeScheduler(databaseWriter: databaseWriter)
-                try await scheduler.scheduleIfNeeded(
-                    conversationId: conversationId,
-                    conversationName: conversationName,
-                    inboxId: currentInboxId,
-                    clientId: clientId,
-                    expiresAt: explodeSettings.expiresAt
-                )
+                // Check if the conversation has already exploded (expiresAt in the past)
+                let hasExpired = explodeSettings.expiresAt <= Date()
 
-                return .droppedMessage
+                if hasExpired {
+                    // Show explosion notification
+                    Log.info("NSE: Conversation exploded, showing notification")
+                    let conversationName = (try? conversation.name()) ?? "Untitled"
+                    return .init(
+                        title: "💥 \(conversationName) 💥",
+                        body: "A convo exploded",
+                        conversationId: conversationId,
+                        userInfo: userInfo
+                    )
+                } else {
+                    // Future explosion - drop the notification
+                    Log.info("NSE: Future explosion scheduled, dropping notification")
+                    return .droppedMessage
+                }
             }
 
             // Only handle text content type for notifications

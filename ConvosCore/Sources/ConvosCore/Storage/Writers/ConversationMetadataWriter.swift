@@ -109,15 +109,6 @@ final class ConversationMetadataWriter: ConversationMetadataWriterProtocol {
                 }
                 return name
             }()
-
-            let scheduler = ExplodeScheduler(databaseWriter: databaseWriter)
-            try await scheduler.scheduleIfNeeded(
-                conversationId: conversationId,
-                conversationName: displayName,
-                inboxId: clientId,
-                clientId: dbClientId,
-                expiresAt: expiresAt
-            )
         } catch {
             Log.error("Failed sending/scheduling explode: \(error.localizedDescription)")
         }

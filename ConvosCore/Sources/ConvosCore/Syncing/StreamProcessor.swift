@@ -161,37 +161,6 @@ actor StreamProcessor: StreamProcessorProtocol {
                     )
                     let result = try await messageWriter.store(message: message, for: dbConversation)
 
-                    // Check if this is an ExplodeSettings message and schedule local notification
-                    let encodedContentType = try message.encodedContent.type
-                    if encodedContentType == ContentTypeExplodeSettings {
-                        Log.info("APP: Processing ExplodeSettings message in StreamProcessor")
-
-                        // Extract explode settings
-                        let content = try message.content() as Any
-                        if let explodeSettings = content as? ExplodeSettings {
-                            // Get client ID from conversation
-                            let clientId = dbConversation.clientId
-
-                            // Get conversation name
-                            let conversationName: String? = {
-                                guard let name = try? conversation.name(), !name.isEmpty else {
-                                    return nil
-                                }
-                                return name
-                            }()
-
-                            // Use centralized scheduler
-                            let scheduler = ExplodeScheduler(databaseWriter: databaseWriter)
-                            try await scheduler.scheduleIfNeeded(
-                                conversationId: conversation.id,
-                                conversationName: conversationName,
-                                inboxId: client.inboxId,
-                                clientId: clientId,
-                                expiresAt: explodeSettings.expiresAt
-                            )
-                        }
-                    }
-
                     // Mark unread if needed
                     if result.contentType.marksConversationAsUnread,
                        conversation.id != activeConversationId,
