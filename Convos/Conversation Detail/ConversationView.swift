@@ -116,9 +116,13 @@ struct ConversationView<MessagesBottomBar: View>: View {
             }
         }
         .onChange(of: viewModel.focus) {
+            guard focusState != viewModel.focus else { return }
             focusState = viewModel.focus
         }
         .onChange(of: focusState) {
+            // Ignore transient nil values during SwiftUI focus transitions
+            guard let focusState = focusState else { return }
+            guard viewModel.focus != focusState else { return }
             viewModel.focus = focusState
         }
     }
