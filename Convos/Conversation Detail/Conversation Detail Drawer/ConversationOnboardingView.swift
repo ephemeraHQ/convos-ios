@@ -4,9 +4,9 @@ import SwiftUI
 /// A view that displays the appropriate onboarding content based on the coordinator's state
 struct ConversationOnboardingView: View {
     @Bindable var coordinator: ConversationOnboardingCoordinator
-    let onTapSetupQuickname: () -> Void
+    let focusCoordinator: FocusCoordinator
     let onUseQuickname: (Profile, UIImage?) -> Void
-    let onSaveAsQuickname: (Profile) -> Void
+    let onPresentProfileSettings: () -> Void
 
     private var permissionState: NotificationPermissionState? {
         switch coordinator.state {
@@ -22,94 +22,151 @@ struct ConversationOnboardingView: View {
     }
 
     var body: some View {
-        if coordinator.inProgress || coordinator.isWaitingForInviteAcceptance {
-            VStack(spacing: DesignConstants.Spacing.step3x) {
-                // Show "Invite accepted" message if waiting for invite
-                if coordinator.isWaitingForInviteAcceptance {
-                    InviteAcceptedView()
-                }
+        VStack(spacing: DesignConstants.Spacing.step3x) {
+            // Show "Invite accepted" message if waiting for invite
+            if coordinator.isWaitingForInviteAcceptance {
+                InviteAcceptedView()
+            }
 
-                // Show the current onboarding state
-                switch coordinator.state {
-                case .idle:
-                    EmptyView()
-                case .setupQuickname(let autoDismiss):
-                    SetupQuicknameView(
-                        autoDismiss: autoDismiss,
-                        onAddName: {
-                            coordinator.didTapSetupQuickname()
-                            onTapSetupQuickname()
-                        },
-                        onDismiss: {
-                            Task {
-                                await coordinator.setupQuicknameDidAutoDismiss()
-                            }
-                        }
-                    )
+            // Show the current onboarding state
+            switch coordinator.state {
+            case .idle, .started, .settingUpQuickname, .quicknameLearnMore, .presentingProfileSettings:
+                EmptyView()
+            case .setupQuickname(let autoDismiss):
+                SetupQuicknameView(
+                    autoDismiss: autoDismiss,
+                )
+                .transition(.blurReplace)
 
-                case .saveAsQuickname(let profile):
-                    UseAsQuicknameView(
-                        profile: .constant(profile),
-                        onUseAsQuickname: {
-                            onSaveAsQuickname(profile)
-                        },
-                        onDismiss: {
-                            Task {
-                                await coordinator.saveAsQuicknameDidAutodismiss()
-                            }
-                        }
-                    )
-
-                case let .addQuickname(settings, profileImage):
-                    AddQuicknameView(
-                        profile: .constant(settings.profile),
-                        profileImage: .constant(profileImage),
-                        onUseProfile: { profile, image in
-                            onUseQuickname(profile, image)
-                            Task {
-                                await coordinator.didSelectQuickname()
-                            }
-                        }, onDismiss: {
-                            Task {
-                                await coordinator.addQuicknameDidAutoDismiss()
-                            }
-                        }
-                    )
-
-                case .requestNotifications,
-                        .notificationsEnabled,
-                        .notificationsDenied:
-                    if let permissionState {
-                        RequestPushNotificationsView(
-                            isWaitingForInviteAcceptance: coordinator.isWaitingForInviteAcceptance,
-                            permissionState: permissionState,
-                            enableNotifications: {
-                                Task {
-                                    await coordinator.requestNotificationPermission()
-                                }
-                            },
-                            openSettings: {
-                                coordinator.openSettings()
-                            }
-                        )
-                        .padding(.vertical, DesignConstants.Spacing.step4x)
-                    } else {
-                        EmptyView()
+            case .saveAsQuickname(let profile):
+                UseAsQuicknameView(
+                    profile: .constant(profile),
+                    onLearnMore: {
+                        // keep the keyboard dismissed
+                        focusCoordinator.moveFocus(to: nil)
+                        coordinator.presentWhatIsQuickname()
                     }
+                )
+                .transition(.blurReplace)
+
+            case .savedAsQuicknameSuccess:
+                SetupQuicknameSuccessView()
+                    .transition(.blurReplace)
+
+            case let .addQuickname(settings, profileImage):
+                AddQuicknameView(
+                    profile: .constant(settings.profile),
+                    profileImage: .constant(profileImage),
+                    onUseProfile: { profile, image in
+                        onUseQuickname(profile, image)
+                        Task {
+                            await coordinator.didSelectQuickname()
+                        }
+                    }
+                )
+                .transition(.blurReplace)
+
+            case .requestNotifications,
+                    .notificationsEnabled,
+                    .notificationsDenied:
+                if let permissionState {
+                    RequestPushNotificationsView(
+                        isWaitingForInviteAcceptance: coordinator.isWaitingForInviteAcceptance,
+                        permissionState: permissionState,
+                        enableNotifications: {
+                            Task {
+                                await coordinator.requestNotificationPermission()
+                            }
+                        },
+                        openSettings: {
+                            coordinator.openSettings()
+                        }
+                    )
+                    .transition(.blurReplace)
+                    .padding(.vertical, DesignConstants.Spacing.step4x)
+                } else {
+                    EmptyView()
                 }
             }
         }
+        .transition(.blurReplace)
+        .animation(.spring(duration: 0.4, bounce: 0.2), value: coordinator.state)
+        .selfSizingSheet(isPresented: Binding(get: {
+            coordinator.state == .quicknameLearnMore
+        }, set: { _ in
+        })) {
+            WhatIsQuicknameView {
+                onPresentProfileSettings()
+                coordinator.onContinueFromWhatIsQuickname()
+            }
+            .interactiveDismissDisabled()
+        }
+    }
+}
+
+#Preview("Onboarding Flow") {
+    @Previewable @State var coordinator = ConversationOnboardingCoordinator(notificationCenter: MockNotificationCenter())
+    @Previewable @State var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
+    let onboardingSteps: [ConversationOnboardingState] = [
+        .idle,
+        .setupQuickname(autoDismiss: false),
+        .settingUpQuickname,
+        .saveAsQuickname(profile: .mock()),
+        .savedAsQuicknameSuccess,
+        .requestNotifications,
+        .notificationsEnabled
+    ]
+
+    VStack {
+        Spacer()
+        HStack {
+            Button {
+                // back
+                if var currentIndex = onboardingSteps.firstIndex(of: coordinator.state) {
+                    onboardingSteps.formIndex(before: &currentIndex)
+                    coordinator.state = onboardingSteps[currentIndex]
+                }
+            } label: {
+                Image(systemName: "chevron.left")
+            }
+            .buttonStyle(.glassProminent)
+
+            Button {
+                // next
+                if var currentIndex = onboardingSteps.firstIndex(of: coordinator.state) {
+                    onboardingSteps.formIndex(after: &currentIndex)
+                    coordinator.state = onboardingSteps[currentIndex]
+                }
+            } label: {
+                Image(systemName: "chevron.right")
+            }
+            .buttonStyle(.glassProminent)
+        }
+
+        Spacer()
+
+        ConversationOnboardingView(
+            coordinator: coordinator,
+            focusCoordinator: focusCoordinator,
+            onUseQuickname: { profile, _ in print("Use quickname: \(profile.displayName)") },
+            onPresentProfileSettings: {}
+        )
+        .onAppear {
+            coordinator.state = .setupQuickname(autoDismiss: false)
+        }
+        .padding()
     }
 }
 
 #Preview("Setup Quickname - Not Dismissible") {
     @Previewable @State var coordinator = ConversationOnboardingCoordinator()
+    @Previewable @State var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
 
     ConversationOnboardingView(
         coordinator: coordinator,
-        onTapSetupQuickname: { print("Tapped setup quickname") },
+        focusCoordinator: focusCoordinator,
         onUseQuickname: { profile, _ in print("Use quickname: \(profile.displayName)") },
-        onSaveAsQuickname: { _ in print("Save as quickname") }
+        onPresentProfileSettings: {}
     )
     .onAppear {
         coordinator.state = .setupQuickname(autoDismiss: false)
@@ -119,12 +176,13 @@ struct ConversationOnboardingView: View {
 
 #Preview("Setup Quickname - Auto Dismiss") {
     @Previewable @State var coordinator = ConversationOnboardingCoordinator()
+    @Previewable @State var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
 
     ConversationOnboardingView(
         coordinator: coordinator,
-        onTapSetupQuickname: { print("Tapped setup quickname") },
+        focusCoordinator: focusCoordinator,
         onUseQuickname: { profile, _ in print("Use quickname: \(profile.displayName)") },
-        onSaveAsQuickname: { _ in print("Save as quickname") }
+        onPresentProfileSettings: {}
     )
     .onAppear {
         coordinator.state = .setupQuickname(autoDismiss: true)
@@ -134,12 +192,13 @@ struct ConversationOnboardingView: View {
 
 #Preview("Add Quickname") {
     @Previewable @State var coordinator = ConversationOnboardingCoordinator()
+    @Previewable @State var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
 
     ConversationOnboardingView(
         coordinator: coordinator,
-        onTapSetupQuickname: { print("Tapped setup quickname") },
+        focusCoordinator: focusCoordinator,
         onUseQuickname: { profile, _ in print("Use quickname: \(profile.displayName)") },
-        onSaveAsQuickname: { _ in print("Save as quickname") }
+        onPresentProfileSettings: {}
     )
     .onAppear {
         coordinator.state = .addQuickname(
@@ -152,13 +211,14 @@ struct ConversationOnboardingView: View {
 
 #Preview("Save As Quickname") {
     @Previewable @State var coordinator = ConversationOnboardingCoordinator()
+    @Previewable @State var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
     let sampleProfile = Profile(inboxId: "preview-inbox", name: "Jane Doe", avatar: nil)
 
     ConversationOnboardingView(
         coordinator: coordinator,
-        onTapSetupQuickname: { print("Tapped setup quickname") },
+        focusCoordinator: focusCoordinator,
         onUseQuickname: { profile, _ in print("Use quickname: \(profile.displayName)") },
-        onSaveAsQuickname: { _ in print("Save as quickname") }
+        onPresentProfileSettings: {}
     )
     .onAppear {
         coordinator.state = .saveAsQuickname(profile: sampleProfile)
@@ -168,12 +228,13 @@ struct ConversationOnboardingView: View {
 
 #Preview("Request Notifications") {
     @Previewable @State var coordinator = ConversationOnboardingCoordinator()
+    @Previewable @State var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
 
     ConversationOnboardingView(
         coordinator: coordinator,
-        onTapSetupQuickname: { print("Tapped setup quickname") },
+        focusCoordinator: focusCoordinator,
         onUseQuickname: { profile, _ in print("Use quickname: \(profile.displayName)") },
-        onSaveAsQuickname: { _ in print("Save as quickname") }
+        onPresentProfileSettings: {}
     )
     .onAppear {
         coordinator.state = .requestNotifications
@@ -183,12 +244,13 @@ struct ConversationOnboardingView: View {
 
 #Preview("Notifications Enabled") {
     @Previewable @State var coordinator = ConversationOnboardingCoordinator()
+    @Previewable @State var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
 
     ConversationOnboardingView(
         coordinator: coordinator,
-        onTapSetupQuickname: { print("Tapped setup quickname") },
+        focusCoordinator: focusCoordinator,
         onUseQuickname: { profile, _ in print("Use quickname: \(profile.displayName)") },
-        onSaveAsQuickname: { _ in print("Save as quickname") }
+        onPresentProfileSettings: {}
     )
     .onAppear {
         coordinator.state = .notificationsEnabled
@@ -198,12 +260,13 @@ struct ConversationOnboardingView: View {
 
 #Preview("Notifications Denied") {
     @Previewable @State var coordinator = ConversationOnboardingCoordinator()
+    @Previewable @State var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
 
     ConversationOnboardingView(
         coordinator: coordinator,
-        onTapSetupQuickname: { print("Tapped setup quickname") },
+        focusCoordinator: focusCoordinator,
         onUseQuickname: { profile, _ in print("Use quickname: \(profile.displayName)") },
-        onSaveAsQuickname: { _ in print("Save as quickname") }
+        onPresentProfileSettings: {}
     )
     .onAppear {
         coordinator.state = .notificationsDenied
@@ -213,12 +276,13 @@ struct ConversationOnboardingView: View {
 
 #Preview("Waiting For Invite + Request Notifications") {
     @Previewable @State var coordinator = ConversationOnboardingCoordinator()
+    @Previewable @State var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
 
     ConversationOnboardingView(
         coordinator: coordinator,
-        onTapSetupQuickname: { print("Tapped setup quickname") },
+        focusCoordinator: focusCoordinator,
         onUseQuickname: { profile, _ in print("Use quickname: \(profile.displayName)") },
-        onSaveAsQuickname: { _ in print("Save as quickname") }
+        onPresentProfileSettings: {}
     )
     .onAppear {
         coordinator.isWaitingForInviteAcceptance = true

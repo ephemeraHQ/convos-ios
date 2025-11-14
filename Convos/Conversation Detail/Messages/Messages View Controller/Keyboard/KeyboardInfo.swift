@@ -36,7 +36,6 @@ struct KeyboardInfo: Equatable {
         isLocal = keyboardIsLocal
         frameBegin = keyboardFrameBegin
         frameEnd = keyboardFrameEnd
-        // Extract screen from notification object (can be UIScreen or nil)
         screen = notification.object as? UIScreen
     }
 }

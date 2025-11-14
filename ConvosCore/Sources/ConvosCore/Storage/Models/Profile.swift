@@ -1,5 +1,4 @@
 import Foundation
-import GRDB
 
 public struct Profile: Codable, Identifiable, Hashable, Sendable {
     public var id: String { inboxId }

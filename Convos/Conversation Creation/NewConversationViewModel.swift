@@ -287,16 +287,17 @@ class NewConversationViewModel: Identifiable {
             Log.info("Waiting for invite acceptance...")
 
         case .ready(let result):
-            conversationViewModel.myProfileViewModel.updateProfileWithLatest(for: result.conversationId)
+            conversationViewModel.startOnboarding()
+            if result.origin == .joined {
+                conversationViewModel.inviteWasAccepted()
+            }
             conversationViewModel.showsInfoView = true
             messagesTopBarTrailingItemEnabled = true
             messagesTextFieldEnabled = true
-            conversationViewModel.isWaitingForInviteAcceptance = false
             isCreatingConversation = false
             showingFullScreenScanner = false
             currentError = nil
 
-            conversationViewModel.startOnboarding()
             Log.info("Conversation ready!")
 
         case .deleting:
@@ -366,7 +367,6 @@ class NewConversationViewModel: Identifiable {
             messagesTopBarTrailingItem = .share
             shouldConfirmDeletingConversation = false
             conversationViewModel.untitledConversationPlaceholder = "Untitled"
-            conversationViewModel.inviteWasAccepted()
         }
         .store(in: &cancellables)
     }

@@ -22,6 +22,8 @@ struct InviteAcceptedView: View {
                         .multilineTextAlignment(.center)
                 }
             }
+            .transition(.blurReplace)
+            .animation(.spring(duration: 0.4, bounce: 0.2), value: showingDescription)
             .padding(DesignConstants.Spacing.step6x)
         }
         .frame(maxWidth: .infinity)
@@ -29,7 +31,7 @@ struct InviteAcceptedView: View {
         .clipShape(RoundedRectangle(cornerRadius: DesignConstants.CornerRadius.mediumLarge))
         .onAppear {
             DispatchQueue.main
-                .asyncAfter(deadline: .now() + ConversationOnboardingCoordinator.waitingForInviteAcceptanceDelay) {
+                .asyncAfter(deadline: .now() + ConversationOnboardingState.waitingForInviteAcceptanceDelay) {
                 withAnimation {
                     self.showingDescription = true
                 }

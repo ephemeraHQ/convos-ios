@@ -24,6 +24,18 @@ final class SystemNotificationCenter: NotificationCenterProtocol, @unchecked Sen
     }
 }
 
+/// For SwiftUI previews
+@MainActor
+final class MockNotificationCenter: NotificationCenterProtocol, @unchecked Sendable {
+    var authStatus: UNAuthorizationStatus = .notDetermined
+    var shouldGrantPermission: Bool = false
+    var deniedStatus: UNAuthorizationStatus = .denied
+
+    nonisolated func authorizationStatus() async -> UNAuthorizationStatus {
+        await MainActor.run { authStatus }
+    }
+}
+
 // MARK: - Notification Permission State
 
 enum NotificationPermissionState {
@@ -39,12 +51,24 @@ enum ConversationOnboardingState: Equatable {
     /// Idle - no onboarding flow active
     case idle
 
+    case started
+
     /// Show "Tap to change your ID" prompt (first time, non-dismissible)
     case setupQuickname(autoDismiss: Bool)
+
+    case settingUpQuickname
 
     /// Shows "Use as Quickname in new convos?" button
     /// Tapping it takes you to your Profile
     case saveAsQuickname(profile: Profile)
+
+    case quicknameLearnMore
+
+    /// Waiting to see if the user saves a quickname
+    case presentingProfileSettings
+
+    /// Autodismissed success state after saving first Quickname
+    case savedAsQuicknameSuccess
 
     /// Show "Tap to chat as [Name]" with the user's quickname
     case addQuickname(settings: QuicknameSettings, profileImage: UIImage?)
@@ -57,32 +81,53 @@ enum ConversationOnboardingState: Equatable {
 
     /// Notifications denied, prompt to change in settings
     case notificationsDenied
+
+    static let addQuicknameViewDuration: CGFloat = 8.0
+    static let setupQuicknameViewDuration: CGFloat = 8.0
+    static let useAsQuicknameViewDuration: CGFloat = 8.0
+    static let savedAsQuicknameSuccessDuration: CGFloat = 3.0
+    static let notificationsEnabledSuccessDuration: CGFloat = 3.0
+    // how long we wait before showing the description string
+    static let waitingForInviteAcceptanceDelay: CGFloat = 3.0
+
+    /// Returns the autodismiss duration for this state, or nil if autodismiss is not enabled
+    var autodismissDuration: CGFloat? {
+        switch self {
+        case .setupQuickname(let autoDismiss):
+            return autoDismiss ? Self.setupQuicknameViewDuration : nil
+        case .addQuickname:
+            return Self.addQuicknameViewDuration
+        case .saveAsQuickname:
+            return Self.useAsQuicknameViewDuration
+        case .savedAsQuicknameSuccess:
+            return Self.savedAsQuicknameSuccessDuration
+        case .notificationsEnabled:
+            return Self.notificationsEnabledSuccessDuration
+        default:
+            return nil
+        }
+    }
 }
 
 /// Manages the onboarding flow state machine for a conversation
 @MainActor
 @Observable
 final class ConversationOnboardingCoordinator {
-    // MARK: - Constants
-
-    static let addQuicknameViewDuration: CGFloat = 8.0
-    static let setupQuicknameViewDuration: CGFloat = 8.0
-    static let useAsQuicknameViewDuration: CGFloat = 8.0
-    // how long we wait before showing the description string
-    static let waitingForInviteAcceptanceDelay: CGFloat = 3.0
-    static let notificationFlowStartDelay: CGFloat = 3.25 // only if we're in the waiting for acceptance state
-
     // MARK: - State
 
     var state: ConversationOnboardingState = .idle
 
     var isSettingUpQuickname: Bool {
         switch state {
-        case .setupQuickname:
+        case .settingUpQuickname, .presentingProfileSettings:
             return true
         default:
             return false
         }
+    }
+
+    var showOnboardingView: Bool {
+        inProgress || isWaitingForInviteAcceptance
     }
 
     var inProgress: Bool {
@@ -138,6 +183,8 @@ final class ConversationOnboardingCoordinator {
     private let notificationCenter: NotificationCenterProtocol
     @ObservationIgnored
     private var appLifecycleTask: Task<Void, Never>?
+    @ObservationIgnored
+    private var autodismissTask: Task<Void, Never>?
 
     init(notificationCenter: NotificationCenterProtocol = SystemNotificationCenter()) {
         self.notificationCenter = notificationCenter
@@ -146,6 +193,7 @@ final class ConversationOnboardingCoordinator {
 
     deinit {
         appLifecycleTask?.cancel()
+        autodismissTask?.cancel()
     }
 
     // MARK: - App Lifecycle
@@ -158,24 +206,49 @@ final class ConversationOnboardingCoordinator {
         }
     }
 
-    private func handleAppDidBecomeActive() async {
-        let authStatus = await notificationCenter.authorizationStatus()
+    // MARK: - State Observation
 
-        switch state {
-        case .idle:
-            // If onboarding is idle but notifications are now disabled, restart notification flow
-            if authStatus == .denied {
-                state = .notificationsDenied
-            }
+    /// Call this after changing state to manage autodismiss tasks
+    private func handleStateChange() {
+        // Cancel any existing autodismiss task (user may have manually progressed)
+        autodismissTask?.cancel()
 
-        case .notificationsDenied:
-            // If we're in denied state and user has now enabled permissions
-            switch authStatus {
-            case .authorized, .provisional, .ephemeral:
-                // Show success briefly
-                state = .notificationsEnabled
-                try? await Task.sleep(for: .seconds(2))
+        // Start new autodismiss task if needed
+        startAutodismissIfNeeded()
+    }
 
+    private func startAutodismissIfNeeded() {
+        // Get autodismiss duration from state
+        guard let duration = state.autodismissDuration else {
+            return
+        }
+
+        // Capture the current state to verify we're still in it after sleep
+        let expectedState = state
+
+        // Start autodismiss task
+        autodismissTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+
+            try? await Task.sleep(for: .seconds(duration))
+
+            // Check if task was cancelled (user manually progressed)
+            guard !Task.isCancelled else { return }
+
+            // Verify we're still in the expected state (state might have changed)
+            guard state == expectedState else { return }
+
+            // Transition to next state based on current state
+            switch state {
+            case .setupQuickname:
+                await setupQuicknameDidAutoDismiss()
+            case .addQuickname:
+                await addQuicknameDidAutoDismiss()
+            case .saveAsQuickname:
+                await saveAsQuicknameDidAutodismiss()
+            case .savedAsQuicknameSuccess:
+                await transitionToNotificationState()
+            case .notificationsEnabled:
                 // Check if we need to continue to quickname flow
                 if shouldShowQuicknameAfterNotifications, let clientId = pendingClientId {
                     await startQuicknameFlow(for: clientId)
@@ -184,6 +257,30 @@ final class ConversationOnboardingCoordinator {
                 } else {
                     await complete()
                 }
+            default:
+                break
+            }
+        }
+    }
+
+    private func handleAppDidBecomeActive() async {
+        let authStatus = await notificationCenter.authorizationStatus()
+
+        switch state {
+        case .idle:
+            // If onboarding is idle but notifications are now disabled, restart notification flow
+            if authStatus == .denied {
+                state = .notificationsDenied
+                handleStateChange()
+            }
+
+        case .notificationsDenied:
+            // If we're in denied state and user has now enabled permissions
+            switch authStatus {
+            case .authorized, .provisional, .ephemeral:
+                // Show success briefly
+                state = .notificationsEnabled
+                handleStateChange()
             default:
                 break
             }
@@ -198,17 +295,19 @@ final class ConversationOnboardingCoordinator {
 
     /// Initialize the onboarding flow based on current conditions
     func start(for clientId: String) async {
-        // Only start if we're in idle state (prevents re-entry and race conditions)
+        // Only start if we're in idle state
         guard case .idle = state else {
             return
         }
 
+        // prevent starting again before we know the next state
+        state = .started
+
         if isWaitingForInviteAcceptance {
-            // Priority: Notifications first, then quickname
-            try? await Task.sleep(for: .seconds(Self.notificationFlowStartDelay))
+            // Notifications first, then quickname
             await startNotificationFlow(for: clientId)
         } else {
-            // Priority: Quickname first, then notifications
+            // Quickname first, then notifications
             await startQuicknameFlow(for: clientId)
         }
     }
@@ -223,8 +322,10 @@ final class ConversationOnboardingCoordinator {
         switch authStatus {
         case .notDetermined:
             state = .requestNotifications
+            handleStateChange()
         case .denied:
             state = .notificationsDenied
+            handleStateChange()
         case .authorized, .provisional, .ephemeral:
             // Already granted, skip to quickname
             if !isWaitingForInviteAcceptance {
@@ -255,14 +356,17 @@ final class ConversationOnboardingCoordinator {
             // First time: show non-dismissible setup prompt
             shouldAnimateAvatarForQuicknameSetup = true
             state = .setupQuickname(autoDismiss: false)
+            handleStateChange()
         } else if quicknameSettings.isDefault && !hasSetQuicknameForConversation {
             // Has seen editor but no quickname: show auto-dismissing setup
             shouldAnimateAvatarForQuicknameSetup = true
             state = .setupQuickname(autoDismiss: true)
+            handleStateChange()
         } else if !hasSetQuicknameForConversation {
             // Has quickname: show auto-dismissing add name
             let profileImage = quicknameSettings.profileImage
             state = .addQuickname(settings: quicknameSettings, profileImage: profileImage)
+            handleStateChange()
         } else {
             // Already set quickname for this conversation, go to notifications
             await transitionToNotificationState()
@@ -282,10 +386,24 @@ final class ConversationOnboardingCoordinator {
     }
 
     /// User tapped to set up their quickname (opens profile editor)
-    func didTapSetupQuickname() {
+    func didTapProfilePhoto() {
+        guard case .setupQuickname = state else {
+            return
+        }
         hasShownQuicknameEditor = true
         shouldAnimateAvatarForQuicknameSetup = false
-        // Stay in current state - profile editor will be shown
+        state = .settingUpQuickname
+        handleStateChange()
+    }
+
+    func presentWhatIsQuickname() {
+        state = .quicknameLearnMore
+        handleStateChange()
+    }
+
+    func onContinueFromWhatIsQuickname() {
+        state = .presentingProfileSettings
+        handleStateChange()
     }
 
     /// The setup quickname view auto-dismissed
@@ -301,20 +419,37 @@ final class ConversationOnboardingCoordinator {
         await transitionToNotificationState()
     }
 
-    func saveAsQuicknameDidAutodismiss() async {
+    private func saveAsQuicknameDidAutodismiss() async {
         await transitionToNotificationState()
     }
 
-    func addQuicknameDidAutoDismiss() async {
+    func successfullySavedAsQuickname() {
+        guard state == .presentingProfileSettings else { return }
+        state = .savedAsQuicknameSuccess
+        handleStateChange()
+    }
+
+    private func addQuicknameDidAutoDismiss() async {
         await transitionToNotificationState()
     }
 
-    /// User changed their profile, see if they want to use as quickname
-    /// if they've never seen the Profile view before
-    func didChangeProfile(profile: Profile) {
-        guard !hasSeenAddAsQuickname && QuicknameSettings.current().isDefault else { return }
-        state = .saveAsQuickname(profile: profile)
-        hasSeenAddAsQuickname = true
+    /// Handle when display name editing ends
+    /// - Parameters:
+    ///   - profile: The current profile
+    ///   - didChangeProfile: Whether the profile was actually changed
+    ///   - isSavingAsQuickname: Whether the user is saving this as their quickname
+    func handleDisplayNameEndedEditing(profile: Profile, didChangeProfile: Bool, isSavingAsQuickname: Bool) {
+        if isSavingAsQuickname {
+            successfullySavedAsQuickname()
+        } else if didChangeProfile {
+            // Check if we should show the "save as quickname" prompt
+            guard state != .presentingProfileSettings else { return }
+            let hasDefaultQuickname = QuicknameSettings.current().isDefault
+            guard !hasSeenAddAsQuickname && hasDefaultQuickname else { return }
+            state = .saveAsQuickname(profile: profile)
+            handleStateChange()
+            hasSeenAddAsQuickname = true
+        }
     }
 
     /// Request notification permission from the user
@@ -323,8 +458,7 @@ final class ConversationOnboardingCoordinator {
 
         if granted {
             state = .notificationsEnabled
-            // Auto-dismiss success state after 2 seconds
-            try? await Task.sleep(for: .seconds(2))
+            handleStateChange()
 
             // Check if we need to show quickname flow next (from invite acceptance)
             if shouldShowQuicknameAfterNotifications,
@@ -333,17 +467,17 @@ final class ConversationOnboardingCoordinator {
                 await startQuicknameFlow(for: clientId)
                 shouldShowQuicknameAfterNotifications = false
                 pendingClientId = nil
-            } else {
-                await complete()
             }
         } else {
             // Check if it was denied or just not determined
             let authStatus = await notificationCenter.authorizationStatus()
             if authStatus == .denied {
                 state = .notificationsDenied
+                handleStateChange()
             } else {
                 // If still undetermined (shouldn't happen), stay on request state
                 state = .requestNotifications
+                handleStateChange()
             }
         }
 
@@ -365,6 +499,7 @@ final class ConversationOnboardingCoordinator {
     func complete() async {
         hasCompletedOnboarding = true
         state = .idle
+        handleStateChange()
     }
 
     /// Skip remaining onboarding steps
@@ -410,8 +545,10 @@ final class ConversationOnboardingCoordinator {
         switch authStatus {
         case .notDetermined:
             state = .requestNotifications
+            handleStateChange()
         case .denied:
             state = .notificationsDenied
+            handleStateChange()
         case .authorized, .provisional, .ephemeral:
             // Already granted, complete onboarding
             await complete()

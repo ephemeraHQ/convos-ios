@@ -34,13 +34,18 @@ struct ConversationView<MessagesBottomBar: View>: View {
             focusState: $focusState,
             focusCoordinator: focusCoordinator,
             messagesTextFieldEnabled: messagesTextFieldEnabled,
-            onProfilePhotoTap: { viewModel.onProfilePhotoTap(focusCoordinator: focusCoordinator) },
+            onProfilePhotoTap: {
+                onboardingCoordinator.didTapProfilePhoto()
+                viewModel.onProfilePhotoTap(focusCoordinator: focusCoordinator)
+            },
             onSendMessage: {
                 viewModel.onSendMessage(focusCoordinator: focusCoordinator)
             },
             onTapMessage: viewModel.onTapMessage(_:),
             onTapAvatar: viewModel.onTapAvatar(_:),
-            onDisplayNameEndedEditing: { viewModel.onDisplayNameEndedEditing(focusCoordinator: focusCoordinator) },
+            onDisplayNameEndedEditing: {
+                viewModel.onDisplayNameEndedEditing(focusCoordinator: focusCoordinator, context: .quickEditor)
+            },
             onProfileSettings: viewModel.onProfileSettings,
             bottomBarContent: {
                 VStack(spacing: DesignConstants.Spacing.step3x) {
@@ -48,9 +53,9 @@ struct ConversationView<MessagesBottomBar: View>: View {
 
                     ConversationOnboardingView(
                         coordinator: onboardingCoordinator,
-                        onTapSetupQuickname: { viewModel.onProfilePhotoTap(focusCoordinator: focusCoordinator) },
+                        focusCoordinator: focusCoordinator,
                         onUseQuickname: viewModel.onUseQuickname(_:_:),
-                        onSaveAsQuickname: viewModel.onSaveAsQuickname(_:)
+                        onPresentProfileSettings: viewModel.onProfileSettings
                     )
                 }
                 .padding(.horizontal, DesignConstants.Spacing.step4x)

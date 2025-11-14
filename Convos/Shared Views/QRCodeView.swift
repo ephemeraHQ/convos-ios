@@ -7,7 +7,6 @@ struct QRCodeView: View {
     let foregroundColor: Color
     let centerImage: Image?
     @State private var currentQRCode: UIImage?
-    @State private var generationTask: Task<Void, Never>?
     @Environment(\.displayScale) private var displayScale: CGFloat
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
     private let displaySize: CGFloat = 220.0
@@ -44,6 +43,8 @@ struct QRCodeView: View {
                 EmptyView()
             }
         }
+        .transition(.blurReplace)
+        .animation(.default, value: url)
     }
 
     var overlay: some View {
@@ -88,8 +89,6 @@ struct QRCodeView: View {
 
                 overlay
             }
-            .transition(.opacity)
-            .animation(.default, value: currentQRCode)
             .task(id: url) {
                 let newQRCode = await generateQRCode()
 
@@ -101,9 +100,6 @@ struct QRCodeView: View {
             }
             .onChange(of: colorScheme) {
                 Task { currentQRCode = await generateQRCode() }
-            }
-            .onDisappear {
-                generationTask?.cancel()
             }
     }
 }

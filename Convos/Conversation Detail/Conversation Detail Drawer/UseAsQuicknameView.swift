@@ -3,67 +3,35 @@ import SwiftUI
 
 struct UseAsQuicknameView: View {
     @Binding var profile: Profile
-    let onUseAsQuickname: () -> Void
-    let onDismiss: () -> Void
-
-    @State private var presentingLearnMore: Bool = false
+    let onLearnMore: () -> Void
 
     var body: some View {
-        AnimatedOverlayView(
-            autoDismiss: true,
-            duration: ConversationOnboardingCoordinator.useAsQuicknameViewDuration,
-            onDismiss: onDismiss
-        ) { animateOut in
-            VStack(spacing: DesignConstants.Spacing.step2x) {
-                Button {
-                    animateOut()
-                    onUseAsQuickname()
-                } label: {
-                    HStack(spacing: DesignConstants.Spacing.step2x) {
-                        Image(systemName: "gear")
-                            .foregroundStyle(.colorTextPrimaryInverted)
-                            .font(.footnote)
+        VStack(spacing: DesignConstants.Spacing.step2x) {
+            Button {
+                onLearnMore()
+            } label: {
+                HStack(spacing: DesignConstants.Spacing.step2x) {
+                    Image(systemName: "gear")
+                        .foregroundStyle(.colorTextPrimaryInverted)
+                        .font(.footnote)
 
-                        Text("Use as Quickname in new convos?")
-                            .font(.callout)
-                            .foregroundStyle(.colorTextPrimaryInverted)
-                    }
-                    .padding(.vertical, DesignConstants.Spacing.step3HalfX)
-                    .padding(.horizontal, DesignConstants.Spacing.step4x)
-                    .background(
-                        DrainingCapsule(
-                            fillColor: .colorBackgroundInverted,
-                            backgroundColor: .colorFillSecondary,
-                            duration: ConversationOnboardingCoordinator.useAsQuicknameViewDuration
-                        )
+                    Text("Use as Quickname in new convos?")
+                        .font(.callout)
+                        .foregroundStyle(.colorTextPrimaryInverted)
+                }
+                .padding(.vertical, DesignConstants.Spacing.step3HalfX)
+                .padding(.horizontal, DesignConstants.Spacing.step4x)
+                .background(
+                    DrainingCapsule(
+                        fillColor: .colorBackgroundInverted,
+                        backgroundColor: .colorFillSecondary,
+                        duration: ConversationOnboardingState.useAsQuicknameViewDuration
                     )
-                }
-                .hoverEffect(.lift)
-
-                Button {
-                    animateOut()
-                    presentingLearnMore = true
-                } label: {
-                    HStack(spacing: DesignConstants.Spacing.stepX) {
-                        Image(systemName: "lanyardcard.fill")
-                            .foregroundStyle(.colorTextTertiary)
-                            .font(.caption)
-                        Text("Learn more about Quickname")
-                            .foregroundStyle(.colorTextSecondary)
-                            .font(.caption)
-                    }
-                    .padding(DesignConstants.Spacing.step3x)
-                }
-                .hoverEffect(.lift)
+                )
             }
-            .selfSizingSheet(isPresented: $presentingLearnMore) {
-                WhatIsQuicknameView {
-                    presentingLearnMore = false
-                    onUseAsQuickname()
-                }
-            }
-            .padding(.vertical, DesignConstants.Spacing.step4x)
+            .hoverEffect(.lift)
         }
+        .padding(.vertical, DesignConstants.Spacing.step4x)
     }
 }
 
@@ -74,8 +42,7 @@ struct UseAsQuicknameView: View {
     VStack(spacing: 20) {
         UseAsQuicknameView(
             profile: $profile,
-            onUseAsQuickname: {},
-            onDismiss: {}
+            onLearnMore: {},
         )
         .id(resetId)
 

@@ -58,30 +58,26 @@ struct RequestPushNotificationsView: View {
     }
 
     var body: some View {
-        AnimatedOverlayView(
-            autoDismiss: false,
-            duration: 0.0,
-            onDismiss: {},
-            content: { animateOut in
-            Button {
-                switch permissionState {
-                case .request:
-                    enableNotifications()
-                case .enabled:
-                    animateOut()
-                case .denied:
-                    openSettings()
-                }
-            } label: {
-                label
+        Button {
+            switch permissionState {
+            case .request:
+                enableNotifications()
+            case .enabled:
+                // No action needed - coordinator will handle state transition
+                break
+            case .denied:
+                openSettings()
             }
-            .convosButtonStyle(
-                .rounded(
-                    fullWidth: true,
-                    backgroundColor: buttonBackgroundColor
-                )
+        } label: {
+            label
+        }
+        .convosButtonStyle(
+            .rounded(
+                fullWidth: true,
+                backgroundColor: buttonBackgroundColor
             )
-        })
+        )
+        .transition(.blurReplace)
     }
 }
 

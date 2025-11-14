@@ -133,7 +133,7 @@ final class ConversationOnboardingCoordinatorTests: XCTestCase {
 
     func testDidTapSetupQuickname_MarksAsShown() async {
         await coordinator.start(for: testConversationId)
-        coordinator.didTapSetupQuickname()
+        coordinator.didTapProfilePhoto()
 
         let hasShown = UserDefaults.standard.bool(forKey: "hasShownQuicknameEditor")
         XCTAssertTrue(hasShown)
@@ -265,10 +265,20 @@ final class ConversationOnboardingCoordinatorTests: XCTestCase {
         switch coordinator.state {
         case .setupQuickname, .addQuickname:
             XCTAssertTrue(true, "Should show a quickname state for new conversation")
+        case .started:
+            XCTFail("Should be in started state")
+        case .presentingProfileSettings:
+            XCTFail("Should not present settings here")
+        case .savedAsQuicknameSuccess:
+            XCTFail("Should not skip to saved state")
+        case .quicknameLearnMore:
+            XCTFail("Should not skip to learn more")
         case .requestNotifications, .notificationsEnabled, .notificationsDenied:
             XCTFail("Should not skip to notifications for new conversation")
         case .idle:
             XCTFail("Should not be idle for new conversation")
+        case .settingUpQuickname:
+            XCTFail("Should not be setting up for new conversation")
         case .saveAsQuickname:
             XCTAssertTrue(true, "SaveAsQuickname is also a valid quickname state")
         }

@@ -111,6 +111,7 @@ final class ConversationsViewModel {
 
     private(set) var hasEarlyAccess: Bool {
         get {
+            return true
             UserDefaults.standard.bool(forKey: "hasEarlyAccess")
         }
         set {

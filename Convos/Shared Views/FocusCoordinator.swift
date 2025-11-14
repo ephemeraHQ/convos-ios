@@ -26,7 +26,6 @@ final class FocusCoordinator {
     /// The type of keyboard currently detected
     private(set) var keyboardType: KeyboardType = .unknown
 
-    /// The current horizontal size class - can change during app lifetime
     var horizontalSizeClass: UserInterfaceSizeClass? {
         didSet {
             // When size class changes, update current focus to match new default if appropriate
@@ -51,6 +50,10 @@ final class FocusCoordinator {
 
     /// The target focus for SwiftUI-initiated transitions
     private var swiftUITransitionTarget: MessagesViewInputFocus?
+
+    /// Tracks the focus state before transitioning
+    /// Used to return to the previous state when done editing in quickEditor context
+    private var previousFocus: MessagesViewInputFocus?
 
     // MARK: - Initialization
 
@@ -93,13 +96,17 @@ final class FocusCoordinator {
             // During onboarding, dismiss keyboard to show onboarding UI
             return nil
 
-        case (.displayName, .quickEditor):
-            // After editing display name, move to message field
-            return defaultFocus ?? .message
+        case (.displayName, .quickEditor),
+            (.conversationName, .quickEditor):
+            // In quickEditor context, return to whatever was focused before
+            // If nothing was tracked, fall back to message field or default
+            return previousFocus ?? defaultFocus ?? .message
 
-        case (.conversationName, .quickEditor),
-            (.conversationName, .conversationSettings):
-            // After editing conversation name, move to message field (or default)
+        case (.displayName, .editProfile):
+            return .message
+
+        case (.conversationName, .conversationSettings):
+            // After editing conversation name in settings, move to message field (or default)
             return defaultFocus ?? .message
 
         case (.message, .conversation):
@@ -117,7 +124,8 @@ final class FocusCoordinator {
 
     /// Programmatically move focus to a specific field
     func moveFocus(to focus: MessagesViewInputFocus?) {
-        Log.info("moveFocus called with: \(String(describing: focus))")
+        Log.info("moveFocus called with: \(String(describing: focus)), saving previous: \(String(describing: currentFocus))")
+        previousFocus = currentFocus
         beginProgrammaticTransition(to: focus)
         currentFocus = focus
     }
@@ -126,6 +134,24 @@ final class FocusCoordinator {
     func endEditing(for field: MessagesViewInputFocus, context: FocusTransitionContext = .quickEditor) {
         let nextFocus = nextFocus(after: field, context: context)
         Log.info("endEditing called for: \(field), context: \(context), next: \(String(describing: nextFocus))")
+
+        // Skip redundant work if already at target or transitioning to it
+        // This prevents duplicate transitions when syncFocusState(nil) has already handled the field submission
+        if currentFocus == nextFocus && !isProgrammaticTransition {
+            Log.info("Already at target focus \(String(describing: nextFocus)) - skipping endEditing")
+            previousFocus = nil
+            return
+        }
+
+        if isProgrammaticTransition && transitionTarget == nextFocus {
+            Log.info("Already transitioning to target focus \(String(describing: nextFocus)) - skipping endEditing")
+            previousFocus = nil
+            return
+        }
+
+        // Clear previousFocus after using it in nextFocus calculation
+        previousFocus = nil
+
         beginProgrammaticTransition(to: nextFocus)
         currentFocus = nextFocus
     }
@@ -203,11 +229,12 @@ final class FocusCoordinator {
             endProgrammaticTransition()
         }
 
+        // Save previous focus to allow returning to it after editing
+        previousFocus = currentFocus
+        Log.info("Beginning SwiftUI-initiated transition from \(String(describing: previousFocus)) to \(String(describing: target))")
+
         isSwiftUITransition = true
         swiftUITransitionTarget = target
-        Log.info("Beginning SwiftUI-initiated transition to: \(String(describing: target))")
-
-        // Update coordinator to match
         currentFocus = target
     }
 
@@ -241,6 +268,8 @@ final class FocusCoordinator {
         guard currentFocus == nil || currentFocus == .message else {
             return
         }
+
+        Log.info("Updating focus for size class change: \(String(describing: horizontalSizeClass))")
 
         // Update to the new default based on new size class
         let newDefault = defaultFocus
@@ -345,15 +374,14 @@ final class FocusCoordinator {
         keyboardType = newKeyboardType
 
         // If keyboard type changed, update current focus to match new default
-        // Only do this if we're currently at nil or .message
+        // Only do this if we're currently at nil
         // Don't interrupt active editing of displayName or conversationName
-        if currentFocus == nil {
-            let newDefault = defaultFocus
+        guard currentFocus == nil else { return }
+        let newDefault = defaultFocus
 
-            Log.info("Keyboard type changed: \(previousKeyboardType) → \(newKeyboardType), updating focus to: \(String(describing: newDefault))")
-            beginProgrammaticTransition(to: newDefault)
-            currentFocus = newDefault
-        }
+        Log.info("Keyboard type changed: \(previousKeyboardType) → \(newKeyboardType), updating focus to: \(String(describing: newDefault))")
+        beginProgrammaticTransition(to: newDefault)
+        currentFocus = newDefault
     }
 }
 

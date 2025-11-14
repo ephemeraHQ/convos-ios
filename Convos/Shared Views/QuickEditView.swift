@@ -20,7 +20,7 @@ struct QuickEditView: View {
     let onSubmit: () -> Void
     let onSettings: () -> Void
 
-    private let textFieldDelegate: TextFieldDelegate = .init()
+    @State private var textFieldDelegate: TextFieldDelegate = .init()
 
     var body: some View {
         HStack {

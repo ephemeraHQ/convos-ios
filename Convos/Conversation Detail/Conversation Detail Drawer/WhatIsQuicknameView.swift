@@ -1,39 +1,32 @@
 import SwiftUI
 
 struct WhatIsQuicknameView: View {
-    let onManage: () -> Void
+    let onContinue: () -> Void
     @Environment(\.dismiss) var dismiss: DismissAction
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignConstants.Spacing.step4x) {
-            Text("Real life is off the record.™")
+            Text("Infinite identities")
                 .font(.caption)
                 .foregroundColor(.colorTextSecondary)
             Text("Quickname")
                 .font(.system(.largeTitle))
                 .fontWeight(.bold)
-            Text("Quickly re-use your favorite name and pic in new convos you join.")
+            Text("You're a new you in every convo, and your Quickname lets you instantly reuse a favorite name and pic across convos.")
                 .font(.body)
                 .foregroundStyle(.colorTextPrimary)
 
-            Text("You’re always anonymous by default, with the option to use your quickname.")
+            Text("You're always anonymous by default, with the option to use your quickname.")
                 .font(.body)
                 .foregroundStyle(.colorTextSecondary)
 
             VStack(spacing: DesignConstants.Spacing.step2x) {
                 Button {
-                    dismiss()
+                    onContinue()
                 } label: {
-                    Text("Got it")
+                    Text("Continue")
                 }
                 .convosButtonStyle(.rounded(fullWidth: true))
-
-                Button {
-                    onManage()
-                } label: {
-                    Text("Manage")
-                }
-                .convosButtonStyle(.text)
             }
             .padding(.top, DesignConstants.Spacing.step4x)
         }

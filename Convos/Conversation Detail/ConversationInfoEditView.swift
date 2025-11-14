@@ -4,7 +4,7 @@ import SwiftUI
 
 struct ConversationInfoEditView: View {
     @Bindable var viewModel: ConversationViewModel
-    let focusCoordinator: FocusCoordinator?
+    let focusCoordinator: FocusCoordinator
 
     @Environment(\.dismiss) private var dismiss: DismissAction
 
@@ -84,6 +84,6 @@ struct ConversationInfoEditView: View {
 }
 
 #Preview {
-    @Previewable @State var focusCoordinator: FocusCoordinator? = FocusCoordinator(horizontalSizeClass: nil)
+    @Previewable @State var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
     ConversationInfoEditView(viewModel: .mock, focusCoordinator: focusCoordinator)
 }

@@ -60,7 +60,7 @@ struct FeatureRowItem<AccessoryView: View>: View {
 
 struct ConversationInfoView: View {
     @Bindable var viewModel: ConversationViewModel
-    let focusCoordinator: FocusCoordinator?
+    let focusCoordinator: FocusCoordinator
 
     @Environment(\.dismiss) private var dismiss: DismissAction
     @State private var showingExplodeConfirmation: Bool = false
@@ -375,6 +375,6 @@ struct DebugLogsTextView: View {
 
 #Preview {
     @Previewable @State var viewModel: ConversationViewModel = .mock
-    @Previewable @State var focusCoordinator: FocusCoordinator? = FocusCoordinator(horizontalSizeClass: nil)
+    @Previewable @State var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
     ConversationInfoView(viewModel: viewModel, focusCoordinator: focusCoordinator)
 }

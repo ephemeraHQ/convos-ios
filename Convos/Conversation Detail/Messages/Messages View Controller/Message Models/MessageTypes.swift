@@ -5,32 +5,31 @@ import UIKit
 
 struct DateGroup: Hashable {
     var date: Date
-    var value: String {
-        MessagesDateFormatter.shared.string(from: date)
-    }
+    var value: String
 
     init(date: Date) {
         self.date = date
+        self.value = MessagesDateFormatter.shared.string(from: date)
     }
 }
 
 extension ConversationUpdate: @retroactive Differentiable {
     public var differenceIdentifier: Int {
-        hashValue
+        summary.hashValue
     }
 
     public func isContentEqual(to source: ConversationUpdate) -> Bool {
-        self == source
+        self.summary == source.summary
     }
 }
 
 extension DateGroup: Differentiable {
     var differenceIdentifier: Int {
-        hashValue
+        value.hashValue
     }
 
     func isContentEqual(to source: DateGroup) -> Bool {
-        self == source
+        self.value == source.value
     }
 }
 

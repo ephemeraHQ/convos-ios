@@ -242,9 +242,8 @@ class ConversationViewModel {
 
     // MARK: - Public
 
-    func startOnboarding(delay: CGFloat = 1.5) {
+    func startOnboarding() {
         Task { @MainActor in
-            try? await Task.sleep(for: .seconds(delay))
             await onboardingCoordinator.start(
                 for: conversation.clientId
             )
@@ -258,11 +257,11 @@ class ConversationViewModel {
         }
     }
 
-    func onConversationInfoTap(focusCoordinator: FocusCoordinator?) {
-        focusCoordinator?.moveFocus(to: .conversationName)
+    func onConversationInfoTap(focusCoordinator: FocusCoordinator) {
+        focusCoordinator.moveFocus(to: .conversationName)
     }
 
-    func onConversationNameEndedEditing(focusCoordinator: FocusCoordinator?, context: FocusTransitionContext) {
+    func onConversationNameEndedEditing(focusCoordinator: FocusCoordinator, context: FocusTransitionContext) {
         let trimmedConversationName = editingConversationName.trimmingCharacters(in: .whitespacesAndNewlines)
         editingConversationName = trimmedConversationName
 
@@ -314,15 +313,15 @@ class ConversationViewModel {
         }
 
         // Delegate focus transition to coordinator
-        focusCoordinator?.endEditing(for: .conversationName, context: context)
+        focusCoordinator.endEditing(for: .conversationName, context: context)
     }
 
-    func onConversationSettings(focusCoordinator: FocusCoordinator?) {
+    func onConversationSettings(focusCoordinator: FocusCoordinator) {
         presentingConversationSettings = true
-        focusCoordinator?.moveFocus(to: nil)
+        focusCoordinator.moveFocus(to: nil)
     }
 
-    func onConversationSettingsDismissed(focusCoordinator: FocusCoordinator?) {
+    func onConversationSettingsDismissed(focusCoordinator: FocusCoordinator) {
         onConversationNameEndedEditing(focusCoordinator: focusCoordinator, context: .conversationSettings)
         presentingConversationSettings = false
     }
@@ -334,20 +333,20 @@ class ConversationViewModel {
         editingDescription = conversation.description ?? ""
     }
 
-    func onProfilePhotoTap(focusCoordinator: FocusCoordinator?) {
-        focusCoordinator?.moveFocus(to: .displayName)
+    func onProfilePhotoTap(focusCoordinator: FocusCoordinator) {
+        focusCoordinator.moveFocus(to: .displayName)
     }
 
-    func onProfileSettingsDismissed(focusCoordinator: FocusCoordinator?) {
-        onDisplayNameEndedEditing(focusCoordinator: focusCoordinator)
+    func onProfileSettingsDismissed(focusCoordinator: FocusCoordinator) {
+        onDisplayNameEndedEditing(focusCoordinator: focusCoordinator, context: .editProfile)
         presentingProfileSettings = false
     }
 
-    func onSendMessage(focusCoordinator: FocusCoordinator?) {
+    func onSendMessage(focusCoordinator: FocusCoordinator) {
         guard !messageText.isEmpty else { return }
         let prevMessageText = messageText
         messageText = ""
-        focusCoordinator?.endEditing(for: .message, context: .conversation)
+        focusCoordinator.endEditing(for: .message, context: .conversation)
         Task { [weak self] in
             guard let self else { return }
             do {
@@ -362,10 +361,6 @@ class ConversationViewModel {
         myProfileViewModel.update(using: profile, profileImage: profileImage, conversationId: conversation.id)
     }
 
-    func onSaveAsQuickname(_ profile: Profile) {
-        onProfileSettings()
-    }
-
     func onTapMessage(_ message: AnyMessage) {
     }
 
@@ -373,22 +368,24 @@ class ConversationViewModel {
         presentingProfileForMember = message.base.sender
     }
 
-    func onDisplayNameEndedEditing(focusCoordinator: FocusCoordinator?) {
-        // Determine context based on onboarding state
-        let context: FocusTransitionContext = onboardingCoordinator.isSettingUpQuickname
-            ? .onboardingQuickname
-        : .quickEditor
-
-        // Handle business logic
+    func onDisplayNameEndedEditing(focusCoordinator: FocusCoordinator, context: FocusTransitionContext) {
         myProfileViewModel.onEndedEditing(for: conversation.id)
 
+        // Forward profile editing completion to onboarding coordinator
         let didChangeProfile = !profile.displayName.isEmpty || profileImage != nil
-        if didChangeProfile {
-            onboardingCoordinator.didChangeProfile(profile: profile)
-        }
+        let isSavingAsQuickname = myProfileViewModel.saveDisplayNameAsQuickname
+        onboardingCoordinator.handleDisplayNameEndedEditing(
+            profile: profile,
+            didChangeProfile: didChangeProfile,
+            isSavingAsQuickname: isSavingAsQuickname
+        )
 
         // Delegate focus transition to coordinator
-        focusCoordinator?.endEditing(for: .displayName, context: context)
+        if onboardingCoordinator.isSettingUpQuickname {
+            focusCoordinator.endEditing(for: .displayName, context: .onboardingQuickname)
+        } else {
+            focusCoordinator.endEditing(for: .displayName, context: context)
+        }
     }
 
     func onProfileSettings() {
