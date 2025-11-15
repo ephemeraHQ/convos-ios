@@ -325,7 +325,14 @@ final class ConversationsViewModel {
         conversationsRepository.conversationsPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] conversations in
-                self?.conversations = conversations
+                guard let self else { return }
+                self.conversations = conversations
+
+                // Clear selection if selected conversation no longer exists
+                if let selectedId = _selectedConversationId,
+                   !conversations.contains(where: { $0.id == selectedId }) {
+                    _selectedConversationId = nil
+                }
             }
             .store(in: &cancellables)
     }
