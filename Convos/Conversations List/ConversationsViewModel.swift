@@ -11,59 +11,69 @@ final class ConversationsViewModel {
 
     private(set) var focusCoordinator: FocusCoordinator
 
+    // MARK: - Selection State
+
+    // Single source of truth for selection
+    @ObservationIgnored
+    private var _selectedConversationId: String? {
+        didSet {
+            updateSelectionState()
+        }
+    }
+
+    // for selection binding
+    var selectedConversationId: Conversation.ID? {
+        get { _selectedConversationId }
+        set {
+            guard _selectedConversationId != newValue else { return }
+            _selectedConversationId = newValue
+        }
+    }
+
+    // Computed property derived from selectedConversationId
     var selectedConversation: Conversation? {
         get {
-            selectedConversationViewModel?.conversation
+            guard let id = _selectedConversationId else { return nil }
+            return conversations.first(where: { $0.id == id })
         }
         set {
-            if let selectedConversation = newValue {
+            selectedConversationId = newValue?.id
+        }
+    }
+
+    private(set) var selectedConversationViewModel: ConversationViewModel?
+
+    // Called whenever _selectedConversationId changes
+    private func updateSelectionState() {
+        let conversation = selectedConversation
+
+        if let conversation = conversation {
+            // Update view model if needed
+            if selectedConversationViewModel?.conversation.id != conversation.id {
                 selectedConversationViewModel = ConversationViewModel(
-                    conversation: selectedConversation,
+                    conversation: conversation,
                     session: session
                 )
-                markConversationAsRead(selectedConversation)
-                // Sync the ID for List selection binding (using private setter to avoid circular dependency)
-                _selectedConversationId = selectedConversation.id
-            } else {
-                selectedConversationViewModel = nil
-                _selectedConversationId = nil
+                markConversationAsRead(conversation)
             }
-
-            // Notify that active conversation has changed
-            let userInfo: [AnyHashable: Any]
-            if let newConversationId = newValue?.id {
-                userInfo = ["conversationId": newConversationId]
-            } else {
-                userInfo = [:]
-            }
-            NotificationCenter.default.post(
-                name: .activeConversationChanged,
-                object: nil,
-                userInfo: userInfo
-            )
+        } else {
+            selectedConversationViewModel = nil
         }
+
+        // Notify that active conversation has changed
+        let userInfo: [AnyHashable: Any]
+        if let conversationId = _selectedConversationId {
+            userInfo = ["conversationId": conversationId]
+        } else {
+            userInfo = [:]
+        }
+        NotificationCenter.default.post(
+            name: .activeConversationChanged,
+            object: nil,
+            userInfo: userInfo
+        )
     }
 
-    var selectedConversationId: Conversation.ID? {
-        get {
-            _selectedConversationId
-        }
-        set {
-            // Find the conversation by ID and update selectedConversation
-            if let id = newValue,
-               let conversation = conversations.first(where: { $0.id == id }) {
-                _selectedConversationId = id
-                selectedConversation = conversation
-            } else {
-                _selectedConversationId = nil
-                selectedConversation = nil
-            }
-        }
-    }
-
-    // Private backing store for selectedConversationId to break circular dependency
-    private var _selectedConversationId: String?
-    private(set) var selectedConversationViewModel: ConversationViewModel?
     var newConversationViewModel: NewConversationViewModel? {
         didSet {
             if newConversationViewModel == nil {
@@ -189,7 +199,6 @@ final class ConversationsViewModel {
             let viewModel = await NewConversationViewModel.create(
                 session: session,
                 autoCreateConversation: true,
-                delegate: self
             )
             await MainActor.run {
                 self.newConversationViewModel = viewModel
@@ -208,7 +217,6 @@ final class ConversationsViewModel {
             let viewModel = await NewConversationViewModel.create(
                 session: session,
                 showingFullScreenScanner: true,
-                delegate: self
             )
             await MainActor.run {
                 self.newConversationViewModel = viewModel
@@ -226,7 +234,6 @@ final class ConversationsViewModel {
             guard let self else { return }
             let viewModel = await NewConversationViewModel.create(
                 session: session,
-                delegate: self
             )
             viewModel.joinConversation(inviteCode: inviteCode)
             await MainActor.run {
@@ -331,10 +338,9 @@ final class ConversationsViewModel {
             return
         }
 
-        Log
-            .info(
-                "Handling conversation notification tap for inboxId: \(inboxId), conversationId: \(conversationId)"
-            )
+        Log.info(
+            "Handling conversation notification tap for inboxId: \(inboxId), conversationId: \(conversationId)"
+        )
 
         if let conversation = conversations.first(where: { $0.id == conversationId }) {
             Log.info("Found conversation, selecting it")
@@ -384,23 +390,6 @@ final class ConversationsViewModel {
                 Log.warning("Failed marking conversation as read: \(error.localizedDescription)")
             }
         }
-    }
-}
-
-extension ConversationsViewModel: NewConversationsViewModelDelegate {
-    func newConversationsViewModel(
-        _ viewModel: NewConversationViewModel,
-        attemptedJoiningExistingConversationWithId conversationId: String
-    ) {
-        // stop showing new convo view
-        newConversationViewModel = nil
-
-        guard let conversation = conversations.first(where: { $0.id == conversationId }) else {
-            return
-        }
-
-        // Already on MainActor due to @MainActor protocol conformance
-        selectedConversation = conversation
     }
 }
 

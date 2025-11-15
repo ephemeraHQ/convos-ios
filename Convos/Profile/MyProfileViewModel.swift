@@ -98,15 +98,6 @@ class MyProfileViewModel {
         }
     }
 
-//    func updateProfileWithLatest(for conversationId: String) {
-//        if let latest = try? myProfileRepository.fetch(),
-//           let latestName = latest.name,
-//           !latestName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-//            editingDisplayName = latestName
-//        }
-//        onEndedEditing(for: conversationId)
-//    }
-
     func onEndedEditing(for conversationId: String) {
         let trimmedDisplayName = editingDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
         let latestProfile = try? myProfileRepository.fetch()
