@@ -290,6 +290,8 @@ class NewConversationViewModel: Identifiable {
             conversationViewModel.startOnboarding()
             if result.origin == .joined {
                 conversationViewModel.inviteWasAccepted()
+            } else {
+                conversationViewModel.isWaitingForInviteAcceptance = false
             }
             conversationViewModel.showsInfoView = true
             messagesTopBarTrailingItemEnabled = true
@@ -367,6 +369,7 @@ class NewConversationViewModel: Identifiable {
             messagesTopBarTrailingItem = .share
             shouldConfirmDeletingConversation = false
             conversationViewModel.untitledConversationPlaceholder = "Untitled"
+            conversationViewModel.inviteWasAccepted()
         }
         .store(in: &cancellables)
     }

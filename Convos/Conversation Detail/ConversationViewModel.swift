@@ -251,7 +251,6 @@ class ConversationViewModel {
     }
 
     func inviteWasAccepted() {
-        isWaitingForInviteAcceptance = false
         Task { @MainActor in
             await onboardingCoordinator.inviteWasAccepted(for: conversation.clientId)
         }

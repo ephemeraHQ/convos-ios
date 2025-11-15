@@ -385,10 +385,13 @@ final class ConversationOnboardingCoordinator {
         // No longer waiting for invite
         isWaitingForInviteAcceptance = false
 
-        // If we're idle (not in an active flow), start notification flow
-        if case .idle = state {
+        // If we're not in an active flow, start notification flow
+        switch state {
+        case .idle, .started:
             // Start notification flow, then quickname
             await startNotificationFlow(for: clientId)
+        default:
+            break
         }
     }
 
