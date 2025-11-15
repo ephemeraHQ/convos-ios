@@ -21,7 +21,6 @@ struct MessagesBottomBar: View {
     let onDisplayNameEndedEditing: () -> Void
     let onProfileSettings: () -> Void
 
-    @State private var progress: CGFloat = 0.0
     @State private var isExpanded: Bool = false
     @Namespace private var namespace: Namespace.ID
 

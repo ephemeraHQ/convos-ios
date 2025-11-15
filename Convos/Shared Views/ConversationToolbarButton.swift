@@ -49,7 +49,7 @@ struct ConversationToolbarButton: View {
                 VStack(alignment: .leading, spacing: 0.0) {
                     Text(title)
                         .lineLimit(1)
-                        .frame(maxWidth: 180.0)
+                        .frame(maxWidth: 140.0)
                         .font(.callout.weight(.medium))
                         .truncationMode(.tail)
                         .foregroundStyle(.colorTextPrimary)
@@ -61,7 +61,7 @@ struct ConversationToolbarButton: View {
                 }
                 .padding(.horizontal, DesignConstants.Spacing.step2x)
             }
-            .compositingGroup()
+            .padding(DesignConstants.Spacing.step2x)
         }
     }
 }
