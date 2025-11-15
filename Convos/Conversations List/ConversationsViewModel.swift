@@ -46,6 +46,7 @@ final class ConversationsViewModel {
     // Called whenever _selectedConversationId changes
     private func updateSelectionState() {
         let conversation = selectedConversation
+        let previousViewModelId = selectedConversationViewModel?.conversation.id
 
         if let conversation = conversation {
             // Update view model if needed
@@ -60,18 +61,20 @@ final class ConversationsViewModel {
             selectedConversationViewModel = nil
         }
 
-        // Notify that active conversation has changed
-        let userInfo: [AnyHashable: Any]
-        if let conversationId = _selectedConversationId {
-            userInfo = ["conversationId": conversationId]
-        } else {
-            userInfo = [:]
+        // Only post notification if the ID actually changed
+        if previousViewModelId != _selectedConversationId {
+            let userInfo: [AnyHashable: Any]
+            if let conversationId = _selectedConversationId {
+                userInfo = ["conversationId": conversationId]
+            } else {
+                userInfo = [:]
+            }
+            NotificationCenter.default.post(
+                name: .activeConversationChanged,
+                object: nil,
+                userInfo: userInfo
+            )
         }
-        NotificationCenter.default.post(
-            name: .activeConversationChanged,
-            object: nil,
-            userInfo: userInfo
-        )
     }
 
     var newConversationViewModel: NewConversationViewModel? {
@@ -331,7 +334,7 @@ final class ConversationsViewModel {
                 // Clear selection if selected conversation no longer exists
                 if let selectedId = _selectedConversationId,
                    !conversations.contains(where: { $0.id == selectedId }) {
-                    _selectedConversationId = nil
+                    selectedConversationId = nil
                 }
             }
             .store(in: &cancellables)
