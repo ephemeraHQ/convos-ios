@@ -177,27 +177,27 @@ struct MessageInviteView: View {
                         .aspectRatio(contentMode: .fill)
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 120.0)
+            .frame(maxWidth: 280.0, minHeight: 120.0)
             .background(.colorBackgroundInverted)
 
             VStack(alignment: .leading, spacing: 2.0) {
                 Text(title)
                     .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .truncationMode(.tail)
                     .foregroundStyle(.black)
-                    .multilineTextAlignment(.leading)
-                    .font(.body)
+                    .font(.callout.weight(.bold))
                     .fontWeight(.bold)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 Text(description)
                     .font(.subheadline)
                     .foregroundStyle(.colorTextSecondary)
             }
             .padding(.vertical, DesignConstants.Spacing.step3x)
             .padding(.horizontal, DesignConstants.Spacing.step4x)
+            .frame(maxWidth: 248.0)
         }
         .background(.colorLinkBackground)
-        .frame(maxWidth: 250.0)
+        .frame(maxWidth: 280.0)
         .cachedImage(for: invite) { image in
             cachedImage = image
         }
