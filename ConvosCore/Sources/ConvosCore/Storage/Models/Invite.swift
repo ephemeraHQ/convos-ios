@@ -20,6 +20,15 @@ public extension Invite {
         )
     }
 
+    static func empty(conversationId: String) -> Self {
+        .init(
+            conversationId: conversationId,
+            urlSlug: "",
+            expiresAt: nil,
+            expiresAfterUse: false
+        )
+    }
+
     var isEmpty: Bool {
         urlSlug.isEmpty
     }

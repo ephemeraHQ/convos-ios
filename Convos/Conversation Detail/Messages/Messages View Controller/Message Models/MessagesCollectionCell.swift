@@ -50,7 +50,7 @@ extension MessagesCollectionCell: Differentiable {
         case let .date(group):
             group.differenceIdentifier
         case let .invite(invite):
-            invite.hashValue
+            invite.differenceIdentifier
         case let .conversationInfo(conversation):
             conversation.id.hashValue
         }

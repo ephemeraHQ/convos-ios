@@ -366,9 +366,9 @@ extension MessagesViewController {
             return cells
         }
 
-        if conversation.creator.isCurrentUser && !invite.isEmpty {
+        if conversation.creator.isCurrentUser {
             cells.insert(.invite(invite), at: 0)
-        } else if !conversation.creator.isCurrentUser {
+        } else {
             cells.insert(.conversationInfo(conversation), at: 0)
         }
 
