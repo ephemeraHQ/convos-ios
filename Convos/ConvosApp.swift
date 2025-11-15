@@ -18,7 +18,12 @@ struct ConvosApp: App {
         // only enable LibXMTP logging in non-production environments
         if !environment.isProduction {
             Log.info("Activating LibXMTP Log Writer...")
-            Client.activatePersistentLibXMTPLogWriter(logLevel: .debug, rotationSchedule: .hourly, maxFiles: 10)
+            Client.activatePersistentLibXMTPLogWriter(
+                logLevel: .debug,
+                rotationSchedule: .hourly,
+                maxFiles: 10,
+                processType: .main
+            )
         }
         Log.info("App starting with environment: \(environment)")
 
