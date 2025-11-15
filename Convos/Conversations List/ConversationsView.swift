@@ -169,13 +169,12 @@ struct ConversationsView: View {
                 viewModel: newConvoViewModel,
                 presentingFullScreen: true
             )
-                .background(.colorBackgroundPrimary)
-                .interactiveDismissDisabled()
-                .navigationTransition(
-                    .zoom(
-                        sourceID: "composer-transition-source",
-                        in: namespace
-                    )
+            .background(.colorBackgroundPrimary)
+            .interactiveDismissDisabled()
+            .navigationTransition(
+                .zoom(
+                    sourceID: "composer-transition-source",
+                    in: namespace
                 )
             )
         }
