@@ -43,6 +43,7 @@ struct ConversationView<MessagesBottomBar: View>: View {
             },
             onTapMessage: viewModel.onTapMessage(_:),
             onTapAvatar: viewModel.onTapAvatar(_:),
+            onTapInvite: viewModel.onTapInvite(_:),
             onDisplayNameEndedEditing: {
                 viewModel.onDisplayNameEndedEditing(focusCoordinator: focusCoordinator, context: .quickEditor)
             },
@@ -108,6 +109,11 @@ struct ConversationView<MessagesBottomBar: View>: View {
                     .disabled(!messagesTopBarTrailingItemEnabled)
                 }
             }
+        }
+        .sheet(item: $viewModel.presentingNewConversationForInvite) { viewModel in
+            NewConversationView(viewModel: viewModel, presentingFullScreen: false)
+                .background(.colorBackgroundPrimary)
+                .interactiveDismissDisabled()
         }
         .sheet(item: $viewModel.presentingProfileForMember) { member in
             NavigationStack {

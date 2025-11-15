@@ -188,8 +188,7 @@ final class ConversationsViewModel {
             guard let self else { return }
             let viewModel = await NewConversationViewModel.create(
                 session: session,
-                autoCreateConversation: true,
-                delegate: self
+                autoCreateConversation: true
             )
             await MainActor.run {
                 self.newConversationViewModel = viewModel
@@ -207,8 +206,7 @@ final class ConversationsViewModel {
             guard let self else { return }
             let viewModel = await NewConversationViewModel.create(
                 session: session,
-                showingFullScreenScanner: true,
-                delegate: self
+                showingFullScreenScanner: true
             )
             await MainActor.run {
                 self.newConversationViewModel = viewModel
@@ -225,8 +223,7 @@ final class ConversationsViewModel {
         newConversationViewModelTask = Task { [weak self] in
             guard let self else { return }
             let viewModel = await NewConversationViewModel.create(
-                session: session,
-                delegate: self
+                session: session
             )
             viewModel.joinConversation(inviteCode: inviteCode)
             await MainActor.run {
@@ -384,23 +381,6 @@ final class ConversationsViewModel {
                 Log.warning("Failed marking conversation as read: \(error.localizedDescription)")
             }
         }
-    }
-}
-
-extension ConversationsViewModel: NewConversationsViewModelDelegate {
-    func newConversationsViewModel(
-        _ viewModel: NewConversationViewModel,
-        attemptedJoiningExistingConversationWithId conversationId: String
-    ) {
-        // stop showing new convo view
-        newConversationViewModel = nil
-
-        guard let conversation = conversations.first(where: { $0.id == conversationId }) else {
-            return
-        }
-
-        // Already on MainActor due to @MainActor protocol conformance
-        selectedConversation = conversation
     }
 }
 

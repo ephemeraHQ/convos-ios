@@ -112,6 +112,7 @@ final class MessagesViewController: UIViewController {
         super.init(nibName: nil, bundle: nil)
     }
 
+    var onTapInvite: ((MessageInvite) -> Void)?
     var onTapMessage: ((AnyMessage) -> Void)?
     var onTapAvatar: ((AnyMessage) -> Void)?
 
@@ -211,6 +212,10 @@ final class MessagesViewController: UIViewController {
             if case .message(let message, _) = cell {
                 self.onTapAvatar?(message)
             }
+        }
+        dataSource.onTapInvite = { [weak self] invite in
+            guard let self = self else { return }
+            self.onTapInvite?(invite)
         }
     }
 

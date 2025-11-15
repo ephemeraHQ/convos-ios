@@ -113,6 +113,7 @@ class ConversationViewModel {
     var presentingConversationSettings: Bool = false
     var presentingProfileSettings: Bool = false
     var presentingProfileForMember: ConversationMember?
+    var presentingNewConversationForInvite: NewConversationViewModel?
     var presentingConversationForked: Bool = false
 
     // MARK: - Onboarding
@@ -126,6 +127,9 @@ class ConversationViewModel {
             onboardingCoordinator.isWaitingForInviteAcceptance = newValue
         }
     }
+
+    @ObservationIgnored
+    private var joinFromInviteTask: Task<Void, Never>?
 
     // MARK: - Init
 
@@ -365,6 +369,20 @@ class ConversationViewModel {
 
     func onTapAvatar(_ message: AnyMessage) {
         presentingProfileForMember = message.base.sender
+    }
+
+    func onTapInvite(_ invite: MessageInvite) {
+        joinFromInviteTask?.cancel()
+        joinFromInviteTask = Task { [weak self] in
+            guard let self else { return }
+            let viewModel = await NewConversationViewModel.create(
+                session: session
+            )
+            viewModel.joinConversation(inviteCode: invite.inviteSlug)
+            await MainActor.run {
+                self.presentingNewConversationForInvite = viewModel
+            }
+        }
     }
 
     func onDisplayNameEndedEditing(focusCoordinator: FocusCoordinator, context: FocusTransitionContext) {

@@ -33,6 +33,7 @@ struct ConversationsView: View {
         ConversationInfoPresenter(
             viewModel: viewModel.selectedConversationViewModel,
             focusCoordinator: focusCoordinator,
+            insetsTopSafeArea: true,
             sidebarColumnWidth: $sidebarWidth
         ) { focusState, coordinator in
             NavigationSplitView {
@@ -165,7 +166,8 @@ struct ConversationsView: View {
         }
         .fullScreenCover(item: $viewModel.newConversationViewModel) { newConvoViewModel in
             NewConversationView(
-                viewModel: newConvoViewModel
+                viewModel: newConvoViewModel,
+                presentingFullScreen: true
             )
             .background(.colorBackgroundPrimary)
             .interactiveDismissDisabled()

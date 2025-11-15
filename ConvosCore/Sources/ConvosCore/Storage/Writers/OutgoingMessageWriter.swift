@@ -53,6 +53,28 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
         try await databaseWriter.write { [weak self] db in
             guard let self else { return }
 
+            let invite: MessageInvite?
+            if let url = URL(string: text),
+               let inviteCode = url.convosInviteCode,
+               let signedInvite = try? SignedInvite.fromInviteCode(inviteCode) {
+                let imageURL: URL?
+                if let image = signedInvite.imageURL {
+                    imageURL = URL(string: image)
+                } else {
+                    imageURL = nil
+                }
+                invite = MessageInvite(
+                    inviteSlug: inviteCode,
+                    conversationName: signedInvite.name,
+                    conversationDescription: signedInvite.description_p,
+                    imageURL: imageURL,
+                    expiresAt: signedInvite.expiresAt,
+                    conversationExpiresAt: signedInvite.conversationExpiresAt
+                )
+            } else {
+                invite = nil
+            }
+
             let localMessage = DBMessage(
                 id: clientMessageId,
                 clientMessageId: clientMessageId,
@@ -62,9 +84,10 @@ class OutgoingMessageWriter: OutgoingMessageWriterProtocol {
                 date: date,
                 status: .unpublished,
                 messageType: .original,
-                contentType: .text,
+                contentType: invite == nil ? .text : .invite,
                 text: text,
                 emoji: nil,
+                invite: invite,
                 sourceMessageId: nil,
                 attachmentUrls: [],
                 update: nil

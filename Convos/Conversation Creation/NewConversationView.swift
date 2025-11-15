@@ -3,7 +3,7 @@ import SwiftUI
 
 struct NewConversationView: View {
     let viewModel: NewConversationViewModel
-
+    let presentingFullScreen: Bool
     @State private var hasShownScannerOnAppear: Bool = false
     @State private var presentingDeleteConfirmation: Bool = false
     @State private var presentingJoiningStateInfo: Bool = false
@@ -17,6 +17,7 @@ struct NewConversationView: View {
         ConversationInfoPresenter(
             viewModel: viewModel.conversationViewModel,
             focusCoordinator: focusCoordinator,
+            insetsTopSafeArea: presentingFullScreen,
             sidebarColumnWidth: $sidebarWidth
         ) { focusState, coordinator in
             NavigationStack {
@@ -109,7 +110,8 @@ struct NewConversationView: View {
     }
     .fullScreenCover(isPresented: $presented) {
         NewConversationView(
-            viewModel: viewModel
+            viewModel: viewModel,
+            presentingFullScreen: true
         )
     }
 }

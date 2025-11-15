@@ -3,7 +3,7 @@ import Foundation
 extension DBMessage {
     func hydrateMessagePreview(conversationKind: ConversationKind) -> MessagePreview {
         let text: String
-        let senderString: String = "Sender "
+        let senderString: String = "Someone "
         let optionalSender: String = conversationKind == .group ? senderString : ""
         let attachmentsCount = attachmentUrls.count
         let attachmentsString = attachmentsCount <= 1 ? "a photo" : "\(attachmentsCount) photos"
@@ -12,33 +12,39 @@ extension DBMessage {
         case .original:
             switch contentType {
             case .attachments:
-                text = "\(optionalSender)sent \(attachmentsString)".capitalized
+                text = "\(optionalSender)sent \(attachmentsString)"
             case .text, .emoji:
                 text = self.text ?? ""
             case .update:
                 text = ""
+            case .invite:
+                text = "\(optionalSender)sent an invite"
             }
 
         case .reply:
             let originalMessage: String = "original"
             switch contentType {
             case .attachments:
-                text = "\(optionalSender)replied with \(attachmentsString)".capitalized
+                text = "\(optionalSender)replied with \(attachmentsString)"
             case .text, .emoji:
-                text = "\(optionalSender)replied: \(self.text ?? "") to \"\(originalMessage)\"".capitalized
+                text = "\(optionalSender)replied: \(self.text ?? "") to \"\(originalMessage)\""
             case .update:
                 text = ""
+            case .invite:
+                text = "\(optionalSender)replied with an invite"
             }
 
         case .reaction:
             let originalMessage: String = "original"
             switch contentType {
             case .attachments:
-                text = "\(optionalSender)sent \(attachmentsString)".capitalized
+                text = "\(optionalSender)sent \(attachmentsString)"
             case .text, .emoji:
-                text = "\(senderString)\(emoji ?? "")'d \(originalMessage)".capitalized
+                text = "\(senderString)\(emoji ?? "")'d \(originalMessage)"
             case .update:
                 text = ""
+            case .invite:
+                text = "\(optionalSender)\(emoji ?? "")'d an invite"
             }
         }
         return .init(text: text, createdAt: date)
