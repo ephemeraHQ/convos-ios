@@ -20,6 +20,55 @@ struct MessagesGroup: Identifiable, Equatable {
     }
 }
 
+// MARK: - Mock Data
+extension MessagesGroup {
+    static var mockIncoming: MessagesGroup {
+        let sender = ConversationMember.mock(isCurrentUser: false)
+        let messages: [AnyMessage] = [
+            .message(Message.mock(text: "Hey there!", sender: sender, status: .published)),
+            .message(Message.mock(text: "How are you doing today?", sender: sender, status: .published)),
+            .message(Message.mock(text: "Let me know when you're free", sender: sender, status: .published))
+        ]
+        return MessagesGroup(
+            id: "mock-incoming-group",
+            sender: sender,
+            messages: messages,
+            unpublished: []
+        )
+    }
+
+    static var mockOutgoing: MessagesGroup {
+        let sender = ConversationMember.mock(isCurrentUser: true)
+        let messages: [AnyMessage] = [
+            .message(Message.mock(text: "I'm doing great!", sender: sender, status: .published)),
+            .message(Message.mock(text: "Thanks for asking 😊", sender: sender, status: .published))
+        ]
+        return MessagesGroup(
+            id: "mock-outgoing-group",
+            sender: sender,
+            messages: messages,
+            unpublished: []
+        )
+    }
+
+    static var mockMixed: MessagesGroup {
+        let sender = ConversationMember.mock(isCurrentUser: true)
+        let published: [AnyMessage] = [
+            .message(Message.mock(text: "Here's my first message", sender: sender, status: .published)),
+            .message(Message.mock(text: "And another one", sender: sender, status: .published))
+        ]
+        let unpublished: [AnyMessage] = [
+            .message(Message.mock(text: "This one is still sending...", sender: sender, status: .unpublished))
+        ]
+        return MessagesGroup(
+            id: "mock-mixed-group",
+            sender: sender,
+            messages: published,
+            unpublished: unpublished
+        )
+    }
+}
+
 enum MessagesListItemType: Identifiable, Equatable {
     /// Shows metadata changes, new members being added, etc
     /// Ex: "Louis joined by invitation"
@@ -50,5 +99,38 @@ enum MessagesListItemType: Identifiable, Equatable {
         default:
             return false
         }
+    }
+}
+
+// MARK: - Mock Data for MessagesListItemType
+extension MessagesListItemType {
+    static var mockDate: MessagesListItemType {
+        .date(DateGroup(date: Date()))
+    }
+
+    static var mockUpdate: MessagesListItemType {
+        .update(id: "mock-update", update: ConversationUpdate.mock())
+    }
+
+    static var mockIncomingMessages: MessagesListItemType {
+        .messages(.mockIncoming)
+    }
+
+    static var mockOutgoingMessages: MessagesListItemType {
+        .messages(.mockOutgoing)
+    }
+
+    static var mockMixedMessages: MessagesListItemType {
+        .messages(.mockMixed)
+    }
+
+    static var mockConversation: [MessagesListItemType] {
+        [
+            .mockDate,
+            .mockIncomingMessages,
+            .mockOutgoingMessages,
+            .mockUpdate,
+            .mockMixedMessages
+        ]
     }
 }

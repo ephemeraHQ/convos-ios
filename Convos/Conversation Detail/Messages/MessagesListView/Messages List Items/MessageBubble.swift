@@ -25,17 +25,18 @@ struct MessageBubble: View {
                     .padding(.horizontal, DesignConstants.Spacing.step3x)
                     .padding(.vertical, DesignConstants.Spacing.step2x)
             } avatarView: {
-                Group {
-                    if isOutgoing {
-                        EmptyView()
-                    } else {
-                        if style == .normal {
-                            Spacer()
-                        } else {
-                            ProfileAvatarView(profile: profile, profileImage: nil)
-                        }
-                    }
-                }
+                EmptyView()
+                //                Group {
+//                    if isOutgoing {
+//                        EmptyView()
+//                    } else {
+//                        if style == .normal {
+//                            Spacer()
+//                        } else {
+//                            ProfileAvatarView(profile: profile, profileImage: nil)
+//                        }
+//                    }
+//                }
             } onTapAvatar: {
                 onTapAvatar?()
             }

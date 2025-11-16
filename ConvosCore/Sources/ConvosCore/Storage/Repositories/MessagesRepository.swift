@@ -158,14 +158,16 @@ extension Array where Element == MessageWithDetails {
                     )
                 }
 
-                let message = Message(id: dbMessage.clientMessageId,
-                                      conversation: conversation,
-                                      sender: sender,
-                                      source: source,
-                                      status: dbMessage.status,
-                                      content: messageContent,
-                                      date: dbMessage.date,
-                                      reactions: reactions)
+                let message = Message(
+                    id: dbMessage.clientMessageId,
+                    conversation: conversation,
+                    sender: sender,
+                    source: source,
+                    status: dbMessage.status,
+                    content: messageContent,
+                    date: dbMessage.date,
+                    reactions: reactions
+                )
                 return .message(message)
             case .reply:
                 switch dbMessage.contentType {

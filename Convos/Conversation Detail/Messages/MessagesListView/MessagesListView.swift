@@ -36,55 +36,16 @@ struct MessagesListView: View {
                                     .padding(.vertical, DesignConstants.Spacing.stepX)
 
                             case .messages(let group):
-                                VStack(alignment: .leading, spacing: DesignConstants.Spacing.stepX) {
-                                    // Combine all messages maintaining chronological order
-                                    let allMessages = group.allMessages.sorted { $0.base.date < $1.base.date }
+                                let isLastGroupByCurrentUser = item == messages.last(where: {
+                                    $0.isMessagesGroupSentByCurrentUser
+                                })
 
-                                    // Render each message in the group
-                                    ForEach(Array(group.messages.enumerated()), id: \.element.base.id) { index, message in
-                                        if index == 0 && !group.sender.isCurrentUser {
-                                            // Show sender name for incoming messages
-                                            Text(group.sender.profile.displayName)
-                                                .font(.footnote)
-                                                .foregroundColor(.secondary)
-                                                .padding(.leading, 52)
-                                                .padding(.bottom, 2)
-                                        }
-                                        let isLast = index == group.messages.count - 1
-                                        let bubbleType: MessagesCollectionCell.BubbleType = isLast ? .tailed : .normal
-
-                                        renderMessage(
-                                            message,
-                                            bubbleType: bubbleType,
-                                        )
-                                    }
-
-                                    let isLastGroupByCurrentUser = item == messages.last(where: {
-                                        $0.isMessagesGroupSentByCurrentUser
-                                    })
-                                    if isLastGroupByCurrentUser {
-                                        HStack {
-                                            Spacer()
-                                            Text("Sent")
-                                                .font(.footnote)
-                                                .foregroundStyle(.colorTextSecondary)
-                                                .padding(.bottom, DesignConstants.Spacing.stepHalf)
-                                            Image(systemName: "checkmark")
-                                                .font(.footnote)
-                                                .foregroundStyle(.colorTextSecondary)
-                                        }
-                                    }
-
-                                    ForEach(Array(group.unpublished.enumerated()), id: \.element.base.id) { index, message in
-                                        let isLast = index == group.unpublished.count - 1
-                                        let bubbleType: MessagesCollectionCell.BubbleType = isLast ? .tailed : .normal
-                                        renderMessage(
-                                            message,
-                                            bubbleType: bubbleType,
-                                        )
-                                    }
-                                }
-                                .id(group.id)
+                                MessagesGroupView(
+                                    group: group,
+                                    isLastGroupByCurrentUser: isLastGroupByCurrentUser,
+                                    onTapMessage: onTapMessage,
+                                    onTapAvatar: onTapAvatar
+                                )
                             }
                         }
 //                        .transition(.slide)
@@ -99,38 +60,6 @@ struct MessagesListView: View {
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
             .scrollPosition($scrollPosition)
-        }
-    }
-
-    @ViewBuilder
-    private func renderMessage(_ message: AnyMessage, bubbleType: MessagesCollectionCell.BubbleType) -> some View {
-        let isPublished = message.base.status == .published
-
-        switch message.base.content {
-        case .text(let text), .emoji(let text):
-            MessageBubble(
-                style: bubbleType,
-                message: text,
-                isOutgoing: message.base.sender.isCurrentUser,
-                profile: message.base.sender.profile,
-                onTapAvatar: { onTapAvatar(message) }
-            )
-            .id(message.base.id)
-            .onTapGesture {
-                onTapMessage(message)
-            }
-
-        case .attachment(let url):
-            // TODO: Implement attachment view
-            EmptyView()
-
-        case .attachments(let urls):
-            // TODO: Implement attachments view
-            EmptyView()
-
-        case .update:
-            // Updates are handled at the item level, not here
-            EmptyView()
         }
     }
 }
