@@ -1,6 +1,5 @@
 import ConvosCore
 import SwiftUI
-import SwiftUIIntrospect
 
 struct MessagesListView: View {
     let conversation: Conversation
@@ -15,7 +14,7 @@ struct MessagesListView: View {
         ScrollViewReader { scrollReader in
             ScrollView {
                 LazyVStack(spacing: 0.0) {
-                    ForEach($messages, id: \.differenceIdentifier) { message in
+                    ForEach($messages, id: \.self) { message in
                         Group {
                             let isFirstMessage = messages.first?.differenceIdentifier == message.wrappedValue.differenceIdentifier
                             let isLastMessage = messages.last?.differenceIdentifier == message.wrappedValue.differenceIdentifier
@@ -56,10 +55,6 @@ struct MessagesListView: View {
                     }
                 }
             }
-            .onAppear {
-                scrollReader.scrollTo(messages.last?.differenceIdentifier, anchor: .bottom)
-            }
-//            .listStyle(.plain)
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
             .scrollPosition($scrollPosition)
