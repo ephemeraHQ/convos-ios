@@ -14,7 +14,7 @@ struct MessagesListView: View {
         ScrollViewReader { scrollReader in
             ScrollView {
                 LazyVStack(spacing: 0.0) {
-                    ForEach($messages, id: \.self) { message in
+                    ForEach($messages, id: \.differenceIdentifier) { message in
                         Group {
                             let isFirstMessage = messages.first?.differenceIdentifier == message.wrappedValue.differenceIdentifier
                             let isLastMessage = messages.last?.differenceIdentifier == message.wrappedValue.differenceIdentifier
@@ -48,12 +48,14 @@ struct MessagesListView: View {
                                 }
                             }
                         }
+                        .transition(.slide)
                         .id(message.wrappedValue.differenceIdentifier)
                         .listRowSeparator(.hidden)
                         .listRowInsets(nil)
                         .listRowSpacing(0.0)
                     }
                 }
+                .animation(.spring(duration: 0.5, bounce: 0.2), value: messages)
             }
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)

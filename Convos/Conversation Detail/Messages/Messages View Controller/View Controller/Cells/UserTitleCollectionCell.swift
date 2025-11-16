@@ -23,39 +23,3 @@ class UserTitleCollectionCell: UICollectionViewCell {
         layoutAttributesForHorizontalFittingRequired(layoutAttributes)
     }
 }
-
-struct UserTitleView: View {
-    let name: String
-    let source: MessageSource
-    var body: some View {
-        if !name.isEmpty {
-            HStack {
-                if source == .outgoing {
-                    Spacer()
-                }
-                Text(name)
-                    .lineLimit(1)
-                    .font(.caption2)
-                    .foregroundStyle(Color.gray)
-                    .truncationMode(.tail)
-                if source == .incoming {
-                    Spacer()
-                }
-            }
-        } else {
-            EmptyView()
-        }
-    }
-}
-
-#Preview {
-    let cell = UserTitleCollectionCell()
-    cell.setup(name: "John Doe", source: .outgoing)
-    return cell
-}
-
-#Preview {
-    let cell = UserTitleCollectionCell()
-    cell.setup(name: "John Doe", source: .incoming)
-    return cell
-}
