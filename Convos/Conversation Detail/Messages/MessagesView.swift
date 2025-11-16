@@ -8,7 +8,7 @@ enum MessagesViewTopBarTrailingItem {
 
 struct MessagesView<BottomBarContent: View>: View {
     let conversation: Conversation
-    @Binding var messages: [AnyMessage]
+    @Binding var messages: [MessagesListItemType]
     let invite: Invite
     let profile: Profile
     let untitledConversationPlaceholder: String

@@ -1,22 +1,29 @@
 import ConvosCore
 import Foundation
 
-struct MessagesGroup {
-    let profile: Profile
-    let messages: [AnyMessage]
+struct MessagesGroup: Identifiable, Equatable {
+    let id: String
+    let sender: ConversationMember // The sender of all messages in this group
+    let messages: [AnyMessage] // Contains only published messages
+    let unpublished: [AnyMessage] // Contains unpublished messages (failed, unpublished, etc.)
+
+    /// All messages in this group (published + unpublished)
+    var allMessages: [AnyMessage] {
+        messages + unpublished
+    }
+
+    static func == (lhs: MessagesGroup, rhs: MessagesGroup) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.sender == rhs.sender &&
+        lhs.messages == rhs.messages &&
+        lhs.unpublished == rhs.unpublished
+    }
 }
 
-enum MessagesListItemType {
-    /// An Invite to this Convo
-    /// Shown if the current user is the creator of the group
-    case invite(Invite)
-
-    /// Info about the current Convo, shown if the current user is not the group creator
-    case info(Conversation)
-
+enum MessagesListItemType: Identifiable, Equatable {
     /// Shows metadata changes, new members being added, etc
     /// Ex: "Louis joined by invitation"
-    case update(ConversationUpdate)
+    case update(id: String, update: ConversationUpdate)
 
     /// Shows a timestamp for when the next message in the list was sent
     /// Shown only if the time between messages was greater than an hour
@@ -24,4 +31,24 @@ enum MessagesListItemType {
 
     /// Messages sent by the same sender
     case messages(MessagesGroup)
+
+    var id: String {
+        switch self {
+        case .update(let id, _):
+            return "update-\(id)"
+        case .date(let dateGroup):
+            return "date-\(dateGroup.date.timeIntervalSince1970)"
+        case .messages(let group):
+            return group.id
+        }
+    }
+
+    var isMessagesGroupSentByCurrentUser: Bool {
+        switch self {
+        case .messages(let group):
+            return group.sender.isCurrentUser
+        default:
+            return false
+        }
+    }
 }
