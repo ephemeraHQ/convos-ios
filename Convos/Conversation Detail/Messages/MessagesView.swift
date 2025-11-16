@@ -1,5 +1,6 @@
 import ConvosCore
 import SwiftUI
+import SwiftUIIntrospect
 
 enum MessagesViewTopBarTrailingItem {
     case share, scan
@@ -7,7 +8,7 @@ enum MessagesViewTopBarTrailingItem {
 
 struct MessagesView<BottomBarContent: View>: View {
     let conversation: Conversation
-    let messages: [AnyMessage]
+    @Binding var messages: [AnyMessage]
     let invite: Invite
     let profile: Profile
     let untitledConversationPlaceholder: String
@@ -32,17 +33,14 @@ struct MessagesView<BottomBarContent: View>: View {
 
     @State private var bottomBarHeight: CGFloat = 0.0
     var body: some View {
-        Group {
-            MessagesViewRepresentable(
-                conversation: conversation,
-                messages: messages,
-                invite: invite,
-                onTapMessage: onTapMessage,
-                onTapAvatar: onTapAvatar,
-                bottomBarHeight: bottomBarHeight
-            )
-            .ignoresSafeArea()
-        }
+        MessagesListView(
+            conversation: conversation,
+            messages: $messages,
+            invite: invite,
+            onTapMessage: onTapMessage,
+            onTapAvatar: onTapAvatar,
+            bottomBarHeight: bottomBarHeight
+        )
         .safeAreaBar(edge: .bottom) {
             VStack(spacing: 0.0) {
                 bottomBarContent()
@@ -67,5 +65,8 @@ struct MessagesView<BottomBarContent: View>: View {
                 bottomBarHeight = height
             }
         }
+        .introspect(.view, on: .iOS(.v26), customize: { view in
+            view.keyboardLayoutGuide.keyboardDismissPadding = bottomBarHeight
+        })
     }
 }

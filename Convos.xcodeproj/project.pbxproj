@@ -234,6 +234,7 @@
 				"Conversation Detail/Messages/Messages View Controller/View Controller/Views/MessagesBottomBar.swift",
 				"Conversation Detail/Messages/Messages View Controller/View Controller/Views/MessagesInputView.swift",
 				"Conversation Detail/Messages/Messages View Controller/View Controller/Views/PreviewViewPanHandler.swift",
+				"Conversation Detail/Messages/MessagesListView.swift",
 				"Conversation Detail/Messages/MessagesView.swift",
 				"Conversation Detail/Messages/MessagesViewRepresentable.swift",
 				"Conversations List/ConversationsListEmptyCTA.swift",
