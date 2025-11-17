@@ -99,6 +99,8 @@ final class MessagesViewController: UIViewController {
 
     private var lastKeyboardFrameChange: KeyboardInfo?
 
+    var scrollViewWillBeginDragging: (() -> Void)?
+
     // MARK: - Initialization
 
     init() {
@@ -481,6 +483,10 @@ extension MessagesViewController {
 // MARK: - UIScrollViewDelegate & UICollectionViewDelegate
 
 extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate {
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        scrollViewWillBeginDragging?()
+    }
+
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let cell = dataSource.sections[indexPath.section].cells[indexPath.item]
         if case .message(let message, _) = cell {

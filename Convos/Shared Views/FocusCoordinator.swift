@@ -122,6 +122,15 @@ final class FocusCoordinator {
         }
     }
 
+    /// Moves focus to `message` if we're currently focusing the displayName or conversationName
+    func dismissQuickEditor() {
+        guard currentFocus == .displayName || currentFocus == .conversationName else {
+            return
+        }
+
+        moveFocus(to: .message)
+    }
+
     /// Programmatically move focus to a specific field
     func moveFocus(to focus: MessagesViewInputFocus?) {
         Log.info("moveFocus called with: \(String(describing: focus)), saving previous: \(String(describing: currentFocus))")

@@ -72,8 +72,6 @@ struct ConversationInfoEditView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(role: .confirm) {
-                        viewModel.isEditingConversationName = false
-                        viewModel.isEditingDescription = false
                         viewModel.onConversationSettingsDismissed(focusCoordinator: focusCoordinator)
                     }
                     .tint(.colorBackgroundInverted)

@@ -255,7 +255,7 @@
 				Profile/QuicknameSettings.swift,
 				"Shared Views/AutoShareSheetView.swift",
 				"Shared Views/AvatarView.swift",
-				"Shared Views/ConversationInfoPresenter.swift",
+				"Shared Views/ConversationPresenter.swift",
 				"Shared Views/ConversationToolbarButton.swift",
 				"Shared Views/ErrorView.swift",
 				"Shared Views/FlashingListRowButton.swift",

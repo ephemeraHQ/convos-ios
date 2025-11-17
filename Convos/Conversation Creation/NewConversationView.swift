@@ -14,7 +14,7 @@ struct NewConversationView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass: UserInterfaceSizeClass?
 
     var body: some View {
-        ConversationInfoPresenter(
+        ConversationPresenter(
             viewModel: viewModel.conversationViewModel,
             focusCoordinator: focusCoordinator,
             sidebarColumnWidth: $sidebarWidth

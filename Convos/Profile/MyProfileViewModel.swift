@@ -48,6 +48,11 @@ class MyProfileViewModel {
         cancellables.removeAll()
     }
 
+    func cancelEditingDisplayName() {
+        isEditingDisplayName = false
+        editingDisplayName = profile.name ?? ""
+    }
+
     // MARK: Private
 
     private func setupMyProfileRepository() {
@@ -97,15 +102,6 @@ class MyProfileViewModel {
             update(profileImage: profileImage, conversationId: conversationId)
         }
     }
-
-//    func updateProfileWithLatest(for conversationId: String) {
-//        if let latest = try? myProfileRepository.fetch(),
-//           let latestName = latest.name,
-//           !latestName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-//            editingDisplayName = latestName
-//        }
-//        onEndedEditing(for: conversationId)
-//    }
 
     func onEndedEditing(for conversationId: String) {
         let trimmedDisplayName = editingDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)

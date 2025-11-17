@@ -22,6 +22,7 @@ struct MessagesView<BottomBarContent: View>: View {
     @FocusState.Binding var focusState: MessagesViewInputFocus?
     let focusCoordinator: FocusCoordinator
     let messagesTextFieldEnabled: Bool
+    let scrollViewWillBeginDragging: () -> Void
     let onProfilePhotoTap: () -> Void
     let onSendMessage: () -> Void
     let onTapMessage: (AnyMessage) -> Void
@@ -37,6 +38,7 @@ struct MessagesView<BottomBarContent: View>: View {
                 conversation: conversation,
                 messages: messages,
                 invite: invite,
+                scrollViewWillBeginDragging: scrollViewWillBeginDragging,
                 onTapMessage: onTapMessage,
                 onTapAvatar: onTapAvatar,
                 bottomBarHeight: bottomBarHeight

@@ -311,6 +311,7 @@ class ConversationViewModel {
             }
         }
 
+        isEditingConversationName = false
         // Delegate focus transition to coordinator
         focusCoordinator.endEditing(for: .conversationName, context: context)
     }
@@ -321,6 +322,8 @@ class ConversationViewModel {
     }
 
     func onConversationSettingsDismissed(focusCoordinator: FocusCoordinator) {
+        isEditingConversationName = false
+        isEditingDescription = false
         onConversationNameEndedEditing(focusCoordinator: focusCoordinator, context: .conversationSettings)
         presentingConversationSettings = false
     }
@@ -367,7 +370,15 @@ class ConversationViewModel {
         presentingProfileForMember = message.base.sender
     }
 
+    func dismissQuickEditor() {
+        isEditingConversationName = false
+        editingConversationName = conversation.name ?? ""
+        myProfileViewModel.cancelEditingDisplayName()
+    }
+
     func onDisplayNameEndedEditing(focusCoordinator: FocusCoordinator, context: FocusTransitionContext) {
+        isEditingDisplayName = false
+
         myProfileViewModel.onEndedEditing(for: conversation.id)
 
         // Forward profile editing completion to onboarding coordinator

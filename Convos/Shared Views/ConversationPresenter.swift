@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ConversationInfoPresenter<Content: View>: View {
+struct ConversationPresenter<Content: View>: View {
     let viewModel: ConversationViewModel?
     let focusCoordinator: FocusCoordinator
     @Binding var sidebarColumnWidth: CGFloat
@@ -100,7 +100,7 @@ private struct ConversationInfoButtonWrapper: View {
     @Previewable @State var conversationViewModel: ConversationViewModel? = .mock
     @Previewable @State var focusCoordinator: FocusCoordinator = FocusCoordinator(horizontalSizeClass: nil)
     @Previewable @State var sidebarColumnWidth: CGFloat = 0
-    ConversationInfoPresenter(
+    ConversationPresenter(
         viewModel: conversationViewModel,
         focusCoordinator: focusCoordinator,
         sidebarColumnWidth: $sidebarColumnWidth

@@ -30,7 +30,7 @@ struct ConversationsView: View {
     }
 
     var body: some View {
-        ConversationInfoPresenter(
+        ConversationPresenter(
             viewModel: viewModel.selectedConversationViewModel,
             focusCoordinator: focusCoordinator,
             sidebarColumnWidth: $sidebarWidth

@@ -34,6 +34,10 @@ struct ConversationView<MessagesBottomBar: View>: View {
             focusState: $focusState,
             focusCoordinator: focusCoordinator,
             messagesTextFieldEnabled: messagesTextFieldEnabled,
+            scrollViewWillBeginDragging: {
+                viewModel.dismissQuickEditor()
+                focusCoordinator.dismissQuickEditor()
+            },
             onProfilePhotoTap: {
                 onboardingCoordinator.didTapProfilePhoto()
                 viewModel.onProfilePhotoTap(focusCoordinator: focusCoordinator)

@@ -159,7 +159,7 @@ struct AppSettingsView: View {
                             .foregroundStyle(.colorTextTertiary)
                     }
                 } footer: {
-                    Text("Made in the open by Ephemera")
+                    Text("Made in the open by XMTP")
                         .foregroundStyle(.colorTextSecondary)
                 }
 

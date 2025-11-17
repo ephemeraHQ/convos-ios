@@ -93,6 +93,7 @@ struct MessagesBottomBar: View {
             conversation: .mock(),
             messages: [],
             invite: .mock(),
+            scrollViewWillBeginDragging: {},
             onTapMessage: { _ in },
             onTapAvatar: { _ in },
             bottomBarHeight: bottomBarHeight
