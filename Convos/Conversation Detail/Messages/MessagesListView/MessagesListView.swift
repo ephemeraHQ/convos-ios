@@ -54,8 +54,8 @@ struct MessagesListView: View {
                         .listRowSpacing(0.0)
                     }
                 }
-                .animation(.spring(duration: 0.5, bounce: 0.2), value: messages)
             }
+            .animation(.spring(duration: 0.5, bounce: 0.2), value: messages)
             .contentMargins(.horizontal, DesignConstants.Spacing.step2x, for: .scrollContent)
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
