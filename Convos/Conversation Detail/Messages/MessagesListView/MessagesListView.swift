@@ -10,7 +10,7 @@ struct MessagesListView: View {
     let bottomBarHeight: CGFloat
 
     @State private var scrollPosition: ScrollPosition = ScrollPosition(edge: .bottom)
-    @State private var hasAppeared: Bool = false
+    @State private var lastItemIndex: Int?
 
     var body: some View {
         ScrollViewReader { _ in
@@ -42,8 +42,14 @@ struct MessagesListView: View {
                                     group: group,
                                     onTapMessage: onTapMessage,
                                     onTapAvatar: onTapAvatar,
-                                    animates: true
+                                    animates: lastItemIndex == nil ? false : index > (lastItemIndex ?? 0)
                                 )
+                            }
+                        }
+                        .onScrollVisibilityChange { isVisible in
+                            guard lastItemIndex == nil else { return }
+                            if isVisible && index == messages.count - 1 {
+                                lastItemIndex = index
                             }
                         }
                         .listRowSeparator(.hidden)
@@ -51,6 +57,7 @@ struct MessagesListView: View {
                         .listRowSpacing(0.0)
                     }
                 }
+//                .scrollTargetLayout()
             }
             .scrollEdgeEffectStyle(.soft, for: .bottom)
             .scrollEdgeEffectHidden() // makes no sense, but fixes the flickering profile photo
