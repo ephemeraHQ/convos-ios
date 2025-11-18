@@ -124,7 +124,7 @@ final class MessagesListProcessor {
         let unpublished = messages.filter { $0.base.status != .published }
 
         let group = MessagesGroup(
-            id: "group-\(senderId)-\(firstMessage.base.date.timeIntervalSince1970)",
+            id: "group-\(senderId)-\(firstMessage.base.id)",
             sender: firstMessage.base.sender,
             messages: published,
             unpublished: unpublished

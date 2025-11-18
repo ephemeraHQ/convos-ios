@@ -24,7 +24,7 @@ struct MessagesListView: View {
                     }
 
                     // Render each message list item
-                    ForEach(messages) { item in
+                    ForEach(messages, id: \.id) { item in
                         Group {
                             switch item {
                             case .date(let dateGroup):
@@ -48,13 +48,14 @@ struct MessagesListView: View {
                                 )
                             }
                         }
-//                        .transition(.slide)
                         .listRowSeparator(.hidden)
                         .listRowInsets(nil)
                         .listRowSpacing(0.0)
                     }
                 }
             }
+            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .scrollEdgeEffectHidden()
             .animation(.spring(duration: 0.5, bounce: 0.2), value: messages)
             .contentMargins(.horizontal, DesignConstants.Spacing.step2x, for: .scrollContent)
             .defaultScrollAnchor(.bottom)

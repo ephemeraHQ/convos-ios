@@ -6,7 +6,9 @@ import XMTPiOS
 
 extension Client {
     static var logFileURLs: [URL]? {
-        let filePaths = getXMTPLogFilePaths(customLogDirectory: nil)
+        let filePaths = getXMTPLogFilePaths(
+            customLogDirectory: ConfigManager.shared.currentEnvironment.defaultDatabasesDirectoryURL
+        )
         guard !filePaths.isEmpty else { return nil }
         return filePaths
             .map { URL(fileURLWithPath: $0) }
