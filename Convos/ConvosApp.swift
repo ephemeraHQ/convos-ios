@@ -22,6 +22,7 @@ struct ConvosApp: App {
                 logLevel: .debug,
                 rotationSchedule: .hourly,
                 maxFiles: 10,
+                customLogDirectory: environment.defaultXMTPLogsDirectoryURL,
                 processType: .main
             )
         }

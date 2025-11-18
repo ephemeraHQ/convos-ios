@@ -209,6 +209,19 @@ public extension AppEnvironment {
         }
     }
 
+    var defaultXMTPLogsDirectoryURL: URL {
+        guard !isTestingEnvironment else {
+            return FileManager.default.temporaryDirectory
+        }
+
+        guard let groupUrl = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupIdentifier
+        ) else {
+            fatalError("Failed getting container URL for group identifier: \(appGroupIdentifier)")
+        }
+        return groupUrl.appendingPathComponent("logs", isDirectory: true)
+    }
+
     var defaultDatabasesDirectoryURL: URL {
         guard !isTestingEnvironment else {
             return FileManager.default.temporaryDirectory

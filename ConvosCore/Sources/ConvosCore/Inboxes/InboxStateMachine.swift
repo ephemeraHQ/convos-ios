@@ -871,7 +871,8 @@ public actor InboxStateMachine {
                 ExplodeSettingsCodec()
             ],
             dbEncryptionKey: keys.databaseKey,
-            dbDirectory: environment.defaultDatabasesDirectory
+            dbDirectory: environment.defaultDatabasesDirectory,
+            deviceSyncEnabled: false
         )
     }
 
