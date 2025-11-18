@@ -55,9 +55,9 @@ struct MessagesListView: View {
                 }
             }
             .scrollEdgeEffectStyle(.soft, for: .bottom)
-            .scrollEdgeEffectHidden()
+            .scrollEdgeEffectHidden() // makes no sense, but fixes the flickering profile photo
             .animation(.spring(duration: 0.5, bounce: 0.2), value: messages)
-            .contentMargins(.horizontal, DesignConstants.Spacing.step2x, for: .scrollContent)
+            .contentMargins(.horizontal, DesignConstants.Spacing.step4x, for: .scrollContent)
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
             .scrollPosition($scrollPosition)

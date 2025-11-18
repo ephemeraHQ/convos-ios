@@ -23,26 +23,12 @@ struct MessagesGroupView: View {
                         }
                         .hoverEffect(.lift)
                         .id("profile-\(group.id)")
-//                        .transition(.move(edge: .bottom))
-//                        .transition(
-//                            .asymmetric(
-//                                insertion: .identity,      // no transition on insert
-//                                removal: .identity
-//                            )
-//                        )
                 } else {
                     EmptyView()
                         .id("profile-\(group.id)")
                 }
             }
             .id("profile-container-\(group.id)")
-//            .transition(
-//                .asymmetric(
-//                    insertion: .identity,      // no transition on insert
-//                    removal: .identity
-//                )
-//            )
-//            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: group.messages)
 
             VStack(alignment: .leading, spacing: DesignConstants.Spacing.stepX) {
                 // Render published messages
