@@ -6,6 +6,9 @@ struct MessagesGroupView: View {
     let isLastGroupByCurrentUser: Bool
     let onTapMessage: (AnyMessage) -> Void
     let onTapAvatar: (AnyMessage) -> Void
+    let animates: Bool
+
+    @State private var isAppearing: Bool = true
 
     var body: some View {
         HStack(spacing: DesignConstants.Spacing.step2x) {
@@ -22,6 +25,23 @@ struct MessagesGroupView: View {
                             }
                         }
                         .hoverEffect(.lift)
+                        .scaleEffect(isAppearing ? 0.9 : 1.0)
+                        .opacity(isAppearing ? 0.0 : 1.0)
+                        .offset(
+                            x: isAppearing ? -80 : 0,
+                            y: 0.0,
+                        )
+                        .onAppear {
+                            guard isAppearing else { return }
+
+                            if animates {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    isAppearing = false
+                                }
+                            } else {
+                                isAppearing = false
+                            }
+                        }
                         .id("profile-\(group.id)")
                 } else {
                     EmptyView()
@@ -37,6 +57,13 @@ struct MessagesGroupView: View {
                     if index == 0 && !group.sender.isCurrentUser {
                         // Show sender name for incoming messages
                         Text(group.sender.profile.displayName)
+                            .scaleEffect(isAppearing ? 0.9 : 1.0)
+                            .opacity(isAppearing ? 0.0 : 1.0)
+                            .offset(
+                                x: 0.0,
+                                y: isAppearing ? 100 : 0,
+                            )
+                            .blur(radius: isAppearing ? 10.0 : 0.0)
                             .font(.footnote)
                             .foregroundColor(.secondary)
                             .padding(.leading, DesignConstants.Spacing.step2x)
@@ -52,7 +79,8 @@ struct MessagesGroupView: View {
                         bubbleType: bubbleType,
                         showsSentStatus: isLastPublished && isLastGroupByCurrentUser,
                         onTapMessage: onTapMessage,
-                        onTapAvatar: onTapAvatar
+                        onTapAvatar: onTapAvatar,
+                        animates: animates
                     )
                     .transition(
                         .asymmetric(
@@ -82,7 +110,8 @@ struct MessagesGroupView: View {
             group: .mockIncoming,
             isLastGroupByCurrentUser: false,
             onTapMessage: { _ in },
-            onTapAvatar: { _ in }
+            onTapAvatar: { _ in },
+            animates: true
         )
         .padding()
     }
@@ -95,7 +124,8 @@ struct MessagesGroupView: View {
             group: .mockOutgoing,
             isLastGroupByCurrentUser: true,
             onTapMessage: { _ in },
-            onTapAvatar: { _ in }
+            onTapAvatar: { _ in },
+            animates: true
         )
         .padding()
     }
@@ -108,7 +138,8 @@ struct MessagesGroupView: View {
             group: .mockMixed,
             isLastGroupByCurrentUser: true,
             onTapMessage: { _ in },
-            onTapAvatar: { _ in }
+            onTapAvatar: { _ in },
+            animates: true
         )
         .padding()
     }

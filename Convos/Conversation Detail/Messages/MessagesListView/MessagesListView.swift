@@ -8,7 +8,9 @@ struct MessagesListView: View {
     let onTapMessage: (AnyMessage) -> Void
     let onTapAvatar: (AnyMessage) -> Void
     let bottomBarHeight: CGFloat
+
     @State private var scrollPosition: ScrollPosition = ScrollPosition(edge: .bottom)
+    @State private var hasAppeared: Bool = false
 
     var body: some View {
         ScrollViewReader { _ in
@@ -24,7 +26,7 @@ struct MessagesListView: View {
                     }
 
                     // Render each message list item
-                    ForEach(messages, id: \.id) { item in
+                    ForEach(messages.enumerated(), id: \.element.id) { index, item in
                         Group {
                             switch item {
                             case .date(let dateGroup):
@@ -44,7 +46,8 @@ struct MessagesListView: View {
                                     group: group,
                                     isLastGroupByCurrentUser: isLastGroupByCurrentUser,
                                     onTapMessage: onTapMessage,
-                                    onTapAvatar: onTapAvatar
+                                    onTapAvatar: onTapAvatar,
+                                    animates: true
                                 )
                             }
                         }

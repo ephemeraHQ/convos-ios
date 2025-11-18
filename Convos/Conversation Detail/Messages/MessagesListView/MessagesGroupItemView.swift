@@ -7,6 +7,7 @@ struct MessagesGroupItemView: View {
     let showsSentStatus: Bool
     let onTapMessage: (AnyMessage) -> Void
     let onTapAvatar: (AnyMessage) -> Void
+    let animates: Bool
 
     @State private var isAppearing: Bool = true
 
@@ -47,7 +48,11 @@ struct MessagesGroupItemView: View {
                 .onAppear {
                     guard isAppearing else { return }
 
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    if animates {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            isAppearing = false
+                        }
+                    } else {
                         isAppearing = false
                     }
                 }
@@ -156,7 +161,8 @@ private struct MultipleAttachmentsPlaceholder: View {
         bubbleType: .normal,
         showsSentStatus: false,
         onTapMessage: { _ in },
-        onTapAvatar: { _ in }
+        onTapAvatar: { _ in },
+        animates: true
     )
     .padding()
 }
@@ -171,7 +177,8 @@ private struct MultipleAttachmentsPlaceholder: View {
         bubbleType: .tailed,
         showsSentStatus: true,
         onTapMessage: { _ in },
-        onTapAvatar: { _ in }
+        onTapAvatar: { _ in },
+        animates: true
     )
     .padding()
 }
@@ -186,7 +193,8 @@ private struct MultipleAttachmentsPlaceholder: View {
         bubbleType: .normal,
         showsSentStatus: false,
         onTapMessage: { _ in },
-        onTapAvatar: { _ in }
+        onTapAvatar: { _ in },
+        animates: true
     )
     .padding()
 }
@@ -201,7 +209,8 @@ private struct MultipleAttachmentsPlaceholder: View {
         bubbleType: .tailed,
         showsSentStatus: false,
         onTapMessage: { _ in },
-        onTapAvatar: { _ in }
+        onTapAvatar: { _ in },
+        animates: true
     )
     .padding()
 }
