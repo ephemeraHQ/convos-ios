@@ -1,0 +1,59 @@
+import ConvosCore
+import SwiftUI
+import UIKit
+
+class MessagesListItemTypeCell: UICollectionViewCell {
+    private var item: MessagesListItemType?
+
+    // MARK: - Initialization
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        self.contentConfiguration = nil
+    }
+
+    func setup(
+        item: MessagesListItemType,
+        onTapAvatar: (() -> Void)?
+    ) {
+        self.item = item
+        contentConfiguration = UIHostingConfiguration {
+            Group {
+                switch item {
+                case .date(let dateGroup):
+                    TextTitleContentView(title: dateGroup.value, profile: nil)
+                        .padding(.vertical, DesignConstants.Spacing.step2x)
+
+                case .update(_, let update):
+                    TextTitleContentView(title: update.summary, profile: update.profile)
+                        .padding(.vertical, DesignConstants.Spacing.stepX)
+
+                case .messages(let group):
+                    MessagesGroupView(
+                        group: group,
+                        onTapMessage: { _ in },
+                        onTapAvatar: { _ in },
+                        animates: true
+                    )
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+//        .margins(.top, DesignConstants.Spacing.stepX)
+        .margins(.bottom, 0.0)
+    }
+
+    override func preferredLayoutAttributesFitting(
+        _ layoutAttributes: UICollectionViewLayoutAttributes
+    ) -> UICollectionViewLayoutAttributes {
+        layoutAttributesForHorizontalFittingRequired(layoutAttributes)
+    }
+}

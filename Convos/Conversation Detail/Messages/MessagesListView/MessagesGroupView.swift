@@ -3,7 +3,6 @@ import SwiftUI
 
 struct MessagesGroupView: View {
     let group: MessagesGroup
-    let isLastGroupByCurrentUser: Bool
     let onTapMessage: (AnyMessage) -> Void
     let onTapAvatar: (AnyMessage) -> Void
     let animates: Bool
@@ -19,11 +18,11 @@ struct MessagesGroupView: View {
                     ProfileAvatarView(profile: group.sender.profile, profileImage: nil)
                         .frame(width: DesignConstants.ImageSizes.smallAvatar,
                                height: DesignConstants.ImageSizes.smallAvatar)
-                        .onTapGesture {
-                            if let message = group.messages.last {
-                                onTapAvatar(message)
-                            }
-                        }
+//                        .onTapGesture {
+//                            if let message = group.messages.last {
+//                                onTapAvatar(message)
+//                            }
+//                        }
                         .hoverEffect(.lift)
                         .scaleEffect(isAppearing ? 0.9 : 1.0)
                         .opacity(isAppearing ? 0.0 : 1.0)
@@ -31,17 +30,6 @@ struct MessagesGroupView: View {
                             x: isAppearing ? -80 : 0,
                             y: 0.0,
                         )
-                        .onAppear {
-                            guard isAppearing else { return }
-
-                            if animates {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                    isAppearing = false
-                                }
-                            } else {
-                                isAppearing = false
-                            }
-                        }
                         .id("profile-\(group.id)")
                 } else {
                     EmptyView()
@@ -77,11 +65,12 @@ struct MessagesGroupView: View {
                     MessagesGroupItemView(
                         message: message,
                         bubbleType: bubbleType,
-                        showsSentStatus: isLastPublished && isLastGroupByCurrentUser,
+                        showsSentStatus: isLastPublished && group.isLastGroupSentByCurrentUser,
                         onTapMessage: onTapMessage,
                         onTapAvatar: onTapAvatar,
                         animates: animates
                     )
+                    .id("messages-group-item-\(group.id)")
                     .transition(
                         .asymmetric(
                             insertion: .identity,      // no transition on insert
@@ -97,9 +86,20 @@ struct MessagesGroupView: View {
                     removal: .opacity
                 )
             )
-            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: group.messages)
         }
         .padding(.vertical, DesignConstants.Spacing.stepX)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: group.messages)
+        .onAppear {
+            guard isAppearing else { return }
+
+            if animates {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    isAppearing = false
+                }
+            } else {
+                isAppearing = false
+            }
+        }
         .id(group.id)
     }
 }
@@ -108,7 +108,6 @@ struct MessagesGroupView: View {
     ScrollView {
         MessagesGroupView(
             group: .mockIncoming,
-            isLastGroupByCurrentUser: false,
             onTapMessage: { _ in },
             onTapAvatar: { _ in },
             animates: true
@@ -122,7 +121,6 @@ struct MessagesGroupView: View {
     ScrollView {
         MessagesGroupView(
             group: .mockOutgoing,
-            isLastGroupByCurrentUser: true,
             onTapMessage: { _ in },
             onTapAvatar: { _ in },
             animates: true
@@ -136,7 +134,6 @@ struct MessagesGroupView: View {
     ScrollView {
         MessagesGroupView(
             group: .mockMixed,
-            isLastGroupByCurrentUser: true,
             onTapMessage: { _ in },
             onTapAvatar: { _ in },
             animates: true

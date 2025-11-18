@@ -3,7 +3,7 @@ import SwiftUI
 
 struct MessagesViewRepresentable: UIViewControllerRepresentable {
     let conversation: Conversation
-    let messages: [AnyMessage]
+    let messages: [MessagesListItemType]
     let invite: Invite
     let onTapMessage: (AnyMessage) -> Void
     let onTapAvatar: (AnyMessage) -> Void
@@ -27,7 +27,7 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
 
 #Preview {
     @Previewable @State var bottomBarHeight: CGFloat = 0.0
-    let messages: [AnyMessage] = []
+    let messages: [MessagesListItemType] = []
     let invite: Invite = .empty
 
     MessagesViewRepresentable(

@@ -10,6 +10,7 @@ struct MessagesGroupItemView: View {
     let animates: Bool
 
     @State private var isAppearing: Bool = true
+    @State private var _showsSentStatus: Bool = false
 
     private var isPublished: Bool {
         message.base.status == .published
@@ -45,17 +46,6 @@ struct MessagesGroupItemView: View {
                     : 0,
                     y: isAppearing ? 40 : 0
                 )
-                .onAppear {
-                    guard isAppearing else { return }
-
-                    if animates {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            isAppearing = false
-                        }
-                    } else {
-                        isAppearing = false
-                    }
-                }
             case .attachment(let url):
                 AttachmentPlaceholder(url: url, isOutgoing: message.base.sender.isCurrentUser)
                     .id(message.base.id)
@@ -75,7 +65,7 @@ struct MessagesGroupItemView: View {
                 EmptyView()
             }
 
-            if showsSentStatus {
+            if _showsSentStatus {
                 HStack {
                     Spacer()
                     Text("Sent")
@@ -86,8 +76,33 @@ struct MessagesGroupItemView: View {
                         .font(.footnote)
                         .foregroundStyle(.colorTextSecondary)
                 }
+                .id("sent-status-\(message.base.sender.id)")
                 .transition(.blurReplace)
                 .zIndex(100)
+            } else {
+                EmptyView()
+            }
+        }
+        .onChange(of: showsSentStatus, initial: true) {
+            Log.info("Changing sent status")
+            _showsSentStatus = showsSentStatus
+        }
+        .animation(.spring, value: _showsSentStatus)
+        .transition(
+            .asymmetric(
+                insertion: .identity,      // no transition on insert
+                removal: .opacity
+            )
+        )
+        .onAppear {
+            guard isAppearing else { return }
+
+            if animates {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    isAppearing = false
+                }
+            } else {
+                isAppearing = false
             }
         }
     }

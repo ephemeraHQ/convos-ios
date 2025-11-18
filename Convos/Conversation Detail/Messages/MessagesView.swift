@@ -33,14 +33,17 @@ struct MessagesView<BottomBarContent: View>: View {
 
     @State private var bottomBarHeight: CGFloat = 0.0
     var body: some View {
-        MessagesListView(
-            conversation: conversation,
-            messages: $messages,
-            invite: invite,
-            onTapMessage: onTapMessage,
-            onTapAvatar: onTapAvatar,
-            bottomBarHeight: bottomBarHeight
-        )
+        Group {
+            MessagesViewRepresentable(
+                conversation: conversation,
+                messages: messages,
+                invite: invite,
+                onTapMessage: onTapMessage,
+                onTapAvatar: onTapAvatar,
+                bottomBarHeight: bottomBarHeight
+            )
+            .ignoresSafeArea()
+        }
         .safeAreaBar(edge: .bottom) {
             VStack(spacing: 0.0) {
                 bottomBarContent()

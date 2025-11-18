@@ -1,11 +1,13 @@
 import ConvosCore
 import Foundation
 
-struct MessagesGroup: Identifiable, Equatable {
+struct MessagesGroup: Identifiable, Equatable, Hashable {
     let id: String
     let sender: ConversationMember // The sender of all messages in this group
     let messages: [AnyMessage] // Contains only published messages
     let unpublished: [AnyMessage] // Contains unpublished messages (failed, unpublished, etc.)
+    let isLastGroup: Bool
+    let isLastGroupSentByCurrentUser: Bool
 
     /// All messages in this group (published + unpublished)
     var allMessages: [AnyMessage] {
@@ -16,7 +18,9 @@ struct MessagesGroup: Identifiable, Equatable {
         lhs.id == rhs.id &&
         lhs.sender == rhs.sender &&
         lhs.messages == rhs.messages &&
-        lhs.unpublished == rhs.unpublished
+        lhs.unpublished == rhs.unpublished &&
+        lhs.isLastGroup == rhs.isLastGroup &&
+        lhs.isLastGroupSentByCurrentUser == rhs.isLastGroupSentByCurrentUser
     }
 }
 
@@ -33,7 +37,9 @@ extension MessagesGroup {
             id: "mock-incoming-group",
             sender: sender,
             messages: messages,
-            unpublished: []
+            unpublished: [],
+            isLastGroup: false,
+            isLastGroupSentByCurrentUser: false
         )
     }
 
@@ -47,7 +53,9 @@ extension MessagesGroup {
             id: "mock-outgoing-group",
             sender: sender,
             messages: messages,
-            unpublished: []
+            unpublished: [],
+            isLastGroup: false,
+            isLastGroupSentByCurrentUser: true
         )
     }
 
@@ -64,12 +72,14 @@ extension MessagesGroup {
             id: "mock-mixed-group",
             sender: sender,
             messages: published,
-            unpublished: unpublished
+            unpublished: unpublished,
+            isLastGroup: true,
+            isLastGroupSentByCurrentUser: true
         )
     }
 }
 
-enum MessagesListItemType: Identifiable, Equatable {
+enum MessagesListItemType: Identifiable, Equatable, Hashable {
     /// Shows metadata changes, new members being added, etc
     /// Ex: "Louis joined by invitation"
     case update(id: String, update: ConversationUpdate)

@@ -8,7 +8,7 @@ import UIKit
 final class MessagesViewController: UIViewController {
     struct MessagesState {
         let conversation: Conversation
-        let messages: [AnyMessage]
+        let messages: [MessagesListItemType]
         let invite: Invite
     }
 
@@ -208,8 +208,8 @@ final class MessagesViewController: UIViewController {
         dataSource.onTapAvatar = { [weak self] indexPath in
             guard let self = self else { return }
             let cell = self.dataSource.sections[indexPath.section].cells[indexPath.item]
-            if case .message(let message, _) = cell {
-                self.onTapAvatar?(message)
+            if case .message(let message) = cell {
+//                self.onTapAvatar?(message)
             }
         }
     }
@@ -312,59 +312,14 @@ final class MessagesViewController: UIViewController {
 
 extension MessagesViewController {
     private func processUpdates(for conversation: Conversation,
-                                with messages: [AnyMessage],
+                                with messages: [MessagesListItemType],
                                 invite: Invite,
                                 animated: Bool = true,
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
         Log.info("Processing updates with \(messages.count) messages")
-        let visibleMessages = messages.filter { message in
-            message.base.content.showsInMessagesList
-        }
-        var cells: [MessagesCollectionCell] = visibleMessages
-            .enumerated()
-            .flatMap { index, message in
-            var cells: [MessagesCollectionCell] = []
-
-            let senderTitleCell = MessagesCollectionCell.messageGroup(
-                .init(
-                    id: message.base.sender.id,
-                    title: message.base.sender.profile.displayName,
-                    source: message.base.source
-                )
-            )
-
-            if index > 0 {
-                let previousMessage = visibleMessages[index - 1]
-                let timeDifference = message.base.date.timeIntervalSince(previousMessage.base.date)
-                if timeDifference > 3600 { // 1 hour in seconds
-                    cells.append(MessagesCollectionCell.date(.init(date: message.base.date)))
-                }
-                if previousMessage.base.sender.id != message.base.sender.id,
-                   message.base.source.isIncoming,
-                   message.base.content.showsSender {
-                    cells.append(senderTitleCell)
-                }
-            } else {
-                cells.append(MessagesCollectionCell.date(.init(date: message.base.date)))
-                if message.base.source.isIncoming,
-                   message.base.content.showsSender {
-                    cells.append(senderTitleCell)
-                }
-            }
-
-            let bubbleType: MessagesCollectionCell.BubbleType
-            if index < visibleMessages.count - 1 {
-                let nextMessage = visibleMessages[index + 1]
-                let timeDifference = nextMessage.base.date.timeIntervalSince(message.base.date)
-                let willShowTimestamp = timeDifference > 3600
-                bubbleType = message.base.sender.id == nextMessage.base.sender.id && !willShowTimestamp ? .normal : .tailed
-            } else {
-                bubbleType = .tailed
-            }
-            cells.append(MessagesCollectionCell.message(message, bubbleType: bubbleType))
-            return cells
-        }
+        var cells: [MessagesCollectionCell] = messages
+            .map { MessagesCollectionCell.message($0) }
 
         if conversation.creator.isCurrentUser {
             cells.insert(.invite(invite), at: 0)
@@ -399,7 +354,7 @@ extension MessagesViewController {
     }
 
     private func scheduleDelayedUpdate(for conversation: Conversation,
-                                       with messages: [AnyMessage],
+                                       with messages: [MessagesListItemType],
                                        invite: Invite,
                                        animated: Bool,
                                        requiresIsolatedProcess: Bool,
@@ -483,8 +438,8 @@ extension MessagesViewController {
 extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let cell = dataSource.sections[indexPath.section].cells[indexPath.item]
-        if case .message(let message, _) = cell {
-            onTapMessage?(message)
+        if case .message(let message) = cell {
+//            onTapMessage?(message)
         }
     }
 

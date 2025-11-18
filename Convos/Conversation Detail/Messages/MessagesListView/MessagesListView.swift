@@ -38,13 +38,8 @@ struct MessagesListView: View {
                                     .padding(.vertical, DesignConstants.Spacing.stepX)
 
                             case .messages(let group):
-                                let isLastGroupByCurrentUser = item == messages.last(where: {
-                                    $0.isMessagesGroupSentByCurrentUser
-                                })
-
                                 MessagesGroupView(
                                     group: group,
-                                    isLastGroupByCurrentUser: isLastGroupByCurrentUser,
                                     onTapMessage: onTapMessage,
                                     onTapAvatar: onTapAvatar,
                                     animates: true

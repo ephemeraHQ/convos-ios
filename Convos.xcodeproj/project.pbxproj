@@ -218,6 +218,7 @@
 				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/ConversationInfoCell.swift",
 				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/ImageCollectionCell.swift",
 				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/InviteCell.swift",
+				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/MessagesListItemTypeCell.swift",
 				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/PreviewableCell.swift",
 				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/TextMessageCollectionCell.swift",
 				"Conversation Detail/Messages/Messages View Controller/View Controller/Cells/TextTitleCell.swift",

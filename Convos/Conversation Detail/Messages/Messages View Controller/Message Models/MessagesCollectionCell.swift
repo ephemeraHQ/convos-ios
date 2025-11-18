@@ -12,7 +12,7 @@ enum MessagesCollectionCell: Hashable {
         case normal, tailed
     }
 
-    case message(AnyMessage, bubbleType: BubbleType)
+    case message(MessagesListItemType)
     case typingIndicator
     case messageGroup(MessageGroup)
     case date(DateGroup)
@@ -21,13 +21,14 @@ enum MessagesCollectionCell: Hashable {
 
     var alignment: MessagesCollectionCell.Alignment {
         switch self {
-        case let .message(message, _):
-            switch message.base.content {
-            case .update:
+        case let .message(message):
                 .center
-            default:
-                message.base.source == .incoming ? .leading : .trailing
-            }
+//            switch message.base.content {
+//            case .update:
+//                .center
+//            default:
+//                message.base.source == .incoming ? .leading : .trailing
+//            }
         case .typingIndicator:
             .leading
         case let .messageGroup(group):
@@ -38,10 +39,20 @@ enum MessagesCollectionCell: Hashable {
     }
 }
 
+extension MessagesListItemType: Differentiable {
+    var differenceIdentifier: Int {
+        id.hashValue
+    }
+
+    func isContentEqual(to source: MessagesListItemType) -> Bool {
+        self.id == source.id
+    }
+}
+
 extension MessagesCollectionCell: Differentiable {
     var differenceIdentifier: Int {
         switch self {
-        case let .message(message, _):
+        case let .message(message):
             message.differenceIdentifier
         case .typingIndicator:
             hashValue

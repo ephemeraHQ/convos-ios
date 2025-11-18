@@ -9,8 +9,8 @@ final class CellFactory {
                            with item: MessagesCollectionCell,
                            onTapAvatar: @escaping () -> Void) -> UICollectionViewCell {
         switch item {
-        case let .message(message, bubbleType: bubbleType):
-            return createMessageCell(in: collectionView, for: indexPath, message: message, bubbleType: bubbleType, onTapAvatar: onTapAvatar)
+        case let .message(message):
+            return createMessagesCell(in: collectionView, for: indexPath, message: message, onTapAvatar: onTapAvatar)
         case let .messageGroup(group):
             return createGroupTitle(in: collectionView, for: indexPath, title: group.title, source: group.source)
         case let .date(group):
@@ -41,63 +41,64 @@ final class CellFactory {
         return cell
     }
 
-    private static func createMessageCell(in collectionView: UICollectionView,
-                                          for indexPath: IndexPath,
-                                          message: AnyMessage,
-                                          bubbleType: MessagesCollectionCell.BubbleType,
-                                          onTapAvatar: @escaping () -> Void) -> UICollectionViewCell {
-        switch message {
-        case .message(let message):
-            switch message.content {
-            case .update(let update):
-                return createConversationUpdate(in: collectionView, for: indexPath, update: update)
-            case .text(let string), .emoji(let string):
-                return createTextCell(
-                    in: collectionView,
-                    for: indexPath,
-                    text: string,
-                    bubbleType: bubbleType,
-                    messageType: message.source,
-                    profile: message.sender.profile,
-                    onTapAvatar: onTapAvatar
-                )
-            case .attachment(let attachmentURL):
-                return createImageCell(
-                    in: collectionView,
-                    messageId: message.id,
-                    for: indexPath,
-                    profile: message.sender.profile,
-                    source: .imageURL(attachmentURL),
-                    messageType: message.source
-                )
-            case .attachments:
-                return UICollectionViewCell()
-            }
-        case .reply(let reply):
-            switch reply.content {
-            case .text(let string), .emoji(let string):
-                return createTextCell(
-                    in: collectionView,
-                    for: indexPath,
-                    text: string,
-                    bubbleType: bubbleType,
-                    messageType: reply.source,
-                    profile: reply.sender.profile,
-                    onTapAvatar: onTapAvatar
-                )
-            case .attachment(let attachmentURL):
-                return createImageCell(
-                    in: collectionView,
-                    messageId: reply.id,
-                    for: indexPath,
-                    profile: reply.sender.profile,
-                    source: .imageURL(attachmentURL),
-                    messageType: reply.source
-                )
-            case .attachments, .update:
-                return UICollectionViewCell()
-            }
-        }
+    private static func createMessagesCell(in collectionView: UICollectionView,
+                                           for indexPath: IndexPath,
+                                           message: MessagesListItemType,
+                                           onTapAvatar: @escaping () -> Void) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MessagesListItemTypeCell.reuseIdentifier,
+                                                      for: indexPath) as! MessagesListItemTypeCell
+        cell.setup(item: message, onTapAvatar: onTapAvatar)
+        return cell
+//        case .message(let message):
+//            switch message.content {
+//            case .update(let update):
+//                return createConversationUpdate(in: collectionView, for: indexPath, update: update)
+//            case .text(let string), .emoji(let string):
+//                return createTextCell(
+//                    in: collectionView,
+//                    for: indexPath,
+//                    text: string,
+//                    bubbleType: bubbleType,
+//                    messageType: message.source,
+//                    profile: message.sender.profile,
+//                    onTapAvatar: onTapAvatar
+//                )
+//            case .attachment(let attachmentURL):
+//                return createImageCell(
+//                    in: collectionView,
+//                    messageId: message.id,
+//                    for: indexPath,
+//                    profile: message.sender.profile,
+//                    source: .imageURL(attachmentURL),
+//                    messageType: message.source
+//                )
+//            case .attachments:
+//                return UICollectionViewCell()
+//            }
+//        case .reply(let reply):
+//            switch reply.content {
+//            case .text(let string), .emoji(let string):
+//                return createTextCell(
+//                    in: collectionView,
+//                    for: indexPath,
+//                    text: string,
+//                    bubbleType: bubbleType,
+//                    messageType: reply.source,
+//                    profile: reply.sender.profile,
+//                    onTapAvatar: onTapAvatar
+//                )
+//            case .attachment(let attachmentURL):
+//                return createImageCell(
+//                    in: collectionView,
+//                    messageId: reply.id,
+//                    for: indexPath,
+//                    profile: reply.sender.profile,
+//                    source: .imageURL(attachmentURL),
+//                    messageType: reply.source
+//                )
+//            case .attachments, .update:
+//                return UICollectionViewCell()
+//            }
     }
 
     // swiftlint:disable:next function_parameter_count
