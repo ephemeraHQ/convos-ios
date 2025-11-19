@@ -20,11 +20,10 @@ struct MessagesGroupItemView: View {
             switch message.base.content {
             case .text(let text):
                 MessageBubble(
-                    style: bubbleType,
+                    style: message.base.content.isEmoji ? .none : bubbleType,
                     message: text,
                     isOutgoing: message.base.sender.isCurrentUser,
                     profile: message.base.sender.profile,
-                    onTapAvatar: { onTapAvatar(message) }
                 )
                 .zIndex(200)
                 .id(message.base.id)
@@ -46,9 +45,33 @@ struct MessagesGroupItemView: View {
                     y: isAppearing ? 40 : 0
                 )
             case .emoji(let text):
-                Text(text)
-                    .id(message.base.id)
-                    .font(.largeTitle)
+                EmojiBubble(
+                    emoji: text,
+                    isOutgoing: message.base.sender.isCurrentUser,
+                    profile: message.base.sender.profile
+                )
+                .zIndex(200)
+                .id(message.base.id)
+                .onTapGesture {
+                    onTapMessage(message)
+                }
+                .opacity(isAppearing ? 0.0 : 1.0)
+                .blur(radius: isAppearing ? 10.0 : 0.0)
+                .scaleEffect(isAppearing ? 0.0 : 1.0)
+                .rotationEffect(
+                    .radians(
+                        isAppearing
+                        ? (message.base.source == .incoming ? -0.10 : 0.10)
+                        : 0
+                    )
+                )
+                .offset(
+                    x: isAppearing
+                    ? (message.base.source == .incoming ? -100 : 100)
+                    : 0,
+                    y: isAppearing ? 40 : 0
+                )
+
             case .attachment(let url):
                 AttachmentPlaceholder(url: url, isOutgoing: message.base.sender.isCurrentUser)
                     .id(message.base.id)

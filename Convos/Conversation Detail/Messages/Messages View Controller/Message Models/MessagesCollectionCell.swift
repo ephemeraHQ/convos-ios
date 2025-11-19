@@ -9,7 +9,7 @@ enum MessagesCollectionCell: Hashable {
     }
 
     enum BubbleType {
-        case normal, tailed
+        case normal, tailed, none
     }
 
     case message(MessagesListItemType)

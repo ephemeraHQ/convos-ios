@@ -1,12 +1,10 @@
 import SwiftUI
 
-struct MessageContainer<Content: View, AvatarView: View>: View {
+struct MessageContainer<Content: View>: View {
     let style: MessagesCollectionCell.BubbleType
     let isOutgoing: Bool
     let cornerRadius: CGFloat = Constant.bubbleCornerRadius
     let content: () -> Content
-    let avatarView: () -> AvatarView
-    let onTapAvatar: (() -> Void)?
 
     var spacer: some View {
         Group {
@@ -41,38 +39,29 @@ struct MessageContainer<Content: View, AvatarView: View>: View {
                     topTrailingRadius: cornerRadius
                 )
             }
+        case .none:
+            return .rect(cornerRadii: .init())
         }
-    }
-
-    var avatar: some View {
-        avatarView()
-            .frame(width: DesignConstants.ImageSizes.smallAvatar,
-                   height: DesignConstants.ImageSizes.smallAvatar)
-            .onTapGesture {
-                onTapAvatar?()
-            }
-            .hoverEffect(.lift)
     }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 0.0) {
             if isOutgoing {
                 spacer
-            } else {
-                avatar
-                    .padding(.trailing, DesignConstants.Spacing.step2x)
             }
 
-            content()
-                .background(isOutgoing ? Color.colorBubble : Color.colorBubbleIncoming)
-                .foregroundColor(isOutgoing ? .colorTextPrimaryInverted : .colorTextPrimary)
-                .mask(mask)
+            if style == .none {
+                content()
+                    .foregroundColor(isOutgoing ? .colorTextPrimaryInverted : .colorTextPrimary)
+            } else {
+                content()
+                    .background(isOutgoing ? Color.colorBubble : Color.colorBubbleIncoming)
+                    .foregroundColor(isOutgoing ? .colorTextPrimaryInverted : .colorTextPrimary)
+                    .mask(mask)
+            }
 
             if !isOutgoing {
                 spacer
-            } else {
-                avatar
-                    .padding(.leading, DesignConstants.Spacing.step2x)
             }
         }
     }

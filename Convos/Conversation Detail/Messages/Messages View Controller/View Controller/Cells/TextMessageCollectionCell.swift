@@ -38,8 +38,7 @@ class TextMessageCollectionCell: UICollectionViewCell {
                     style: style,
                     message: message,
                     isOutgoing: messageType == .outgoing,
-                    profile: profile,
-                    onTapAvatar: onTapAvatar
+                    profile: profile
                 )
             }
             .frame(maxWidth: .infinity, alignment: .leading)

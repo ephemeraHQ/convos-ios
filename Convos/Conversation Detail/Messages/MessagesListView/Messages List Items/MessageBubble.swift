@@ -6,7 +6,6 @@ struct MessageBubble: View {
     let message: String
     let isOutgoing: Bool
     let profile: Profile
-    let onTapAvatar: (() -> Void)?
 
     private var textColor: Color {
         // Match the text color based on message type (same as MessageContainer)
@@ -18,28 +17,36 @@ struct MessageBubble: View {
     }
 
     var body: some View {
-        HStack {
-            MessageContainer(style: style, isOutgoing: isOutgoing) {
-                LinkDetectingTextView(message, linkColor: textColor)
-                    .foregroundStyle(textColor)
-                    .padding(.horizontal, DesignConstants.Spacing.step3x)
-                    .padding(.vertical, DesignConstants.Spacing.step2x)
-            } avatarView: {
-                EmptyView()
-                //                Group {
-//                    if isOutgoing {
-//                        EmptyView()
-//                    } else {
-//                        if style == .normal {
-//                            Spacer()
-//                        } else {
-//                            ProfileAvatarView(profile: profile, profileImage: nil)
-//                        }
-//                    }
-//                }
-            } onTapAvatar: {
-                onTapAvatar?()
-            }
+        MessageContainer(style: style, isOutgoing: isOutgoing) {
+            LinkDetectingTextView(message, linkColor: textColor)
+                .foregroundStyle(textColor)
+                .font(.callout)
+                .padding(.horizontal, DesignConstants.Spacing.step3x)
+                .padding(.vertical, DesignConstants.Spacing.step2x)
+        }
+    }
+}
+
+struct EmojiBubble: View {
+    let emoji: String
+    let isOutgoing: Bool
+    let profile: Profile
+
+    private var textColor: Color {
+        if isOutgoing {
+            return Color.colorTextPrimaryInverted
+        } else {
+            return Color.colorTextPrimary
+        }
+    }
+
+    var body: some View {
+        MessageContainer(style: .none, isOutgoing: isOutgoing) {
+            Text(emoji)
+                .foregroundStyle(textColor)
+                .font(.largeTitle.pointSize(64.0))
+                .padding(.vertical, DesignConstants.Spacing.step2x)
+                .multilineTextAlignment(isOutgoing ? .trailing : .leading)
         }
     }
 }
@@ -52,21 +59,23 @@ struct MessageBubble: View {
                 message: "Hello world!",
                 isOutgoing: type == .outgoing,
                 profile: .mock(),
-                onTapAvatar: nil
             )
             MessageBubble(
                 style: .normal,
                 message: "Check out https://convos.org for more info",
                 isOutgoing: type == .outgoing,
                 profile: .mock(),
-                onTapAvatar: nil
             )
             MessageBubble(
                 style: .tailed,
                 message: "Visit www.example.com or email us at hello@example.com",
                 isOutgoing: type == .outgoing,
                 profile: .mock(),
-                onTapAvatar: nil
+            )
+            EmojiBubble(
+                emoji: "❤️❤️❤️",
+                isOutgoing: type == .outgoing,
+                profile: .mock(),
             )
         }
     }

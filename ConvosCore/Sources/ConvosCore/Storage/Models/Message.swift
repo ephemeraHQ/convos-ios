@@ -40,6 +40,15 @@ public enum MessageContent: Hashable, Codable, Sendable {
         }
     }
 
+    public var isEmoji: Bool {
+        switch self {
+        case .emoji:
+            true
+        default:
+            false
+        }
+    }
+
     public var showsSender: Bool {
         switch self {
         case .update:
