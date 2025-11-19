@@ -18,7 +18,7 @@ struct MessagesGroupItemView: View {
     var body: some View {
         VStack {
             switch message.base.content {
-            case .text(let text), .emoji(let text):
+            case .text(let text):
                 MessageBubble(
                     style: bubbleType,
                     message: text,
@@ -45,6 +45,10 @@ struct MessagesGroupItemView: View {
                     : 0,
                     y: isAppearing ? 40 : 0
                 )
+            case .emoji(let text):
+                Text(text)
+                    .id(message.base.id)
+                    .font(.largeTitle)
             case .attachment(let url):
                 AttachmentPlaceholder(url: url, isOutgoing: message.base.sender.isCurrentUser)
                     .id(message.base.id)
@@ -65,16 +69,14 @@ struct MessagesGroupItemView: View {
             }
 
             if showsSentStatus {
-                HStack {
+                HStack(spacing: DesignConstants.Spacing.stepHalf) {
                     Spacer()
                     Text("Sent")
-                        .font(.footnote)
-                        .foregroundStyle(.colorTextSecondary)
-                        .padding(.bottom, DesignConstants.Spacing.stepHalf)
                     Image(systemName: "checkmark")
-                        .font(.footnote)
-                        .foregroundStyle(.colorTextSecondary)
                 }
+                .padding(.bottom, DesignConstants.Spacing.stepHalf)
+                .font(.caption)
+                .foregroundStyle(.colorTextSecondary)
                 .id("sent-status-\(message.base.sender.id)")
                 .transition(.blurReplace)
                 .zIndex(100)

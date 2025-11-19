@@ -37,6 +37,7 @@ struct MessagesView<BottomBarContent: View>: View {
             conversation: conversation,
             messages: $messages,
             invite: invite,
+            focusCoordinator: focusCoordinator,
             onTapMessage: onTapMessage,
             onTapAvatar: onTapAvatar,
             bottomBarHeight: bottomBarHeight

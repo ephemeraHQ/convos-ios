@@ -5,6 +5,7 @@ struct MessagesListView: View {
     let conversation: Conversation
     @Binding var messages: [MessagesListItemType]
     let invite: Invite
+    let focusCoordinator: FocusCoordinator
     let onTapMessage: (AnyMessage) -> Void
     let onTapAvatar: (AnyMessage) -> Void
     let bottomBarHeight: CGFloat
@@ -52,20 +53,32 @@ struct MessagesListView: View {
                                 lastItemIndex = index
                             }
                         }
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(nil)
-                        .listRowSpacing(0.0)
                     }
                 }
-//                .scrollTargetLayout()
             }
-            .scrollEdgeEffectStyle(.soft, for: .bottom)
-            .scrollEdgeEffectHidden() // makes no sense, but fixes the flickering profile photo
+            .onChange(of: focusCoordinator.currentFocus) { _, newValue in
+                if newValue == .message {
+                    scrollPosition.scrollTo(edge: .bottom)
+                }
+            }
+            .onChange(of: messages) {
+                if let last = messages.last {
+                    switch last {
+                    case .messages(let group):
+                        if group.isLastGroupSentByCurrentUser {
+                            scrollPosition.scrollTo(edge: .bottom)
+                        }
+                    default:
+                        break
+                    }
+                }
+            }
+            .scrollEdgeEffectHidden(for: [.bottom]) // fixes the flickering profile photo
             .animation(.spring(duration: 0.5, bounce: 0.2), value: messages)
             .contentMargins(.horizontal, DesignConstants.Spacing.step4x, for: .scrollContent)
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
-            .scrollPosition($scrollPosition)
+            .scrollPosition($scrollPosition, anchor: .bottom)
         }
     }
 }
