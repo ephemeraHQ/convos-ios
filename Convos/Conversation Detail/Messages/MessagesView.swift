@@ -39,8 +39,7 @@ struct MessagesView<BottomBarContent: View>: View {
             invite: invite,
             focusCoordinator: focusCoordinator,
             onTapMessage: onTapMessage,
-            onTapAvatar: onTapAvatar,
-            bottomBarHeight: bottomBarHeight
+            onTapAvatar: onTapAvatar
         )
         .safeAreaBar(edge: .bottom) {
             VStack(spacing: 0.0) {

@@ -8,7 +8,6 @@ struct MessagesListView: View {
     let focusCoordinator: FocusCoordinator
     let onTapMessage: (AnyMessage) -> Void
     let onTapAvatar: (AnyMessage) -> Void
-    let bottomBarHeight: CGFloat
 
     @State private var scrollPosition: ScrollPosition = ScrollPosition(edge: .bottom)
     @State private var lastItemIndex: Int?

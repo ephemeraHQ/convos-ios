@@ -97,7 +97,9 @@ struct MessagesGroupView: View {
                     isAppearing = false
                 }
             } else {
-                isAppearing = false
+                withAnimation(.none) {
+                    isAppearing = false
+                }
             }
         }
         .id(group.id)

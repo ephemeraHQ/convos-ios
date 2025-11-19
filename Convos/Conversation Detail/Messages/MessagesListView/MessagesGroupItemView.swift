@@ -119,7 +119,9 @@ struct MessagesGroupItemView: View {
                     isAppearing = false
                 }
             } else {
-                isAppearing = false
+                withAnimation(.none) {
+                    isAppearing = false
+                }
             }
         }
     }
