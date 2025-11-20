@@ -16,8 +16,8 @@ final class MessagesListRepository: MessagesListRepositoryProtocol {
     // MARK: - Private Properties
 
     private let messagesRepository: any MessagesRepositoryProtocol
-    private let messagesListSubject = CurrentValueSubject<[MessagesListItemType], Never>([])
-    private var cancellables = Set<AnyCancellable>()
+    private let messagesListSubject: CurrentValueSubject<[MessagesListItemType], Never> = .init([])
+    private var cancellables: Set<AnyCancellable> = .init()
 
     // MARK: - Public Properties
 

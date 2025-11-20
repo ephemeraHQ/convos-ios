@@ -23,6 +23,7 @@ struct MessageBubble: View {
                 .font(.callout)
                 .padding(.horizontal, DesignConstants.Spacing.step3x)
                 .padding(.vertical, DesignConstants.Spacing.step2x)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

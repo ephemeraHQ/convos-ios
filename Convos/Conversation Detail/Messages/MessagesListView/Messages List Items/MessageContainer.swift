@@ -7,11 +7,9 @@ struct MessageContainer<Content: View>: View {
     let content: () -> Content
 
     var spacer: some View {
-        Group {
-            Spacer()
-            Spacer()
-                .frame(maxWidth: 50.0)
-        }
+        Spacer()
+            .frame(minWidth: 50.0)
+            .layoutPriority(-1)
     }
 
     var mask: UnevenRoundedRectangle {
