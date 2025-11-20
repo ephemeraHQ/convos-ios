@@ -29,6 +29,7 @@ struct MessagesView<BottomBarContent: View>: View {
     let onTapAvatar: (AnyMessage) -> Void
     let onDisplayNameEndedEditing: () -> Void
     let onProfileSettings: () -> Void
+    let loadPreviousMessages: () -> Void
     @ViewBuilder let bottomBarContent: () -> BottomBarContent
 
     @State private var bottomBarHeight: CGFloat = 0.0
@@ -39,7 +40,8 @@ struct MessagesView<BottomBarContent: View>: View {
             invite: invite,
             focusCoordinator: focusCoordinator,
             onTapMessage: onTapMessage,
-            onTapAvatar: onTapAvatar
+            onTapAvatar: onTapAvatar,
+            loadPrevious: loadPreviousMessages
         )
         .safeAreaBar(edge: .bottom) {
             VStack(spacing: 0.0) {

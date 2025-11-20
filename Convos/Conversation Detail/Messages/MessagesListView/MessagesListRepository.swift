@@ -8,7 +8,14 @@ protocol MessagesListRepositoryProtocol {
     var messagesListPublisher: AnyPublisher<[MessagesListItemType], Never> { get }
     var conversationMessagesListPublisher: AnyPublisher<(String, [MessagesListItemType]), Never> { get }
 
-    func fetchAll() throws -> [MessagesListItemType]
+    /// Fetches the initial page of messages (most recent messages)
+    func fetchInitial() throws -> [MessagesListItemType]
+
+    /// Fetches previous (older) messages
+    func fetchPrevious() throws -> [MessagesListItemType]
+
+    /// Indicates if there are more messages to load
+    var hasMoreMessages: Bool { get }
 }
 
 @MainActor
@@ -55,9 +62,18 @@ final class MessagesListRepository: MessagesListRepositoryProtocol {
 
     // MARK: - Public Methods
 
-    func fetchAll() throws -> [MessagesListItemType] {
-        let messages = try messagesRepository.fetchAll()
+    func fetchInitial() throws -> [MessagesListItemType] {
+        let messages = try messagesRepository.fetchInitial()
         return processMessages(messages)
+    }
+
+    func fetchPrevious() throws -> [MessagesListItemType] {
+        let messages = try messagesRepository.fetchPrevious()
+        return processMessages(messages)
+    }
+
+    var hasMoreMessages: Bool {
+        return messagesRepository.hasMoreMessages
     }
 
     // MARK: - Private Methods

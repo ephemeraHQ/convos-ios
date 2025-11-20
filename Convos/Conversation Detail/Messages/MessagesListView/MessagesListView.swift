@@ -8,6 +8,7 @@ struct MessagesListView: View {
     let focusCoordinator: FocusCoordinator
     let onTapMessage: (AnyMessage) -> Void
     let onTapAvatar: (AnyMessage) -> Void
+    let loadPrevious: () -> Void
 
     @State private var scrollPosition: ScrollPosition = ScrollPosition(edge: .bottom)
     @State private var lastItemIndex: Int?
@@ -46,8 +47,13 @@ struct MessagesListView: View {
                                 )
                             }
                         }
-                        .onScrollVisibilityChange { isVisible in
+                        .onScrollVisibilityChange(threshold: 0.1) { isVisible in
+//                            if index == messages.count - 1 && isVisible {
+//                                loadPrevious()
+//                            }
+//
                             guard lastItemIndex == nil else { return }
+
                             if isVisible && index == messages.count - 1 {
                                 lastItemIndex = index
                             }

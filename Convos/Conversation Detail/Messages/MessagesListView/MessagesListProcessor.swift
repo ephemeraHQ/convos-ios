@@ -23,6 +23,18 @@ final class MessagesListProcessor {
         return processMessages(sortedMessages)
     }
 
+    /// Processes messages for pagination scenarios
+    /// When loading previous messages, this method ensures proper grouping and date handling
+    /// - Parameters:
+    ///   - messages: Array of all messages from the repository (including newly loaded)
+    ///   - isLoadingPrevious: Whether we're loading previous messages (affects date separator logic)
+    /// - Returns: Array of items ready for display in the messages list
+    static func processWithPagination(_ messages: [AnyMessage], isLoadingPrevious: Bool = false) -> [MessagesListItemType] {
+        // Use the standard process method - it handles all messages properly
+        // The repository already ensures messages are in the correct order
+        return process(messages)
+    }
+
     // MARK: - Private Methods
 
     // swiftlint:disable:next cyclomatic_complexity

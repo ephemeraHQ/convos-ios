@@ -162,7 +162,7 @@ class ConversationViewModel {
         )
 
         do {
-            self.messages = try messagesListRepository.fetchAll()
+            self.messages = try messagesListRepository.fetchInitial()
             self.conversation = try conversationRepository.fetchConversation() ?? conversation
         } catch {
             Log.error("Error fetching messages or conversation: \(error.localizedDescription)")
@@ -209,7 +209,7 @@ class ConversationViewModel {
         )
 
         do {
-            self.messages = try messagesListRepository.fetchAll()
+            self.messages = try messagesListRepository.fetchInitial()
             self.conversation = try conversationRepository.fetchConversation() ?? conversation
         } catch {
             Log.error("Error fetching messages or conversation: \(error.localizedDescription)")
@@ -444,6 +444,29 @@ class ConversationViewModel {
                 Log.error("Error exploding convo: \(error.localizedDescription)")
             }
         }
+    }
+
+    // MARK: - Pagination Support
+
+    /// Loads previous (older) messages
+    func loadPreviousMessages() {
+        guard hasMoreMessages else { return }
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let allMessages = try messagesListRepository.fetchPrevious()
+                self.messages = allMessages
+                Log.info("Loaded \(allMessages.count) total messages")
+            } catch {
+                Log.error("Error loading previous messages: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Checks if there are more messages to load
+    var hasMoreMessages: Bool {
+        return messagesListRepository.hasMoreMessages
     }
 
     @MainActor

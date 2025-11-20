@@ -187,8 +187,20 @@ extension MockMessagingService: MessagesRepositoryProtocol {
         messagesSubject.eraseToAnyPublisher()
     }
 
-    public func fetchAll() throws -> [AnyMessage] {
+    public func fetchInitial() throws -> [AnyMessage] {
+        // Return the last 25 messages (or all if less than 25) to match default page size
+        let pageSize = 25
+        return Array(messages.suffix(pageSize))
+    }
+
+    public func fetchPrevious() throws -> [AnyMessage] {
+        // For mock, just return all messages
         messages
+    }
+
+    public var hasMoreMessages: Bool {
+        // For mock, return false since we don't have real pagination
+        false
     }
 
     public var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> {

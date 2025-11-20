@@ -8,7 +8,17 @@ public protocol MessagesRepositoryProtocol {
     var messagesPublisher: AnyPublisher<[AnyMessage], Never> { get }
     var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> { get }
 
-    func fetchAll() throws -> [AnyMessage]
+    /// Fetches the initial page of messages (most recent messages)
+    /// Resets the pagination cursor to fetch only the latest messages
+    func fetchInitial() throws -> [AnyMessage]
+
+    /// Fetches previous (older) messages by increasing the limit
+    /// Each call increases the limit by the page size
+    func fetchPrevious() throws -> [AnyMessage]
+
+    /// Indicates if there are more messages to load
+    /// Automatically set to false when fetchPrevious returns fewer messages than the page size
+    var hasMoreMessages: Bool { get }
 }
 
 extension MessagesRepositoryProtocol {
@@ -19,6 +29,16 @@ extension MessagesRepositoryProtocol {
     }
 }
 
+/// Repository for managing paginated message fetching and observation
+///
+/// This repository implements a simple pagination strategy:
+/// - Starts by fetching the N most recent messages (where N = pageSize)
+/// - Each call to fetchPrevious() increases the limit by pageSize
+/// - The publisher automatically updates when the limit changes
+/// - When conversation changes, pagination resets to the initial page
+///
+/// Note: Currently, when loading previous messages, all messages up to the new limit
+/// are re-composed. This could be optimized in the future to only compose new messages.
 class MessagesRepository: MessagesRepositoryProtocol {
     private let dbReader: any DatabaseReader
     private var conversationId: String {
@@ -28,19 +48,38 @@ class MessagesRepository: MessagesRepositoryProtocol {
     private let messages: [AnyMessage] = []
     private var conversationIdCancellable: AnyCancellable?
 
-    init(dbReader: any DatabaseReader, conversationId: String) {
+    // Pagination properties
+    private let pageSize: Int
+    private let currentLimitSubject: CurrentValueSubject<Int, Never>
+    private var currentLimit: Int {
+        get { currentLimitSubject.value }
+        set { currentLimitSubject.send(newValue) }
+    }
+
+    /// Indicates if there are more messages to load
+    private(set) var hasMoreMessages: Bool = true
+
+    init(dbReader: any DatabaseReader, conversationId: String, pageSize: Int = 25) {
         self.dbReader = dbReader
         self.conversationIdSubject = .init(conversationId)
+        self.pageSize = pageSize
+        self.currentLimitSubject = .init(pageSize)
     }
 
     init(dbReader: any DatabaseReader,
          conversationId: String,
-         conversationIdPublisher: AnyPublisher<String, Never>) {
+         conversationIdPublisher: AnyPublisher<String, Never>,
+         pageSize: Int = 25) {
         self.dbReader = dbReader
         self.conversationIdSubject = .init(conversationId)
+        self.pageSize = pageSize
+        self.currentLimitSubject = .init(pageSize)
         conversationIdCancellable = conversationIdPublisher.sink { [weak self] conversationId in
             guard let self else { return }
-            Log.info("Sending updated conversation id: \(conversationId)")
+            Log.info("Sending updated conversation id: \(conversationId), resetting pagination")
+            // Reset pagination when conversation changes
+            currentLimit = pageSize
+            hasMoreMessages = true
             conversationIdSubject.send(conversationId)
         }
     }
@@ -49,39 +88,89 @@ class MessagesRepository: MessagesRepositoryProtocol {
         conversationIdCancellable?.cancel()
     }
 
-    func fetchAll() throws -> [AnyMessage] {
-        try dbReader.read { [weak self] db in
+    func fetchInitial() throws -> [AnyMessage] {
+        // Reset to initial page size and assume more messages are available
+        currentLimit = pageSize
+        hasMoreMessages = true
+
+        return try dbReader.read { [weak self] db in
             guard let self else { return [] }
-            return try db.composeMessages(for: conversationId)
+            let messages = try db.composeMessages(for: conversationId, limit: currentLimit)
+
+            // Check if we got fewer messages than the page size
+            if messages.count < pageSize {
+                hasMoreMessages = false
+            }
+
+            return messages
+        }
+    }
+
+    func fetchPrevious() throws -> [AnyMessage] {
+        // Don't fetch if we already know there are no more messages
+        guard hasMoreMessages else {
+            return try dbReader.read { [weak self] db in
+                guard let self else { return [] }
+                return try db.composeMessages(for: conversationId, limit: currentLimit)
+            }
+        }
+
+        let previousLimit = currentLimit
+        // Increase the limit by pageSize to load more messages
+        currentLimit += pageSize
+
+        return try dbReader.read { [weak self] db in
+            guard let self else { return [] }
+            let messages = try db.composeMessages(for: conversationId, limit: currentLimit)
+
+            // Check if we got fewer new messages than expected
+            // If the total count is less than the new limit, we've loaded everything
+            if messages.count < currentLimit {
+                hasMoreMessages = false
+            } else {
+                // Also check if we didn't get any new messages beyond the previous limit
+                // This handles the case where we have exactly previousLimit messages
+                let totalCount = try DBMessage
+                    .filter(DBMessage.Columns.conversationId == conversationId)
+                    .fetchCount(db)
+                if totalCount <= currentLimit {
+                    hasMoreMessages = false
+                }
+            }
+
+            return messages
         }
     }
 
     lazy var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> = {
-        conversationIdSubject
-            .removeDuplicates()
-            .map { [weak self] conversationId -> AnyPublisher<ConversationMessages, Never> in
-                guard let self else {
-                    return Just((conversationId, [])).eraseToAnyPublisher()
-                }
-
-                return ValueObservation
-                    .tracking { [weak self] db in
-                        guard let self else { return [] }
-                        do {
-                            let messages = try db.composeMessages(for: conversationId)
-                            return messages
-                        } catch {
-                            Log.error("Error in messages publisher: \(error)")
-                        }
-                        return []
-                    }
-                    .publisher(in: dbReader)
-                    .replaceError(with: [])
-                    .map { (conversationId, $0) }
-                    .eraseToAnyPublisher()
+        // Combine both conversation ID and limit changes
+        Publishers.CombineLatest(
+            conversationIdSubject.removeDuplicates(),
+            currentLimitSubject.removeDuplicates()
+        )
+        .map { [weak self] conversationId, limit -> AnyPublisher<ConversationMessages, Never> in
+            guard let self else {
+                return Just((conversationId, [])).eraseToAnyPublisher()
             }
-            .switchToLatest()
-            .eraseToAnyPublisher()
+
+            return ValueObservation
+                .tracking { [weak self] db in
+                    guard let self else { return [] }
+                    do {
+                        let messages = try db.composeMessages(for: conversationId, limit: limit)
+                        return messages
+                    } catch {
+                        Log.error("Error in messages publisher: \(error)")
+                    }
+                    return []
+                }
+                .publisher(in: dbReader)
+                .replaceError(with: [])
+                .map { (conversationId, $0) }
+                .eraseToAnyPublisher()
+        }
+        .switchToLatest()
+        .eraseToAnyPublisher()
     }()
 }
 
@@ -197,7 +286,7 @@ extension Array where Element == MessageWithDetails {
 }
 
 fileprivate extension Database {
-    func composeMessages(for conversationId: String) throws -> [AnyMessage] {
+    func composeMessages(for conversationId: String, limit: Int? = nil) throws -> [AnyMessage] {
         guard let dbConversationDetails = try DBConversation
             .filter(DBConversation.Columns.id == conversationId)
             .detailedConversationQuery()
@@ -206,9 +295,18 @@ fileprivate extension Database {
         }
 
         let conversation = dbConversationDetails.hydrateConversation()
-        let dbMessages = try DBMessage
+
+        // Build the query
+        var query = DBMessage
             .filter(DBMessage.Columns.conversationId == conversationId)
-            .order(\.dateNs.asc)
+            .order(\.dateNs.desc) // Order by DESC to get the latest messages first
+
+        // Apply limit if provided (gets the N most recent messages)
+        if let limit = limit {
+            query = query.limit(limit)
+        }
+
+        let dbMessages = try query
             .including(
                 required: DBMessage.sender
                     .forKey("messageSender")
@@ -220,6 +318,10 @@ fileprivate extension Database {
             .including(optional: DBMessage.sourceMessage)
             .asRequest(of: MessageWithDetails.self)
             .fetchAll(self)
-        return try dbMessages.composeMessages(from: self, in: conversation)
+
+        // Reverse the messages back to chronological order after fetching
+        // since we fetched them in reverse order to get the latest N messages
+        let chronologicalMessages = dbMessages.reversed()
+        return try Array(chronologicalMessages).composeMessages(from: self, in: conversation)
     }
 }

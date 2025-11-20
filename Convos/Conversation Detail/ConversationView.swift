@@ -47,6 +47,7 @@ struct ConversationView<MessagesBottomBar: View>: View {
                 viewModel.onDisplayNameEndedEditing(focusCoordinator: focusCoordinator, context: .quickEditor)
             },
             onProfileSettings: viewModel.onProfileSettings,
+            loadPreviousMessages: viewModel.loadPreviousMessages,
             bottomBarContent: {
                 VStack(spacing: DesignConstants.Spacing.step3x) {
                     bottomBarContent()
