@@ -205,13 +205,13 @@ final class MessagesViewController: UIViewController {
 
         dataSource.prepare(with: collectionView)
 
-        dataSource.onTapAvatar = { [weak self] indexPath in
-            guard let self = self else { return }
-            let cell = self.dataSource.sections[indexPath.section].cells[indexPath.item]
-            if case .message(let message) = cell {
+//        dataSource.onTapAvatar = { [weak self] indexPath in
+//            guard let self = self else { return }
+//            let cell = self.dataSource.sections[indexPath.section].cells[indexPath.item]
+//            if case .message(let message) = cell {
 //                self.onTapAvatar?(message)
-            }
-        }
+//            }
+//        }
     }
 
     private func handleViewTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -436,13 +436,6 @@ extension MessagesViewController {
 // MARK: - UIScrollViewDelegate & UICollectionViewDelegate
 
 extension MessagesViewController: UIScrollViewDelegate, UICollectionViewDelegate {
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let cell = dataSource.sections[indexPath.section].cells[indexPath.item]
-        if case .message(let message) = cell {
-//            onTapMessage?(message)
-        }
-    }
-
     func scrollViewShouldScrollToTop(_ scrollView: UIScrollView) -> Bool {
         guard scrollView.contentSize.height > 0,
               !currentInterfaceActions.options.contains(.scrollingToTop),

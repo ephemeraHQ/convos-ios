@@ -2,8 +2,6 @@ import Foundation
 import SwiftUI
 import UIKit
 
-// swiftlint:disable force_cast
-
 final class MessagesCollectionViewDataSource: NSObject {
     var sections: [MessagesCollectionSection] = [] {
         didSet {
@@ -107,5 +105,3 @@ extension MessagesCollectionViewDataSource: MessagesLayoutDelegate {
         layoutDelegate.interSectionSpacing(messagesLayout, after: sectionIndex)
     }
 }
-
-// swiftlint:enable force_cast

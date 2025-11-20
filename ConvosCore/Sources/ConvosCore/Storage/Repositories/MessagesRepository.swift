@@ -115,7 +115,6 @@ class MessagesRepository: MessagesRepositoryProtocol {
             }
         }
 
-        let previousLimit = currentLimit
         // Increase the limit by pageSize to load more messages
         currentLimit += pageSize
 
