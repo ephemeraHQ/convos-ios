@@ -14,10 +14,7 @@
 		7AD20CA42E5A8F0B00F68E6E /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AC5995B2E5593C300D65D07 /* ConvosCore */; };
 		7AD545902E4EA8BE00500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD5458F2E4EA8BE00500ADF /* ConvosCore */; };
 		7AD545942E4EA8F300500ADF /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD545932E4EA8F300500ADF /* ConvosCore */; };
-		7AD974582EC2715000566BD5 /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD974572EC2715000566BD5 /* ConvosCore */; };
-		7AD978712EC2741100566BD5 /* ConvosCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7AD5458F2E4EA8BE00500ADF /* ConvosCore */; };
 		D8084BA92DC9193A00E708B0 /* DifferenceKit in Frameworks */ = {isa = PBXBuildFile; productRef = D8084BA82DC9193A00E708B0 /* DifferenceKit */; };
-		D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D80850342DC94F4C00E708B0 /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,13 +46,6 @@
 			remoteGlobalIDString = 7ADC0C6D2E2977800053978A;
 			remoteInfo = ConvosAppClip;
 		};
-		D80850392DC94F4C00E708B0 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D8A2B6892DA4BA4B00EF8577 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = D80850332DC94F4C00E708B0;
-			remoteInfo = NotificationService;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -75,19 +65,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				D808503C2DC94F4C00E708B0 /* NotificationService.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		D80850472DC94FF300E708B0 /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-			);
-			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D85B9BA02DD26BC400831D58 /* Embed Frameworks */ = {
@@ -113,7 +92,6 @@
 		7ADC0C6E2E2977800053978A /* ConvosAppClip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ConvosAppClip.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7ADC0C7C2E2977810053978A /* ConvosAppClipTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConvosAppClipTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7ADC0C862E2977810053978A /* ConvosAppClipUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ConvosAppClipUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		D80850342DC94F4C00E708B0 /* NotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D8477AD42DCBA52F00E31E54 /* .env */ = {isa = PBXFileReference; lastKnownFileType = text; path = .env; sourceTree = "<group>"; };
 		D8477AD52DCBA52F00E31E54 /* .env.example */ = {isa = PBXFileReference; lastKnownFileType = text; path = .env.example; sourceTree = "<group>"; };
 		D8A2B6912DA4BA4B00EF8577 /* Convos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Convos.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -134,13 +112,6 @@
 				Info.plist,
 			);
 			target = 7ADC0C6D2E2977800053978A /* ConvosAppClip */;
-		};
-		D80850402DC94F4C00E708B0 /* Exceptions for "NotificationService" folder in "NotificationService" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = D80850332DC94F4C00E708B0 /* NotificationService */;
 		};
 		D8A2B6A32DA4BA4C00EF8577 /* Exceptions for "Convos" folder in "Convos" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -317,9 +288,6 @@
 		};
 		D80850352DC94F4C00E708B0 /* NotificationService */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				D80850402DC94F4C00E708B0 /* Exceptions for "NotificationService" folder in "NotificationService" target */,
-			);
 			path = NotificationService;
 			sourceTree = "<group>";
 		};
@@ -383,15 +351,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D80850312DC94F4C00E708B0 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				7AD978712EC2741100566BD5 /* ConvosCore in Frameworks */,
-				7AD974582EC2715000566BD5 /* ConvosCore in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		D8A2B68E2DA4BA4B00EF8577 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -450,7 +409,6 @@
 			isa = PBXGroup;
 			children = (
 				D8A2B6912DA4BA4B00EF8577 /* Convos.app */,
-				D80850342DC94F4C00E708B0 /* NotificationService.appex */,
 				7ACA8BA32DE16DE200848799 /* ConvosTests.xctest */,
 				7ADC0C6E2E2977800053978A /* ConvosAppClip.app */,
 				7ADC0C7C2E2977810053978A /* ConvosAppClipTests.xctest */,
@@ -607,32 +565,6 @@
 			productReference = 7ADC0C862E2977810053978A /* ConvosAppClipUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		D80850332DC94F4C00E708B0 /* NotificationService */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = D808503D2DC94F4C00E708B0 /* Build configuration list for PBXNativeTarget "NotificationService" */;
-			buildPhases = (
-				DA06CC472E537505006BFFBA /* Copy Environment Config */,
-				D80850302DC94F4C00E708B0 /* Sources */,
-				D80850312DC94F4C00E708B0 /* Frameworks */,
-				D80850322DC94F4C00E708B0 /* Resources */,
-				D80850472DC94FF300E708B0 /* Embed Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				D80850422DC94FA000E708B0 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				D80850352DC94F4C00E708B0 /* NotificationService */,
-			);
-			name = NotificationService;
-			packageProductDependencies = (
-				7AD5458F2E4EA8BE00500ADF /* ConvosCore */,
-			);
-			productName = NotificationService;
-			productReference = D80850342DC94F4C00E708B0 /* NotificationService.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		D8A2B6902DA4BA4B00EF8577 /* Convos */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D8A2B6A42DA4BA4C00EF8577 /* Build configuration list for PBXNativeTarget "Convos" */;
@@ -648,7 +580,6 @@
 			);
 			dependencies = (
 				D8084C1C2DC91F1300E708B0 /* PBXTargetDependency */,
-				D808503A2DC94F4C00E708B0 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D8A2B6932DA4BA4B00EF8577 /* Convos */,
@@ -695,9 +626,6 @@
 						CreatedOnToolsVersion = 26.0;
 						TestTargetID = 7ADC0C6D2E2977800053978A;
 					};
-					D80850332DC94F4C00E708B0 = {
-						CreatedOnToolsVersion = 16.3;
-					};
 					D8A2B6902DA4BA4B00EF8577 = {
 						CreatedOnToolsVersion = 16.2;
 					};
@@ -734,7 +662,6 @@
 			projectRoot = "";
 			targets = (
 				D8A2B6902DA4BA4B00EF8577 /* Convos */,
-				D80850332DC94F4C00E708B0 /* NotificationService */,
 				7ACA8BA22DE16DE200848799 /* ConvosTests */,
 				7ADC0C6D2E2977800053978A /* ConvosAppClip */,
 				7ADC0C7B2E2977810053978A /* ConvosAppClipTests */,
@@ -788,13 +715,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D80850322DC94F4C00E708B0 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		D8A2B68F2DA4BA4B00EF8577 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -826,27 +746,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "#!/bin/bash\nset -e\n\n# Copy config file to app bundle\n# Handle both absolute and relative paths for CONFIG_FILE\nif [[ \"$CONFIG_FILE\" = /* ]]; then\n    CONFIG_SOURCE=\"$CONFIG_FILE\"\nelse\n    CONFIG_SOURCE=\"${SRCROOT}/Convos/Config/${CONFIG_FILE}\"\nfi\n\nCONFIG_DEST=\"${CODESIGNING_FOLDER_PATH}/config.json\"\n\nif [ ! -f \"$CONFIG_SOURCE\" ]; then\n    echo \"error: Config file not found: $CONFIG_SOURCE (CONFIG_FILE=$CONFIG_FILE)\"\n    exit 1\nfi\n\necho \"📋 Copying config file to app bundle\"\ncp \"$CONFIG_SOURCE\" \"$CONFIG_DEST\"\necho \"✅ Config copied successfully\"\n";
-		};
-		DA06CC472E537505006BFFBA /* Copy Environment Config */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/Convos/Config/$(CONFIG_FILE)",
-				"$(SRCROOT)/.env",
-			);
-			name = "Copy Environment Config";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/config.json",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "#!/bin/bash\nset -e\n\n# Part 1: Generate Secrets.swift for Local builds only (App target only)\nif [ \"$TARGET_NAME\" = \"Convos\" ] && [ \"$CONFIGURATION\" = \"Local\" ]; then\n    echo \"🏠 Local build detected - generating secrets with auto-detected IP\"\n    \n    SECRETS_FILE=\"${SRCROOT}/Convos/Config/Secrets.swift\"\n    \n    # Get the first routable IPv4 address (excluding link-local/APIPA addresses)\n    # First try to get a public IP (not in private ranges)\n    LOCAL_IP=$(ifconfig | grep -E \"inet [0-9]+\" | grep -v \"127\\.\" | grep -v \"169\\.254\\.\" | grep -v \"10\\.\" | grep -v \"172\\.1[6-9]\\.\" | grep -v \"172\\.2[0-9]\\.\" | grep -v \"172\\.3[0-1]\\.\" | grep -v \"192\\.168\\.\" | head -1 | awk '{print $2}')\n    # If no public IP, get the first private network IP (but not link-local)\n    if [ -z \"$LOCAL_IP\" ]; then\n        LOCAL_IP=$(ifconfig | grep -E \"inet [0-9]+\" | grep -v \"127\\.\" | grep -v \"169\\.254\\.\" | head -1 | awk '{print $2}')\n    fi\n    \n    if [ -z \"$LOCAL_IP\" ]; then\n        echo \"❌ Could not detect local IP address\"\n        exit 1\n    fi\n    \n    echo \"✅ Detected local IP\"\n    \n    # Create directory if needed\n    mkdir -p \"${SRCROOT}/Convos/Config\"\n    \n    # Start generating Secrets.swift\n    cat > \"$SECRETS_FILE\" << 'HEADER_EOF'\nimport Foundation\n\n// WARNING:\n// This code is generated by the build phase for Local development.\n// Do not edit this file directly. Your changes will be lost on next build.\n// Git does not track this file.\n// For Local builds, the IP addresses are auto-detected from your network interfaces.\n// For other environments, edit the .env file and run ./Scripts/generate-secrets.sh\n\n// swiftlint:disable all\n\n/// Secrets are generated automatically for Local development\nenum Secrets {\nHEADER_EOF\n\n    # Check if .env has custom values first, otherwise auto-detect\n    CONVOS_API_BASE_URL=\"\"\n    XMTP_CUSTOM_HOST=\"\"\n    \n    if [ -f \"${SRCROOT}/.env\" ]; then\n        # Check for uncommented values in .env\n        CONVOS_API_BASE_URL=$(grep -v '^#' \"${SRCROOT}/.env\" | grep '^CONVOS_API_BASE_URL=' | cut -d'=' -f2- | sed -e 's/^\"//' -e 's/\"$//' || true)\n        XMTP_CUSTOM_HOST=$(grep -v '^#' \"${SRCROOT}/.env\" | grep '^XMTP_CUSTOM_HOST=' | cut -d'=' -f2- | sed -e 's/^\"//' -e 's/\"$//' || true)\n    fi\n\n    # Use .env values if present, otherwise auto-detect\n    if [ -n \"$CONVOS_API_BASE_URL\" ]; then\n        echo \"🔧 Using CONVOS_API_BASE_URL from .env\"\n        echo \"    static let CONVOS_API_BASE_URL = \\\"$CONVOS_API_BASE_URL\\\"\" >> \"$SECRETS_FILE\"\n    else\n        echo \"🔍 Auto-detecting CONVOS_API_BASE_URL\"\n        echo \"    static let CONVOS_API_BASE_URL = \\\"http://$LOCAL_IP:4000/api\\\"\" >> \"$SECRETS_FILE\"\n    fi\n\n    if [ -n \"$XMTP_CUSTOM_HOST\" ]; then\n        echo \"🔧 Using XMTP_CUSTOM_HOST from .env\"\n        echo \"    static let XMTP_CUSTOM_HOST = \\\"$XMTP_CUSTOM_HOST\\\"\" >> \"$SECRETS_FILE\"\n    else\n        echo \"🔍 Auto-detecting XMTP_CUSTOM_HOST\"\n        echo \"    static let XMTP_CUSTOM_HOST = \\\"$LOCAL_IP\\\"\" >> \"$SECRETS_FILE\"\n    fi\n    \n    # Add other secrets from .env if available\n    if [ -f \"${SRCROOT}/.env\" ]; then\n        echo \"📋 Adding additional secrets from .env file...\"\n        \n        # Process .env file: skip comments, empty lines, and IP-related keys (since we handled them above), then format as Swift\n        sed -n '/^[^#]/p' \"${SRCROOT}/.env\" | grep '=' | grep -v '^CONVOS_API_BASE_URL' | grep -v '^XMTP_CUSTOM_HOST' | sed 's/^\\([^=]*\\)=\\(.*\\)$/    static let \\1 = \"\\2\"/' | sed 's/\"\"\\(.*\\)\"\"/\"\\1\"/' >> \"$SECRETS_FILE\"\n    fi\n    \n    # Close the enum\n    cat >> \"$SECRETS_FILE\" << 'FOOTER_EOF'\n}\n\n// swiftlint:enable all\nFOOTER_EOF\n    \n    echo \"🏁 Generated Secrets.swift with auto-detected IP\"\nfi\n\n# Part 2: Copy config file (existing functionality)\nCONFIG_SOURCE=\"${SRCROOT}/Convos/Config/${CONFIG_FILE}\"\nCONFIG_DEST=\"${TARGET_BUILD_DIR}/${WRAPPER_NAME}/config.json\"\n\nif [ ! -f \"$CONFIG_SOURCE\" ]; then\n    echo \"error: Config file not found: $CONFIG_SOURCE (CONFIG_FILE=$CONFIG_FILE)\"\n    exit 1\nfi\n\necho \"📋 Copying $CONFIG_FILE to app bundle\"\ncp \"$CONFIG_SOURCE\" \"$CONFIG_DEST\"\necho \"✅ Config copied successfully\"\n";
 		};
 		DAFC98F62E37C4E700991094 /* Copy Environment Config */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -915,13 +814,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D80850302DC94F4C00E708B0 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		D8A2B68D2DA4BA4B00EF8577 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -955,15 +847,6 @@
 		D8084C1C2DC91F1300E708B0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			productRef = D8084C1B2DC91F1300E708B0 /* SwiftLintBuildToolPlugin */;
-		};
-		D808503A2DC94F4C00E708B0 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = D80850332DC94F4C00E708B0 /* NotificationService */;
-			targetProxy = D80850392DC94F4C00E708B0 /* PBXContainerItemProxy */;
-		};
-		D80850422DC94FA000E708B0 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			productRef = D80850412DC94FA000E708B0 /* SwiftLintBuildToolPlugin */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1487,63 +1370,6 @@
 			};
 			name = Release;
 		};
-		D808503E2DC94F4C00E708B0 /* Dev */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
-			baseConfigurationReferenceRelativePath = Config/Dev.xcconfig;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = NotificationService/NotificationService.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = NotificationService/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = NotificationService;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0.4;
-				PRODUCT_BUNDLE_IDENTIFIER = "$(NOTIFICATION_SERVICE_BUNDLE_ID)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Dev;
-		};
-		D808503F2DC94F4C00E708B0 /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
-			baseConfigurationReferenceRelativePath = Config/Prod.xcconfig;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = NotificationService/NotificationService.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = NotificationService/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = NotificationService;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0.4;
-				PRODUCT_BUNDLE_IDENTIFIER = "$(NOTIFICATION_SERVICE_BUNDLE_ID)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 		D8A2B6A52DA4BA4C00EF8577 /* Dev */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
@@ -1866,35 +1692,6 @@
 			};
 			name = Local;
 		};
-		DAF2D7292E37B3D100A17FF9 /* Local */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
-			baseConfigurationReferenceRelativePath = Config/Local.xcconfig;
-			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = NotificationService/NotificationService.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = NotificationService/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = NotificationService;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0.4;
-				PRODUCT_BUNDLE_IDENTIFIER = "$(NOTIFICATION_SERVICE_BUNDLE_ID)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SKIP_INSTALL = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Local;
-		};
 		DAF2D72A2E37B3D100A17FF9 /* Local */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = D8A2B6932DA4BA4B00EF8577 /* Convos */;
@@ -2073,16 +1870,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D808503D2DC94F4C00E708B0 /* Build configuration list for PBXNativeTarget "NotificationService" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D808503E2DC94F4C00E708B0 /* Dev */,
-				DAF2D7292E37B3D100A17FF9 /* Local */,
-				D808503F2DC94F4C00E708B0 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		D8A2B68C2DA4BA4B00EF8577 /* Build configuration list for PBXProject "Convos" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -2171,22 +1958,12 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = ConvosCore;
 		};
-		7AD974572EC2715000566BD5 /* ConvosCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7AD20B552E5A21AE00F68E6E /* XCLocalSwiftPackageReference "ConvosCore" */;
-			productName = ConvosCore;
-		};
 		D8084BA82DC9193A00E708B0 /* DifferenceKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D8084BA72DC9193A00E708B0 /* XCRemoteSwiftPackageReference "DifferenceKit" */;
 			productName = DifferenceKit;
 		};
 		D8084C1B2DC91F1300E708B0 /* SwiftLintBuildToolPlugin */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
-			productName = "plugin:SwiftLintBuildToolPlugin";
-		};
-		D80850412DC94FA000E708B0 /* SwiftLintBuildToolPlugin */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D80BAEE72DB2F1CD00C2FB42 /* XCRemoteSwiftPackageReference "SwiftLintPlugins" */;
 			productName = "plugin:SwiftLintBuildToolPlugin";
