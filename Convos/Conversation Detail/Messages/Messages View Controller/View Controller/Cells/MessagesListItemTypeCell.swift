@@ -47,8 +47,7 @@ class MessagesListItemTypeCell: UICollectionViewCell {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-//        .margins(.top, DesignConstants.Spacing.stepX)
-        .margins(.bottom, 0.0)
+        .margins(.vertical, 0.0)
     }
 
     override func preferredLayoutAttributesFitting(

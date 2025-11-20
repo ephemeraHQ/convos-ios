@@ -22,25 +22,10 @@ final class MessagesCollectionViewDataSource: NSObject {
                                 forCellWithReuseIdentifier: MessagesListItemTypeCell.reuseIdentifier)
         collectionView.register(ConversationInfoCell.self,
                                 forCellWithReuseIdentifier: ConversationInfoCell.reuseIdentifier)
-        collectionView.register(TextMessageCollectionCell.self,
-                                forCellWithReuseIdentifier: TextMessageCollectionCell.reuseIdentifier)
-        collectionView.register(ImageCollectionCell.self,
-                                forCellWithReuseIdentifier: ImageCollectionCell.reuseIdentifier)
         collectionView.register(InviteCell.self, forCellWithReuseIdentifier: InviteCell.reuseIdentifier)
 
-        collectionView.register(UserTitleCollectionCell.self,
-                                forCellWithReuseIdentifier: UserTitleCollectionCell.reuseIdentifier)
         collectionView.register(TypingIndicatorCollectionCell.self,
                                 forCellWithReuseIdentifier: TypingIndicatorCollectionCell.reuseIdentifier)
-        collectionView.register(TextTitleCell.self,
-                                forCellWithReuseIdentifier: TextTitleCell.reuseIdentifier)
-
-        collectionView.register(TextTitleView.self,
-                                forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
-                                withReuseIdentifier: TextTitleView.reuseIdentifier)
-        collectionView.register(TextTitleView.self,
-                                forSupplementaryViewOfKind: UICollectionView.elementKindSectionFooter,
-                                withReuseIdentifier: TextTitleView.reuseIdentifier)
     }
 }
 
@@ -65,18 +50,6 @@ extension MessagesCollectionViewDataSource: UICollectionViewDataSource {
         return CellFactory.createCell(in: collectionView, for: indexPath, with: item) { [weak self] in
             self?.onTapAvatar?(indexPath)
         }
-    }
-
-    func collectionView(_ collectionView: UICollectionView,
-                        viewForSupplementaryElementOfKind kind: String,
-                        at indexPath: IndexPath) -> UICollectionReusableView {
-        let view = collectionView.dequeueReusableSupplementaryView(
-            ofKind: kind,
-            withReuseIdentifier: TextTitleView.reuseIdentifier,
-            for: indexPath
-        ) as! TextTitleView
-        view.setup(title: sections[indexPath.section].title)
-        return view
     }
 }
 
