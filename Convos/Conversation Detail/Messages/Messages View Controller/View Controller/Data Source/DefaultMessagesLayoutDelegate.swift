@@ -25,17 +25,8 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         case .cell:
             let item = sections[indexPath.section].cells[indexPath.item]
             switch item {
-            case let .message(group):
+            case .message:
                 return .auto
-//            case let .message(message, bubbleType: _):
-//                switch message.base.content {
-//                case .text, .emoji:
-//                    return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 36))
-//                case .attachment, .attachments:
-//                    return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 120.0))
-//                case .update:
-//                    return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 18))
-//                }
             case .date:
                 return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 18))
             case .invite:
@@ -68,14 +59,8 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
             switch item {
             case .date, .invite:
                 return .center
-            case .message(let message):
+            case .message:
                 return .fullWidth
-//                switch message.base.content {
-//                case .update:
-//                    return .center
-//                default:
-//                    return .fullWidth
-//                }
             case .messageGroup:
                 return .fullWidth
             case .typingIndicator:
@@ -101,13 +86,13 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
 
         let item = sections[indexPath.section].cells[indexPath.item]
         switch item {
-//        case let .message(message, ):
-//            switch message.base.content {
-//            case .text, .attachment, .attachments, .emoji:
-//                applyMessageAnimation(for: message, to: originalAttributes)
-//            default:
-//                break
-//            }
+        case .message(let item):
+            switch item {
+            case .messages(let messagesGroup):
+                applyMessageAnimation(for: messagesGroup, to: originalAttributes)
+            default:
+                break
+            }
         case .typingIndicator:
             applyTypingIndicatorAnimation(to: originalAttributes)
         default:
@@ -126,13 +111,13 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
 
         let oldItem = oldSections[indexPath.section].cells[indexPath.item]
         switch oldItem {
-//        case let .message(message, bubbleType: _):
-//            switch message.base.content {
-//            case .text, .attachment, .attachments, .emoji:
-//                applyMessageAnimation(for: message, to: originalAttributes)
-//            default:
-//                break
-//            }
+        case .message(let item):
+            switch item {
+            case .messages(let messagesGroup):
+                applyMessageAnimation(for: messagesGroup, to: originalAttributes)
+            default:
+                break
+            }
         case .typingIndicator:
             applyTypingIndicatorAnimation(to: originalAttributes)
         default:
@@ -147,20 +132,7 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         let item = sections[indexPath.section].cells[indexPath.item]
 
         switch item {
-        case .messageGroup:
-            return 0.0
-//        case .message(let message, _):
-//            if case .message(let nextMessage, _) = safeCell(at: indexPath.nextItem),
-//               nextMessage.base.source == .outgoing,
-//               message.base.source == .incoming {
-//                // add spacing above outgoing messages when they are below incoming
-//                return DesignConstants.Spacing.stepX
-//            }
-
-//            return 0.0
-        case .date:
-            return 0.0
-        case .invite:
+        case .messageGroup, .date, .invite:
             return 0.0
         default:
             return nil
@@ -184,20 +156,13 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         return section.cells[indexPath.item]
     }
 
-    private func applyMessageAnimation(for message: AnyMessage, to attributes: MessagesLayoutAttributes) {
-        attributes.transform = .init(scaleX: 0.9, y: 0.9)
-        attributes.transform = attributes
-            .transform
-            .concatenating(
-                .init(rotationAngle: message.base.source == .incoming ? -0.05 : 0.05)
-            )
-        attributes.center.x += (message.base.source == .incoming ? -20 : 20)
-        attributes.center.y += 40
+    private func applyMessageAnimation(for messages: MessagesGroup, to attributes: MessagesLayoutAttributes) {
+        attributes.center.y += (attributes.bounds.height / 2.0) + 120.0
     }
 
     private func applyTypingIndicatorAnimation(to attributes: MessagesLayoutAttributes) {
         attributes.transform = .init(scaleX: 0.1, y: 0.1)
-        attributes.center.x -= attributes.bounds.width / 5
+        attributes.center.x -= attributes.bounds.width / 5.0
     }
 }
 
