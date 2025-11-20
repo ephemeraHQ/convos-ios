@@ -40,7 +40,7 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
                 return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 300.0))
             }
         case .footer, .header:
-            return .auto
+            return .exact(.zero)
         }
     }
 
