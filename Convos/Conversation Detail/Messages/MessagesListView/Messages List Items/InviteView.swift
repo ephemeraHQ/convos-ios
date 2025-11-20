@@ -21,6 +21,7 @@ struct InviteView: View {
             .background(.colorFillMinimal)
             .mask(RoundedRectangle(cornerRadius: 38.0))
         }
+        .id(invite.differenceIdentifier)
     }
 }
 

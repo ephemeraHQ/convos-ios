@@ -151,7 +151,7 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
     }
 
     private func applyMessageAnimation(for messages: MessagesGroup, to attributes: MessagesLayoutAttributes) {
-        attributes.center.y += (attributes.bounds.height / 2.0) + 120.0
+        attributes.center.y += 120.0
     }
 
     private func applyTypingIndicatorAnimation(to attributes: MessagesLayoutAttributes) {

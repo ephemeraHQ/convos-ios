@@ -3,8 +3,6 @@ import SwiftUI
 import UIKit
 
 class MessagesListItemTypeCell: UICollectionViewCell {
-    private var item: MessagesListItemType?
-
     // MARK: - Initialization
 
     override init(frame: CGRect) {
@@ -24,7 +22,6 @@ class MessagesListItemTypeCell: UICollectionViewCell {
         item: MessagesListItemType,
         onTapAvatar: (() -> Void)?
     ) {
-        self.item = item
         contentConfiguration = UIHostingConfiguration {
             Group {
                 switch item {
@@ -34,7 +31,7 @@ class MessagesListItemTypeCell: UICollectionViewCell {
 
                 case .update(_, let update):
                     TextTitleContentView(title: update.summary, profile: update.profile)
-                        .padding(.vertical, DesignConstants.Spacing.stepX)
+                        .padding(.vertical, DesignConstants.Spacing.step2x)
 
                 case .messages(let group):
                     MessagesGroupView(
@@ -46,6 +43,7 @@ class MessagesListItemTypeCell: UICollectionViewCell {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .id("message-cell-\(item.differenceIdentifier)")
         }
         .margins(.vertical, 0.0)
     }

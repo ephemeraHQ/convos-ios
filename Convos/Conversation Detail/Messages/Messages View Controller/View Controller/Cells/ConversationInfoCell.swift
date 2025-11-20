@@ -26,6 +26,7 @@ class ConversationInfoCell: UICollectionViewCell {
                     .padding(.horizontal, DesignConstants.Spacing.step6x)
             }
             .frame(maxWidth: .infinity, alignment: .center)
+            .id(conversation.id)
         }
         .margins(.vertical, 0.0)
     }

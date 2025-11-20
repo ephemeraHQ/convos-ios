@@ -10,13 +10,10 @@ struct MessagesGroupItemView: View {
     let animates: Bool
 
     @State private var isAppearing: Bool = true
-
-    private var isPublished: Bool {
-        message.base.status == .published
-    }
+    @State private var showingSentStatus: Bool = false
 
     var body: some View {
-        VStack {
+        VStack(alignment: message.base.sender.isCurrentUser ? .trailing : .leading, spacing: 0.0) {
             switch message.base.content {
             case .text(let text):
                 MessageBubble(
@@ -26,7 +23,7 @@ struct MessagesGroupItemView: View {
                     profile: message.base.sender.profile,
                 )
                 .zIndex(200)
-                .id(message.base.id)
+                .id("bubble-\(message.base.id)")
                 .onTapGesture {
                     onTapMessage(message)
                 }
@@ -51,7 +48,7 @@ struct MessagesGroupItemView: View {
                     profile: message.base.sender.profile
                 )
                 .zIndex(200)
-                .id(message.base.id)
+                .id("emoji-bubble-\(message.base.id)")
                 .onTapGesture {
                     onTapMessage(message)
                 }
@@ -91,20 +88,26 @@ struct MessagesGroupItemView: View {
                 EmptyView()
             }
 
-            if showsSentStatus {
+            if showingSentStatus {
                 HStack(spacing: DesignConstants.Spacing.stepHalf) {
-                    Spacer()
                     Text("Sent")
                     Image(systemName: "checkmark")
                 }
-                .padding(.bottom, DesignConstants.Spacing.stepHalf)
+                .padding(.vertical, DesignConstants.Spacing.stepX)
                 .font(.caption)
                 .foregroundStyle(.colorTextSecondary)
-                .id("sent-status-\(message.base.sender.id)")
+                .zIndex(60)
+                .id("sent-status")
                 .transition(.blurReplace)
-                .zIndex(100)
             }
         }
+        .onChange(of: showsSentStatus, initial: true) {
+            withAnimation(animates ? .spring(response: 0.35, dampingFraction: 0.8) : .none) {
+                showingSentStatus = showsSentStatus
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showsSentStatus)
+        .id("messages-group-item-view-\(message.base.id)")
         .transition(
             .asymmetric(
                 insertion: .identity,      // no transition on insert

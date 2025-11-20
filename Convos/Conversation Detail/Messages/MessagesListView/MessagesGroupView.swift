@@ -18,11 +18,11 @@ struct MessagesGroupView: View {
                     ProfileAvatarView(profile: group.sender.profile, profileImage: nil)
                         .frame(width: DesignConstants.ImageSizes.smallAvatar,
                                height: DesignConstants.ImageSizes.smallAvatar)
-//                        .onTapGesture {
-//                            if let message = group.messages.last {
-//                                onTapAvatar(message)
-//                            }
-//                        }
+                        .onTapGesture {
+                            if let message = group.messages.last {
+                                onTapAvatar(message)
+                            }
+                        }
                         .hoverEffect(.lift)
                         .scaleEffect(isAppearing ? 0.9 : 1.0)
                         .opacity(isAppearing ? 0.0 : 1.0)
@@ -30,9 +30,6 @@ struct MessagesGroupView: View {
                             x: isAppearing ? -80 : 0,
                             y: 0.0,
                         )
-                        .id("profile-\(group.id)")
-                } else {
-                    EmptyView()
                         .id("profile-\(group.id)")
                 }
             }
@@ -88,7 +85,7 @@ struct MessagesGroupView: View {
             )
         }
         .padding(.vertical, DesignConstants.Spacing.stepX)
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: group.messages)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: group)
         .onAppear {
             guard isAppearing else { return }
 
@@ -102,7 +99,7 @@ struct MessagesGroupView: View {
                 }
             }
         }
-        .id(group.id)
+        .id("messages-group-\(group.id)")
     }
 }
 

@@ -78,8 +78,8 @@ struct MessagesView<BottomBarContent: View>: View {
                 bottomBarHeight = height
             }
         }
-        .introspect(.view, on: .iOS(.v26), customize: { view in
-            view.keyboardLayoutGuide.keyboardDismissPadding = bottomBarHeight
-        })
+//        .introspect(.view, on: .iOS(.v26), customize: { view in
+//            view.keyboardLayoutGuide.keyboardDismissPadding = bottomBarHeight
+//        })
     }
 }
