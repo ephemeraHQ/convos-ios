@@ -193,9 +193,9 @@ extension MockMessagingService: MessagesRepositoryProtocol {
         return Array(messages.suffix(pageSize))
     }
 
-    public func fetchPrevious() throws -> [AnyMessage] {
-        // For mock, just return all messages
-        messages
+    public func fetchPrevious() throws {
+        // For mock, results are delivered through the publisher
+        // No action needed as messages are already available
     }
 
     public var hasMoreMessages: Bool {
@@ -402,15 +402,17 @@ extension MockMessagingService: MessageSender {
     public func prepare(text: String) async throws -> String {
         guard let conversation = currentConversation else { return "" }
         let message: AnyMessage = .message(
-            .init(id: UUID().uuidString,
-                  conversation: conversation,
-                  sender: ConversationMember(profile: currentUser.profile, role: .member, isCurrentUser: true),
-                  source: .outgoing,
-                  status: .published,
-                  content: .text(text),
-                  date: Date(),
-                  reactions: []
-                 )
+            .init(
+                id: UUID().uuidString,
+                conversation: conversation,
+                sender: ConversationMember(profile: currentUser.profile, role: .member, isCurrentUser: true),
+                source: .outgoing,
+                status: .published,
+                content: .text(text),
+                date: Date(),
+                reactions: []
+            ),
+            .inserted
         )
         unpublishedMessages.append(message)
         return message.base.id
@@ -536,7 +538,7 @@ extension MockMessagingService {
             date: Date(),
             reactions: []
         )
-        let anyMessage = AnyMessage.message(message)
+        let anyMessage = AnyMessage.message(message, .inserted)
         messages.append(anyMessage)
         messagesSubject.send(messages)
     }
@@ -558,7 +560,7 @@ extension MockMessagingService {
                 date: Date(),
                 reactions: []
             )
-            return AnyMessage.message(message)
+            return AnyMessage.message(message, .existing)
         }
     }
 }

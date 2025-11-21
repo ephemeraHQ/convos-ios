@@ -11,14 +11,27 @@ public protocol MessageType: Sendable {
 }
 
 public enum AnyMessage: Hashable, Codable, Sendable {
-    case message(Message),
-         reply(MessageReply)
+    public enum Origin: Hashable, Codable, Sendable {
+        case existing // message was loaded initially or was previously inserted but seen again
+        case inserted // new message that arrived after initialization
+    }
+
+    case message(Message, Origin),
+         reply(MessageReply, Origin)
+
+    public var origin: Origin {
+        switch self {
+        case .message(_, let origin),
+                .reply(_, let origin):
+            return origin
+        }
+    }
 
     public var base: MessageType {
         switch self {
-        case .message(let message):
+        case .message(let message, _):
             return message
-        case .reply(let reply):
+        case .reply(let reply, _):
             return reply
         }
     }

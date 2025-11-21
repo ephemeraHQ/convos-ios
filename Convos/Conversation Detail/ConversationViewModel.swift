@@ -455,9 +455,9 @@ class ConversationViewModel {
         Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                let allMessages = try messagesListRepository.fetchPrevious()
-                self.messages = allMessages
-                Log.info("Loaded \(allMessages.count) total messages")
+                try messagesListRepository.fetchPrevious()
+                // Messages will be delivered through the publisher
+                Log.info("Fetching previous messages")
             } catch {
                 Log.error("Error loading previous messages: \(error.localizedDescription)")
             }

@@ -42,8 +42,7 @@ struct MessagesListView: View {
                                 MessagesGroupView(
                                     group: group,
                                     onTapMessage: onTapMessage,
-                                    onTapAvatar: onTapAvatar,
-                                    animates: lastItemIndex == nil ? false : index > (lastItemIndex ?? 0)
+                                    onTapAvatar: onTapAvatar
                                 )
                             }
                         }

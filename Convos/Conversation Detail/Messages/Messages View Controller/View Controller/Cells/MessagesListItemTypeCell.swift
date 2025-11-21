@@ -38,7 +38,6 @@ class MessagesListItemTypeCell: UICollectionViewCell {
                         group: group,
                         onTapMessage: { _ in },
                         onTapAvatar: { _ in },
-                        animates: true
                     )
                 }
             }

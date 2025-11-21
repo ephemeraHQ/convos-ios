@@ -12,7 +12,8 @@ protocol MessagesListRepositoryProtocol {
     func fetchInitial() throws -> [MessagesListItemType]
 
     /// Fetches previous (older) messages
-    func fetchPrevious() throws -> [MessagesListItemType]
+    /// Results are delivered through the messagesListPublisher
+    func fetchPrevious() throws
 
     /// Indicates if there are more messages to load
     var hasMoreMessages: Bool { get }
@@ -67,9 +68,9 @@ final class MessagesListRepository: MessagesListRepositoryProtocol {
         return processMessages(messages)
     }
 
-    func fetchPrevious() throws -> [MessagesListItemType] {
-        let messages = try messagesRepository.fetchPrevious()
-        return processMessages(messages)
+    func fetchPrevious() throws {
+        // Trigger fetch - results will be delivered through the publisher
+        try messagesRepository.fetchPrevious()
     }
 
     var hasMoreMessages: Bool {

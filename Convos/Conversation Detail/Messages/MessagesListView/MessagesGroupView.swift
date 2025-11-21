@@ -5,9 +5,12 @@ struct MessagesGroupView: View {
     let group: MessagesGroup
     let onTapMessage: (AnyMessage) -> Void
     let onTapAvatar: (AnyMessage) -> Void
-    let animates: Bool
 
     @State private var isAppearing: Bool = true
+
+    private var animates: Bool {
+        group.messages.first?.origin == .inserted
+    }
 
     var body: some View {
         HStack(spacing: DesignConstants.Spacing.step2x) {
@@ -64,8 +67,7 @@ struct MessagesGroupView: View {
                         bubbleType: bubbleType,
                         showsSentStatus: showsSentStatus,
                         onTapMessage: onTapMessage,
-                        onTapAvatar: onTapAvatar,
-                        animates: animates
+                        onTapAvatar: onTapAvatar
                     )
                     .id("messages-group-item-\(group.id)")
                     .transition(
@@ -109,7 +111,6 @@ struct MessagesGroupView: View {
             group: .mockIncoming,
             onTapMessage: { _ in },
             onTapAvatar: { _ in },
-            animates: true
         )
         .padding()
     }
@@ -122,7 +123,6 @@ struct MessagesGroupView: View {
             group: .mockOutgoing,
             onTapMessage: { _ in },
             onTapAvatar: { _ in },
-            animates: true
         )
         .padding()
     }
@@ -135,7 +135,6 @@ struct MessagesGroupView: View {
             group: .mockMixed,
             onTapMessage: { _ in },
             onTapAvatar: { _ in },
-            animates: true
         )
         .padding()
     }

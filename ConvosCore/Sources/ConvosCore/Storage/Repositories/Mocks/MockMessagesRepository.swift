@@ -19,10 +19,10 @@ class MockMessagesRepository: MessagesRepositoryProtocol {
         return result
     }
 
-    func fetchPrevious() throws -> [AnyMessage] {
-        // For mock, just return all messages and set hasMoreMessages to false
+    func fetchPrevious() throws {
+        // For mock, just set hasMoreMessages to false
+        // Results are delivered through the publisher
         hasMoreMessages = false
-        return mockMessages
     }
 
     var conversationMessagesPublisher: AnyPublisher<ConversationMessages, Never> {

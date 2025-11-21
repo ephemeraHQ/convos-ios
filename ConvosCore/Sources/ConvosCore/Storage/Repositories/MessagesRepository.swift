@@ -14,7 +14,8 @@ public protocol MessagesRepositoryProtocol {
 
     /// Fetches previous (older) messages by increasing the limit
     /// Each call increases the limit by the page size
-    func fetchPrevious() throws -> [AnyMessage]
+    /// Results are delivered through the publisher
+    func fetchPrevious() throws
 
     /// Indicates if there are more messages to load
     /// Automatically set to false when fetchPrevious returns fewer messages than the page size
@@ -59,6 +60,19 @@ class MessagesRepository: MessagesRepositoryProtocol {
     /// Indicates if there are more messages to load
     private(set) var hasMoreMessages: Bool = true
 
+    /// Tracks message IDs that have been seen (existing messages)
+    /// Any new message not in this set is considered "inserted"
+    /// When messages are loaded again, previously inserted messages become existing
+    private var seenMessageIds: Set<String> = []
+
+    /// Tracks whether we've completed the initial load
+    /// Used to differentiate between initial/pagination loads vs new message insertions
+    private var hasCompletedInitialLoad: Bool = false
+
+    /// Tracks whether we're currently loading via fetchPrevious
+    /// Used to ensure paginated messages are marked as .existing
+    private var isLoadingPrevious: Bool = false
+
     init(dbReader: any DatabaseReader, conversationId: String, pageSize: Int = 25) {
         self.dbReader = dbReader
         self.conversationIdSubject = .init(conversationId)
@@ -77,9 +91,12 @@ class MessagesRepository: MessagesRepositoryProtocol {
         conversationIdCancellable = conversationIdPublisher.sink { [weak self] conversationId in
             guard let self else { return }
             Log.info("Sending updated conversation id: \(conversationId), resetting pagination")
-            // Reset pagination when conversation changes
+            // Reset pagination and origin tracking when conversation changes
             currentLimit = pageSize
             hasMoreMessages = true
+            seenMessageIds.removeAll()
+            hasCompletedInitialLoad = false
+            isLoadingPrevious = false
             conversationIdSubject.send(conversationId)
         }
     }
@@ -92,10 +109,17 @@ class MessagesRepository: MessagesRepositoryProtocol {
         // Reset to initial page size and assume more messages are available
         currentLimit = pageSize
         hasMoreMessages = true
+        // Clear seenMessageIds for fresh start
+        seenMessageIds.removeAll()
+        hasCompletedInitialLoad = false
 
         return try dbReader.read { [weak self] db in
             guard let self else { return [] }
-            let messages = try db.composeMessages(for: conversationId, limit: currentLimit)
+            // Pass isLoadingExisting = true to mark all messages as .existing
+            let messages = try db.composeMessages(for: conversationId, limit: currentLimit, seenMessageIds: &seenMessageIds, isLoadingExisting: true)
+
+            // Mark initial load as complete
+            hasCompletedInitialLoad = true
 
             // Check if we got fewer messages than the page size
             if messages.count < pageSize {
@@ -106,38 +130,34 @@ class MessagesRepository: MessagesRepositoryProtocol {
         }
     }
 
-    func fetchPrevious() throws -> [AnyMessage] {
+    func fetchPrevious() throws {
         // Don't fetch if we already know there are no more messages
-        guard hasMoreMessages else {
-            return try dbReader.read { [weak self] db in
-                guard let self else { return [] }
-                return try db.composeMessages(for: conversationId, limit: currentLimit)
-            }
-        }
+        guard hasMoreMessages else { return }
+
+        // Set flag to indicate we're loading previous messages
+        isLoadingPrevious = true
 
         // Increase the limit by pageSize to load more messages
         currentLimit += pageSize
 
-        return try dbReader.read { [weak self] db in
-            guard let self else { return [] }
-            let messages = try db.composeMessages(for: conversationId, limit: currentLimit)
+        // The publisher will automatically update with the new messages
+        // Check if we need to update hasMoreMessages
+        try dbReader.read { [weak self] db in
+            guard let self else { return }
 
-            // Check if we got fewer new messages than expected
-            // If the total count is less than the new limit, we've loaded everything
-            if messages.count < currentLimit {
+            let totalCount = try DBMessage
+                .filter(DBMessage.Columns.conversationId == conversationId)
+                .fetchCount(db)
+
+            if totalCount <= currentLimit {
                 hasMoreMessages = false
-            } else {
-                // Also check if we didn't get any new messages beyond the previous limit
-                // This handles the case where we have exactly previousLimit messages
-                let totalCount = try DBMessage
-                    .filter(DBMessage.Columns.conversationId == conversationId)
-                    .fetchCount(db)
-                if totalCount <= currentLimit {
-                    hasMoreMessages = false
-                }
             }
+        }
 
-            return messages
+        // Reset the flag after triggering the update
+        // The publisher will pick up the flag value before we reset it
+        DispatchQueue.main.async { [weak self] in
+            self?.isLoadingPrevious = false
         }
     }
 
@@ -156,7 +176,12 @@ class MessagesRepository: MessagesRepositoryProtocol {
                 .tracking { [weak self] db in
                     guard let self else { return [] }
                     do {
-                        let messages = try db.composeMessages(for: conversationId, limit: limit)
+                        var mutableSeenIds = self.seenMessageIds
+                        // Mark as .existing if we're doing initial load or pagination
+                        // Only mark as .inserted for truly new messages that arrive after initial load
+                        let isLoadingExisting = !self.hasCompletedInitialLoad || self.isLoadingPrevious
+                        let messages = try db.composeMessages(for: conversationId, limit: limit, seenMessageIds: &mutableSeenIds, isLoadingExisting: isLoadingExisting)
+                        self.seenMessageIds = mutableSeenIds
                         return messages
                     } catch {
                         Log.error("Error in messages publisher: \(error)")
@@ -175,7 +200,9 @@ class MessagesRepository: MessagesRepositoryProtocol {
 
 extension Array where Element == MessageWithDetails {
     func composeMessages(from database: Database,
-                         in conversation: Conversation) throws -> [AnyMessage] {
+                         in conversation: Conversation,
+                         seenMessageIds: inout Set<String>,
+                         isLoadingExisting: Bool = false) throws -> [AnyMessage] {
         let dbMessagesWithDetails = self
 
         return try dbMessagesWithDetails.compactMap { dbMessageWithDetails -> AnyMessage? in
@@ -256,7 +283,23 @@ extension Array where Element == MessageWithDetails {
                     date: dbMessage.date,
                     reactions: reactions
                 )
-                return .message(message)
+
+                // Determine origin:
+                // - If we're loading existing messages (initial load or pagination), mark as .existing
+                // - Otherwise, check if this is a new message we haven't seen
+                let origin: AnyMessage.Origin
+                if isLoadingExisting {
+                    // Initial load or pagination - all are existing
+                    origin = .existing
+                } else {
+                    // Check if this is a new message (not in our seen set)
+                    origin = seenMessageIds.contains(dbMessage.clientMessageId) ? .existing : .inserted
+                }
+
+                // Add to seen messages
+                seenMessageIds.insert(dbMessage.clientMessageId)
+
+                return .message(message, origin)
             case .reply:
                 switch dbMessage.contentType {
                 case .text:
@@ -285,7 +328,7 @@ extension Array where Element == MessageWithDetails {
 }
 
 fileprivate extension Database {
-    func composeMessages(for conversationId: String, limit: Int? = nil) throws -> [AnyMessage] {
+    func composeMessages(for conversationId: String, limit: Int? = nil, seenMessageIds: inout Set<String>, isLoadingExisting: Bool = false) throws -> [AnyMessage] {
         guard let dbConversationDetails = try DBConversation
             .filter(DBConversation.Columns.id == conversationId)
             .detailedConversationQuery()
@@ -321,6 +364,6 @@ fileprivate extension Database {
         // Reverse the messages back to chronological order after fetching
         // since we fetched them in reverse order to get the latest N messages
         let chronologicalMessages = dbMessages.reversed()
-        return try Array(chronologicalMessages).composeMessages(from: self, in: conversation)
+        return try Array(chronologicalMessages).composeMessages(from: self, in: conversation, seenMessageIds: &seenMessageIds, isLoadingExisting: isLoadingExisting)
     }
 }

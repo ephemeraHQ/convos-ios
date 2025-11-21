@@ -7,10 +7,13 @@ struct MessagesGroupItemView: View {
     let showsSentStatus: Bool
     let onTapMessage: (AnyMessage) -> Void
     let onTapAvatar: (AnyMessage) -> Void
-    let animates: Bool
 
     @State private var isAppearing: Bool = true
     @State private var showingSentStatus: Bool = false
+
+    private var animates: Bool {
+        message.origin == .inserted
+    }
 
     var body: some View {
         VStack(alignment: message.base.sender.isCurrentUser ? .trailing : .leading, spacing: 0.0) {
@@ -197,12 +200,11 @@ private struct MultipleAttachmentsPlaceholder: View {
             text: "Hello, how are you doing today?",
             sender: .mock(isCurrentUser: false),
             status: .published
-        )),
+        ), .existing),
         bubbleType: .normal,
         showsSentStatus: false,
         onTapMessage: { _ in },
-        onTapAvatar: { _ in },
-        animates: true
+        onTapAvatar: { _ in }
     )
     .padding()
 }
@@ -213,12 +215,11 @@ private struct MultipleAttachmentsPlaceholder: View {
             text: "I'm doing great, thanks for asking!",
             sender: .mock(isCurrentUser: true),
             status: .published
-        )),
+        ), .existing),
         bubbleType: .tailed,
         showsSentStatus: true,
         onTapMessage: { _ in },
-        onTapAvatar: { _ in },
-        animates: true
+        onTapAvatar: { _ in }
     )
     .padding()
 }
@@ -229,12 +230,11 @@ private struct MultipleAttachmentsPlaceholder: View {
             text: "This message is still sending...",
             sender: .mock(isCurrentUser: true),
             status: .unpublished
-        )),
+        ), .existing),
         bubbleType: .normal,
         showsSentStatus: false,
         onTapMessage: { _ in },
-        onTapAvatar: { _ in },
-        animates: true
+        onTapAvatar: { _ in }
     )
     .padding()
 }
@@ -245,12 +245,11 @@ private struct MultipleAttachmentsPlaceholder: View {
             text: "😊👍🎉",
             sender: .mock(isCurrentUser: false),
             status: .published
-        )),
+        ), .existing),
         bubbleType: .tailed,
         showsSentStatus: false,
         onTapMessage: { _ in },
-        onTapAvatar: { _ in },
-        animates: true
+        onTapAvatar: { _ in }
     )
     .padding()
 }

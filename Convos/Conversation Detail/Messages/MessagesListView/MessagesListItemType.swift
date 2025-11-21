@@ -29,9 +29,9 @@ extension MessagesGroup {
     static var mockIncoming: MessagesGroup {
         let sender = ConversationMember.mock(isCurrentUser: false)
         let messages: [AnyMessage] = [
-            .message(Message.mock(text: "Hey there!", sender: sender, status: .published)),
-            .message(Message.mock(text: "How are you doing today?", sender: sender, status: .published)),
-            .message(Message.mock(text: "Let me know when you're free", sender: sender, status: .published))
+            .message(Message.mock(text: "Hey there!", sender: sender, status: .published), .existing),
+            .message(Message.mock(text: "How are you doing today?", sender: sender, status: .published), .existing),
+            .message(Message.mock(text: "Let me know when you're free", sender: sender, status: .published), .existing)
         ]
         return MessagesGroup(
             id: "mock-incoming-group",
@@ -46,8 +46,8 @@ extension MessagesGroup {
     static var mockOutgoing: MessagesGroup {
         let sender = ConversationMember.mock(isCurrentUser: true)
         let messages: [AnyMessage] = [
-            .message(Message.mock(text: "I'm doing great!", sender: sender, status: .published)),
-            .message(Message.mock(text: "Thanks for asking 😊", sender: sender, status: .published))
+            .message(Message.mock(text: "I'm doing great!", sender: sender, status: .published), .existing),
+            .message(Message.mock(text: "Thanks for asking 😊", sender: sender, status: .published), .existing)
         ]
         return MessagesGroup(
             id: "mock-outgoing-group",
@@ -62,11 +62,11 @@ extension MessagesGroup {
     static var mockMixed: MessagesGroup {
         let sender = ConversationMember.mock(isCurrentUser: true)
         let published: [AnyMessage] = [
-            .message(Message.mock(text: "Here's my first message", sender: sender, status: .published)),
-            .message(Message.mock(text: "And another one", sender: sender, status: .published))
+            .message(Message.mock(text: "Here's my first message", sender: sender, status: .published), .existing),
+            .message(Message.mock(text: "And another one", sender: sender, status: .published), .existing)
         ]
         let unpublished: [AnyMessage] = [
-            .message(Message.mock(text: "This one is still sending...", sender: sender, status: .unpublished))
+            .message(Message.mock(text: "This one is still sending...", sender: sender, status: .unpublished), .existing)
         ]
         return MessagesGroup(
             id: "mock-mixed-group",
