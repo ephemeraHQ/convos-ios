@@ -168,7 +168,12 @@ final class MessagesViewController: UIViewController {
     private func configureMessagesLayout() {
         messagesLayout.settings.interItemSpacing = 0.0
         messagesLayout.settings.interSectionSpacing = 0.0
-        messagesLayout.settings.additionalInsets = UIEdgeInsets(top: 8, left: 0.0, bottom: 8.0, right: 0.0)
+        messagesLayout.settings.additionalInsets = UIEdgeInsets(
+            top: 0.0,
+            left: DesignConstants.Spacing.step4x,
+            bottom: 0.0,
+            right: DesignConstants.Spacing.step4x
+        )
         messagesLayout.keepContentOffsetAtBottomOnBatchUpdates = true
         messagesLayout.processOnlyVisibleItemsOnAnimatedBatchUpdates = true
     }

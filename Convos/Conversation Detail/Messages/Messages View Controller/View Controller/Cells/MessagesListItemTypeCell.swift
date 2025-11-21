@@ -45,6 +45,7 @@ class MessagesListItemTypeCell: UICollectionViewCell {
             .frame(maxWidth: .infinity, alignment: .leading)
             .id("message-cell-\(item.differenceIdentifier)")
         }
+        .margins(.horizontal, 0.0)
         .margins(.vertical, 0.0)
     }
 }
