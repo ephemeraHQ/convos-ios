@@ -73,7 +73,7 @@ final class MessagesViewController: UIViewController {
                 with: state.messages,
                 invite: state.invite,
                 animated: animated,
-                requiresIsolatedProcess: !isFirstStateUpdate) { [currentControllerActions, isFirstStateUpdate] in
+                requiresIsolatedProcess: true) { [currentControllerActions, isFirstStateUpdate] in
                     if isFirstStateUpdate {
                         currentControllerActions.options.remove(.loadingInitialMessages)
                         UIView.performWithoutAnimation {
@@ -166,9 +166,9 @@ final class MessagesViewController: UIViewController {
     }
 
     private func configureMessagesLayout() {
-        messagesLayout.settings.interItemSpacing = 8
-        messagesLayout.settings.interSectionSpacing = 8
-        messagesLayout.settings.additionalInsets = UIEdgeInsets(top: 8, left: 5, bottom: 8.0, right: 5)
+        messagesLayout.settings.interItemSpacing = 0.0
+        messagesLayout.settings.interSectionSpacing = 0.0
+        messagesLayout.settings.additionalInsets = UIEdgeInsets(top: 8, left: 0.0, bottom: 8.0, right: 0.0)
         messagesLayout.keepContentOffsetAtBottomOnBatchUpdates = true
         messagesLayout.processOnlyVisibleItemsOnAnimatedBatchUpdates = true
     }

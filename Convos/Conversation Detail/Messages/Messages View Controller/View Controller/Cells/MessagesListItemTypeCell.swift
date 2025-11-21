@@ -27,11 +27,11 @@ class MessagesListItemTypeCell: UICollectionViewCell {
                 switch item {
                 case .date(let dateGroup):
                     TextTitleContentView(title: dateGroup.value, profile: nil)
-                        .padding(.vertical, DesignConstants.Spacing.step2x)
+                        .padding(.vertical, DesignConstants.Spacing.step4x)
 
                 case .update(_, let update):
                     TextTitleContentView(title: update.summary, profile: update.profile)
-                        .padding(.vertical, DesignConstants.Spacing.step2x)
+                        .padding(.vertical, DesignConstants.Spacing.step4x)
 
                 case .messages(let group):
                     MessagesGroupView(
@@ -46,11 +46,5 @@ class MessagesListItemTypeCell: UICollectionViewCell {
             .id("message-cell-\(item.differenceIdentifier)")
         }
         .margins(.vertical, 0.0)
-    }
-
-    override func preferredLayoutAttributesFitting(
-        _ layoutAttributes: UICollectionViewLayoutAttributes
-    ) -> UICollectionViewLayoutAttributes {
-        layoutAttributesForHorizontalFittingRequired(layoutAttributes)
     }
 }

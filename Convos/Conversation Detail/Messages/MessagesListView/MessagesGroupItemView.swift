@@ -88,17 +88,20 @@ struct MessagesGroupItemView: View {
                 EmptyView()
             }
 
-            if showingSentStatus {
+            if showsSentStatus {
                 HStack(spacing: DesignConstants.Spacing.stepHalf) {
                     Text("Sent")
                     Image(systemName: "checkmark")
                 }
+//                .transition(.blurReplace)
+                .opacity(showingSentStatus ? 1.0 : 0.0)
+                .blur(radius: showingSentStatus ? 0.0 : 10.0)
+                .scaleEffect(showingSentStatus ? 1.0 : 0.8)
                 .padding(.vertical, DesignConstants.Spacing.stepX)
                 .font(.caption)
                 .foregroundStyle(.colorTextSecondary)
                 .zIndex(60)
                 .id("sent-status")
-                .transition(.blurReplace)
             }
         }
         .onChange(of: showsSentStatus, initial: true) {

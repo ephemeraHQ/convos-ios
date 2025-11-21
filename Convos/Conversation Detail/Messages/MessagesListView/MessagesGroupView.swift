@@ -58,11 +58,11 @@ struct MessagesGroupView: View {
                     let isLastPublished = message == group.messages.last
                     let isLast = message == group.unpublished.last || isLastPublished
                     let bubbleType: MessagesCollectionCell.BubbleType = isLast ? .tailed : .normal
-
+                    let showsSentStatus = isLastPublished && group.isLastGroupSentByCurrentUser
                     MessagesGroupItemView(
                         message: message,
                         bubbleType: bubbleType,
-                        showsSentStatus: isLastPublished && group.isLastGroupSentByCurrentUser,
+                        showsSentStatus: showsSentStatus,
                         onTapMessage: onTapMessage,
                         onTapAvatar: onTapAvatar,
                         animates: animates
