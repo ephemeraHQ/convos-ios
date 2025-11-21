@@ -114,6 +114,7 @@ final class MessagesViewController: UIViewController {
 
     var onTapMessage: ((AnyMessage) -> Void)?
     var onTapAvatar: ((AnyMessage) -> Void)?
+    var onLoadPreviousMessages: (() -> Void)?
 
     deinit {
         KeyboardListener.shared.remove(delegate: self)
@@ -242,12 +243,13 @@ final class MessagesViewController: UIViewController {
     // MARK: - Scrolling Methods
 
     private func loadPreviousMessages() {
-        //        currentControllerActions.options.insert(.loadingPreviousMessages)
+        currentControllerActions.options.insert(.loadingPreviousMessages)
+
+        currentControllerActions.options.remove(.loadingPreviousMessages)
         //        Task {
         //            let sections = await messagesStore.loadPreviousMessages()
         //            let animated = !isUserInitiatedScrolling
         //            processUpdates(with: sections, animated: animated, requiresIsolatedProcess: true) {
-        //                self.currentControllerActions.options.remove(.loadingPreviousMessages)
         //            }
         //        }
     }

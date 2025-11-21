@@ -116,7 +116,10 @@ class MessagesRepository: MessagesRepositoryProtocol {
         return try dbReader.read { [weak self] db in
             guard let self else { return [] }
             // Pass isLoadingExisting = true to mark all messages as .existing
-            let messages = try db.composeMessages(for: conversationId, limit: currentLimit, seenMessageIds: &seenMessageIds, isLoadingExisting: true)
+            let (messages, updatedSeenIds) = try db.composeMessages(for: conversationId, limit: currentLimit, seenMessageIds: seenMessageIds, isLoadingExisting: true)
+
+            // Update seen IDs
+            self.seenMessageIds = updatedSeenIds
 
             // Mark initial load as complete
             hasCompletedInitialLoad = true
@@ -176,12 +179,11 @@ class MessagesRepository: MessagesRepositoryProtocol {
                 .tracking { [weak self] db in
                     guard let self else { return [] }
                     do {
-                        var mutableSeenIds = self.seenMessageIds
                         // Mark as .existing if we're doing initial load or pagination
                         // Only mark as .inserted for truly new messages that arrive after initial load
                         let isLoadingExisting = !self.hasCompletedInitialLoad || self.isLoadingPrevious
-                        let messages = try db.composeMessages(for: conversationId, limit: limit, seenMessageIds: &mutableSeenIds, isLoadingExisting: isLoadingExisting)
-                        self.seenMessageIds = mutableSeenIds
+                        let (messages, updatedSeenIds) = try db.composeMessages(for: conversationId, limit: limit, seenMessageIds: self.seenMessageIds, isLoadingExisting: isLoadingExisting)
+                        self.seenMessageIds = updatedSeenIds
                         return messages
                     } catch {
                         Log.error("Error in messages publisher: \(error)")
@@ -201,11 +203,12 @@ class MessagesRepository: MessagesRepositoryProtocol {
 extension Array where Element == MessageWithDetails {
     func composeMessages(from database: Database,
                          in conversation: Conversation,
-                         seenMessageIds: inout Set<String>,
-                         isLoadingExisting: Bool = false) throws -> [AnyMessage] {
+                         seenMessageIds: Set<String>,
+                         isLoadingExisting: Bool = false) throws -> ([AnyMessage], Set<String>) {
         let dbMessagesWithDetails = self
+        var updatedSeenIds = seenMessageIds
 
-        return try dbMessagesWithDetails.compactMap { dbMessageWithDetails -> AnyMessage? in
+        let messages = try dbMessagesWithDetails.compactMap { dbMessageWithDetails -> AnyMessage? in
             let dbMessage = dbMessageWithDetails.message
             let dbReactions = dbMessageWithDetails.messageReactions
             let dbSender = dbMessageWithDetails.messageSender
@@ -297,7 +300,7 @@ extension Array where Element == MessageWithDetails {
                 }
 
                 // Add to seen messages
-                seenMessageIds.insert(dbMessage.clientMessageId)
+                updatedSeenIds.insert(dbMessage.clientMessageId)
 
                 return .message(message, origin)
             case .reply:
@@ -324,16 +327,18 @@ extension Array where Element == MessageWithDetails {
 
             return nil
         }
+
+        return (messages, updatedSeenIds)
     }
 }
 
 fileprivate extension Database {
-    func composeMessages(for conversationId: String, limit: Int? = nil, seenMessageIds: inout Set<String>, isLoadingExisting: Bool = false) throws -> [AnyMessage] {
+    func composeMessages(for conversationId: String, limit: Int? = nil, seenMessageIds: Set<String>, isLoadingExisting: Bool = false) throws -> ([AnyMessage], Set<String>) {
         guard let dbConversationDetails = try DBConversation
             .filter(DBConversation.Columns.id == conversationId)
             .detailedConversationQuery()
             .fetchOne(self) else {
-            return []
+            return ([], .init())
         }
 
         let conversation = dbConversationDetails.hydrateConversation()
@@ -364,6 +369,6 @@ fileprivate extension Database {
         // Reverse the messages back to chronological order after fetching
         // since we fetched them in reverse order to get the latest N messages
         let chronologicalMessages = dbMessages.reversed()
-        return try Array(chronologicalMessages).composeMessages(from: self, in: conversation, seenMessageIds: &seenMessageIds, isLoadingExisting: isLoadingExisting)
+        return try Array(chronologicalMessages).composeMessages(from: self, in: conversation, seenMessageIds: seenMessageIds, isLoadingExisting: isLoadingExisting)
     }
 }
