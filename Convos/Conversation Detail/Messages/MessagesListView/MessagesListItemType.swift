@@ -96,7 +96,7 @@ enum MessagesListItemType: Identifiable, Equatable, Hashable {
         case .update(let id, _):
             return "update-\(id)"
         case .date(let dateGroup):
-            return "date-\(dateGroup.date.timeIntervalSince1970)"
+            return "date-\(dateGroup.differenceIdentifier)"
         case .messages(let group):
             return group.id
         }

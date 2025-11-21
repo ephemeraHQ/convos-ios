@@ -17,6 +17,7 @@ struct TextTitleContentView: View {
                 .font(.caption2)
                 .foregroundStyle(.colorTextSecondary)
         }
+        .transition(.blurReplace)
         .frame(maxWidth: .infinity, alignment: .center)
     }
 }

@@ -27,10 +27,12 @@ class MessagesListItemTypeCell: UICollectionViewCell {
                 switch item {
                 case .date(let dateGroup):
                     TextTitleContentView(title: dateGroup.value, profile: nil)
+                        .id(dateGroup.differenceIdentifier)
                         .padding(.vertical, DesignConstants.Spacing.step4x)
 
                 case .update(_, let update):
                     TextTitleContentView(title: update.summary, profile: update.profile)
+                        .id(update.differenceIdentifier)
                         .padding(.vertical, DesignConstants.Spacing.step4x)
 
                 case .messages(let group):

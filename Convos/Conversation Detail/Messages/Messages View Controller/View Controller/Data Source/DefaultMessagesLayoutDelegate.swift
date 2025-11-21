@@ -85,7 +85,8 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
             case .messages(let messagesGroup):
                 applyMessageAnimation(for: messagesGroup, to: originalAttributes)
             default:
-                break
+                originalAttributes.center.y += 40.0
+                originalAttributes.transform = .init(scaleX: 0.1, y: 0.1)
             }
         case .typingIndicator:
             applyTypingIndicatorAnimation(to: originalAttributes)
@@ -110,7 +111,8 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
             case .messages(let messagesGroup):
                 applyMessageAnimation(for: messagesGroup, to: originalAttributes)
             default:
-                break
+                originalAttributes.center.y += 40.0
+                originalAttributes.transform = .init(scaleX: 0.1, y: 0.1)
             }
         case .typingIndicator:
             applyTypingIndicatorAnimation(to: originalAttributes)
