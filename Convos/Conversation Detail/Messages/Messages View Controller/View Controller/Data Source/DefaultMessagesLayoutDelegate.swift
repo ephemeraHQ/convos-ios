@@ -25,13 +25,8 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         case .cell:
             let item = sections[indexPath.section].cells[indexPath.item]
             switch item {
-            case .message(let group):
-                switch group {
-                case .date, .update:
-                    return .estimated(.init(width: messagesLayout.layoutFrame.width, height: 50.0))
-                case .messages:
-                    return .auto
-                }
+            case .message:
+                return .auto
             case .invite:
                 return .estimated(
                     CGSize(

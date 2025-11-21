@@ -48,4 +48,8 @@ class MessagesListItemTypeCell: UICollectionViewCell {
         .margins(.horizontal, 0.0)
         .margins(.vertical, 0.0)
     }
+
+    override func preferredLayoutAttributesFitting(_ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
+        layoutAttributesForHorizontalFittingRequired(layoutAttributes)
+    }
 }
