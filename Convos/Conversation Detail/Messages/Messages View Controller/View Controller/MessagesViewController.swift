@@ -10,6 +10,7 @@ final class MessagesViewController: UIViewController {
         let conversation: Conversation
         let messages: [MessagesListItemType]
         let invite: Invite
+        let hasMoreMessages: Bool
     }
 
     private enum ReactionTypes {
@@ -62,6 +63,7 @@ final class MessagesViewController: UIViewController {
                     for: .empty(),
                     with: [],
                     invite: .empty,
+                    hasMoreMessages: true,
                     animated: true,
                     requiresIsolatedProcess: false) {}
                 return
@@ -72,6 +74,7 @@ final class MessagesViewController: UIViewController {
                 for: state.conversation,
                 with: state.messages,
                 invite: state.invite,
+                hasMoreMessages: state.hasMoreMessages,
                 animated: animated,
                 requiresIsolatedProcess: true) { [currentControllerActions, isFirstStateUpdate] in
                     if isFirstStateUpdate {
@@ -320,6 +323,7 @@ extension MessagesViewController {
     private func processUpdates(for conversation: Conversation,
                                 with messages: [MessagesListItemType],
                                 invite: Invite,
+                                hasMoreMessages: Bool,
                                 animated: Bool = true,
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
@@ -333,10 +337,13 @@ extension MessagesViewController {
         var cells: [MessagesCollectionCell] = messages
             .map { MessagesCollectionCell.message($0) }
 
-        if conversation.creator.isCurrentUser {
-            cells.insert(.invite(invite), at: 0)
-        } else {
-            cells.insert(.conversationInfo(conversation), at: 0)
+        // Add invite or conversation info at the beginning if no more messages to load
+        if !hasMoreMessages {
+            if conversation.creator.isCurrentUser {
+                cells.insert(.message(.invite(invite)), at: 0)
+            } else {
+                cells.insert(.message(.conversationInfo(conversation)), at: 0)
+            }
         }
 
         let sections: [MessagesCollectionSection] = [
@@ -353,6 +360,7 @@ extension MessagesViewController {
             scheduleDelayedUpdate(for: conversation,
                                   with: messages,
                                   invite: invite,
+                                  hasMoreMessages: hasMoreMessages,
                                   animated: animated,
                                   requiresIsolatedProcess: requiresIsolatedProcess,
                                   completion: completion)
@@ -365,9 +373,11 @@ extension MessagesViewController {
                       completion: completion)
     }
 
+    // swiftlint:disable:next function_parameter_count
     private func scheduleDelayedUpdate(for conversation: Conversation,
                                        with messages: [MessagesListItemType],
                                        invite: Invite,
+                                       hasMoreMessages: Bool,
                                        animated: Bool,
                                        requiresIsolatedProcess: Bool,
                                        completion: (() -> Void)?) {
@@ -380,6 +390,7 @@ extension MessagesViewController {
                 processUpdates(for: conversation,
                                with: messages,
                                invite: invite,
+                               hasMoreMessages: hasMoreMessages,
                                animated: animated,
                                requiresIsolatedProcess: requiresIsolatedProcess,
                                completion: completion)

@@ -25,19 +25,22 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         case .cell:
             let item = sections[indexPath.section].cells[indexPath.item]
             switch item {
-            case .message:
-                return .auto
-            case .invite:
-                return .estimated(
-                    CGSize(
-                        width: messagesLayout.layoutFrame.width,
-                        height: 316.0
+            case .message(let messagesType):
+                switch messagesType {
+                case .invite:
+                    return .estimated(
+                        CGSize(
+                            width: messagesLayout.layoutFrame.width,
+                            height: 316.0
+                        )
                     )
-                )
+                case .conversationInfo:
+                    return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 300.0))
+                default:
+                    return .auto
+                }
             case .typingIndicator:
                 return .estimated(CGSize(width: 60, height: 36))
-            case .conversationInfo:
-                return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 300.0))
             }
         case .footer, .header:
             return .exact(.zero)
@@ -53,14 +56,10 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         case .cell:
             let item = sections[indexPath.section].cells[indexPath.item]
             switch item {
-            case .invite:
-                return .center
             case .message:
                 return .fullWidth
             case .typingIndicator:
                 return .leading
-            case .conversationInfo:
-                return .center
             }
         case .footer:
             return .trailing
@@ -90,8 +89,6 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
             }
         case .typingIndicator:
             applyTypingIndicatorAnimation(to: originalAttributes)
-        default:
-            break
         }
     }
 
@@ -116,23 +113,13 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
             }
         case .typingIndicator:
             applyTypingIndicatorAnimation(to: originalAttributes)
-        default:
-            break
         }
     }
 
     func interItemSpacing(_ messagesLayout: MessagesCollectionLayout,
                           of kind: ItemKind,
                           after indexPath: IndexPath) -> CGFloat? {
-        guard kind == .cell else { return nil }
-        let item = sections[indexPath.section].cells[indexPath.item]
-
-        switch item {
-        case .invite:
-            return 0.0
-        default:
-            return nil
-        }
+        return nil
     }
 
     func interSectionSpacing(_ messagesLayout: MessagesCollectionLayout, after sectionIndex: Int) -> CGFloat? {

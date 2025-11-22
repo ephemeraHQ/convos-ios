@@ -44,6 +44,14 @@ struct MessagesListView: View {
                                     onTapMessage: onTapMessage,
                                     onTapAvatar: onTapAvatar
                                 )
+
+                            case .invite(let invite):
+                                InviteView(invite: invite)
+                                    .padding(.vertical, DesignConstants.Spacing.step2x)
+
+                            case .conversationInfo(let conversation):
+                                ConversationInfoPreview(conversation: conversation)
+                                    .padding(.vertical, DesignConstants.Spacing.step2x)
                             }
                         }
                         .onScrollVisibilityChange(threshold: 0.1) { isVisible in

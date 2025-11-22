@@ -91,6 +91,12 @@ enum MessagesListItemType: Identifiable, Equatable, Hashable {
     /// Messages sent by the same sender
     case messages(MessagesGroup)
 
+    /// Shows invite information at the top of the conversation (for creators)
+    case invite(Invite)
+
+    /// Shows conversation info at the top of the conversation (for non-creators)
+    case conversationInfo(Conversation)
+
     var id: String {
         switch self {
         case .update(let id, _, _):
@@ -99,6 +105,10 @@ enum MessagesListItemType: Identifiable, Equatable, Hashable {
             return "date-\(dateGroup.differenceIdentifier)"
         case .messages(let group):
             return group.id
+        case .invite(let invite):
+            return "invite-\(invite.id)"
+        case .conversationInfo(let conversation):
+            return "conversation-info-\(conversation.id)"
         }
     }
 
@@ -118,7 +128,7 @@ enum MessagesListItemType: Identifiable, Equatable, Hashable {
             return origin
         case .messages(let group):
             return group.messages.last?.origin
-        case .date:
+        case .date, .invite, .conversationInfo:
             return nil
         }
     }

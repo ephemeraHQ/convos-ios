@@ -21,6 +21,7 @@ struct ConversationView<MessagesBottomBar: View>: View {
             conversation: viewModel.conversation,
             messages: $viewModel.messages,
             invite: viewModel.invite,
+            hasMoreMessages: viewModel.hasMoreMessages,
             profile: viewModel.profile,
             untitledConversationPlaceholder: viewModel.untitledConversationPlaceholder,
             conversationNamePlaceholder: viewModel.conversationNamePlaceholder,

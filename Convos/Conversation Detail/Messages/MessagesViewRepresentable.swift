@@ -5,6 +5,7 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
     let conversation: Conversation
     let messages: [MessagesListItemType]
     let invite: Invite
+    let hasMoreMessages: Bool
     let onTapMessage: (AnyMessage) -> Void
     let onTapAvatar: (ConversationMember) -> Void
     let onLoadPreviousMessages: () -> Void
@@ -22,7 +23,8 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
         messagesViewController.state = .init(
             conversation: conversation,
             messages: messages,
-            invite: invite
+            invite: invite,
+            hasMoreMessages: hasMoreMessages
         )
     }
 }
@@ -36,6 +38,7 @@ struct MessagesViewRepresentable: UIViewControllerRepresentable {
         conversation: .mock(),
         messages: messages,
         invite: invite,
+        hasMoreMessages: true,
         onTapMessage: { _ in },
         onTapAvatar: { _ in },
         onLoadPreviousMessages: {},

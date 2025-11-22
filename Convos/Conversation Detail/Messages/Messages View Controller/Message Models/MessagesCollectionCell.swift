@@ -14,12 +14,10 @@ enum MessagesCollectionCell: Hashable {
 
     case message(MessagesListItemType)
     case typingIndicator
-    case invite(Invite)
-    case conversationInfo(Conversation)
 
     var alignment: MessagesCollectionCell.Alignment {
         switch self {
-        case .message, .invite, .conversationInfo:
+        case .message:
             return .center
         case .typingIndicator:
             return .leading
@@ -44,10 +42,6 @@ extension MessagesCollectionCell: Differentiable {
             message.differenceIdentifier
         case .typingIndicator:
             hashValue
-        case let .invite(invite):
-            invite.differenceIdentifier
-        case let .conversationInfo(conversation):
-            conversation.id.hashValue
         }
     }
 

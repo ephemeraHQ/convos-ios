@@ -10,6 +10,7 @@ struct MessagesView<BottomBarContent: View>: View {
     let conversation: Conversation
     @Binding var messages: [MessagesListItemType]
     let invite: Invite
+    let hasMoreMessages: Bool
     let profile: Profile
     let untitledConversationPlaceholder: String
     let conversationNamePlaceholder: String
@@ -39,6 +40,7 @@ struct MessagesView<BottomBarContent: View>: View {
                 conversation: conversation,
                 messages: messages,
                 invite: invite,
+                hasMoreMessages: hasMoreMessages,
                 onTapMessage: onTapMessage,
                 onTapAvatar: onTapAvatar,
                 onLoadPreviousMessages: onLoadPreviousMessages,

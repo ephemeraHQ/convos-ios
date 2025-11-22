@@ -46,8 +46,9 @@ struct EmojiBubble: View {
             Text(emoji)
                 .foregroundStyle(textColor)
                 .font(.largeTitle.pointSize(64.0))
+                .padding(.horizontal, 0.0)
                 .padding(.vertical, DesignConstants.Spacing.step2x)
-                .multilineTextAlignment(isOutgoing ? .trailing : .leading)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

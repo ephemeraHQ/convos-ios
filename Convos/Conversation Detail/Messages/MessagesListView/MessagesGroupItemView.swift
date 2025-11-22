@@ -67,7 +67,7 @@ struct MessagesGroupItemView: View {
                 )
                 .offset(
                     x: isAppearing
-                    ? (message.base.source == .incoming ? -100 : 100)
+                    ? (message.base.source == .incoming ? -200 : 200)
                     : 0,
                     y: isAppearing ? 40 : 0
                 )

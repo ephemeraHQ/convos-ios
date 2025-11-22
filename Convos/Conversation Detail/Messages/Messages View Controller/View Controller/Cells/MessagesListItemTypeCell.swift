@@ -41,6 +41,14 @@ class MessagesListItemTypeCell: UICollectionViewCell {
                         onTapMessage: { _ in },
                         onTapAvatar: { _ in },
                     )
+
+                case .invite(let invite):
+                    InviteView(invite: invite)
+                        .padding(.vertical, DesignConstants.Spacing.step4x)
+
+                case .conversationInfo(let conversation):
+                    ConversationInfoPreview(conversation: conversation)
+                        .padding(.vertical, DesignConstants.Spacing.step4x)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

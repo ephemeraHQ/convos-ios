@@ -46,6 +46,7 @@ struct ConversationInfoPreview: View {
             }
             .font(.caption)
         }
+        .id("convo-info-\(conversation.id)")
     }
 }
 

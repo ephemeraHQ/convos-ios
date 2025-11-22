@@ -93,6 +93,7 @@ struct MessagesBottomBar: View {
             conversation: .mock(),
             messages: [],
             invite: .mock(),
+            hasMoreMessages: false,
             onTapMessage: { _ in },
             onTapAvatar: { _ in },
             onLoadPreviousMessages: {},
