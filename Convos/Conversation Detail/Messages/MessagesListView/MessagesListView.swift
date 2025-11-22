@@ -34,7 +34,7 @@ struct MessagesListView: View {
                                 TextTitleContentView(title: dateGroup.value, profile: nil)
                                     .padding(.vertical, DesignConstants.Spacing.step2x)
 
-                            case .update(_, let update):
+                            case .update(_, let update, _):
                                 TextTitleContentView(title: update.summary, profile: update.profile)
                                     .padding(.vertical, DesignConstants.Spacing.stepX)
 

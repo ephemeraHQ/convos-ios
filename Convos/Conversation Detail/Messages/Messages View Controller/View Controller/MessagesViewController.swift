@@ -113,7 +113,7 @@ final class MessagesViewController: UIViewController {
     }
 
     var onTapMessage: ((AnyMessage) -> Void)?
-    var onTapAvatar: ((AnyMessage) -> Void)?
+    var onTapAvatar: ((ConversationMember) -> Void)?
     var onLoadPreviousMessages: (() -> Void)?
 
     deinit {
@@ -211,13 +211,18 @@ final class MessagesViewController: UIViewController {
 
         dataSource.prepare(with: collectionView)
 
-//        dataSource.onTapAvatar = { [weak self] indexPath in
-//            guard let self = self else { return }
-//            let cell = self.dataSource.sections[indexPath.section].cells[indexPath.item]
-//            if case .message(let message) = cell {
-//                self.onTapAvatar?(message)
-//            }
-//        }
+        dataSource.onTapAvatar = { [weak self] indexPath in
+            guard let self = self else { return }
+            let cell = self.dataSource.sections[indexPath.section].cells[indexPath.item]
+            if case .message(let message) = cell {
+                switch message {
+                case .messages(let group):
+                    self.onTapAvatar?(group.sender)
+                default:
+                    break
+                }
+            }
+        }
     }
 
     private func handleViewTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -243,15 +248,9 @@ final class MessagesViewController: UIViewController {
     // MARK: - Scrolling Methods
 
     private func loadPreviousMessages() {
+        guard let onLoadPreviousMessages = onLoadPreviousMessages else { return }
         currentControllerActions.options.insert(.loadingPreviousMessages)
-
-        currentControllerActions.options.remove(.loadingPreviousMessages)
-        //        Task {
-        //            let sections = await messagesStore.loadPreviousMessages()
-        //            let animated = !isUserInitiatedScrolling
-        //            processUpdates(with: sections, animated: animated, requiresIsolatedProcess: true) {
-        //            }
-        //        }
+        onLoadPreviousMessages()
     }
 
     func scrollToBottom(completion: (() -> Void)? = nil) {
@@ -325,6 +324,12 @@ extension MessagesViewController {
                                 requiresIsolatedProcess: Bool,
                                 completion: (() -> Void)? = nil) {
         Log.info("Processing updates with \(messages.count) messages")
+
+        if currentControllerActions.options.contains(.loadingPreviousMessages),
+           messages.contains(where: { $0.origin == .paginated }) {
+            currentControllerActions.options.remove(.loadingPreviousMessages)
+        }
+
         var cells: [MessagesCollectionCell] = messages
             .map { MessagesCollectionCell.message($0) }
 

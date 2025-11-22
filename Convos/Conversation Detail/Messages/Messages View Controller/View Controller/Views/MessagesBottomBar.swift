@@ -95,6 +95,7 @@ struct MessagesBottomBar: View {
             invite: .mock(),
             onTapMessage: { _ in },
             onTapAvatar: { _ in },
+            onLoadPreviousMessages: {},
             bottomBarHeight: bottomBarHeight
         )
         .ignoresSafeArea()

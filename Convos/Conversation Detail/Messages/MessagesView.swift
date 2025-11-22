@@ -26,10 +26,10 @@ struct MessagesView<BottomBarContent: View>: View {
     let onProfilePhotoTap: () -> Void
     let onSendMessage: () -> Void
     let onTapMessage: (AnyMessage) -> Void
-    let onTapAvatar: (AnyMessage) -> Void
+    let onTapAvatar: (ConversationMember) -> Void
     let onDisplayNameEndedEditing: () -> Void
     let onProfileSettings: () -> Void
-    let loadPreviousMessages: () -> Void
+    let onLoadPreviousMessages: () -> Void
     @ViewBuilder let bottomBarContent: () -> BottomBarContent
 
     @State private var bottomBarHeight: CGFloat = 0.0
@@ -41,19 +41,11 @@ struct MessagesView<BottomBarContent: View>: View {
                 invite: invite,
                 onTapMessage: onTapMessage,
                 onTapAvatar: onTapAvatar,
+                onLoadPreviousMessages: onLoadPreviousMessages,
                 bottomBarHeight: bottomBarHeight
             )
             .ignoresSafeArea()
         }
-//        MessagesListView(
-//            conversation: conversation,
-//            messages: $messages,
-//            invite: invite,
-//            focusCoordinator: focusCoordinator,
-//            onTapMessage: onTapMessage,
-//            onTapAvatar: onTapAvatar,
-//            loadPrevious: loadPreviousMessages
-//        )
         .safeAreaBar(edge: .bottom) {
             VStack(spacing: 0.0) {
                 bottomBarContent()
@@ -78,8 +70,5 @@ struct MessagesView<BottomBarContent: View>: View {
                 bottomBarHeight = height
             }
         }
-//        .introspect(.view, on: .iOS(.v26), customize: { view in
-//            view.keyboardLayoutGuide.keyboardDismissPadding = bottomBarHeight
-//        })
     }
 }

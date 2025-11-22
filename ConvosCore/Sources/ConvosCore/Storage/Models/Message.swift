@@ -12,7 +12,8 @@ public protocol MessageType: Sendable {
 
 public enum AnyMessage: Hashable, Codable, Sendable {
     public enum Origin: Hashable, Codable, Sendable {
-        case existing // message was loaded initially or was previously inserted but seen again
+        case existing // message was loaded initially or was previously seen (inserted/paginated)
+        case paginated // message was loaded via pagination for the first time
         case inserted // new message that arrived after initialization
     }
 

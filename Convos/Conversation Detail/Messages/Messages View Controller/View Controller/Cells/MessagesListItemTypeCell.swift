@@ -30,7 +30,7 @@ class MessagesListItemTypeCell: UICollectionViewCell {
                         .id(dateGroup.differenceIdentifier)
                         .padding(.vertical, DesignConstants.Spacing.step4x)
 
-                case .update(_, let update):
+                case .update(_, let update, _):
                     TextTitleContentView(title: update.summary, profile: update.profile)
                         .id(update.differenceIdentifier)
                         .padding(.vertical, DesignConstants.Spacing.step4x)

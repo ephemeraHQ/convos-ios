@@ -73,7 +73,7 @@ class MessagesRepository: MessagesRepositoryProtocol {
     /// Used to ensure paginated messages are marked as .existing
     private var isLoadingPrevious: Bool = false
 
-    init(dbReader: any DatabaseReader, conversationId: String, pageSize: Int = 25) {
+    init(dbReader: any DatabaseReader, conversationId: String, pageSize: Int = 150) {
         self.dbReader = dbReader
         self.conversationIdSubject = .init(conversationId)
         self.pageSize = pageSize
@@ -115,8 +115,8 @@ class MessagesRepository: MessagesRepositoryProtocol {
 
         return try dbReader.read { [weak self] db in
             guard let self else { return [] }
-            // Pass isLoadingExisting = true to mark all messages as .existing
-            let (messages, updatedSeenIds) = try db.composeMessages(for: conversationId, limit: currentLimit, seenMessageIds: seenMessageIds, isLoadingExisting: true)
+            // Pass isInitialLoad = true to mark all messages as .existing
+            let (messages, updatedSeenIds) = try db.composeMessages(for: conversationId, limit: currentLimit, seenMessageIds: seenMessageIds, isInitialLoad: true, isPaginating: false)
 
             // Update seen IDs
             self.seenMessageIds = updatedSeenIds
@@ -179,10 +179,16 @@ class MessagesRepository: MessagesRepositoryProtocol {
                 .tracking { [weak self] db in
                     guard let self else { return [] }
                     do {
-                        // Mark as .existing if we're doing initial load or pagination
-                        // Only mark as .inserted for truly new messages that arrive after initial load
-                        let isLoadingExisting = !self.hasCompletedInitialLoad || self.isLoadingPrevious
-                        let (messages, updatedSeenIds) = try db.composeMessages(for: conversationId, limit: limit, seenMessageIds: self.seenMessageIds, isLoadingExisting: isLoadingExisting)
+                        // Determine the context of this load
+                        let isInitialLoad = !self.hasCompletedInitialLoad
+                        let isPaginating = self.isLoadingPrevious
+                        let (messages, updatedSeenIds) = try db.composeMessages(
+                            for: conversationId,
+                            limit: limit,
+                            seenMessageIds: self.seenMessageIds,
+                            isInitialLoad: isInitialLoad,
+                            isPaginating: isPaginating
+                        )
                         self.seenMessageIds = updatedSeenIds
                         return messages
                     } catch {
@@ -204,7 +210,8 @@ extension Array where Element == MessageWithDetails {
     func composeMessages(from database: Database,
                          in conversation: Conversation,
                          seenMessageIds: Set<String>,
-                         isLoadingExisting: Bool = false) throws -> ([AnyMessage], Set<String>) {
+                         isInitialLoad: Bool = false,
+                         isPaginating: Bool = false) throws -> ([AnyMessage], Set<String>) {
         let dbMessagesWithDetails = self
         var updatedSeenIds = seenMessageIds
 
@@ -288,14 +295,18 @@ extension Array where Element == MessageWithDetails {
                 )
 
                 // Determine origin:
-                // - If we're loading existing messages (initial load or pagination), mark as .existing
-                // - Otherwise, check if this is a new message we haven't seen
+                // - Initial load: all messages are .existing
+                // - Pagination: unseen messages are .paginated, seen are .existing
+                // - New insertions: unseen messages are .inserted, seen are .existing
                 let origin: AnyMessage.Origin
-                if isLoadingExisting {
-                    // Initial load or pagination - all are existing
+                if isInitialLoad {
+                    // Initial load - all are existing
                     origin = .existing
+                } else if isPaginating {
+                    // Pagination - unseen messages are paginated, seen are existing
+                    origin = seenMessageIds.contains(dbMessage.clientMessageId) ? .existing : .paginated
                 } else {
-                    // Check if this is a new message (not in our seen set)
+                    // New insertions - unseen messages are inserted, seen are existing
                     origin = seenMessageIds.contains(dbMessage.clientMessageId) ? .existing : .inserted
                 }
 
@@ -333,7 +344,13 @@ extension Array where Element == MessageWithDetails {
 }
 
 fileprivate extension Database {
-    func composeMessages(for conversationId: String, limit: Int? = nil, seenMessageIds: Set<String>, isLoadingExisting: Bool = false) throws -> ([AnyMessage], Set<String>) {
+    func composeMessages(
+        for conversationId: String,
+        limit: Int? = nil,
+        seenMessageIds: Set<String>,
+        isInitialLoad: Bool = false,
+        isPaginating: Bool = false
+    ) throws -> ([AnyMessage], Set<String>) {
         guard let dbConversationDetails = try DBConversation
             .filter(DBConversation.Columns.id == conversationId)
             .detailedConversationQuery()
@@ -369,6 +386,12 @@ fileprivate extension Database {
         // Reverse the messages back to chronological order after fetching
         // since we fetched them in reverse order to get the latest N messages
         let chronologicalMessages = dbMessages.reversed()
-        return try Array(chronologicalMessages).composeMessages(from: self, in: conversation, seenMessageIds: seenMessageIds, isLoadingExisting: isLoadingExisting)
+        return try Array(chronologicalMessages).composeMessages(
+            from: self,
+            in: conversation,
+            seenMessageIds: seenMessageIds,
+            isInitialLoad: isInitialLoad,
+            isPaginating: isPaginating
+        )
     }
 }

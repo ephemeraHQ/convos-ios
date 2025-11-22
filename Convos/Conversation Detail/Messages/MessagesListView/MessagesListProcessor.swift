@@ -69,8 +69,8 @@ final class MessagesListProcessor {
                     currentSenderId = nil
                 }
 
-                // Add the update item
-                items.append(.update(id: message.base.id, update: update))
+                // Add the update item with the message's origin
+                items.append(.update(id: message.base.id, update: update, origin: message.origin))
                 lastMessageDate = message.base.date
                 continue
             }
