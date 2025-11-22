@@ -1,5 +1,14 @@
 import ConvosCore
+import DifferenceKit
 import Foundation
+
+enum MessagesListItemAlignment {
+    case leading, center, trailing, fullWidth
+}
+
+enum MessageBubbleType {
+    case normal, tailed, none
+}
 
 struct MessagesGroup: Identifiable, Equatable, Hashable {
     let id: String
@@ -104,7 +113,7 @@ enum MessagesListItemType: Identifiable, Equatable, Hashable {
         case .date(let dateGroup):
             return "date-\(dateGroup.differenceIdentifier)"
         case .messages(let group):
-            return group.id
+            return "messages-group-\(group.id)"
         case .invite(let invite):
             return "invite-\(invite.id)"
         case .conversationInfo(let conversation):
@@ -136,6 +145,22 @@ enum MessagesListItemType: Identifiable, Equatable, Hashable {
     /// Whether this item should animate when displayed
     var shouldAnimate: Bool {
         origin == .inserted
+    }
+
+    /// The alignment for this item when displayed in the collection view
+    var alignment: MessagesListItemAlignment {
+        .fullWidth
+    }
+}
+
+// MARK: - Differentiable Conformance
+extension MessagesListItemType: Differentiable {
+    var differenceIdentifier: Int {
+        id.hashValue
+    }
+
+    func isContentEqual(to source: MessagesListItemType) -> Bool {
+        self == source
     }
 }
 

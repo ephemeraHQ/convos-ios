@@ -68,7 +68,7 @@ extension MessagesCollectionViewDataSource: MessagesLayoutDelegate {
 
     func alignmentForItem(_ messagesLayout: MessagesCollectionLayout,
                           of kind: ItemKind,
-                          at indexPath: IndexPath) -> MessagesCollectionCell.Alignment {
+                          at indexPath: IndexPath) -> MessagesListItemAlignment {
         layoutDelegate.alignmentForItem(messagesLayout, of: kind, at: indexPath)
     }
 

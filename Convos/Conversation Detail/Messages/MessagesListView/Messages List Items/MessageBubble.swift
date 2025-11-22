@@ -2,7 +2,7 @@ import ConvosCore
 import SwiftUI
 
 struct MessageBubble: View {
-    let style: MessagesCollectionCell.BubbleType
+    let style: MessageBubbleType
     let message: String
     let isOutgoing: Bool
     let profile: Profile

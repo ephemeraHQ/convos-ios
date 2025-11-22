@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TypingIndicatorView: View {
-    let alignment: MessagesCollectionCell.Alignment
+    let alignment: MessagesListItemAlignment
     var body: some View {
         MessageContainer(style: .tailed,
                          isOutgoing: false) {

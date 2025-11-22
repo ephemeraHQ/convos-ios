@@ -3,7 +3,7 @@ import SwiftUI
 
 struct MessagesGroupItemView: View {
     let message: AnyMessage
-    let bubbleType: MessagesCollectionCell.BubbleType
+    let bubbleType: MessageBubbleType
     let showsSentStatus: Bool
     let onTapMessage: (AnyMessage) -> Void
     let onTapAvatar: (AnyMessage) -> Void

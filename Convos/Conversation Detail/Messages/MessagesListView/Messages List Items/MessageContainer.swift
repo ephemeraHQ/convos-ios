@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MessageContainer<Content: View>: View {
-    let style: MessagesCollectionCell.BubbleType
+    let style: MessageBubbleType
     let isOutgoing: Bool
     let cornerRadius: CGFloat = Constant.bubbleCornerRadius
     let content: () -> Content

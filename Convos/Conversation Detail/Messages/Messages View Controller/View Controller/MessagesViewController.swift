@@ -216,14 +216,12 @@ final class MessagesViewController: UIViewController {
 
         dataSource.onTapAvatar = { [weak self] indexPath in
             guard let self = self else { return }
-            let cell = self.dataSource.sections[indexPath.section].cells[indexPath.item]
-            if case .message(let message) = cell {
-                switch message {
-                case .messages(let group):
-                    self.onTapAvatar?(group.sender)
-                default:
-                    break
-                }
+            let item = self.dataSource.sections[indexPath.section].cells[indexPath.item]
+            switch item {
+            case .messages(let group):
+                self.onTapAvatar?(group.sender)
+            default:
+                break
             }
         }
     }
@@ -334,15 +332,14 @@ extension MessagesViewController {
             currentControllerActions.options.remove(.loadingPreviousMessages)
         }
 
-        var cells: [MessagesCollectionCell] = messages
-            .map { MessagesCollectionCell.message($0) }
+        var cells: [MessagesListItemType] = messages
 
         // Add invite or conversation info at the beginning if no more messages to load
         if !hasMoreMessages {
             if conversation.creator.isCurrentUser {
-                cells.insert(.message(.invite(invite)), at: 0)
+                cells.insert(.invite(invite), at: 0)
             } else {
-                cells.insert(.message(.conversationInfo(conversation)), at: 0)
+                cells.insert(.conversationInfo(conversation), at: 0)
             }
         }
 

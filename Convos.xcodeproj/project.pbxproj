@@ -205,7 +205,6 @@
 				"Conversation Detail/Messages/Messages View Controller/Helpers/UIView+Extension.swift",
 				"Conversation Detail/Messages/Messages View Controller/Keyboard/KeyboardInfo.swift",
 				"Conversation Detail/Messages/Messages View Controller/Keyboard/KeyboardListener.swift",
-				"Conversation Detail/Messages/Messages View Controller/Message Models/MessagesCollectionCell.swift",
 				"Conversation Detail/Messages/Messages View Controller/Message Models/MessagesCollectionSection.swift",
 				"Conversation Detail/Messages/Messages View Controller/Message Models/MessageTypes.swift",
 				"Conversation Detail/Messages/Messages View Controller/Message Models/TypingState.swift",

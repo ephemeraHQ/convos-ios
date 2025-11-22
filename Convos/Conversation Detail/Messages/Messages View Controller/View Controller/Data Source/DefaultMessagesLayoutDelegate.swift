@@ -25,22 +25,17 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
         case .cell:
             let item = sections[indexPath.section].cells[indexPath.item]
             switch item {
-            case .message(let messagesType):
-                switch messagesType {
-                case .invite:
-                    return .estimated(
-                        CGSize(
-                            width: messagesLayout.layoutFrame.width,
-                            height: 316.0
-                        )
+            case .invite:
+                return .estimated(
+                    CGSize(
+                        width: messagesLayout.layoutFrame.width,
+                        height: 316.0
                     )
-                case .conversationInfo:
-                    return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 300.0))
-                default:
-                    return .auto
-                }
-            case .typingIndicator:
-                return .estimated(CGSize(width: 60, height: 36))
+                )
+            case .conversationInfo:
+                return .estimated(CGSize(width: messagesLayout.layoutFrame.width, height: 300.0))
+            default:
+                return .auto
             }
         case .footer, .header:
             return .exact(.zero)
@@ -49,18 +44,13 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
 
     func alignmentForItem(_ messagesLayout: MessagesCollectionLayout,
                           of kind: ItemKind,
-                          at indexPath: IndexPath) -> MessagesCollectionCell.Alignment {
+                          at indexPath: IndexPath) -> MessagesListItemAlignment {
         switch kind {
         case .header:
             return .center
         case .cell:
             let item = sections[indexPath.section].cells[indexPath.item]
-            switch item {
-            case .message:
-                return .fullWidth
-            case .typingIndicator:
-                return .leading
-            }
+            return item.alignment
         case .footer:
             return .trailing
         }
@@ -79,16 +69,11 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
 
         let item = sections[indexPath.section].cells[indexPath.item]
         switch item {
-        case .message(let item):
-            switch item {
-            case .messages(let messagesGroup):
-                applyMessageAnimation(for: messagesGroup, to: originalAttributes)
-            default:
-                originalAttributes.center.y += 40.0
-                originalAttributes.transform = .init(scaleX: 0.1, y: 0.1)
-            }
-        case .typingIndicator:
-            applyTypingIndicatorAnimation(to: originalAttributes)
+        case .messages(let messagesGroup):
+            applyMessageAnimation(for: messagesGroup, to: originalAttributes)
+        default:
+            originalAttributes.center.y += 40.0
+            originalAttributes.transform = .init(scaleX: 0.1, y: 0.1)
         }
     }
 
@@ -103,16 +88,11 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
 
         let oldItem = oldSections[indexPath.section].cells[indexPath.item]
         switch oldItem {
-        case .message(let item):
-            switch item {
-            case .messages(let messagesGroup):
-                applyMessageAnimation(for: messagesGroup, to: originalAttributes)
-            default:
-                originalAttributes.center.y += 40.0
-                originalAttributes.transform = .init(scaleX: 0.1, y: 0.1)
-            }
-        case .typingIndicator:
-            applyTypingIndicatorAnimation(to: originalAttributes)
+        case .messages(let messagesGroup):
+            applyMessageAnimation(for: messagesGroup, to: originalAttributes)
+        default:
+            originalAttributes.center.y += 40.0
+            originalAttributes.transform = .init(scaleX: 0.1, y: 0.1)
         }
     }
 
@@ -128,7 +108,7 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
 
     // MARK: - Private Helpers
 
-    private func safeCell(at indexPath: IndexPath) -> MessagesCollectionCell? {
+    private func safeCell(at indexPath: IndexPath) -> MessagesListItemType? {
         guard !sections.isEmpty, sections.count > indexPath.section else {
             return nil
         }
@@ -141,11 +121,6 @@ final class DefaultMessagesLayoutDelegate: MessagesLayoutDelegate {
 
     private func applyMessageAnimation(for messages: MessagesGroup, to attributes: MessagesLayoutAttributes) {
         attributes.center.y += 120.0
-    }
-
-    private func applyTypingIndicatorAnimation(to attributes: MessagesLayoutAttributes) {
-        attributes.transform = .init(scaleX: 0.1, y: 0.1)
-        attributes.center.x -= attributes.bounds.width / 5.0
     }
 }
 
